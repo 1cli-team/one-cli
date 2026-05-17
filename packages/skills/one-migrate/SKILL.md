@@ -57,11 +57,11 @@ If this command fails, **stop and tell the user**:
 > One CLI 还没装。请用 curl 一键安装（macOS / Linux）：
 >
 > ```bash
-> curl -fsSL https://<your-oss-host>/install.sh | bash
+> curl -fsSL https://1cli.dev/install.sh | bash
 > ```
 >
 > 或从 GitHub Releases 下载对应平台的归档：
-> https://github.com/torchstellar-team/one-cli/releases/latest
+> https://github.com/1cli-team/one-cli/releases/latest
 >
 > 装完再回来重试这个请求。
 
@@ -165,5 +165,5 @@ skill for the full table.)
 - Manifest schema source: `packages/cli/internal/workspace/manifest.go`
 - Workspace scaffold inventory: `packages/cli/internal/scaffold/scaffold.go`
 - Template registry: `packages/templates/registry.json`
-- Error code reference: <https://github.com/torchstellar-team/one-cli/blob/master/internal/errors/codes.go>
+- Error code reference: <https://github.com/1cli-team/one-cli/blob/master/packages/cli/internal/errors/codes.go>
 - Agent Skills format spec: <https://agentskills.io/specification>

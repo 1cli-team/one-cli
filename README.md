@@ -24,10 +24,10 @@ One CLI gives you a ready project folder first. You can add more pieces later as
 Install on macOS or Linux:
 
 ```bash
-curl -fsSL https://one.torchstellar.com/install.sh | bash
+curl -fsSL https://1cli.dev/install.sh | bash
 ```
 
-Windows users can download a build from [GitHub Releases](https://github.com/torchstellar-team/one-cli/releases/latest).
+Windows users can download a build from [GitHub Releases](https://github.com/1cli-team/one-cli/releases/latest).
 
 Create a project:
 
@@ -91,7 +91,7 @@ one add nestjs-api --name api
 | `one deploy` | Deploy selected parts of the project |
 | `one skills install` | Teach supported AI assistants how to use One CLI |
 
-Full command docs live at [one.torchstellar.com](https://one.torchstellar.com).
+Full command docs live at [1cli.dev](https://1cli.dev).
 
 ## Work With AI Assistants
 
@@ -156,11 +156,11 @@ Read [CONTRIBUTING.md](./CONTRIBUTING.md) before opening a pull request.
 
 ## Documentation
 
-- [Installation](https://one.torchstellar.com/docs/getting-started/installation/)
-- [First project tutorial](https://one.torchstellar.com/tutorials/first-workspace/)
-- [Templates](https://one.torchstellar.com/docs/templates/)
-- [Command reference](https://one.torchstellar.com/docs/reference/cli-overview/)
-- [Error codes](https://one.torchstellar.com/docs/reference/error-codes/)
+- [Installation](https://1cli.dev/docs/installation/)
+- [First project tutorial](https://1cli.dev/tutorials/first-workspace/)
+- [Templates](https://1cli.dev/templates/)
+- [Command reference](https://1cli.dev/docs/cli-overview/)
+- [Error codes](https://1cli.dev/docs/error-codes/)
 
 ## License
 

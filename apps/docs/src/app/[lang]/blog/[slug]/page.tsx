@@ -109,7 +109,7 @@ export default async function BlogArticleRoute(props: {
             {post.readingTime} {labels.readTime}
           </span>
           <a
-            href={`https://github.com/torchstellar-team/one-cli/blob/master/apps/docs/${post.contentPath}`}
+            href={`https://github.com/1cli-team/one-cli/blob/master/apps/docs/${post.contentPath}`}
             target="_blank"
             rel="noreferrer"
           >

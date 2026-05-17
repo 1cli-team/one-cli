@@ -111,7 +111,7 @@ env:
   INFISICAL_UNIVERSAL_AUTH_CLIENT_SECRET: ${{ secrets.INFISICAL_CLIENT_SECRET }}
 steps:
   - uses: actions/checkout@v4
-  - run: curl -fsSL https://one.torchstellar.com/install.sh | bash
+  - run: curl -fsSL https://1cli.dev/install.sh | bash
   - run: one env pull --env staging
   - run: pnpm install && pnpm test
 ```

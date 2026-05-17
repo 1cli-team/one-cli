@@ -15,14 +15,13 @@ package processorch
 //      nil if every child exited cleanly.
 
 import (
-	"bufio"
 	"context"
 	"errors"
 	"fmt"
-	"io"
 	"os"
 	"os/exec"
 	"os/signal"
+	"strings"
 	"sync"
 	"syscall"
 	"time"
@@ -71,6 +70,8 @@ func runBuiltin(ctx context.Context, projectRoot string, entries []ProcEntry, op
 	type running struct {
 		entry ProcEntry
 		cmd   *exec.Cmd
+		out   *prefixLineWriter
+		err   *prefixLineWriter
 		// done closes when this child's Wait returns.
 		done chan error
 	}
@@ -78,10 +79,6 @@ func runBuiltin(ctx context.Context, projectRoot string, entries []ProcEntry, op
 	var (
 		procs   []*running
 		startMu sync.Mutex
-		// streamWg tracks every streamLines goroutine spawned. We wait
-		// on it before returning so the caller's writer (and the data
-		// race detector) see a consistent state.
-		streamWg sync.WaitGroup
 	)
 
 	// Helper to broadcast SIGTERM/SIGKILL to every still-running child's
@@ -99,6 +96,14 @@ func runBuiltin(ctx context.Context, projectRoot string, entries []ProcEntry, op
 			_ = syscall.Kill(-p.cmd.Process.Pid, sig)
 		}
 	}
+	waitStarted := func() {
+		startMu.Lock()
+		started := append([]*running(nil), procs...)
+		startMu.Unlock()
+		for _, p := range started {
+			<-p.done
+		}
+	}
 
 	// Start every entry. If any Start fails, tear down the ones that
 	// already started.
@@ -108,45 +113,29 @@ func runBuiltin(ctx context.Context, projectRoot string, entries []ProcEntry, op
 		cmd.Env = os.Environ()
 		cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
 
-		stdout, err := cmd.StdoutPipe()
-		if err != nil {
-			terminate(syscall.SIGTERM)
-			streamWg.Wait()
-			return fmt.Errorf("启动 %s 失败: %w", e.Name, err)
-		}
-		stderr, err := cmd.StderrPipe()
-		if err != nil {
-			_ = stdout.Close()
-			terminate(syscall.SIGTERM)
-			streamWg.Wait()
-			return fmt.Errorf("启动 %s 失败: %w", e.Name, err)
-		}
+		prefix := decoratePrefix(padName(e.Name, width), len(procs), useColor)
+		stdout := newPrefixLineWriter(prefix, writeLine)
+		stderr := newPrefixLineWriter(prefix, writeLine)
+		cmd.Stdout = stdout
+		cmd.Stderr = stderr
+
 		if err := cmd.Start(); err != nil {
-			_ = stdout.Close()
-			_ = stderr.Close()
 			terminate(syscall.SIGTERM)
-			streamWg.Wait()
+			waitStarted()
 			return fmt.Errorf("启动 %s 失败: %w", e.Name, err)
 		}
 
-		prefix := decoratePrefix(padName(e.Name, width), len(procs), useColor)
-		r := &running{entry: e, cmd: cmd, done: make(chan error, 1)}
+		r := &running{entry: e, cmd: cmd, out: stdout, err: stderr, done: make(chan error, 1)}
 
 		startMu.Lock()
 		procs = append(procs, r)
 		startMu.Unlock()
 
-		streamWg.Add(2)
-		go func() {
-			defer streamWg.Done()
-			streamLines(stdout, prefix, writeLine)
-		}()
-		go func() {
-			defer streamWg.Done()
-			streamLines(stderr, prefix, writeLine)
-		}()
 		go func(rr *running) {
-			rr.done <- rr.cmd.Wait()
+			err := rr.cmd.Wait()
+			rr.out.Flush()
+			rr.err.Flush()
+			rr.done <- err
 		}(r)
 	}
 
@@ -212,26 +201,49 @@ func runBuiltin(ctx context.Context, projectRoot string, entries []ProcEntry, op
 		}
 	}
 
-	// All cmd.Wait() returns are in. The OS has closed each child's
-	// stdout/stderr pipes by now, so streamLines will EOF and exit
-	// once the scheduler runs them; wait for that to make the caller's
-	// writer safe to read.
-	streamWg.Wait()
-
 	return firstErr
 }
 
-// streamLines reads r line-by-line and pushes each line through writeLine.
-// Closes when r EOFs. Trailing newlines are stripped before prefixing.
-func streamLines(r io.ReadCloser, prefix string, writeLine func(string, string)) {
-	defer r.Close()
-	scanner := bufio.NewScanner(r)
-	// Bigger buffer so long log lines (stack traces, JSON blobs) don't
-	// trigger ErrTooLong.
-	scanner.Buffer(make([]byte, 64*1024), 1024*1024)
-	for scanner.Scan() {
-		writeLine(prefix, scanner.Text())
+// prefixLineWriter collects arbitrary Write chunks into log lines, prefixes
+// each complete line, and flushes the final unterminated line after Wait.
+// It avoids bufio.Scanner's token limit and lets exec.Cmd own pipe draining.
+type prefixLineWriter struct {
+	prefix    string
+	writeLine func(string, string)
+	pending   []byte
+}
+
+func newPrefixLineWriter(prefix string, writeLine func(string, string)) *prefixLineWriter {
+	return &prefixLineWriter{prefix: prefix, writeLine: writeLine}
+}
+
+func (w *prefixLineWriter) Write(p []byte) (int, error) {
+	start := 0
+	for i, b := range p {
+		if b != '\n' {
+			continue
+		}
+		w.pending = append(w.pending, p[start:i]...)
+		w.emit()
+		start = i + 1
 	}
+	if start < len(p) {
+		w.pending = append(w.pending, p[start:]...)
+	}
+	return len(p), nil
+}
+
+func (w *prefixLineWriter) Flush() {
+	if len(w.pending) == 0 {
+		return
+	}
+	w.emit()
+}
+
+func (w *prefixLineWriter) emit() {
+	line := strings.TrimSuffix(string(w.pending), "\r")
+	w.writeLine(w.prefix, line)
+	w.pending = w.pending[:0]
 }
 
 // signalError is returned by runBuiltin when shutdown was triggered by

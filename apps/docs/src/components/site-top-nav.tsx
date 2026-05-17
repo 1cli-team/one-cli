@@ -61,7 +61,7 @@ export function SiteTopNav({
             </Link>
           ))}
           <a
-            href="https://github.com/torchstellar-team/one-cli/blob/master/CHANGELOG.md"
+            href="https://github.com/1cli-team/one-cli/blob/master/CHANGELOG.md"
             target="_blank"
             rel="noreferrer"
           >
@@ -77,7 +77,7 @@ export function SiteTopNav({
         </div>
         <DocsLanguageSwitcher lang={lang} />
         <a
-          href="https://github.com/torchstellar-team/one-cli"
+          href="https://github.com/1cli-team/one-cli"
           className="one-docs-icon-link"
           target="_blank"
           rel="noreferrer"

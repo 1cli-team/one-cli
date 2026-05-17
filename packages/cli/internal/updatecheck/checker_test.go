@@ -24,6 +24,9 @@ func fetchAt(ctx context.Context, url, currentVersion string) (string, error) {
 	if resp.StatusCode != http.StatusOK {
 		return "", &httpError{status: resp.StatusCode}
 	}
+	if v := versionFromReleasePath(resp.Request.URL.Path); v != "" {
+		return v, nil
+	}
 	buf := make([]byte, 64)
 	n, _ := resp.Body.Read(buf)
 	v := normalizeTag(strings.TrimSpace(string(buf[:n])))
@@ -50,6 +53,27 @@ func TestFetch_Happy(t *testing.T) {
 	}))
 	defer srv.Close()
 	got, err := fetchAt(context.Background(), srv.URL, "v0.8.0")
+	if err != nil {
+		t.Fatalf("fetch: %v", err)
+	}
+	if got != "v0.9.0" {
+		t.Errorf("got %q, want v0.9.0", got)
+	}
+}
+
+func TestFetch_GitHubLatestRedirect(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/latest":
+			http.Redirect(w, r, "/releases/tag/v0.9.0", http.StatusFound)
+		case "/releases/tag/v0.9.0":
+			_, _ = w.Write([]byte("<html>release page</html>"))
+		default:
+			t.Fatalf("unexpected path: %s", r.URL.Path)
+		}
+	}))
+	defer srv.Close()
+	got, err := fetchAt(context.Background(), srv.URL+"/latest", "v0.8.0")
 	if err != nil {
 		t.Fatalf("fetch: %v", err)
 	}
@@ -90,5 +114,5 @@ func TestFetchLatest_RealURL_Skipped(t *testing.T) {
 	if err != nil {
 		t.Fatalf("real fetch: %v", err)
 	}
-	t.Logf("live /dl/latest = %s", v)
+	t.Logf("live latest release = %s", v)
 }

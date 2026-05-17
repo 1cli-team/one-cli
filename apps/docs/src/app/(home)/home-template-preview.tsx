@@ -97,7 +97,7 @@ export function HomeTemplatePreview({ lang = "zh" }: { lang?: Locale }) {
             {text.label}
           </div>
           <div className="mt-2 flex min-w-0 items-center gap-2 rounded-md border border-white/10 bg-black/20 px-3 py-2 font-mono text-xs text-stone-300">
-            <span className="text-orange-400">one.torchstellar.com</span>
+            <span className="text-orange-400">1cli.dev</span>
             <span className="min-w-0 truncate">{text.path}</span>
           </div>
         </div>
