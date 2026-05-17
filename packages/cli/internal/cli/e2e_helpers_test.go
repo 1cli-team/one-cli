@@ -64,10 +64,12 @@ func runBinary(t *testing.T, args ...string) (stdout, stderr string, exitCode in
 // Inherits the test process env, so t.Setenv("HOME", ...) propagates.
 func runBinaryIn(t *testing.T, dir string, args ...string) (stdout, stderr string, exitCode int) {
 	t.Helper()
-	cmd := exec.Command(binaryPath(t), args...)
+	bin := binaryPath(t)
+	cmd := exec.Command(bin, args...)
 	if dir != "" {
 		cmd.Dir = dir
 	}
+	cmd.Env = prependPath(os.Environ(), filepath.Dir(bin))
 	var out, errBuf bytes.Buffer
 	cmd.Stdout = &out
 	cmd.Stderr = &errBuf
@@ -78,6 +80,23 @@ func runBinaryIn(t *testing.T, dir string, args ...string) (stdout, stderr strin
 		t.Fatalf("exec error: %v", err)
 	}
 	return out.String(), errBuf.String(), exitCode
+}
+
+func prependPath(env []string, dir string) []string {
+	out := append([]string{}, env...)
+	prefix := "PATH="
+	for i, kv := range out {
+		if strings.HasPrefix(kv, prefix) {
+			path := strings.TrimPrefix(kv, prefix)
+			if path == "" {
+				out[i] = prefix + dir
+			} else {
+				out[i] = prefix + dir + string(os.PathListSeparator) + path
+			}
+			return out
+		}
+	}
+	return append(out, prefix+dir)
 }
 
 // loadFixture reads a JSON fixture from testdata/reference/<name> and

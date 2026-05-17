@@ -157,10 +157,13 @@ func runAdd(cmd *cobra.Command, positional string, flags *addFlags) error {
 	// engine `one create --preset` orchestrates over multiple projects).
 	// addcmd remains a thin shell: validate flags, prompt where the
 	// command-specific UX is, then hand off.
+	// Plain `one add` follows the template registry default. Presets pass an
+	// empty container to opt into the preset-level default instead.
 	result, err := preset.ApplyProject(cmd.Context(), projectRoot, preset.ProjectInput{
-		Template: entry,
-		Name:     name,
-		Deploy:   flags.deploy,
+		Template:  entry,
+		Name:      name,
+		Deploy:    flags.deploy,
+		Container: entry.Defaults["container"],
 	}, interactive)
 	if err != nil {
 		return err
