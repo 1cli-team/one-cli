@@ -12,9 +12,9 @@
 # Both jobs need Node + pnpm because sync-web runs `pnpm install` +
 # `vite build` against apps/dashboard/.
 #
-# Runners (self-hosted):
-#   - thunder: [self-hosted, Linux, X64]
-#   - nano:    [self-hosted, macOS, ARM64]
+# Runners:
+#   - ubuntu-latest for Linux checks
+#   - macos-latest for macOS checks
 #
 # Windows is deferred until testdata/bin/ has .bat siblings of the POSIX
 # shell stubs (Phase 3 in the test plan).
@@ -31,7 +31,7 @@ permissions:
 
 jobs:
   lint:
-    runs-on: [self-hosted, Linux, X64]
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
@@ -83,9 +83,9 @@ jobs:
       matrix:
         include:
           - name: linux
-            runs-on: [self-hosted, Linux, X64]
+            runs-on: ubuntu-latest
           - name: macos
-            runs-on: [self-hosted, macOS, ARM64]
+            runs-on: macos-latest
     runs-on: ${{ matrix.runs-on }}
     steps:
       - uses: actions/checkout@v4
