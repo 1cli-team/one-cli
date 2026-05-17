@@ -20,16 +20,29 @@ type Frontmatter = Record<string, string | string[]>;
 const contentRoot = path.join(process.cwd(), "content", "blog");
 const repoContentRoot = path.join(process.cwd(), "apps", "docs", "content", "blog");
 
+// Module-level cache to avoid O(n²) build time when computing related posts
+const blogPostsCache = new Map<Locale, BlogPost[]>();
+
 export function getBlogPosts(lang: Locale) {
+  if (blogPostsCache.has(lang)) {
+    return blogPostsCache.get(lang)!;
+  }
+
   const root = getBlogRoot();
   const dir = path.join(root, lang);
-  if (!fs.existsSync(dir)) return [];
+  if (!fs.existsSync(dir)) {
+    blogPostsCache.set(lang, []);
+    return [];
+  }
 
-  return fs
+  const posts = fs
     .readdirSync(dir)
     .filter((file) => file.endsWith(".md"))
     .map((file) => readBlogPostFromFile(lang, path.join(dir, file)))
     .sort((a, b) => b.date.localeCompare(a.date));
+
+  blogPostsCache.set(lang, posts);
+  return posts;
 }
 
 export function getAllBlogPosts() {
