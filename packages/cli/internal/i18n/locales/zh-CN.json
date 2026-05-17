@@ -1,0 +1,16 @@
+{
+  "root.short": "AI Native 单体仓库编排器",
+  "root.help": "\none — AI Native 单体仓库编排器\n\n用法\n  one <command> [options]\n\n命令\n  create        创建新工作区\n  add           添加项目\n  templates     查看可用模板\n  env           secrets / 环境变量后端（get / set / list / pull / switch）—— dotenv / infisical\n  container     容器构建与推送（info / build / push）—— Dockerfile-driven\n  dev           启动本地开发进程（Procfile.dev driven）\n  deploy        部署 per-project 工作负载（kustomize / S3-compatible / Vercel / Cloudflare / EdgeOne）\n  run           在项目 .env 注入下执行任意命令（类 infisical run）\n  configure     配置机器级 endpoint（env / deploy / container 各 backend 一棵子树）\n  serve         启动本地 Web UI 编辑配置（127.0.0.1，凭据手工录入，AI 不接触）\n  skills        管理 one CLI 自带 skills 的安装（skills install）\n\n通用选项\n  -o, --output  输出格式: json | yaml | text（默认 auto：TTY 人类格式，pipe JSON）\n  -h, --help    显示此帮助\n  -v, --version 显示版本号\n\n示例\n  one create my-app                                                # 创建工作区（默认 dotenv）\n  one add nestjs-api --name user-api                               # 添加 NestJS 后端项目\n  one configure add container/ghcr --profile ghcr --use            # 新增 GHCR 配置\n  one configure add deploy/kustomize --profile prod-k8s --use      # 新增 Kubernetes 配置\n  one container build user-api                                     # 构建 registry-tagged 项目镜像\n  one container push user-api                                      # 推送已构建镜像\n  one deploy                                                       # 自动 build / push / kubectl apply\n  one dev                                                          # 起所有 dev 进程\n  one env pull                                                     # 从 Infisical 拉密钥到 .env\n\n详细帮助：one <command> --help\n",
+  "add.short": "添加项目（从内置模板选）",
+  "configure.short": "配置 endpoint profile（机器级，~/.config/one/{config,credentials}.json）",
+  "container.short": "容器构建（per-project Dockerfile）",
+  "create.short": "创建工作区",
+  "deploy.short": "部署 per-project 工作负载（kustomize / aws-s3 / aliyun-oss / vercel / ...）",
+  "dev.short": "本地开发编排（启动 Procfile.dev 中的进程）",
+  "env.short": "Secrets / 环境变量后端（dotenv 或 infisical）",
+  "run.short": "注入项目密钥并执行任意命令（类 infisical run）",
+  "serve.short": "启动本地 Web UI 编辑 profile（127.0.0.1，含敏感凭据）",
+  "skills.short": "管理 one CLI 自带 skills 在本机的安装",
+  "templates.short": "列出可用模板",
+  "configure.locale.short": "查看或设置显示语言（auto / zh-CN / en-US）"
+}

@@ -1,0 +1,119 @@
+# PR-time test gate. Mirrors `task pre-push` so green CI ≡ green local run.
+#
+# Two jobs:
+#  - lint: documentation drift, go vet, gofmt cleanliness. The whole bundled
+#    tree (registry/skills/_templates/_web) is gitignored and regenerated
+#    via `task sync-bundled` + `task sync-web`, both of which run as deps
+#    of `task vet` — so vet implicitly bootstraps the bundle here.
+#  - test: matrix on linux + macos, builds bin/one then runs `task test`
+#    (go test -race ./...). Build is required because internal/cli/snapshot_e2e_test.go
+#    skips when bin/one is missing.
+#
+# Both jobs need Node + pnpm because sync-web runs `pnpm install` +
+# `vite build` against apps/dashboard/.
+#
+# Runners (self-hosted):
+#   - thunder: [self-hosted, Linux, X64]
+#   - nano:    [self-hosted, macOS, ARM64]
+#
+# Windows is deferred until testdata/bin/ has .bat siblings of the POSIX
+# shell stubs (Phase 3 in the test plan).
+
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [master]
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    runs-on: [self-hosted, Linux, X64]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: packages/cli/go.mod
+          cache: true
+          cache-dependency-path: packages/cli/go.sum
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          # packageManager pin in apps/dashboard/package.json drives version selection.
+          run_install: false
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+          cache-dependency-path: apps/dashboard/pnpm-lock.yaml
+
+      - name: Install task
+        run: go install github.com/go-task/task/v3/cmd/task@latest
+
+      - name: Verify documentation in sync
+        run: task verify-docs
+
+      - name: go vet
+        # Implicitly runs sync-bundled + sync-web first, materialising the
+        # gitignored bundle so the //go:embed directives compile.
+        run: task vet
+
+      - name: Check gofmt
+        working-directory: packages/cli
+        run: |
+          changed=$(gofmt -l .)
+          if [ -n "$changed" ]; then
+            echo "Files need gofmt — run 'task fmt' locally:" >&2
+            echo "$changed" >&2
+            exit 1
+          fi
+
+  test:
+    needs: lint
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: linux
+            runs-on: [self-hosted, Linux, X64]
+          - name: macos
+            runs-on: [self-hosted, macOS, ARM64]
+    runs-on: ${{ matrix.runs-on }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: packages/cli/go.mod
+          cache: true
+          cache-dependency-path: packages/cli/go.sum
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          run_install: false
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+          cache-dependency-path: apps/dashboard/pnpm-lock.yaml
+
+      - name: Install task
+        run: go install github.com/go-task/task/v3/cmd/task@latest
+
+      - name: Build binary
+        run: task build
+
+      - name: Run tests
+        run: task test

@@ -1,0 +1,32 @@
+新增或更新 container/docker profile（通用 Docker registry 协议）。
+
+适配任何走标准 docker registry 协议 + HTTP Basic auth 的镜像仓库：
+自建 Harbor / Quay / 任意私有 registry / Cloudflare R2 / GitLab Container
+Registry / 任何接受 "docker login --password-stdin" 的服务。
+
+如果你用的是 Docker Hub / GHCR / 阿里云 ACR，请改用对应的 kind
+(container/dockerhub / container/ghcr / container/acr)，host 会自动派生，少配一个字段。
+
+示例：
+  # 交互（推荐）
+  one configure add container/docker
+
+  # 非交互（CI / 脚本，地址按你的 registry 填）
+  one configure add container/docker --profile prod \
+      --registry <your-registry-host> \
+      --namespace <your-namespace> \
+      --username $REGISTRY_USER --password $REGISTRY_TOKEN --use
+
+Usage:
+  one configure add container/docker [--profile <name>] [flags]
+
+Flags:
+      --namespace string   Registry namespace / owner（如组织名）
+      --password string    Registry 登录凭据（PAT / token / 密码）
+      --profile string     profile 名（非交互模式必传；交互模式留空则 prompt）
+      --registry string    Registry host（如 your-harbor.example.com；docker kind 必填）
+      --use                把此 profile 设为 default
+      --username string    Registry 登录名（账号 / robot 账号 / PAT 持有者）
+
+Global Flags:
+  -o, --output string   输出格式: json | yaml | text（默认 auto：TTY 时人类格式，pipe 时 JSON）

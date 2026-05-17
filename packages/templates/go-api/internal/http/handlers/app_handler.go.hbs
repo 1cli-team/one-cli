@@ -1,0 +1,29 @@
+package handlers
+
+import (
+	"net/http"
+
+	"github.com/gin-gonic/gin"
+
+	"github.com/example/{{projectNameKebabCase}}/internal/config"
+	"github.com/example/{{projectNameKebabCase}}/internal/http/response"
+)
+
+type AppHandler struct {
+	cfg config.Config
+}
+
+func NewAppHandler(cfg config.Config) *AppHandler {
+	return &AppHandler{cfg: cfg}
+}
+
+func (h *AppHandler) Info(c *gin.Context) {
+	response.OK(c, gin.H{
+		"name": h.cfg.AppName,
+		"env":  h.cfg.AppEnv,
+	})
+}
+
+func (h *AppHandler) Docs(c *gin.Context) {
+	c.Redirect(http.StatusTemporaryRedirect, "/api/openapi.yaml")
+}

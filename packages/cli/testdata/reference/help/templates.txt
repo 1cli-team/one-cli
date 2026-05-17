@@ -1,0 +1,13 @@
+List available templates
+
+Usage:
+  one templates [flags]
+  one templates [command]
+
+Available Commands:
+  list        列出可用模板
+
+Global Flags:
+  -o, --output string   输出格式: json | yaml | text（默认 auto：TTY 时人类格式，pipe 时 JSON）
+
+Use "one templates [command] --help" for more information about a command.

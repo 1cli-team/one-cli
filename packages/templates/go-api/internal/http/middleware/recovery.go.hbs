@@ -1,0 +1,22 @@
+package middleware
+
+import (
+	"net/http"
+
+	"github.com/gin-gonic/gin"
+	"go.uber.org/zap"
+
+	"github.com/example/{{projectNameKebabCase}}/internal/http/response"
+)
+
+func Recovery(log *zap.Logger) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		defer func() {
+			if recovered := recover(); recovered != nil {
+				log.Error("panic recovered", zap.Any("panic", recovered), zap.String("request_id", requestID(c)))
+				response.Error(c, http.StatusInternalServerError, 50000, "internal server error")
+			}
+		}()
+		c.Next()
+	}
+}

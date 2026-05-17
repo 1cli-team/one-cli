@@ -1,0 +1,87 @@
+---
+title: Local dev orchestration
+description: Run every project's dev process at once with one dev. Where the command lives, how to run a single project, how it composes with one run.
+---
+
+`one dev` starts every project's local dev process at once. Commands are read from `one.manifest.json` at `projects[].domains.dev.command`, and a built-in supervisor handles the children — **no third-party tool to install**.
+
+## 1. Where the dev command lives
+
+When you `one add <template>`, the CLI derives a dev command from the template's stack and writes it into the manifest:
+
+```json
+{
+  "projects": [
+    {
+      "name": "api",
+      "relativeDir": "services/api",
+      "toolchain": "node",
+      "domains": {
+        "dev": { "command": "pnpm run start:dev" }
+      }
+    },
+    {
+      "name": "web",
+      "relativeDir": "apps/web",
+      "toolchain": "node",
+      "domains": {
+        "dev": { "command": "pnpm run dev" }
+      }
+    }
+  ]
+}
+```
+
+Resolution order:
+
+- Node projects: `scripts.dev` → `scripts.start:dev` (NestJS) → `scripts.start` (Expo / generic)
+- Go projects: `go run ./cmd/server`
+- Nothing matches: empty string — the project is skipped by `one dev`
+
+Want to customise? Edit the field directly. There is **no auto-sync** from `package.json` — the manifest is the source of truth.
+
+## 2. Run everything
+
+```bash
+one dev
+```
+
+The built-in supervisor starts every project in parallel, multiplexes stdout/stderr line-by-line with a `<name> | ` prefix (colored under a TTY), and forwards Ctrl-C to every workload — including grandchildren forked by npm / node (via POSIX process groups).
+
+## 3. Run just one project
+
+```bash
+one dev -p api
+one dev -p apps/web        # selector also accepts relativeDir
+```
+
+Only the matching project is launched. Use this when:
+
+- You want to restart `api` alone while the rest keeps running in another terminal
+- You only need part of the stack to avoid port conflicts
+
+## 4. Dry-run to inspect the resolved commands
+
+```bash
+one dev --dry-run
+```
+
+Prints the per-project commands that would run without starting any process.
+
+## 5. Composition with `one run`
+
+Each project's command is internally launched as `one run -p <reldir> -- <command>` — so **`one env` variables are auto-injected** (dotenv or Infisical, per workspace backend). No need to wrap your dev script with `one run` in the manifest.
+
+To start one project with full control, you can still call `one run -p <name>` directly; `one dev` is an orchestrator, not a gate.
+
+## Common errors
+
+| Code | Symptom | Fix |
+|---|---|---|
+| `SUBPROJECT_NOT_FOUND` | No projects declared a dev command, or `-p` selector didn't match | Run `one -o json` to list projects; edit the manifest's `projects[].domains.dev.command` |
+
+Full table: [Error codes](/en/docs/error-codes/).
+
+## Next
+
+- Full flag reference → [`one dev`](/en/docs/dev/)

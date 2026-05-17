@@ -1,0 +1,139 @@
+# Release workflow for the Go rewrite. Runs on git tags shaped vN.N.N (and
+# their pre-release variants), cross-compiles via goreleaser, and uploads
+# the artifacts to a GitHub Release that the npm wrapper postinstall reads.
+#
+# Tagging convention: `v0.3.0`, `v0.3.0-rc.1`. Tag MUST match the version
+# in package.json so `one --version` and the npm package report the same
+# thing.
+
+name: CLI
+
+on:
+  push:
+    tags:
+      - "v*"
+  # Manual trigger lets us test goreleaser end-to-end without cutting a tag.
+  # Empty tag input -> snapshot mode (goes to /dl/v0.0.0-test/, leaves
+  # /dl/latest untouched). Tag input -> full release at that tag.
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Override tag (snapshot mode if empty)"
+        required: false
+
+permissions:
+  # goreleaser needs write access to upload release artifacts.
+  contents: write
+
+jobs:
+  release:
+    runs-on: [self-hosted, Linux, X64]
+    steps:
+      - name: Check out
+        uses: actions/checkout@v4
+        with:
+          # goreleaser inspects the full git history for changelog data
+          # even though we disabled its auto-changelog — full clone is
+          # still cheap and avoids surprise tag-resolution failures.
+          fetch-depth: 0
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: packages/cli/go.mod
+          cache: true
+          cache-dependency-path: packages/cli/go.sum
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          run_install: false
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+          cache-dependency-path: apps/dashboard/pnpm-lock.yaml
+
+      - name: Sync bundled assets
+        # packages/cli/internal/bundled/* (registry.json, skills/,
+        # _templates/, _web/) is gitignored and regenerated here. Without
+        # this step goreleaser would build a binary with empty embeds.
+        run: |
+          go install github.com/go-task/task/v3/cmd/task@latest
+          task sync-bundled
+          task sync-web
+
+      # One step decides everything that varies by trigger so the rest of
+      # the workflow stays linear:
+      #   - tag push (real release)         → kind=release, tag=v*, full release
+      #   - workflow_dispatch with tag      → kind=release, tag=input, full release
+      #   - branch push (test) / dispatch   → kind=snapshot, tag=v0.0.0-test, snapshot
+      # Only kind=release updates /dl/latest in OSS. Snapshot runs upload
+      # to a fixed test prefix and leave the production pointer alone.
+      - name: Determine release mode
+        id: mode
+        run: |
+          set -euo pipefail
+          if [[ "${{ github.event_name }}" == "push" && "${{ github.ref_type }}" == "tag" ]]; then
+            echo "kind=release"  >> "$GITHUB_OUTPUT"
+            echo "tag=${{ github.ref_name }}" >> "$GITHUB_OUTPUT"
+            echo "args=release --clean"      >> "$GITHUB_OUTPUT"
+          elif [[ "${{ github.event_name }}" == "workflow_dispatch" && -n "${{ inputs.tag }}" ]]; then
+            echo "kind=release"  >> "$GITHUB_OUTPUT"
+            echo "tag=${{ inputs.tag }}"     >> "$GITHUB_OUTPUT"
+            echo "args=release --clean"      >> "$GITHUB_OUTPUT"
+          else
+            echo "kind=snapshot" >> "$GITHUB_OUTPUT"
+            echo "tag=v0.0.0-test"           >> "$GITHUB_OUTPUT"
+            echo "args=release --snapshot --clean" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Run goreleaser
+        uses: goreleaser/goreleaser-action@v6
+        with:
+          version: latest
+          args: ${{ steps.mode.outputs.args }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # The repo is private, so GitHub Releases are not anonymously
+      # downloadable. Mirror the archives + checksums to Aliyun OSS so
+      # install.sh (curl | bash) can fetch them without authentication.
+      - name: Install ossutil
+        run: |
+          curl -fsSL -o /usr/local/bin/ossutil https://gosspublic.alicdn.com/ossutil/1.7.18/ossutil64
+          chmod +x /usr/local/bin/ossutil
+          ossutil --version
+
+      - name: Mirror release artifacts to OSS
+        env:
+          OSS_ENDPOINT: ${{ secrets.ALIYUN_OSS_ENDPOINT }}
+          OSS_AK: ${{ secrets.ALIYUN_OSS_ACCESS_KEY_ID }}
+          OSS_SK: ${{ secrets.ALIYUN_OSS_ACCESS_KEY_SECRET }}
+          OSS_BUCKET: ${{ secrets.ALIYUN_OSS_BUCKET }}
+          TAG: ${{ steps.mode.outputs.tag }}
+          KIND: ${{ steps.mode.outputs.kind }}
+        run: |
+          set -euo pipefail
+          echo "uploading $TAG (kind=$KIND) to oss://$OSS_BUCKET/dl/$TAG/"
+
+          # Versioned artifacts: aggressive immutable cache (URL contains the tag).
+          ossutil cp -rf \
+            -e "$OSS_ENDPOINT" -i "$OSS_AK" -k "$OSS_SK" \
+            --include "*.tar.gz" --include "*.zip" --include "checksums.txt" \
+            --meta "Cache-Control:public,max-age=31536000,immutable" \
+            dist/ "oss://$OSS_BUCKET/dl/$TAG/"
+
+          if [[ "$KIND" == "release" ]]; then
+            # latest pointer: short cache so installs see new versions promptly.
+            printf '%s' "$TAG" > /tmp/one-latest
+            ossutil cp -f \
+              -e "$OSS_ENDPOINT" -i "$OSS_AK" -k "$OSS_SK" \
+              --meta "Cache-Control:public,max-age=300,must-revalidate" \
+              --meta "Content-Type:text/plain; charset=utf-8" \
+              /tmp/one-latest "oss://$OSS_BUCKET/dl/latest"
+          else
+            echo "snapshot/test mode: leaving /dl/latest untouched"
+          fi

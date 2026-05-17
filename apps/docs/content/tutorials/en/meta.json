@@ -1,0 +1,18 @@
+{
+  "title": "Tutorials",
+  "pages": [
+    "---Basics---",
+    "templates",
+    "first-workspace",
+    "deploy",
+    "skills-install",
+    "---Advanced---",
+    "configure-profiles",
+    "env-vars",
+    "env-multi-env",
+    "dev-local",
+    "container-build-push",
+    "deploy-multi-backend",
+    "json-output-error-codes"
+  ]
+}

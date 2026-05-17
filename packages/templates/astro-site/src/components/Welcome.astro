@@ -1,0 +1,72 @@
+---
+/**
+ * Welcome screen — kept intentionally minimal for AI agents to extend.
+ *
+ * Pre-wired infrastructure (don't recreate; import from these paths):
+ *   - Layout:        src/layouts/Layout.astro      (mounts ErrorBoundary + toast container)
+ *   - Toast system:  src/utils/toast.ts            (showToast.success/info/warning/error, handleError)
+ *   - HTTP utils:    src/utils/api.ts              (fetch wrapper used by api/demo.ts)
+ *   - Demo API:      src/api/demo.ts               (getDemoPost, createDemoPost)
+ *   - Error boundary: src/components/ErrorBoundary.astro
+ *   - 404 page:      src/pages/404.astro
+ *   - Design tokens: src/styles/tokens.css         (Tailwind v4 @theme — primary / success / warning / error / secondary palettes)
+ *   - Global styles: src/styles/global.css
+ *
+ * Atomic design (advisory — physical folders NOT enforced):
+ *   - atoms      → inline Tailwind utilities in .astro components (no UI lib here)
+ *   - molecules  → src/components/                (compose atoms; e.g. ResourceLink below)
+ *   - organisms  → src/components/sections/       (page-level blocks; create when needed)
+ *   - pages      → src/pages/                     (Astro file-based routes)
+ *
+ * Design tokens — DO use these utilities (they map to @theme in tokens.css):
+ *   - Primary:    bg-primary-{50..900} / text-primary-{...} / border-primary-{...}
+ *   - Success:    bg-success-{50..900} / text-success-{...}
+ *   - Warning:    bg-warning-{50..900} / text-warning-{...}
+ *   - Error:      bg-error-{50..900} / text-error-{...}
+ *   - Secondary:  bg-secondary-{50..900} / text-secondary-{...}  (used for surfaces / text)
+ *   DON'T hardcode hex / rgb in Tailwind classes.
+ */
+---
+
+<main class="min-h-screen bg-[#0a0a0a] text-[#fafaf9]">
+	<section class="mx-auto flex max-w-2xl flex-col items-center gap-8 px-6 py-24 text-center sm:py-32">
+		<img src="/onecli-logo-inverted.svg" alt="One CLI" class="h-10 w-auto" />
+
+		<div class="space-y-3">
+			<span class="inline-flex items-center rounded-full border border-stone-700 px-3 py-1 text-[11px] font-medium uppercase tracking-[0.18em] text-stone-300">
+				Astro · SSG
+			</span>
+			<h1 class="text-4xl font-semibold tracking-tight text-white sm:text-5xl">
+				Welcome to One CLI
+			</h1>
+			<p class="text-base text-stone-400 sm:text-lg">
+				一个由 One CLI 生成的 Astro 静态站脚手架，已预置 Tailwind v4、设计令牌、Toast 与错误边界。
+			</p>
+		</div>
+
+		<p class="text-sm text-stone-500">
+			Edit
+			<code class="rounded bg-stone-900 px-2 py-1 font-mono text-xs text-stone-200">src/components/Welcome.astro</code>
+			and save to start.
+		</p>
+
+		<div class="flex flex-col items-center gap-3 sm:flex-row">
+			<a
+				href="https://one.torchstellar.com/zh/docs/quick-start/"
+				target="_blank"
+				rel="noreferrer noopener"
+				class="inline-flex items-center gap-2 rounded-full bg-[#ea580c] px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-[#c2410c]"
+			>
+				开始构建 →
+			</a>
+			<a
+				href="https://github.com/torchstellar-team/one-cli"
+				target="_blank"
+				rel="noreferrer noopener"
+				class="inline-flex items-center gap-2 rounded-full border border-stone-700 px-5 py-2.5 text-sm font-medium text-stone-200 transition-colors hover:border-stone-500 hover:text-white"
+			>
+				GitHub
+			</a>
+		</div>
+	</section>
+</main>

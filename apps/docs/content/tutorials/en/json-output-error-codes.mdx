@@ -1,0 +1,159 @@
+---
+title: Output & error codes
+description: Use -o json everywhere. Read error.code, never parse error.message. The pattern for scripts and the rule for agents.
+---
+
+Every One CLI command supports `-o json` — and when stdout isn't a TTY (piped or redirected), it defaults to JSON automatically. This page covers the output schema, the error envelope, the error-code dispatch pattern, and why this matters for scripts and AI agents.
+
+## 1. The output schema is auto
+
+```bash
+# Human-readable in a terminal:
+one templates list
+
+# JSON when piped (or with explicit -o json):
+one templates list -o json | jq
+one templates list | tee templates.json   # piped → JSON
+```
+
+The auto-detection is based on whether stdout is a TTY. Explicit:
+
+```bash
+one templates list -o json       # force JSON
+one templates list -o yaml       # force YAML
+one templates list -o text       # force human-readable
+```
+
+## 2. Successful output
+
+Every command emits a shape with a `schema` field for forward compatibility:
+
+```json
+{
+  "schema": "one-cli/templates/v1",
+  "templates": [
+    {
+      "id": "nestjs-api",
+      "name": "NestJS API",
+      "toolchain": "node",
+      "category": "backend",
+      "deploy": { "default": "kustomize", "compat": [] }
+    }
+  ]
+}
+```
+
+The `schema` URL is stable for a major version; the data inside the matching payload key (`templates` here, `projects` for `one add`, `profiles` for `one configure list`) is the part you process.
+
+## 3. The error envelope
+
+All errors share one shape:
+
+```json
+{
+  "schema": "one-cli/error/v1",
+  "error": {
+    "code": "TEMPLATE_NOT_FOUND",
+    "message": "Template 'nestjs-api-typescript' not found.",
+    "context": {
+      "requested": "nestjs-api-typescript",
+      "available_templates": ["nestjs-api", "go-api", "nextjs-app", "..."]
+    }
+  }
+}
+```
+
+Three rules:
+
+1. **Dispatch on `error.code`**, never on `error.message`. The message is human-readable and changes with the user's `locale` (zh-CN vs en-US).
+2. **Read `error.context`** for structured details. Each error code documents its context fields in [error codes](/en/docs/error-codes/).
+3. **Exit code is non-zero** for any error. Don't read JSON without checking the exit code first.
+
+## 4. The dispatch pattern in shell
+
+```bash
+output=$(one add nestjs-api --name api -o json --yes 2>&1)
+status=$?
+
+if [ $status -ne 0 ]; then
+  code=$(echo "$output" | jq -r '.error.code')
+  case "$code" in
+    TARGET_EXISTS)
+      echo "Project already exists — picking next available name"
+      ;;
+    TEMPLATE_NOT_FOUND)
+      echo "Wrong template id; available:"
+      echo "$output" | jq -r '.error.context.available_templates[]'
+      ;;
+    NOT_ONE_PROJECT)
+      echo "Not in a One CLI workspace. cd to the workspace root."
+      ;;
+    *)
+      echo "Unhandled: $code"
+      echo "$output" | jq
+      exit 1
+      ;;
+  esac
+fi
+```
+
+This pattern is robust against:
+
+- i18n changes to the message text
+- Future codes added without breaking your script (the `*` arm catches them)
+- One CLI version upgrades (`schema` field lets you check compatibility if needed)
+
+## 5. The same pattern for an agent
+
+The bundled `one-cli` skill (see [Install skill to agent](/en/tutorials/skills-install/)) instructs agents to follow exactly this dispatch. From the skill:
+
+> When you call `one`, always pass `-o json`. Read `error.code`. Never parse `error.message` — it changes with the user's locale.
+
+In practice, an agent doing "add a NestJS API called user-api" will:
+
+1. Run `one add nestjs-api --name user-api -o json --yes`.
+2. If exit code is 0, parse the success envelope and confirm.
+3. If `error.code == "TARGET_EXISTS"`, try `user-api-2` or ask the user.
+4. If `error.code == "NOT_ONE_PROJECT"`, run `one create` first or ask the user.
+
+The skill ships these recovery patterns as playbooks — agents don't have to reinvent them.
+
+## 6. Key error code groups
+
+There are ~150 codes; you rarely handle all of them in a script. The most common groups:
+
+| Group | Examples | Typical handler |
+|---|---|---|
+| Workspace state | `NOT_ONE_PROJECT`, `WORKSPACE_NESTED_FORBIDDEN`, `MANIFEST_MISSING_OR_EMPTY` | "Run from the workspace root" or "Run `one create` first" |
+| Templates | `TEMPLATE_NOT_FOUND`, `TEMPLATE_REQUIRED`, `INVALID_NAME` | List available templates from `error.context` |
+| Backends | `BACKEND_NOT_ENABLED`, `PROFILE_NOT_FOUND`, `DOMAIN_INVALID`, `BACKEND_ID_UNKNOWN` | Direct user to `one configure list <pair>` |
+| Infisical | `INFISICAL_NOT_CONFIGURED`, `INFISICAL_AUTH_MISSING`, `INFISICAL_AUTH_FAILED`, `ENV_PULL_CONFLICT` | Re-auth or rerun with `--force` |
+| Container / deploy | `IMAGE_TAG_NOT_FOUND`, `REGISTRY_CREDENTIAL_MISSING`, `BUILD_VERSION_UNRESOLVED`, `VERCEL_DEPLOY_FAILED` | Build/push before deploy; fix profile |
+| Serve | `SERVE_PORT_BUSY`, `SERVE_BIND_FORBIDDEN`, `SERVE_TOKEN_INVALID` | Change flag, restart |
+
+Full table with all 155+ codes and what each `context` contains: [error codes reference](/en/docs/error-codes/).
+
+## 7. JSON output as a CI contract
+
+Pinning `-o json` in CI means your pipeline behavior depends on stable code names, not on prose. Tag your One CLI version in CI to prevent silent breakage:
+
+{/* verify-cli:ignore-start */}
+```yaml
+- run: curl -fsSL https://one.torchstellar.com/install.sh | bash -s -- --version v0.1.0
+- run: one -o json add nestjs-api --name api --yes
+```
+{/* verify-cli:ignore-end */}
+
+## Common gotchas
+
+| Symptom | Cause | Fix |
+|---|---|---|
+| Got a human-readable table instead of JSON in CI | Stdout is a TTY (rare but possible in CI runners) | Pass `-o json` explicitly |
+| `jq` fails on the first line | A non-CLI tool wrote a banner before One CLI output | Run `one ... 2>/dev/null` to strip stderr |
+| Different `error.message` across machines | User locales differ | That's expected; dispatch on `code` |
+| `schema` field missing | Major version mismatch | Upgrade One CLI to the current major version |
+
+## Next
+
+- Browse every error code → [Error codes reference](/en/docs/error-codes/)
+- Install the skill so an agent does this dispatch for you → [Install skill to agent](/en/tutorials/skills-install/)

@@ -1,0 +1,77 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  font-size: 100px;
+
+  --foreground-rgb: 0, 0, 0;
+  --background-start-rgb: 214, 219, 220;
+  --background-end-rgb: 255, 255, 255;
+
+  --btn-bgcolor: #9e61ff;
+  --btn-bgcolor2: #619bff;
+  --btn-bgcolor3: #6c52ee;
+
+  --background-body: #00031c;
+
+  --font2: Metropolitano;
+
+  --brand1-1: #e8f3ff;
+  --brand1-2: #bedaff;
+  --brand1-3: #94bfff;
+  --brand1-4: #6aa1ff;
+  --brand1-5: #4080ff;
+  --brand1-6: #165dff;
+  --brand1-7: #0e42d2;
+
+  --brand2-1: #e8f3ff1a;
+  --brand2-2: #bedaff1a;
+  --brand2-3: #94bfff1a;
+  --brand2-4: #6aa1ff1a;
+  --brand2-5: #4080ff1a;
+  --brand2-6: #165dff1a;
+  --brand2-7: #0e42d21a;
+
+  --gray-1: #fff;
+  --gray-2: #f7f8fa;
+  --gray-3: #f2f3f7;
+  --gray-4: #ebecf0;
+  --gray-5: #e5e6ec;
+  --gray-6: #dadbe1;
+  --gray-7: #d0d1d9;
+  --gray-8: #bbbac4;
+  --gray-9: #868b9c;
+  --gray-10: #4e5469;
+  --gray-11: #13141d;
+
+  --info-1: #ebf3ff;
+  --info-2: #bedaff;
+  --info-3: #94bfff;
+  --info-5: #4080ff;
+  --info-6: #165dff;
+  --info-7: #0e42d2;
+
+  --success-1: #e8ffea;
+  --success-2: #aff0b5;
+  --success-3: #7be188;
+  --success-5: #23c343;
+  --success-6: #00b42a;
+  --success-7: #009a29;
+
+  --warning-1: #fff7e8;
+  --warning-2: #ffe4ba;
+  --warning-3: #ffcf8b;
+  --warning-5: #ff9a2e;
+  --warning-6: #ff7d00;
+  --warning-7: #d25f00;
+
+  --error-1: #ffece8;
+  --error-2: #ffece8;
+  --error-3: #fbaca3;
+  --error-5: #f76560;
+  --error-6: #f53f3f;
+  --error-7: #cb2634;
+
+  --mask-1: #00000099;
+}

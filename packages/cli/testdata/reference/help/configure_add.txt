@@ -1,0 +1,44 @@
+新增或更新一个 profile。每个 (domain, backend) 一棵 sub-subcommand,
+分别拥有该 backend 的专属 flag(--site-url / --endpoint / --kubeconfig / ...)。
+
+无参形式(TTY): 进入交互式向导,先选 (domain, backend) 再走对应流程。
+非交互模式(CI / -y): 必须指定 pair 和 --profile,如:
+
+  one configure add env/infisical --profile work --client-id $CID --client-secret $CSEC --use
+  one configure add deploy/aliyun-oss --profile web-prod \
+      --endpoint https://oss-<region>.aliyuncs.com \
+      --region <region> --access-key-id $AK --access-key-secret $SK --use
+  one configure add container/docker --profile prod \
+      --registry <your-registry-host> --namespace <your-namespace> \
+      --username $REGISTRY_USER --password $REGISTRY_TOKEN --use
+
+行为:
+  - 第一次配某个 name → status=completed,自动设为 default
+  - 同名再跑一次     → status=updated(覆盖凭据)
+  - 加 --use         → 显式切到这个 profile
+
+Usage:
+  one configure add [pair] [--profile <name>] [flags]
+  one configure add [command]
+
+Available Commands:
+  container/acr       新增 / 更新一个 container/acr profile
+  container/docker    新增 / 更新一个 container/docker profile
+  container/dockerhub 新增 / 更新一个 container/dockerhub profile
+  container/ghcr      新增 / 更新一个 container/ghcr profile
+  deploy/aliyun-oss   新增 / 更新一个 deploy/aliyun-oss profile
+  deploy/aws-s3       新增 / 更新一个 deploy/aws-s3 profile
+  deploy/cloudflare   新增 / 更新一个 deploy/cloudflare profile
+  deploy/edgeone      新增 / 更新一个 deploy/edgeone profile
+  deploy/kustomize    新增 / 更新一个 deploy/kustomize profile
+  deploy/minio        新增 / 更新一个 deploy/minio profile
+  deploy/r2           新增 / 更新一个 deploy/r2 profile
+  deploy/rustfs       新增 / 更新一个 deploy/rustfs profile
+  deploy/tencent-cos  新增 / 更新一个 deploy/tencent-cos profile
+  deploy/vercel       新增 / 更新一个 deploy/vercel profile
+  env/infisical       新增 / 更新一个 env/infisical profile
+
+Global Flags:
+  -o, --output string   输出格式: json | yaml | text（默认 auto：TTY 时人类格式，pipe 时 JSON）
+
+Use "one configure add [command] --help" for more information about a command.

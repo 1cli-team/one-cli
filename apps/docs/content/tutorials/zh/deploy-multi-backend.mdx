@@ -1,0 +1,139 @@
+---
+title: 服务部署
+description: 10 个 deploy backend 对比、混合后端工作区、多环境树、per-project flag、profile 钉死、dry-run。
+---
+
+`one deploy` 一次性把工作区每个项目按自己声明的 backend 推上线。一个 Next.js 前端走 Vercel、NestJS API 走 k8s 的工作区，跑一次 `one deploy` 两个都上。
+
+这一章接[基础 deploy](/zh/tutorials/deploy/)（那里只把一个项目推到一个目标），讲剩下的菜单。
+
+## 10 个 deploy backend 概览
+
+| Backend | 工作负载 | profile 字段 | 备注 |
+|---|---|---|---|
+| `kustomize` | k8s manifest | kubeconfig path、context、namespace | 消费 `one container push` 的镜像 |
+| `aws-s3` | 静态站 | region、AK/SK、endpoint 可选 | 同步构建产物到 bucket |
+| `aliyun-oss` | 静态站 | endpoint、region、AK/SK | S3 协议 |
+| `tencent-cos` | 静态站 | endpoint、region、AK/SK | S3 协议 |
+| `minio` | 静态站 | endpoint、AK/SK | 自托管，path-style |
+| `rustfs` | 静态站 | endpoint、AK/SK | 自托管，path-style |
+| `r2` | 静态站 | endpoint、AK/SK | Cloudflare R2，region=auto |
+| `vercel` | serverless / SSR | token、teamSlug | 第一次 deploy 自动建项目 |
+| `cloudflare` | Pages / Workers | accountId、apiToken | One CLI 直调 Cloudflare API |
+| `edgeone` | 腾讯 EdgeOne Pages | secret + 项目信息 | 国内网络优化 |
+
+模板会钉一个合理默认，要切换就改 `projects[*].domains.deploy.kind`。
+
+## 单项目部署 / 全工作区部署
+
+```bash
+# 所有含 deploy 块的项目（混合 backend 也行）：
+one deploy
+
+# 过滤单项目：
+one deploy -p api
+one deploy -p apps/web        # 按 relativeDir
+```
+
+不传 `-p` 时按 manifest 顺序部署。**遇错停**（目前没有 continue-on-error）；改完出错的项目重跑即可。
+
+## 选环境
+
+```bash
+one deploy --env staging
+```
+
+`--env` 一个 flag 干两件事：
+
+1. 告诉 `one env` 注入哪个环境的环境变量（适用时）
+2. env-aware backend（kustomize / vercel / cloudflare / edgeone）选目标环境
+
+按 backend 行为：
+
+- **kustomize**：`--env staging` → 应用 `<project>/k8s/overlays/staging/`。模板会生成这些 overlay。
+- **vercel**：`--env staging` → Vercel preview 环境；`--env prod` → Production 环境。
+- **cloudflare** / **edgeone**：env 名映射到平台的环境标签。
+- **S3 家族**（aws / aliyun / tencent / minio / rustfs / r2）：无环境概念，`--env` 只影响构建时注入的环境变量。
+
+env 默认解析：`projects[*].domains.deploy.<provider>.env` → `manifest.environments.default` → `prod`。
+
+## Per-project 钉死
+
+要让 `one deploy` 永远对某个项目用某个 profile / 环境，钉进 manifest：
+
+```json
+{
+  "name": "api",
+  "domains": {
+    "deploy": {
+      "kind": "kustomize",
+      "profile": "prod-cluster",
+      "config": {
+        "kustomizationPath": "k8s/overlays/prod"
+      }
+    }
+  }
+}
+```
+
+钉死是**可复现部署**的关键 — 只要 profile 名字在那台机器存在，任何机器跑 `one deploy -p api` 都打到同一个集群。
+
+## 混合 backend 工作区示例
+
+```text
+my-workspace/
+├── apps/
+│   └── web/         # nextjs-app，deploy 到 vercel
+├── services/
+│   └── api/         # nestjs-api，deploy 到 kustomize
+└── docs/            # starlight-docs，deploy 到 aws-s3
+```
+
+```bash
+one deploy --env prod
+```
+
+每个项目分别派发：
+
+- `apps/web` → `deploy/vercel` profile `prod` → Vercel API
+- `services/api` → 镜像已由 `one container push` 推过 → `kustomize build | kubectl apply` 到 prod 集群
+- `docs` → `aws-s3` profile `prod` → `aws s3 sync` 到 bucket
+
+一条命令，三种部署，按顺序。
+
+## Dry-run
+
+```bash
+one deploy --dry-run -o json | jq
+```
+
+打印每个项目的计划动作 — 镜像 tag、目标环境、解析出的 profile、实际命令行 — 不执行任何东西。每次 prod 部署前跑一次，能在错 profile 变事故前抓住。
+
+## 运行时覆盖 profile / env
+
+```bash
+one deploy -p api --env prod --profile prod-cluster --build-version v1.4.2
+```
+
+每个 flag 只对这次调用生效：
+
+- `--profile <name>` — 所有需要 profile 的项目都用这个（backend 匹配的话）
+- `--env <name>` — 应用到每个 env-aware backend
+- `--build-version` — 只 kustomize 消费
+
+## 常见错误
+
+| 错误码 | 现象 | 修法 |
+|---|---|---|
+| `BACKEND_NOT_ENABLED` | 项目没 `domains.deploy` | 加 `deploy` 块或别用 `-p <project>` |
+| `PROFILE_NOT_FOUND` | `--profile <name>` 在对应 `(deploy/<backend>)` 下不存在 | `one configure list deploy/<backend>` |
+| `IMAGE_TAG_NOT_FOUND` | kustomize deploy 找不到镜像 | 传 `--build-version`，或先 `one container build && one container push` |
+| `KUSTOMIZE_OVERLAY_MISSING` | `--env <name>` 但 `k8s/overlays/<name>/` 不存在 | 建 overlay 或用已存在的 |
+| `VERCEL_DEPLOY_FAILED` | Vercel API 拒绝部署 | 看 JSON 输出里 `context.vercel_error` |
+| `S3_BUCKET_NOT_FOUND` / `S3_ACCESS_DENIED` | bucket 名错或凭据权限不够 | 核对 bucket 和 profile 的 AK/SK |
+
+完整码表：[错误码大全](/zh/docs/error-codes/)。
+
+## 下一步
+
+- 脚本化部署用的 JSON 输出 → [JSON 输出与错误码](/zh/tutorials/json-output-error-codes/)

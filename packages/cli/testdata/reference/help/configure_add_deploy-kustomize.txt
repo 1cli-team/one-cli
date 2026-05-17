@@ -1,0 +1,27 @@
+新增或更新 deploy/kustomize profile。
+
+profile 只决定要用 kubeconfig 里的哪个 context；k8s 认证还是走本地
+~/.kube/config，或 --kubeconfig 指定的文件。kustomization overlay path 是 workspace 级
+字段，写在 manifest.deploy；namespace 默认用 project.id，只有需要覆盖时才写 manifest.deploy.namespace。
+
+示例：
+  # 交互（推荐）
+  one configure add deploy/kustomize --profile prod-k8s --use
+
+  # 非交互（CI / 脚本）
+  one configure add deploy/kustomize --profile prod-k8s \
+      --kubeconfig ~/.kube/config \
+      --kubeconfig-context prod \
+      --use
+
+Usage:
+  one configure add deploy/kustomize [--profile <name>] [flags]
+
+Flags:
+      --kubeconfig string           kubeconfig 文件路径（默认 ~/.kube/config）
+      --kubeconfig-context string   kubeconfig context name
+      --profile string              profile 名（非交互模式必传；交互模式留空则 prompt）
+      --use                         把此 profile 设为 default
+
+Global Flags:
+  -o, --output string   输出格式: json | yaml | text（默认 auto：TTY 时人类格式，pipe 时 JSON）

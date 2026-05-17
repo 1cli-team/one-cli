@@ -1,0 +1,91 @@
+---
+title: One-click workspace
+description: Pick a template and deploy target on the templates page, then copy the generated one create command into your terminal — no config files to touch.
+---
+
+This is the page you open before you create a workspace. It does two things:
+
+1. Shows the **preset templates** One CLI ships with — what each one is, what stack it uses, where it can deploy.
+2. Lets you **build a custom command** in the modal: pick any combination of templates + deploy targets and get a single ready-to-paste `one create` command.
+
+You don't run anything in this tutorial. Picking a template here, then running the command in your terminal, is the [next chapter](/en/tutorials/first-workspace/).
+
+Open [https://one.torchstellar.com/en/templates/](/en/templates/).
+
+## 1. Browse preset templates
+
+The page lists all 10 starter templates as cards. Each card shows:
+
+| Field | Meaning |
+|---|---|
+| **Name + icon** | The template id you'd pass to `one add` or `one create` |
+| **Toolchain** | `node` or `go` — drives package manager, lockfile, build tooling |
+| **Kind** | `frontend` / `backend` / `library` — used by the kind filter at the top |
+| **Default deploy** | The backend the project ships with out of the box (kustomize / aws-s3 / vercel / cloudflare / edgeone / none) |
+| **Compatible deploys** | Other backends you can swap to without touching code (only shown when the template has alternates) |
+
+Use the kind filter (`All / Frontend / Backend / Library`) at the top to narrow the list. A simple decision tree:
+
+- **Service / API** → `nestjs-api` (Node) or `go-api` (Go)
+- **Marketing / docs site** → `astro-site` or `starlight-docs`
+- **App with auth / SSR** → `nextjs-app`
+- **SPA dashboard** → `react-spa`
+- **Desktop app** → `electron-app`
+- **Mobile app** → `expo-mobile`
+- **Reusable code** → `ts-library` (Node) or `go-lib` (Go)
+
+Click any card to open the template detail page (`/en/templates/<id>/`). You'll see longer prose, when to pick it, what comes scaffolded, and example projects built on it.
+
+## 2. Build a custom command
+
+The right-hand side of the page (or the floating button on mobile) opens **Build your own**. This is what most users actually want.
+
+The modal has three columns / sections:
+
+### Left — pick templates
+
+The same 10 cards as on the page, filtered by kind. Tap **+ Add** on any card.
+
+If a template has multiple deploy backends (e.g. `astro-site` can ship as aws-s3 / aliyun-oss / tencent-cos / minio / rustfs / r2 / vercel / cloudflare / edgeone), a follow-up "choose a deploy target" modal asks which one. Pick the one your team uses; if you're unsure, pick the template's default.
+
+You can add the same template type more than once — useful for monorepos with multiple frontends or services.
+
+### Right — review your selection
+
+Each picked template appears as a row showing:
+
+- Generated project name (defaults to the template id; edit inline if you want)
+- Chosen deploy target
+- A **− Remove** button
+
+Above the list:
+
+- **Workspace name** — becomes the directory name and the workspace id in `one.manifest.json`. Default is `my-workspace`.
+- **Env provider** — `dotenv` (local `.env` files) or `infisical` (managed env vars). Pick `dotenv` if you're not sure; you can switch later.
+
+### Bottom — the generated command
+
+As you add / remove templates, the page renders a single `one create` command in real time. It looks like:
+
+```bash
+one create my-workspace \
+  --env-provider dotenv \
+  --add nestjs-api:api \
+  --add nextjs-app:web \
+  --add ts-library:shared
+```
+
+Hit **Copy** to put it on your clipboard. That's the entire output of this page — a deterministic command you can paste, version, share, or feed to an agent.
+
+## 3. What this page is *not*
+
+A few things this page intentionally doesn't do, so you know where to look:
+
+- It doesn't run the command for you. Running it is [Create a workspace](/en/tutorials/first-workspace/).
+- It doesn't replace `one templates list`. The CLI command lives in the [CLI reference](/en/docs/templates-cmd/) — same registry data, terminal output.
+- It doesn't publish to a registry. Custom templates as a registry concept (your own organization's templates living alongside the built-ins) is a separate feature; today this page composes from built-ins only.
+
+## Next
+
+- Run the command you just built → [Create a workspace](/en/tutorials/first-workspace/)
+- Look up template metadata in JSON form → [`one templates` reference](/en/docs/templates-cmd/)

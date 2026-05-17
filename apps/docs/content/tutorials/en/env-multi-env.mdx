@@ -1,0 +1,156 @@
+---
+title: Multi-env vars
+description: Layered .env files, dev/staging/prod switching, per-project path overrides, and Infisical inheritance — the parts that don't fit on the basics page.
+---
+
+This page picks up where [basics: configure env vars](/en/tutorials/env-vars/) ended. Prerequisites: you've already set a value with `one env set` and you understand the difference between dotenv and Infisical backends. Here we cover layered overrides, multi-environment trees, and per-project paths.
+
+## dotenv: layered files per environment
+
+For each project, four files are loaded in order. Later files override earlier ones:
+
+```
+<project>/.env
+<project>/.env.<env>
+<project>/.env.local
+<project>/.env.<env>.local
+```
+
+Concrete example for `services/api/` with `--env staging`:
+
+| File | Should commit? | Contents typically |
+|---|---|---|
+| `services/api/.env` | yes | Defaults checked in for all environments — e.g. `LOG_LEVEL=info`, non-sensitive flags |
+| `services/api/.env.staging` | yes | Staging-specific values that aren't secret — e.g. feature flag overrides |
+| `services/api/.env.local` | **no** (gitignored) | Developer-machine overrides — e.g. local DB URL |
+| `services/api/.env.staging.local` | **no** (gitignored) | Local override scoped to staging |
+
+`one env set KEY=VALUE -p api --env staging` writes to `services/api/.env.staging`. To write to a `.local` file, edit it directly.
+
+`one env get KEY -p api --env staging` reads the resolved value after all four layers.
+
+`one env list -p api --env staging` shows the resolved set with origin file for each key, when run with `-o json`.
+
+## Multi-environment switching
+
+The list of environments lives in `one.manifest.json#environments.names`:
+
+```json
+{
+  "environments": {
+    "names": ["dev", "staging", "prod"],
+    "default": "dev"
+  }
+}
+```
+
+Add a new environment — say `qa` — by adding it to the array. Commands then accept it:
+
+```bash
+one env set DATABASE_URL=... --env qa -p api
+one env pull --env qa            # Infisical
+one run -p api --env qa -- npm run e2e
+```
+
+Environment names are arbitrary strings; the manifest is the single source of truth.
+
+## Infisical: folder tree mirrors workspace layout
+
+In Infisical, every project gets its own folder, path = `relativeDir`. Environment is orthogonal (dev / staging / prod live as separate environment branches under the same folder tree):
+
+```
+Infisical project
+├── env=dev
+│   ├── /                       (workspace-root folder)
+│   ├── /services/api/
+│   └── /apps/web/
+├── env=staging
+└── env=prod
+```
+
+Inheritance rules (Layer 1):
+
+- Root folder keys are inherited by every project.
+- Project folders don't see each other's keys.
+
+So `apps/web` never gets `apps/api/DATABASE_URL`, even at the same environment.
+
+## Per-project path override
+
+Default path = project's `relativeDir`. A project can override under `domains.env`:
+
+```json
+{
+  "name": "charge",
+  "relativeDir": "services/charge",
+  "domains": {
+    "env": {
+      "path": "/teams/payments/services/charge",
+      "inherits": true,
+      "keys": ["DATABASE_URL", "STRIPE_SECRET"]
+    }
+  }
+}
+```
+
+| Field | Effect |
+|---|---|
+| `path` | Override the inferred Infisical folder path |
+| `inherits` | Default `true` — inherit root folder keys. Set `false` for total isolation. |
+| `keys` | Optional allowlist — only these keys land in this project's `.env`, even if the folder has more |
+| `disabled` | If `true`, `one env pull` skips this project entirely |
+
+## CI integration
+
+For CI, set the Universal Auth credentials as repository secrets and pull once at job start:
+
+{/* verify-cli:ignore-start */}
+```yaml
+env:
+  INFISICAL_UNIVERSAL_AUTH_CLIENT_ID:     ${{ secrets.INFISICAL_CLIENT_ID }}
+  INFISICAL_UNIVERSAL_AUTH_CLIENT_SECRET: ${{ secrets.INFISICAL_CLIENT_SECRET }}
+steps:
+  - uses: actions/checkout@v4
+  - run: curl -fsSL https://one.torchstellar.com/install.sh | bash
+  - run: one env pull --env staging
+  - run: pnpm install && pnpm test
+```
+{/* verify-cli:ignore-end */}
+
+The action takes One CLI's env vars rather than profiles — no `~/.config/one/credentials.json` to manage in CI.
+
+## Conflict protection on `pull`
+
+```bash
+one env pull --env dev
+# ENV_PULL_CONFLICT if any local .env differs from Infisical
+```
+
+Comparison is **semantic** — parsed dotenv records, not byte diff. Quote-style or trailing-newline differences won't false-positive.
+
+To overwrite intentionally:
+
+```bash
+one env pull --env dev --force
+```
+
+To preview without writing:
+
+```bash
+one env pull --env dev --dry-run
+```
+
+## Common errors
+
+| Code | Symptom | Fix |
+|---|---|---|
+| `ENV_UNKNOWN_ENVIRONMENT` | `--env qa` but `qa` isn't in `manifest.environments.names` | Add it to the manifest |
+| `ENV_PULL_CONFLICT` | Local `.env` differs from Infisical | Inspect; rerun with `--force` if intentional |
+| `INFISICAL_PROJECT_CREATE_FORBIDDEN` | Machine identity lacks permission to auto-create the Infisical project | Grant admin role, or create the project manually and pin `projectId` |
+| `ENV_KEY_NOT_FOUND` | `one env get` returned nothing | Wrong project / env / key spelling — check with `one env list` |
+
+Full table: [error codes](/en/docs/error-codes/).
+
+## Next
+
+- The `one env` command reference → [Env vars reference](/en/docs/env-vars/)

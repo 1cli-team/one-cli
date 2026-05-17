@@ -1,0 +1,101 @@
+export enum ErrorCode {
+  SUCCESS = 0,
+
+  // 通用错误 (100000-100999)
+  INTERNAL_SERVER_ERROR = 100000,
+  INVALID_PARAMS = 100001,
+  UNAUTHORIZED = 100002,
+  FORBIDDEN = 100003,
+  NOT_FOUND = 100004,
+  METHOD_NOT_ALLOWED = 100005,
+  RATE_LIMITED = 100006,
+
+  // 认证授权相关错误 (200000-200999)
+  AUTH_TOKEN_MISSING = 200000,
+  AUTH_TOKEN_INVALID = 200001,
+  AUTH_TOKEN_EXPIRED = 200002,
+  AUTH_REFRESH_TOKEN_INVALID = 200003,
+  AUTH_LOGIN_FAILED = 200004,
+  AUTH_PASSWORD_INCORRECT = 200005,
+  AUTH_ACCOUNT_DISABLED = 200006,
+  AUTH_ACCOUNT_LOCKED = 200007,
+
+  // 用户相关错误 (300000-300999)
+  USER_NOT_FOUND = 300000,
+  USER_ALREADY_EXISTS = 300001,
+  USER_EMAIL_ALREADY_EXISTS = 300002,
+  USER_NAME_ALREADY_EXISTS = 300003,
+  USER_PROFILE_UPDATE_FAILED = 300004,
+  USER_PASSWORD_UPDATE_FAILED = 300005,
+  USER_PERMISSION_DENIED = 300006,
+
+  // 业务逻辑错误 (400000-499999)
+  BUSINESS_RULE_VIOLATION = 400000,
+  RESOURCE_CONFLICT = 400001,
+  OPERATION_NOT_ALLOWED = 400002,
+  QUOTA_EXCEEDED = 400003,
+
+  // 数据库相关错误 (500000-500999)
+  DATABASE_CONNECTION_ERROR = 500000,
+  DATABASE_QUERY_FAILED = 500001,
+  DATABASE_CONSTRAINT_VIOLATION = 500002,
+  DATABASE_TIMEOUT = 500003,
+
+  // 外部服务错误 (600000-600999)
+  EXTERNAL_SERVICE_UNAVAILABLE = 600000,
+  EXTERNAL_SERVICE_TIMEOUT = 600001,
+  EXTERNAL_SERVICE_ERROR = 600002,
+}
+
+export const ErrorMessages: Record<ErrorCode, string> = {
+  [ErrorCode.SUCCESS]: "操作成功",
+
+  // 通用错误
+  [ErrorCode.INTERNAL_SERVER_ERROR]: "服务器内部错误",
+  [ErrorCode.INVALID_PARAMS]: "参数无效",
+  [ErrorCode.UNAUTHORIZED]: "未授权访问",
+  [ErrorCode.FORBIDDEN]: "禁止访问",
+  [ErrorCode.NOT_FOUND]: "资源未找到",
+  [ErrorCode.METHOD_NOT_ALLOWED]: "方法不被允许",
+  [ErrorCode.RATE_LIMITED]: "请求频率限制",
+
+  // 认证授权相关错误
+  [ErrorCode.AUTH_TOKEN_MISSING]: "访问令牌缺失",
+  [ErrorCode.AUTH_TOKEN_INVALID]: "访问令牌无效",
+  [ErrorCode.AUTH_TOKEN_EXPIRED]: "访问令牌已过期",
+  [ErrorCode.AUTH_REFRESH_TOKEN_INVALID]: "刷新令牌无效",
+  [ErrorCode.AUTH_LOGIN_FAILED]: "登录失败",
+  [ErrorCode.AUTH_PASSWORD_INCORRECT]: "密码错误",
+  [ErrorCode.AUTH_ACCOUNT_DISABLED]: "账户已禁用",
+  [ErrorCode.AUTH_ACCOUNT_LOCKED]: "账户已锁定",
+
+  // 用户相关错误
+  [ErrorCode.USER_NOT_FOUND]: "用户不存在",
+  [ErrorCode.USER_ALREADY_EXISTS]: "用户已存在",
+  [ErrorCode.USER_EMAIL_ALREADY_EXISTS]: "邮箱已被使用",
+  [ErrorCode.USER_NAME_ALREADY_EXISTS]: "用户名已被使用",
+  [ErrorCode.USER_PROFILE_UPDATE_FAILED]: "用户资料更新失败",
+  [ErrorCode.USER_PASSWORD_UPDATE_FAILED]: "密码更新失败",
+  [ErrorCode.USER_PERMISSION_DENIED]: "用户权限不足",
+
+  // 业务逻辑错误
+  [ErrorCode.BUSINESS_RULE_VIOLATION]: "业务规则违反",
+  [ErrorCode.RESOURCE_CONFLICT]: "资源冲突",
+  [ErrorCode.OPERATION_NOT_ALLOWED]: "操作不被允许",
+  [ErrorCode.QUOTA_EXCEEDED]: "配额超限",
+
+  // 数据库相关错误
+  [ErrorCode.DATABASE_CONNECTION_ERROR]: "数据库连接错误",
+  [ErrorCode.DATABASE_QUERY_FAILED]: "数据库查询失败",
+  [ErrorCode.DATABASE_CONSTRAINT_VIOLATION]: "数据库约束违反",
+  [ErrorCode.DATABASE_TIMEOUT]: "数据库操作超时",
+
+  // 外部服务错误
+  [ErrorCode.EXTERNAL_SERVICE_UNAVAILABLE]: "外部服务不可用",
+  [ErrorCode.EXTERNAL_SERVICE_TIMEOUT]: "外部服务超时",
+  [ErrorCode.EXTERNAL_SERVICE_ERROR]: "外部服务错误",
+};
+
+export function getErrorMessage(code: ErrorCode): string {
+  return ErrorMessages[code] || ErrorMessages[ErrorCode.INTERNAL_SERVER_ERROR];
+}

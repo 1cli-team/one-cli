@@ -1,0 +1,159 @@
+---
+title: 输出与错误码
+description: 任何地方都用 -o json。读 error.code，不解析 error.message。这是脚本的模式，也是 agent 的硬规则。
+---
+
+每个 One CLI 命令都支持 `-o json` — stdout 不是 TTY 时（管道 / 重定向）自动切到 JSON。这一章讲输出 schema、错误包络、按错误码分流的写法，以及为什么这套对脚本和 AI agent 都重要。
+
+## 1. 输出格式自动判定
+
+```bash
+# 终端里人类格式：
+one templates list
+
+# 管道时自动 JSON（或显式 -o json）：
+one templates list -o json | jq
+one templates list | tee templates.json   # 管道 → JSON
+```
+
+自动判定看 stdout 是不是 TTY。显式控制：
+
+```bash
+one templates list -o json       # 强制 JSON
+one templates list -o yaml       # 强制 YAML
+one templates list -o text       # 强制人类格式
+```
+
+## 2. 成功输出
+
+每个命令都吐一个含 `schema` 字段的结构，便于向前兼容：
+
+```json
+{
+  "schema": "one-cli/templates/v1",
+  "templates": [
+    {
+      "id": "nestjs-api",
+      "name": "NestJS API",
+      "toolchain": "node",
+      "category": "backend",
+      "deploy": { "default": "kustomize", "compat": [] }
+    }
+  ]
+}
+```
+
+`schema` URL 在大版本内稳定；具体数据在对应 payload key 下（这里是 `templates`；`one add` 是 `projects`；`one configure list` 是 `profiles`）。
+
+## 3. 错误包络
+
+所有错误共用一个 shape：
+
+```json
+{
+  "schema": "one-cli/error/v1",
+  "error": {
+    "code": "TEMPLATE_NOT_FOUND",
+    "message": "Template 'nestjs-api-typescript' not found.",
+    "context": {
+      "requested": "nestjs-api-typescript",
+      "available_templates": ["nestjs-api", "go-api", "nextjs-app", "..."]
+    }
+  }
+}
+```
+
+三条规则：
+
+1. **按 `error.code` 分流**，**永远不要**按 `error.message` 分流。message 是给人看的，会随用户 `locale`（zh-CN vs en-US）变。
+2. **读 `error.context`** 取结构化细节。每个错误码的 context 字段都在[错误码大全](/zh/docs/error-codes/)。
+3. **退出码非零**才算错。读 JSON 前先看退出码。
+
+## 4. shell 里的分流写法
+
+```bash
+output=$(one add nestjs-api --name api -o json --yes 2>&1)
+status=$?
+
+if [ $status -ne 0 ]; then
+  code=$(echo "$output" | jq -r '.error.code')
+  case "$code" in
+    TARGET_EXISTS)
+      echo "项目已存在 — 换个名字"
+      ;;
+    TEMPLATE_NOT_FOUND)
+      echo "模板 id 错。可选："
+      echo "$output" | jq -r '.error.context.available_templates[]'
+      ;;
+    NOT_ONE_PROJECT)
+      echo "不在 One CLI 工作区里。cd 进工作区根。"
+      ;;
+    *)
+      echo "未处理：$code"
+      echo "$output" | jq
+      exit 1
+      ;;
+  esac
+fi
+```
+
+这套写法抗：
+
+- message 文本因 i18n 变动
+- 未来新增的错误码（`*` 兜底）
+- One CLI 大版本升级（`schema` 字段可做兼容检查）
+
+## 5. agent 的同款模式
+
+bundled `one-cli` skill（见[安装 Skill 到 Agent](/zh/tutorials/skills-install/)）要求 agent 严格按这套分流：
+
+> 跑 `one` 时永远加 `-o json`。读 `error.code`。**永远不要**解析 `error.message` — 它随用户 locale 变。
+
+实际中，"加一个叫 user-api 的 NestJS 服务"的 agent 会：
+
+1. 跑 `one add nestjs-api --name user-api -o json --yes`
+2. 退出码 0 → 解析成功包络、确认
+3. `error.code == "TARGET_EXISTS"` → 试 `user-api-2`，或问用户
+4. `error.code == "NOT_ONE_PROJECT"` → 先 `one create` 或问用户
+
+这些恢复模式 skill 本身就带，agent 不用重发明。
+
+## 6. 关键错误码组
+
+总共 ~150 个码，脚本里几乎不可能全处理。最常用的几组：
+
+| 组 | 例子 | 典型处理 |
+|---|---|---|
+| 工作区状态 | `NOT_ONE_PROJECT`、`WORKSPACE_NESTED_FORBIDDEN`、`MANIFEST_MISSING_OR_EMPTY` | "从工作区根跑"或"先 `one create`" |
+| 模板 | `TEMPLATE_NOT_FOUND`、`TEMPLATE_REQUIRED`、`INVALID_NAME` | 从 `error.context` 列出可用模板 |
+| Backend | `BACKEND_NOT_ENABLED`、`PROFILE_NOT_FOUND`、`DOMAIN_INVALID`、`BACKEND_ID_UNKNOWN` | 指向 `one configure list <pair>` |
+| Infisical | `INFISICAL_NOT_CONFIGURED`、`INFISICAL_AUTH_MISSING`、`INFISICAL_AUTH_FAILED`、`ENV_PULL_CONFLICT` | 重新 auth 或加 `--force` 重跑 |
+| Container / deploy | `IMAGE_TAG_NOT_FOUND`、`REGISTRY_CREDENTIAL_MISSING`、`BUILD_VERSION_UNRESOLVED`、`VERCEL_DEPLOY_FAILED` | deploy 前先 build/push；修 profile |
+| Serve | `SERVE_PORT_BUSY`、`SERVE_BIND_FORBIDDEN`、`SERVE_TOKEN_INVALID` | 改 flag、重启 |
+
+全部 155+ 码 + 每个的 `context` 字段：[错误码大全](/zh/docs/error-codes/)。
+
+## 7. JSON 输出作为 CI 契约
+
+CI 里钉死 `-o json` 等于把流水线行为绑定到稳定的码名上，不绑文案。同时钉 One CLI 版本防 silent breakage：
+
+{/* verify-cli:ignore-start */}
+```yaml
+- run: curl -fsSL https://one.torchstellar.com/install.sh | bash -s -- --version v0.1.0
+- run: one -o json add nestjs-api --name api --yes
+```
+{/* verify-cli:ignore-end */}
+
+## 常见踩坑
+
+| 现象 | 原因 | 修法 |
+|---|---|---|
+| CI 里拿到人类格式的表格而非 JSON | stdout 是 TTY（CI runner 偶尔会） | 显式传 `-o json` |
+| `jq` 第一行就挂 | 非 CLI 的工具在前面打了 banner | 加 `2>/dev/null` 屏蔽 stderr |
+| 不同机器的 `error.message` 不一样 | 用户 locale 不同 | 正常，按 `code` 分流即可 |
+| `schema` 字段缺失 | 大版本不匹配 | 升级 One CLI 到当前大版本 |
+
+## 下一步
+
+- 浏览所有错误码 → [错误码参考](/zh/docs/error-codes/)
+- 装 skill 让 agent 自动按这套分流 → [安装 Skill 到 Agent](/zh/tutorials/skills-install/)

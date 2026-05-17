@@ -1,0 +1,15 @@
+{
+  "error": {
+    "code": "PROFILE_BACKEND_INVALID",
+    "context": {
+      "failed_code": "v",
+      "failed_segment": "femv",
+      "preset_id": "1.femv",
+      "reason": "template expo-mobile does not support deploy backend \"vercel\"",
+      "template_id": "expo-mobile"
+    },
+    "message": "\u003cvolatile\u003e",
+    "remediation": []
+  },
+  "schema": "one-cli/error/v1"
+}

@@ -1,0 +1,18 @@
+查看或设置 one CLI 的显示语言。
+
+无参形式：打印当前生效的语言（preferences.json 中存储的值 + 实际解析结果）。
+带参形式：把 preferences.json 中的 locale 字段写为指定值。
+
+可选值：
+  auto    跟随机器语言（解析 LC_ALL / LC_MESSAGES / LANG，识别 zh* → zh-CN，其它 → en-US）
+  zh-CN   强制中文
+  en-US   强制英文
+
+dashboard（`one serve` 起的本地 UI）共享这份 preferences.json，
+所以在 dashboard 里切换语言也会写到这里；反之亦然。
+
+Usage:
+  one configure locale [auto|zh-CN|en-US] [flags]
+
+Global Flags:
+  -o, --output string   输出格式: json | yaml | text（默认 auto：TTY 时人类格式，pipe 时 JSON）

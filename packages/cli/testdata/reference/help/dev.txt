@@ -1,0 +1,13 @@
+本命令把工作区里所有声明了 dev 命令的项目并行启动。命令读自
+one.manifest.json 的 projects[].domains.dev.command，由 one add 在脚手架时
+自动写入。内置 supervisor 处理子进程，无需安装任何第三方工具。
+
+Usage:
+  one dev [flags]
+
+Flags:
+      --dry-run          只打印将执行的命令
+  -p, --project string   只起指定 project 的 dev 进程（manifest 里的 name 或相对路径）
+
+Global Flags:
+  -o, --output string   输出格式: json | yaml | text（默认 auto：TTY 时人类格式，pipe 时 JSON）

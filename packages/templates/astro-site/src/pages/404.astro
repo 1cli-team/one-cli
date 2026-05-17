@@ -1,0 +1,171 @@
+---
+import Layout from '../layouts/Layout.astro';
+---
+
+<Layout>
+	<div class="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary-50 to-secondary-50 px-4">
+		<div class="max-w-lg w-full text-center">
+			<!-- 404 插图 -->
+			<div class="mb-8">
+				<div class="relative">
+					<!-- 主要的404数字 -->
+					<div class="text-8xl md:text-9xl font-bold text-primary-200 select-none">
+						404
+					</div>
+					
+					<!-- 装饰性元素 -->
+					<div class="absolute inset-0 flex items-center justify-center">
+						<div class="w-24 h-24 bg-primary-500 rounded-full opacity-20 animate-pulse"></div>
+					</div>
+					
+					<!-- 搜索图标 -->
+					<div class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
+						<svg class="w-16 h-16 text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+						</svg>
+					</div>
+				</div>
+			</div>
+
+			<!-- 错误信息 -->
+			<div class="mb-8">
+				<h1 class="text-3xl md:text-4xl font-bold text-secondary-900 mb-4">
+					页面未找到
+				</h1>
+				<p class="text-lg text-secondary-600 mb-2">
+					抱歉，您访问的页面不存在
+				</p>
+				<p class="text-secondary-500">
+					页面可能已被移动、删除，或者URL输入有误
+				</p>
+			</div>
+
+			<!-- 搜索建议 -->
+			<div class="bg-white rounded-lg shadow-sm border border-secondary-200 p-6 mb-8">
+				<h2 class="font-semibold text-secondary-800 mb-4 flex items-center gap-2">
+					<svg class="w-5 h-5 text-primary-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"></path>
+					</svg>
+					您可能在寻找：
+				</h2>
+				<div class="grid grid-cols-1 gap-3">
+					<a href="/" class="text-left p-3 rounded-lg hover:bg-primary-50 transition-colors border border-transparent hover:border-primary-200">
+						<div class="font-medium text-primary-600">首页</div>
+						<div class="text-sm text-secondary-500">查看所有功能演示</div>
+					</a>
+					<a href="/docs" class="text-left p-3 rounded-lg hover:bg-primary-50 transition-colors border border-transparent hover:border-primary-200">
+						<div class="font-medium text-primary-600">文档</div>
+						<div class="text-sm text-secondary-500">查看使用说明</div>
+					</a>
+					<a href="/examples" class="text-left p-3 rounded-lg hover:bg-primary-50 transition-colors border border-transparent hover:border-primary-200">
+						<div class="font-medium text-primary-600">示例</div>
+						<div class="text-sm text-secondary-500">查看代码示例</div>
+					</a>
+				</div>
+			</div>
+
+			<!-- 操作按钮 -->
+			<div class="space-y-4">
+				<div class="flex flex-col sm:flex-row gap-3 justify-center">
+					<button 
+						onclick="window.history.back()" 
+						class="px-6 py-3 border border-secondary-300 text-secondary-700 rounded-lg hover:bg-secondary-50 transition-colors font-medium"
+					>
+						返回上一页
+					</button>
+					<a 
+						href="/" 
+						class="px-6 py-3 bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-colors font-medium text-center"
+					>
+						回到首页
+					</a>
+				</div>
+
+				<!-- 报告问题 -->
+				<button 
+					id="report-404-btn"
+					class="text-secondary-500 hover:text-secondary-700 transition-colors text-sm"
+				>
+					报告错误链接
+				</button>
+			</div>
+
+			<!-- 帮助信息 -->
+			<div class="mt-12 pt-8 border-t border-secondary-200">
+				<div class="grid grid-cols-1 md:grid-cols-3 gap-6 text-sm">
+					<div class="text-center">
+						<div class="w-8 h-8 bg-primary-100 rounded-full mx-auto mb-2 flex items-center justify-center">
+							<svg class="w-4 h-4 text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2H5a2 2 0 00-2-2z"></path>
+								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3a2 2 0 012-2h4a2 2 0 012 2v4"></path>
+							</svg>
+						</div>
+						<div class="font-medium text-secondary-700">检查URL</div>
+						<div class="text-secondary-500">确认网址拼写正确</div>
+					</div>
+					<div class="text-center">
+						<div class="w-8 h-8 bg-success-100 rounded-full mx-auto mb-2 flex items-center justify-center">
+							<svg class="w-4 h-4 text-success-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+							</svg>
+						</div>
+						<div class="font-medium text-secondary-700">刷新页面</div>
+						<div class="text-secondary-500">可能是临时问题</div>
+					</div>
+					<div class="text-center">
+						<div class="w-8 h-8 bg-warning-100 rounded-full mx-auto mb-2 flex items-center justify-center">
+							<svg class="w-4 h-4 text-warning-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+							</svg>
+						</div>
+						<div class="font-medium text-secondary-700">联系我们</div>
+						<div class="text-secondary-500">获取技术支持</div>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+</Layout>
+
+<script>
+	// 报告问题按钮
+	document.getElementById('report-404-btn')?.addEventListener('click', () => {
+		// 导入toast函数
+		import('../utils/toast.js').then((module) => {
+			module.showToast.info(
+				'感谢反馈', 
+				'我们已记录此问题，将会检查链接状态'
+			);
+		});
+
+		console.warn('User reported broken link', {
+			url: window.location.href,
+			referrer: document.referrer
+		});
+	});
+
+	// 添加键盘快捷键
+	document.addEventListener('keydown', (event) => {
+		// 按 Escape 返回首页
+		if (event.key === 'Escape') {
+			window.location.href = '/';
+		}
+		// 按 Backspace 返回上一页
+		if (event.key === 'Backspace' && !(event.target instanceof Element && event.target.tagName.match(/INPUT|TEXTAREA/))) {
+			event.preventDefault();
+			window.history.back();
+		}
+	});
+</script>
+
+<style>
+	/* 404页面特有的动画 */
+	@keyframes float {
+		0%, 100% { transform: translateY(0px) rotate(0deg); }
+		50% { transform: translateY(-10px) rotate(2deg); }
+	}
+	
+	.animate-float {
+		animation: float 3s ease-in-out infinite;
+	}
+</style>

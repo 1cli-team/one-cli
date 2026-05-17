@@ -1,0 +1,22 @@
+import React from "react";
+import ReactDOM from "react-dom/client";
+import { BrowserRouter } from "react-router-dom";
+import { App } from "./App";
+import { ErrorBoundary } from "./components/ErrorBoundary";
+import { SWRProvider } from "./providers/SWRProvider";
+import { ThemeProvider } from "./providers/ThemeProvider";
+import "@/styles/index.css";
+
+ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(
+	<React.StrictMode>
+		<ThemeProvider>
+			<SWRProvider>
+				<BrowserRouter>
+					<ErrorBoundary>
+						<App />
+					</ErrorBoundary>
+				</BrowserRouter>
+			</SWRProvider>
+		</ThemeProvider>
+	</React.StrictMode>,
+);

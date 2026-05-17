@@ -1,0 +1,36 @@
+新增或更新 container/acr profile（阿里云 Aliyun Container Registry）。
+
+host 由 --region 派生为 registry.<region>.aliyuncs.com —— 不需要
+--registry。namespace 必须用户自己在阿里云控制台创建后再填进来
+（个人版的 namespace 是仓库前缀，不会自动取自用户名）。
+
+凭据可以是：
+  - 仓库登录账号 + 仓库登录密码（控制台「访问凭证」里设置）
+  - RAM 子账号 AccessKey ID + AccessKey Secret
+
+本次只支持「个人版」host 格式。企业版 instance 名（<instance>-registry.<region>.cr.aliyuncs.com）
+的支持要等后续 PR。
+
+示例：
+  # 交互（推荐）
+  one configure add container/acr
+
+  # 非交互（CI / 脚本）
+  one configure add container/acr --profile prod \
+      --region cn-hangzhou \
+      --namespace my-team \
+      --username $ACR_USER --password $ACR_TOKEN --use
+
+Usage:
+  one configure add container/acr [--profile <name>] [flags]
+
+Flags:
+      --namespace string   Aliyun ACR namespace（必填，由你在阿里云控制台创建）
+      --password string    Aliyun ACR 登录密码（仓库密码 / RAM AccessKey Secret）
+      --profile string     profile 名（非交互模式必传；交互模式留空则 prompt）
+      --region string      阿里云 ACR region（如 cn-hangzhou / cn-shanghai；host 会派生为 registry.<region>.aliyuncs.com）
+      --use                把此 profile 设为 default
+      --username string    Aliyun ACR 登录账号（个人版用户名 / RAM AKID）
+
+Global Flags:
+  -o, --output string   输出格式: json | yaml | text（默认 auto：TTY 时人类格式，pipe 时 JSON）

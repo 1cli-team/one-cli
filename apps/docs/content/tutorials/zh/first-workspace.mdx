@@ -1,0 +1,121 @@
+---
+title: 手动创建工作区
+description: 直接在终端跑 one create。看清它往磁盘写了什么、生成的 manifest 长什么样、默认接了哪些 backend。
+---
+
+这一章**只讲一条命令** — `one create`。挑模板是[上一章](/zh/tutorials/templates/)；起好工作区后第一次部署是[下一章](/zh/tutorials/deploy/)。
+
+## 1. 装 One CLI
+
+```bash
+curl -fsSL https://one.torchstellar.com/install.sh | bash
+one --version
+```
+
+装不上看 [手动安装](/zh/docs/installation/)。
+
+## 2. 跑 `one create`
+
+最简形式，所有都交互式问你：
+
+```bash
+one create my-workspace
+```
+
+如果你从[模板页](/zh/tutorials/templates/)拿到了一条 `one create` 命令，直接粘贴 — 它已经填好了 `--add` / `--env-provider`。
+
+非交互式（脚本 / CI 用）：
+
+```bash
+one create my-workspace \
+  --yes \
+  --env-provider dotenv
+```
+
+关键 flag：
+
+| Flag | 作用 |
+|---|---|
+| `--name <name>` | 工作区名（覆盖位置参数的 basename） |
+| `--yes` | 跳过所有交互，全部走默认 |
+| `--env-provider dotenv \| infisical` | 选 env 后端（默认 `dotenv`，要 Infisical 也可后期 one env switch infisical） |
+| `--add <template-id>[:<project-name>]` | 预先加一个项目，可重复 |
+
+完整 flag 列表见 [`one create` 参考](/zh/docs/create/)。
+
+## 3. 跑完写了啥
+
+```bash
+cd my-workspace
+ls -la
+```
+
+会看到：
+
+```
+.git/
+.github/
+AGENTS.md
+CLAUDE.md
+apps/
+one.manifest.json
+packages/
+services/
+```
+
+看 manifest：
+
+```bash
+cat one.manifest.json | jq
+```
+
+manifest 关键字段：
+
+- `version: 5` — schema 版本必须是 5
+- `workspace.id` — 自动生成的 UUID
+- `environments.names: ["dev", "staging", "prod"]`、`default: "dev"`
+- `domains.env` — 你选的 secrets backend (`dotenv` 或 `infisical`)
+- `domains.deploy`、`domains.container` — 此阶段还没设；后面给单个项目启用 deploy/container backend 时才会写
+- `projects: []` — 空数组（除非你传了 `--add`）
+
+## 4. `one create` 默认接上的 backend
+
+每个新工作区都会**默认装 3 个 baseline backend**，不用你选：
+
+| Domain | Backend | 给你啥 |
+|---|---|---|
+| `env` | `dotenv`（或 `infisical`，看你选的） | 每个项目自己的 `.env` 管理 |
+| `ci` | `github-actions` | 每个项目的 `.github/workflows/<name>-ci.yml` |
+| `dev` | `process` | `one add` 时把每个项目的 dev 命令写到 `projects[].domains.dev.command`，[`one dev`](/zh/tutorials/dev-local/) 用内置 supervisor 启动 |
+
+这三个不在 `one.manifest.json#domains` 里 — 它们装在工作区层，不是 per-domain opt-in 的。CI workflow 文件等你加第一个项目时才生成。
+
+## 5. 自动装的 bundled skill
+
+`one create` 会自动检测本机已装的 AI agent（Claude Code / Cursor / Codex），并把 bundled skill 装上 — 等价跑了一遍 `one skills install`。CI 里跳过用 `--no-skills`。后续手动装见 [安装 Skill 到 Agent](/zh/tutorials/skills-install/)。
+
+## 6. 第一次提交
+
+```bash
+git status
+git add .
+git commit -m "chore: scaffold workspace"
+```
+
+`one create` 已经跑过 `git init`，第一次 commit 把骨架收进 git。
+
+## 常见错误
+
+| 错误码 | 现象 | 修法 |
+|---|---|---|
+| `INVALID_NAME` | 名字有非法字符 | 用 `^[a-zA-Z0-9][a-zA-Z0-9_-]*$`（kebab-case 最稳） |
+| `WORKSPACE_NESTED_FORBIDDEN` | 在已有工作区里 `one create` | 退出去再起 |
+| `TARGET_EXISTS` | 目标目录已经存在且非空 | 换个名字，或清空目录 |
+| `TEMPLATE_NOT_FOUND` | `--add <id>` 的模板 id 不存在 | 跑 [`one templates list`](/zh/docs/templates-cmd/) 或回 [模板页](/zh/tutorials/templates/) |
+
+完整码表：[错误码大全](/zh/docs/error-codes/)。
+
+## 下一步
+
+- 设第一个环境变量 → [配置环境变量](/zh/tutorials/env-vars/)
+- 让 agent 直接操作 → [安装 Skill 到 Agent](/zh/tutorials/skills-install/)

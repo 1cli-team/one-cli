@@ -1,0 +1,13 @@
+构建项目的容器镜像
+
+Usage:
+  one container build [subproject] [flags]
+
+Flags:
+      --build-version string   非交互/CI 用镜像版本（如 v0.1.0）；TTY 未传且无 Git/package 默认版本时会提示选择
+      --dry-run                只打印 build 命令不实际构建
+      --profile string         一次性使用指定 container profile（不改 default）
+  -p, --project string         只构建指定 subproject（manifest 里的 name 或相对路径）
+
+Global Flags:
+  -o, --output string   输出格式: json | yaml | text（默认 auto：TTY 时人类格式，pipe 时 JSON）

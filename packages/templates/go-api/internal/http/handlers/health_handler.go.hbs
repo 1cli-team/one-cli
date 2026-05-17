@@ -1,0 +1,33 @@
+package handlers
+
+import (
+	"net/http"
+
+	"github.com/gin-gonic/gin"
+	"gorm.io/gorm"
+
+	"github.com/example/{{projectNameKebabCase}}/internal/http/response"
+)
+
+type HealthHandler struct {
+	db *gorm.DB
+}
+
+func NewHealthHandler(db *gorm.DB) *HealthHandler {
+	return &HealthHandler{db: db}
+}
+
+func (h *HealthHandler) Check(c *gin.Context) {
+	sqlDB, err := h.db.DB()
+	if err != nil {
+		response.Error(c, http.StatusServiceUnavailable, 50300, "database unavailable")
+		return
+	}
+
+	if err := sqlDB.PingContext(c.Request.Context()); err != nil {
+		response.Error(c, http.StatusServiceUnavailable, 50301, "database unavailable")
+		return
+	}
+
+	response.OK(c, gin.H{"status": "ok", "driver": h.db.Dialector.Name()})
+}

@@ -1,0 +1,35 @@
+本命令逐个 project 派发到其声明的 deploy 后端。混合工作区
+（前端走 aws-s3 / aliyun-oss / vercel、后端走 kustomize）在一次 `one deploy` 内完成各类部署。
+
+profile 解析每个 project 各自走一遍：
+  --profile <name>                          # 一次性覆盖（所有 project 都用这个）
+  → config.json#workspaces[workspaceId].projects[project].profiles[deploy/backend]
+  → config.json#workspaces[workspaceId].profiles[deploy/backend]
+  → ~/.config/one/config.json#deploy/<backend>.default # machine default
+
+env 目标环境（vercel / cloudflare / edgeone / kustomize 后端）按以下顺序解析：
+  --env <name>                              # 一次性覆盖（所有 project 都用这个）
+  → projects[i].domains.deploy.config.env   # project 自己的 pin（manifest）
+  → "prod"                                  # 默认生产部署
+kustomize 把 env 名映射到 overlay 路径 kustomize/overlays/<env>，覆盖
+workspace 级别的 manifest.domains.deploy.config.kustomizationPath。
+
+machine-level endpoint / 凭据用顶层 `one configure <domain>/<backend>` 管理，
+对应：one configure deploy/aliyun-oss ... / one configure deploy/aws-s3 ... /
+one configure deploy/kustomize ... / one configure deploy/vercel ... 等。
+
+可用 backend：aliyun-oss / aws-s3 / cloudflare / edgeone / kustomize / minio / r2 / rustfs / tencent-cos / vercel（按字典序，由已注册的 provider 决定）。
+
+Usage:
+  one deploy [flags]
+
+Flags:
+      --build-version string   非交互/CI 用镜像版本（如 v0.1.0）；TTY 未传时会提示选择（仅 kustomize 后端有效）
+      --dry-run                只打印将执行的命令 / 计划
+      --env string             deploy 目标环境名 + 环境变量环境名（必须在 manifest.environments.names；空=按 manifest 走）
+      --env-provider string    env provider: dotenv | infisical（默认取 workspace manifest 中已选的值）
+      --profile string         一次性使用指定 profile（覆盖所有 project）
+  -p, --project string         只部署指定 subproject（manifest 里的 name 或相对路径）
+
+Global Flags:
+  -o, --output string   输出格式: json | yaml | text（默认 auto：TTY 时人类格式，pipe 时 JSON）

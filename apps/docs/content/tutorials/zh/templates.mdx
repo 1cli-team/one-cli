@@ -1,0 +1,91 @@
+---
+title: 一键创建工作区
+description: 在 docs 站的模板页挑模板、配部署目标，复制生成的 one create 命令到终端就能起工作区 — 全程不用打开任何配置文件。
+---
+
+这是你创建工作区之前要先打开的一张页面。它做两件事：
+
+1. 展示 One CLI 自带的 **10 个预设模板** — 每个是什么栈、能往哪儿部署。
+2. 在 **"自定义模板"** modal 里让你**自由组合**模板 + 部署目标，实时生成一条可直接粘贴的 `one create` 命令。
+
+本章**不跑任何命令**。在这里挑好模板拿到命令，然后在终端真正执行，是[下一章](/zh/tutorials/first-workspace/)。
+
+打开 [https://one.torchstellar.com/zh/templates/](/zh/templates/)。
+
+## 1. 浏览预设模板
+
+页面上 10 个 starter 模板每个一张卡片。卡片字段：
+
+| 字段 | 含义 |
+|---|---|
+| **名称 + 图标** | 模板 id，就是后面 `one add` / `one create` 里要传的 |
+| **Toolchain** | `node` 或 `go` — 决定包管理器、lockfile、构建工具链 |
+| **Kind** | `frontend` / `backend` / `library` — 顶部"种类筛选"的依据 |
+| **默认部署** | 模板开箱自带的 deploy backend（kustomize / aws-s3 / vercel / cloudflare / edgeone / 无） |
+| **可切换部署** | 不改代码就能换的其他 backend（只有支持的模板才显示） |
+
+顶部"全部 / 前端 / 后端 / 库"过滤器可以收窄列表。简单决策树：
+
+- **服务端 / API** → `nestjs-api` (Node) 或 `go-api` (Go)
+- **官网 / 文档站** → `astro-site` 或 `starlight-docs`
+- **带 auth / SSR 的应用** → `nextjs-app`
+- **后台 SPA** → `react-spa`
+- **桌面应用** → `electron-app`
+- **移动端** → `expo-mobile`
+- **跨项目复用代码** → `ts-library` (Node) 或 `go-lib` (Go)
+
+点任何一张卡进模板详情页（`/zh/templates/<id>/`），里面有更长的文字介绍、什么时候选它、自带哪些东西、有哪些项目用它做底。
+
+## 2. 用"自定义模板"拼命令
+
+页面右侧（移动端是悬浮按钮）的 **"自定义模板"** 是你大概率真正要用的东西。
+
+modal 三个区：
+
+### 左边 — 挑模板
+
+跟主页一样的 10 张卡，按种类过滤。任何一张点 **+ 添加**。
+
+如果一个模板有多个 deploy backend（比如 `astro-site` 能选 aws-s3 / aliyun-oss / tencent-cos / minio / rustfs / r2 / vercel / cloudflare / edgeone），会弹一个"选择部署目标"小弹窗让你挑。不确定就选默认的；团队有约定就按约定。
+
+同一类模板可以加多次 — 适合一个 monorepo 里有多个前端或多个服务。
+
+### 右边 — 看选中列表
+
+每选一个模板，列表里多一行：
+
+- 生成的项目名（默认就是模板 id，可以改）
+- 选中的部署目标
+- 一个 **− 移除** 按钮
+
+列表上方两个字段：
+
+- **工作区名** — 决定生成的目录名 + `one.manifest.json` 里的 workspace id。默认 `my-workspace`。
+- **Env 提供方** — `dotenv`（本地 `.env` 文件）或 `infisical`（托管 secrets）。不确定先选 `dotenv`，后面可以切。
+
+### 底部 — 实时生成的命令
+
+每次加 / 移模板，下面的 `one create` 命令都会重算一次。长这样：
+
+```bash
+one create my-workspace \
+  --env-provider dotenv \
+  --add nestjs-api:api \
+  --add nextjs-app:web \
+  --add ts-library:shared
+```
+
+按 **复制**。这就是整张页面的产出：一条确定的命令，可以粘贴、归档、分享，或喂给 agent。
+
+## 3. 这张页面不做什么
+
+几件这页**故意不做**的事，你知道去哪儿找：
+
+- 它不替你执行命令。真正跑起来在 [创建工作区](/zh/tutorials/first-workspace/)。
+- 它不替代 `one templates list`。CLI 命令的文档在 [CLI 参考](/zh/docs/templates-cmd/) — 同一份模板注册表数据，终端输出版。
+- 它不发布到 registry。"组织自己的私有模板注册表"是另一个特性；当前页面只组合内置模板。
+
+## 下一步
+
+- 把刚才拼出来的命令真正跑起来 → [创建工作区](/zh/tutorials/first-workspace/)
+- 拿 JSON 格式的模板元数据 → [`one templates` 参考](/zh/docs/templates-cmd/)

@@ -1,0 +1,30 @@
+新增或更新 container/dockerhub profile（Docker Hub）。
+
+host 固定为 index.docker.io —— 不需要 --registry。namespace 留空时
+默认等于 username（Docker Hub 的个人 / 组织目录通常等于账号名）。
+
+凭据建议用 Docker Hub 的 Personal Access Token（Account Settings →
+Security → Personal access tokens）而不是登录密码。
+
+示例：
+  # 交互（推荐）
+  one configure add container/dockerhub
+
+  # 非交互（CI / 脚本）
+  one configure add container/dockerhub --profile prod \
+      --username $DOCKER_HUB_USER \
+      --password $DOCKER_HUB_PAT \
+      --namespace my-org --use
+
+Usage:
+  one configure add container/dockerhub [--profile <name>] [flags]
+
+Flags:
+      --namespace string   Docker Hub namespace（个人账号名 / 组织名；空则默认等于 username）
+      --password string    Docker Hub access token (PAT)
+      --profile string     profile 名（非交互模式必传；交互模式留空则 prompt）
+      --use                把此 profile 设为 default
+      --username string    Docker Hub username
+
+Global Flags:
+  -o, --output string   输出格式: json | yaml | text（默认 auto：TTY 时人类格式，pipe 时 JSON）

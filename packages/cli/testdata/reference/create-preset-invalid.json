@@ -1,0 +1,21 @@
+{
+  "error": {
+    "code": "PRESET_INVALID",
+    "context": {
+      "preset_id": "1",
+      "reason": "must contain version and at least one segment"
+    },
+    "message": "\u003cvolatile\u003e",
+    "remediation": [
+      {
+        "action": "regen-preset",
+        "hint": "用 `one serve` 打开 dashboard 重新挑组合得到新的 preset id（dashboard 页面将在后续版本上线）"
+      },
+      {
+        "action": "check-syntax",
+        "hint": "v1 形如 `1.bgok.fnav.ei` —— 前缀为版本号，段以 `.` 分隔，每段首字符是 f/b/l/e kind"
+      }
+    ]
+  },
+  "schema": "one-cli/error/v1"
+}

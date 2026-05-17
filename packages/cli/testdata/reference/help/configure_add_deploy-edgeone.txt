@@ -1,0 +1,32 @@
+新增或更新 deploy/edgeone profile。
+
+凭据使用 EdgeOne Pages API token，和上游命令：
+  edgeone pages deploy <dir> --token <token>
+保持一致。
+
+部署时如果 profile 有 token，会以 --token 传给 edgeone CLI；One CLI 的 dry-run 输出会隐藏真实 token。
+如果不配置 token，则使用本机 edgeone login 的登录态。
+
+region 字段对应腾讯云区域 slug（ap-guangzhou / ap-shanghai 等），
+留空让 CLI 默认。
+
+示例：
+  # 交互（本地可留空 token，改用 edgeone login）
+  one configure add deploy/edgeone
+
+  # 非交互（CI / 脚本）
+  one configure add deploy/edgeone --profile work \
+      --token $EDGEONE_API_TOKEN \
+      --use
+
+Usage:
+  one configure add deploy/edgeone [--profile <name>] [flags]
+
+Flags:
+      --profile string   profile 名（非交互模式必传；交互模式留空则 prompt）
+      --region string    Tencent 区域（可选，如 ap-guangzhou / ap-shanghai；留空默认）
+      --token string     EdgeOne API token（edgeone pages deploy --token 使用）
+      --use              把此 profile 设为 default
+
+Global Flags:
+  -o, --output string   输出格式: json | yaml | text（默认 auto：TTY 时人类格式，pipe 时 JSON）

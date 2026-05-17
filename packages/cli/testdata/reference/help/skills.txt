@@ -1,0 +1,15 @@
+把 bundled one-cli / one-migrate skills 装到本机选定的 coding agent。
+
+子命令：
+  one skills install   安装 / 刷新 bundled skills 到本机
+
+Usage:
+  one skills [command]
+
+Available Commands:
+  install     安装 / 刷新 one CLI 自带 skills 到本机选定的 agent
+
+Global Flags:
+  -o, --output string   输出格式: json | yaml | text（默认 auto：TTY 时人类格式，pipe 时 JSON）
+
+Use "one skills [command] --help" for more information about a command.

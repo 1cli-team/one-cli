@@ -1,0 +1,23 @@
+添加项目到当前工作区。
+
+  位置参数 = 模板 ID（从 one templates 选）：
+    one add nestjs-api --name user-api --yes
+
+模板模式渲染物理模板。
+
+infra / deploy（Dockerfile / Kustomize / S3-compatible deploy / CI 工作流）
+由模板自动决定。API / SSR 模板通常启用
+container/docker + deploy/kustomize；静态前端模板通常启用 deploy/aws-s3。
+container / deploy 是 per-project domain，可随后用
+手编 one.manifest.json 调整 deploy/container 字段。
+
+Usage:
+  one add [template-id] [flags]
+
+Flags:
+      --deploy-provider string   显式选择 deploy 后端（kustomize / aws-s3 / aliyun-oss / vercel ...）；非交互模式或想跳过选择 prompt 时使用。必须在模板的 compat.deploy 列表里。
+  -n, --name string              项目名称（必选）
+  -y, --yes                      非交互模式
+
+Global Flags:
+  -o, --output string   输出格式: json | yaml | text（默认 auto：TTY 时人类格式，pipe 时 JSON）

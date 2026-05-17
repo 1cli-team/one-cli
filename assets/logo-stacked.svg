@@ -1,0 +1,8 @@
+<svg viewBox="0 0 200 240" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="One CLI">
+  <title>One CLI</title>
+  <desc>One CLI stacked lockup — for square contexts and app icons</desc>
+  <path d="M 86.32 52.41 A 40 40 0 0 1 137.59 103.68 M 113.68 127.59 A 40 40 0 0 1 62.41 76.32"
+        fill="none" stroke="#ea580c" stroke-width="18" stroke-linecap="round"/>
+  <text x="100" y="200" font-family="Inter, 'Helvetica Neue', Arial, sans-serif"
+        font-size="28" font-weight="500" fill="#0a0a0a" letter-spacing="4" text-anchor="middle">ONE CLI</text>
+</svg>

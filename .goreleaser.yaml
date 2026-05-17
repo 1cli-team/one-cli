@@ -1,0 +1,90 @@
+# goreleaser config for the Go rewrite of one-cli.
+#
+# Cuts cross-platform binaries on every git tag, packs them into per-target
+# tarballs/zips, and uploads them to a GitHub Release. The npm wrapper at
+# scripts/npm-postinstall.js downloads the matching tarball at install time.
+#
+# Run locally:    goreleaser release --snapshot --clean
+# Run on tag:     goreleaser release --clean    (CI / release pipeline)
+#
+# We keep this in sync with package.json#version: the version baked into
+# the binary via -ldflags must match the npm package version that
+# distributes it, otherwise `one --version` would lie.
+
+version: 2
+
+project_name: one-cli
+
+before:
+  hooks:
+    - go -C packages/cli mod tidy
+
+builds:
+  - id: one
+    dir: packages/cli
+    main: ./cmd/one
+    binary: one
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - darwin
+      - linux
+      - windows
+    goarch:
+      - amd64
+      - arm64
+    # No need for windows/arm64 yet — too few users.
+    ignore:
+      - goos: windows
+        goarch: arm64
+    ldflags:
+      - -s -w
+      - -X main.version={{.Version}}
+    flags:
+      - -trimpath
+
+archives:
+  - id: default
+    formats:
+      - tar.gz
+    format_overrides:
+      - goos: windows
+        formats:
+          - zip
+    # The npm shim resolves binaries by archive name. Keep the template
+    # shape (one-cli_{os}_{arch}) stable so older shims keep working when
+    # we cut newer releases.
+    name_template: "one-cli_{{ .Os }}_{{ .Arch }}"
+    files:
+      - LICENSE*
+      - README*
+
+checksum:
+  name_template: "checksums.txt"
+  algorithm: sha256
+
+snapshot:
+  version_template: "{{ incpatch .Version }}-snapshot"
+
+changelog:
+  # We keep CHANGELOG.md authoritative. goreleaser's auto-generated entries
+  # are noisy and conflict with the curated narrative.
+  disable: true
+
+release:
+  # The wrapper downloads from <repo>/releases/download/<tag>/<asset> so the
+  # exact GitHub repo coordinates here matter. Adjust if the repo moves.
+  github:
+    owner: torchstellar-team
+    name: one-cli
+  draft: false
+  prerelease: auto
+  header: |
+    # one-cli {{ .Tag }}
+
+    Pre-built binaries for darwin/linux/windows × amd64/arm64.
+    Install via the curl one-liner (see README), or download the
+    matching archive below and extract `one` onto your PATH.
+
+  footer: |
+    Verify your download with `sha256sum -c checksums.txt`.

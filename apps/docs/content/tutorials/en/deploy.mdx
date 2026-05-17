@@ -1,0 +1,146 @@
+---
+title: One-click deploy
+description: Pick a deploy backend, configure a profile, and ship one project with one deploy. The shortest path.
+---
+
+This tutorial walks one project to one target. The full menu — all 10 deploy backends, per-project flags, multi-environment trees — lives in [Multi-backend deploy](/en/tutorials/deploy-multi-backend/) (advanced).
+
+We'll pick the deploy backend that matches your project's template default. Each template ships with a sensible default; you can override later.
+
+| Your project's template | Default deploy backend | Pick this path |
+|---|---|---|
+| `nextjs-app`, `astro-site`, `react-spa`, `starlight-docs` | Static / serverless | [Path A: Vercel](#path-a-vercel-for-frontends) |
+| `nestjs-api`, `go-api` | Container + Kubernetes | [Path B: Kubernetes via kustomize](#path-b-kustomize-for-services) |
+
+If you're using a backend that's not listed (S3, Cloudflare, EdgeOne, OSS, COS, MinIO, R2), the shape is the same: configure a profile, then `one deploy`. The [`one configure` reference](/en/docs/configure/) lists the credential fields for each.
+
+## Path A: Vercel (for frontends)
+
+### 1. Get a Vercel token
+
+Vercel dashboard → **Settings → Tokens → Create**. Note the token, your team slug, and the project id (or let One CLI create the project for you).
+
+### 2. Configure the profile
+
+```bash
+one configure add deploy/vercel --profile prod \
+  --token <VERCEL_TOKEN> \
+  --team-slug <TEAM_SLUG> \
+  --use
+```
+
+This writes to `~/.config/one/config.json` + `credentials.json` (machine-local, mode 0600). It does not touch the repo.
+
+### 3. Make sure the project's manifest entry has `deploy.kind: vercel`
+
+```bash
+cat one.manifest.json | jq '.projects[] | select(.name == "web") | .domains.deploy'
+```
+
+If `--deploy-provider vercel` was passed at `one add` time, it's already there. Otherwise add it:
+
+```json
+{
+  "name": "web",
+  "domains": {
+    "deploy": {
+      "kind": "vercel",
+      "config": { "projectId": "prj_xxx" }
+    }
+  }
+}
+```
+
+(`projectId` is optional. One CLI creates the Vercel project on first deploy if it's missing.)
+
+### 4. Deploy
+
+```bash
+one deploy -p web --env prod
+```
+
+Output points you at the Vercel deployment URL. Subsequent deploys reuse the same Vercel project.
+
+## Path B: kustomize (for services)
+
+The kustomize path has two steps because Kubernetes runs containers: you build + push the image, then `one deploy` applies the manifests.
+
+### 1. Configure a container registry
+
+Pick a registry (Docker Hub, GHCR, ACR, Harbor, etc.) and create an access token there.
+
+```bash
+one configure add container/docker --profile prod \
+  --registry ghcr.io \
+  --username <USER> \
+  --password <TOKEN> \
+  --use
+```
+
+### 2. Configure kustomize
+
+```bash
+one configure add deploy/kustomize --profile prod \
+  --kubeconfig-path ~/.kube/config \
+  --context production \
+  --namespace default \
+  --use
+```
+
+`kubeconfig-path` and `context` together pick which cluster you're deploying to. `namespace` defaults to `default`.
+
+### 3. Build and push the image
+
+```bash
+one container build -p api
+one container push -p api
+```
+
+The build version is inferred from git / `package.json` (or pass `--build-version`). See [Build & push images](/en/tutorials/container-build-push/) for details.
+
+### 4. Deploy
+
+```bash
+one deploy -p api --env prod
+```
+
+`one deploy` reads `services/api/k8s/overlays/<env>/` (the template scaffolds these) and runs `kustomize build | kubectl apply -f -` against the cluster from the default profile.
+
+Verify:
+
+```bash
+kubectl --context production get pods
+```
+
+## Override the profile at runtime
+
+By default, `one deploy` uses the default profile. To force a specific one (e.g. for a staging cluster):
+
+```bash
+one deploy -p api --env staging --profile staging
+```
+
+Profile resolution order:
+
+1. `--profile` flag (this command only)
+2. Local project binding in `~/.config/one/config.json#workspaces`
+3. Local workspace binding in `~/.config/one/config.json#workspaces`
+4. The machine's default profile for the matching `(domain, backend)` pair
+
+## Common errors
+
+| Code | Symptom | Fix |
+|---|---|---|
+| `BACKEND_NOT_ENABLED` | The project's `domains.deploy` is empty | Add the `deploy` block to `one.manifest.json` for that project |
+| `PROFILE_NOT_FOUND` | The profile referenced doesn't exist on this machine | `one configure list deploy/<backend>` to see what's available |
+| `REGISTRY_CREDENTIAL_MISSING` | `one container push` ran without a default `container/docker` profile | `one configure add container/docker ... --use` |
+| `IMAGE_TAG_NOT_FOUND` | `one deploy` for kustomize couldn't find the pushed image | Run `one container build && one container push` first |
+| `VERCEL_DEPLOY_FAILED` | Vercel rejected the deploy | Inspect Vercel UI logs; the message in `context.vercel_error` usually says why |
+
+Full table: [error codes](/en/docs/error-codes/).
+
+## Next
+
+- The other 8 deploy backends + multi-project / multi-env → [Multi-backend deploy](/en/tutorials/deploy-multi-backend/) (advanced)
+- All `one configure` backends including S3 variants and Cloudflare → [Manage profiles](/en/tutorials/configure-profiles/) (advanced)
+- Build / push images in more detail → [Build & push images](/en/tutorials/container-build-push/) (advanced)

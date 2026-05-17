@@ -1,0 +1,36 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{.WorkloadName}}
+  labels:
+    app: {{.WorkloadName}}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: {{.WorkloadName}}
+  template:
+    metadata:
+      labels:
+        app: {{.WorkloadName}}
+    spec:
+      containers:
+        - name: {{.WorkloadName}}
+          image: {{.WorkloadName}}:latest
+          ports:
+            - containerPort: {{.ContainerPort}}
+              protocol: TCP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{.WorkloadName}}
+spec:
+  type: ClusterIP
+  selector:
+    app: {{.WorkloadName}}
+  ports:
+    - port: {{.ContainerPort}}
+      targetPort: {{.ContainerPort}}
+      protocol: TCP
+      name: http

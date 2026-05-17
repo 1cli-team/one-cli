@@ -1,0 +1,21 @@
+{
+  "error": {
+    "code": "EXISTING_TARGET_NOT_EMPTY",
+    "context": {
+      "display_path": "\u003cvolatile\u003e",
+      "target_path": "\u003cvolatile\u003e"
+    },
+    "message": "\u003cvolatile\u003e",
+    "remediation": [
+      {
+        "action": "use-different-dir",
+        "hint": "换一个空的目标目录"
+      },
+      {
+        "action": "remove-target",
+        "hint": "手动删除已存在的目录后重试"
+      }
+    ]
+  },
+  "schema": "one-cli/error/v1"
+}

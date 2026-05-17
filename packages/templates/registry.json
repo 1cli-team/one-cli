@@ -1,0 +1,138 @@
+{
+  "version": 1,
+  "templates": [
+    {
+      "id": "nestjs-api",
+      "code": "ne",
+      "name": "NestJS API 服务",
+      "description": "NestJS + TypeScript，适合 API 服务与业务后台",
+      "category": "backend",
+      "tags": ["api", "nestjs", "typescript", "backend"],
+      "toolchain": "node",
+      "repo": "local:nestjs-api",
+      "domains": {
+        "container": { "default": "docker", "compat": ["docker"] },
+        "deploy": { "default": "kustomize", "compat": ["kustomize"] }
+      }
+    },
+    {
+      "id": "go-api",
+      "code": "go",
+      "name": "Go API 服务",
+      "description": "Gin + Gorm + Viper + Zap，适合 API 服务与业务后台",
+      "category": "backend",
+      "tags": ["api", "go", "golang", "gin", "gorm", "viper", "zap", "backend"],
+      "toolchain": "go",
+      "repo": "local:go-api",
+      "domains": {
+        "container": { "default": "docker", "compat": ["docker"] },
+        "deploy": { "default": "kustomize", "compat": ["kustomize"] }
+      }
+    },
+    {
+      "id": "astro-site",
+      "code": "as",
+      "name": "Astro 静态网站",
+      "description": "前端静态站模板，适合官网、营销站与内容站点",
+      "category": "frontend",
+      "tags": ["web", "astro", "static", "frontend"],
+      "toolchain": "node",
+      "repo": "local:astro-site",
+      "domains": {
+        "deploy": { "default": "aws-s3", "compat": ["aliyun-oss", "tencent-cos", "aws-s3", "minio", "rustfs", "r2", "vercel", "cloudflare", "edgeone"] }
+      }
+    },
+    {
+      "id": "starlight-docs",
+      "code": "sl",
+      "name": "Starlight 文档站点",
+      "description": "基于 Astro + Starlight 的文档项目模板",
+      "category": "frontend",
+      "tags": ["web", "docs", "starlight", "astro", "frontend"],
+      "toolchain": "node",
+      "repo": "local:starlight-docs",
+      "domains": {
+        "deploy": { "default": "aws-s3", "compat": ["aliyun-oss", "tencent-cos", "aws-s3", "minio", "rustfs", "r2", "vercel", "cloudflare", "edgeone"] }
+      }
+    },
+    {
+      "id": "nextjs-app",
+      "code": "na",
+      "name": "Next.js 全栈应用",
+      "description": "Next.js 前端模板，适合 SEO 与首屏性能要求较高场景",
+      "category": "frontend",
+      "tags": ["web", "nextjs", "react", "frontend"],
+      "toolchain": "node",
+      "repo": "local:nextjs-app",
+      "domains": {
+        "container": { "default": "docker", "compat": ["docker"] },
+        "deploy": { "default": "kustomize", "compat": ["kustomize", "vercel", "cloudflare"] }
+      }
+    },
+    {
+      "id": "react-spa",
+      "code": "rs",
+      "name": "React 单页应用",
+      "description": "React + Vite 单页应用模板，适合交互型业务系统",
+      "category": "frontend",
+      "tags": ["web", "spa", "react", "vite", "frontend"],
+      "toolchain": "node",
+      "repo": "local:react-spa",
+      "domains": {
+        "deploy": { "default": "aws-s3", "compat": ["aliyun-oss", "tencent-cos", "aws-s3", "minio", "rustfs", "r2", "vercel", "cloudflare", "edgeone"] }
+      }
+    },
+    {
+      "id": "expo-mobile",
+      "code": "em",
+      "name": "Expo 移动 App",
+      "description": "React Native + Expo App 模板，适合 iOS/Android 双端开发",
+      "category": "frontend",
+      "tags": ["react-native", "expo", "mobile", "app"],
+      "toolchain": "node",
+      "repo": "local:expo-mobile",
+      "domains": {
+        "deploy": { "compat": [] }
+      }
+    },
+    {
+      "id": "ts-library",
+      "code": "tl",
+      "name": "TypeScript 通用库",
+      "description": "通用库模板，适合发包场景，内置 tsdown + vitest + oxlint/oxfmt",
+      "category": "library",
+      "tags": ["library", "typescript", "npm", "tsdown", "vitest"],
+      "toolchain": "node",
+      "repo": "local:ts-library",
+      "domains": {
+        "deploy": { "compat": [] }
+      }
+    },
+    {
+      "id": "go-lib",
+      "code": "gl",
+      "name": "Go 通用库",
+      "description": "Go 库模板，遵循 golang-standards/project-layout，适合发包与被 import 场景",
+      "category": "library",
+      "tags": ["library", "go", "golang", "module", "pkg"],
+      "toolchain": "go",
+      "repo": "local:go-lib",
+      "domains": {
+        "deploy": { "compat": [] }
+      }
+    },
+    {
+      "id": "electron-app",
+      "code": "ea",
+      "name": "Electron 桌面应用",
+      "description": "Electron + React + Vite 桌面应用模板，主进程基于 inversify，内置 electron-log/store/updater",
+      "category": "frontend",
+      "tags": ["electron", "desktop", "react", "vite", "frontend"],
+      "toolchain": "node",
+      "repo": "local:electron-app",
+      "domains": {
+        "deploy": { "compat": [] }
+      }
+    }
+  ]
+}

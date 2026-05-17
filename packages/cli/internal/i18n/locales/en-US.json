@@ -1,0 +1,16 @@
+{
+  "root.short": "AI Native monorepo workspace orchestrator",
+  "root.help": "\none — AI Native monorepo workspace orchestrator\n\nUSAGE\n  one <command> [options]\n\nCOMMANDS\n  create        Scaffold a new workspace\n  add           Add a project (from the bundled templates)\n  templates     List available templates\n  env           Secrets / environment-variable backends (get / set / list / pull / switch) — dotenv / infisical\n  container     Build and push container images (info / build / push) — Dockerfile-driven\n  dev           Start local dev processes (Procfile.dev driven)\n  deploy        Deploy per-project workloads (kustomize / S3-compatible / Vercel / Cloudflare / EdgeOne)\n  run           Run any command with project .env injected (infisical-run style)\n  configure     Configure machine-level endpoint profiles (env / deploy / container, per-backend subtree)\n  serve         Launch the local web UI to edit configuration (127.0.0.1; credentials never seen by AI)\n  skills        Manage the one CLI's bundled skills installation (skills install)\n\nCOMMON FLAGS\n  -o, --output  Output format: json | yaml | text (default auto: human format on a TTY, JSON on a pipe)\n  -h, --help    Show this help\n  -v, --version Show version\n\nEXAMPLES\n  one create my-app                                                # Scaffold a workspace (defaults to dotenv)\n  one add nestjs-api --name user-api                               # Add a NestJS backend project\n  one configure add container/ghcr --profile ghcr --use            # Register a GHCR profile\n  one configure add deploy/kustomize --profile prod-k8s --use      # Register a Kubernetes profile\n  one container build user-api                                     # Build the project's registry-tagged image\n  one container push user-api                                      # Push the built image\n  one deploy                                                       # Auto build / push / kubectl apply\n  one dev                                                          # Start every dev process\n  one env pull                                                     # Pull secrets from Infisical into .env\n\nFor per-command help: one <command> --help\n",
+  "add.short": "Add a project (from the bundled templates)",
+  "configure.short": "Configure endpoint profiles (machine-level, ~/.config/one/{config,credentials}.json)",
+  "container.short": "Container build (per-project Dockerfile)",
+  "create.short": "Scaffold a new workspace",
+  "deploy.short": "Deploy per-project workloads (kustomize / aws-s3 / aliyun-oss / vercel / ...)",
+  "dev.short": "Local dev orchestration (start the processes in Procfile.dev)",
+  "env.short": "Secrets / environment-variable backends (dotenv or infisical)",
+  "run.short": "Inject project secrets and run any command (infisical-run style)",
+  "serve.short": "Launch a local web UI to edit profiles (127.0.0.1, with sensitive credentials)",
+  "skills.short": "Manage the one CLI's bundled skills installation on this machine",
+  "templates.short": "List available templates",
+  "configure.locale.short": "Show or set the display language (auto / zh-CN / en-US)"
+}

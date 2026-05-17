@@ -1,0 +1,38 @@
+package middleware
+
+import (
+	"net/http"
+	"strings"
+
+	"github.com/gin-gonic/gin"
+
+	"github.com/example/{{projectNameKebabCase}}/internal/http/response"
+	"github.com/example/{{projectNameKebabCase}}/internal/platform/jwt"
+)
+
+const CurrentUserIDKey = "current_user_id"
+
+func Auth(manager *jwt.Manager) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		header := c.GetHeader("Authorization")
+		if header == "" {
+			response.Error(c, http.StatusUnauthorized, 40100, "missing authorization header")
+			return
+		}
+
+		tokenValue := strings.TrimSpace(strings.TrimPrefix(header, "Bearer "))
+		if tokenValue == "" || tokenValue == header {
+			response.Error(c, http.StatusUnauthorized, 40101, "invalid authorization header")
+			return
+		}
+
+		claims, err := manager.Verify(tokenValue)
+		if err != nil {
+			response.Error(c, http.StatusUnauthorized, 40102, "invalid token")
+			return
+		}
+
+		c.Set(CurrentUserIDKey, claims.UserID)
+		c.Next()
+	}
+}

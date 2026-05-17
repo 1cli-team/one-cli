@@ -1,0 +1,34 @@
+切换工作区当前的 env 后端，可选地把本地 dotenv 数据一并同步到 Infisical。
+
+合法 <backend>: dotenv | infisical
+
+切到 infisical:
+  1. 需要本机已有 default env/infisical profile
+     （没有时报 INFISICAL_AUTH_MISSING，提示先跑 one configure add env/infisical）
+  2. 默认交互式问你是否要把本地 .env 数据同步到 Infisical
+     （--yes 跳过问询直接同步；--no-sync 仅切 manifest 不同步）
+  3. Infisical 已存在的同名 key 默认报 ENV_MIGRATE_CONFLICT；加 --overwrite 覆盖
+
+切到 dotenv:
+  - 只改 manifest，不删 Infisical 数据（安全）
+  - 切回后若需要把 Infisical 已有数据拉到本地，先跑 one env pull
+
+示例:
+  one env switch infisical                  # 交互式
+  one env switch infisical -y               # 非交互：直接同步
+  one env switch infisical --no-sync        # 仅切 manifest 不同步
+  one env switch infisical --overwrite -y   # 覆盖冲突 key
+  one env switch infisical --dry-run        # 只打印计划，不写
+  one env switch dotenv                     # 切回 dotenv（只改 manifest）
+
+Usage:
+  one env switch <backend> [flags]
+
+Flags:
+      --dry-run     只打印计划，不实际写
+      --no-sync     只切 manifest 后端，不做数据同步
+      --overwrite   目标 backend 已有同名 key 时覆盖（默认报错）
+  -y, --yes         非交互：跳过同步确认，默认执行同步
+
+Global Flags:
+  -o, --output string   输出格式: json | yaml | text（默认 auto：TTY 时人类格式，pipe 时 JSON）

@@ -1,0 +1,17 @@
+# binaries
+bin/
+
+# test output
+coverage.out
+
+# environment
+.env
+.env.local
+configs/config.yaml
+configs/config.local.yaml
+
+# logs
+logs/
+
+# misc
+.DS_Store

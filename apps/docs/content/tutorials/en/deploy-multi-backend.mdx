@@ -1,0 +1,139 @@
+---
+title: Service deploy
+description: All 10 deploy backends compared. Mixed workspaces. Multi-environment trees. Per-project flags, profile pinning, and dry-run.
+---
+
+`one deploy` runs every project's deploy step in one go, dispatching each project to its declared backend. A workspace with a Next.js front end on Vercel and a NestJS API on Kubernetes ships both with a single `one deploy`.
+
+This page picks up from [basics deploy](/en/tutorials/deploy/) (which walked one project to one target) and covers the rest of the menu.
+
+## The 10 deploy backends at a glance
+
+| Backend | Workload type | Profile fields | Notes |
+|---|---|---|---|
+| `kustomize` | k8s manifests | kubeconfig path, context, namespace | Consumes images from `one container push` |
+| `aws-s3` | Static site | region, AK/SK, optional endpoint | Sync build output to bucket |
+| `aliyun-oss` | Static site | endpoint, region, AK/SK | S3-compatible |
+| `tencent-cos` | Static site | endpoint, region, AK/SK | S3-compatible |
+| `minio` | Static site | endpoint, AK/SK | Self-hosted; path-style |
+| `rustfs` | Static site | endpoint, AK/SK | Self-hosted; path-style |
+| `r2` | Static site | endpoint, AK/SK | Cloudflare R2; region=auto |
+| `vercel` | Serverless / SSR | token, teamSlug | Auto-creates project on first deploy |
+| `cloudflare` | Pages / Workers | accountId, apiToken | One CLI calls Cloudflare API |
+| `edgeone` | Tencent EdgeOne Pages | secret + project info | Tencent-network optimized |
+
+Templates pin a sensible default; you switch by editing `projects[*].domains.deploy.kind` in `one.manifest.json`.
+
+## Deploy one project, deploy all projects
+
+```bash
+# All projects with a deploy block (mixed backends OK):
+one deploy
+
+# Filter to one project:
+one deploy -p api
+one deploy -p apps/web        # by relativeDir
+```
+
+When no `-p` is given, projects deploy in manifest order. A failure stops the run (no continue-on-error today); fix the failing project and rerun.
+
+## Environment selection
+
+```bash
+one deploy --env staging
+```
+
+`--env` does two things in one flag:
+
+1. Tells `one env` which environment's env vars to inject (where applicable).
+2. For env-aware backends (kustomize, vercel, cloudflare, edgeone), selects the deploy target environment.
+
+Per-backend behavior:
+
+- **kustomize**: `--env staging` → applies `<project>/k8s/overlays/staging/`. Each template scaffolds these overlays.
+- **vercel**: `--env staging` → Vercel preview environment; `--env prod` → Production environment.
+- **cloudflare** / **edgeone**: same idea — env name maps to the platform's environment label.
+- **S3 family** (aws / aliyun / tencent / minio / rustfs / r2): no env concept; `--env` only changes which env vars get baked into the build.
+
+Default env resolution: `projects[*].domains.deploy.<provider>.env` → `manifest.environments.default` → `prod`.
+
+## Per-project pinning
+
+To make `one deploy` always use a specific profile or environment for a project, pin it in the manifest:
+
+```json
+{
+  "name": "api",
+  "domains": {
+    "deploy": {
+      "kind": "kustomize",
+      "profile": "prod-cluster",
+      "config": {
+        "kustomizationPath": "k8s/overlays/prod"
+      }
+    }
+  }
+}
+```
+
+The pin is what makes a deploy *reproducible* — the same `one deploy -p api` from any machine targets the same cluster, as long as the named profile exists.
+
+## Mixed-backend workspace example
+
+```text
+my-workspace/
+├── apps/
+│   └── web/         # nextjs-app, deploys to vercel
+├── services/
+│   └── api/         # nestjs-api, deploys to kustomize
+└── docs/            # starlight-docs, deploys to aws-s3
+```
+
+```bash
+one deploy --env prod
+```
+
+Each project dispatches:
+
+- `apps/web` → `deploy/vercel` profile `prod` → Vercel API
+- `services/api` → image already pushed via `one container push` → `kustomize build | kubectl apply` against the prod cluster
+- `docs` → `aws-s3` profile `prod` → `aws s3 sync` to the bucket
+
+One command, three different deploys, in order.
+
+## Dry-run
+
+```bash
+one deploy --dry-run -o json | jq
+```
+
+Prints the planned actions per project — image tag, target environment, resolved profile, the actual command lines — without executing anything. Use this before every prod deploy and you'll catch wrong-profile mistakes before they become incidents.
+
+## Profile / env override at runtime
+
+```bash
+one deploy -p api --env prod --profile prod-cluster --build-version v1.4.2
+```
+
+Each flag overrides only for this invocation:
+
+- `--profile <name>` — every project that needs a profile uses this name (if its backend matches).
+- `--env <name>` — applied to every project's env-aware backend.
+- `--build-version` — only consumed by kustomize.
+
+## Common errors
+
+| Code | Symptom | Fix |
+|---|---|---|
+| `BACKEND_NOT_ENABLED` | Project has no `domains.deploy` | Add `deploy` block, or remove `-p <project>` |
+| `PROFILE_NOT_FOUND` | `--profile <name>` doesn't exist for the matching `(deploy/<backend>)` | `one configure list deploy/<backend>` |
+| `IMAGE_TAG_NOT_FOUND` | kustomize deploy can't find the pushed image | Pass `--build-version`, or run `one container build && one container push` first |
+| `KUSTOMIZE_OVERLAY_MISSING` | `--env <name>` but `k8s/overlays/<name>/` doesn't exist | Create the overlay, or use one that exists |
+| `VERCEL_DEPLOY_FAILED` | Vercel API rejected the deploy | Check `context.vercel_error` in JSON output |
+| `S3_BUCKET_NOT_FOUND` / `S3_ACCESS_DENIED` | Bucket name wrong or credentials lack permission | Inspect bucket and the profile's AK/SK |
+
+Full table: [error codes](/en/docs/error-codes/).
+
+## Next
+
+- JSON output for scripting deploys → [JSON output & error codes](/en/tutorials/json-output-error-codes/)

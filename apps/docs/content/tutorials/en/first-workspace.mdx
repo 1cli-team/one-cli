@@ -1,0 +1,121 @@
+---
+title: Manual workspace
+description: Run one create yourself in the terminal. See what gets written to disk, what manifest it produces, and what default backends get wired.
+---
+
+This tutorial covers exactly one command: `one create`. Picking which templates to use is the [previous chapter](/en/tutorials/templates/); deploying for the first time is the [next chapter](/en/tutorials/deploy/).
+
+## 1. Install the CLI
+
+```bash
+curl -fsSL https://one.torchstellar.com/install.sh | bash
+one --version
+```
+
+Manual options live in [installation](/en/docs/installation/).
+
+## 2. Run `one create`
+
+The simplest form prompts you interactively for everything:
+
+```bash
+one create my-workspace
+```
+
+If you came from the [templates page](/en/tutorials/templates/) with a generated command, you can paste it directly — it has `--add` / `--env-provider` already filled in.
+
+Non-interactive form (for scripts and CI):
+
+```bash
+one create my-workspace \
+  --yes \
+  --env-provider dotenv
+```
+
+Key flags:
+
+| Flag | What it does |
+|---|---|
+| `--name <name>` | Workspace name (overrides positional arg's basename) |
+| `--yes` | Skip all prompts; accept defaults |
+| `--env-provider dotenv \| infisical` | Choose the env backend (default: `dotenv`; switch later with `one env switch infisical`) |
+| `--add <template-id>[:<project-name>]` | Pre-add a project; repeatable |
+
+For the full list, see the [`one create` reference](/en/docs/create/).
+
+## 3. What got written
+
+```bash
+cd my-workspace
+ls -la
+```
+
+You'll see something like:
+
+```
+.git/
+.github/
+AGENTS.md
+CLAUDE.md
+apps/
+one.manifest.json
+packages/
+services/
+```
+
+Inspect the manifest:
+
+```bash
+cat one.manifest.json | jq
+```
+
+Key parts of the produced manifest:
+
+- `version: 5` — required schema version
+- `workspace.id` — generated UUID
+- `environments.names: ["dev", "staging", "prod"]` and `default: "dev"`
+- `domains.env` — the env backend you chose (`dotenv` or `infisical`)
+- `domains.deploy` and `domains.container` — left unset at this stage; filled in when individual projects opt into deploy / container backends
+- `projects: []` — empty unless you passed `--add`
+
+## 4. Default backends wired by `one create`
+
+Every new workspace gets three baseline backends installed without you asking:
+
+| Domain | Backend | What it gives you |
+|---|---|---|
+| `env` | `dotenv` (or `infisical` if you chose it) | `.env` file management for every project |
+| `ci` | `github-actions` | Per-project `.github/workflows/<name>-ci.yml` files |
+| `dev` | `process` | Each `one add` records a dev command at `projects[].domains.dev.command`, run by [`one dev`](/en/tutorials/dev-local/) via the built-in supervisor |
+
+These do not appear in `one.manifest.json#domains` because they are installed at the workspace level, not as opt-in domains. The CI workflow files appear when you add the first project.
+
+## 5. Auto-installed bundled skill
+
+`one create` also runs the equivalent of `one skills install` for any AI agent it detects on your machine (Claude Code, Cursor, Codex). Skip this step in CI with `--no-skills`. To install it later, see [Install skill to agent](/en/tutorials/skills-install/).
+
+## 6. The first commit
+
+```bash
+git status
+git add .
+git commit -m "chore: scaffold workspace"
+```
+
+`one create` already ran `git init`. The first commit captures the skeleton.
+
+## Common errors
+
+| Code | Symptom | Fix |
+|---|---|---|
+| `INVALID_NAME` | Workspace name has unsupported characters | Use `^[a-zA-Z0-9][a-zA-Z0-9_-]*$` (kebab-case is safe) |
+| `WORKSPACE_NESTED_FORBIDDEN` | Tried to `one create` inside an existing workspace | Run from a non-workspace directory |
+| `TARGET_EXISTS` | The target directory already exists and is non-empty | Pick a different name, or empty the directory first |
+| `TEMPLATE_NOT_FOUND` | `--add <id>` used an unknown template id | Run [`one templates list`](/en/docs/templates-cmd/) or visit the [templates page](/en/tutorials/templates/) |
+
+Full table: [error codes](/en/docs/error-codes/).
+
+## Next
+
+- Set your first env var → [Configure env vars](/en/tutorials/env-vars/)
+- Have your agent drive One CLI → [Install skill to agent](/en/tutorials/skills-install/)

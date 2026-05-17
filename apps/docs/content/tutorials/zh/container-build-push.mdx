@@ -1,0 +1,139 @@
+---
+title: 构建与推送镜像
+description: one container info / build / push — 构什么、版本号怎么推断、镜像 tag 怎么映射到 registry namespace。
+---
+
+`one container` 是 `docker build` / `docker push` 的 wrapper，但它认 manifest。三个子命令，没花活。
+
+前置：已经配过 `container/docker` profile，工作区里至少有一个项目声明了 `domains.container`（`nestjs-api`、`go-api`、`nextjs-app` 模板默认就有）。没配 profile 见[管理 Profile](/zh/tutorials/configure-profiles/)。
+
+## 1. `one container info` — 看会构什么
+
+```bash
+one container info
+one container info -o json
+```
+
+列出工作区里所有有 container 声明的项目和当前状态：
+
+| 字段 | 含义 |
+|---|---|
+| `project` | manifest 里的项目名 |
+| `image` | 完整镜像 tag（`<registry>/<namespace>/<image>:<version>`） |
+| `dockerfile` | 项目里 Dockerfile 路径 |
+| `lastBuildVersion` | 上次 `one container build` 写下的版本 |
+
+只读，随时跑都安全。
+
+## 2. `one container build [<name>]` — 构镜像
+
+构所有含 container 的项目：
+
+```bash
+one container build
+```
+
+构一个：
+
+```bash
+one container build api
+one container build -p apps/web      # 或按相对路径
+```
+
+### 版本号推断
+
+`--build-version` 控制镜像 tag 后缀。不传时按顺序尝试：
+
+1. manifest 里项目的 `buildVersion` 字段（钉了的话）
+2. 当前 commit 上最近的 `v*` git tag
+3. `package.json#version`（Node 项目）
+4. 当前 git SHA 前 7 位（工作区有未提交内容时加 `-dirty`）
+
+随时可以覆盖：
+
+```bash
+one container build api --build-version v1.4.2
+```
+
+**CI 里永远显式传 `--build-version`** — 这是让镜像 tag 在重跑时确定唯一的唯一办法。
+
+### Dry-run
+
+```bash
+one container build api --dry-run
+```
+
+打印 One CLI 会跑的 `docker build` 命令，不实际调 docker。适合 debug tag 拼接。
+
+## 3. `one container push [<name>]` — 推到 registry
+
+```bash
+one container push
+one container push api --build-version v1.4.2
+```
+
+`push` 需要 default 的 `container/docker` profile（或 `--profile <name>` 一次性指定）。profile 提供：
+
+- `registry` — 比如 `ghcr.io`、`<acct>.dkr.ecr.us-east-1.amazonaws.com`
+- `namespace` — 比如 GitHub org、AWS ECR repo prefix
+- `username` + `password`（或 token）
+
+完整推送 tag 是 `<registry>/<namespace>/<image>:<build-version>`。
+
+### 单项目覆盖 tag
+
+默认镜像名（tag 里的 `<image>`）就是项目名。manifest 里覆盖：
+
+```json
+{
+  "name": "api",
+  "domains": {
+    "container": {
+      "image": "user-service",
+      "namespace": "internal"
+    }
+  }
+}
+```
+
+不管项目叫什么，生成 `<registry>/internal/user-service:v1.4.2`。
+
+## 跟 `one deploy` 联动的版本流
+
+部署到 kustomize（唯一消费 container 镜像的 deploy backend）时，最终 apply 到 k8s 的版本是：
+
+1. `one deploy --build-version vX.Y.Z` 显式传的
+2. 否则 manifest 里 `lastBuildVersion`（`one container build` 会写回）
+
+典型 CI 流程：
+
+```yaml
+- run: one container build api --build-version ${{ github.sha }}
+- run: one container push  api --build-version ${{ github.sha }}
+- run: one deploy -p api --env prod --build-version ${{ github.sha }}
+```
+
+## Profile 解析
+
+跟其他命令一样的链（见[管理 Profile](/zh/tutorials/configure-profiles/)）：
+
+1. `--profile` flag
+2. 本机 project 绑定：`~/.config/one/config.json#workspaces`
+3. 本机 workspace 绑定：`~/.config/one/config.json#workspaces`
+4. 本机 default
+
+## 常见错误
+
+| 错误码 | 现象 | 修法 |
+|---|---|---|
+| `BACKEND_NOT_ENABLED` | 项目没 `domains.container` 块 | `one add --container-provider docker` 或手改 manifest |
+| `REGISTRY_CREDENTIAL_MISSING` | `push` 没 default `container/docker` profile | `one configure add container/docker --profile <name> ... --use` |
+| `DOCKERFILE_MISSING` | 项目声明的 Dockerfile 路径不存在 | 核对 `projects[*].domains.container.dockerfile` 和实际文件 |
+| `BUILD_VERSION_UNRESOLVED` | 推断不出版本且没传 `--build-version` | 传 `--build-version`，或打 git tag，或写 `package.json#version` |
+
+完整码表：[错误码大全](/zh/docs/error-codes/)。
+
+## 下一步
+
+- 推完镜像部署到 k8s → [多 backend 部署](/zh/tutorials/deploy-multi-backend/)
+- container profile 全字段 → [管理 Profile](/zh/tutorials/configure-profiles/)

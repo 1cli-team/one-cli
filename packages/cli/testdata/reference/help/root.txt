@@ -1,0 +1,36 @@
+
+one — AI Native monorepo workspace orchestrator
+
+USAGE
+  one <command> [options]
+
+COMMANDS
+  create        Scaffold a new workspace
+  add           Add a project (from the bundled templates)
+  templates     List available templates
+  env           Secrets / environment-variable backends (get / set / list / pull / switch) — dotenv / infisical
+  container     Build and push container images (info / build / push) — Dockerfile-driven
+  dev           Start local dev processes (Procfile.dev driven)
+  deploy        Deploy per-project workloads (kustomize / S3-compatible / Vercel / Cloudflare / EdgeOne)
+  run           Run any command with project .env injected (infisical-run style)
+  configure     Configure machine-level endpoint profiles (env / deploy / container, per-backend subtree)
+  serve         Launch the local web UI to edit configuration (127.0.0.1; credentials never seen by AI)
+  skills        Manage the one CLI's bundled skills installation (skills install)
+
+COMMON FLAGS
+  -o, --output  Output format: json | yaml | text (default auto: human format on a TTY, JSON on a pipe)
+  -h, --help    Show this help
+  -v, --version Show version
+
+EXAMPLES
+  one create my-app                                                # Scaffold a workspace (defaults to dotenv)
+  one add nestjs-api --name user-api                               # Add a NestJS backend project
+  one configure add container/ghcr --profile ghcr --use            # Register a GHCR profile
+  one configure add deploy/kustomize --profile prod-k8s --use      # Register a Kubernetes profile
+  one container build user-api                                     # Build the project's registry-tagged image
+  one container push user-api                                      # Push the built image
+  one deploy                                                       # Auto build / push / kubectl apply
+  one dev                                                          # Start every dev process
+  one env pull                                                     # Pull secrets from Infisical into .env
+
+For per-command help: one <command> --help

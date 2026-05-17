@@ -1,0 +1,78 @@
+// Package postgres opens the application's Gorm DB handle. The package
+// name is historical — when DATABASE_URL is empty it actually returns
+// an in-memory SQLite (pure-Go via modernc) so the first `one dev`
+// boots successfully without a Postgres server. Set DATABASE_URL to
+// switch to the real driver.
+package postgres
+
+import (
+	"strings"
+	"time"
+
+	"github.com/glebarez/sqlite"
+	"go.uber.org/zap"
+	"gorm.io/driver/postgres"
+	"gorm.io/gorm"
+	gormlogger "gorm.io/gorm/logger"
+
+	"github.com/example/{{projectNameKebabCase}}/internal/domain"
+)
+
+// Open returns a configured *gorm.DB. When databaseURL is empty, falls
+// back to in-memory SQLite (no daemon, no Docker, no extra install).
+// Gorm's dialect abstraction handles the schema for both drivers; the
+// same AutoMigrate produces compatible tables on either side. The
+// returned handle is never nil, so downstream callers (repositories,
+// handlers) work uniformly without nil-checks.
+func Open(databaseURL string, log *zap.Logger) (*gorm.DB, error) {
+	if strings.TrimSpace(databaseURL) == "" {
+		return openSQLite(log)
+	}
+	return openPostgres(databaseURL, log)
+}
+
+func openPostgres(databaseURL string, log *zap.Logger) (*gorm.DB, error) {
+	db, err := gorm.Open(postgres.Open(databaseURL), &gorm.Config{
+		Logger: gormlogger.Default.LogMode(gormlogger.Warn),
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	sqlDB, err := db.DB()
+	if err != nil {
+		return nil, err
+	}
+	sqlDB.SetMaxOpenConns(20)
+	sqlDB.SetMaxIdleConns(10)
+	sqlDB.SetConnMaxLifetime(time.Hour)
+
+	if err := db.AutoMigrate(&domain.User{}); err != nil {
+		return nil, err
+	}
+
+	log.Info("database connected", zap.String("driver", "postgres"))
+	return db, nil
+}
+
+func openSQLite(log *zap.Logger) (*gorm.DB, error) {
+	log.Warn(
+		"DATABASE_URL 未设置，使用内存 SQLite 作为开发兜底。" +
+			"数据不持久化（每次重启都清空）；需要持久化时 " +
+			"`one env set DATABASE_URL=postgres://... -p <project>`",
+	)
+
+	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{
+		Logger: gormlogger.Default.LogMode(gormlogger.Warn),
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	if err := db.AutoMigrate(&domain.User{}); err != nil {
+		return nil, err
+	}
+
+	log.Info("database connected", zap.String("driver", "sqlite-memory"))
+	return db, nil
+}

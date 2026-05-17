@@ -1,0 +1,33 @@
+新增或更新 env/infisical profile。
+
+凭据获取（Infisical 后台）：
+  Organization → Access Control → Identities → 新建 Universal Auth
+  identity，记下 client id 与 client secret。
+
+行为：
+  - 第一次配某个 name → status=completed，自动设为 default
+  - 同名再跑一次     → status=updated（覆盖凭据）
+  - 加 --use         → 显式切到这个 profile
+
+示例：
+  # 交互（推荐）
+  one configure add env/infisical
+
+  # 非交互（CI / 脚本）
+  one configure add env/infisical --profile work \
+      --site-url https://infisical.company.com \
+      --client-id $CID --client-secret $CSEC \
+      --use
+
+Usage:
+  one configure add env/infisical [--profile <name>] [flags]
+
+Flags:
+      --client-id string       Universal Auth client ID
+      --client-secret string   Universal Auth client secret
+      --profile string         profile 名（非交互模式必传；交互模式留空则 prompt）
+      --site-url string        Infisical site URL（默认 https://app.infisical.com）
+      --use                    把此 profile 设为 default
+
+Global Flags:
+  -o, --output string   输出格式: json | yaml | text（默认 auto：TTY 时人类格式，pipe 时 JSON）

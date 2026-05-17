@@ -1,0 +1,15 @@
+{
+  "ci_enabled": true,
+  "created_in_place": false,
+  "created_path": "\u003cvolatile\u003e",
+  "dev_enabled": true,
+  "package_manager": "pnpm",
+  "project_name": "my-app",
+  "schema": "one-cli/create/v2",
+  "secrets_backend": "dotenv",
+  "skills": {
+    "installed_to": "\u003cvolatile\u003e",
+    "skill_count": 2,
+    "status": "completed"
+  }
+}

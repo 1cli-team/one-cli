@@ -1,0 +1,10 @@
+{
+  "backend": "docker",
+  "config_path": "\u003cvolatile\u003e",
+  "credentials_path": "\u003cvolatile\u003e",
+  "default": true,
+  "domain": "container",
+  "name": "acr-prod",
+  "schema": "one-cli/configure-add/v1",
+  "status": "completed"
+}

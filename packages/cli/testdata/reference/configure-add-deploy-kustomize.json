@@ -1,0 +1,9 @@
+{
+  "backend": "kustomize",
+  "config_path": "\u003cvolatile\u003e",
+  "default": true,
+  "domain": "deploy",
+  "name": "prod-k8s",
+  "schema": "one-cli/configure-add/v1",
+  "status": "completed"
+}

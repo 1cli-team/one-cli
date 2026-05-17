@@ -1,0 +1,47 @@
+package handlers
+
+import (
+	"errors"
+	"net/http"
+
+	"github.com/gin-gonic/gin"
+
+	"github.com/example/{{projectNameKebabCase}}/internal/http/response"
+	"github.com/example/{{projectNameKebabCase}}/internal/service"
+)
+
+type AuthHandler struct {
+	auth *service.AuthService
+}
+
+type loginRequest struct {
+	Email    string `json:"email" binding:"required,email"`
+	Password string `json:"password" binding:"required"`
+}
+
+func NewAuthHandler(auth *service.AuthService) *AuthHandler {
+	return &AuthHandler{auth: auth}
+}
+
+func (h *AuthHandler) Login(c *gin.Context) {
+	var req loginRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.Error(c, http.StatusBadRequest, 40000, "invalid request body")
+		return
+	}
+
+	token, err := h.auth.Login(c.Request.Context(), service.LoginInput{
+		Email:    req.Email,
+		Password: req.Password,
+	})
+	if errors.Is(err, service.ErrInvalidCredentials) {
+		response.Error(c, http.StatusUnauthorized, 40103, "invalid credentials")
+		return
+	}
+	if err != nil {
+		response.Error(c, http.StatusInternalServerError, 50001, "login failed")
+		return
+	}
+
+	response.OK(c, token)
+}

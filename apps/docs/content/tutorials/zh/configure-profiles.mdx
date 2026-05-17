@@ -1,0 +1,128 @@
+---
+title: 管理多平台密钥
+description: 用 one configure 集中管理 12 个平台的凭据 — 每个平台存什么、文件落在哪、运行时怎么选。
+---
+
+`one configure` 管理本机的 **profile** — 即 One CLI 要去对接的各种 endpoint 的凭据集合。一个工作区可以用多个 profile（staging 集群一个 / prod 集群一个）；同一个 profile 也能跨工作区共享。
+
+[基础 secrets](/zh/tutorials/env-vars/) 和 [基础 deploy](/zh/tutorials/deploy/) 都只用了单个 profile 走 happy path。这一章是 profile 管理的完整参考。
+
+## 12 个 (domain, backend) pair
+
+| Pair | profile 里存什么 |
+|---|---|
+| `env/infisical` | Universal Auth machine identity — `siteUrl` / `clientId` / `clientSecret` |
+| `deploy/aws-s3` | `region`、`accessKeyId`、`accessKeySecret`，`endpoint` 可选 |
+| `deploy/aliyun-oss` | `endpoint`、`region`、AK/SK |
+| `deploy/tencent-cos` | `endpoint`、`region`、AK/SK |
+| `deploy/minio` | `endpoint`、AK/SK（默认 path-style） |
+| `deploy/rustfs` | 同 minio |
+| `deploy/r2` | Cloudflare R2：`endpoint`、AK/SK（`region` 是 `auto`） |
+| `deploy/kustomize` | `kubeconfigPath`、`context`、`namespace` |
+| `deploy/vercel` | `token`、`teamSlug`（可选） |
+| `deploy/cloudflare` | `accountId`、`apiToken` |
+| `deploy/edgeone` | EdgeOne secret + 项目信息 |
+| `container/docker` | `registry`、`namespace`、`username`、`password`（token 也行） |
+
+跑 `one configure add --help` 看 live 列表。每个 pair 有自己的 sub-subcommand，含 backend 专属 flag — 跑 `one configure add <pair> --help` 看具体 flag。
+
+## 存储：双文件 mode 0600
+
+```
+~/.config/one/
+├── config.json         # endpoint / region / default 指针（非敏感）
+└── credentials.json    # clientSecret / accessKeySecret / 密码（敏感）
+```
+
+两个文件都是 `0600` 权限 — 仅本人可读。**不进 git**，**不要**复制到团队共享 dotfile 仓库。
+
+这套拆分跟 AWS CLI 的双文件模型一致：敏感字段在 `credentials.json`，截图 / 误提交也无所谓的字段在 `config.json`。
+
+## 加 / 改 profile
+
+```bash
+# 交互式（新机器推荐）：
+one configure
+# → 问 (domain, backend) → 走对应流程
+
+# 或直接对某个 pair：
+one configure add deploy/aws-s3 --profile prod \
+  --region us-east-1 \
+  --access-key-id <AK> \
+  --access-key-secret <SK> \
+  --use
+```
+
+规则：
+
+- 某 `(pair, profile)` 第一次配：status = `completed`，自动成为 default
+- 同 `(pair, profile)` 再跑一次：status = `updated`（覆盖凭据）
+- `--use` 显式把这个 profile 设为 default
+
+## 列表 / 切换 / 查看
+
+```bash
+# 列所有 profile：
+one configure list
+
+# 只列某个 pair：
+one configure list deploy/aws-s3
+
+# 看 default：
+one configure current
+one configure current deploy/aws-s3
+
+# 打印一个 profile 全文（凭据默认掩码）：
+one configure show deploy/aws-s3 --profile prod
+one configure show deploy/aws-s3 --profile prod --reveal   # 显示原文
+
+# 切 default：
+one configure use deploy/aws-s3 --profile staging
+
+# 删除：
+one configure remove deploy/aws-s3 --profile old
+```
+
+所有这些都支持 `-o json` — 适合写脚本做 profile 轮换。
+
+## Profile 解析链
+
+跑需要 profile 的命令时（`one deploy` / `one env pull` / `one container push`），One CLI 按这个顺序选：
+
+1. **`--profile` flag**（最高优先，一次性）
+2. **本机 project 绑定** — `~/.config/one/config.json#workspaces[workspaceId].projects[project].profiles[...]`
+3. **本机 workspace 绑定** — 用 `one configure use <pair> --profile <name> --workspace` 设置
+4. **本机 default 指针** — `one configure use <pair> --profile <name>` 设的（或第一个加入的 profile，如果没显式设过）
+
+manifest 不再保存本机 profile 名。`one configure current <pair>` 报的是 default 指针（第 4 层）。要 debug 具体某条命令会选哪个，跑 `-o json --dry-run`：
+
+```bash
+one deploy -p api --env staging -o json --dry-run | jq '.profile'
+```
+
+## locale：切 CLI 语言
+
+`configure` 的第 14 个子命令不是 `(domain, backend)` 对，是 CLI 自己的 UI 语言：
+
+```bash
+one configure locale --set zh-CN
+one configure locale --set en-US
+```
+
+**只影响人类看到的文本**（`error.message`、提示语、表格表头）。错误**码**（`error.code`）和 JSON 输出跨 locale 完全一样 — 这也是为什么 bundled skill 要求 agent 按 `error.code` 分流，不去解析 `error.message`。
+
+## 常见错误
+
+| 错误码 | 现象 | 修法 |
+|---|---|---|
+| `DOMAIN_INVALID` | pair 形式错（如 `env/foo` 但 `foo` 不是已知 backend） | 用 12 个支持的 pair 中的一个 |
+| `BACKEND_ID_UNKNOWN` | 跟上一条一样，从另一条代码路径冒出来 | 同上 |
+| `PROFILE_NOT_FOUND` | 某条命令（或 `--profile` flag）引用了不存在的 profile 名 | `one configure list <pair>` 看本机有什么 |
+| `PROFILE_NAME_REQUIRED` | 子命令需要 `--profile <name>` 你没传 | 加 `--profile` |
+
+完整码表：[错误码大全](/zh/docs/error-codes/)。
+
+## 下一步
+
+- env 的多环境用法 → [多环境变量](/zh/tutorials/env-multi-env/)
+- 10 个 deploy backend 细节 → [多 backend 部署](/zh/tutorials/deploy-multi-backend/)

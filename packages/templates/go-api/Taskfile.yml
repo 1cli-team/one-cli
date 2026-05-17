@@ -1,0 +1,40 @@
+version: "3"
+
+dotenv:
+  - .env
+
+tasks:
+  run:
+    cmds:
+      - go run ./cmd/server
+
+  build:
+    cmds:
+      - go build -o bin/server ./cmd/server
+
+  fmt:
+    cmds:
+      - gofmt -w .
+
+  fmt:check:
+    cmds:
+      - test -z "$(gofmt -l .)"
+
+  vet:
+    cmds:
+      - go vet ./...
+
+  test:
+    cmds:
+      - go test ./...
+
+  tidy:
+    cmds:
+      - go mod tidy
+
+  check:
+    cmds:
+      - task: tidy
+      - task: fmt:check
+      - task: vet
+      - task: test

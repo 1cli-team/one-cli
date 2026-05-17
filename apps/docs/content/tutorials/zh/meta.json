@@ -1,0 +1,18 @@
+{
+  "title": "教程",
+  "pages": [
+    "---基础教程---",
+    "templates",
+    "first-workspace",
+    "deploy",
+    "skills-install",
+    "---进阶教程---",
+    "configure-profiles",
+    "env-vars",
+    "env-multi-env",
+    "dev-local",
+    "container-build-push",
+    "deploy-multi-backend",
+    "json-output-error-codes"
+  ]
+}

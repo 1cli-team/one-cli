@@ -1,0 +1,7 @@
+列出工作区里容器构建的相关元数据（无副作用）
+
+Usage:
+  one container info [flags]
+
+Global Flags:
+  -o, --output string   输出格式: json | yaml | text（默认 auto：TTY 时人类格式，pipe 时 JSON）

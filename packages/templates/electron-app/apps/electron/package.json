@@ -1,0 +1,38 @@
+{
+  "name": "@app/electron",
+  "version": "0.1.0",
+  "description": "electron-template electron main process",
+  "type": "module",
+  "main": "build/main/index.js",
+  "scripts": {
+    "dev": "cross-env NODE_ENV=development tsdown && cross-env NODE_ENV=development electron build/main/index.js",
+    "build": "cross-env NODE_ENV=production tsdown",
+    "pack": "cross-env NODE_ENV=development node script/release.mjs",
+    "release": "cross-env NODE_ENV=production node script/release.mjs"
+  },
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "@app/preload": "workspace:*",
+    "@inversifyjs/binding-decorators": "^1.1.3",
+    "dayjs": "^1.11.11",
+    "electron-devtools-installer": "^4.0.0",
+    "electron-is-dev": "^3.0.1",
+    "electron-log": "^5.1.5",
+    "electron-store": "^11.0.2",
+    "electron-updater": "^6.8.3",
+    "inversify": "^7.9.1",
+    "mime-types": "^3.0.1",
+    "reflect-metadata": "^0.2.2"
+  },
+  "devDependencies": {
+    "@types/mime-types": "^2.1.4",
+    "@types/node": "^20.11.0",
+    "cross-env": "^10.0.0",
+    "dotenv": "^16.4.5",
+    "electron": "^41.0.0",
+    "electron-builder": "^26.0.0",
+    "tsdown": "^0.15.9",
+    "typescript": "^6.0.0"
+  }
+}

@@ -1,0 +1,139 @@
+---
+title: Build & push images
+description: one container info / build / push — what gets built, how versions are inferred, and how the image tag maps to your registry namespace.
+---
+
+`one container` is the wrapper around `docker build` / `docker push` that knows about your manifest. Three subcommands, no surprises.
+
+Prerequisites: you've configured a `container/docker` profile and the workspace has at least one project that declares `domains.container` (templates `nestjs-api`, `go-api`, `nextjs-app` do by default). See [Manage profiles](/en/tutorials/configure-profiles/) if you haven't set up the profile yet.
+
+## 1. `one container info` — see what builds
+
+```bash
+one container info
+one container info -o json
+```
+
+Lists every project in the workspace that has a container declaration, plus the current state:
+
+| Field | What it means |
+|---|---|
+| `project` | Project name from manifest |
+| `image` | The full image tag (`<registry>/<namespace>/<image>:<version>`) |
+| `dockerfile` | Path to the Dockerfile inside the project |
+| `lastBuildVersion` | Version recorded after the last `one container build` |
+
+This is read-only — safe to run any time.
+
+## 2. `one container build [<name>]` — build an image
+
+Build all containerized projects:
+
+```bash
+one container build
+```
+
+Build one:
+
+```bash
+one container build api
+one container build -p apps/web      # or by relative path
+```
+
+### Version inference
+
+`--build-version` controls the image tag suffix. If you don't pass it, One CLI tries these in order:
+
+1. The `buildVersion` field on the project in `one.manifest.json` (if pinned)
+2. The closest git tag matching `v*` on the current commit
+3. The `version` field in `package.json` (Node projects)
+4. The first 7 characters of the current git SHA (`-dirty` appended if working tree has uncommitted changes)
+
+Override anytime:
+
+```bash
+one container build api --build-version v1.4.2
+```
+
+In CI, always pass `--build-version` explicitly — it's the only way to make image tags deterministic across re-runs.
+
+### Dry-run
+
+```bash
+one container build api --dry-run
+```
+
+Prints the `docker build` command One CLI would run, without invoking docker. Useful for debugging tag construction.
+
+## 3. `one container push [<name>]` — push to registry
+
+```bash
+one container push
+one container push api --build-version v1.4.2
+```
+
+`push` requires a default `container/docker` profile (or `--profile <name>` for a one-off). The profile supplies:
+
+- `registry` — e.g. `ghcr.io`, `<acct>.dkr.ecr.us-east-1.amazonaws.com`
+- `namespace` — e.g. your GitHub org, AWS ECR repo prefix
+- `username` + `password` (or token)
+
+The full pushed tag is `<registry>/<namespace>/<image>:<build-version>`.
+
+### Tag override per project
+
+By default, the image name (`<image>` in the tag) is the project name. Override in the manifest:
+
+```json
+{
+  "name": "api",
+  "domains": {
+    "container": {
+      "image": "user-service",
+      "namespace": "internal"
+    }
+  }
+}
+```
+
+This produces `<registry>/internal/user-service:v1.4.2` regardless of the project name.
+
+## Build version flow with `one deploy`
+
+When deploying to kustomize (the only deploy backend that consumes container images), the version that gets applied to k8s is:
+
+1. `one deploy --build-version vX.Y.Z` if you pass it
+2. Otherwise the last recorded build version (`one container build` writes it back to manifest as `lastBuildVersion`)
+
+Typical CI sequence:
+
+```yaml
+- run: one container build api --build-version ${{ github.sha }}
+- run: one container push  api --build-version ${{ github.sha }}
+- run: one deploy -p api --env prod --build-version ${{ github.sha }}
+```
+
+## Profile resolution
+
+Same chain as everything else (see [Manage profiles](/en/tutorials/configure-profiles/) for the full picture):
+
+1. `--profile` flag on this command
+2. Local project binding in `~/.config/one/config.json#workspaces`
+3. Local workspace binding in `~/.config/one/config.json#workspaces`
+4. Machine default
+
+## Common errors
+
+| Code | Symptom | Fix |
+|---|---|---|
+| `BACKEND_NOT_ENABLED` | The project has no `domains.container` block | Add it via `one add --container-provider docker`, or edit the manifest manually |
+| `REGISTRY_CREDENTIAL_MISSING` | `push` ran without a default `container/docker` profile | `one configure add container/docker --profile <name> ... --use` |
+| `DOCKERFILE_MISSING` | Project's declared Dockerfile path doesn't exist | Check `projects[*].domains.container.dockerfile` and the actual file |
+| `BUILD_VERSION_UNRESOLVED` | No version could be inferred and `--build-version` wasn't passed | Pass `--build-version`, or commit a tag, or set `package.json#version` |
+
+Full table: [error codes](/en/docs/error-codes/).
+
+## Next
+
+- Deploy to k8s after pushing → [Multi-backend deploy](/en/tutorials/deploy-multi-backend/)
+- All container profile fields → [Manage profiles](/en/tutorials/configure-profiles/)

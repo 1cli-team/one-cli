@@ -1,0 +1,13 @@
+{
+  "installed_to": "\u003cvolatile\u003e",
+  "schema": "one-cli/skills-install/v1",
+  "skill_count": 2,
+  "status": "completed",
+  "targets": [
+    {
+      "agent_id": "claude-code",
+      "display_name": "Claude Code",
+      "global_path": "~/.claude/skills/"
+    }
+  ]
+}

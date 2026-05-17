@@ -1,0 +1,243 @@
+{
+	"sidebar": {
+		"brand": "one serve",
+		"home": "Overview",
+		"profile": "Credential profiles",
+		"loopbackOnly": "127.0.0.1 only",
+		"themeToDark": "Switch to dark mode",
+		"themeToLight": "Switch to light mode",
+		"language": "Language",
+		"languageAuto": "Follow system",
+		"languageZh": "中文",
+		"languageEn": "English"
+	},
+	"topbar": {
+		"home": "Overview",
+		"profile": "Credential profiles",
+		"sectionsRoot": "Sections"
+	},
+	"notFound": {
+		"message": "404 — Page not found"
+	},
+	"errorBoundary": {
+		"title": "The application hit an error",
+		"body": "An unexpected error was caught by the local error boundary. You can retry or return to the overview.",
+		"errorId": "Error ID:",
+		"devDetails": "Development error details",
+		"reload": "Reload",
+		"home": "Back home"
+	},
+	"sections": {
+		"groupLabel": {
+			"env": "Environment variables",
+			"deploy": "Deploy",
+			"container": "Container"
+		},
+		"env": {
+			"infisical": {
+				"title": "Infisical",
+				"description": "Universal Auth credentials and Infisical site URL for the env domain."
+			}
+		},
+		"deploy": {
+			"aliyun-oss": {
+				"title": "Aliyun OSS",
+				"description": "Aliyun OSS endpoint plus AK/SK using the S3 protocol."
+			},
+			"tencent-cos": {
+				"title": "Tencent COS",
+				"description": "Tencent COS endpoint plus AK/SK using the S3 protocol."
+			},
+			"aws-s3": {
+				"title": "AWS S3",
+				"description": "AWS S3 region plus AK/SK; leave endpoint blank for SDK defaults."
+			},
+			"minio": {
+				"title": "MinIO",
+				"description": "Self-hosted MinIO object storage with path-style addressing."
+			},
+			"rustfs": {
+				"title": "RustFS",
+				"description": "Self-hosted RustFS object storage with path-style addressing."
+			},
+			"r2": {
+				"title": "Cloudflare R2",
+				"description": "Cloudflare R2 endpoint plus AK/SK."
+			},
+			"kustomize": {
+				"title": "Kustomize",
+				"description": "Kubeconfig context for the deploy domain."
+			},
+			"vercel": {
+				"title": "Vercel",
+				"description": "Vercel API token with optional team slug."
+			},
+			"cloudflare": {
+				"title": "Cloudflare",
+				"description": "Cloudflare API token with optional account ID."
+			},
+			"edgeone": {
+				"title": "EdgeOne Pages",
+				"description": "Tencent EdgeOne Pages token with optional region."
+			}
+		},
+		"container": {
+			"docker": {
+				"title": "Docker Registry",
+				"description": "ACR, Docker Hub, GHCR, Harbor, or another container registry."
+			}
+		}
+	},
+	"home": {
+		"title": "Machine-level profiles",
+		"loadFailedTitle": "Failed to load profiles",
+		"profileCount_one": "{{count}} profile",
+		"profileCount_other": "{{count}} profiles",
+		"default": "default: {{name}}",
+		"noDefault": "no default",
+		"loading": "Loading…"
+	},
+	"detail": {
+		"unknownSectionTitle": "Unknown section",
+		"unknownSectionBody": "{{domain}}/{{backend}} is not a valid (domain, backend) pair.",
+		"loadFailedTitle": "Load failed",
+		"showSecrets": "Show secrets",
+		"hideSecrets": "Hide secrets",
+		"showingSecrets": "Showing secrets",
+		"addProfile": "New profile",
+		"loading": "Loading…",
+		"empty": "No profiles yet. Click 'New profile' to create the first one.",
+		"default": "default",
+		"tableProfile": "Profile",
+		"tableSummary": "Summary",
+		"tableActions": "Actions",
+		"setDefault": "Set default",
+		"edit": "Edit",
+		"remove": "Delete",
+		"confirmRemove": "Delete profile \"{{name}}\"? This cannot be undone."
+	},
+	"form": {
+		"addTitle": "New profile",
+		"editTitle": "Edit {{name}}",
+		"addDescription": "Fill in and save. The first profile in a section is set default automatically.",
+		"editDescription": "Saving overwrites the existing values.",
+		"profileName": "Profile name",
+		"profileNamePlaceholder": "e.g. work / prod / acr-prod",
+		"setDefaultAfterSave": "Set default after save",
+		"setDefaultAfterSaveAuto": "Set default after save (this section has no default yet — will set automatically)",
+		"cancel": "Cancel",
+		"save": "Save",
+		"fields": {
+			"siteUrl": "Site URL",
+			"clientId": "Client ID",
+			"clientSecret": "Client Secret",
+			"endpoint": "Endpoint (leave blank for AWS S3 to use SDK defaults)",
+			"endpointPlaceholder": "https://<vendor-endpoint>",
+			"region": "Region",
+			"regionPlaceholder": "us-east-1 / cn-hangzhou / auto",
+			"forcePathStyle": "force path style (MinIO / RustFS need this)",
+			"accessKeyId": "Access Key ID",
+			"accessKeySecret": "Access Key Secret",
+			"kubeconfigPath": "Kubeconfig path",
+			"kubeconfigContext": "Context name",
+			"kubeconfigContextPlaceholder": "prod / staging",
+			"teamSlug": "Team slug (leave blank for personal scope)",
+			"teamSlugPlaceholder": "my-org",
+			"apiToken": "API Token",
+			"accountId": "Account ID (required for multi-account tokens, otherwise leave blank)",
+			"accountIdPlaceholder": "a1b2c3...",
+			"regionEdgeOne": "Region (e.g. ap-guangzhou; optional)",
+			"regionEdgeOnePlaceholder": "ap-guangzhou",
+			"registry": "Registry",
+			"registryPlaceholder": "your-harbor.example.com / quay.io / ...",
+			"acrRegion": "ACR Region",
+			"acrRegionPlaceholder": "cn-hangzhou / cn-shanghai (host derives to registry.<region>.aliyuncs.com)",
+			"namespace": "Namespace",
+			"namespacePlaceholder": "org / username",
+			"username": "Username",
+			"password": "Password / token"
+		},
+		"summary": {
+			"noFields": "(no fields)",
+			"site": "site: {{site}}",
+			"notSet": "(not set)",
+			"endpointDefault": "(SDK default)",
+			"regionDefault": "—",
+			"endpointRegion": "endpoint: {{endpoint}} · region: {{region}}",
+			"contextDefault": "—",
+			"kubeconfigDefault": "(default)",
+			"contextFile": "context: {{context}} · file: {{file}}",
+			"team": "team: {{team}}",
+			"teamPersonal": "(personal)",
+			"account": "account: {{account}}",
+			"accountTokenDefault": "(token default)",
+			"regionLabel": "region: {{region}}",
+			"regionDefaultLabel": "(default)",
+			"registryUnset": "(no registry)",
+			"acrRegionUnset": "(no region)"
+		}
+	},
+	"toast": {
+		"updated": "Updated {{name}}",
+		"created": "Created {{name}}",
+		"setDefault": "Default switched to {{name}}",
+		"removed": "Deleted {{name}}",
+		"setDefaultAfterSaveHint": "Set as default"
+	},
+	"http": {
+		"networkError": "Network request failed — check your connection."
+	},
+	"overview": {
+		"untitledWorkspace": "Untitled workspace",
+		"environments": "Environments",
+		"projects": "Projects",
+		"empty": "The manifest declares no sub-projects.",
+		"allGood": "✓ All set",
+		"workspaceIssuesTitle": "Workspace-level configuration missing",
+		"manageProfilesCta": "Manage credential profiles",
+		"kinds": {
+			"app": "App",
+			"service": "Service",
+			"package": "Package"
+		},
+		"issue": {
+			"label": {
+				"container": "container",
+				"deploy": "deploy",
+				"env": "env",
+				"profile": "profile"
+			},
+			"missingProfile": "{{section}} is missing a usable credential profile{{profile}} — fill in the API key / token",
+			"missing": {
+				"container": "No container backend configured — `one container build` will fail",
+				"deploy": "No deploy backend configured — `one deploy` will fail",
+				"env": "Workspace has no env backend selected — set one before using `one env`"
+			}
+		},
+		"fix": {
+			"cta": "Configure",
+			"profileCta": "Add credentials",
+			"title": {
+				"container": "Configure container backend",
+				"deploy": "Configure deploy backend",
+				"env": "Configure workspace env backend"
+			},
+			"description": {
+				"container": "Pick a container image backend for \"{{project}}\" — writes to manifest projects[].domains.container.",
+				"deploy": "Pick a deploy backend for \"{{project}}\" — writes to manifest projects[].domains.deploy.kind.",
+				"env": "Pick the environment-variable backend for the whole workspace — writes to manifest domains.env.kind."
+			},
+			"kindLabel": "Backend kind",
+			"kindPlaceholder": "Select a backend…",
+			"imageLabel": "Image (optional)",
+			"imagePlaceholder": "ghcr.io/org/web:latest",
+			"note": "This only writes the backend selection to the manifest. Configure the matching credential profile (API key / token) in the \"{{section}}\" section.",
+			"sectionLink": "credential section",
+			"save": "Save",
+			"saving": "Saving…",
+			"cancel": "Cancel",
+			"saved": "Updated {{domain}} configuration",
+			"failed": "Save failed"
+		}
+	}
+}

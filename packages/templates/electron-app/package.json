@@ -1,0 +1,23 @@
+{
+  "name": "electron-template",
+  "version": "0.1.0",
+  "description": "electron-template",
+  "private": true,
+  "scripts": {
+    "dev": "pnpm -F @app/preload build && pnpm -r --parallel -F @app/electron -F @app/ui run dev",
+    "build": "pnpm -F @app/preload run build && pnpm -r --parallel -F @app/electron -F @app/ui run build",
+    "pack": "pnpm -F @app/electron run pack",
+    "release": "pnpm run build && pnpm -F @app/electron run release",
+    "lint": "oxlint",
+    "lint:fix": "oxlint --fix",
+    "format": "oxfmt",
+    "format:check": "oxfmt --check"
+  },
+  "devDependencies": {
+    "oxfmt": "^0.45.0",
+    "oxlint": "^1.60.0"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "MIT"
+}

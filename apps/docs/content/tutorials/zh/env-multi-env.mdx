@@ -1,0 +1,156 @@
+---
+title: 多环境变量
+description: ".env 多层覆盖、dev/staging/prod 切换、per-project path 覆盖、Infisical 继承 — 基础页放不下的部分。"
+---
+
+这一页接[基础：配置环境变量](/zh/tutorials/env-vars/)。前置条件：已经能用 `one env set` 写值，懂 dotenv 和 Infisical 两种 backend 的区别。这里讲多层覆盖、多环境树、per-project path。
+
+## dotenv：每个环境四层文件
+
+每个项目按顺序加载四个文件，后者覆盖前者：
+
+```
+<project>/.env
+<project>/.env.<env>
+<project>/.env.local
+<project>/.env.<env>.local
+```
+
+`services/api/` + `--env staging` 的具体例子：
+
+| 文件 | 该 commit 吗？ | 典型内容 |
+|---|---|---|
+| `services/api/.env` | yes | 所有环境共用的默认值 — `LOG_LEVEL=info`、非敏感开关 |
+| `services/api/.env.staging` | yes | staging 专属、非敏感的值 — feature flag 覆盖 |
+| `services/api/.env.local` | **no**（gitignored） | 本机开发覆盖 — 本地 DB URL |
+| `services/api/.env.staging.local` | **no**（gitignored） | 限于 staging 的本机覆盖 |
+
+`one env set KEY=VALUE -p api --env staging` 写到 `services/api/.env.staging`。要写 `.local` 文件直接编辑。
+
+`one env get KEY -p api --env staging` 读四层叠加后的结果。
+
+`one env list -p api --env staging -o json` 显示叠加后的所有 key + 每个 key 来自哪个文件。
+
+## 多环境切换
+
+环境名列表存在 `one.manifest.json#environments.names`：
+
+```json
+{
+  "environments": {
+    "names": ["dev", "staging", "prod"],
+    "default": "dev"
+  }
+}
+```
+
+加新环境 — 比如 `qa` — 在数组里加一项。后续命令就接受了：
+
+```bash
+one env set DATABASE_URL=... --env qa -p api
+one env pull --env qa            # Infisical
+one run -p api --env qa -- npm run e2e
+```
+
+环境名是任意字符串，manifest 是 single source of truth。
+
+## Infisical：folder 树镜像工作区目录
+
+Infisical 里每个项目自动一个 folder，path = `relativeDir`。环境正交（dev / staging / prod 是同一棵 folder 树下并列的环境分区）：
+
+```
+Infisical project
+├── env=dev
+│   ├── /                       (工作区根 folder)
+│   ├── /services/api/
+│   └── /apps/web/
+├── env=staging
+└── env=prod
+```
+
+继承规则（Layer 1）：
+
+- 根 folder 的 key 被每个项目继承
+- 项目 folder 互相看不到对方的 key
+
+所以 `apps/web` 永远拿不到 `services/api/DATABASE_URL`，即使是同一个环境。
+
+## Per-project path 覆盖
+
+默认 path = 项目 `relativeDir`。项目可以在自己的 `domains.env` 里覆盖：
+
+```json
+{
+  "name": "charge",
+  "relativeDir": "services/charge",
+  "domains": {
+    "env": {
+      "path": "/teams/payments/services/charge",
+      "inherits": true,
+      "keys": ["DATABASE_URL", "STRIPE_SECRET"]
+    }
+  }
+}
+```
+
+| 字段 | 作用 |
+|---|---|
+| `path` | 覆盖默认推导出的 Infisical folder path |
+| `inherits` | 默认 `true` — 从根 folder 继承。设 `false` 完全隔离。 |
+| `keys` | 可选白名单 — 只这些 key 落到这个项目的 `.env`，folder 里有更多也不要 |
+| `disabled` | `true` 时 `one env pull` 直接跳过这个项目 |
+
+## CI 集成
+
+CI 里把 Universal Auth 凭据设成 repo secret，job 开始时拉一次：
+
+{/* verify-cli:ignore-start */}
+```yaml
+env:
+  INFISICAL_UNIVERSAL_AUTH_CLIENT_ID:     ${{ secrets.INFISICAL_CLIENT_ID }}
+  INFISICAL_UNIVERSAL_AUTH_CLIENT_SECRET: ${{ secrets.INFISICAL_CLIENT_SECRET }}
+steps:
+  - uses: actions/checkout@v4
+  - run: curl -fsSL https://one.torchstellar.com/install.sh | bash
+  - run: one env pull --env staging
+  - run: pnpm install && pnpm test
+```
+{/* verify-cli:ignore-end */}
+
+CI 走环境变量而不是 profile — 不用管 `~/.config/one/credentials.json`。
+
+## pull 的冲突保护
+
+```bash
+one env pull --env dev
+# 任何本地 .env 跟 Infisical 不一致都会 ENV_PULL_CONFLICT
+```
+
+判断是**语义级**的 — parse 后比较 dotenv 记录，不是 byte diff。引号风格、行末换行差异不会误报。
+
+显式覆盖：
+
+```bash
+one env pull --env dev --force
+```
+
+预演不实际写：
+
+```bash
+one env pull --env dev --dry-run
+```
+
+## 常见错误
+
+| 错误码 | 现象 | 修法 |
+|---|---|---|
+| `ENV_UNKNOWN_ENVIRONMENT` | `--env qa` 但 `qa` 不在 `manifest.environments.names` | 加进 manifest |
+| `ENV_PULL_CONFLICT` | 本地 `.env` 跟 Infisical 不一致 | 看 diff；确认要覆盖加 `--force` |
+| `INFISICAL_PROJECT_CREATE_FORBIDDEN` | machine identity 没建项目权限 | 加 admin 角色，或手工建项目后把 `projectId` 钉进 manifest |
+| `ENV_KEY_NOT_FOUND` | `one env get` 拿不到值 | 项目 / env / key 拼写错 — 用 `one env list` 核对 |
+
+完整码表：[错误码大全](/zh/docs/error-codes/)。
+
+## 下一步
+
+- `one env` 命令参考 → [Secrets 参考](/zh/docs/env-vars/)

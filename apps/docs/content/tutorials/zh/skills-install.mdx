@@ -1,0 +1,92 @@
+---
+title: 安装 one cli skill
+description: 跑 one skills install，让 Claude Code、Cursor、Codex（以及 50+ 其他 coding agent）能直接操作 One CLI。
+---
+
+`one-cli` skill 是一个 bundled agent skill — 一个 markdown 包，教 coding agent 怎么安全地用 One CLI（读 JSON 输出、按错误码自恢复、挑模板、按 toolchain 装依赖）。装好后，你跟 agent 说"加一个叫 user-api 的 NestJS 服务"，它会自动跑 `one add nestjs-api --name user-api -o json`。
+
+`one create` 已经会替已检测到的 agent 跑等价命令。这一章是给"显式装"或"装到额外 agent"的场景用的。
+
+## 1. 跑命令
+
+交互式（新机器推荐）：
+
+```bash
+one skills install
+```
+
+会自动检测本机所有支持的 coding agent（Claude Code、Cursor、Codex、Gemini CLI、GitHub Copilot、OpenCode、Cline 等 50+）。给你一个多选框，默认只勾 Claude Code。空格切换，回车确认。
+
+非交互式：
+
+```bash
+# 只装到指定 agent：
+one skills install --agent claude-code --agent cursor
+
+# 装到所有检测到的（CI 用）：
+one skills install --yes
+```
+
+**幂等** — 多次跑都安全。升级 One CLI binary 之后再跑一次，把新 skill 内容刷到所有目标。
+
+## 2. 装到哪了
+
+skill 实体只 materialize 一份在：
+
+```
+~/.one/skills-store/one-bundled/one-cli/
+```
+
+每个目标 agent 从自己的 global skills 目录创 symlink 指过去。Windows 自动 fallback 到 copy。
+
+可以看一下：
+
+```bash
+ls -la ~/.claude/skills/one-cli      # Claude Code
+ls -la ~/.cursor/skills/one-cli      # Cursor
+```
+
+（具体路径看 agent。）
+
+## 3. Skill 教 agent 什么
+
+skill 是一个 markdown playbook 目录。最关键的几本：
+
+| Playbook | agent 什么时候读 |
+|---|---|
+| `references/bootstrap.md` | 用户想新建工作区 |
+| `references/add-feature.md` | 用户想从模板加项目 |
+| `references/dependencies.md` | 工作区刚变动，需要装依赖 |
+| `references/env-consumption.md` | 服务代码要读环境变量 |
+| `references/REFERENCE.md` | 查命令 / schema / 错误码 |
+
+skill 还硬性约束 agent 必须做这几件事：
+
+1. 永远用 `-o json` 取结构化输出。
+2. 读 `error.code`，**不解析** `error.message`（会随 i18n 变）。
+3. 工作区根 = 含 `one.manifest.json` 的目录。
+4. 不手改 `AGENTS.md` / `CLAUDE.md`。
+5. 非交互流程一律加 `--yes`。
+
+## 4. 验证装好了
+
+在 Claude Code（或你的 agent）里说：
+
+> 用 one-cli skill 扫一下这个工作区，告诉我有哪些项目。
+
+agent 应该跑 `one -o json` 之类的命令，而不是按文件名猜。如果它无视 skill，多半是这个 agent 没被检测到 — 用 `--agent <id>` 显式装一次。
+
+## 常见错误
+
+| 错误码 | 现象 | 修法 |
+|---|---|---|
+| `SKILLS_INSTALL_FAILED` | materialize 或 symlink 步骤失败 | 看 `context.path` — 通常是 `~/.claude/skills/` 权限问题 |
+| `SKILLS_NO_AGENTS_DETECTED` | 自动检测没发现任何 agent | 先装一个 agent，或者用 `--agent <id>` 强制指定 |
+| (没报错但 agent 不照 skill 走) | agent 加载了 skill 但不按它做 | 重启 agent — 有些 agent 只在启动时扫描 skill |
+
+完整码表：[错误码大全](/zh/docs/error-codes/)。
+
+## 下一步
+
+- `one-cli` skill 自己的 reference 文档 → [Skills 参考](/zh/docs/skills/)
+- agent 怎么消费 One CLI 的 JSON 输出 → [JSON 输出与错误码](/zh/tutorials/json-output-error-codes/)（进阶）

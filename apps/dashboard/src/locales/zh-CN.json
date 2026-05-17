@@ -1,0 +1,243 @@
+{
+	"sidebar": {
+		"brand": "one serve",
+		"home": "概览",
+		"profile": "凭据 profile",
+		"loopbackOnly": "127.0.0.1 only",
+		"themeToDark": "切深色",
+		"themeToLight": "切浅色",
+		"language": "语言",
+		"languageAuto": "跟随系统",
+		"languageZh": "中文",
+		"languageEn": "English"
+	},
+	"topbar": {
+		"home": "概览",
+		"profile": "凭据 profile",
+		"sectionsRoot": "配置分区"
+	},
+	"notFound": {
+		"message": "404 — 页面未找到"
+	},
+	"errorBoundary": {
+		"title": "应用程序遇到了一个错误",
+		"body": "很抱歉，应用程序遇到了一个意外错误。问题已经被本地错误边界捕获，你可以重试或返回首页。",
+		"errorId": "错误 ID：",
+		"devDetails": "开发模式错误详情",
+		"reload": "重新加载",
+		"home": "返回首页"
+	},
+	"sections": {
+		"groupLabel": {
+			"env": "环境变量",
+			"deploy": "部署",
+			"container": "容器"
+		},
+		"env": {
+			"infisical": {
+				"title": "Infisical",
+				"description": "Universal Auth 凭据 + Infisical site URL（env 域）"
+			}
+		},
+		"deploy": {
+			"aliyun-oss": {
+				"title": "Aliyun OSS",
+				"description": "阿里云 OSS endpoint + AK/SK（deploy 域，S3 协议）"
+			},
+			"tencent-cos": {
+				"title": "Tencent COS",
+				"description": "腾讯云 COS endpoint + AK/SK（deploy 域，S3 协议）"
+			},
+			"aws-s3": {
+				"title": "AWS S3",
+				"description": "AWS S3 region + AK/SK（deploy 域；endpoint 留空走 SDK 默认）"
+			},
+			"minio": {
+				"title": "MinIO",
+				"description": "MinIO 自部署对象存储（deploy 域，path-style 寻址）"
+			},
+			"rustfs": {
+				"title": "RustFS",
+				"description": "RustFS 自部署对象存储（deploy 域，path-style 寻址）"
+			},
+			"r2": {
+				"title": "Cloudflare R2",
+				"description": "Cloudflare R2 endpoint + AK/SK（deploy 域）"
+			},
+			"kustomize": {
+				"title": "Kustomize",
+				"description": "kubeconfig context（deploy 域）"
+			},
+			"vercel": {
+				"title": "Vercel",
+				"description": "Vercel API token + 可选 team slug（deploy 域）"
+			},
+			"cloudflare": {
+				"title": "Cloudflare",
+				"description": "Cloudflare API token + 可选 account ID（deploy 域）"
+			},
+			"edgeone": {
+				"title": "EdgeOne Pages",
+				"description": "Tencent EdgeOne Pages token + 可选 region（deploy 域）"
+			}
+		},
+		"container": {
+			"docker": {
+				"title": "Docker Registry",
+				"description": "ACR / Docker Hub / GHCR / Harbor 等（container 域）"
+			}
+		}
+	},
+	"home": {
+		"title": "机器级 profile",
+		"loadFailedTitle": "加载 profile 失败",
+		"profileCount_one": "{{count}} 个 profile",
+		"profileCount_other": "{{count}} 个 profile",
+		"default": "default: {{name}}",
+		"noDefault": "无 default",
+		"loading": "加载中…"
+	},
+	"detail": {
+		"unknownSectionTitle": "未知 section",
+		"unknownSectionBody": "{{domain}}/{{backend}} 不是合法 (domain, backend) 对。",
+		"loadFailedTitle": "加载失败",
+		"showSecrets": "显示原文",
+		"hideSecrets": "隐藏凭据原文",
+		"showingSecrets": "已显示原文",
+		"addProfile": "新增 profile",
+		"loading": "加载中…",
+		"empty": "还没有 profile。点击右上「新增 profile」创建第一个。",
+		"default": "default",
+		"tableProfile": "Profile",
+		"tableSummary": "摘要",
+		"tableActions": "操作",
+		"setDefault": "设为 default",
+		"edit": "编辑",
+		"remove": "删除",
+		"confirmRemove": "确认删除 profile \"{{name}}\"？此操作不可撤销。"
+	},
+	"form": {
+		"addTitle": "新增 profile",
+		"editTitle": "编辑 {{name}}",
+		"addDescription": "填好后点保存。第一个 profile 自动成为 default。",
+		"editDescription": "保存会覆盖现有内容。",
+		"profileName": "profile 名",
+		"profileNamePlaceholder": "如 work / prod / acr-prod",
+		"setDefaultAfterSave": "保存后设为 default",
+		"setDefaultAfterSaveAuto": "保存后设为 default（当前 section 无 default，会自动设）",
+		"cancel": "取消",
+		"save": "保存",
+		"fields": {
+			"siteUrl": "Site URL",
+			"clientId": "Client ID",
+			"clientSecret": "Client Secret",
+			"endpoint": "Endpoint（aws-s3 可留空走 SDK 默认）",
+			"endpointPlaceholder": "https://<vendor-endpoint>",
+			"region": "Region",
+			"regionPlaceholder": "us-east-1 / cn-hangzhou / auto",
+			"forcePathStyle": "force path style（MinIO / RustFS 必需）",
+			"accessKeyId": "Access Key ID",
+			"accessKeySecret": "Access Key Secret",
+			"kubeconfigPath": "Kubeconfig 路径",
+			"kubeconfigContext": "Context 名",
+			"kubeconfigContextPlaceholder": "prod / staging",
+			"teamSlug": "Team slug（留空 = 个人 scope）",
+			"teamSlugPlaceholder": "my-org",
+			"apiToken": "API Token",
+			"accountId": "Account ID（多账号 token 必填，否则留空）",
+			"accountIdPlaceholder": "a1b2c3...",
+			"regionEdgeOne": "Region（如 ap-guangzhou，可空）",
+			"regionEdgeOnePlaceholder": "ap-guangzhou",
+			"registry": "Registry",
+			"registryPlaceholder": "your-harbor.example.com / quay.io / ...",
+			"acrRegion": "ACR Region",
+			"acrRegionPlaceholder": "cn-hangzhou / cn-shanghai（host 派生为 registry.<region>.aliyuncs.com）",
+			"namespace": "Namespace",
+			"namespacePlaceholder": "org / username",
+			"username": "Username",
+			"password": "Password / token"
+		},
+		"summary": {
+			"noFields": "（无字段）",
+			"site": "site: {{site}}",
+			"notSet": "(未填)",
+			"endpointDefault": "(SDK 默认)",
+			"regionDefault": "—",
+			"endpointRegion": "endpoint: {{endpoint}} · region: {{region}}",
+			"contextDefault": "—",
+			"kubeconfigDefault": "(默认)",
+			"contextFile": "context: {{context}} · file: {{file}}",
+			"team": "team: {{team}}",
+			"teamPersonal": "(personal)",
+			"account": "account: {{account}}",
+			"accountTokenDefault": "(token default)",
+			"regionLabel": "region: {{region}}",
+			"regionDefaultLabel": "(default)",
+			"registryUnset": "(未填 registry)",
+			"acrRegionUnset": "(未填 region)"
+		}
+	},
+	"toast": {
+		"updated": "已更新 {{name}}",
+		"created": "已新增 {{name}}",
+		"setDefault": "default 已切换到 {{name}}",
+		"removed": "已删除 {{name}}",
+		"setDefaultAfterSaveHint": "已设为 default"
+	},
+	"http": {
+		"networkError": "网络请求失败，请检查网络连接。"
+	},
+	"overview": {
+		"untitledWorkspace": "未命名 workspace",
+		"environments": "环境",
+		"projects": "子项目",
+		"empty": "manifest 里没有声明任何子项目。",
+		"allGood": "✓ 配置齐全",
+		"workspaceIssuesTitle": "工作区级配置缺失",
+		"manageProfilesCta": "管理凭据 profile",
+		"kinds": {
+			"app": "App",
+			"service": "Service",
+			"package": "Package"
+		},
+		"issue": {
+			"label": {
+				"container": "container",
+				"deploy": "deploy",
+				"env": "env",
+				"profile": "profile"
+			},
+			"missingProfile": "{{section}} 缺少可用凭据 profile{{profile}} — 请补齐 API key / token",
+			"missing": {
+				"container": "未配置 container — 跑 `one container build` 会报错",
+				"deploy": "未配置 deploy backend — 跑 `one deploy` 会报错",
+				"env": "workspace 未选择 env backend — 跑 `one env` 相关命令前先配置"
+			}
+		},
+		"fix": {
+			"cta": "去配置",
+			"profileCta": "补凭据",
+			"title": {
+				"container": "配置 container backend",
+				"deploy": "配置 deploy backend",
+				"env": "配置 workspace env backend"
+			},
+			"description": {
+				"container": "为「{{project}}」选择容器镜像 backend，写入 manifest 的 projects[].domains.container。",
+				"deploy": "为「{{project}}」选择部署 backend，写入 manifest 的 projects[].domains.deploy.kind。",
+				"env": "选择整个 workspace 的环境变量 backend，写入 manifest 的 domains.env.kind。"
+			},
+			"kindLabel": "Backend 类型",
+			"kindPlaceholder": "选择一个 backend…",
+			"imageLabel": "镜像地址（可选）",
+			"imagePlaceholder": "ghcr.io/org/web:latest",
+			"note": "这里只写入 manifest 的 backend 选择；对应的凭据 profile（API key / token 等）请到「{{section}}」分区配置。",
+			"sectionLink": "对应凭据分区",
+			"save": "保存",
+			"saving": "保存中…",
+			"cancel": "取消",
+			"saved": "已更新 {{domain}} 配置",
+			"failed": "保存失败"
+		}
+	}
+}

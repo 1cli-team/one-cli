@@ -1,0 +1,53 @@
+package main
+
+import (
+	"context"
+	"errors"
+	"net/http"
+	"os"
+	"os/signal"
+	"syscall"
+	"time"
+
+	"go.uber.org/zap"
+
+	"github.com/example/{{projectNameKebabCase}}/internal/app"
+	"github.com/example/{{projectNameKebabCase}}/internal/config"
+	"github.com/example/{{projectNameKebabCase}}/internal/platform/logger"
+)
+
+func main() {
+	cfg := config.Load()
+	log := logger.New(cfg.AppEnv)
+	defer func() {
+		_ = log.Sync()
+	}()
+
+	application, err := app.New(cfg, log)
+	if err != nil {
+		log.Fatal("failed to initialize application", zap.Error(err))
+	}
+
+	server := &http.Server{
+		Addr:              ":" + cfg.Port,
+		Handler:           application.Router(),
+		ReadHeaderTimeout: 5 * time.Second,
+	}
+
+	go func() {
+		log.Info("server started", zap.String("addr", server.Addr), zap.String("env", cfg.AppEnv))
+		if err := server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			log.Fatal("server failed", zap.Error(err))
+		}
+	}()
+
+	stop := make(chan os.Signal, 1)
+	signal.Notify(stop, syscall.SIGINT, syscall.SIGTERM)
+	<-stop
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	if err := server.Shutdown(ctx); err != nil {
+		log.Error("graceful shutdown failed", zap.Error(err))
+	}
+}

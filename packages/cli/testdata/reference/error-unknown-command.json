@@ -1,0 +1,1 @@
+{"schema":"one-cli/error/v1","error":{"code":"UNKNOWN_COMMAND","message":"未知命令: unknown-cmd","context":{"command":"one unknown-cmd"},"remediation":[{"action":"show-help","hint":"查看可用命令","command":"one --help"}]}}

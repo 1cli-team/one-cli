@@ -1,0 +1,7 @@
+列出可用模板
+
+Usage:
+  one templates list [flags]
+
+Global Flags:
+  -o, --output string   输出格式: json | yaml | text（默认 auto：TTY 时人类格式，pipe 时 JSON）

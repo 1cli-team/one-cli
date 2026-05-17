@@ -1,0 +1,37 @@
+# 这个文件提供配置 schema 和本地开发默认值，committed 到仓库。
+#
+# 生产敏感值不写在这里 —— 改用：
+#
+#     one env set DATABASE_URL=postgres://prod/db -p api
+#     one env set JWT_SECRET=real-secret -p api
+#
+# Viper 在运行时通过 AutomaticEnv + SetEnvKeyReplacer(".", "_") 把环境
+# 变量按嵌套路径覆盖到对应字段：
+#
+#     env var DATABASE_URL  →  viper.Get("database.url")
+#     env var JWT_SECRET    →  viper.Get("jwt.secret")
+#     env var APP_ENV       →  viper.Get("app.env")
+#
+# 即"嵌套路径 a.b.c ↔ env var A_B_C"。所以服务无须依赖一个生成的
+# config.yaml，env 注入与文件覆盖会自动归一。
+
+app:
+  name: go-api
+  env: development
+
+port: 3000
+
+# Database — 留空时使用内存 SQLite（开发兜底，数据不持久化）。需要
+# Postgres 时取消注释下面那行，或用 `one env set DATABASE_URL=...`。
+database:
+  url: ""
+  # url: postgresql://postgres:postgres@127.0.0.1:5432/demo?sslmode=disable
+
+jwt:
+  secret: your-jwt-secret-here
+  expires_in: 720h
+
+cors:
+  allowed_origins:
+    - http://localhost:3000
+    - http://localhost:5173

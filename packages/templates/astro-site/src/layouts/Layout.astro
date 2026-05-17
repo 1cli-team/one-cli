@@ -1,0 +1,39 @@
+---
+import '../styles/global.css';
+import ErrorBoundary from '../components/ErrorBoundary.astro';
+
+export interface Props {
+	title?: string;
+	description?: string;
+}
+
+const { title = 'Frontend SSG Webapp Template', description = 'A modern Astro template with comprehensive tooling' } = Astro.props;
+---
+
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+		<meta name="generator" content={Astro.generator} />
+		<meta name="description" content={description} />
+		<title>{title}</title>
+	</head>
+	<body>
+		<!-- Toast 容器 -->
+		<div id="toast-container" class="fixed top-4 right-4 z-[1000] space-y-2"></div>
+		
+		<!-- 页面内容 -->
+		<slot />
+		
+		<!-- 错误边界组件 -->
+		<ErrorBoundary showDetails={import.meta.env.DEV} />
+		
+		<!-- 全局脚本 -->
+		<script>
+			// 导入 Toast 系统
+			import '../utils/toast.ts';
+		</script>
+	</body>
+</html>

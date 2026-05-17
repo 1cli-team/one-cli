@@ -1,0 +1,55 @@
+package http
+
+import (
+	"github.com/gin-gonic/gin"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"go.uber.org/zap"
+
+	"github.com/example/{{projectNameKebabCase}}/internal/config"
+	"github.com/example/{{projectNameKebabCase}}/internal/http/handlers"
+	"github.com/example/{{projectNameKebabCase}}/internal/http/middleware"
+	"github.com/example/{{projectNameKebabCase}}/internal/platform/jwt"
+)
+
+type Router struct {
+	*gin.Engine
+}
+
+type Dependencies struct {
+	Config  config.Config
+	Logger  *zap.Logger
+	JWT     *jwt.Manager
+	Handler handlers.Set
+}
+
+func NewRouter(deps Dependencies) *Router {
+	if deps.Config.AppEnv == "production" {
+		gin.SetMode(gin.ReleaseMode)
+	}
+
+	engine := gin.New()
+	engine.Use(
+		middleware.RequestID(),
+		middleware.Recovery(deps.Logger),
+		middleware.Logger(deps.Logger),
+		middleware.Metrics(),
+		middleware.CORS(deps.Config),
+	)
+
+	engine.GET("/", deps.Handler.App.Info)
+	engine.GET("/health", deps.Handler.Health.Check)
+	engine.GET("/metrics", gin.WrapH(promhttp.Handler()))
+	engine.GET("/api/docs", deps.Handler.App.Docs)
+	engine.StaticFile("/api/openapi.yaml", "api/openapi.yaml")
+
+	engine.POST("/auth/login", deps.Handler.Auth.Login)
+
+	api := engine.Group("/api")
+	api.Use(middleware.Auth(deps.JWT))
+	{
+		api.GET("/users", deps.Handler.Users.List)
+		api.POST("/users", deps.Handler.Users.Create)
+	}
+
+	return &Router{Engine: engine}
+}

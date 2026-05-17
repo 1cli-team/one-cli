@@ -1,0 +1,146 @@
+---
+title: 一键部署
+description: 挑一个 deploy backend、配 profile、用 one deploy 把一个项目推上线。最短路径。
+---
+
+这一章带你把一个项目推到一个目标。10 个 deploy backend 全菜单、per-project flag、多环境树都在[多 backend 部署](/zh/tutorials/deploy-multi-backend/)（进阶）。
+
+按你项目用的模板默认 backend 选一条路径。每个模板都自带一个合理默认值，后面可以改。
+
+| 你的项目模板 | 默认 deploy backend | 走这条路径 |
+|---|---|---|
+| `nextjs-app`、`astro-site`、`react-spa`、`starlight-docs` | 静态 / serverless | [路线 A：Vercel 前端](#路线-avercel前端) |
+| `nestjs-api`、`go-api` | 容器 + Kubernetes | [路线 B：kustomize 服务](#路线-bkustomize服务) |
+
+用其他 backend（S3、Cloudflare、EdgeOne、OSS、COS、MinIO、R2）形式一样：配 profile，跑 `one deploy`。每个 backend 的凭据字段见 [`one configure` 参考](/zh/docs/configure/)。
+
+## 路线 A：Vercel（前端）
+
+### 1. 拿 Vercel token
+
+Vercel 后台 → **Settings → Tokens → Create**。记下 token、team slug、project id（也可以让 One CLI 替你建项目）。
+
+### 2. 配 profile
+
+```bash
+one configure add deploy/vercel --profile prod \
+  --token <VERCEL_TOKEN> \
+  --team-slug <TEAM_SLUG> \
+  --use
+```
+
+写到本机 `~/.config/one/config.json` + `credentials.json`（mode 0600）。**不会进 git。**
+
+### 3. 确认项目 manifest 里有 `deploy.kind: vercel`
+
+```bash
+cat one.manifest.json | jq '.projects[] | select(.name == "web") | .domains.deploy'
+```
+
+`one add` 时传过 `--deploy-provider vercel` 的话已经在了。否则加上：
+
+```json
+{
+  "name": "web",
+  "domains": {
+    "deploy": {
+      "kind": "vercel",
+      "config": { "projectId": "prj_xxx" }
+    }
+  }
+}
+```
+
+（`projectId` 可选，第一次 deploy 时 One CLI 会自动建。）
+
+### 4. 部署
+
+```bash
+one deploy -p web --env prod
+```
+
+输出带 Vercel 部署 URL。后续 deploy 复用同一个 Vercel project。
+
+## 路线 B：kustomize（服务）
+
+kustomize 路径要两步，因为 k8s 跑容器：先 build + push 镜像，再 `one deploy` apply manifest。
+
+### 1. 配容器 registry
+
+挑一个 registry（Docker Hub、GHCR、ACR、Harbor 等）创建 access token。
+
+```bash
+one configure add container/docker --profile prod \
+  --registry ghcr.io \
+  --username <USER> \
+  --password <TOKEN> \
+  --use
+```
+
+### 2. 配 kustomize
+
+```bash
+one configure add deploy/kustomize --profile prod \
+  --kubeconfig-path ~/.kube/config \
+  --context production \
+  --namespace default \
+  --use
+```
+
+`kubeconfig-path` + `context` 一起决定推到哪个集群。`namespace` 默认 `default`。
+
+### 3. Build + push 镜像
+
+```bash
+one container build -p api
+one container push -p api
+```
+
+build version 从 git / `package.json` 推断，也可以传 `--build-version` 显式指定。详见[构建与推送镜像](/zh/tutorials/container-build-push/)。
+
+### 4. 部署
+
+```bash
+one deploy -p api --env prod
+```
+
+`one deploy` 会读 `services/api/k8s/overlays/<env>/`（模板生成的目录），跑 `kustomize build | kubectl apply -f -`，集群从 default profile 拿。
+
+验证：
+
+```bash
+kubectl --context production get pods
+```
+
+## 运行时覆盖 profile
+
+默认用 default profile。要指定具体的（例如 staging 集群）：
+
+```bash
+one deploy -p api --env staging --profile staging
+```
+
+profile 解析顺序：
+
+1. `--profile` flag（只对这次命令生效）
+2. 本机 project 绑定：`~/.config/one/config.json#workspaces`
+3. 本机 workspace 绑定：`~/.config/one/config.json#workspaces`
+4. 本机 `(domain, backend)` 对的 default profile
+
+## 常见错误
+
+| 错误码 | 现象 | 修法 |
+|---|---|---|
+| `BACKEND_NOT_ENABLED` | 项目 `domains.deploy` 为空 | 在 `one.manifest.json` 给该项目加 `deploy` 块 |
+| `PROFILE_NOT_FOUND` | 引用的 profile 在本机不存在 | `one configure list deploy/<backend>` 看本机有哪些 |
+| `REGISTRY_CREDENTIAL_MISSING` | `one container push` 没 default `container/docker` profile | `one configure add container/docker ... --use` |
+| `IMAGE_TAG_NOT_FOUND` | kustomize 部署找不到镜像 | 先 `one container build && one container push` |
+| `VERCEL_DEPLOY_FAILED` | Vercel 拒绝部署 | 看 Vercel UI 日志，`context.vercel_error` 一般写明原因 |
+
+完整码表：[错误码大全](/zh/docs/error-codes/)。
+
+## 下一步
+
+- 另外 8 个 deploy backend + 多项目 / 多环境 → [多 backend 部署](/zh/tutorials/deploy-multi-backend/)（进阶）
+- 所有 `one configure` 后端含 S3 各家 + Cloudflare → [管理 Profile](/zh/tutorials/configure-profiles/)（进阶）
+- 镜像构建 / 推送细节 → [构建与推送镜像](/zh/tutorials/container-build-push/)（进阶）

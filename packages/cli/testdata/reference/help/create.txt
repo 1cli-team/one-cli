@@ -1,0 +1,39 @@
+创建工作区。
+
+位置参数 [dir] 是 **目标目录**（不是项目名）。可以是相对路径或绝对路径。
+默认 项目名 = basename(dir)；如需不同名字用 --name 显式指定。
+
+示例：
+  one create my-app                    # 创建 ./my-app/，项目名 my-app
+  one create services/billing          # 创建 ./services/billing/，名 billing
+  one create /tmp/sandbox --name demo  # 创建 /tmp/sandbox/，名 demo
+  one create .                          # 在当前目录创建，名 = basename(cwd)
+
+工作区默认配置（自动应用）：
+  env       - dotenv（.env 系列文件读写，零配置）
+  ci        - GitHub Actions 工作流
+  dev       - Procfile.dev（overmind / hivemind / foreman / honcho 可读）
+
+需要 Infisical 托管环境变量？两种方式：
+  - create 时显式选：one create my-app --env-provider infisical
+  - 后期再切换：    one env switch infisical
+
+deploy / container 由模板自动决定，不在 create 时落盘：
+  go-api / nestjs-api / nextjs-app                       → Dockerfile + kustomize
+  react-spa / astro-site / starlight-docs                → aws-s3 (静态部署)
+  expo-mobile / ts-library / electron-app                → 不参与 deploy / container
+
+会自动安装 bundled skill 到本机 agent。
+
+Usage:
+  one create [dir] [flags]
+
+Flags:
+      --env-provider string            env provider: dotenv | infisical（默认 dotenv；要 Infisical 也可后期 one env switch infisical）
+  -n, --name string                    项目名称（默认 basename(dir)）
+      --preset 1.bnek.fnav.ei          preset id（如 1.bnek.fnav.ei）：一次性 scaffold 工作区 + 项目 + deploy + env。隐含 -y，必须传 [dir]。
+      --project-names api,web,shared   --preset 模式下按展开顺序指定子项目名，逗号分隔（如 api,web,shared）。
+  -y, --yes                            非交互模式：使用全部默认值
+
+Global Flags:
+  -o, --output string   输出格式: json | yaml | text（默认 auto：TTY 时人类格式，pipe 时 JSON）

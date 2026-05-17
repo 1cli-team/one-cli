@@ -1,0 +1,139 @@
+---
+title: Configure env vars
+description: Set your first env var with one env. Start on dotenv, switch to Infisical when you need shared/team env vars. The shortest path.
+---
+
+<VideoEmbed provider="youtube" videoId="aqz-KE-bpKQ" title="Configure env vars with one env" />
+
+This is the happy-path tutorial. You set values in two flavours — local `.env` files (the default) and Infisical (when you need shared env vars) — and you're done. Layered `.env.local` overrides, per-project paths, and multi-environment trees live in [Multi-env vars](/en/tutorials/env-multi-env/) (advanced).
+
+The workspace's env backend is decided by `one.manifest.json#domains.env.kind`. `one create` sets it to `dotenv` unless you passed `--env-provider infisical`.
+
+## Path A: dotenv (default)
+
+The simplest setup. No external service, no credentials to manage.
+
+### 1. Set a value
+
+```bash
+one env set DATABASE_URL=postgres://localhost/dev
+```
+
+If you're in the workspace root, you'll be asked which project this belongs to. To skip the prompt:
+
+```bash
+one env set DATABASE_URL=postgres://localhost/dev -p api
+```
+
+The value is written to `services/api/.env` (or whichever directory matches the project's `relativeDir`).
+
+### 2. Read it back
+
+```bash
+one env get DATABASE_URL -p api
+# postgres://localhost/dev
+
+one env list -p api
+# DATABASE_URL=postgres://localhost/dev
+```
+
+### 3. Use the value at runtime
+
+`one run` injects the project's env vars into a child command:
+
+```bash
+one run -p api -- npm run dev
+# DATABASE_URL is in process.env inside the child
+```
+
+That's it for dotenv. Commit `.env.example` if you want; don't commit `.env`. (The workspace `.gitignore` already excludes it.)
+
+## Path B: Infisical (managed)
+
+Use this when env vars live in one shared place — multiple machines, CI, multiple teammates — and dotenv files start drifting.
+
+### 1. Create a machine identity in Infisical
+
+In the Infisical UI: **Organization → Access Control → Identities → New** (use Universal Auth). Note the `client id` and `client secret`.
+
+### 2. Configure a profile on this machine
+
+```bash
+one configure add env/infisical --profile default \
+  --site-url https://app.infisical.com \
+  --client-id <CLIENT_ID> \
+  --client-secret <CLIENT_SECRET> \
+  --use
+```
+
+This writes to `~/.config/one/config.json` + `credentials.json` (machine-local, mode 0600). It does not touch the repo.
+
+### 3. Switch the workspace to Infisical
+
+If the workspace was created with `--env-provider dotenv`, run:
+
+```bash
+one env switch infisical
+```
+
+This does a few things:
+
+1. Verifies the default `env/infisical` profile exists on this machine
+2. Scans every project's `.env` files and asks: "found N keys, sync to Infisical?"
+3. Only after sync succeeds (or you opt out), flips `one.manifest.json#domains.env.kind` to `infisical`
+4. Lazily binds / creates the Infisical project for this workspace
+
+Useful flags:
+
+| Flag | What it does |
+|---|---|
+| `--yes` / `-y` | Skip the sync confirmation (default action: sync) |
+| `--no-sync` | Flip the manifest only; don't touch data |
+| `--overwrite` | Overwrite Infisical's existing keys on conflict (default: error `ENV_MIGRATE_CONFLICT`) |
+| `--dry-run` | Print the plan without executing |
+
+For new workspaces you can skip this step by starting with `one create --env-provider infisical`.
+
+### 4. Set a value
+
+```bash
+one env set DATABASE_URL=postgres://prod/db --env prod -p api
+```
+
+The value goes straight to Infisical (folder = project path, environment = `prod`). Nothing is written to your filesystem yet.
+
+### 5. Pull to a local `.env`
+
+```bash
+one env pull --env dev
+```
+
+Each project gets its own `.env` written into its directory. Path isolation means the `apps/web/.env` won't contain the API's database password — see [Multi-env vars](/en/tutorials/env-multi-env/) for the rules.
+
+`one env pull` refuses to overwrite a `.env` that diverges from Infisical. Add `--force` if you're sure.
+
+### Switching back to dotenv
+
+```bash
+one env switch dotenv
+```
+
+Flips the manifest only. **Does not** delete Infisical data (safe). If you want Infisical's data back on disk first, run `one env pull` *before* switching.
+
+## Common errors
+
+| Code | Symptom | Fix |
+|---|---|---|
+| `ENV_INVALID_KEY` | Key has unsupported characters | Use POSIX env-var names: `^[A-Z][A-Z0-9_]*$` (e.g. `DATABASE_URL`) |
+| `ENV_SET_KEY_REQUIRED` | Ran `one env set` without a key | Pass `KEY=VALUE` or `KEY VALUE` |
+| `INFISICAL_NOT_CONFIGURED` | Workspace isn't on `env/infisical`, or the manifest config is incomplete | Switch the manifest or re-run `one create --env-provider infisical` |
+| `INFISICAL_AUTH_MISSING` | No default `env/infisical` profile on this machine | Re-run `one configure add env/infisical ... --use` |
+| `INFISICAL_AUTH_FAILED` | Client id / secret is wrong or expired | Regenerate the secret in Infisical, update the profile |
+| `ENV_PULL_CONFLICT` | Local `.env` differs from Infisical contents | Inspect the diff; rerun with `--force` to overwrite |
+
+Full table: [error codes](/en/docs/error-codes/).
+
+## Next
+
+- Multi-environment trees, layered `.env.local`, per-project path overrides → [Multi-env vars](/en/tutorials/env-multi-env/) (advanced)
+- All `one configure` backends, not just env → [Manage profiles](/en/tutorials/configure-profiles/) (advanced)

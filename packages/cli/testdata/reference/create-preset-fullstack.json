@@ -1,0 +1,45 @@
+{
+  "ci_enabled": true,
+  "created_in_place": false,
+  "created_path": "\u003cvolatile\u003e",
+  "deploy_summary": {
+    "kustomize": 1,
+    "vercel": 1
+  },
+  "dev_enabled": true,
+  "env_summary": {
+    "backend": "dotenv",
+    "infisical_bound": false
+  },
+  "package_manager": "pnpm",
+  "partial_state": "none",
+  "preset": {
+    "id": "1.bgok.fnav",
+    "version": 1
+  },
+  "project_name": "fs",
+  "projects": [
+    {
+      "deploy_backend": "kustomize",
+      "name": "go-api",
+      "target_path": "\u003cvolatile\u003e",
+      "template_id": "go-api",
+      "toolchain": "go"
+    },
+    {
+      "deploy_backend": "vercel",
+      "name": "nextjs-app",
+      "package_manager": "pnpm",
+      "target_path": "\u003cvolatile\u003e",
+      "template_id": "nextjs-app",
+      "toolchain": "node"
+    }
+  ],
+  "schema": "one-cli/create/v3",
+  "secrets_backend": "dotenv",
+  "skills": {
+    "installed_to": "\u003cvolatile\u003e",
+    "skill_count": 2,
+    "status": "completed"
+  }
+}

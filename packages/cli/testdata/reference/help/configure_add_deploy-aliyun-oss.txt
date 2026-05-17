@@ -1,0 +1,35 @@
+新增或更新 deploy/aliyun-oss profile。
+
+阿里云 OSS（S3 协议）。所有 S3-protocol 兼容后端共享同一 profile 结构（endpoint + region +
+AccessKey 对）；六个 backend id 只是给同一段实现起的不同名字，方便区分
+你的 endpoint 来自哪家供应商。
+
+bucket 是 subproject 级字段，由 `one add` 时的 prompt 写入
+projects[i].deploy.bucket，不存在 profile 里。
+
+示例：
+  # 交互（推荐）
+  one configure add deploy/aliyun-oss
+
+  # 非交互（CI / 脚本）
+  one configure add deploy/aliyun-oss --profile prod \
+      --endpoint https://oss-<region>.aliyuncs.com \
+      --region <region>（如 cn-hangzhou / cn-shanghai） \
+      --access-key-id $AK --access-key-secret $SK --use
+
+通常不需要 --force-path-style。
+
+Usage:
+  one configure add deploy/aliyun-oss [--profile <name>] [flags]
+
+Flags:
+      --access-key-id string       AccessKey ID
+      --access-key-secret string   AccessKey Secret
+      --endpoint string            S3 endpoint URL（如 https://oss-<region>.aliyuncs.com）
+      --force-path-style           用 path-style 寻址（MinIO / RustFS 默认开启；AWS / Aliyun / 腾讯 / R2 通常关闭）
+      --profile string             profile 名（非交互模式必传；交互模式留空则 prompt）
+      --region string              Region（如 cn-hangzhou / cn-shanghai）
+      --use                        把此 profile 设为 default
+
+Global Flags:
+  -o, --output string   输出格式: json | yaml | text（默认 auto：TTY 时人类格式，pipe 时 JSON）

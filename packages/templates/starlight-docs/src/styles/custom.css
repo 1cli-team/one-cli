@@ -1,0 +1,65 @@
+:root {
+	--sl-font: "Inter", "Avenir Next", "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+	--sl-content-width: 52rem;
+	--sl-text-5xl: 3.5rem;
+	--sl-color-accent-low: #431407;
+	--sl-color-accent: #ea580c;
+	--sl-color-accent-high: #fed7aa;
+	--sl-color-white: #fafaf9;
+	--sl-color-gray-1: #e7e5e4;
+	--sl-color-gray-2: #d6d3d1;
+	--sl-color-gray-3: #a8a29e;
+	--sl-color-gray-4: #78716c;
+	--sl-color-gray-5: #57534e;
+	--sl-color-gray-6: #292524;
+	--sl-color-black: #0a0a0a;
+}
+
+:root[data-theme="light"] {
+	--sl-color-accent-low: #fff7ed;
+	--sl-color-accent: #ea580c;
+	--sl-color-accent-high: #7c2d12;
+	--sl-color-white: #0a0a0a;
+	--sl-color-gray-1: #1c1917;
+	--sl-color-gray-2: #292524;
+	--sl-color-gray-3: #44403c;
+	--sl-color-gray-4: #78716c;
+	--sl-color-gray-5: #a8a29e;
+	--sl-color-gray-6: #e7e5e4;
+	--sl-color-black: #fafaf9;
+}
+
+:root {
+	background:
+		radial-gradient(circle at top left, rgb(234 88 12 / 0.14), transparent 26%),
+		radial-gradient(circle at top right, rgb(251 146 60 / 0.08), transparent 18%),
+		var(--sl-color-black);
+}
+
+:root[data-theme="light"] {
+	background:
+		radial-gradient(circle at top left, rgb(234 88 12 / 0.12), transparent 24%),
+		radial-gradient(circle at top right, rgb(253 186 116 / 0.12), transparent 18%),
+		var(--sl-color-black);
+}
+
+main {
+	font-family: var(--sl-font);
+}
+
+.hero {
+	position: relative;
+}
+
+.hero::after {
+	content: "";
+	position: absolute;
+	inset: auto 0 -2rem 0;
+	height: 10rem;
+	background: linear-gradient(180deg, transparent, rgb(234 88 12 / 0.08));
+	pointer-events: none;
+}
+
+.card {
+	border-radius: 1.25rem;
+}

@@ -1,0 +1,10 @@
+{
+  "backend": "infisical",
+  "config_path": "\u003cvolatile\u003e",
+  "credentials_path": "\u003cvolatile\u003e",
+  "default": true,
+  "domain": "env",
+  "name": "work",
+  "schema": "one-cli/configure-add/v1",
+  "status": "completed"
+}

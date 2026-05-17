@@ -1,0 +1,11 @@
+打印 profile 全文（凭据默认掩码）
+
+Usage:
+  one configure show <pair> --profile <name> [flags]
+
+Flags:
+      --profile string   profile 名（必填）
+      --reveal           显示凭据原文（默认掩码为 ********）
+
+Global Flags:
+  -o, --output string   输出格式: json | yaml | text（默认 auto：TTY 时人类格式，pipe 时 JSON）

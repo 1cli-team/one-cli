@@ -1,0 +1,317 @@
+version: '3'
+
+# Taskfile for one-cli. After the monorepo restructure the Go module lives at
+# packages/cli/, the docs site at apps/docs/, and the `one serve` UI at
+# apps/dashboard/. Run `task` (no args) for the menu of available targets.
+
+vars:
+  PKG: github.com/torchstellar-team/one-cli/packages/cli
+  CLI_DIR: packages/cli
+  BIN_DIR: packages/cli/bin
+  BIN: packages/cli/bin/one
+  GOPROXY: '{{.GOPROXY | default "https://goproxy.cn,direct"}}'
+  # Read version from the VERSION file. Releases override this via
+  # goreleaser's git-tag injection (-X main.version={{.Version}}).
+  VERSION:
+    sh: cat VERSION 2>/dev/null || echo 0.0.0-dev
+  LDFLAGS: '-s -w -X main.version={{.VERSION}}'
+
+env:
+  GOPROXY: '{{.GOPROXY}}'
+
+tasks:
+  default:
+    desc: List available tasks
+    cmds:
+      - task --list
+
+  build:
+    desc: Build the local binary into packages/cli/bin/one
+    deps: [sync-bundled, sync-web]
+    dir: '{{.CLI_DIR}}'
+    cmds:
+      - mkdir -p bin
+      - go build -trimpath -ldflags '{{.LDFLAGS}}' -o bin/one ./cmd/one
+    sources:
+      - 'packages/cli/cmd/**/*.go'
+      - 'packages/cli/internal/**/*.go'
+      - 'packages/cli/pkg/**/*.go'
+      - 'packages/cli/go.mod'
+    generates:
+      - '{{.BIN}}'
+
+  gen-error-codes:
+    desc: Render apps/docs/content/docs/zh/error-codes.md from internal/errors/codes.go
+    dir: '{{.CLI_DIR}}'
+    cmds:
+      - go run ./tools/gen-error-codes
+    sources:
+      - 'packages/cli/internal/errors/codes.go'
+      - 'packages/cli/tools/gen-error-codes/**/*.go'
+    generates:
+      - 'apps/docs/content/docs/zh/error-codes.md'
+
+  verify-versions:
+    desc: Refuse drift between VERSION and SKILL.md frontmatter / installation doc samples
+    dir: '{{.CLI_DIR}}'
+    cmds:
+      - go run ./tools/verify-versions
+    sources:
+      - 'VERSION'
+      - 'packages/skills/one-cli/SKILL.md'
+      - 'apps/docs/content/docs/zh/installation.md'
+      - 'apps/docs/content/docs/en/installation.md'
+      - 'packages/cli/tools/verify-versions/**/*.go'
+
+  verify-cli-references:
+    desc: Refuse `one <subcommand>` references in docs that name unregistered commands
+    # The tool imports internal/cli → internal/bundled, so it can't compile
+    # without the //go:embed sources being present. sync-bundled covers
+    # registry/skills/_templates; sync-web covers _web. Both run before
+    # `go run` here so a fresh checkout works without prior task invocations.
+    deps: [sync-bundled, sync-web]
+    dir: '{{.CLI_DIR}}'
+    cmds:
+      - go run ./tools/verify-cli-references
+    sources:
+      - 'packages/cli/internal/cli/**/*.go'
+      - 'packages/cli/internal/cmd/**/*.go'
+      - 'packages/cli/tools/verify-cli-references/**/*.go'
+      - 'README.md'
+      - 'CLAUDE.md'
+      - 'CONTRIBUTING.md'
+      - 'apps/docs/content/docs/**/*.md'
+      - 'apps/docs/content/docs/**/*.mdx'
+      - 'packages/skills/**/*.md'
+      - 'packages/templates/*/README.md'
+      - 'packages/templates/*/README.md.hbs'
+
+  verify-preset-codes:
+    desc: Lock the v1 preset code table (template + deploy + env + container) — codes are append-only and never re-used
+    # The test package imports internal/template → internal/bundled, so it
+    # needs the embed sources present. Mirrors verify-cli-references.
+    deps: [sync-bundled, sync-web]
+    dir: '{{.CLI_DIR}}'
+    cmds:
+      - go test -count=1 -run 'TestTemplateCodesMatchGoldenAndRegistry|TestDeployCodesMatchGolden|TestEnvCodesMatchGolden|TestContainerCodesMatchGolden|TestGoldenSortedByCode' ./internal/preset/...
+    sources:
+      - 'packages/cli/internal/preset/**/*.go'
+      - 'packages/cli/testdata/preset/v1_codes.json'
+      - 'packages/templates/registry.json'
+
+  verify-preset-vectors:
+    desc: Lock the v1 preset id encoding — Encode(spec) and Parse(id) roundtrip every frozen vector
+    deps: [sync-bundled, sync-web]
+    dir: '{{.CLI_DIR}}'
+    cmds:
+      - go test -count=1 -run 'TestEncodeVectors|TestParseEncodeRoundTrip|TestEncodeOrderIndependent' ./internal/preset/...
+    sources:
+      - 'packages/cli/internal/preset/**/*.go'
+      - 'packages/cli/testdata/preset/v1_vectors.json'
+
+  verify-help:
+    desc: Refuse drift in cobra help text (rootHelp completeness + Example flag existence)
+    # The tool imports internal/cli → internal/bundled, so it can't compile
+    # without the //go:embed sources being present. sync-bundled covers
+    # registry/skills/_templates; sync-web covers _web. Mirrors the deps
+    # on verify-cli-references and verify-preset-codes.
+    deps: [sync-bundled, sync-web]
+    dir: '{{.CLI_DIR}}'
+    cmds:
+      - go run ./tools/verify-help
+    sources:
+      - 'packages/cli/internal/cli/**/*.go'
+      - 'packages/cli/internal/cmd/**/*.go'
+      - 'packages/cli/tools/verify-help/**/*.go'
+
+  verify-docs:
+    desc: All documentation drift checks (versions + CLI references + help text + frontmatter presence + preset codes / vectors)
+    cmds:
+      - task: verify-versions
+      - task: verify-cli-references
+      - task: verify-help
+      - task: verify-preset-codes
+      - task: verify-preset-vectors
+      - |
+        # Frontmatter sanity: every page under apps/docs/content/docs/ must
+        # declare title and description. Fumadocs renders these in the sidebar
+        # and as page metadata; missing fields silently degrade navigation.
+        missing=0
+        while IFS= read -r f; do
+          head -10 "$f" | grep -q '^title:' || { echo "$f: missing 'title:' frontmatter" >&2; missing=1; }
+          head -10 "$f" | grep -q '^description:' || { echo "$f: missing 'description:' frontmatter" >&2; missing=1; }
+        done < <(find apps/docs/content/docs -type f \( -name '*.md' -o -name '*.mdx' \))
+        exit $missing
+
+  install-local:
+    desc: Build + symlink packages/cli/bin/one to ~/.local/bin/one for local testing
+    summary: |
+      One-shot dev install: builds the binary and creates a symlink at
+      ~/.local/bin/one pointing at the absolute path of packages/cli/bin/one
+      in this checkout. Subsequent `task build` invocations rebuild the
+      binary in place; the symlink keeps working.
+
+      Idempotent — safe to re-run after switching branches.
+
+      Requires ~/.local/bin to be on PATH. Add to your shell rc if not:
+        export PATH="$HOME/.local/bin:$PATH"
+    deps: [build]
+    cmds:
+      - mkdir -p $HOME/.local/bin
+      - ln -sf "$(pwd)/{{.BIN}}" $HOME/.local/bin/one
+      - one --version
+
+  build-all:
+    desc: Cross-compile every supported platform under go-dist/
+    deps: [sync-bundled]
+    dir: '{{.CLI_DIR}}'
+    cmds:
+      - rm -rf ../../go-dist
+      - mkdir -p ../../go-dist
+      - for: { var: PLATFORMS, default: ['darwin/amd64', 'darwin/arm64', 'linux/amd64', 'linux/arm64', 'windows/amd64'] }
+        cmd: |
+          plat={{.ITEM}}
+          os=${plat%/*}
+          arch=${plat#*/}
+          out=../../go-dist/one-${os}-${arch}
+          [ "$os" = "windows" ] && out="${out}.exe"
+          echo "→ $out"
+          GOOS=$os GOARCH=$arch go build -trimpath -ldflags '{{.LDFLAGS}}' -o "$out" ./cmd/one
+
+  test:
+    desc: Run Go tests with race detector
+    deps: [sync-bundled, sync-web]
+    dir: '{{.CLI_DIR}}'
+    cmds:
+      - go test -race ./...
+
+  test:snapshot:
+    desc: Run only the JSON-snapshot tests against testdata/reference
+    deps: [sync-bundled, sync-web]
+    dir: '{{.CLI_DIR}}'
+    cmds:
+      - go test -run Snapshot ./...
+
+  pre-push:
+    desc: Local equivalent of the PR CI gate (verify-docs + vet + fmt + build + test)
+    summary: |
+      Runs the same checks .github/workflows/ci.yml enforces on every PR:
+      - documentation drift (verify-docs: versions + CLI references + frontmatter)
+      - go vet (auto-syncs bundled assets and rebuilds dashboard via deps)
+      - gofmt cleanliness (no rewriting; just diff check)
+      - build (required for snapshot E2E tests that exec packages/cli/bin/one)
+      - test (-race ./...)
+
+      Run before every push. Cheap enough (~10–30s on a warm cache) that you
+      shouldn't have to skip it. The first run on a fresh clone takes longer
+      because sync-web bootstraps the dashboard via pnpm install + vite build.
+    cmds:
+      - task: verify-docs
+      - task: vet
+      - |
+        changed=$(cd {{.CLI_DIR}} && gofmt -l .)
+        if [ -n "$changed" ]; then
+          echo "Files need gofmt — run 'task fmt' first:" >&2
+          echo "$changed" >&2
+          exit 1
+        fi
+      - task: build
+      - task: test
+
+  fmt:
+    desc: gofmt the codebase
+    dir: '{{.CLI_DIR}}'
+    cmds:
+      - go fmt ./...
+
+  vet:
+    desc: go vet ./...
+    deps: [sync-bundled, sync-web]
+    dir: '{{.CLI_DIR}}'
+    cmds:
+      - go vet ./...
+
+  tidy:
+    desc: go mod tidy
+    dir: '{{.CLI_DIR}}'
+    cmds:
+      - go mod tidy
+
+  clean:
+    desc: Remove packages/cli/bin/ and go-dist/
+    cmds:
+      - rm -rf {{.BIN_DIR}} go-dist
+
+  build-web:
+    desc: Build the embedded `one serve` web UI (apps/dashboard/ → apps/dashboard/dist/)
+    summary: |
+      Builds the React UI shipped with `one serve` (sources at apps/dashboard/).
+      Output lands at apps/dashboard/dist/. The bundled mirror at
+      packages/cli/internal/bundled/_web/ is refreshed by `task sync-web`,
+      which depends on this task.
+
+      Idempotent: reruns cheaply when sources are unchanged (task hashes
+      sources/generates fingerprints).
+
+      Requires Node + pnpm locally. CI (the release pipeline) does NOT need
+      Node because the built dist is committed under
+      packages/cli/internal/bundled/_web/. Edit the UI → run `task sync-web`
+      → commit both apps/dashboard/ source and the regenerated _web/ mirror.
+    cmds:
+      - pnpm --dir apps/dashboard install --frozen-lockfile=false
+      - pnpm --dir apps/dashboard build
+    sources:
+      - 'apps/dashboard/src/**/*'
+      - 'apps/dashboard/index.html'
+      - 'apps/dashboard/package.json'
+      - 'apps/dashboard/vite.config.ts'
+      - 'apps/dashboard/tsconfig*.json'
+    generates:
+      - 'apps/dashboard/dist/index.html'
+
+  sync-bundled:
+    desc: Regenerate registry/skills/_templates under packages/cli/internal/bundled (go:embed sources)
+    summary: |
+      Go's embed cannot traverse `..` or follow symlinks, so we keep physical
+      copies of canonical assets under packages/cli/internal/bundled. The
+      whole bundled tree is gitignored and regenerated on demand.
+
+      This task handles the cheap copies: registry.json, skills/, _templates/.
+      It runs implicitly as a dep of `vet` / `test` / `build`. The dashboard
+      build (sync-web) is separate but identically wired — both have to run
+      before any Go command will compile the bundled package.
+
+      Direct `go build` / IDE-driven `gopls` won't run any task, so a fresh
+      clone needs `task sync-bundled && task sync-web` once before the Go
+      toolchain stops complaining about missing embed paths.
+
+      Dev-only go.mod files inside packages/templates/<id>/ are stripped
+      from the bundled copy — their presence isolates each Go-based template
+      from the parent module during repository development, but go:embed
+      treats any directory containing go.mod as a separate module and
+      excludes its subtree, which would silently drop the go-api template
+      from the binary.
+    cmds:
+      - cp packages/templates/registry.json packages/cli/internal/bundled/registry.json
+      - rm -rf packages/cli/internal/bundled/skills
+      - cp -R packages/skills packages/cli/internal/bundled/skills
+      - rm -rf packages/cli/internal/bundled/_templates
+      - cp -R packages/templates packages/cli/internal/bundled/_templates
+      - rm -f packages/cli/internal/bundled/_templates/registry.json
+      - find packages/cli/internal/bundled/_templates -name go.mod -delete
+
+  sync-web:
+    desc: Rebuild the embedded `one serve` UI from apps/dashboard/ and refresh packages/cli/internal/bundled/_web/
+    summary: |
+      Requires Node + pnpm — both CI and local dev need them. _web/ is
+      gitignored; this task is the only path that creates it. Runs as a
+      dep of `vet` / `test` / `build`, so the normal Taskfile flow always
+      keeps it fresh.
+
+      First run on a clean checkout takes 30–90s (pnpm install + vite build).
+      Subsequent runs hit the task-level sources/generates fingerprint and
+      are near-free unless you've edited apps/dashboard/.
+    deps: [build-web]
+    cmds:
+      - rm -rf packages/cli/internal/bundled/_web
+      - cp -R apps/dashboard/dist packages/cli/internal/bundled/_web

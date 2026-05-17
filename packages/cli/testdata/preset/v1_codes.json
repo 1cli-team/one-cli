@@ -1,0 +1,39 @@
+{
+  "version": 1,
+  "doc": "Frozen v1 preset code table. Entries here are LOAD-BEARING: once a (code, id) pair lands, it never changes. Tests in packages/cli/internal/preset/codes_test.go enforce this — additions are allowed, renames and removals fail CI.",
+  "templates": [
+    { "code": "as", "template_id": "astro-site" },
+    { "code": "ea", "template_id": "electron-app" },
+    { "code": "em", "template_id": "expo-mobile" },
+    { "code": "gl", "template_id": "go-lib" },
+    { "code": "go", "template_id": "go-api" },
+    { "code": "na", "template_id": "nextjs-app" },
+    { "code": "ne", "template_id": "nestjs-api" },
+    { "code": "rs", "template_id": "react-spa" },
+    { "code": "sl", "template_id": "starlight-docs" },
+    { "code": "tl", "template_id": "ts-library" }
+  ],
+  "deploys": [
+    { "code": "2", "deploy_id": "r2" },
+    { "code": "a", "deploy_id": "aliyun-oss" },
+    { "code": "c", "deploy_id": "cloudflare" },
+    { "code": "d", "deploy_id": "docker" },
+    { "code": "e", "deploy_id": "edgeone" },
+    { "code": "k", "deploy_id": "kustomize" },
+    { "code": "m", "deploy_id": "minio" },
+    { "code": "r", "deploy_id": "rustfs" },
+    { "code": "s", "deploy_id": "aws-s3" },
+    { "code": "t", "deploy_id": "tencent-cos" },
+    { "code": "v", "deploy_id": "vercel" }
+  ],
+  "envs": [
+    { "code": "d", "env_id": "dotenv" },
+    { "code": "i", "env_id": "infisical" }
+  ],
+  "containers": [
+    { "code": "a", "container_id": "acr" },
+    { "code": "d", "container_id": "docker" },
+    { "code": "g", "container_id": "ghcr" },
+    { "code": "h", "container_id": "dockerhub" }
+  ]
+}

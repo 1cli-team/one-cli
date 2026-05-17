@@ -1,0 +1,19 @@
+写一个环境变量值。两种调用形式都接受：
+
+  one env set KEY VALUE        # 两个位置参数
+  one env set KEY=VALUE        # 单参数 KEY=VALUE
+  one env set KEY              # 等价于 KEY=（空值）
+
+VALUE 含等号时，单参形式按第一个 = 拆分：one env set DSN=postgres://x=y → KEY="DSN", VALUE="postgres://x=y"。
+
+Usage:
+  one env set <KEY[=VALUE]> [VALUE] [flags]
+
+Flags:
+      --env string       环境名（缺省 manifest.environments.default）
+      --profile string   一次性使用指定 profile（不改 default）
+  -p, --project string   项目名（manifest.projects[].name）或相对路径；默认从 cwd 推导
+  -y, --yes              非交互模式：覆盖已存在值 / 自动确认创建新环境
+
+Global Flags:
+  -o, --output string   输出格式: json | yaml | text（默认 auto：TTY 时人类格式，pipe 时 JSON）

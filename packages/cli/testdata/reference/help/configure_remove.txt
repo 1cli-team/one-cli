@@ -1,0 +1,10 @@
+删除一个 profile
+
+Usage:
+  one configure remove <pair> --profile <name> [flags]
+
+Flags:
+      --profile string   profile 名（必填）
+
+Global Flags:
+  -o, --output string   输出格式: json | yaml | text（默认 auto：TTY 时人类格式，pipe 时 JSON）

@@ -1,0 +1,128 @@
+---
+title: Manage multi-platform secrets
+description: Centrally manage credentials for 12 platforms with one configure — what each pair stores, where the files live, and how runtime picks them.
+---
+
+`one configure` manages machine-local **profiles** — credential sets for the endpoints One CLI talks to. One workspace can use many profiles (one for staging cluster, one for prod); one profile can be used from many workspaces.
+
+The [basics env vars](/en/tutorials/env-vars/) and [basics deploy](/en/tutorials/deploy/) tutorials each used a single profile to show the happy path. This page is the full reference for managing them.
+
+## The 12 (domain, backend) pairs
+
+| Pair | What the profile contains |
+|---|---|
+| `env/infisical` | Universal Auth machine identity — `siteUrl`, `clientId`, `clientSecret` |
+| `deploy/aws-s3` | `region`, `accessKeyId`, `accessKeySecret`, optional `endpoint` |
+| `deploy/aliyun-oss` | `endpoint`, `region`, AK/SK |
+| `deploy/tencent-cos` | `endpoint`, `region`, AK/SK |
+| `deploy/minio` | `endpoint`, AK/SK (path-style by default) |
+| `deploy/rustfs` | Same shape as minio |
+| `deploy/r2` | Cloudflare R2: `endpoint`, AK/SK (`region` is `auto`) |
+| `deploy/kustomize` | `kubeconfigPath`, `context`, `namespace` |
+| `deploy/vercel` | `token`, optional `teamSlug` |
+| `deploy/cloudflare` | `accountId`, `apiToken` |
+| `deploy/edgeone` | EdgeOne secret + project info |
+| `container/docker` | `registry`, `namespace`, `username`, `password` (a token works) |
+
+Run `one configure add --help` for the live list. Each pair has its own sub-subcommand with backend-specific flags; run `one configure add <pair> --help` for that backend's flags.
+
+## Storage: two files, mode 0600
+
+```
+~/.config/one/
+├── config.json         # endpoint / region / default pointer (non-sensitive)
+└── credentials.json    # clientSecret / accessKeySecret / passwords (sensitive)
+```
+
+Both files are mode `0600` — owner-readable only. Neither goes in git. **Do not** copy them to a shared dotfile repo.
+
+The split mirrors AWS CLI's two-file model: anything sensitive lives in `credentials.json`, anything that's safe to read in a screenshot or commit somewhere else lives in `config.json`.
+
+## Add or update a profile
+
+```bash
+# Interactive (recommended on a new machine):
+one configure
+# → asks for (domain, backend) → walks the matching flow
+
+# Or jump straight to one pair:
+one configure add deploy/aws-s3 --profile prod \
+  --region us-east-1 \
+  --access-key-id <AK> \
+  --access-key-secret <SK> \
+  --use
+```
+
+Rules:
+
+- First time for a given `(pair, profile)`: status = `completed`, automatically becomes default.
+- Same `(pair, profile)` again: status = `updated` (overwrites credentials).
+- `--use` makes this profile the default afterwards.
+
+## List, switch, inspect
+
+```bash
+# List every profile across every pair:
+one configure list
+
+# Only a single pair:
+one configure list deploy/aws-s3
+
+# Print default profiles:
+one configure current
+one configure current deploy/aws-s3
+
+# Print one profile's full contents (credentials masked by default):
+one configure show deploy/aws-s3 --profile prod
+one configure show deploy/aws-s3 --profile prod --reveal   # unmask
+
+# Switch default:
+one configure use deploy/aws-s3 --profile staging
+
+# Delete:
+one configure remove deploy/aws-s3 --profile old
+```
+
+`-o json` works on all of these — useful for scripting profile rotation.
+
+## Profile resolution chain
+
+When you run a command that needs a profile (e.g. `one deploy`, `one env pull`, `one container push`), One CLI picks one in this order:
+
+1. **`--profile` flag** on the current command (highest priority; one-shot use).
+2. **Local project binding** — `~/.config/one/config.json#workspaces[workspaceId].projects[project].profiles[...]`.
+3. **Local workspace binding** — set with `one configure use <pair> --profile <name> --workspace`.
+4. **Machine default pointer** — whatever `one configure use <pair> --profile <name>` last set (or the first profile, if none was explicitly chosen).
+
+Manifest files do not store local profile names. `one configure current <pair>` reports the default pointer (level 4). To debug what a specific command will pick, dry-run with `-o json`:
+
+```bash
+one deploy -p api --env staging -o json --dry-run | jq '.profile'
+```
+
+## Locale: switch CLI language
+
+The 14th `configure` subcommand isn't a `(domain, backend)` pair — it's the CLI's own UI language:
+
+```bash
+one configure locale --set zh-CN
+one configure locale --set en-US
+```
+
+This affects only the human-readable text (`error.message`, prompts, table headers). Error **codes** (`error.code`) and JSON output stay identical across locales — that's why the bundled skill instructs agents to dispatch on `error.code`, not `error.message`.
+
+## Common errors
+
+| Code | Symptom | Fix |
+|---|---|---|
+| `DOMAIN_INVALID` | Pair is malformed (e.g. `env/foo` where `foo` isn't a known backend) | Use one of the 13 supported pairs |
+| `BACKEND_ID_UNKNOWN` | Same as above, surfaced from a different code path | Same fix |
+| `PROFILE_NOT_FOUND` | A command (or `--profile` flag) referenced a profile name that's not in `config.json` for that pair | `one configure list <pair>` to see what exists |
+| `PROFILE_NAME_REQUIRED` | Subcommand needs `--profile <name>` and you didn't pass it | Pass `--profile` |
+
+Full table: [error codes](/en/docs/error-codes/).
+
+## Next
+
+- Multi-environment workflows for env → [Multi-env vars](/en/tutorials/env-multi-env/)
+- All 10 deploy backends in detail → [Multi-backend deploy](/en/tutorials/deploy-multi-backend/)

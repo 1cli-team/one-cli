@@ -1,0 +1,87 @@
+---
+title: 本地开发编排
+description: 用 one dev 一次性起所有项目的 dev 进程。命令存哪里、什么时候只跑单项目、和 one run 怎么配合。
+---
+
+`one dev` 一次起所有项目的本地 dev 进程。命令读自 `one.manifest.json` 的 `projects[].domains.dev.command`，由内置 supervisor 跑——**不需要安装任何第三方工具**。
+
+## 1. dev 命令在哪里
+
+`one add <template>` 时自动按模板技术栈推导出 dev 命令并写进 manifest：
+
+```json
+{
+  "projects": [
+    {
+      "name": "api",
+      "relativeDir": "services/api",
+      "toolchain": "node",
+      "domains": {
+        "dev": { "command": "pnpm run start:dev" }
+      }
+    },
+    {
+      "name": "web",
+      "relativeDir": "apps/web",
+      "toolchain": "node",
+      "domains": {
+        "dev": { "command": "pnpm run dev" }
+      }
+    }
+  ]
+}
+```
+
+推导顺序：
+
+- Node 项目：`scripts.dev` → `scripts.start:dev`（NestJS 约定）→ `scripts.start`（Expo / 通用）
+- Go 项目：`go run ./cmd/server`
+- 都对不上：空字符串，该 project 不参与 `one dev`
+
+想改 dev 命令？直接编辑这一行。**不会**自动跟 `package.json` 同步——manifest 是唯一来源。
+
+## 2. 跑全部
+
+```bash
+one dev
+```
+
+内置 supervisor 把每个项目并行启动，stdout/stderr 按行带项目名前缀（TTY 下还会上色）。Ctrl-C 干净杀掉整组——包括 npm / node fork 出来的孙进程（用 POSIX 进程组实现）。
+
+## 3. 只跑一个项目
+
+```bash
+one dev -p api
+one dev -p apps/web        # selector 也接受 relativeDir
+```
+
+只起 selector 匹配的那个项目。适合：
+
+- 光重启 api、其他 dev 在另一个 terminal 继续跑
+- 只需要部分栈、避免端口冲突时
+
+## 4. dry-run 看会执行什么
+
+```bash
+one dev --dry-run
+```
+
+打印每个项目即将执行的命令，不实际启进程。
+
+## 5. 跟 `one run` 配合
+
+`one dev` 每个项目的命令实际是通过 `one run -p <reldir> -- <command>` 启的——这意味着 **`one env` 的环境变量会自动注入到 dev 进程**（dotenv 或 Infisical，看工作区的 env backend 设置）。不需要在模板的 dev 命令里再套 `one run`。
+
+要单独启某个项目并自己控制注入，直接用 `one run -p <name>` 也行；`one dev` 是编排器，不是必选。
+
+## 常见错误
+
+| 错误码 | 现象 | 修法 |
+|---|---|---|
+| `SUBPROJECT_NOT_FOUND` | 工作区没声明 dev 命令的项目；或 `-p` 指错 | `one -o json` 看项目列表；编辑 manifest 的 `projects[].domains.dev.command` |
+
+完整码表：[错误码大全](/zh/docs/error-codes/)。
+
+## 下一步
+
+- 完整 flag → [`one dev` 参考](/zh/docs/dev/)

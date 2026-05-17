@@ -1,0 +1,146 @@
+---
+export interface Props {
+	showDetails?: boolean;
+}
+
+const { showDetails = false } = Astro.props;
+---
+
+<div id="error-boundary" class="hidden">
+	<div class="min-h-screen flex items-center justify-center bg-secondary-50 px-4">
+		<div class="max-w-md w-full">
+			<!-- 错误图标和标题 -->
+			<div class="text-center mb-8">
+				<div class="mx-auto w-20 h-20 bg-error-100 rounded-full flex items-center justify-center mb-4">
+					<svg class="w-10 h-10 text-error-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+					</svg>
+				</div>
+				<h1 class="text-2xl font-bold text-secondary-900 mb-2">页面出现问题</h1>
+				<p class="text-secondary-600">抱歉，页面遇到了意外错误</p>
+			</div>
+
+			<!-- 错误信息卡片 -->
+			<div class="bg-white rounded-lg shadow-sm border border-secondary-200 p-6 mb-6">
+				<div class="flex items-start gap-3">
+					<div class="flex-shrink-0">
+						<div class="w-8 h-8 bg-error-100 rounded-full flex items-center justify-center">
+							<span class="text-error-500 text-sm">!</span>
+						</div>
+					</div>
+					<div class="flex-1">
+						<h3 class="font-semibold text-secondary-900 mb-2">发生了什么？</h3>
+						<p class="text-sm text-secondary-600 mb-4">
+							页面在运行过程中遇到了错误。我们已经自动记录了这个问题，开发团队会尽快修复。
+						</p>
+						
+						<!-- 错误详情（开发模式） -->
+						{showDetails && (
+							<details class="mt-4">
+								<summary class="cursor-pointer text-sm font-medium text-secondary-700 hover:text-secondary-900">
+									查看技术详情
+								</summary>
+								<div class="mt-2 p-3 bg-secondary-50 rounded border text-xs font-mono text-secondary-700" id="error-details">
+									错误详情将在这里显示
+								</div>
+							</details>
+						)}
+					</div>
+				</div>
+			</div>
+
+			<!-- 操作按钮 -->
+			<div class="space-y-3">
+				<button 
+					onclick="window.location.reload()" 
+					class="w-full px-4 py-3 bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-colors font-medium"
+				>
+					刷新页面
+				</button>
+				
+				<button 
+					onclick="window.location.href='/'" 
+					class="w-full px-4 py-3 border border-secondary-300 text-secondary-700 rounded-lg hover:bg-secondary-50 transition-colors font-medium"
+				>
+					返回首页
+				</button>
+
+				<button 
+					id="report-error-btn"
+					class="w-full px-4 py-3 text-secondary-500 hover:text-secondary-700 transition-colors text-sm"
+				>
+					报告问题
+				</button>
+			</div>
+
+			<!-- 帮助信息 -->
+			<div class="mt-8 text-center">
+				<p class="text-xs text-secondary-500">
+					如果问题持续存在，请尝试清除浏览器缓存或联系支持团队
+				</p>
+			</div>
+		</div>
+	</div>
+</div>
+
+<script>
+	// 全局错误处理
+	window.addEventListener('error', (event) => {
+		handleGlobalError(event.error);
+	});
+
+	window.addEventListener('unhandledrejection', (event) => {
+		handleGlobalError(event.reason);
+	});
+
+	function handleGlobalError(error: unknown) {
+		console.error('Global error caught:', error);
+		
+		// 显示错误边界
+		const errorBoundary = document.getElementById('error-boundary');
+		if (errorBoundary) {
+			errorBoundary.classList.remove('hidden');
+			
+			// 显示错误详情（如果启用）
+			const errorDetails = document.getElementById('error-details');
+			if (errorDetails) {
+				const errorMessage = error instanceof Error ? error.stack || error.message : String(error);
+				errorDetails.textContent = errorMessage;
+			}
+		}
+
+		// 发送错误通知
+		if ((window as any).toast) {
+			(window as any).toast.error({
+				title: '页面崩溃',
+				message: '页面遇到了严重错误，请刷新或返回上一页',
+				persistent: true
+			});
+		}
+	}
+
+	// 报告错误按钮
+	document.getElementById('report-error-btn')?.addEventListener('click', () => {
+		// 可以集成错误报告表单或邮件
+		if ((window as any).toast) {
+			(window as any).toast.info({
+				title: '感谢反馈',
+				message: '问题已在当前页面记录，请把复现步骤同步给维护者'
+			});
+		}
+	});
+</script>
+
+<style>
+	/* 确保错误边界在最上层 */
+	#error-boundary {
+		position: fixed;
+		top: 0;
+		left: 0;
+		right: 0;
+		bottom: 0;
+		z-index: 9999;
+		background: rgba(255, 255, 255, 0.95);
+		backdrop-filter: blur(4px);
+	}
+</style>

@@ -1,0 +1,67 @@
+package handlers
+
+import (
+	"errors"
+	"net/http"
+	"strconv"
+
+	"github.com/gin-gonic/gin"
+
+	"github.com/example/{{projectNameKebabCase}}/internal/http/response"
+	"github.com/example/{{projectNameKebabCase}}/internal/service"
+)
+
+type UserHandler struct {
+	users *service.UserService
+}
+
+type createUserRequest struct {
+	Email    string `json:"email" binding:"required,email"`
+	Name     string `json:"name" binding:"required"`
+	Password string `json:"password" binding:"required,min=8"`
+}
+
+func NewUserHandler(users *service.UserService) *UserHandler {
+	return &UserHandler{users: users}
+}
+
+func (h *UserHandler) List(c *gin.Context) {
+	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "20"))
+	offset, _ := strconv.Atoi(c.DefaultQuery("offset", "0"))
+
+	users, err := h.users.List(c.Request.Context(), limit, offset)
+	if err != nil {
+		response.Error(c, http.StatusInternalServerError, 50002, "failed to list users")
+		return
+	}
+
+	response.OK(c, users)
+}
+
+func (h *UserHandler) Create(c *gin.Context) {
+	var req createUserRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.Error(c, http.StatusBadRequest, 40000, "invalid request body")
+		return
+	}
+
+	user, err := h.users.Create(c.Request.Context(), service.CreateUserInput{
+		Email:    req.Email,
+		Name:     req.Name,
+		Password: req.Password,
+	})
+	if errors.Is(err, service.ErrInvalidInput) {
+		response.Error(c, http.StatusBadRequest, 40001, "invalid user input")
+		return
+	}
+	if errors.Is(err, service.ErrEmailAlreadyInUse) {
+		response.Error(c, http.StatusConflict, 40900, "email already in use")
+		return
+	}
+	if err != nil {
+		response.Error(c, http.StatusInternalServerError, 50003, "failed to create user")
+		return
+	}
+
+	response.Created(c, user)
+}

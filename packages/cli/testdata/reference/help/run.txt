@@ -1,0 +1,36 @@
+把项目环境变量注入到任意命令，类似 infisical run。
+
+项目解析：
+  - 不传 -p：从当前目录推导（必须 cd 到某个项目目录里）
+  - 传 -p <name>：按 manifest.projects[].name 选（如 -p web）
+  - 传 -p <relativeDir>：按相对路径选（如 -p apps/web）
+
+密钥来源（--env-provider，默认取 workspace 在 one create 时选择的 provider）：
+  - dotenv    ：读 <project>/.env 文件
+  - infisical ：联网从 Infisical 拉
+
+环境名（--env）：
+  覆盖 manifest.environments.default，比如 --env staging。
+
+工作目录：
+  子进程总在解析出的项目目录里运行（不论你从哪里 cd 进来）。
+
+注入的密钥默认会覆盖已存在的 shell 环境变量。
+
+示例：
+  one run -- npm run dev                          # 用 workspace 默认 provider
+  one run -p web -- npm start                     # 按 manifest 里的 name 选
+  one run -p apps/web -- npm start                # 按相对路径选
+  one run --env-provider dotenv -- npm test       # 强制走 dotenv（离线场景）
+  one run --env staging -- npm run e2e            # 用 staging 环境的密钥
+
+Usage:
+  one run [-p <name|path>] [--env-provider dotenv|infisical] [--env <name>] -- <cmd> [args...]
+
+Flags:
+      --env string            环境名（默认取 manifest.environments.default）
+      --env-provider string   env provider: dotenv | infisical（默认取 workspace manifest 中已选的值）
+  -p, --project string        项目名（manifest.projects[].name）或相对路径；默认从 cwd 推导
+
+Global Flags:
+  -o, --output string   输出格式: json | yaml | text（默认 auto：TTY 时人类格式，pipe 时 JSON）

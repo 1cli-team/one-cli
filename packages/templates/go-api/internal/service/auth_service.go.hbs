@@ -1,0 +1,66 @@
+package service
+
+import (
+	"context"
+	"errors"
+	"strings"
+
+	"golang.org/x/crypto/bcrypt"
+
+	"github.com/example/{{projectNameKebabCase}}/internal/domain"
+	"github.com/example/{{projectNameKebabCase}}/internal/platform/jwt"
+	"github.com/example/{{projectNameKebabCase}}/internal/repository"
+)
+
+type TokenSigner interface {
+	Sign(userID string) (string, error)
+}
+
+type AuthService struct {
+	users UserStore
+	jwt   TokenSigner
+}
+
+type LoginInput struct {
+	Email    string
+	Password string
+}
+
+type AuthToken struct {
+	AccessToken string       `json:"access_token"`
+	TokenType   string       `json:"token_type"`
+	User        *domain.User `json:"user"`
+}
+
+func NewAuthService(users UserStore, manager *jwt.Manager) *AuthService {
+	return &AuthService{users: users, jwt: manager}
+}
+
+func (s *AuthService) Login(ctx context.Context, input LoginInput) (*AuthToken, error) {
+	email := strings.TrimSpace(strings.ToLower(input.Email))
+	if email == "" || input.Password == "" {
+		return nil, ErrInvalidCredentials
+	}
+
+	user, err := s.users.FindByEmail(ctx, email)
+	if errors.Is(err, repository.ErrNotFound) {
+		return nil, ErrInvalidCredentials
+	}
+	if err != nil {
+		return nil, err
+	}
+	if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(input.Password)); err != nil {
+		return nil, ErrInvalidCredentials
+	}
+
+	token, err := s.jwt.Sign(user.ID)
+	if err != nil {
+		return nil, err
+	}
+
+	return &AuthToken{
+		AccessToken: token,
+		TokenType:   "Bearer",
+		User:        user,
+	}, nil
+}

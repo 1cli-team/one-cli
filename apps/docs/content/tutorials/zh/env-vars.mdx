@@ -1,0 +1,139 @@
+---
+title: 配置环境变量
+description: 用 one env 设第一个环境变量。先走 dotenv，需要团队共享时再切到 Infisical。最短路径。
+---
+
+<VideoEmbed provider="bilibili" videoId="BV1GJ411x7h7" title="用 one env 配置环境变量" />
+
+这是 happy path 教程。两条路 — 本地 `.env` 文件（默认）和 Infisical（团队共享时）— 设个值就完事。多层 `.env.local` 覆盖、per-project path、多环境树都在[多环境变量](/zh/tutorials/env-multi-env/)（进阶）。
+
+工作区用哪个后端由 `one.manifest.json#domains.env.kind` 决定。`one create` 默认设为 `dotenv`，除非你传了 `--env-provider infisical`。
+
+## 路线 A：dotenv（默认）
+
+最简方案。没有外部服务，没有凭据要管。
+
+### 1. 设个值
+
+```bash
+one env set DATABASE_URL=postgres://localhost/dev
+```
+
+如果你在工作区根跑这条命令，会问你是哪个项目。要跳过交互：
+
+```bash
+one env set DATABASE_URL=postgres://localhost/dev -p api
+```
+
+值会写到 `services/api/.env`（取决于项目的 `relativeDir`）。
+
+### 2. 读出来
+
+```bash
+one env get DATABASE_URL -p api
+# postgres://localhost/dev
+
+one env list -p api
+# DATABASE_URL=postgres://localhost/dev
+```
+
+### 3. 运行时用
+
+`one run` 把项目的环境变量注入到子进程：
+
+```bash
+one run -p api -- npm run dev
+# 子进程的 process.env 里就有 DATABASE_URL
+```
+
+dotenv 就这些。想 commit `.env.example` 随便；**别 commit `.env`**（工作区 `.gitignore` 已经排除了）。
+
+## 路线 B：Infisical（托管）
+
+适用：环境变量需要多机 / CI / 多人共享，dotenv 文件开始飘了。
+
+### 1. 在 Infisical 建 machine identity
+
+Infisical 后台：**Organization → Access Control → Identities → New**（选 Universal Auth），记下 `client id` 和 `client secret`。
+
+### 2. 在本机配 profile
+
+```bash
+one configure add env/infisical --profile default \
+  --site-url https://app.infisical.com \
+  --client-id <CLIENT_ID> \
+  --client-secret <CLIENT_SECRET> \
+  --use
+```
+
+只写本机 `~/.config/one/config.json` + `credentials.json`（mode 0600，权限 600）。**不会进 git。**
+
+### 3. 切工作区到 Infisical
+
+工作区当初用 `--env-provider dotenv` 起的，跑：
+
+```bash
+one env switch infisical
+```
+
+会做几件事：
+
+1. 验证本机 default `env/infisical` profile 存在
+2. 扫描所有项目 `.env` 文件，问你"发现 N 个 key，要同步过去吗？"
+3. 同步成功后才把 `one.manifest.json#domains.env.kind` 改成 `infisical`
+4. 自动绑/建对应 Infisical project
+
+常用 flag：
+
+| flag | 作用 |
+|---|---|
+| `--yes` / `-y` | 跳过同步确认（默认执行同步） |
+| `--no-sync` | 仅改 manifest，不动数据 |
+| `--overwrite` | Infisical 已有同名 key 时覆盖（默认报 `ENV_MIGRATE_CONFLICT`） |
+| `--dry-run` | 打印计划不执行 |
+
+新工作区可以省掉这一步，直接 `one create --env-provider infisical`。
+
+### 4. 设值
+
+```bash
+one env set DATABASE_URL=postgres://prod/db --env prod -p api
+```
+
+值直接写到 Infisical（folder = 项目 path，环境 = `prod`）。**本地文件系统这时不写任何东西。**
+
+### 5. 拉到本地 `.env`
+
+```bash
+one env pull --env dev
+```
+
+每个项目自己的 `.env` 出现在它的目录里。Path 隔离保证 `apps/web/.env` 不会含 API 的数据库密码 — 规则见[多环境变量](/zh/tutorials/env-multi-env/)。
+
+`one env pull` 默认拒绝覆盖跟 Infisical 不一致的本地 `.env`。确认要覆盖加 `--force`。
+
+### 切回 dotenv
+
+```bash
+one env switch dotenv
+```
+
+只改 manifest，**不删** Infisical 数据（安全）。切回后如果想把 Infisical 已有数据拿到本地，先跑 `one env pull` 再切。
+
+## 常见错误
+
+| 错误码 | 现象 | 修法 |
+|---|---|---|
+| `ENV_INVALID_KEY` | KEY 有非法字符 | 用 POSIX env-var 风格：`^[A-Z][A-Z0-9_]*$`（如 `DATABASE_URL`） |
+| `ENV_SET_KEY_REQUIRED` | `one env set` 没传 key | 用 `KEY=VALUE` 或 `KEY VALUE` |
+| `INFISICAL_NOT_CONFIGURED` | 工作区不是 `env/infisical`，或 manifest config 不完整 | 改 manifest 或重跑 `one create --env-provider infisical` |
+| `INFISICAL_AUTH_MISSING` | 本机没 default `env/infisical` profile | 重跑 `one configure add env/infisical ... --use` |
+| `INFISICAL_AUTH_FAILED` | client id / secret 错或过期 | Infisical 后台重新生成 secret，更新 profile |
+| `ENV_PULL_CONFLICT` | 本地 `.env` 跟 Infisical 不一致 | 看 diff，确认要覆盖加 `--force` |
+
+完整码表：[错误码大全](/zh/docs/error-codes/)。
+
+## 下一步
+
+- 多环境树、`.env.local` 覆盖、per-project path 覆盖 → [多环境变量](/zh/tutorials/env-multi-env/)（进阶）
+- 不只 env，所有 `one configure` 的 backend → [管理 Profile](/zh/tutorials/configure-profiles/)（进阶）

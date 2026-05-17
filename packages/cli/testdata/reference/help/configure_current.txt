@@ -1,0 +1,7 @@
+打印 default profile（无 pair 时聚合所有 section）
+
+Usage:
+  one configure current [pair] [flags]
+
+Global Flags:
+  -o, --output string   输出格式: json | yaml | text（默认 auto：TTY 时人类格式，pipe 时 JSON）

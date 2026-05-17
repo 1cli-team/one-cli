@@ -1,0 +1,23 @@
+{
+  "title": "文档",
+  "pages": [
+    "installation",
+    "quick-start",
+    "manifest",
+    "templates",
+    "ai-native",
+    "cli-overview",
+    "create",
+    "add",
+    "env-vars",
+    "configure",
+    "templates-cmd",
+    "container",
+    "dev",
+    "deploy",
+    "run",
+    "skills",
+    "serve",
+    "error-codes"
+  ]
+}

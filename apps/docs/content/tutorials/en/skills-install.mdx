@@ -1,0 +1,92 @@
+---
+title: Install one cli skill
+description: Run one skills install so Claude Code, Cursor, Codex (and 50+ other coding agents) can drive One CLI for you.
+---
+
+The `one-cli` skill is a bundled agent skill — a markdown package that teaches a coding agent how to use One CLI safely (read JSON output, recover from error codes, pick the right template, install dependencies for the right toolchain). Once it's installed, you can say "add a NestJS API called user-api" and the agent runs `one add nestjs-api --name user-api -o json` for you.
+
+`one create` already runs the equivalent of this command for detected agents. This tutorial is for cases where you want to install it explicitly, or to install to additional agents later.
+
+## 1. Run the command
+
+Interactive (recommended on a new machine):
+
+```bash
+one skills install
+```
+
+It auto-detects every supported coding agent installed on this machine (Claude Code, Cursor, Codex, Gemini CLI, GitHub Copilot, OpenCode, Cline, and 50+ more). You get a multi-select prompt; only Claude Code is pre-checked. Space to toggle, Enter to confirm.
+
+Non-interactive forms:
+
+```bash
+# Install to specific agents only:
+one skills install --agent claude-code --agent cursor
+
+# Install to every detected agent (use in CI):
+one skills install --yes
+```
+
+The command is idempotent — running it again refreshes the skill content on every target. Run it after upgrading the One CLI binary to push new skill content out.
+
+## 2. Where it lands
+
+The skill is materialized once at:
+
+```
+~/.one/skills-store/one-bundled/one-cli/
+```
+
+Each target agent gets a symlink from its global skills directory pointing at that store. On Windows the symlink falls back to a copy.
+
+You can inspect what's installed:
+
+```bash
+ls -la ~/.claude/skills/one-cli      # Claude Code
+ls -la ~/.cursor/skills/one-cli      # Cursor
+```
+
+(Exact path depends on the agent.)
+
+## 3. What the skill teaches your agent
+
+The skill is a directory of markdown playbooks. The most relevant ones:
+
+| Playbook | When the agent reads it |
+|---|---|
+| `references/bootstrap.md` | User wants a fresh workspace |
+| `references/add-feature.md` | User wants to add a project from a template |
+| `references/dependencies.md` | Workspace just changed; deps need installing |
+| `references/env-consumption.md` | Service code needs to read an env var |
+| `references/REFERENCE.md` | Look up a command, schema, or error code |
+
+The skill also enforces a few hard rules on the agent:
+
+1. Always use `-o json` for structured output.
+2. Read `error.code`, never parse `error.message` (varies with i18n).
+3. Workspace root = directory containing `one.manifest.json`.
+4. Don't hand-edit `AGENTS.md` / `CLAUDE.md`.
+5. Use `--yes` for non-interactive flows.
+
+## 4. Sanity-check the install
+
+In Claude Code (or your agent of choice), say:
+
+> Use the one-cli skill to scan this workspace and tell me what projects exist.
+
+The agent should run `one -o json` commands instead of guessing from filenames. If it ignores the skill, the agent probably wasn't picked up — re-run with `--agent <id>` to force.
+
+## Common errors
+
+| Code | Symptom | Fix |
+|---|---|---|
+| `SKILLS_INSTALL_FAILED` | The materialize or symlink step failed | Check the path printed in `context.path` — usually a permission issue on `~/.claude/skills/` |
+| `SKILLS_NO_AGENTS_DETECTED` | Auto-detection found nothing | Either install an agent first, or pass `--agent <id>` for a known target |
+| (no error, but agent ignores it) | The agent loaded but doesn't seem to follow the skill | Restart the agent; some agents only re-scan skills on launch |
+
+Full table: [error codes](/en/docs/error-codes/).
+
+## Next
+
+- The `one-cli` skill's own reference docs → [Skills reference](/en/docs/skills/)
+- How agents should consume One CLI's JSON output → [JSON output & error codes](/en/tutorials/json-output-error-codes/) (advanced)
