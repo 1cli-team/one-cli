@@ -4,9 +4,9 @@ const withMDX = createMDX();
 
 /** @type {import('next').NextConfig} */
 const config = {
-  // SSG: 全静态导出，对接 website-deploy.yml 现有 OSS 上传逻辑。
+  // SSG: 全静态导出，交给 Vercel 作为静态 Next.js 文档站托管。
   output: "export",
-  // CI 上传 docs/dist/ 到 OSS（见 .github/workflows/website-deploy.yml）。
+  // Vercel 的 Output Directory 指向 apps/docs/dist。
   distDir: "dist",
   // SSG 模式下 next/image 默认依赖 server，关掉优化用原图。
   images: { unoptimized: true },

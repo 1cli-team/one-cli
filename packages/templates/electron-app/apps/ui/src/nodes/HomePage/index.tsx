@@ -58,7 +58,7 @@ const HomePage: FC = () => (
 
     <div className="flex flex-col items-center gap-3 sm:flex-row">
       <a
-        href="https://one.torchstellar.com/zh/docs/quick-start/"
+        href="https://1cli.dev/zh/docs/quick-start/"
         target="_blank"
         rel="noreferrer noopener"
         className="bg-primary text-primary-foreground inline-flex items-center gap-2 rounded-full px-5 py-2.5 text-sm font-medium transition-opacity hover:opacity-90"

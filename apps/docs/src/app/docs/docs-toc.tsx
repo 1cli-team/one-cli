@@ -43,7 +43,7 @@ export function DocsToc({ docPath, items, lang }: DocsTocProps) {
 
       <div className="one-docs-toc-actions">
         <a
-          href={`https://github.com/torchstellar-team/one-cli/blob/master/apps/docs/content/docs/${docPath}`}
+          href={`https://github.com/1cli-team/one-cli/blob/master/apps/docs/content/docs/${docPath}`}
           target="_blank"
           rel="noreferrer"
         >
@@ -51,7 +51,7 @@ export function DocsToc({ docPath, items, lang }: DocsTocProps) {
           {labels.edit}
         </a>
         <a
-          href="https://github.com/torchstellar-team/one-cli/issues"
+          href="https://github.com/1cli-team/one-cli/issues"
           target="_blank"
           rel="noreferrer"
         >

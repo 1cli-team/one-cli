@@ -3,8 +3,8 @@ package updatecheck
 // Minimal vX.Y.Z comparison without pulling golang.org/x/mod/semver. We
 // only need a less-than test: "is `latest` strictly newer than the running
 // binary's version?" — anything more nuanced (pre-release ordering, build
-// metadata) is out of scope because /dl/latest only ever returns stable
-// releases.
+// metadata) is out of scope because the latest-release endpoint is only
+// expected to resolve to stable releases.
 
 import (
 	"strconv"
@@ -72,9 +72,9 @@ func parseTriple(v string) ([3]int, bool) {
 	return out, true
 }
 
-// normalizeTag re-shapes whatever /dl/latest returned into a canonical
-// `vX.Y.Z` (no pre-release suffix). Empty / unparseable input → "" so the
-// caller can short-circuit cache writes.
+// normalizeTag re-shapes a release tag into a canonical `vX.Y.Z` (no
+// pre-release suffix). Empty / unparseable input → "" so the caller can
+// short-circuit cache writes.
 func normalizeTag(raw string) string {
 	t, ok := parseTriple(raw)
 	if !ok {

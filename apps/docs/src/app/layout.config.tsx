@@ -24,7 +24,7 @@ export const baseOptions: BaseLayoutProps = {
     { text: "Blog", url: "/zh/blog/", active: "nested-url" },
     {
       text: "Changelog",
-      url: "https://github.com/torchstellar-team/one-cli/blob/master/CHANGELOG.md",
+      url: "https://github.com/1cli-team/one-cli/blob/master/CHANGELOG.md",
       external: true,
     },
   ],

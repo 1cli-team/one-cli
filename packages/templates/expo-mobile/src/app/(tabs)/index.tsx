@@ -65,7 +65,7 @@ export default function HomeScreen() {
       </ThemedText>
 
       <View className="w-full max-w-xs gap-3">
-        <ExternalLink href="https://one.torchstellar.com/zh/docs/quick-start/" asChild>
+        <ExternalLink href="https://1cli.dev/zh/docs/quick-start/" asChild>
           <Pressable
             style={{ backgroundColor: "#ea580c" }}
             className="rounded-full px-5 py-3"

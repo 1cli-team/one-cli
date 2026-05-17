@@ -16,7 +16,7 @@ import (
 // installCommand is what the warning tells the user to run. Matches the
 // command in [README.md](README.md) so the notification's recommendation
 // is the same path users have already seen.
-const installCommand = "curl -fsSL https://one.torchstellar.com/install.sh | bash"
+const installCommand = "curl -fsSL https://1cli.dev/install.sh | bash"
 
 // Notify reads the cached check result and prints a yellow warning to
 // stderr if a strictly newer version is available. Idempotent and

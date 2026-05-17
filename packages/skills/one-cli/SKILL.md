@@ -9,7 +9,7 @@ metadata:
 
 # One CLI — Unified Skill
 
-This skill covers every interaction with [One CLI](https://github.com/torchstellar-team/one-cli),
+This skill covers every interaction with [One CLI](https://github.com/1cli-team/one-cli),
 a Go-based scaffolding + governance tool for AI-Native monorepo workspaces.
 Commands are minimal (`create`, `add`, `templates`, `env`,
 `container`, `dev`, `deploy`, `run`, `configure`, `serve`, `skills`),
@@ -44,11 +44,11 @@ If this command fails, **stop and tell the user**:
 > One CLI 还没装。请用 curl 一键安装（macOS / Linux）：
 >
 > ```bash
-> curl -fsSL https://<your-oss-host>/install.sh | bash
+> curl -fsSL https://1cli.dev/install.sh | bash
 > ```
 >
 > 或从 GitHub Releases 下载对应平台的归档：
-> https://github.com/torchstellar-team/one-cli/releases/latest
+> https://github.com/1cli-team/one-cli/releases/latest
 >
 > 装完再回来重试这个请求。
 
@@ -140,6 +140,6 @@ For the complete code → recovery mapping see `references/REFERENCE.md`.
 
 ## References
 
-- One CLI repo: <https://github.com/torchstellar-team/one-cli>
-- Error code reference: <https://github.com/torchstellar-team/one-cli/blob/master/internal/errors/codes.go> (Codes registry — source of truth)
+- One CLI repo: <https://github.com/1cli-team/one-cli>
+- Error code reference: <https://github.com/1cli-team/one-cli/blob/master/packages/cli/internal/errors/codes.go> (Codes registry — source of truth)
 - Agent Skills format spec: <https://agentskills.io/specification>

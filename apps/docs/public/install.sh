@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # install.sh — One CLI installer for macOS / Linux.
 #
-#   curl -fsSL https://one.torchstellar.com/install.sh | bash
+#   curl -fsSL https://1cli.dev/install.sh | bash
 #
 # Default behavior:
 #   - First install (no existing binary): install.
@@ -10,11 +10,14 @@
 #   - Target older than current: refuse (downgrade requires ONE_FORCE=1).
 #
 # Configurable env vars:
-#   ONE_VERSION       Pin a version (vX.Y.Z). Default: read $ONE_BASE_URL/dl/latest.
+#   ONE_VERSION       Pin a version (vX.Y.Z). Default: follow $ONE_LATEST_URL.
 #   ONE_INSTALL_DIR   Install dir. Default: $HOME/.local/bin (matches `task install-local`).
 #   ONE_FORCE         Set to 1 to allow downgrade, force-reinstall the same version,
 #                     or overwrite an existing binary whose version can't be read.
-#   ONE_BASE_URL      Override the origin. Default: https://one.torchstellar.com.
+#   ONE_REPO_URL      Override the GitHub repo URL. Default: https://github.com/1cli-team/one-cli.
+#   ONE_RELEASE_BASE_URL
+#                     Override release asset base. Default: $ONE_REPO_URL/releases/download.
+#   ONE_LATEST_URL    Override latest release URL. Default: $ONE_REPO_URL/releases/latest.
 #   ONE_SKIP_VERIFY   Set to 1 to skip SHA256 verification (debugging only).
 
 set -euo pipefail
@@ -23,7 +26,9 @@ set -euo pipefail
 # leave a partial install behind: main is only called after the script
 # is fully sourced.
 main() {
-    : "${ONE_BASE_URL:=https://one.torchstellar.com}"
+    : "${ONE_REPO_URL:=https://github.com/1cli-team/one-cli}"
+    : "${ONE_RELEASE_BASE_URL:=${ONE_REPO_URL%/}/releases/download}"
+    : "${ONE_LATEST_URL:=${ONE_REPO_URL%/}/releases/latest}"
     : "${ONE_INSTALL_DIR:=$HOME/.local/bin}"
     : "${ONE_FORCE:=0}"
     : "${ONE_SKIP_VERIFY:=0}"
@@ -53,7 +58,7 @@ detect_platform() {
         Darwin) OS="darwin" ;;
         Linux)  OS="linux"  ;;
         *)
-            err "unsupported OS: $(uname -s). Download a binary manually from https://github.com/torchstellar-team/one-cli/releases/latest"
+            err "unsupported OS: $(uname -s). Download a binary manually from https://github.com/1cli-team/one-cli/releases/latest"
             exit 1
             ;;
     esac
@@ -71,13 +76,20 @@ detect_platform() {
 
 resolve_version() {
     if [[ -z "${ONE_VERSION:-}" ]]; then
-        info "resolving latest version from $ONE_BASE_URL/dl/latest"
-        if ! ONE_VERSION=$(curl -fsSL --retry 3 "$ONE_BASE_URL/dl/latest" 2>/dev/null); then
-            err "failed to fetch /dl/latest. Set ONE_VERSION=vX.Y.Z to bypass."
+        info "resolving latest version from $ONE_LATEST_URL"
+        local effective_url
+        if ! effective_url=$(curl -fsSL --retry 3 -o /dev/null -w '%{url_effective}' "$ONE_LATEST_URL" 2>/dev/null); then
+            err "failed to resolve latest GitHub release. Set ONE_VERSION=vX.Y.Z to bypass."
             exit 1
         fi
-        ONE_VERSION=$(printf '%s' "$ONE_VERSION" | tr -d '[:space:]')
+        ONE_VERSION="${effective_url##*/}"
+        if [[ "$ONE_VERSION" == "latest" || "$ONE_VERSION" == "releases" || -z "$ONE_VERSION" ]]; then
+            err "could not infer a release tag from $effective_url."
+            err "Make sure the GitHub repo has at least one release, or set ONE_VERSION=vX.Y.Z."
+            exit 1
+        fi
     fi
+    ONE_VERSION=$(printf '%s' "$ONE_VERSION" | tr -d '[:space:]')
     case "$ONE_VERSION" in
         v[0-9]*) ;;
         *) err "invalid version format: '$ONE_VERSION' (expected vX.Y.Z)"; exit 1 ;;
@@ -191,8 +203,8 @@ preflight() {
 
 download_and_verify() {
     archive="one-cli_${OS}_${ARCH}.tar.gz"
-    archive_url="$ONE_BASE_URL/dl/$ONE_VERSION/$archive"
-    checksum_url="$ONE_BASE_URL/dl/$ONE_VERSION/checksums.txt"
+    archive_url="${ONE_RELEASE_BASE_URL%/}/$ONE_VERSION/$archive"
+    checksum_url="${ONE_RELEASE_BASE_URL%/}/$ONE_VERSION/checksums.txt"
 
     TMP=$(mktemp -d -t one-cli-installer.XXXXXX)
     trap 'rm -rf "$TMP"' EXIT

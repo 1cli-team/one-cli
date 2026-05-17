@@ -12,18 +12,18 @@ Install the `one` binary onto your `PATH`. It should take only a few seconds.
 ## macOS / Linux One-line Install
 
 ```bash
-curl -fsSL https://one.torchstellar.com/install.sh | bash
+curl -fsSL https://1cli.dev/install.sh | bash
 ```
 
 The script:
 
 1. Detects `$os/$arch` (`darwin` / `linux`, `amd64` / `arm64`)
-2. Resolves the latest version from `one.torchstellar.com/dl/latest`
-3. Downloads the matching tarball and verifies SHA256
+2. Resolves the latest version from the GitHub Releases latest redirect
+3. Downloads the matching tarball from release assets and verifies SHA256
 4. Extracts `one` into `~/.local/bin/one`
 5. Tells you if `PATH` needs an update
 
-**Audit the script**: open `https://one.torchstellar.com/install.sh` in a browser. It is plain text.
+**Audit the script**: open `https://1cli.dev/install.sh` in a browser. It is plain text.
 
 Verify after installation:
 
@@ -46,13 +46,13 @@ Open a new shell.
 
 ## Windows / Manual Download
 
-Download the matching archive from [GitHub Releases](https://github.com/torchstellar-team/one-cli/releases/latest) (`darwin/linux/windows x amd64/arm64`), unzip it, and put `one` on `PATH`.
+Download the matching archive from [GitHub Releases](https://github.com/1cli-team/one-cli/releases/latest) (`darwin/linux/windows x amd64/arm64`), unzip it, and put `one` on `PATH`.
 
 Example for Linux amd64:
 
 ```bash
 curl -L -o one.tar.gz \
-  https://github.com/torchstellar-team/one-cli/releases/latest/download/one-cli_linux_amd64.tar.gz
+  https://github.com/1cli-team/one-cli/releases/latest/download/one-cli_linux_amd64.tar.gz
 tar -xzf one.tar.gz
 mv one ~/.local/bin/
 one --version
@@ -131,16 +131,18 @@ See [Install skill to agent](/en/tutorials/skills-install/).
 
 | Variable | Default | Meaning |
 |---|---|---|
-| `ONE_VERSION` | read from `/dl/latest` | Lock the version, for example `v0.1.0` |
+| `ONE_VERSION` | resolved from the latest GitHub release | Lock the version, for example `v0.1.0` |
 | `ONE_INSTALL_DIR` | `$HOME/.local/bin` | Install directory |
 | `ONE_FORCE` | `0` | Set to `1` to allow downgrade, same-version reinstall, or overwrite a binary whose version cannot be read |
-| `ONE_BASE_URL` | `https://one.torchstellar.com` | Mirror override for debugging |
+| `ONE_REPO_URL` | `https://github.com/1cli-team/one-cli` | GitHub repo URL override for debugging |
+| `ONE_RELEASE_BASE_URL` | `$ONE_REPO_URL/releases/download` | Release asset download base override |
+| `ONE_LATEST_URL` | `$ONE_REPO_URL/releases/latest` | Latest release resolver override |
 | `ONE_SKIP_VERIFY` | `0` | Set to `1` to skip SHA256 verification; debugging only |
 
 Install a specific older version into a custom directory:
 
 ```bash
-curl -fsSL https://one.torchstellar.com/install.sh | ONE_VERSION=v0.1.0 ONE_INSTALL_DIR=/opt/bin bash
+curl -fsSL https://1cli.dev/install.sh | ONE_VERSION=v0.1.0 ONE_INSTALL_DIR=/opt/bin bash
 ```
 
 ## Uninstall
@@ -153,10 +155,10 @@ If you also want to remove skills installed by `one skills install`, delete the 
 
 ## Local Repo Build For Contributors
 
-If you are changing One CLI itself, read [CONTRIBUTING.md](https://github.com/torchstellar-team/one-cli/blob/master/CONTRIBUTING.md). Short version:
+If you are changing One CLI itself, read [CONTRIBUTING.md](https://github.com/1cli-team/one-cli/blob/master/CONTRIBUTING.md). Short version:
 
 ```bash
-git clone https://github.com/torchstellar-team/one-cli
+git clone https://github.com/1cli-team/one-cli
 cd one-cli
 brew install go go-task     # macOS; adapt for Linux
 task install-local           # build current branch and symlink to ~/.local/bin/one
@@ -165,7 +167,7 @@ which one
 one --version
 ```
 
-For the full contributor flow, see [CONTRIBUTING.md](https://github.com/torchstellar-team/one-cli/blob/master/CONTRIBUTING.md). For command-surface reference, see [Command overview](/en/docs/cli-overview/).
+For the full contributor flow, see [CONTRIBUTING.md](https://github.com/1cli-team/one-cli/blob/master/CONTRIBUTING.md). For command-surface reference, see [Command overview](/en/docs/cli-overview/).
 
 ## Installed?
 

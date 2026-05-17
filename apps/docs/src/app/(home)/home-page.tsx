@@ -28,7 +28,7 @@ import { HomeHeroCanvas } from "./hero-canvas";
 import { HomeCopyButton } from "./home-template-preview";
 import { WorkflowSidebarNav, type WorkflowNavIcon } from "./workflow-nav";
 
-const installCommand = "curl -fsSL one.torchstellar.com/install.sh | bash";
+const installCommand = "curl -fsSL https://1cli.dev/install.sh | bash";
 
 const homeCopy = {
   zh: {
@@ -331,7 +331,7 @@ const homeCopy = {
         bullets: ["按产品类型浏览", "现成示例和自定义组合都支持", "复制命令后自己运行或交给 AI"],
         cta: "进入模板页",
         metaLabel: "模板页入口",
-        metaValue: "one.torchstellar.com /zh/templates/",
+        metaValue: "1cli.dev /zh/templates/",
       },
       ai: {
         label: "方式三",
@@ -693,7 +693,7 @@ const homeCopy = {
         bullets: ["Browse by product type", "Use ready examples or custom mixes", "Run the command yourself or hand it to AI"],
         cta: "Open templates",
         metaLabel: "Template page",
-        metaValue: "one.torchstellar.com /en/templates/",
+        metaValue: "1cli.dev /en/templates/",
       },
       ai: {
         label: "Option three",
@@ -819,7 +819,7 @@ function HomeNav({ lang, text }: { lang: Locale; text: HomeText }) {
     [text.nav.docs, localizedDocsPath(lang, ["quick-start"])],
     [text.nav.templates, localizedTemplatesPath(lang)],
     [text.nav.blog, localizedBlogPath(lang)],
-    [text.nav.changelog, "https://github.com/torchstellar-team/one-cli/blob/master/CHANGELOG.md"],
+    [text.nav.changelog, "https://github.com/1cli-team/one-cli/blob/master/CHANGELOG.md"],
   ] as const;
 
   return (
@@ -848,7 +848,7 @@ function HomeNav({ lang, text }: { lang: Locale; text: HomeText }) {
         <div className="flex items-center gap-2">
           <HomeLanguageSwitcher lang={lang} />
           <a
-            href="https://github.com/torchstellar-team/one-cli"
+            href="https://github.com/1cli-team/one-cli"
             target="_blank"
             rel="noreferrer"
             className="hidden size-9 items-center justify-center rounded-md text-stone-300 transition hover:bg-white/5 hover:text-white sm:inline-flex"
@@ -920,7 +920,7 @@ function Hero({ lang, text }: { lang: Locale; text: HomeText }) {
               {text.hero.install}
             </Link>
             <a
-              href="https://github.com/torchstellar-team/one-cli"
+              href="https://github.com/1cli-team/one-cli"
               target="_blank"
               rel="noreferrer"
               className="inline-flex h-11 items-center justify-center gap-2 rounded-md border border-white/10 px-5 text-sm font-semibold text-stone-100 transition hover:border-orange-500/60 hover:bg-white/5"
@@ -1174,7 +1174,7 @@ function JsonSection({ text }: { text: HomeText }) {
 function StartWaysSection({ lang, text }: { lang: Locale; text: HomeText }) {
   const createHref = localizedDocsPath(lang, ["create"]);
   const templatesHref = localizedTemplatesPath(lang);
-  const templateUrl = `https://one.torchstellar.com${templatesHref}`;
+  const templateUrl = `https://1cli.dev${templatesHref}`;
   const aiGuideHref = localizedDocsPath(lang, ["ai-native"]);
 
   return (
@@ -1257,7 +1257,7 @@ function StartWaysSection({ lang, text }: { lang: Locale; text: HomeText }) {
                 />
               </div>
               <p className="truncate px-4 py-3 font-mono text-sm text-stone-200">
-                <span className="text-orange-400">one.torchstellar.com</span>
+                <span className="text-orange-400">1cli.dev</span>
                 {templatesHref}
               </p>
             </div>
@@ -1350,7 +1350,7 @@ function FinalCTA({ lang, text }: { lang: Locale; text: HomeText }) {
             <ArrowRight className="size-4" />
           </Link>
           <a
-            href="https://github.com/torchstellar-team/one-cli"
+            href="https://github.com/1cli-team/one-cli"
             target="_blank"
             rel="noreferrer"
             className="inline-flex h-11 items-center justify-center gap-2 rounded-md border border-white/10 px-5 text-sm font-semibold text-stone-100 transition hover:border-orange-500/60 hover:bg-white/5"
@@ -1402,10 +1402,10 @@ function Footer({ lang, text }: { lang: Locale; text: HomeText }) {
           <FooterLinks
             title={text.footer.project}
             links={[
-              ["GitHub", "https://github.com/torchstellar-team/one-cli"],
+              ["GitHub", "https://github.com/1cli-team/one-cli"],
               [text.nav.blog, localizedBlogPath(lang)],
-              [text.footer.links.releases, "https://github.com/torchstellar-team/one-cli/releases"],
-              [text.footer.links.changelog, "https://github.com/torchstellar-team/one-cli/blob/master/CHANGELOG.md"],
+              [text.footer.links.releases, "https://github.com/1cli-team/one-cli/releases"],
+              [text.footer.links.changelog, "https://github.com/1cli-team/one-cli/blob/master/CHANGELOG.md"],
             ]}
           />
         </div>
