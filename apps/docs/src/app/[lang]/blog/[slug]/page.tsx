@@ -5,12 +5,17 @@ import { MarkdownContent } from "@/components/markdown-content";
 import { SiteTopNav } from "@/components/site-top-nav";
 import {
   alternateBlogLanguages,
-  htmlLang,
   isLocale,
   localizedBlogPath,
   type Locale,
 } from "@/i18n";
 import { formatBlogDate, getBlogPost, getBlogPosts } from "@/lib/blog";
+import {
+  blogPostingJsonLd,
+  breadcrumbJsonLd,
+  createPageMetadata,
+  jsonLdScriptProps,
+} from "@/lib/seo";
 
 const copy: Record<
   Locale,
@@ -18,17 +23,20 @@ const copy: Record<
     back: string;
     readTime: string;
     editGithub: string;
+    related: string;
   }
 > = {
   zh: {
     back: "返回博客",
     readTime: "分钟阅读",
     editGithub: "在 GitHub 编辑",
+    related: "继续阅读",
   },
   en: {
     back: "Back to blog",
     readTime: "min read",
     editGithub: "Edit on GitHub",
+    related: "Related reading",
   },
 };
 
@@ -49,17 +57,14 @@ export async function generateMetadata(props: {
   const post = getBlogPost(rawLang, slug);
   if (!post) notFound();
 
-  return {
+  return createPageMetadata({
     title: `${post.title} | One CLI Blog`,
     description: post.description,
-    alternates: {
-      canonical: localizedBlogPath(rawLang, [post.slug]),
-      languages: alternateBlogLanguages([post.slug]),
-    },
-    other: {
-      "content-language": htmlLang[rawLang],
-    },
-  };
+    path: localizedBlogPath(rawLang, [post.slug]),
+    locale: rawLang,
+    alternates: alternateBlogLanguages([post.slug]),
+    type: "article",
+  });
 }
 
 export default async function BlogArticleRoute(props: {
@@ -71,9 +76,29 @@ export default async function BlogArticleRoute(props: {
   const post = getBlogPost(lang, slug);
   if (!post) notFound();
   const labels = copy[lang];
+  const related = getRelatedPosts(lang, post.slug, post.tags);
 
   return (
     <main className="min-h-screen bg-[var(--surface-primary)] text-[var(--foreground-primary)]">
+      <script
+        {...jsonLdScriptProps([
+          blogPostingJsonLd({
+            title: post.title,
+            description: post.description,
+            path: localizedBlogPath(lang, [post.slug]),
+            locale: lang,
+            datePublished: post.date,
+            author: post.author,
+            tags: post.tags,
+            section: "One CLI Blog",
+          }),
+          breadcrumbJsonLd([
+            { name: "One CLI", path: `/${lang}/` },
+            { name: "Blog", path: localizedBlogPath(lang) },
+            { name: post.title, path: localizedBlogPath(lang, [post.slug]) },
+          ]),
+        ])}
+      />
       <SiteTopNav lang={lang} active="blog" standalone />
       <article className="mx-auto max-w-[900px] px-5 pt-28 pb-20 md:px-8">
         <Link
@@ -119,7 +144,45 @@ export default async function BlogArticleRoute(props: {
         </div>
         <div className="one-docs-divider" />
         <MarkdownContent content={post.content} />
+        {related.length > 0 ? (
+          <section className="mt-14 border-t border-[var(--border-subtle)] pt-8">
+            <h2 className="text-xl font-semibold">{labels.related}</h2>
+            <div className="mt-5 grid gap-3">
+              {related.map((item) => (
+                <Link
+                  className="no-style rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-elevated)] p-4 transition hover:border-[var(--accent-border)] hover:bg-[var(--accent-soft)]"
+                  href={localizedBlogPath(lang, [item.slug])}
+                  key={item.slug}
+                >
+                  <span className="text-base font-semibold text-[var(--foreground-primary)]">
+                    {item.title}
+                  </span>
+                  <span className="mt-1 block text-sm leading-6 text-[var(--foreground-secondary)]">
+                    {item.description}
+                  </span>
+                </Link>
+              ))}
+            </div>
+          </section>
+        ) : null}
       </article>
     </main>
   );
+}
+
+function getRelatedPosts(lang: Locale, slug: string, tags: string[]) {
+  const tagSet = new Set(tags);
+
+  return getBlogPosts(lang)
+    .filter((candidate) => candidate.slug !== slug)
+    .map((candidate) => ({
+      candidate,
+      score: candidate.tags.filter((tag) => tagSet.has(tag)).length,
+    }))
+    .sort(
+      (a, b) =>
+        b.score - a.score || b.candidate.date.localeCompare(a.candidate.date),
+    )
+    .slice(0, 3)
+    .map(({ candidate }) => candidate);
 }

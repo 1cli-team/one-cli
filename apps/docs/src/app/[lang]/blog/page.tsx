@@ -4,12 +4,16 @@ import { notFound } from "next/navigation";
 import { SiteTopNav } from "@/components/site-top-nav";
 import {
   alternateBlogLanguages,
-  htmlLang,
   isLocale,
   localizedBlogPath,
   type Locale,
 } from "@/i18n";
 import { formatBlogDate, getBlogPosts } from "@/lib/blog";
+import {
+  createPageMetadata,
+  itemListJsonLd,
+  jsonLdScriptProps,
+} from "@/lib/seo";
 
 const copy: Record<
   Locale,
@@ -50,17 +54,13 @@ export async function generateMetadata(props: {
   if (!isLocale(rawLang)) notFound();
   const lang = rawLang;
 
-  return {
+  return createPageMetadata({
     title: lang === "zh" ? "博客 | One CLI" : "Blog | One CLI",
     description: copy[lang].description,
-    alternates: {
-      canonical: localizedBlogPath(lang),
-      languages: alternateBlogLanguages(),
-    },
-    other: {
-      "content-language": htmlLang[lang],
-    },
-  };
+    path: localizedBlogPath(lang),
+    locale: lang,
+    alternates: alternateBlogLanguages(),
+  });
 }
 
 export default async function BlogIndexRoute(props: {
@@ -74,6 +74,19 @@ export default async function BlogIndexRoute(props: {
 
   return (
     <main className="min-h-screen bg-[var(--surface-primary)] text-[var(--foreground-primary)]">
+      <script
+        {...jsonLdScriptProps(
+          itemListJsonLd({
+            name: text.title,
+            description: text.description,
+            items: posts.map((post) => ({
+              name: post.title,
+              description: post.description,
+              path: localizedBlogPath(lang, [post.slug]),
+            })),
+          }),
+        )}
+      />
       <SiteTopNav lang={lang} active="blog" standalone />
       <section className="border-b border-[var(--border-subtle)] bg-[var(--surface-elevated)] px-5 pt-28 pb-16 lg:px-24">
         <div className="mx-auto max-w-[1120px]">

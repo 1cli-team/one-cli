@@ -5,9 +5,8 @@ import {
   localizedBlogPath,
 } from "@/i18n";
 import { getAllBlogPosts } from "@/lib/blog";
+import { siteUrl } from "@/lib/seo";
 import { source } from "@/lib/source";
-
-const siteUrl = "https://1cli.dev";
 
 export const dynamic = "force-static";
 
