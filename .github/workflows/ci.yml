@@ -1,13 +1,14 @@
-# PR-time test gate. Mirrors `task pre-push` so green CI ≡ green local run.
+# PR-time test gate. Keeps the merge path fast while preserving slower
+# compatibility checks on master/manual runs.
 #
 # Two jobs:
 #  - lint: documentation drift, go vet, gofmt cleanliness. The whole bundled
 #    tree (registry/skills/_templates/_web) is gitignored and regenerated
 #    via `task sync-bundled` + `task sync-web`, both of which run as deps
 #    of `task vet` — so vet implicitly bootstraps the bundle here.
-#  - test: Linux PR gate, builds bin/one then runs `task test`
-#    (go test -race ./...). Build is required because internal/cli/snapshot_e2e_test.go
-#    skips when bin/one is missing. macOS runs on master/manual triggers only.
+#  - test: Linux PR gate, builds bin/one then runs `go test ./...`.
+#    Build is required because internal/cli/snapshot_e2e_test.go skips when
+#    bin/one is missing. Race + macOS checks run on master/manual triggers only.
 #
 # Both jobs need Node + pnpm because sync-web runs `pnpm install` +
 # `vite build` against apps/dashboard/.
@@ -26,6 +27,10 @@ on:
   push:
     branches: [master]
   workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 permissions:
   contents: read
@@ -87,13 +92,48 @@ jobs:
           fi
 
   test:
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - name: linux
-            runs-on: ubuntu-latest
-    runs-on: ${{ matrix.runs-on }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: packages/cli/go.mod
+          cache: true
+          cache-dependency-path: packages/cli/go.sum
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          run_install: false
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+          cache-dependency-path: apps/dashboard/pnpm-lock.yaml
+
+      - name: Install task
+        run: go install github.com/go-task/task/v3/cmd/task@latest
+
+      - name: Download Go modules
+        working-directory: packages/cli
+        run: go mod download
+
+      - name: Build binary
+        run: task build
+
+      - name: Run tests
+        working-directory: packages/cli
+        run: go test ./...
+
+  test-race:
+    # Race tests are useful but slow on GitHub-hosted runners. Keep them off
+    # the PR critical path and run them before/after merging to master.
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
@@ -130,7 +170,7 @@ jobs:
         run: task test
 
   test-macos:
-    # macOS runners are much slower to start and are scarce on PRs. Keep the
+    # macOS runners are slower to start and are scarce on PRs. Keep the
     # cross-platform signal for master/manual runs without making every PR wait.
     if: github.event_name != 'pull_request'
     runs-on: macos-latest
@@ -167,4 +207,5 @@ jobs:
         run: task build
 
       - name: Run tests
-        run: task test
+        working-directory: packages/cli
+        run: go test ./...
