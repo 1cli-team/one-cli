@@ -7,7 +7,7 @@ import {
 import { getAllBlogPosts } from "@/lib/blog";
 import { source } from "@/lib/source";
 
-const siteUrl = "https://one.torchstellar.com";
+const siteUrl = "https://1cli.dev";
 
 export const dynamic = "force-static";
 

@@ -85,7 +85,7 @@ export function TemplateExamplesNav({ lang }: { lang: NavLocale }) {
               {text.blog}
             </Link>
             <a
-              href="https://github.com/torchstellar-team/one-cli/blob/master/CHANGELOG.md"
+              href="https://github.com/1cli-team/one-cli/blob/master/CHANGELOG.md"
               target="_blank"
               rel="noreferrer"
               className="text-stone-600 hover:text-[#0a0a0a]"
@@ -111,7 +111,7 @@ export function TemplateExamplesNav({ lang }: { lang: NavLocale }) {
             ))}
           </div>
           <a
-            href="https://github.com/torchstellar-team/one-cli"
+            href="https://github.com/1cli-team/one-cli"
             target="_blank"
             rel="noreferrer"
             className="hidden text-stone-700 hover:text-[#0a0a0a] sm:inline-flex"

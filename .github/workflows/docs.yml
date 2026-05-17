@@ -1,26 +1,29 @@
-# Build the docs site and sync it to the OSS bucket that fronts
-# https://one.torchstellar.com. The same bucket also holds /dl/<tag>/* (binaries),
-# populated by .github/workflows/cli.yml. We must NEVER touch
-# /dl/* from this workflow — see the guard before the upload step.
-#
-# Site source lives at apps/docs/ (Next.js + Fumadocs SSG, output: 'export',
-# distDir: 'dist').
+# Build the docs site for PR/push confidence. Production deploys are handled
+# by the Vercel project linked to apps/docs and the 1cli.dev domain.
 
 name: Docs
 
 on:
+  pull_request:
+    paths:
+      - "apps/docs/**"
+      - "package.json"
+      - "pnpm-lock.yaml"
+      - "pnpm-workspace.yaml"
   push:
-    tags:
-      - "v*"
-  # Manual run for ad-hoc redeploys (e.g. docs hotfixes between tags, or
-  # after editing install.sh without cutting a release).
+    branches: [master]
+    paths:
+      - "apps/docs/**"
+      - "package.json"
+      - "pnpm-lock.yaml"
+      - "pnpm-workspace.yaml"
   workflow_dispatch:
 
 permissions:
   contents: read
 
 jobs:
-  deploy:
+  build:
     runs-on: [self-hosted, Linux, X64]
     steps:
       - name: Check out
@@ -45,45 +48,3 @@ jobs:
       - name: Build docs site
         working-directory: apps/docs
         run: pnpm build
-
-      - name: Install ossutil
-        run: |
-          curl -fsSL -o /usr/local/bin/ossutil https://gosspublic.alicdn.com/ossutil/1.7.18/ossutil64
-          chmod +x /usr/local/bin/ossutil
-          ossutil --version
-
-      - name: Sync apps/docs/dist to OSS
-        env:
-          OSS_ENDPOINT: ${{ secrets.ALIYUN_OSS_ENDPOINT }}
-          OSS_AK: ${{ secrets.ALIYUN_OSS_ACCESS_KEY_ID }}
-          OSS_SK: ${{ secrets.ALIYUN_OSS_ACCESS_KEY_SECRET }}
-          OSS_BUCKET: ${{ secrets.ALIYUN_OSS_BUCKET }}
-        # `ossutil cp` is non-destructive: it uploads/overwrites source
-        # files but never deletes OSS keys that are missing locally. So
-        # /dl/* (owned by cli.yml) is naturally preserved as long
-        # as the build doesn't produce a `apps/docs/dist/dl/` tree. The guard
-        # below makes that an explicit failure instead of silent damage.
-        # ossutil v1 --include/--exclude only takes filename globs, not
-        # directory paths, so we cannot use --exclude "dl/*" defensively.
-        run: |
-          set -euo pipefail
-          if [[ -d apps/docs/dist/dl ]]; then
-            echo "::error::apps/docs/dist/dl/ exists; that path is reserved for binary distribution"
-            echo "::error::Refusing to upload — would overwrite the release tree maintained by cli.yml"
-            exit 1
-          fi
-
-          ossutil cp -rf \
-            -e "$OSS_ENDPOINT" -i "$OSS_AK" -k "$OSS_SK" \
-            --meta "Cache-Control:public,max-age=3600,must-revalidate" \
-            apps/docs/dist/ "oss://$OSS_BUCKET/"
-
-          # install.sh gets a shorter cache so script updates roll out
-          # quickly. Re-upload it explicitly with overriding metadata.
-          if [[ -f apps/docs/dist/install.sh ]]; then
-            ossutil cp -f \
-              -e "$OSS_ENDPOINT" -i "$OSS_AK" -k "$OSS_SK" \
-              --meta "Cache-Control:public,max-age=300,must-revalidate" \
-              --meta "Content-Type:text/plain; charset=utf-8" \
-              apps/docs/dist/install.sh "oss://$OSS_BUCKET/install.sh"
-          fi

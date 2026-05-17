@@ -8,7 +8,7 @@ import { cn } from "@/lib/utils";
 const geist = Geist({subsets:['latin'],variable:'--font-sans'});
 
 export const metadata = {
-  metadataBase: new URL("https://one.torchstellar.com"),
+  metadataBase: new URL("https://1cli.dev"),
   title: "One CLI",
   description: "面向团队工作区的脚手架与治理工具",
   icons: {

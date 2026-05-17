@@ -17,7 +17,7 @@ One CLI is the **author** of these skills, not a delivery channel for third-part
 
 Covers every routine task **inside or on the way into** a One CLI workspace: create a workspace, add a project, fix a manifest, look up a command / JSON schema / error code.
 
-Trigger keywords (from [SKILL.md](https://github.com/torchstellar-team/one-cli/blob/master/packages/skills/one-cli/SKILL.md) frontmatter):
+Trigger keywords (from [SKILL.md](https://github.com/1cli-team/one-cli/blob/master/packages/skills/one-cli/SKILL.md) frontmatter):
 
 | Bucket | English | 中文 |
 |---|---|---|
@@ -80,8 +80,8 @@ one skills install --yes
 
 The full skill bodies are intentionally **not inlined here** (to avoid drift against the source). Read them directly in the repo:
 
-- [`packages/skills/one-cli/`](https://github.com/torchstellar-team/one-cli/tree/master/packages/skills/one-cli) — SKILL.md + references/INDEX.md + each playbook
-- [`packages/skills/one-migrate/`](https://github.com/torchstellar-team/one-cli/tree/master/packages/skills/one-migrate) — same shape
+- [`packages/skills/one-cli/`](https://github.com/1cli-team/one-cli/tree/master/packages/skills/one-cli) — SKILL.md + references/INDEX.md + each playbook
+- [`packages/skills/one-migrate/`](https://github.com/1cli-team/one-cli/tree/master/packages/skills/one-migrate) — same shape
 
 Or open the local store after install: `~/.one/skills-store/one-bundled/`.
 

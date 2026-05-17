@@ -131,7 +131,7 @@ function ArticleMeta({ docPath, lang }: { docPath: string; lang: Locale }) {
         {labels.updated}
       </span>
       <a
-        href={`https://github.com/torchstellar-team/one-cli/blob/master/apps/docs/content/docs/${docPath}`}
+        href={`https://github.com/1cli-team/one-cli/blob/master/apps/docs/content/docs/${docPath}`}
         target="_blank"
         rel="noreferrer"
       >

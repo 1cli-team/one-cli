@@ -28,7 +28,7 @@ that `one create` produces for users:
   `testdata/`). Module path: `github.com/torchstellar-team/one-cli/packages/cli`.
 - `packages/templates/` — canonical template sources + `registry.json`.
 - `packages/skills/` — bundled agent skills.
-- `apps/docs/` — Next.js + Fumadocs SSG, served at one.torchstellar.com.
+- `apps/docs/` — Next.js + Fumadocs SSG, served at 1cli.dev.
 - `apps/dashboard/` — React + Vite UI shipped with `one serve`.
 
 `packages/cli/internal/bundled/` is `go:embed`-ed at build time and

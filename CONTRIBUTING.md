@@ -1,13 +1,13 @@
 # 贡献 one cli
 
-> 这是给"要改 one cli 自己的代码"的人看的。要"用 one cli 起项目"看 [README](./README.md) + [文档站](https://one.torchstellar.com)。
+> 这是给"要改 one cli 自己的代码"的人看的。要"用 one cli 起项目"看 [README](./README.md) + [文档站](https://1cli.dev)。
 
 ## 一次性环境
 
 ```bash
 brew install go go-task node    # macOS；Linux 用 apt / dnf 类比
 npm i -g pnpm                   # 或 corepack enable && corepack prepare pnpm@10
-git clone https://github.com/torchstellar-team/one-cli
+git clone https://github.com/1cli-team/one-cli
 cd one-cli
 task install-local              # 编译 + symlink packages/cli/bin/one 到 ~/.local/bin/one
 one --version                   # 验证装好
@@ -82,6 +82,7 @@ CI 会跑跟 `task pre-push` 等价的检查。
 
 - 文档站是 Next.js + Fumadocs SSG
 - 本地预览：`pnpm --dir apps/docs install && pnpm --dir apps/docs dev`
+- 线上部署：Vercel 项目 Root Directory 指向 `apps/docs`，Output Directory 用 `dist`，域名绑定 `1cli.dev`
 - `apps/docs/content/docs/reference/error-codes.md` **不要手工编辑**——跑 `task gen-error-codes` 重生成
 - 新增页面要更新对应目录的 `meta.json`（sidebar 顺序）
 
@@ -121,13 +122,13 @@ git commit -m "chore(release): v0.4.3"
 git push origin master
 git tag v0.4.3
 git push origin v0.4.3
-# → cli workflow 触发，自动 cross-compile + 上传 GitHub Release + 镜像到 OSS
+# → cli workflow 触发，自动 cross-compile + 上传 GitHub Release assets
 ```
 
 发布 channel：
 
-- **GitHub Releases** — 主仓库
-- **Aliyun OSS** `/dl/<tag>/` — `install.sh` 的来源
+- **GitHub Releases** — `install.sh` 下载二进制和 `checksums.txt` 的来源
+- **Vercel** `https://1cli.dev` — 文档站和 `install.sh`
 - ~~**npm `qzkpwoxtl`**~~ — v0.4.1 起停发
 
 ## 环境变量（开发时常用）

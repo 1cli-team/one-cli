@@ -6,7 +6,7 @@ package updatecheck
 //
 // Trade-off: if the main command exits before the goroutine completes,
 // the cache write is lost and we re-fetch next time. That's fine — most
-// commands run >100ms, the GitHub-equivalent /dl/latest endpoint usually
+// commands run >100ms, the GitHub Releases redirect usually
 // responds in <300ms over good network, and long-running commands
 // (`one serve`, `one dev`, `one env pull`) easily give the goroutine
 // time to finish.
@@ -67,7 +67,7 @@ func MaybeRefreshAsync(currentVersion string) {
 // notifyWait is how long Notify will block waiting for an in-flight
 // refresh goroutine to finish. Short enough not to be perceptible
 // (CLI usability research puts the human-noticeable threshold at ~200ms),
-// long enough that a typical /dl/latest round-trip on a residential
+// long enough that a typical latest-release round-trip on a residential
 // connection (~80ms warm DNS, ~50ms TLS, ~50ms response) usually fits.
 const notifyWait = 200 * time.Millisecond
 

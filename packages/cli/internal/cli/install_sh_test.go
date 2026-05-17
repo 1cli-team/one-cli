@@ -1,9 +1,9 @@
 package cli_test
 
 // Static checks for the curl-based installer at apps/docs/public/install.sh.
-// The script is shipped to users via a
-// public OSS endpoint, so a regression here means broken installs. We
-// can't run the script end-to-end without hitting OSS, but we can
+// The script is shipped to users via the public docs site, so a regression
+// here means broken installs. We can't run the script end-to-end without
+// hitting GitHub Releases, but we can
 // guard against the cheap-but-real failure modes:
 //
 //  1. Bash syntax error introduced by an edit (bash -n parse-only)
