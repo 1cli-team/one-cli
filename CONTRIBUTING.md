@@ -122,7 +122,8 @@ git commit -m "chore(release): v0.4.3"
 git push origin master
 git tag v0.4.3
 git push origin v0.4.3
-# → cli workflow 触发，自动 cross-compile + 上传 GitHub Release assets
+# → cli workflow 触发，自动 cross-compile + 上传 GitHub Release draft assets
+# → 检查 assets / checksums / release notes 后，在 GitHub 手动 Publish
 ```
 
 发布 channel：

@@ -77,7 +77,7 @@ release:
   github:
     owner: 1cli-team
     name: one-cli
-  draft: false
+  draft: true
   prerelease: auto
   header: |
     # one-cli {{ .Tag }}
