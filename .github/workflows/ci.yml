@@ -5,16 +5,16 @@
 #    tree (registry/skills/_templates/_web) is gitignored and regenerated
 #    via `task sync-bundled` + `task sync-web`, both of which run as deps
 #    of `task vet` — so vet implicitly bootstraps the bundle here.
-#  - test: matrix on linux + macos, builds bin/one then runs `task test`
+#  - test: Linux PR gate, builds bin/one then runs `task test`
 #    (go test -race ./...). Build is required because internal/cli/snapshot_e2e_test.go
-#    skips when bin/one is missing.
+#    skips when bin/one is missing. macOS runs on master/manual triggers only.
 #
 # Both jobs need Node + pnpm because sync-web runs `pnpm install` +
 # `vite build` against apps/dashboard/.
 #
 # Runners:
-#   - ubuntu-latest for Linux checks
-#   - macos-latest for macOS checks
+#   - ubuntu-latest for PR checks
+#   - macos-latest for master/manual compatibility checks
 #
 # Windows is deferred until testdata/bin/ has .bat siblings of the POSIX
 # shell stubs (Phase 3 in the test plan).
@@ -25,9 +25,15 @@ on:
   pull_request:
   push:
     branches: [master]
+  workflow_dispatch:
 
 permissions:
   contents: read
+
+env:
+  # GitHub-hosted runners are outside China; the default Taskfile proxy
+  # (goproxy.cn) is slower/flakier there and has caused CI download failures.
+  GOPROXY: https://proxy.golang.org,direct
 
 jobs:
   lint:
@@ -58,6 +64,10 @@ jobs:
       - name: Install task
         run: go install github.com/go-task/task/v3/cmd/task@latest
 
+      - name: Download Go modules
+        working-directory: packages/cli
+        run: go mod download
+
       - name: Verify documentation in sync
         run: task verify-docs
 
@@ -77,15 +87,12 @@ jobs:
           fi
 
   test:
-    needs: lint
     strategy:
       fail-fast: false
       matrix:
         include:
           - name: linux
             runs-on: ubuntu-latest
-          - name: macos
-            runs-on: macos-latest
     runs-on: ${{ matrix.runs-on }}
     steps:
       - uses: actions/checkout@v4
@@ -111,6 +118,50 @@ jobs:
 
       - name: Install task
         run: go install github.com/go-task/task/v3/cmd/task@latest
+
+      - name: Download Go modules
+        working-directory: packages/cli
+        run: go mod download
+
+      - name: Build binary
+        run: task build
+
+      - name: Run tests
+        run: task test
+
+  test-macos:
+    # macOS runners are much slower to start and are scarce on PRs. Keep the
+    # cross-platform signal for master/manual runs without making every PR wait.
+    if: github.event_name != 'pull_request'
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: packages/cli/go.mod
+          cache: true
+          cache-dependency-path: packages/cli/go.sum
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          run_install: false
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+          cache-dependency-path: apps/dashboard/pnpm-lock.yaml
+
+      - name: Install task
+        run: go install github.com/go-task/task/v3/cmd/task@latest
+
+      - name: Download Go modules
+        working-directory: packages/cli
+        run: go mod download
 
       - name: Build binary
         run: task build

@@ -23,6 +23,9 @@ permissions:
   # goreleaser needs write access to upload release artifacts.
   contents: write
 
+env:
+  GOPROXY: https://proxy.golang.org,direct
+
 jobs:
   release:
     runs-on: ubuntu-latest
