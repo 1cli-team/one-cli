@@ -24,7 +24,7 @@ export function VideoEmbed({ provider, videoId, title }: VideoEmbedProps) {
         allow="autoplay; encrypted-media; picture-in-picture; fullscreen"
         allowFullScreen
         loading="lazy"
-        referrerPolicy="no-referrer"
+        referrerPolicy="strict-origin-when-cross-origin"
         src={src}
         title={title ?? "Tutorial video"}
       />
