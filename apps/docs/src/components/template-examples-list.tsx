@@ -17,6 +17,7 @@ import { examples, type Example, type ExampleCategory } from "@/data/examples";
 import { TemplateExamplesNav } from "@/components/template-examples-nav";
 import { CustomTemplateModal } from "@/components/custom-template-modal";
 import { PresetCreateCommandDialog } from "@/components/preset-create-command-dialog";
+import { TemplateCoverImage } from "@/components/template-cover-image";
 import {
   shouldInterceptClick,
   useViewTransitionNavigate,
@@ -253,10 +254,11 @@ function ExampleCard({
       style={{ viewTransitionName: cardTransitionName }}
     >
       <div className="relative aspect-[16/10] w-full overflow-hidden bg-stone-100">
-        <img
+        <TemplateCoverImage
           src={example.cover}
           alt=""
-          className="size-full object-cover transition group-hover:scale-[1.02]"
+          className="object-cover transition group-hover:scale-[1.02]"
+          sizes="(min-width: 1024px) 370px, (min-width: 640px) 50vw, 100vw"
         />
         <div className="absolute left-3 top-3 inline-flex items-center gap-1.5 rounded-full bg-white/90 px-2.5 py-1 text-xs font-medium text-stone-700 shadow-[0_1px_2px_rgba(10,10,10,0.06)] backdrop-blur">
           <Icon className="size-3.5" />
