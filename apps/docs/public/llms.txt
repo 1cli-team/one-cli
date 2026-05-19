@@ -1,0 +1,57 @@
+# One CLI
+
+> One CLI is a Go-based scaffolding and governance tool for AI-native monorepo workspaces.
+
+Canonical site: https://1cli.dev/
+
+## What it is
+
+One CLI creates and manages AI-ready workspaces with a manifest, reusable templates, local configuration, environment-variable flows, container and deploy helpers, JSON command output, and a bundled agent skill.
+
+Use it when a coding agent or engineer needs a predictable workspace contract instead of ad hoc project bootstrapping.
+
+## Core documentation
+
+- Quick start: https://1cli.dev/en/docs/quick-start/
+- Installation: https://1cli.dev/en/docs/installation/
+- CLI overview: https://1cli.dev/en/docs/cli-overview/
+- Manifest reference: https://1cli.dev/en/docs/manifest/
+- Templates: https://1cli.dev/en/docs/templates/
+- Template examples: https://1cli.dev/en/templates/
+- Agent skills: https://1cli.dev/en/docs/skills/
+- Error codes: https://1cli.dev/en/docs/error-codes/
+
+## Key concepts
+
+- `one create`: create a workspace or apply a preset.
+- `one add`: add a project from a template to an existing workspace.
+- `one templates`: list available templates.
+- `one configure`: store local environment, deploy, and container settings.
+- `one env`: manage environment variables.
+- `one run`: run a project with the selected environment.
+- `one deploy`: deploy configured projects.
+- `one container`: build and push container images.
+- `one serve`: open the local configuration UI.
+- `one skills install`: install the bundled One CLI agent skill.
+
+## AI and agent usage
+
+The site explains how agents should work from `one.manifest.json`, prefer JSON output, respect stable error codes, and install only missing dependencies according to project type.
+
+Recommended entry points for AI summarizers:
+
+- https://1cli.dev/en/docs/ai-native/
+- https://1cli.dev/en/docs/skills/
+- https://1cli.dev/en/blog/ai-native-monorepo-cli/
+- https://1cli.dev/en/blog/coding-agent-workspace-setup/
+- https://1cli.dev/en/blog/json-cli-contracts-for-agents/
+- https://1cli.dev/en/blog/monorepo-scaffold-manifest/
+- https://1cli.dev/en/blog/template-governance-for-ai-workspaces/
+- https://1cli.dev/en/blog/one-cli-vs-general-scaffolding/
+- https://1cli.dev/en/blog/agent-skill-context/
+- https://1cli.dev/en/blog/manifest-as-contract/
+- https://1cli.dev/en/blog/preset-id-boundary/
+
+## Languages
+
+The documentation is available in Chinese and English under `/zh/` and `/en/`. Prefer the matching language URL when citing.

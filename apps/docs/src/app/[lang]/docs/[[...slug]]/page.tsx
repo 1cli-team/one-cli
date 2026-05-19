@@ -10,12 +10,17 @@ import { notFound } from "next/navigation";
 import { isValidElement, type ReactNode } from "react";
 import {
   alternateDocsLanguages,
-  htmlLang,
   isLocale,
   localizedDocsPath,
   type Locale,
 } from "@/i18n";
 import { DocsToc } from "../../../docs/docs-toc";
+import {
+  articleJsonLd,
+  breadcrumbJsonLd,
+  createPageMetadata,
+  jsonLdScriptProps,
+} from "@/lib/seo";
 
 export default async function Page(props: {
   params: Promise<{ lang: string; slug?: string[] }>;
@@ -42,6 +47,7 @@ export default async function Page(props: {
     ...item,
     title: tocTitleToText(item.title),
   }));
+  const docUrl = localizedDocsPath(lang, params.slug);
 
   return (
     <DocsPage
@@ -62,6 +68,22 @@ export default async function Page(props: {
       }}
       tableOfContentPopover={{ enabled: false }}
     >
+      <script
+        {...jsonLdScriptProps([
+          articleJsonLd({
+            title: data.title,
+            description: data.description,
+            path: docUrl,
+            locale: lang,
+            section: "Documentation",
+          }),
+          breadcrumbJsonLd([
+            { name: "One CLI", path: `/${lang}/` },
+            { name: uiText[lang].docs, path: localizedDocsPath(lang) },
+            { name: String(data.title), path: docUrl },
+          ]),
+        ])}
+      />
       <DocsTitle className="one-docs-title">{data.title}</DocsTitle>
       <DocsDescription className="one-docs-description">
         {data.description}
@@ -86,17 +108,14 @@ export async function generateMetadata(props: {
   if (!isLocale(params.lang)) notFound();
   const page = source.getPage(params.slug, params.lang);
   if (!page) notFound();
-  return {
-    title: page.data.title,
+  return createPageMetadata({
+    title: page.data.title ?? "One CLI Docs",
     description: page.data.description,
-    alternates: {
-      canonical: localizedDocsPath(params.lang, params.slug),
-      languages: alternateDocsLanguages(params.slug),
-    },
-    other: {
-      "content-language": htmlLang[params.lang],
-    },
-  };
+    path: localizedDocsPath(params.lang, params.slug),
+    locale: params.lang,
+    alternates: alternateDocsLanguages(params.slug),
+    type: "article",
+  });
 }
 
 function ArticleBreadcrumb({

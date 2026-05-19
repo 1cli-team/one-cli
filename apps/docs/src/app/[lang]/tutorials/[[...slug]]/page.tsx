@@ -10,7 +10,6 @@ import { notFound } from "next/navigation";
 import { isValidElement, type ReactNode } from "react";
 import {
   alternateTutorialsLanguages,
-  htmlLang,
   isLocale,
   localizedDocsPath,
   localizedTutorialsPath,
@@ -18,6 +17,12 @@ import {
 } from "@/i18n";
 import { DocsToc } from "../../../docs/docs-toc";
 import { VideoEmbed } from "@/components/video-embed";
+import {
+  articleJsonLd,
+  breadcrumbJsonLd,
+  createPageMetadata,
+  jsonLdScriptProps,
+} from "@/lib/seo";
 
 export default async function Page(props: {
   params: Promise<{ lang: string; slug?: string[] }>;
@@ -45,6 +50,7 @@ export default async function Page(props: {
     title: tocTitleToText(item.title),
   }));
   const isVideo = data.kind === "video";
+  const tutorialUrl = localizedTutorialsPath(lang, params.slug);
 
   return (
     <DocsPage
@@ -66,6 +72,22 @@ export default async function Page(props: {
       }}
       tableOfContentPopover={{ enabled: false }}
     >
+      <script
+        {...jsonLdScriptProps([
+          articleJsonLd({
+            title: data.title,
+            description: data.description,
+            path: tutorialUrl,
+            locale: lang,
+            section: isVideo ? "Video tutorial" : "Tutorial",
+          }),
+          breadcrumbJsonLd([
+            { name: "One CLI", path: `/${lang}/` },
+            { name: uiText[lang].tutorials, path: localizedTutorialsPath(lang) },
+            { name: String(data.title), path: tutorialUrl },
+          ]),
+        ])}
+      />
       <DocsTitle className="one-docs-title">{data.title}</DocsTitle>
       <DocsDescription className="one-docs-description">
         {data.description}
@@ -94,17 +116,14 @@ export async function generateMetadata(props: {
   if (!isLocale(params.lang)) notFound();
   const page = tutorialsSource.getPage(params.slug, params.lang);
   if (!page) notFound();
-  return {
-    title: page.data.title,
+  return createPageMetadata({
+    title: page.data.title ?? "One CLI Tutorials",
     description: page.data.description,
-    alternates: {
-      canonical: localizedTutorialsPath(params.lang, params.slug),
-      languages: alternateTutorialsLanguages(params.slug),
-    },
-    other: {
-      "content-language": htmlLang[params.lang],
-    },
-  };
+    path: localizedTutorialsPath(params.lang, params.slug),
+    locale: params.lang,
+    alternates: alternateTutorialsLanguages(params.slug),
+    type: "article",
+  });
 }
 
 function ArticleBreadcrumb({

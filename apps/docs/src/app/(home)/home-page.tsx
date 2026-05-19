@@ -16,7 +16,6 @@ import {
 } from "lucide-react";
 import {
   defaultLocale,
-  htmlLang,
   localeLabels,
   localizedBlogPath,
   localizedDocsPath,
@@ -27,6 +26,12 @@ import { BrandMark } from "@/components/brand-mark";
 import { HomeHeroCanvas } from "./hero-canvas";
 import { HomeCopyButton } from "./home-template-preview";
 import { WorkflowSidebarNav, type WorkflowNavIcon } from "./workflow-nav";
+import {
+  createPageMetadata,
+  jsonLdScriptProps,
+  softwareApplicationJsonLd,
+  websiteJsonLd,
+} from "@/lib/seo";
 
 const installCommand = "curl -fsSL https://1cli.dev/install.sh | bash";
 
@@ -783,17 +788,13 @@ const commandSlugs = commandNames.map((command) => command.replace(/\s+/g, "-"))
 export function generateHomeMetadata(lang: Locale): Metadata {
   const text = homeCopy[lang];
 
-  return {
+  return createPageMetadata({
     title: text.meta.title,
     description: text.meta.description,
-    alternates: {
-      canonical: localizedHomePath(lang),
-      languages: alternateHomeLanguages(),
-    },
-    other: {
-      "content-language": htmlLang[lang],
-    },
-  };
+    path: localizedHomePath(lang),
+    locale: lang,
+    alternates: alternateHomeLanguages(),
+  });
 }
 
 export function LocalizedHomePage({ lang }: { lang: Locale }) {
@@ -801,6 +802,12 @@ export function LocalizedHomePage({ lang }: { lang: Locale }) {
 
   return (
     <main className="min-h-screen w-full bg-[#0a0a0a] text-[#fafaf9]">
+      <script
+        {...jsonLdScriptProps([
+          websiteJsonLd(lang),
+          softwareApplicationJsonLd(lang),
+        ])}
+      />
       <HomeNav lang={lang} text={text} />
       <Hero lang={lang} text={text} />
       <StartWaysSection lang={lang} text={text} />
