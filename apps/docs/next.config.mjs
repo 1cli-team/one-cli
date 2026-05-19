@@ -1,15 +1,15 @@
+import { fileURLToPath } from "node:url";
 import { createMDX } from "fumadocs-mdx/next";
 
 const withMDX = createMDX();
+const workspaceRoot = fileURLToPath(new URL("../..", import.meta.url));
 
 /** @type {import('next').NextConfig} */
 const config = {
-  // SSG: 全静态导出，交给 Vercel 作为静态 Next.js 文档站托管。
-  output: "export",
-  // Vercel 的 Output Directory 指向 apps/docs/dist。
+  // Keep build artifacts under apps/docs/dist while letting Vercel run the
+  // managed Next.js runtime, including the Image Optimization API.
   distDir: "dist",
-  // SSG 模式下 next/image 默认依赖 server，关掉优化用原图。
-  images: { unoptimized: true },
+  outputFileTracingRoot: workspaceRoot,
   // 让生成的 URL 与 Starlight 的 trailing-slash 行为一致。
   trailingSlash: true,
   reactStrictMode: true,
