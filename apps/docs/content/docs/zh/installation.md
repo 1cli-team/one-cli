@@ -81,7 +81,7 @@ Windows 类似——下载 `one-cli_windows_amd64.zip`，解压把 `one.exe` 放
 one skills install
 ```
 
-它会自动检测本机已装的所有受支持 agent，让你勾选装到哪些（默认全选；空格切换；回车确认）。
+它会自动检测本机已装的所有受支持 agent，让你勾选装到哪些（默认只勾 Claude Code；↑/↓ 移动光标；空格勾选 / 取消；回车开始安装）。
 
 非交互场景：
 

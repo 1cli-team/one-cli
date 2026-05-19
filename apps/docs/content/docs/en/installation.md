@@ -81,7 +81,7 @@ For normal upgrades, rerun the install command. Use `ONE_FORCE` only for downgra
 one skills install
 ```
 
-It detects supported agents on your machine and lets you choose where to install the skills. The default is all detected agents; use Space to toggle and Enter to confirm.
+It detects supported agents on your machine and lets you choose where to install the skills. Only Claude Code is pre-selected by default; use Up/Down to move, Space to check or uncheck, and Enter to start installing.
 
 Non-interactive usage:
 

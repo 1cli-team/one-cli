@@ -52,7 +52,7 @@ one skills install --yes         # 装到所有检测到的 agent（CI 用）
 行为：
 
 1. **自动检测**本机已安装的 coding agent（Claude Code / Cursor / Codex / Gemini CLI / GitHub Copilot / OpenCode / Cline 等 50+；完整列表见 `one skills install --help`）
-2. **交互模式**：弹出多选列表，空格切换、回车确认；默认只勾 Claude Code
+2. **交互模式**：弹出多选列表，↑/↓ 移动光标，空格勾选 / 取消，回车开始安装；默认只勾 Claude Code
 3. **非 TTY 或 `--yes`**：装到所有检测到的；都没检测到时 fallback 到 Claude Code 默认路径
 4. **物化**到 `~/.one/skills-store/one-bundled/<skill-name>/`，每个目标 agent 在其 global skills 目录建一个 **symlink** 指向 store
 5. **Windows fallback**：symlink 失败时（无 dev mode 权限）自动改为整目录 copy

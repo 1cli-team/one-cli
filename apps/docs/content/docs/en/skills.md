@@ -52,7 +52,7 @@ one skills install --yes                    # install to every detected agent (C
 Behavior:
 
 1. **Auto-detects** installed coding agents on the machine — Claude Code, Cursor, Codex, Gemini CLI, GitHub Copilot, OpenCode, Cline, and 50+ others. Full list: `one skills install --help`.
-2. **Interactive mode**: opens a multi-select list; space toggles and enter confirms. Only Claude Code is pre-checked.
+2. **Interactive mode**: opens a multi-select list; Up/Down moves the cursor, Space checks or unchecks the current agent, and Enter starts installation. Only Claude Code is pre-checked.
 3. **Non-TTY or `--yes`**: installs to every detected agent. If none are detected, falls back to Claude Code's default path.
 4. **Materialises** every One CLI skill into `~/.one/skills-store/one-bundled/<skill-name>/`. Each target agent gets a **symlink** in its global skills directory pointing at the store.
 5. **Windows fallback**: when the OS rejects symlinks (no dev-mode privilege), the CLI silently switches to a directory copy.

@@ -54,7 +54,7 @@ func newInstallCmd() *cobra.Command {
 
 会先自动检测所有受支持的 coding agent（Claude Code / Cursor / Codex /
 Gemini CLI / GitHub Copilot / OpenCode / Cline 等 50+），然后让你
-**勾选**装到哪些（默认只勾 Claude Code；按需勾选其他；空格切换；回车确认）。
+**勾选**装到哪些（默认只勾 Claude Code；↑/↓ 移动；空格勾选/取消；回车开始安装）。
 
 非交互场景：
   --agent claude-code --agent cursor   # 只装这两个
@@ -149,7 +149,7 @@ func resolveTargets(flags *installFlags) ([]agentskills.Agent, error) {
 		}
 	}
 	picked, err := prompt.MultiSelect(
-		"选择要安装到的 agent（空格切换，回车确认；默认仅 Claude Code）",
+		"选择要安装到的 agent（↑/↓ 移动，空格勾选/取消，回车开始安装；默认仅 Claude Code）",
 		options, defaults)
 	if err != nil {
 		return nil, err
