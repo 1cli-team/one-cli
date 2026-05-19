@@ -65,7 +65,7 @@ const homeCopy = {
       ),
       body: "让 AI 从标准工程底座开始开发：网站、后台、文档、环境配置和上线流程，一次准备好。",
       canvasAria:
-        "One CLI 分层工作区画布，展示 create、manifest、templates、JSON output 和 agent skills 层级",
+        "One CLI 工作区模块画布，展示应用、API、文档、Packages、Manifest、Env、Deploy 和 AI 上下文模块",
       install: "开始使用",
       github: "查看 GitHub",
       copy: "复制",
@@ -427,7 +427,7 @@ const homeCopy = {
       ),
       body: "Give AI a real product foundation: website, backend, docs, environment config, and deployment flow, ready from day one.",
       canvasAria:
-        "One CLI layered workspace canvas showing create, manifest, templates, JSON output, and bundled skill layers",
+        "One CLI workspace module canvas showing apps, API, docs, packages, manifest, env, deploy, and AI context modules",
       install: "Start building",
       github: "View on GitHub",
       copy: "copy",
