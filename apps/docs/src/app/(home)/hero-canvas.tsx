@@ -12,8 +12,25 @@ type Object3D = import("three").Object3D;
 type Texture = import("three").Texture;
 type Vector3 = import("three").Vector3;
 
+type ModuleId =
+  | "apps"
+  | "api"
+  | "docs"
+  | "packages"
+  | "env"
+  | "deploy"
+  | "manifest"
+  | "ai-context";
+
+type ModuleSpotlightCopy = {
+  title: string;
+  subtitle: string;
+};
+
 type ModuleConfig = {
+  id: ModuleId;
   labels: Record<Locale, string>;
+  spotlight: Record<Locale, ModuleSpotlightCopy>;
   x: number;
   y: number;
   width: number;
@@ -23,7 +40,9 @@ type ModuleConfig = {
 
 type ModuleModel = {
   config: ModuleConfig;
+  decorativeMaterials: Material[];
   group: Group;
+  hitTarget: Mesh;
   labelMaterials: Material[];
   materials: Material[];
   route: Line;
@@ -47,6 +66,15 @@ type BoardModel = {
   flowTexture: Texture;
 };
 
+type ModuleSpotlightModel = {
+  config: ModuleConfig;
+  group: Group;
+  panelGroup: Group;
+  materials: Material[];
+  signalLines: Line[];
+  mix: number;
+};
+
 type HomeHeroCanvasProps = {
   ariaLabel?: string;
   lang?: Locale;
@@ -55,20 +83,111 @@ type HomeHeroCanvasProps = {
 type Three = typeof THREE;
 
 const moduleConfigs: ModuleConfig[] = [
-  { labels: { zh: "前端", en: "Frontend" }, x: -1.34, y: -0.82, width: 0.76, depth: 0.44, delay: 0 },
-  { labels: { zh: "后端", en: "Backend" }, x: -0.45, y: -0.82, width: 0.76, depth: 0.44, delay: 300 },
-  { labels: { zh: "桌面", en: "Desktop" }, x: 0.44, y: -0.82, width: 0.76, depth: 0.44, delay: 600 },
-  { labels: { zh: "移动", en: "Mobile" }, x: -1.34, y: -0.25, width: 0.72, depth: 0.44, delay: 900 },
-  { labels: { zh: "文档", en: "Docs" }, x: -0.45, y: -0.25, width: 0.72, depth: 0.44, delay: 1200 },
-  { labels: { zh: "共享库", en: "Library" }, x: 0.44, y: -0.25, width: 0.88, depth: 0.44, delay: 1500 },
-  { labels: { zh: "环境", en: "Env" }, x: 1.34, y: -0.25, width: 0.72, depth: 0.44, delay: 1800 },
-  { labels: { zh: "容器", en: "Container" }, x: -1.34, y: 0.34, width: 0.72, depth: 0.44, delay: 2100 },
-  { labels: { zh: "部署", en: "Deploy" }, x: -0.45, y: 0.34, width: 0.72, depth: 0.44, delay: 2400 },
-  { labels: { zh: "JSON", en: "JSON" }, x: 0.44, y: 0.34, width: 0.72, depth: 0.44, delay: 2700 },
-  { labels: { zh: "错误恢复", en: "Recovery" }, x: 1.34, y: 0.34, width: 0.92, depth: 0.44, delay: 3000 },
-  { labels: { zh: "AI上下文", en: "AI Context" }, x: -1.24, y: 0.94, width: 0.96, depth: 0.44, delay: 3300 },
+  {
+    id: "ai-context",
+    labels: { zh: "AI上下文", en: "AI Context" },
+    spotlight: {
+      zh: { title: "AI 上下文", subtitle: "Agent 规则和项目地图" },
+      en: { title: "AI Context", subtitle: "Agent rules and project map" },
+    },
+    x: -1.18,
+    y: 0.9,
+    width: 0.96,
+    depth: 0.44,
+    delay: 0,
+  },
+  {
+    id: "manifest",
+    labels: { zh: "Manifest", en: "Manifest" },
+    spotlight: {
+      zh: { title: "Manifest", subtitle: "项目清单和工程契约" },
+      en: { title: "Manifest", subtitle: "Workspace contract file" },
+    },
+    x: -0.1,
+    y: 0.48,
+    width: 0.92,
+    depth: 0.44,
+    delay: 360,
+  },
+  {
+    id: "deploy",
+    labels: { zh: "Deploy", en: "Deploy" },
+    spotlight: {
+      zh: { title: "Deploy", subtitle: "K8s / S3 / Vercel 部署" },
+      en: { title: "Deploy", subtitle: "K8s, S3, Vercel deploy" },
+    },
+    x: 1.0,
+    y: 0.48,
+    width: 0.78,
+    depth: 0.44,
+    delay: 720,
+  },
+  {
+    id: "apps",
+    labels: { zh: "Apps", en: "Apps" },
+    spotlight: {
+      zh: { title: "Apps", subtitle: "Web / Mobile / Desktop 模板" },
+      en: { title: "Apps", subtitle: "Web, mobile, desktop" },
+    },
+    x: -1.18,
+    y: 0.2,
+    width: 0.78,
+    depth: 0.44,
+    delay: 1080,
+  },
+  {
+    id: "api",
+    labels: { zh: "API", en: "API" },
+    spotlight: {
+      zh: { title: "API", subtitle: "NestJS / Go 服务" },
+      en: { title: "API", subtitle: "NestJS and Go services" },
+    },
+    x: -0.14,
+    y: -0.08,
+    width: 0.72,
+    depth: 0.44,
+    delay: 1440,
+  },
+  {
+    id: "docs",
+    labels: { zh: "Docs", en: "Docs" },
+    spotlight: {
+      zh: { title: "Docs", subtitle: "Starlight 文档站" },
+      en: { title: "Docs", subtitle: "Starlight docs site" },
+    },
+    x: 0.9,
+    y: -0.08,
+    width: 0.74,
+    depth: 0.44,
+    delay: 1800,
+  },
+  {
+    id: "packages",
+    labels: { zh: "Packages", en: "Packages" },
+    spotlight: {
+      zh: { title: "Packages", subtitle: "TS / Go 通用库" },
+      en: { title: "Packages", subtitle: "TypeScript and Go libs" },
+    },
+    x: -0.7,
+    y: -0.72,
+    width: 0.98,
+    depth: 0.44,
+    delay: 2160,
+  },
+  {
+    id: "env",
+    labels: { zh: "Env", en: "Env" },
+    spotlight: {
+      zh: { title: "Env", subtitle: "dotenv / Infisical 环境" },
+      en: { title: "Env", subtitle: "dotenv and Infisical" },
+    },
+    x: 0.52,
+    y: -0.72,
+    width: 0.72,
+    depth: 0.44,
+    delay: 2520,
+  },
 ];
-
 const boardWidth = 3.82;
 const boardDepth = 2.78;
 const boardHeight = 0.18;
@@ -82,6 +201,9 @@ const moduleStart = 320;
 const moduleDuration = 1080;
 const settleStart = moduleStart + moduleConfigs[moduleConfigs.length - 1].delay + moduleDuration;
 const sceneScale = 0.84;
+const maxCanvasPixelRatio = 2;
+const hitTargetPaddingX = 0.36;
+const hitTargetPaddingY = 0.28;
 
 export function HomeHeroCanvas({ ariaLabel, lang = "zh" }: HomeHeroCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -150,13 +272,17 @@ function mountScene(THREE: Three, canvas: HTMLCanvasElement, container: HTMLElem
   });
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.setClearColor(0x000000, 0);
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 3.5));
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, maxCanvasPixelRatio));
 
   const scene = new THREE.Scene();
   const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, -20, 20);
+  const baseCameraPosition = new THREE.Vector3(3.35, -5.35, 3.85);
+  const activeCameraPosition = new THREE.Vector3(1.92, -5.08, 4.38);
+  const baseCameraTarget = new THREE.Vector3(0.02, 0, 0.2);
+  const activeCameraTarget = new THREE.Vector3(-0.08, 0.03, 0.32);
   camera.up.set(0, 0, 1);
-  camera.position.set(3.35, -5.35, 3.85);
-  camera.lookAt(0.02, 0, 0.2);
+  camera.position.copy(baseCameraPosition);
+  camera.lookAt(baseCameraTarget);
 
   scene.add(new THREE.AmbientLight(0xffffff, 2.05));
 
@@ -189,8 +315,14 @@ function mountScene(THREE: Three, canvas: HTMLCanvasElement, container: HTMLElem
   const modules = moduleConfigs.map((config, index) => {
     const model = createModule(THREE, config, index, lang);
     root.add(model.route);
+    root.add(model.hitTarget);
     root.add(model.group);
     return model;
+  });
+  const moduleSpotlights = moduleConfigs.map((config) => {
+    const spotlight = createModuleSpotlight(THREE, config, lang);
+    root.add(spotlight.group);
+    return spotlight;
   });
 
   const pointer = {
@@ -199,6 +331,13 @@ function mountScene(THREE: Three, canvas: HTMLCanvasElement, container: HTMLElem
     targetX: 0,
     targetY: 0,
   };
+  const interaction = {
+    activeId: null as ModuleId | null,
+    activeMix: 0,
+    hoveredId: null as ModuleId | null,
+  };
+  const raycaster = new THREE.Raycaster();
+  const pointerNdc = new THREE.Vector2();
   const motionQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
   const startedAt = performance.now();
   let frame = 0;
@@ -222,9 +361,46 @@ function mountScene(THREE: Three, canvas: HTMLCanvasElement, container: HTMLElem
   const render = (now = performance.now()) => {
     pointer.x += (pointer.targetX - pointer.x) * 0.08;
     pointer.y += (pointer.targetY - pointer.y) * 0.08;
+    interaction.activeMix += ((interaction.activeId ? 1 : 0) - interaction.activeMix) * (motionQuery.matches ? 1 : 0.014);
+    moduleSpotlights.forEach((spotlight) => {
+      const targetMix = interaction.activeId === spotlight.config.id ? 1 : 0;
+
+      if (targetMix > 0 || spotlight.mix > 0.001) {
+        spotlight.mix += (targetMix - spotlight.mix) * (motionQuery.matches ? 1 : 0.014);
+      } else {
+        spotlight.mix = 0;
+      }
+    });
+
+    const cameraMix = easeInOutCubic(smoothStep(0, 1, interaction.activeMix));
+    camera.position.set(
+      lerp(baseCameraPosition.x, activeCameraPosition.x, cameraMix),
+      lerp(baseCameraPosition.y, activeCameraPosition.y, cameraMix),
+      lerp(baseCameraPosition.z, activeCameraPosition.z, cameraMix),
+    );
+    camera.lookAt(
+      lerp(baseCameraTarget.x, activeCameraTarget.x, cameraMix),
+      lerp(baseCameraTarget.y, activeCameraTarget.y, cameraMix),
+      lerp(baseCameraTarget.z, activeCameraTarget.z, cameraMix),
+    );
 
     const elapsed = motionQuery.matches ? settleStart + 900 : Math.max(0, now - startedAt);
-    updateScene(THREE, root, board, printedMark, modules, amberPulse, elapsed, pointer.x, pointer.y, motionQuery.matches);
+    updateScene(
+      THREE,
+      root,
+      board,
+      printedMark,
+      modules,
+      moduleSpotlights,
+      amberPulse,
+      elapsed,
+      pointer.x,
+      pointer.y,
+      interaction.activeMix,
+      interaction.activeId,
+      interaction.hoveredId,
+      motionQuery.matches,
+    );
     renderer.render(scene, camera);
 
     if (!motionQuery.matches) {
@@ -236,11 +412,38 @@ function mountScene(THREE: Three, canvas: HTMLCanvasElement, container: HTMLElem
     const rect = canvas.getBoundingClientRect();
     pointer.targetX = (event.clientX - rect.left) / rect.width - 0.5;
     pointer.targetY = (event.clientY - rect.top) / rect.height - 0.5;
+    const hoveredModule = pickInteractiveModule(event, canvas, camera, modules, raycaster, pointerNdc);
+
+    interaction.hoveredId = hoveredModule?.config.id ?? null;
+    canvas.style.cursor = interaction.hoveredId ? "pointer" : "default";
+
+    if (motionQuery.matches) {
+      render();
+    }
   };
 
   const onPointerLeave = () => {
     pointer.targetX = 0;
     pointer.targetY = 0;
+    interaction.hoveredId = null;
+    canvas.style.cursor = "default";
+
+    if (motionQuery.matches) {
+      render();
+    }
+  };
+
+  const onCanvasClick = (event: MouseEvent) => {
+    const clickedModule = pickInteractiveModule(event, canvas, camera, modules, raycaster, pointerNdc);
+
+    if (clickedModule) {
+      interaction.activeId = interaction.activeId === clickedModule.config.id ? null : clickedModule.config.id;
+      render();
+      return;
+    }
+
+    interaction.activeId = null;
+    render();
   };
 
   const observer = new ResizeObserver(() => {
@@ -251,6 +454,7 @@ function mountScene(THREE: Three, canvas: HTMLCanvasElement, container: HTMLElem
   observer.observe(container);
   canvas.addEventListener("pointermove", onPointerMove);
   canvas.addEventListener("pointerleave", onPointerLeave);
+  canvas.addEventListener("click", onCanvasClick);
   resize();
   render();
 
@@ -258,12 +462,38 @@ function mountScene(THREE: Three, canvas: HTMLCanvasElement, container: HTMLElem
     observer.disconnect();
     canvas.removeEventListener("pointermove", onPointerMove);
     canvas.removeEventListener("pointerleave", onPointerLeave);
+    canvas.removeEventListener("click", onCanvasClick);
     if (frame) {
       window.cancelAnimationFrame(frame);
     }
     disposeObject(scene);
     renderer.dispose();
   };
+}
+
+function pickInteractiveModule(
+  event: MouseEvent | PointerEvent,
+  canvas: HTMLCanvasElement,
+  camera: import("three").Camera,
+  modules: ModuleModel[],
+  raycaster: import("three").Raycaster,
+  pointerNdc: import("three").Vector2,
+) {
+  const rect = canvas.getBoundingClientRect();
+  pointerNdc.set(
+    ((event.clientX - rect.left) / rect.width) * 2 - 1,
+    -(((event.clientY - rect.top) / rect.height) * 2 - 1),
+  );
+  raycaster.setFromCamera(pointerNdc, camera);
+
+  const hitTargets = modules.filter((module) => module.hitTarget.visible).map((module) => module.hitTarget);
+  const [hit] = raycaster.intersectObjects(hitTargets, false);
+
+  if (!hit) {
+    return null;
+  }
+
+  return modules.find((module) => module.hitTarget === hit.object) ?? null;
 }
 
 function createWorkspaceBoard(THREE: Three): BoardModel {
@@ -336,7 +566,29 @@ function createModule(THREE: Three, config: ModuleConfig, index: number, lang: L
   setMaxOpacity(outline.material as Material, 0.5);
   group.add(outline);
 
-  createStuds(THREE, config.width, config.depth).forEach((stud) => group.add(stud));
+  const start = new THREE.Vector3(launcherX, launcherY, boardTopZ + launcherLift);
+  const target = new THREE.Vector3(config.x, config.y, boardTopZ + 0.014);
+  const hoverTarget = new THREE.Vector3(config.x, config.y, boardTopZ + 0.42);
+
+  const hitTargetMaterial = new THREE.MeshBasicMaterial({
+    color: 0xffffff,
+    depthWrite: false,
+    opacity: 0,
+    side: THREE.DoubleSide,
+    transparent: true,
+  });
+  hitTargetMaterial.userData.keepTransparent = true;
+  const hitTarget = new THREE.Mesh(
+    new THREE.PlaneGeometry(config.width + hitTargetPaddingX, config.depth + hitTargetPaddingY),
+    hitTargetMaterial,
+  );
+  hitTarget.visible = false;
+  hitTarget.position.copy(start);
+  hitTarget.renderOrder = 40;
+
+  const studs = createStuds(THREE, config.width, config.depth);
+  const decorativeMaterials = uniqueMaterials(studs.map((stud) => stud.material as Material));
+  studs.forEach((stud) => group.add(stud));
 
   const labelText = config.labels[lang];
   const labelWidth = lang === "zh" ? 320 : labelText.length > 8 ? 420 : labelText.length > 5 ? 360 : 300;
@@ -353,9 +605,6 @@ function createModule(THREE: Three, config: ModuleConfig, index: number, lang: L
   label.position.z = moduleHeight + 0.065;
   group.add(label);
 
-  const start = new THREE.Vector3(launcherX, launcherY, boardTopZ + launcherLift);
-  const target = new THREE.Vector3(config.x, config.y, boardTopZ + 0.014);
-  const hoverTarget = new THREE.Vector3(config.x, config.y, boardTopZ + 0.42);
   const fromLauncher = new THREE.Vector3(config.x - launcherX, config.y - launcherY, 0).normalize();
   const bend = new THREE.Vector3(-fromLauncher.y, fromLauncher.x, 0).multiplyScalar(index % 2 === 0 ? 0.18 : -0.18);
   const control = new THREE.Vector3(
@@ -371,7 +620,9 @@ function createModule(THREE: Three, config: ModuleConfig, index: number, lang: L
   return {
     config,
     control,
+    decorativeMaterials,
     group,
+    hitTarget,
     labelMaterials: [label.material as Material],
     hoverTarget,
     materials: [topMaterial, sideMaterial, outline.material as Material, label.material as Material],
@@ -382,6 +633,119 @@ function createModule(THREE: Three, config: ModuleConfig, index: number, lang: L
   };
 }
 
+function createModuleSpotlight(THREE: Three, config: ModuleConfig, lang: Locale): ModuleSpotlightModel {
+  const group = new THREE.Group();
+  const panelGroup = new THREE.Group();
+  const materials: Material[] = [];
+  const signalLines: Line[] = [];
+  const copy = config.spotlight[lang];
+  const panelOrigin = new THREE.Vector3(config.x + 0.12, config.y + 0.16, boardTopZ + 0.46);
+  const panelPosition = getSpotlightPanelPosition(THREE, config);
+
+  group.visible = false;
+  panelGroup.position.copy(panelOrigin);
+  panelGroup.rotation.x = THREE.MathUtils.degToRad(58);
+  panelGroup.userData.originX = panelOrigin.x;
+  panelGroup.userData.originY = panelOrigin.y;
+  panelGroup.userData.originZ = panelOrigin.z;
+  panelGroup.userData.targetX = panelPosition.x;
+  panelGroup.userData.targetY = panelPosition.y;
+  panelGroup.userData.baseZ = panelPosition.z;
+  group.add(panelGroup);
+
+  const panelMaterial = createGlassMaterial(THREE, {
+    color: 0x18130f,
+    emissive: 0xea580c,
+    maxOpacity: 0.8,
+    roughness: 0.24,
+    transmission: 0.08,
+  });
+  const panel = new THREE.Mesh(new THREE.ShapeGeometry(createRoundedRectShape(THREE, 2.08, 0.82, 0.09)), panelMaterial);
+  panel.renderOrder = 22;
+  panelGroup.add(panel);
+  materials.push(panelMaterial);
+
+  const panelOutline = createOutline(THREE, 2.08, 0.82, 0.09, 0xfff7ed, 0.014);
+  panelOutline.renderOrder = 24;
+  setMaxOpacity(panelOutline.material as Material, 0.66);
+  panelGroup.add(panelOutline);
+  materials.push(panelOutline.material as Material);
+
+  const title = createWordPlane(
+    THREE,
+    copy.title,
+    "rgba(255, 250, 242, 0.98)",
+    420,
+    110,
+    lang === "zh" ? 70 : 68,
+    1.2,
+  );
+  title.position.set(-0.3, 0.12, 0.042);
+  title.renderOrder = 32;
+  panelGroup.add(title);
+  materials.push(title.material as Material);
+
+  const subtitle = createWordPlane(
+    THREE,
+    copy.subtitle,
+    "rgba(231, 229, 228, 0.92)",
+    720,
+    98,
+    lang === "zh" ? 54 : 52,
+    1.86,
+  );
+  subtitle.position.set(0, -0.18, 0.044);
+  subtitle.renderOrder = 32;
+  panelGroup.add(subtitle);
+  materials.push(subtitle.material as Material);
+
+  const signalStart = new THREE.Vector3(config.x, config.y, boardTopZ + 0.31);
+  const panelSide = config.x < panelPosition.x ? -0.58 : 0.58;
+  const stem = createSignalLine(THREE, signalStart, new THREE.Vector3(panelPosition.x + panelSide, panelPosition.y - 0.3, panelPosition.z - 0.04), 0.86, 0xea580c);
+  group.add(stem);
+  signalLines.push(stem);
+  materials.push(stem.material as Material);
+
+  return {
+    config,
+    group,
+    materials,
+    mix: 0,
+    panelGroup,
+    signalLines,
+  };
+}
+
+function getSpotlightPanelPosition(THREE: Three, config: ModuleConfig) {
+  return new THREE.Vector3(THREE.MathUtils.clamp(config.x * 0.42, -0.62, 0.62), 1.62, 0.9);
+}
+
+function createSignalLine(THREE: Three, start: Vector3, target: Vector3, lift: number, color: number) {
+  const control = new THREE.Vector3((start.x + target.x) / 2, (start.y + target.y) / 2, lift);
+  const points: Vector3[] = [];
+
+  for (let index = 0; index < 36; index += 1) {
+    points.push(quadraticPoint(THREE, start, control, target, index / 35));
+  }
+
+  const geometry = new THREE.BufferGeometry().setFromPoints(points);
+  geometry.setDrawRange(0, 0);
+
+  const material = new THREE.LineBasicMaterial({
+    blending: THREE.AdditiveBlending,
+    color,
+    depthWrite: false,
+    opacity: 0,
+    transparent: true,
+  });
+  material.userData.keepTransparent = true;
+  setMaxOpacity(material, color === 0xea580c ? 0.34 : 0.62);
+
+  const line = new THREE.Line(geometry, material);
+  line.renderOrder = 25;
+  return line;
+}
+
 function createStuds(THREE: Three, width: number, depth: number) {
   const studs: Mesh[] = [];
   const material = createSolidMaterial(THREE, {
@@ -390,6 +754,7 @@ function createStuds(THREE: Three, width: number, depth: number) {
     roughness: 0.72,
     seed: 71,
   });
+  setMaxOpacity(material, 0.42);
   const geometry = new THREE.CylinderGeometry(0.045, 0.05, 0.035, 28);
   geometry.rotateX(Math.PI / 2);
 
@@ -807,20 +1172,27 @@ function updateScene(
   board: BoardModel,
   printedMark: PrintedMarkModel,
   modules: ModuleModel[],
+  moduleSpotlights: ModuleSpotlightModel[],
   amberPulse: import("three").PointLight,
   elapsed: number,
   pointerX: number,
   pointerY: number,
+  activeMix: number,
+  activeId: ModuleId | null,
+  hoveredId: ModuleId | null,
   reducedMotion: boolean,
 ) {
   const markRaw = reducedMotion ? 1 : clamp01((elapsed - coreStart) / 650);
   const markEnter = easeOutBack(markRaw);
   const settled = reducedMotion ? 1 : smoothStep(settleStart, settleStart + 800, elapsed);
   const sharedBreath = reducedMotion ? 0 : Math.sin(elapsed * 0.00135) * 0.022 * settled;
+  const boardTurnEase = easeInOutCubic(smoothStep(0, 1, activeMix));
+  const focusEase = easeInOutCubic(smoothStep(0.08, 1, activeMix));
 
-  root.rotation.x = THREE.MathUtils.degToRad(0.75 + pointerY * 1.5);
-  root.rotation.y = THREE.MathUtils.degToRad(pointerX * 1.5);
-  root.position.z = 0.02;
+  root.rotation.x = THREE.MathUtils.degToRad(lerp(0.75 + pointerY * 1.5, -0.7, boardTurnEase));
+  root.rotation.y = THREE.MathUtils.degToRad(lerp(pointerX * 1.5, 0, boardTurnEase));
+  root.rotation.z = THREE.MathUtils.degToRad(lerp(0, -1.25, boardTurnEase));
+  root.position.set(-0.14, lerp(0.02, -0.01, boardTurnEase), 0.02 + boardTurnEase * 0.025);
 
   board.group.visible = markRaw > 0.01;
   board.group.scale.setScalar(0.94 + markEnter * 0.06);
@@ -836,6 +1208,8 @@ function updateScene(
   amberPulse.intensity = 0.54 + Math.sin(elapsed * 0.0032) * 0.18;
 
   modules.forEach((module, index) => {
+    const isHovered = hoveredId === module.config.id;
+    const selected = activeId === module.config.id ? focusEase : 0;
     const raw = reducedMotion ? 1 : clamp01((elapsed - moduleStart - module.config.delay) / moduleDuration);
     const lift = smoothStep(0, 0.18, raw);
     const fly = smoothStep(0.14, 0.72, raw);
@@ -848,24 +1222,87 @@ function updateScene(
     const moduleSettled = settled * smoothStep(0.82, 1, raw);
     const breath = reducedMotion ? 0 : Math.sin(elapsed * 0.00165 + index * 0.62) * 0.026 * moduleSettled;
     const snapFlash = Math.sin(seat * Math.PI) * smoothStep(0.76, 0.92, raw);
+    const hoverAmount = isHovered ? smoothStep(0.18, 1, moduleSettled) * (1 - selected) : 0;
+    const hoverLift = reducedMotion ? 0 : hoverAmount * 0.1;
+    const selectedLift = selected * 0.18;
+    const selectedScale = selected * 0.045;
+    const hoverScale = hoverAmount * 0.045;
     const scale = 0.2 + scaleIn * 0.8;
+    const surfaceOpacity = alpha;
+    const labelOpacity = alpha * labelReveal * (0.92 + selected * 0.08 + hoverAmount * 0.08);
+    const baseX = lerp(point.x, module.target.x, lock);
+    const baseY = lerp(point.y, module.target.y, lock);
+    const baseZ = lerp(point.z + lift * 0.16, module.target.z, lock) + breath + snapFlash * 0.035;
 
     module.group.visible = alpha > 0.01;
     module.group.position.set(
-      lerp(point.x, module.target.x, lock),
-      lerp(point.y, module.target.y, lock),
-      lerp(point.z + lift * 0.16, module.target.z, lock) + breath + snapFlash * 0.035,
+      baseX,
+      baseY,
+      baseZ + hoverLift + selectedLift,
     );
     module.group.rotation.x = (index % 2 === 0 ? -0.18 : 0.16) * (1 - smoothStep(0.44, 0.9, raw));
     module.group.rotation.z = (index % 2 === 0 ? -0.46 : 0.46) * (1 - smoothStep(0.34, 0.92, raw));
-    module.group.scale.set(scale, scale, (0.42 + scaleIn * 0.58) * (1 + moduleSettled * 0.035));
-    setOpacity(module.materials, alpha);
-    module.labelMaterials.forEach((material) => setMaterialOpacity(material, alpha * labelReveal * 0.92));
+    module.group.scale.set(
+      scale * (1 + selectedScale + hoverScale),
+      scale * (1 + selectedScale + hoverScale),
+      (0.42 + scaleIn * 0.58) * (1 + moduleSettled * 0.035 + selected * 0.08),
+    );
+    module.hitTarget.visible = alpha > 0.65;
+    module.hitTarget.position.set(baseX, baseY, baseZ + moduleHeight * scale + 0.1);
+    module.hitTarget.scale.set(scale, scale, 1);
+    setOpacity(module.materials, surfaceOpacity * (1 + selected * 0.08 + hoverAmount * 0.06));
+    setOpacity(module.decorativeMaterials, surfaceOpacity * lerp(0.72, 0.32, selected));
+    module.labelMaterials.forEach((material) => setMaterialOpacity(material, labelOpacity));
 
     const routeProgress = smoothStep(0.08, 0.7, raw);
     const routeFade = 1 - smoothStep(0.72, 0.98, raw);
-    module.route.geometry.setDrawRange(0, Math.max(0, Math.floor(routeProgress * 42)));
+    setLineDrawCount(module.route, Math.max(0, Math.floor(routeProgress * 42)));
     setMaterialOpacity(module.routeMaterial, alpha * routeFade * 0.26);
+  });
+
+  updateModuleSpotlights(moduleSpotlights, elapsed, reducedMotion);
+}
+
+function updateModuleSpotlights(
+  spotlights: ModuleSpotlightModel[],
+  elapsed: number,
+  reducedMotion: boolean,
+) {
+  spotlights.forEach((spotlight) => {
+    if (spotlight.mix <= 0.001) {
+      if (spotlight.group.visible) {
+        setOpacity(spotlight.materials, 0);
+        spotlight.signalLines.forEach((line) => setLineDrawCount(line, 0));
+        spotlight.group.visible = false;
+      }
+
+      return;
+    }
+
+    const reveal = easeOutCubic(smoothStep(0.18, 1, spotlight.mix));
+    const lineReveal = smoothStep(0.24, 0.9, spotlight.mix);
+    const panelReveal = smoothStep(0.34, 1, spotlight.mix);
+    const panelMotion = easeInOutCubic(smoothStep(0.24, 1, spotlight.mix));
+    const originX = typeof spotlight.panelGroup.userData.originX === "number" ? spotlight.panelGroup.userData.originX : -1.12;
+    const originY = typeof spotlight.panelGroup.userData.originY === "number" ? spotlight.panelGroup.userData.originY : 1.1;
+    const originZ = typeof spotlight.panelGroup.userData.originZ === "number" ? spotlight.panelGroup.userData.originZ : 0.56;
+    const targetX = typeof spotlight.panelGroup.userData.targetX === "number" ? spotlight.panelGroup.userData.targetX : -0.08;
+    const targetY = typeof spotlight.panelGroup.userData.targetY === "number" ? spotlight.panelGroup.userData.targetY : 1.18;
+    const baseZ = typeof spotlight.panelGroup.userData.baseZ === "number" ? spotlight.panelGroup.userData.baseZ : 0.92;
+    const pulse = reducedMotion ? 0 : Math.sin(elapsed * 0.004) * 0.018;
+
+    spotlight.group.visible = spotlight.mix > 0.01;
+    spotlight.panelGroup.position.set(
+      lerp(originX, targetX, panelMotion),
+      lerp(originY, targetY, panelMotion),
+      lerp(originZ, baseZ + panelReveal * 0.16, panelMotion) + pulse * panelReveal,
+    );
+    spotlight.panelGroup.scale.setScalar(0.62 + panelMotion * 0.38);
+    setOpacity(spotlight.materials, reveal);
+
+    spotlight.signalLines.forEach((line) => {
+      setLineDrawCount(line, Math.max(0, Math.floor(lineReveal * 36)));
+    });
   });
 }
 
@@ -884,12 +1321,38 @@ function setOpacity(materials: Material[], opacity: number) {
   materials.forEach((material) => setMaterialOpacity(material, opacity));
 }
 
+function setLineDrawCount(line: Line, count: number) {
+  if (line.userData.drawCount === count) {
+    return;
+  }
+
+  line.geometry.setDrawRange(0, count);
+  line.userData.drawCount = count;
+}
+
+function uniqueMaterials(materials: Material[]) {
+  return Array.from(new Set(materials));
+}
+
 function setMaterialOpacity(material: Material, opacity: number) {
   const maxOpacity = typeof material.userData.maxOpacity === "number" ? material.userData.maxOpacity : 1;
+  const visibleOpacity = clamp01(opacity * maxOpacity);
+  const nextTransparent = Boolean(material.userData.keepTransparent) || visibleOpacity < 0.999 || maxOpacity < 0.999;
+  const nextDepthWrite = !nextTransparent;
 
-  material.opacity = clamp01(opacity * maxOpacity);
-  material.transparent = Boolean(material.userData.keepTransparent) || material.opacity < 0.999 || maxOpacity < 0.999;
-  material.needsUpdate = true;
+  if (Math.abs(material.opacity - visibleOpacity) > 0.001) {
+    material.opacity = visibleOpacity;
+  }
+
+  if (material.transparent !== nextTransparent) {
+    material.transparent = nextTransparent;
+    material.needsUpdate = true;
+  }
+
+  if (material.depthWrite !== nextDepthWrite) {
+    material.depthWrite = nextDepthWrite;
+    material.needsUpdate = true;
+  }
 }
 
 function setMaxOpacity(material: Material, opacity: number) {
