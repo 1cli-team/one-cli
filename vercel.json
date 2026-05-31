@@ -3,6 +3,19 @@
   "framework": "nextjs",
   "installCommand": "pnpm --dir apps/docs install --frozen-lockfile",
   "buildCommand": "pnpm --dir apps/docs build",
+  "redirects": [
+    {
+      "source": "/:path*",
+      "has": [
+        {
+          "type": "host",
+          "value": "1cli.dev"
+        }
+      ],
+      "destination": "https://www.1cli.dev/:path*",
+      "permanent": true
+    }
+  ],
   "headers": [
     {
       "source": "/install.sh",
