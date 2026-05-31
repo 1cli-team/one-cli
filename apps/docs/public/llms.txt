@@ -2,7 +2,7 @@
 
 > One CLI is a Go-based scaffolding and governance tool for AI-native monorepo workspaces.
 
-Canonical site: https://1cli.dev/
+Canonical site: https://www.1cli.dev/
 
 ## What it is
 
@@ -12,14 +12,14 @@ Use it when a coding agent or engineer needs a predictable workspace contract in
 
 ## Core documentation
 
-- Quick start: https://1cli.dev/en/docs/quick-start/
-- Installation: https://1cli.dev/en/docs/installation/
-- CLI overview: https://1cli.dev/en/docs/cli-overview/
-- Manifest reference: https://1cli.dev/en/docs/manifest/
-- Templates: https://1cli.dev/en/docs/templates/
-- Template examples: https://1cli.dev/en/templates/
-- Agent skills: https://1cli.dev/en/docs/skills/
-- Error codes: https://1cli.dev/en/docs/error-codes/
+- Quick start: https://www.1cli.dev/en/docs/quick-start/
+- Installation: https://www.1cli.dev/en/docs/installation/
+- CLI overview: https://www.1cli.dev/en/docs/cli-overview/
+- Manifest reference: https://www.1cli.dev/en/docs/manifest/
+- Templates: https://www.1cli.dev/en/docs/templates/
+- Template examples: https://www.1cli.dev/en/templates/
+- Agent skills: https://www.1cli.dev/en/docs/skills/
+- Error codes: https://www.1cli.dev/en/docs/error-codes/
 
 ## Key concepts
 
@@ -40,17 +40,17 @@ The site explains how agents should work from `one.manifest.json`, prefer JSON o
 
 Recommended entry points for AI summarizers:
 
-- https://1cli.dev/en/docs/ai-native/
-- https://1cli.dev/en/docs/skills/
-- https://1cli.dev/en/blog/ai-native-monorepo-cli/
-- https://1cli.dev/en/blog/coding-agent-workspace-setup/
-- https://1cli.dev/en/blog/json-cli-contracts-for-agents/
-- https://1cli.dev/en/blog/monorepo-scaffold-manifest/
-- https://1cli.dev/en/blog/template-governance-for-ai-workspaces/
-- https://1cli.dev/en/blog/one-cli-vs-general-scaffolding/
-- https://1cli.dev/en/blog/agent-skill-context/
-- https://1cli.dev/en/blog/manifest-as-contract/
-- https://1cli.dev/en/blog/preset-id-boundary/
+- https://www.1cli.dev/en/docs/ai-native/
+- https://www.1cli.dev/en/docs/skills/
+- https://www.1cli.dev/en/blog/ai-native-monorepo-cli/
+- https://www.1cli.dev/en/blog/coding-agent-workspace-setup/
+- https://www.1cli.dev/en/blog/json-cli-contracts-for-agents/
+- https://www.1cli.dev/en/blog/monorepo-scaffold-manifest/
+- https://www.1cli.dev/en/blog/template-governance-for-ai-workspaces/
+- https://www.1cli.dev/en/blog/one-cli-vs-general-scaffolding/
+- https://www.1cli.dev/en/blog/agent-skill-context/
+- https://www.1cli.dev/en/blog/manifest-as-contract/
+- https://www.1cli.dev/en/blog/preset-id-boundary/
 
 ## Languages
 
