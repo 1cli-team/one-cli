@@ -40,6 +40,19 @@ const copy: Record<
   },
 };
 
+const agenticEngineeringSeoPatch = {
+  metadataTitle: "Agentic Engineering | 1cli",
+  canonicalUrl: "https://www.1cli.dev/en/blog/agentic-engineering/",
+  webPageJsonLd: {
+    "@context": "https://schema.org",
+    "@type": "WebPage",
+    description:
+      "Learn about Agentic Engineering, including key details, use cases, and next steps.",
+    name: "Agentic Engineering | 1cli",
+    url: "https://www.1cli.dev/en/blog/agentic-engineering/",
+  },
+};
+
 export function generateStaticParams() {
   return (["zh", "en"] as const).flatMap((lang) =>
     getBlogPosts(lang).map((post) => ({
@@ -56,11 +69,12 @@ export async function generateMetadata(props: {
   if (!isLocale(rawLang)) notFound();
   const post = getBlogPost(rawLang, slug);
   if (!post) notFound();
+  const seoPatch = getBlogSeoPatch(rawLang, post.slug);
 
   return createPageMetadata({
-    title: `${post.title} | One CLI Blog`,
+    title: seoPatch?.metadataTitle ?? `${post.title} | One CLI Blog`,
     description: post.description,
-    path: localizedBlogPath(rawLang, [post.slug]),
+    path: seoPatch?.canonicalUrl ?? localizedBlogPath(rawLang, [post.slug]),
     locale: rawLang,
     alternates: alternateBlogLanguages([post.slug]),
     type: "article",
@@ -77,15 +91,18 @@ export default async function BlogArticleRoute(props: {
   if (!post) notFound();
   const labels = copy[lang];
   const related = getRelatedPosts(lang, post.slug, post.tags);
+  const seoPatch = getBlogSeoPatch(lang, post.slug);
+  const articlePath = seoPatch?.canonicalUrl ?? localizedBlogPath(lang, [post.slug]);
 
   return (
     <main className="min-h-screen bg-[var(--surface-primary)] text-[var(--foreground-primary)]">
+      {seoPatch ? <script {...jsonLdScriptProps(seoPatch.webPageJsonLd)} /> : null}
       <script
         {...jsonLdScriptProps([
           blogPostingJsonLd({
             title: post.title,
             description: post.description,
-            path: localizedBlogPath(lang, [post.slug]),
+            path: articlePath,
             locale: lang,
             datePublished: post.date,
             author: post.author,
@@ -95,7 +112,7 @@ export default async function BlogArticleRoute(props: {
           breadcrumbJsonLd([
             { name: "One CLI", path: `/${lang}/` },
             { name: "Blog", path: localizedBlogPath(lang) },
-            { name: post.title, path: localizedBlogPath(lang, [post.slug]) },
+            { name: post.title, path: articlePath },
           ]),
         ])}
       />
@@ -168,6 +185,12 @@ export default async function BlogArticleRoute(props: {
       </article>
     </main>
   );
+}
+
+function getBlogSeoPatch(lang: Locale, slug: string) {
+  return lang === "en" && slug === "agentic-engineering"
+    ? agenticEngineeringSeoPatch
+    : null;
 }
 
 function getRelatedPosts(lang: Locale, slug: string, tags: string[]) {
