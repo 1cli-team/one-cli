@@ -43,3 +43,11 @@ bin-go/
 
 # Claude Code local worktrees / per-session state
 .claude/
+
+# SEO agent local state and generated artifacts
+.secrets/
+.seo/config.json
+.seo/cache/
+.seo/blog-drafts/
+.seo/skills/
+.seo/patches/
