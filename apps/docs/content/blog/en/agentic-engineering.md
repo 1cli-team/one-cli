@@ -1,14 +1,14 @@
 ---
-title: "Agentic Engineering Needs Structured Workspaces"
+title: "Agentic Engineering: Structured Workspaces for AI Coding Agents"
 description: "Agentic engineering makes AI coding agents useful by giving them clear workspace state, repeatable commands, and fewer places to guess."
 date: "2026-05-31"
 author: "One CLI Team"
 tags: ["agentic-engineering", "workspace", "cli"]
 ---
 
-## Agentic engineering is a team practice
+## What is agentic engineering?
 
-Agentic engineering is the practice of designing software workflows so AI coding agents can do useful engineering work with less ambiguity. It is not only about better prompts. It is about the repository shape, command contracts, project metadata, dependency boundaries, and review loop that let a human delegate a task without hiding the context the task depends on.
+Agentic engineering is the practice of designing software workflows so AI coding agents can do useful engineering work with less ambiguity. For a software team, that means treating repository shape, command contracts, project metadata, dependency boundaries, and review loops as part of the agent operating environment, not as background knowledge hidden in prompts.
 
 For software teams, the important shift is operational. An agent that edits code needs the same facts a teammate would need: what kind of workspace this is, which project owns the change, how dependencies are installed, which commands verify the result, and what output means success or failure. If those facts live only in habit, README prose, or tribal memory, every agent run starts with reverse engineering.
 
@@ -92,4 +92,4 @@ If a command fails, JSON output and documented error codes give the agent a bett
 
 The simplest way to improve agentic engineering is to remove avoidable ambiguity before the agent starts editing code. Give the workspace a manifest, use repeatable CLI commands, prefer machine-readable output, and make setup steps visible in the repository.
 
-To try that flow, start with the [quick start](/en/docs/quick-start/) or walk through the [manual workspace tutorial](/en/tutorials/first-workspace/). For the agent-facing command pattern, read [Output & error codes](/en/tutorials/json-output-error-codes/).
+To try an agentic engineering workflow with One CLI, start with the [quick start](/en/docs/quick-start/) or walk through the [manual workspace tutorial](/en/tutorials/first-workspace/). For the agent-facing command pattern, read [Output & error codes](/en/tutorials/json-output-error-codes/).
