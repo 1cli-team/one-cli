@@ -1,0 +1,1879 @@
+{
+  "version": "0.1",
+  "site": {
+    "url": "https://1cli.dev",
+    "type": "docs",
+    "language": "en",
+    "gsc_property": "sc-domain:1cli.dev"
+  },
+  "stage": {
+    "name": "no_data",
+    "impressions_90d": 104,
+    "updated_at": "2026-06-15T14:13:21.80712Z"
+  },
+  "pages": [],
+  "keywords": [
+    {
+      "query": "one cli",
+      "status": "validating",
+      "source": "gsc",
+      "page": "https://1cli.dev/en/",
+      "business_value": "unknown",
+      "reason": "Discovered in Google Search Console; review business fit before selecting it as a target.",
+      "evidence": {
+        "average_position": 6.925925925925926,
+        "clicks": 0,
+        "impressions": 27,
+        "pages": [
+          "https://1cli.dev/en/",
+          "https://www.1cli.dev/en/"
+        ]
+      },
+      "created_at": "2026-05-29T05:08:14.95008Z",
+      "updated_at": "2026-05-29T05:19:17.223249Z"
+    },
+    {
+      "query": "one-cli",
+      "status": "candidate",
+      "source": "gsc",
+      "page": "https://1cli.dev/en/",
+      "business_value": "unknown",
+      "reason": "Discovered in Google Search Console; review business fit before selecting it as a target.",
+      "evidence": {
+        "average_position": 15.666666666666666,
+        "clicks": 1,
+        "impressions": 3,
+        "pages": [
+          "https://1cli.dev/en/",
+          "https://www.1cli.dev/en/"
+        ]
+      },
+      "created_at": "2026-05-29T05:08:14.95008Z",
+      "updated_at": "2026-05-29T05:19:17.223249Z"
+    },
+    {
+      "query": "aone cli",
+      "status": "candidate",
+      "source": "gsc",
+      "page": "https://1cli.dev/en/",
+      "business_value": "unknown",
+      "reason": "Discovered in Google Search Console; review business fit before selecting it as a target.",
+      "evidence": {
+        "average_position": 4.333333333333333,
+        "clicks": 0,
+        "impressions": 3,
+        "pages": [
+          "https://1cli.dev/en/"
+        ]
+      },
+      "created_at": "2026-05-29T05:08:14.95008Z",
+      "updated_at": "2026-05-29T05:19:17.223249Z"
+    },
+    {
+      "query": "ones cli",
+      "status": "candidate",
+      "source": "gsc",
+      "page": "https://1cli.dev/en/",
+      "business_value": "unknown",
+      "reason": "Discovered in Google Search Console; review business fit before selecting it as a target.",
+      "evidence": {
+        "average_position": 3,
+        "clicks": 0,
+        "impressions": 2,
+        "pages": [
+          "https://1cli.dev/en/"
+        ]
+      },
+      "created_at": "2026-05-29T05:08:14.95008Z",
+      "updated_at": "2026-05-29T05:19:17.223249Z"
+    },
+    {
+      "query": "onetcli",
+      "status": "candidate",
+      "source": "gsc",
+      "page": "https://1cli.dev/en/",
+      "business_value": "unknown",
+      "reason": "Discovered in Google Search Console; review business fit before selecting it as a target.",
+      "evidence": {
+        "average_position": 22,
+        "clicks": 0,
+        "impressions": 2,
+        "pages": [
+          "https://1cli.dev/en/"
+        ]
+      },
+      "created_at": "2026-05-29T05:08:14.95008Z",
+      "updated_at": "2026-05-29T05:19:17.223249Z"
+    },
+    {
+      "query": "1cli",
+      "status": "candidate",
+      "source": "gsc",
+      "page": "https://1cli.dev/en/",
+      "business_value": "unknown",
+      "reason": "Discovered in Google Search Console; review business fit before selecting it as a target.",
+      "evidence": {
+        "average_position": 2,
+        "clicks": 0,
+        "impressions": 1,
+        "pages": [
+          "https://www.1cli.dev/en/"
+        ]
+      },
+      "created_at": "2026-05-29T05:08:14.95008Z",
+      "updated_at": "2026-05-29T05:19:17.223249Z"
+    },
+    {
+      "query": "ai cli",
+      "status": "selected",
+      "source": "keyword-planner",
+      "intent": "commercial",
+      "page": "https://1cli.dev/en/",
+      "business_value": "high",
+      "reason": "Imported from keyword-planner CSV; review intent and business fit before selecting it as a target.",
+      "evidence": {
+        "avg_monthly_searches": 1900,
+        "competition": "低",
+        "csv_row": 4,
+        "evidence_source": "keyword-planner",
+        "three_month_change": 53,
+        "top_of_page_bid_high": 57.78,
+        "top_of_page_bid_low": 5.77,
+        "year_over_year_change": 504
+      },
+      "created_at": "2026-05-29T05:19:21.598807Z",
+      "updated_at": "2026-05-29T05:19:26.309693Z"
+    },
+    {
+      "query": "codex cli",
+      "status": "candidate",
+      "source": "keyword-planner",
+      "intent": "commercial",
+      "page": "https://1cli.dev/en/",
+      "business_value": "high",
+      "reason": "Imported from keyword-planner CSV; review intent and business fit before selecting it as a target.",
+      "evidence": {
+        "avg_monthly_searches": 110000,
+        "competition": "低",
+        "csv_row": 5,
+        "evidence_source": "keyword-planner",
+        "three_month_change": 49,
+        "top_of_page_bid_high": 2413.91,
+        "top_of_page_bid_low": 15.28,
+        "year_over_year_change": 232
+      },
+      "created_at": "2026-05-29T05:19:21.598807Z",
+      "updated_at": "2026-05-29T05:19:21.598807Z"
+    },
+    {
+      "query": "cli ai",
+      "status": "candidate",
+      "source": "keyword-planner",
+      "intent": "informational",
+      "page": "https://1cli.dev/en/",
+      "business_value": "high",
+      "reason": "Imported from keyword-planner CSV; review intent and business fit before selecting it as a target.",
+      "evidence": {
+        "avg_monthly_searches": 1600,
+        "competition": "低",
+        "csv_row": 7,
+        "evidence_source": "keyword-planner",
+        "three_month_change": 53,
+        "top_of_page_bid_high": 57.96,
+        "top_of_page_bid_low": 5.65,
+        "year_over_year_change": 806
+      },
+      "created_at": "2026-05-29T05:19:21.598807Z",
+      "updated_at": "2026-05-29T07:10:09.659923Z"
+    },
+    {
+      "query": "ai coding cli",
+      "status": "candidate",
+      "source": "keyword-planner",
+      "intent": "informational",
+      "page": "https://1cli.dev/en/",
+      "business_value": "high",
+      "reason": "Imported from keyword-planner CSV; review intent and business fit before selecting it as a target.",
+      "evidence": {
+        "avg_monthly_searches": 170,
+        "competition": "中",
+        "csv_row": 41,
+        "evidence_source": "keyword-planner",
+        "three_month_change": -19,
+        "top_of_page_bid_high": 59.31,
+        "top_of_page_bid_low": 5.08,
+        "year_over_year_change": "∞"
+      },
+      "created_at": "2026-05-29T05:19:21.598807Z",
+      "updated_at": "2026-05-29T07:10:09.659923Z"
+    },
+    {
+      "query": "claude cli",
+      "status": "candidate",
+      "source": "keyword-planner",
+      "intent": "commercial",
+      "page": "https://1cli.dev/en/",
+      "business_value": "high",
+      "reason": "Imported from keyword-planner CSV; review intent and business fit before selecting it as a target.",
+      "evidence": {
+        "avg_monthly_searches": 60500,
+        "competition": "低",
+        "csv_row": 8,
+        "evidence_source": "keyword-planner",
+        "three_month_change": 49,
+        "top_of_page_bid_high": 156.06,
+        "top_of_page_bid_low": 9.89,
+        "year_over_year_change": 1945
+      },
+      "created_at": "2026-05-29T05:19:21.598807Z",
+      "updated_at": "2026-05-29T05:19:21.598807Z"
+    },
+    {
+      "query": "monorepo cli",
+      "status": "candidate",
+      "source": "keyword-planner",
+      "intent": "informational",
+      "page": "https://1cli.dev/en/",
+      "business_value": "high",
+      "reason": "Imported from keyword-planner CSV; review intent and business fit before selecting it as a target.",
+      "evidence": {
+        "avg_monthly_searches": "--",
+        "csv_row": 42,
+        "evidence_source": "keyword-planner",
+        "three_month_change": "--",
+        "year_over_year_change": "未知"
+      },
+      "created_at": "2026-05-29T05:19:21.598807Z",
+      "updated_at": "2026-05-29T07:10:09.659923Z"
+    },
+    {
+      "query": "developer workspace cli",
+      "status": "candidate",
+      "source": "keyword-planner",
+      "intent": "informational",
+      "page": "https://1cli.dev/en/",
+      "business_value": "high",
+      "reason": "Imported from keyword-planner CSV; review intent and business fit before selecting it as a target.",
+      "evidence": {
+        "avg_monthly_searches": "--",
+        "csv_row": 43,
+        "evidence_source": "keyword-planner",
+        "three_month_change": "--",
+        "year_over_year_change": "未知"
+      },
+      "created_at": "2026-05-29T05:19:21.598807Z",
+      "updated_at": "2026-05-29T07:10:09.659923Z"
+    },
+    {
+      "query": "monorepo",
+      "status": "candidate",
+      "source": "keyword-planner",
+      "intent": "informational",
+      "page": "https://1cli.dev/en/",
+      "business_value": "high",
+      "reason": "Imported from keyword-planner CSV; review intent and business fit before selecting it as a target.",
+      "evidence": {
+        "avg_monthly_searches": 22200,
+        "competition": "低",
+        "csv_row": 5,
+        "evidence_source": "keyword-planner",
+        "three_month_change": 22,
+        "top_of_page_bid_high": 100.82,
+        "top_of_page_bid_low": 4.8,
+        "year_over_year_change": 22
+      },
+      "created_at": "2026-05-29T07:07:47.650523Z",
+      "updated_at": "2026-05-29T07:10:09.659923Z"
+    },
+    {
+      "query": "mono repo",
+      "status": "candidate",
+      "source": "keyword-planner",
+      "intent": "informational",
+      "page": "https://1cli.dev/en/",
+      "business_value": "high",
+      "reason": "Imported from keyword-planner CSV; review intent and business fit before selecting it as a target.",
+      "evidence": {
+        "avg_monthly_searches": 3600,
+        "competition": "低",
+        "csv_row": 6,
+        "evidence_source": "keyword-planner",
+        "three_month_change": 0,
+        "top_of_page_bid_high": 88.85,
+        "top_of_page_bid_low": 5.27,
+        "year_over_year_change": -18
+      },
+      "created_at": "2026-05-29T07:07:47.650523Z",
+      "updated_at": "2026-05-29T07:10:09.659923Z"
+    },
+    {
+      "query": "monorepo architecture",
+      "status": "candidate",
+      "source": "keyword-planner",
+      "intent": "informational",
+      "page": "https://1cli.dev/en/",
+      "business_value": "high",
+      "reason": "Imported from keyword-planner CSV; review intent and business fit before selecting it as a target.",
+      "evidence": {
+        "avg_monthly_searches": 1000,
+        "competition": "低",
+        "csv_row": 8,
+        "evidence_source": "keyword-planner",
+        "three_month_change": 0,
+        "top_of_page_bid_high": 70.06,
+        "top_of_page_bid_low": 11.58,
+        "year_over_year_change": 30
+      },
+      "created_at": "2026-05-29T07:07:47.650523Z",
+      "updated_at": "2026-05-29T07:10:09.659923Z"
+    },
+    {
+      "query": "monorepo structure",
+      "status": "candidate",
+      "source": "keyword-planner",
+      "intent": "informational",
+      "page": "https://1cli.dev/en/",
+      "business_value": "high",
+      "reason": "Imported from keyword-planner CSV; review intent and business fit before selecting it as a target.",
+      "evidence": {
+        "avg_monthly_searches": 480,
+        "competition": "低",
+        "csv_row": 9,
+        "evidence_source": "keyword-planner",
+        "three_month_change": 0,
+        "top_of_page_bid_high": 390,
+        "top_of_page_bid_low": 390,
+        "year_over_year_change": 0
+      },
+      "created_at": "2026-05-29T07:07:47.650523Z",
+      "updated_at": "2026-05-29T07:10:09.659923Z"
+    },
+    {
+      "query": "monorepo benefits",
+      "status": "candidate",
+      "source": "keyword-planner",
+      "intent": "informational",
+      "page": "https://1cli.dev/en/",
+      "business_value": "high",
+      "reason": "Imported from keyword-planner CSV; review intent and business fit before selecting it as a target.",
+      "evidence": {
+        "avg_monthly_searches": 40,
+        "competition": "低",
+        "csv_row": 10,
+        "evidence_source": "keyword-planner",
+        "three_month_change": 0,
+        "top_of_page_bid_high": 50,
+        "top_of_page_bid_low": 50,
+        "year_over_year_change": -20
+      },
+      "created_at": "2026-05-29T07:07:47.650523Z",
+      "updated_at": "2026-05-29T07:10:09.659923Z"
+    },
+    {
+      "query": "js monorepo",
+      "status": "candidate",
+      "source": "keyword-planner",
+      "intent": "informational",
+      "page": "https://1cli.dev/en/",
+      "business_value": "high",
+      "reason": "Imported from keyword-planner CSV; review intent and business fit before selecting it as a target.",
+      "evidence": {
+        "avg_monthly_searches": 90,
+        "competition": "低",
+        "csv_row": 11,
+        "evidence_source": "keyword-planner",
+        "three_month_change": -29,
+        "top_of_page_bid_high": 110,
+        "top_of_page_bid_low": 110,
+        "year_over_year_change": -64
+      },
+      "created_at": "2026-05-29T07:07:47.650523Z",
+      "updated_at": "2026-05-29T07:10:09.659923Z"
+    },
+    {
+      "query": "monorepo structure example",
+      "status": "candidate",
+      "source": "keyword-planner",
+      "intent": "informational",
+      "page": "https://1cli.dev/en/",
+      "business_value": "high",
+      "reason": "Imported from keyword-planner CSV; review intent and business fit before selecting it as a target.",
+      "evidence": {
+        "avg_monthly_searches": 30,
+        "competition": "低",
+        "csv_row": 12,
+        "evidence_source": "keyword-planner",
+        "three_month_change": -25,
+        "top_of_page_bid_high": 30,
+        "top_of_page_bid_low": 30,
+        "year_over_year_change": 0
+      },
+      "created_at": "2026-05-29T07:07:47.650523Z",
+      "updated_at": "2026-05-29T07:10:09.659923Z"
+    },
+    {
+      "query": "monorepo setup",
+      "status": "candidate",
+      "source": "keyword-planner",
+      "intent": "informational",
+      "page": "https://1cli.dev/en/",
+      "business_value": "high",
+      "reason": "Imported from keyword-planner CSV; review intent and business fit before selecting it as a target.",
+      "evidence": {
+        "avg_monthly_searches": 140,
+        "competition": "低",
+        "csv_row": 13,
+        "evidence_source": "keyword-planner",
+        "three_month_change": 27,
+        "top_of_page_bid_high": 140,
+        "top_of_page_bid_low": 110,
+        "year_over_year_change": 56
+      },
+      "created_at": "2026-05-29T07:07:47.650523Z",
+      "updated_at": "2026-05-29T07:10:09.659923Z"
+    },
+    {
+      "query": "benefits of monorepo",
+      "status": "candidate",
+      "source": "keyword-planner",
+      "intent": "informational",
+      "page": "https://1cli.dev/en/",
+      "business_value": "high",
+      "reason": "Imported from keyword-planner CSV; review intent and business fit before selecting it as a target.",
+      "evidence": {
+        "avg_monthly_searches": 50,
+        "competition": "低",
+        "csv_row": 14,
+        "evidence_source": "keyword-planner",
+        "three_month_change": 75,
+        "top_of_page_bid_high": 50,
+        "top_of_page_bid_low": 70,
+        "year_over_year_change": 40
+      },
+      "created_at": "2026-05-29T07:07:47.650523Z",
+      "updated_at": "2026-05-29T07:10:09.659923Z"
+    },
+    {
+      "query": "monorepo management",
+      "status": "candidate",
+      "source": "keyword-planner",
+      "intent": "informational",
+      "page": "https://1cli.dev/en/",
+      "business_value": "high",
+      "reason": "Imported from keyword-planner CSV; review intent and business fit before selecting it as a target.",
+      "evidence": {
+        "avg_monthly_searches": 50,
+        "competition": "低",
+        "csv_row": 15,
+        "evidence_source": "keyword-planner",
+        "three_month_change": -44,
+        "top_of_page_bid_high": 30,
+        "top_of_page_bid_low": 50,
+        "year_over_year_change": -29
+      },
+      "created_at": "2026-05-29T07:07:47.650523Z",
+      "updated_at": "2026-05-29T07:10:09.659923Z"
+    },
+    {
+      "query": "monorepo advantages",
+      "status": "candidate",
+      "source": "keyword-planner",
+      "intent": "informational",
+      "page": "https://1cli.dev/en/",
+      "business_value": "high",
+      "reason": "Imported from keyword-planner CSV; review intent and business fit before selecting it as a target.",
+      "evidence": {
+        "avg_monthly_searches": 40,
+        "competition": "低",
+        "csv_row": 16,
+        "evidence_source": "keyword-planner",
+        "three_month_change": 0,
+        "top_of_page_bid_high": 70,
+        "top_of_page_bid_low": 50,
+        "year_over_year_change": -20
+      },
+      "created_at": "2026-05-29T07:07:47.650523Z",
+      "updated_at": "2026-05-29T07:10:09.659923Z"
+    },
+    {
+      "query": "benefits of a monorepo",
+      "status": "candidate",
+      "source": "keyword-planner",
+      "intent": "informational",
+      "page": "https://1cli.dev/en/",
+      "business_value": "high",
+      "reason": "Imported from keyword-planner CSV; review intent and business fit before selecting it as a target.",
+      "evidence": {
+        "avg_monthly_searches": 20,
+        "competition": "低",
+        "csv_row": 17,
+        "evidence_source": "keyword-planner",
+        "three_month_change": -33,
+        "top_of_page_bid_high": 20,
+        "top_of_page_bid_low": 30,
+        "year_over_year_change": 0
+      },
+      "created_at": "2026-05-29T07:07:47.650523Z",
+      "updated_at": "2026-05-29T07:10:09.659923Z"
+    },
+    {
+      "query": "best monorepo",
+      "status": "candidate",
+      "source": "keyword-planner",
+      "intent": "informational",
+      "page": "https://1cli.dev/en/",
+      "business_value": "high",
+      "reason": "Imported from keyword-planner CSV; review intent and business fit before selecting it as a target.",
+      "evidence": {
+        "avg_monthly_searches": 40,
+        "competition": "低",
+        "csv_row": 18,
+        "evidence_source": "keyword-planner",
+        "three_month_change": -25,
+        "top_of_page_bid_high": 30,
+        "top_of_page_bid_low": 40,
+        "year_over_year_change": -25
+      },
+      "created_at": "2026-05-29T07:07:47.650523Z",
+      "updated_at": "2026-05-29T07:10:09.659923Z"
+    },
+    {
+      "query": "create a monorepo",
+      "status": "candidate",
+      "source": "keyword-planner",
+      "intent": "informational",
+      "page": "https://1cli.dev/en/",
+      "business_value": "high",
+      "reason": "Imported from keyword-planner CSV; review intent and business fit before selecting it as a target.",
+      "evidence": {
+        "avg_monthly_searches": 20,
+        "competition": "低",
+        "csv_row": 19,
+        "evidence_source": "keyword-planner",
+        "three_month_change": 100,
+        "top_of_page_bid_high": 10,
+        "top_of_page_bid_low": 30,
+        "year_over_year_change": -33
+      },
+      "created_at": "2026-05-29T07:07:47.650523Z",
+      "updated_at": "2026-05-29T07:10:09.659923Z"
+    },
+    {
+      "query": "create monorepo",
+      "status": "candidate",
+      "source": "keyword-planner",
+      "intent": "informational",
+      "page": "https://1cli.dev/en/",
+      "business_value": "high",
+      "reason": "Imported from keyword-planner CSV; review intent and business fit before selecting it as a target.",
+      "evidence": {
+        "avg_monthly_searches": 30,
+        "competition": "低",
+        "csv_row": 20,
+        "evidence_source": "keyword-planner",
+        "three_month_change": 0,
+        "top_of_page_bid_high": 30,
+        "top_of_page_bid_low": 40,
+        "year_over_year_change": 0
+      },
+      "created_at": "2026-05-29T07:07:47.650523Z",
+      "updated_at": "2026-05-29T07:10:09.659923Z"
+    },
+    {
+      "query": "define monorepo",
+      "status": "candidate",
+      "source": "keyword-planner",
+      "intent": "informational",
+      "page": "https://1cli.dev/en/",
+      "business_value": "high",
+      "reason": "Imported from keyword-planner CSV; review intent and business fit before selecting it as a target.",
+      "evidence": {
+        "avg_monthly_searches": 110,
+        "competition": "低",
+        "csv_row": 21,
+        "evidence_source": "keyword-planner",
+        "three_month_change": 56,
+        "top_of_page_bid_high": 110,
+        "top_of_page_bid_low": 110,
+        "year_over_year_change": 56
+      },
+      "created_at": "2026-05-29T07:07:47.650523Z",
+      "updated_at": "2026-05-29T07:10:09.659923Z"
+    },
+    {
+      "query": "mono repo architecture",
+      "status": "candidate",
+      "source": "keyword-planner",
+      "intent": "informational",
+      "page": "https://1cli.dev/en/",
+      "business_value": "high",
+      "reason": "Imported from keyword-planner CSV; review intent and business fit before selecting it as a target.",
+      "evidence": {
+        "avg_monthly_searches": 1000,
+        "competition": "低",
+        "csv_row": 22,
+        "evidence_source": "keyword-planner",
+        "three_month_change": 0,
+        "top_of_page_bid_high": 70.06,
+        "top_of_page_bid_low": 11.58,
+        "year_over_year_change": 30
+      },
+      "created_at": "2026-05-29T07:07:47.650523Z",
+      "updated_at": "2026-05-29T07:10:09.659923Z"
+    },
+    {
+      "query": "mono repo meaning",
+      "status": "candidate",
+      "source": "keyword-planner",
+      "intent": "informational",
+      "page": "https://1cli.dev/en/",
+      "business_value": "high",
+      "reason": "Imported from keyword-planner CSV; review intent and business fit before selecting it as a target.",
+      "evidence": {
+        "avg_monthly_searches": 320,
+        "competition": "低",
+        "csv_row": 23,
+        "evidence_source": "keyword-planner",
+        "three_month_change": 0,
+        "top_of_page_bid_high": 260,
+        "top_of_page_bid_low": 320,
+        "year_over_year_change": 0
+      },
+      "created_at": "2026-05-29T07:07:47.650523Z",
+      "updated_at": "2026-05-29T07:10:09.659923Z"
+    },
+    {
+      "query": "mono repository structure",
+      "status": "candidate",
+      "source": "keyword-planner",
+      "intent": "informational",
+      "page": "https://1cli.dev/en/",
+      "business_value": "high",
+      "reason": "Imported from keyword-planner CSV; review intent and business fit before selecting it as a target.",
+      "evidence": {
+        "avg_monthly_searches": 480,
+        "competition": "低",
+        "csv_row": 24,
+        "evidence_source": "keyword-planner",
+        "three_month_change": 0,
+        "top_of_page_bid_high": 390,
+        "top_of_page_bid_low": 390,
+        "year_over_year_change": 0
+      },
+      "created_at": "2026-05-29T07:07:47.650523Z",
+      "updated_at": "2026-05-29T07:10:09.659923Z"
+    },
+    {
+      "query": "monorepo approach",
+      "status": "candidate",
+      "source": "keyword-planner",
+      "intent": "informational",
+      "page": "https://1cli.dev/en/",
+      "business_value": "high",
+      "reason": "Imported from keyword-planner CSV; review intent and business fit before selecting it as a target.",
+      "evidence": {
+        "avg_monthly_searches": 40,
+        "competition": "低",
+        "csv_row": 25,
+        "evidence_source": "keyword-planner",
+        "three_month_change": 0,
+        "top_of_page_bid_high": 40,
+        "top_of_page_bid_low": 30,
+        "year_over_year_change": 0
+      },
+      "created_at": "2026-05-29T07:07:47.650523Z",
+      "updated_at": "2026-05-29T07:10:09.659923Z"
+    },
+    {
+      "query": "monorepo build",
+      "status": "candidate",
+      "source": "keyword-planner",
+      "intent": "informational",
+      "page": "https://1cli.dev/en/",
+      "business_value": "high",
+      "reason": "Imported from keyword-planner CSV; review intent and business fit before selecting it as a target.",
+      "evidence": {
+        "avg_monthly_searches": 20,
+        "competition": "低",
+        "csv_row": 26,
+        "evidence_source": "keyword-planner",
+        "three_month_change": 0,
+        "top_of_page_bid_high": 20,
+        "top_of_page_bid_low": 20,
+        "year_over_year_change": -50
+      },
+      "created_at": "2026-05-29T07:07:47.650523Z",
+      "updated_at": "2026-05-29T07:10:09.659923Z"
+    },
+    {
+      "query": "monorepo concept",
+      "status": "candidate",
+      "source": "keyword-planner",
+      "intent": "informational",
+      "page": "https://1cli.dev/en/",
+      "business_value": "high",
+      "reason": "Imported from keyword-planner CSV; review intent and business fit before selecting it as a target.",
+      "evidence": {
+        "avg_monthly_searches": 20,
+        "competition": "低",
+        "csv_row": 27,
+        "evidence_source": "keyword-planner",
+        "three_month_change": -50,
+        "top_of_page_bid_high": 20,
+        "top_of_page_bid_low": 30,
+        "year_over_year_change": 0
+      },
+      "created_at": "2026-05-29T07:07:47.650523Z",
+      "updated_at": "2026-05-29T07:10:09.659923Z"
+    },
+    {
+      "query": "monorepo definition",
+      "status": "candidate",
+      "source": "keyword-planner",
+      "intent": "informational",
+      "page": "https://1cli.dev/en/",
+      "business_value": "high",
+      "reason": "Imported from keyword-planner CSV; review intent and business fit before selecting it as a target.",
+      "evidence": {
+        "avg_monthly_searches": 70,
+        "competition": "低",
+        "csv_row": 28,
+        "evidence_source": "keyword-planner",
+        "three_month_change": 0,
+        "top_of_page_bid_high": 90,
+        "top_of_page_bid_low": 70,
+        "year_over_year_change": 0
+      },
+      "created_at": "2026-05-29T07:07:47.650523Z",
+      "updated_at": "2026-05-29T07:10:09.659923Z"
+    },
+    {
+      "query": "monorepo example",
+      "status": "candidate",
+      "source": "keyword-planner",
+      "intent": "informational",
+      "page": "https://1cli.dev/en/",
+      "business_value": "high",
+      "reason": "Imported from keyword-planner CSV; review intent and business fit before selecting it as a target.",
+      "evidence": {
+        "avg_monthly_searches": 210,
+        "competition": "低",
+        "csv_row": 29,
+        "evidence_source": "keyword-planner",
+        "three_month_change": -18,
+        "top_of_page_bid_high": 210,
+        "top_of_page_bid_low": 210,
+        "year_over_year_change": -46
+      },
+      "created_at": "2026-05-29T07:07:47.650523Z",
+      "updated_at": "2026-05-29T07:10:09.659923Z"
+    },
+    {
+      "query": "monorepo explained",
+      "status": "candidate",
+      "source": "keyword-planner",
+      "intent": "informational",
+      "page": "https://1cli.dev/en/",
+      "business_value": "high",
+      "reason": "Imported from keyword-planner CSV; review intent and business fit before selecting it as a target.",
+      "evidence": {
+        "avg_monthly_searches": 30,
+        "competition": "低",
+        "csv_row": 30,
+        "evidence_source": "keyword-planner",
+        "three_month_change": 100,
+        "top_of_page_bid_high": 30,
+        "top_of_page_bid_low": 20,
+        "year_over_year_change": 0
+      },
+      "created_at": "2026-05-29T07:07:47.650523Z",
+      "updated_at": "2026-05-29T07:10:09.659923Z"
+    },
+    {
+      "query": "monorepo javascript",
+      "status": "candidate",
+      "source": "keyword-planner",
+      "intent": "informational",
+      "page": "https://1cli.dev/en/",
+      "business_value": "high",
+      "reason": "Imported from keyword-planner CSV; review intent and business fit before selecting it as a target.",
+      "evidence": {
+        "avg_monthly_searches": 90,
+        "competition": "低",
+        "csv_row": 31,
+        "evidence_source": "keyword-planner",
+        "three_month_change": 0,
+        "top_of_page_bid_high": 110,
+        "top_of_page_bid_low": 110,
+        "year_over_year_change": -36
+      },
+      "created_at": "2026-05-29T07:07:47.650523Z",
+      "updated_at": "2026-05-29T07:10:09.659923Z"
+    },
+    {
+      "query": "monorepo manager",
+      "status": "candidate",
+      "source": "keyword-planner",
+      "intent": "informational",
+      "page": "https://1cli.dev/en/",
+      "business_value": "high",
+      "reason": "Imported from keyword-planner CSV; review intent and business fit before selecting it as a target.",
+      "evidence": {
+        "avg_monthly_searches": 30,
+        "competition": "低",
+        "csv_row": 32,
+        "evidence_source": "keyword-planner",
+        "three_month_change": 0,
+        "top_of_page_bid_high": 30,
+        "top_of_page_bid_low": 30,
+        "year_over_year_change": -33
+      },
+      "created_at": "2026-05-29T07:07:47.650523Z",
+      "updated_at": "2026-05-29T07:10:09.659923Z"
+    },
+    {
+      "query": "monorepo meaning",
+      "status": "candidate",
+      "source": "keyword-planner",
+      "intent": "informational",
+      "page": "https://1cli.dev/en/",
+      "business_value": "high",
+      "reason": "Imported from keyword-planner CSV; review intent and business fit before selecting it as a target.",
+      "evidence": {
+        "avg_monthly_searches": 720,
+        "competition": "低",
+        "csv_row": 33,
+        "evidence_source": "keyword-planner",
+        "three_month_change": 14,
+        "top_of_page_bid_high": 590,
+        "top_of_page_bid_low": 480,
+        "year_over_year_change": 69
+      },
+      "created_at": "2026-05-29T07:07:47.650523Z",
+      "updated_at": "2026-05-29T07:10:09.659923Z"
+    },
+    {
+      "query": "monorepo packages",
+      "status": "candidate",
+      "source": "keyword-planner",
+      "intent": "informational",
+      "page": "https://1cli.dev/en/",
+      "business_value": "high",
+      "reason": "Imported from keyword-planner CSV; review intent and business fit before selecting it as a target.",
+      "evidence": {
+        "avg_monthly_searches": 40,
+        "competition": "低",
+        "csv_row": 34,
+        "evidence_source": "keyword-planner",
+        "three_month_change": -25,
+        "top_of_page_bid_high": 30,
+        "top_of_page_bid_low": 30,
+        "year_over_year_change": -40
+      },
+      "created_at": "2026-05-29T07:07:47.650523Z",
+      "updated_at": "2026-05-29T07:10:09.659923Z"
+    },
+    {
+      "query": "monorepo pattern",
+      "status": "candidate",
+      "source": "keyword-planner",
+      "intent": "informational",
+      "page": "https://1cli.dev/en/",
+      "business_value": "high",
+      "reason": "Imported from keyword-planner CSV; review intent and business fit before selecting it as a target.",
+      "evidence": {
+        "avg_monthly_searches": 30,
+        "competition": "低",
+        "csv_row": 35,
+        "evidence_source": "keyword-planner",
+        "three_month_change": 33,
+        "top_of_page_bid_high": 30,
+        "top_of_page_bid_low": 30,
+        "year_over_year_change": 100
+      },
+      "created_at": "2026-05-29T07:07:47.650523Z",
+      "updated_at": "2026-05-29T07:10:09.659923Z"
+    },
+    {
+      "query": "monorepo strategy",
+      "status": "candidate",
+      "source": "keyword-planner",
+      "intent": "informational",
+      "page": "https://1cli.dev/en/",
+      "business_value": "high",
+      "reason": "Imported from keyword-planner CSV; review intent and business fit before selecting it as a target.",
+      "evidence": {
+        "avg_monthly_searches": 20,
+        "competition": "低",
+        "csv_row": 36,
+        "evidence_source": "keyword-planner",
+        "three_month_change": -50,
+        "top_of_page_bid_high": 20,
+        "top_of_page_bid_low": 20,
+        "year_over_year_change": -50
+      },
+      "created_at": "2026-05-29T07:07:47.650523Z",
+      "updated_at": "2026-05-29T07:10:09.659923Z"
+    },
+    {
+      "query": "monorepo version control",
+      "status": "candidate",
+      "source": "keyword-planner",
+      "intent": "informational",
+      "page": "https://1cli.dev/en/",
+      "business_value": "high",
+      "reason": "Imported from keyword-planner CSV; review intent and business fit before selecting it as a target.",
+      "evidence": {
+        "avg_monthly_searches": 10,
+        "competition": "低",
+        "csv_row": 37,
+        "evidence_source": "keyword-planner",
+        "three_month_change": 0,
+        "top_of_page_bid_high": 10,
+        "top_of_page_bid_low": 10,
+        "year_over_year_change": 0
+      },
+      "created_at": "2026-05-29T07:07:47.650523Z",
+      "updated_at": "2026-05-29T07:10:09.659923Z"
+    },
+    {
+      "query": "monorepo what is",
+      "status": "candidate",
+      "source": "keyword-planner",
+      "intent": "informational",
+      "page": "https://1cli.dev/en/",
+      "business_value": "high",
+      "reason": "Imported from keyword-planner CSV; review intent and business fit before selecting it as a target.",
+      "evidence": {
+        "avg_monthly_searches": 10,
+        "competition": "低",
+        "csv_row": 38,
+        "evidence_source": "keyword-planner",
+        "three_month_change": 0,
+        "top_of_page_bid_high": 10,
+        "top_of_page_bid_low": 10,
+        "year_over_year_change": 0
+      },
+      "created_at": "2026-05-29T07:07:47.650523Z",
+      "updated_at": "2026-05-29T07:10:09.659923Z"
+    },
+    {
+      "query": "node js monorepo",
+      "status": "candidate",
+      "source": "keyword-planner",
+      "intent": "informational",
+      "page": "https://1cli.dev/en/",
+      "business_value": "high",
+      "reason": "Imported from keyword-planner CSV; review intent and business fit before selecting it as a target.",
+      "evidence": {
+        "avg_monthly_searches": 40,
+        "competition": "低",
+        "csv_row": 39,
+        "evidence_source": "keyword-planner",
+        "three_month_change": 50,
+        "top_of_page_bid_high": 50,
+        "top_of_page_bid_low": 70,
+        "year_over_year_change": -57
+      },
+      "created_at": "2026-05-29T07:07:47.650523Z",
+      "updated_at": "2026-05-29T07:10:09.659923Z"
+    },
+    {
+      "query": "setup monorepo",
+      "status": "candidate",
+      "source": "keyword-planner",
+      "intent": "informational",
+      "page": "https://1cli.dev/en/",
+      "business_value": "high",
+      "reason": "Imported from keyword-planner CSV; review intent and business fit before selecting it as a target.",
+      "evidence": {
+        "avg_monthly_searches": 20,
+        "competition": "低",
+        "csv_row": 40,
+        "evidence_source": "keyword-planner",
+        "three_month_change": 50,
+        "top_of_page_bid_high": 20,
+        "top_of_page_bid_low": 20,
+        "year_over_year_change": 0
+      },
+      "created_at": "2026-05-29T07:07:47.650523Z",
+      "updated_at": "2026-05-29T07:10:09.659923Z"
+    },
+    {
+      "query": "monorepo ai",
+      "status": "candidate",
+      "source": "keyword-planner",
+      "intent": "informational",
+      "page": "https://1cli.dev/en/",
+      "business_value": "high",
+      "reason": "Imported from keyword-planner CSV; review intent and business fit before selecting it as a target.",
+      "evidence": {
+        "avg_monthly_searches": 10,
+        "competition": "低",
+        "csv_row": 44,
+        "evidence_source": "keyword-planner",
+        "three_month_change": 67,
+        "top_of_page_bid_high": 83.3,
+        "top_of_page_bid_low": 10.77,
+        "year_over_year_change": "∞"
+      },
+      "created_at": "2026-05-29T07:07:47.650523Z",
+      "updated_at": "2026-05-29T07:10:09.659923Z"
+    },
+    {
+      "query": "agentic engineering",
+      "status": "candidate",
+      "source": "keyword-planner",
+      "intent": "informational",
+      "page": "https://1cli.dev/en/",
+      "business_value": "high",
+      "reason": "Imported from keyword-planner CSV; review intent and business fit before selecting it as a target.",
+      "evidence": {
+        "avg_monthly_searches": 3600,
+        "competition": "中",
+        "csv_row": 45,
+        "evidence_source": "keyword-planner",
+        "three_month_change": 0,
+        "top_of_page_bid_high": 51.78,
+        "top_of_page_bid_low": 5.38,
+        "year_over_year_change": 3003
+      },
+      "created_at": "2026-05-29T07:10:09.659923Z",
+      "updated_at": "2026-05-29T07:10:09.659923Z"
+    },
+    {
+      "query": "agentic engineering",
+      "status": "selected",
+      "source": "keyword-planner",
+      "intent": "informational",
+      "page": "https://www.1cli.dev/en/blog/agentic-engineering/",
+      "business_value": "high",
+      "reason": "Imported from keyword-planner CSV; review intent and business fit before selecting it as a target.",
+      "evidence": {
+        "avg_monthly_searches": 3600,
+        "competition": "中",
+        "csv_row": 45,
+        "evidence_source": "keyword-planner",
+        "three_month_change": 0,
+        "top_of_page_bid_high": 51.78,
+        "top_of_page_bid_low": 5.38,
+        "year_over_year_change": 3003
+      },
+      "created_at": "2026-05-29T07:10:09.659923Z",
+      "updated_at": "2026-06-15T15:31:21.980975Z"
+    }
+  ],
+  "targets": [
+    {
+      "page": "https://1cli.dev/en/",
+      "primary_query": "ai cli",
+      "intent": "commercial",
+      "evidence_source": "keyword-planner",
+      "business_value": "high",
+      "created_at": "2026-05-29T05:19:26.309693Z"
+    },
+    {
+      "page": "https://www.1cli.dev/en/blog/agentic-engineering/",
+      "primary_query": "agentic engineering",
+      "intent": "informational",
+      "evidence_source": "keyword-planner",
+      "business_value": "high",
+      "created_at": "2026-06-15T15:31:21.980975Z"
+    }
+  ],
+  "opportunities": [
+    {
+      "id": "opp_e2ac47ff1c63",
+      "rule_id": "gsc.low_ctr.v1",
+      "type": "opportunity",
+      "page": "https://1cli.dev/en/",
+      "query": "one cli",
+      "priority": "high",
+      "confidence": "medium",
+      "evidence": {
+        "clicks": 0,
+        "ctr": 0,
+        "impressions": 19,
+        "position": 6.631578947368421
+      },
+      "recommended_actions": [
+        "rewrite_title",
+        "rewrite_meta_description",
+        "improve_intro_summary"
+      ],
+      "created_at": "2026-05-29T09:29:41.521706Z"
+    },
+    {
+      "id": "opp_890af78e3d9f",
+      "rule_id": "url.canonical_split.v1",
+      "type": "blocker",
+      "page": "https://1cli.dev/en/",
+      "priority": "high",
+      "confidence": "high",
+      "evidence": {
+        "canonical_key": "1cli.dev/en",
+        "variants": [
+          "https://1cli.dev/en/",
+          "https://www.1cli.dev/en/"
+        ]
+      },
+      "recommended_actions": [
+        "choose_canonical_url",
+        "add_or_fix_301_redirect",
+        "fix_canonical_tag",
+        "fix_sitemap_urls",
+        "fix_internal_links"
+      ],
+      "created_at": "2026-05-29T09:29:41.521706Z"
+    },
+    {
+      "id": "opp_793033740360",
+      "rule_id": "url.canonical_split.v1",
+      "type": "blocker",
+      "page": "https://www.1cli.dev/en/tutorials/container-build-push",
+      "priority": "high",
+      "confidence": "high",
+      "evidence": {
+        "canonical_key": "1cli.dev/en/tutorials/container-build-push",
+        "variants": [
+          "https://www.1cli.dev/en/tutorials/container-build-push",
+          "https://www.1cli.dev/en/tutorials/container-build-push/"
+        ]
+      },
+      "recommended_actions": [
+        "choose_canonical_url",
+        "add_or_fix_301_redirect",
+        "fix_canonical_tag",
+        "fix_sitemap_urls",
+        "fix_internal_links"
+      ],
+      "created_at": "2026-05-29T09:29:41.521706Z"
+    },
+    {
+      "id": "opp_0c1d7de1a252",
+      "rule_id": "gsc.cannibalization.v1",
+      "type": "opportunity",
+      "page": "https://www.1cli.dev/en/tutorials/container-build-push",
+      "query": "push image",
+      "priority": "medium",
+      "confidence": "medium",
+      "evidence": {
+        "pages": [
+          "https://www.1cli.dev/en/tutorials/container-build-push",
+          "https://www.1cli.dev/en/tutorials/container-build-push/"
+        ],
+        "query": "push image",
+        "total_impressions": 2
+      },
+      "recommended_actions": [
+        "choose_primary_target_page",
+        "reduce_topic_overlap",
+        "add_internal_links_to_primary_page",
+        "consider_merge_or_canonical"
+      ],
+      "created_at": "2026-05-29T09:29:41.521706Z"
+    },
+    {
+      "id": "opp_f417a5b1cff1",
+      "rule_id": "gsc.cannibalization.v1",
+      "type": "opportunity",
+      "page": "https://1cli.dev/en/",
+      "query": "one cli",
+      "priority": "medium",
+      "confidence": "medium",
+      "evidence": {
+        "pages": [
+          "https://1cli.dev/en/",
+          "https://www.1cli.dev/en/"
+        ],
+        "query": "one cli",
+        "total_impressions": 27
+      },
+      "recommended_actions": [
+        "choose_primary_target_page",
+        "reduce_topic_overlap",
+        "add_internal_links_to_primary_page",
+        "consider_merge_or_canonical"
+      ],
+      "created_at": "2026-05-29T09:29:41.521706Z"
+    },
+    {
+      "id": "opp_dea361b6094c",
+      "rule_id": "gsc.cannibalization.v1",
+      "type": "opportunity",
+      "page": "https://1cli.dev/en/",
+      "query": "one-cli",
+      "priority": "medium",
+      "confidence": "medium",
+      "evidence": {
+        "pages": [
+          "https://1cli.dev/en/",
+          "https://www.1cli.dev/en/"
+        ],
+        "query": "one-cli",
+        "total_impressions": 3
+      },
+      "recommended_actions": [
+        "choose_primary_target_page",
+        "reduce_topic_overlap",
+        "add_internal_links_to_primary_page",
+        "consider_merge_or_canonical"
+      ],
+      "created_at": "2026-05-29T09:29:41.521706Z"
+    },
+    {
+      "id": "opp_66e122301795",
+      "rule_id": "keyword.competitor_brand.v1",
+      "type": "review",
+      "page": "https://1cli.dev/en/",
+      "query": "codex cli",
+      "priority": "medium",
+      "confidence": "medium",
+      "evidence": {
+        "avg_monthly_searches": 110000,
+        "business_value": "high",
+        "detected_brands": [
+          "codex"
+        ],
+        "keyword_source": "keyword-planner",
+        "keyword_status": "candidate",
+        "query": "codex cli"
+      },
+      "recommended_actions": [
+        "do_not_use_as_homepage_primary_query",
+        "consider_comparison_or_integration_page",
+        "require_human_review_before_target_selection"
+      ],
+      "created_at": "2026-05-29T09:29:41.521706Z"
+    },
+    {
+      "id": "opp_795aaa2e80e8",
+      "rule_id": "keyword.competitor_brand.v1",
+      "type": "review",
+      "page": "https://1cli.dev/en/",
+      "query": "claude cli",
+      "priority": "medium",
+      "confidence": "medium",
+      "evidence": {
+        "avg_monthly_searches": 60500,
+        "business_value": "high",
+        "detected_brands": [
+          "claude"
+        ],
+        "keyword_source": "keyword-planner",
+        "keyword_status": "candidate",
+        "query": "claude cli"
+      },
+      "recommended_actions": [
+        "do_not_use_as_homepage_primary_query",
+        "consider_comparison_or_integration_page",
+        "require_human_review_before_target_selection"
+      ],
+      "created_at": "2026-05-29T09:29:41.521706Z"
+    },
+    {
+      "id": "opp_8910da7b2028",
+      "rule_id": "keyword.page_intent_mismatch.v1",
+      "type": "review",
+      "page": "https://1cli.dev/en/",
+      "query": "monorepo setup",
+      "priority": "medium",
+      "confidence": "medium",
+      "evidence": {
+        "keyword_source": "keyword-planner",
+        "keyword_status": "candidate",
+        "page_type": "homepage",
+        "query": "monorepo setup",
+        "query_intent": "how_to"
+      },
+      "recommended_actions": [
+        "assign_keyword_to_better_page_type",
+        "create_or_choose_supporting_page",
+        "avoid_forcing_homepage_to_match_how_to_queries"
+      ],
+      "created_at": "2026-05-29T09:29:41.521706Z"
+    },
+    {
+      "id": "opp_d10322020866",
+      "rule_id": "keyword.page_intent_mismatch.v1",
+      "type": "review",
+      "page": "https://1cli.dev/en/",
+      "query": "setup monorepo",
+      "priority": "medium",
+      "confidence": "medium",
+      "evidence": {
+        "keyword_source": "keyword-planner",
+        "keyword_status": "candidate",
+        "page_type": "homepage",
+        "query": "setup monorepo",
+        "query_intent": "how_to"
+      },
+      "recommended_actions": [
+        "assign_keyword_to_better_page_type",
+        "create_or_choose_supporting_page",
+        "avoid_forcing_homepage_to_match_how_to_queries"
+      ],
+      "created_at": "2026-05-29T09:29:41.521706Z"
+    },
+    {
+      "id": "opp_813f832378f0",
+      "rule_id": "target.keyword_fit_review.v1",
+      "type": "review",
+      "page": "https://1cli.dev/en/",
+      "query": "ai cli",
+      "priority": "low",
+      "confidence": "medium",
+      "evidence": {
+        "factors": {
+          "avg_monthly_searches": 1900,
+          "gsc_validated": false,
+          "page_intent_fit": true,
+          "page_type": "homepage",
+          "product_fit_score": 10,
+          "query_intent": "product"
+        },
+        "score": 65,
+        "target_query": "ai cli"
+      },
+      "recommended_actions": [
+        "review_keyword_fit_score",
+        "confirm_or_change_primary_target_query",
+        "keep_target_as_experiment_until_gsc_validates_it"
+      ],
+      "created_at": "2026-05-29T09:29:41.521706Z"
+    },
+    {
+      "id": "opp_97ad0745443e",
+      "rule_id": "target.no_gsc_signal.v1",
+      "type": "experiment",
+      "page": "https://1cli.dev/en/",
+      "query": "ai cli",
+      "priority": "low",
+      "confidence": "low",
+      "evidence": {
+        "evidence_source": "keyword-planner",
+        "target_query": "ai cli"
+      },
+      "recommended_actions": [
+        "strengthen_target_query_match",
+        "add_internal_links",
+        "review_search_intent"
+      ],
+      "created_at": "2026-05-29T09:29:41.521706Z"
+    }
+  ],
+  "experiments": [
+    {
+      "id": "exp_20260529_2aea336c95",
+      "page": "https://1cli.dev/en/",
+      "query": "one cli",
+      "change_summary": "fixed homepage canonical/title/meta",
+      "started_at": "2026-05-29T08:34:08.079452Z",
+      "measurement_window_days": 28,
+      "status": "measuring"
+    },
+    {
+      "id": "exp_20260529_ff52e43ac5",
+      "page": "https://www.1cli.dev/en/tutorials/container-build-push",
+      "query": "push image",
+      "change_summary": "added www/non-www and legacy path redirects in root and docs Vercel configs",
+      "started_at": "2026-05-29T08:44:33.887215Z",
+      "measurement_window_days": 28,
+      "status": "measuring"
+    },
+    {
+      "id": "exp_20260529_fa09a7c30b",
+      "page": "https://1cli.dev/en/",
+      "query": "one-cli",
+      "change_summary": "homepage canonical/title/meta also covers one-cli brand variant",
+      "started_at": "2026-05-29T08:45:14.061224Z",
+      "measurement_window_days": 28,
+      "status": "measuring"
+    },
+    {
+      "id": "exp_20260615_0999e14314",
+      "page": "https://www.1cli.dev/en/blog/agentic-engineering/",
+      "query": "agentic engineering",
+      "change_summary": "strengthen_target_query_match / target agentic engineering",
+      "started_at": "2026-06-15T15:27:44.901389Z",
+      "measurement_window_days": 28,
+      "status": "measuring"
+    },
+    {
+      "id": "exp_20260615_81c1c4386d",
+      "page": "https://www.1cli.dev/en/blog/agentic-engineering/",
+      "query": "agentic engineering",
+      "change_summary": "review_keyword_fit_score / target agentic engineering",
+      "started_at": "2026-06-15T15:35:36.60935Z",
+      "measurement_window_days": 28,
+      "status": "measuring"
+    }
+  ],
+  "reports": [
+    {
+      "id": "report_2026-05-27",
+      "type": "weekly",
+      "period_start": "2026-05-21",
+      "period_end": "2026-05-27",
+      "created_at": "2026-05-29T09:29:41.521706Z",
+      "summary": {
+        "average_position_delta": -10.080459770114944,
+        "clicks_delta": -1,
+        "ctr_delta": -0.06666666666666667,
+        "current": {
+          "average_position": 8.586206896551724,
+          "clicks": 0,
+          "ctr": 0,
+          "impressions": 29
+        },
+        "impressions_delta": 14,
+        "previous": {
+          "average_position": 18.666666666666668,
+          "clicks": 1,
+          "ctr": 0.06666666666666667,
+          "impressions": 15
+        }
+      }
+    },
+    {
+      "id": "daily_2026-05-27",
+      "type": "daily",
+      "period_start": "2026-05-27",
+      "period_end": "2026-05-27",
+      "created_at": "2026-05-29T09:29:41.521706Z",
+      "summary": {
+        "daily_plan": {
+          "do_now": [
+            {
+              "action": "separate_competitor_keyword_strategy",
+              "commands": [
+                "seo plan --page 'https://1cli.dev/en/' -o json",
+                "seo experiments start --page 'https://1cli.dev/en/' --query 'codex cli' --change 'separate_competitor_keyword_strategy' --window 28"
+              ],
+              "evidence": {
+                "avg_monthly_searches": 110000,
+                "business_value": "high",
+                "detected_brands": [
+                  "codex"
+                ],
+                "keyword_source": "keyword-planner",
+                "keyword_status": "candidate",
+                "query": "codex cli"
+              },
+              "id": "dp_4f5452dd02f6",
+              "page": "https://1cli.dev/en/",
+              "priority": "medium",
+              "query": "codex cli",
+              "success_metric": "Review GSC after the measurement window.",
+              "type": "page_fix",
+              "why_now": "The keyword includes a third-party brand; avoid making it a homepage primary target by accident."
+            },
+            {
+              "action": "separate_competitor_keyword_strategy",
+              "commands": [
+                "seo plan --page 'https://1cli.dev/en/' -o json",
+                "seo experiments start --page 'https://1cli.dev/en/' --query 'claude cli' --change 'separate_competitor_keyword_strategy' --window 28"
+              ],
+              "evidence": {
+                "avg_monthly_searches": 60500,
+                "business_value": "high",
+                "detected_brands": [
+                  "claude"
+                ],
+                "keyword_source": "keyword-planner",
+                "keyword_status": "candidate",
+                "query": "claude cli"
+              },
+              "id": "dp_f70316b7e3ab",
+              "page": "https://1cli.dev/en/",
+              "priority": "medium",
+              "query": "claude cli",
+              "success_metric": "Review GSC after the measurement window.",
+              "type": "page_fix",
+              "why_now": "The keyword includes a third-party brand; avoid making it a homepage primary target by accident."
+            },
+            {
+              "action": "assign_keyword_to_better_page_type",
+              "commands": [
+                "seo plan --page 'https://1cli.dev/en/' -o json",
+                "seo experiments start --page 'https://1cli.dev/en/' --query 'monorepo setup' --change 'assign_keyword_to_better_page_type' --window 28"
+              ],
+              "evidence": {
+                "keyword_source": "keyword-planner",
+                "keyword_status": "candidate",
+                "page_type": "homepage",
+                "query": "monorepo setup",
+                "query_intent": "how_to"
+              },
+              "id": "dp_068558c56072",
+              "page": "https://1cli.dev/en/",
+              "priority": "medium",
+              "query": "monorepo setup",
+              "success_metric": "Review GSC after the measurement window.",
+              "type": "page_fix",
+              "why_now": "The keyword appears mapped to a page type that may not satisfy search intent."
+            },
+            {
+              "action": "assign_keyword_to_better_page_type",
+              "commands": [
+                "seo plan --page 'https://1cli.dev/en/' -o json",
+                "seo experiments start --page 'https://1cli.dev/en/' --query 'setup monorepo' --change 'assign_keyword_to_better_page_type' --window 28"
+              ],
+              "evidence": {
+                "keyword_source": "keyword-planner",
+                "keyword_status": "candidate",
+                "page_type": "homepage",
+                "query": "setup monorepo",
+                "query_intent": "how_to"
+              },
+              "id": "dp_5fc414bdb7f3",
+              "page": "https://1cli.dev/en/",
+              "priority": "medium",
+              "query": "setup monorepo",
+              "success_metric": "Review GSC after the measurement window.",
+              "type": "page_fix",
+              "why_now": "The keyword appears mapped to a page type that may not satisfy search intent."
+            },
+            {
+              "action": "review_keyword_fit_score",
+              "commands": [
+                "seo plan --page 'https://1cli.dev/en/' -o json",
+                "seo experiments start --page 'https://1cli.dev/en/' --query 'ai cli' --change 'review_keyword_fit_score' --window 28"
+              ],
+              "evidence": {
+                "factors": {
+                  "avg_monthly_searches": 1900,
+                  "gsc_validated": false,
+                  "page_intent_fit": true,
+                  "page_type": "homepage",
+                  "product_fit_score": 10,
+                  "query_intent": "product"
+                },
+                "score": 65,
+                "target_query": "ai cli"
+              },
+              "id": "dp_5b19defa2a7e",
+              "page": "https://1cli.dev/en/",
+              "priority": "low",
+              "query": "ai cli",
+              "success_metric": "The target is confirmed, changed, or kept as a measured experiment.",
+              "type": "page_fix",
+              "why_now": "The selected target query is still a hypothesis and needs review before more edits."
+            }
+          ],
+          "publish_next": [
+            {
+              "action": "create_supporting_content",
+              "evidence": {
+                "avg_monthly_searches": 3600,
+                "business_value": "high",
+                "gsc_impressions": 0,
+                "intent": "informational",
+                "source": "keyword-planner",
+                "source_page": "https://1cli.dev/en/"
+              },
+              "format": "blog",
+              "id": "dp_4668fccb722f",
+              "priority": "high",
+              "query": "agentic engineering",
+              "success_metric": "GSC starts showing impressions for this query/page within 28-90 days.",
+              "suggested_path": "/en/blog/agentic-engineering",
+              "title": "Agentic Engineering Needs Structured Workspaces",
+              "type": "content_idea",
+              "why_now": "Keyword Planner shows 3600 average monthly searches; use a supporting page instead of repeatedly changing an existing page."
+            },
+            {
+              "action": "create_supporting_content",
+              "evidence": {
+                "avg_monthly_searches": 1600,
+                "business_value": "high",
+                "gsc_impressions": 0,
+                "intent": "informational",
+                "source": "keyword-planner",
+                "source_page": "https://1cli.dev/en/"
+              },
+              "format": "blog",
+              "id": "dp_ec6b53b24d25",
+              "priority": "high",
+              "query": "cli ai",
+              "success_metric": "GSC starts showing impressions for this query/page within 28-90 days.",
+              "suggested_path": "/en/blog/cli-ai",
+              "title": "AI CLI vs Project CLI",
+              "type": "content_idea",
+              "why_now": "Keyword Planner shows 1600 average monthly searches; use a supporting page instead of repeatedly changing an existing page."
+            },
+            {
+              "action": "create_supporting_content",
+              "evidence": {
+                "avg_monthly_searches": 1000,
+                "business_value": "high",
+                "gsc_impressions": 0,
+                "intent": "informational",
+                "source": "keyword-planner",
+                "source_page": "https://1cli.dev/en/"
+              },
+              "format": "guide",
+              "id": "dp_8f5808763bbe",
+              "priority": "high",
+              "query": "mono repo architecture",
+              "success_metric": "GSC starts showing impressions for this query/page within 28-90 days.",
+              "suggested_path": "/en/guides/mono-repo-architecture",
+              "title": "Monorepo Architecture for AI Coding Agents",
+              "type": "content_idea",
+              "why_now": "Keyword Planner shows 1000 average monthly searches; use a supporting page instead of repeatedly changing an existing page."
+            },
+            {
+              "action": "create_supporting_content",
+              "evidence": {
+                "avg_monthly_searches": 720,
+                "business_value": "high",
+                "gsc_impressions": 0,
+                "intent": "informational",
+                "source": "keyword-planner",
+                "source_page": "https://1cli.dev/en/"
+              },
+              "format": "blog",
+              "id": "dp_449d11870f06",
+              "priority": "medium",
+              "query": "monorepo meaning",
+              "success_metric": "GSC starts showing impressions for this query/page within 28-90 days.",
+              "suggested_path": "/en/blog/monorepo-meaning",
+              "title": "What Is Monorepo Meaning?",
+              "type": "content_idea",
+              "why_now": "Keyword Planner shows 720 average monthly searches; use a supporting page instead of repeatedly changing an existing page."
+            },
+            {
+              "action": "create_supporting_content",
+              "evidence": {
+                "avg_monthly_searches": 210,
+                "business_value": "high",
+                "gsc_impressions": 0,
+                "intent": "informational",
+                "source": "keyword-planner",
+                "source_page": "https://1cli.dev/en/"
+              },
+              "format": "blog",
+              "id": "dp_605ec08e7fc7",
+              "priority": "medium",
+              "query": "monorepo example",
+              "success_metric": "GSC starts showing impressions for this query/page within 28-90 days.",
+              "suggested_path": "/en/blog/monorepo-example",
+              "title": "Monorepo Example",
+              "type": "content_idea",
+              "why_now": "Keyword Planner shows 210 average monthly searches; use a supporting page instead of repeatedly changing an existing page."
+            }
+          ],
+          "verify_now": [
+            {
+              "action": "verify_recent_technical_change",
+              "commands": [
+                "seo verify --page 'https://1cli.dev/en/' -o json"
+              ],
+              "days_remaining": 28,
+              "id": "dp_64738be983f0",
+              "page": "https://1cli.dev/en/",
+              "priority": "high",
+              "query": "one cli",
+              "success_metric": "The live page reports the expected canonical, redirect, sitemap, or indexability state.",
+              "type": "verification",
+              "why_now": "A recent technical SEO change should be verified before making more changes."
+            },
+            {
+              "action": "verify_recent_technical_change",
+              "commands": [
+                "seo verify --page 'https://www.1cli.dev/en/tutorials/container-build-push' -o json"
+              ],
+              "days_remaining": 28,
+              "id": "dp_d7af2022702c",
+              "page": "https://www.1cli.dev/en/tutorials/container-build-push",
+              "priority": "high",
+              "query": "push image",
+              "success_metric": "The live page reports the expected canonical, redirect, sitemap, or indexability state.",
+              "type": "verification",
+              "why_now": "A recent technical SEO change should be verified before making more changes."
+            },
+            {
+              "action": "verify_recent_technical_change",
+              "commands": [
+                "seo verify --page 'https://1cli.dev/en/' -o json"
+              ],
+              "days_remaining": 28,
+              "id": "dp_c450082a5af7",
+              "page": "https://1cli.dev/en/",
+              "priority": "high",
+              "query": "one-cli",
+              "success_metric": "The live page reports the expected canonical, redirect, sitemap, or indexability state.",
+              "type": "verification",
+              "why_now": "A recent technical SEO change should be verified before making more changes."
+            }
+          ],
+          "wait_review_later": [
+            {
+              "action": "wait_for_gsc_measurement",
+              "days_remaining": 28,
+              "evidence": {
+                "change_summary": "fixed homepage canonical/title/meta",
+                "experiment_id": "exp_20260529_2aea336c95",
+                "started_at": "2026-05-29T08:34:08Z"
+              },
+              "id": "dp_c894de7e7fc2",
+              "page": "https://1cli.dev/en/",
+              "priority": "medium",
+              "query": "one cli",
+              "success_metric": "Review impressions, clicks, CTR, and average position after the window ends.",
+              "type": "measurement_wait",
+              "why_now": "A recent SEO change is still inside its 28-day measurement window."
+            },
+            {
+              "action": "wait_for_gsc_measurement",
+              "days_remaining": 28,
+              "evidence": {
+                "change_summary": "added www/non-www and legacy path redirects in root and docs Vercel configs",
+                "experiment_id": "exp_20260529_ff52e43ac5",
+                "started_at": "2026-05-29T08:44:33Z"
+              },
+              "id": "dp_cc0cbb10224d",
+              "page": "https://www.1cli.dev/en/tutorials/container-build-push",
+              "priority": "medium",
+              "query": "push image",
+              "success_metric": "Review impressions, clicks, CTR, and average position after the window ends.",
+              "type": "measurement_wait",
+              "why_now": "A recent SEO change is still inside its 28-day measurement window."
+            },
+            {
+              "action": "wait_for_gsc_measurement",
+              "days_remaining": 28,
+              "evidence": {
+                "change_summary": "homepage canonical/title/meta also covers one-cli brand variant",
+                "experiment_id": "exp_20260529_fa09a7c30b",
+                "started_at": "2026-05-29T08:45:14Z"
+              },
+              "id": "dp_8c199897de78",
+              "page": "https://1cli.dev/en/",
+              "priority": "medium",
+              "query": "one-cli",
+              "success_metric": "Review impressions, clicks, CTR, and average position after the window ends.",
+              "type": "measurement_wait",
+              "why_now": "A recent SEO change is still inside its 28-day measurement window."
+            },
+            {
+              "action": "wait_for_gsc_measurement",
+              "days_remaining": 28,
+              "evidence": {
+                "change_summary": "fixed homepage canonical/title/meta",
+                "experiment_id": "exp_20260529_2aea336c95",
+                "started_at": "2026-05-29T08:34:08Z",
+                "suppressed_rule_id": "gsc.low_ctr.v1"
+              },
+              "id": "dp_3b2b551292e5",
+              "page": "https://1cli.dev/en/",
+              "priority": "high",
+              "query": "one cli",
+              "success_metric": "Review impressions, clicks, CTR, and average position after the window ends.",
+              "type": "measurement_wait",
+              "why_now": "This opportunity matches a recent SEO change that is still being measured; avoid changing the same page again too soon."
+            },
+            {
+              "action": "wait_for_gsc_measurement",
+              "days_remaining": 28,
+              "evidence": {
+                "change_summary": "fixed homepage canonical/title/meta",
+                "experiment_id": "exp_20260529_2aea336c95",
+                "started_at": "2026-05-29T08:34:08Z",
+                "suppressed_rule_id": "url.canonical_split.v1"
+              },
+              "id": "dp_d4cc32e8e873",
+              "page": "https://1cli.dev/en/",
+              "priority": "high",
+              "query": "one cli",
+              "success_metric": "Review impressions, clicks, CTR, and average position after the window ends.",
+              "type": "measurement_wait",
+              "why_now": "This opportunity matches a recent SEO change that is still being measured; avoid changing the same page again too soon."
+            },
+            {
+              "action": "wait_for_gsc_measurement",
+              "days_remaining": 28,
+              "evidence": {
+                "change_summary": "added www/non-www and legacy path redirects in root and docs Vercel configs",
+                "experiment_id": "exp_20260529_ff52e43ac5",
+                "started_at": "2026-05-29T08:44:33Z",
+                "suppressed_rule_id": "url.canonical_split.v1"
+              },
+              "id": "dp_d5ccea39718e",
+              "page": "https://www.1cli.dev/en/tutorials/container-build-push",
+              "priority": "high",
+              "query": "push image",
+              "success_metric": "Review impressions, clicks, CTR, and average position after the window ends.",
+              "type": "measurement_wait",
+              "why_now": "This opportunity matches a recent SEO change that is still being measured; avoid changing the same page again too soon."
+            },
+            {
+              "action": "wait_for_gsc_measurement",
+              "days_remaining": 28,
+              "evidence": {
+                "change_summary": "added www/non-www and legacy path redirects in root and docs Vercel configs",
+                "experiment_id": "exp_20260529_ff52e43ac5",
+                "started_at": "2026-05-29T08:44:33Z",
+                "suppressed_rule_id": "gsc.cannibalization.v1"
+              },
+              "id": "dp_c2a8a3aecd97",
+              "page": "https://www.1cli.dev/en/tutorials/container-build-push",
+              "priority": "medium",
+              "query": "push image",
+              "success_metric": "Review impressions, clicks, CTR, and average position after the window ends.",
+              "type": "measurement_wait",
+              "why_now": "This opportunity matches a recent SEO change that is still being measured; avoid changing the same page again too soon."
+            },
+            {
+              "action": "wait_for_gsc_measurement",
+              "days_remaining": 28,
+              "evidence": {
+                "change_summary": "fixed homepage canonical/title/meta",
+                "experiment_id": "exp_20260529_2aea336c95",
+                "started_at": "2026-05-29T08:34:08Z",
+                "suppressed_rule_id": "gsc.cannibalization.v1"
+              },
+              "id": "dp_bb45016f8204",
+              "page": "https://1cli.dev/en/",
+              "priority": "medium",
+              "query": "one cli",
+              "success_metric": "Review impressions, clicks, CTR, and average position after the window ends.",
+              "type": "measurement_wait",
+              "why_now": "This opportunity matches a recent SEO change that is still being measured; avoid changing the same page again too soon."
+            }
+          ]
+        },
+        "gsc_rows": 31,
+        "high_priority_opportunities": 3,
+        "impressions_90d": 44,
+        "opportunities_count": 12,
+        "stage": "no_data"
+      }
+    },
+    {
+      "id": "report_20260527",
+      "type": "weekly",
+      "period_start": "2026-05-21",
+      "period_end": "2026-05-27",
+      "created_at": "2026-05-29T07:08:27.874822Z",
+      "summary": {
+        "average_position_delta": -10.080459770114944,
+        "clicks_delta": -1,
+        "ctr_delta": -0.06666666666666667,
+        "current": {
+          "average_position": 8.586206896551724,
+          "clicks": 0,
+          "ctr": 0,
+          "impressions": 29
+        },
+        "impressions_delta": 14,
+        "previous": {
+          "average_position": 18.666666666666668,
+          "clicks": 1,
+          "ctr": 0.06666666666666667,
+          "impressions": 15
+        }
+      }
+    }
+  ]
+}
