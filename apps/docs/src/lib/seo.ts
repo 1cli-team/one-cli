@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { htmlLang, type Locale } from "@/i18n";
 
-export const siteUrl = "https://1cli.dev";
+export const siteUrl = "https://www.1cli.dev";
 export const siteName = "One CLI";
 export const defaultDescription =
   "One CLI is a scaffolding and governance tool for AI-native monorepo workspaces, templates, manifests, local configuration, and agent-ready command flows.";
