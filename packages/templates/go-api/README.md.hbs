@@ -11,6 +11,13 @@ task check
 task build
 ```
 
+## API docs
+
+Swagger UI is available at `http://localhost:8080/api/docs` when the
+service is running. The UI reads the OpenAPI source at
+`/api/openapi.yaml`; update `api/openapi.yaml` whenever routes or
+response shapes change.
+
 ## Environment
 
 Viper reads `configs/config.yaml` and process environment variables. For local task commands, copy `.env.example` to `.env`; `go-task` loads it before running Go commands.

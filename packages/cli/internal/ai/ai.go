@@ -107,13 +107,14 @@ func tryRefresh(projectRoot string, force bool) (RefreshResult, error) {
 
 	generated := make([]string, 0, len(providers))
 	for _, p := range providers {
+		filename := guideFilename(p)
 		sections := collectSections(subprojects, p)
-		content := renderGuide(p, sections, projectRoot)
-		path := filepath.Join(projectRoot, guideFilename(p))
+		content := renderGuide(p, sections)
+		path := filepath.Join(projectRoot, filename)
 		if _, err := writeManagedGuide(path, content, force, false); err != nil {
 			return RefreshResult{}, err
 		}
-		generated = append(generated, path)
+		generated = append(generated, filename)
 	}
 
 	return RefreshResult{
@@ -227,7 +228,7 @@ func renderFallbackGuide(templateID string) string {
 	}, "\n")
 }
 
-func renderGuide(p Provider, sections []section, projectRoot string) string {
+func renderGuide(p Provider, sections []section) string {
 	filename := guideFilename(p)
 	label := providerLabel(p)
 	var b strings.Builder
@@ -235,7 +236,7 @@ func renderGuide(p Provider, sections []section, projectRoot string) string {
 	b.WriteString("# " + label + " 工作区 AI 指南\n\n")
 	b.WriteString("本段内容由 One CLI 基于项目模板为 `" + filename + "` 自动生成。请优先修改模板 AI 片段，或通过 `one add` 刷新；不要直接手改这段受管内容。\n\n")
 	b.WriteString("## 工作区\n\n")
-	b.WriteString("- 根目录：`" + projectRoot + "`\n")
+	b.WriteString("- 根目录：当前包含 `one.manifest.json` 的工作区目录\n")
 	b.WriteString("- AI 提供方：`" + string(p) + "`\n")
 	b.WriteString(fmt.Sprintf("- 模板分组数：%d\n", len(sections)))
 	for _, s := range sections {

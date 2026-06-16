@@ -44,6 +44,7 @@ Taskfile.yml                # go-task tasks
 | Request ID | `middleware.RequestID` — already wired in `internal/app` |
 | Structured response | `internal/http/response` (success / error / list helpers) |
 | DB | Gorm via `repository/`; configure in `internal/app` |
+| API docs | `api/openapi.yaml` feeds Swagger UI at `/api/docs`; keep it in sync with routes and response shapes. |
 
 ## Engineering discipline — mandatory
 
@@ -83,9 +84,9 @@ If any fails, stop. Fix the root cause, don't paper over.
 2. Add validation: `c.ShouldBindJSON(&req)` → returns 400 on failure.
 3. Call the service: `svc.DoThing(c.Request.Context(), req)`.
 4. Write response via `response.OK(c, data)` or `response.Error(c, err)`.
-5. Register route in `internal/app/router.go`.
+5. Register route in `internal/http/router.go`.
 6. Add unit test for the handler (mock the service interface).
-7. Add OpenAPI doc in `api/`.
+7. Add OpenAPI doc in `api/openapi.yaml` and verify it renders in Swagger UI at `/api/docs`.
 
 **Add a new repository method**
 
