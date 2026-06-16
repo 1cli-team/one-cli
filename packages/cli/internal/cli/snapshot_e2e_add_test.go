@@ -59,6 +59,48 @@ func TestSnapshot_E2E_Add_AutoEnablesTemplateDefaults(t *testing.T) {
 			t.Errorf("expected template file missing: %s", full)
 		}
 	}
+	goModRaw, err := os.ReadFile(filepath.Join(svcDir, "go.mod"))
+	if err != nil {
+		t.Fatalf("read rendered go.mod: %v", err)
+	}
+	goMod := string(goModRaw)
+	for _, want := range []string{
+		"github.com/swaggo/files v1.0.1",
+		"github.com/swaggo/gin-swagger v1.6.1",
+	} {
+		if !strings.Contains(goMod, want) {
+			t.Errorf("rendered go.mod missing Swagger dependency %q:\n%s", want, goMod)
+		}
+	}
+	routerRaw, err := os.ReadFile(filepath.Join(svcDir, "internal", "http", "router.go"))
+	if err != nil {
+		t.Fatalf("read rendered router.go: %v", err)
+	}
+	router := string(routerRaw)
+	for _, want := range []string{
+		`swaggerFiles "github.com/swaggo/files"`,
+		`ginSwagger "github.com/swaggo/gin-swagger"`,
+		`engine.GET("/api/docs/*any", ginSwagger.WrapHandler(`,
+		`ginSwagger.URL("/api/openapi.yaml")`,
+	} {
+		if !strings.Contains(router, want) {
+			t.Errorf("rendered router.go missing Swagger wiring %q:\n%s", want, router)
+		}
+	}
+	appHandlerRaw, err := os.ReadFile(filepath.Join(svcDir, "internal", "http", "handlers", "app_handler.go"))
+	if err != nil {
+		t.Fatalf("read rendered app_handler.go: %v", err)
+	}
+	if !strings.Contains(string(appHandlerRaw), `c.Redirect(http.StatusTemporaryRedirect, "/api/docs/index.html")`) {
+		t.Errorf("rendered app handler should redirect /api/docs to Swagger UI:\n%s", appHandlerRaw)
+	}
+	openAPIRaw, err := os.ReadFile(filepath.Join(svcDir, "api", "openapi.yaml"))
+	if err != nil {
+		t.Fatalf("read rendered openapi.yaml: %v", err)
+	}
+	if !strings.HasPrefix(string(openAPIRaw), "openapi: 3.0.3\n") {
+		t.Errorf("rendered openapi.yaml must use Swagger UI-compatible OpenAPI 3.0.x, got:\n%s", openAPIRaw)
+	}
 
 	// go-api's `defaults` auto-enables container/docker
 	// per-subproject, so Dockerfile MUST exist.

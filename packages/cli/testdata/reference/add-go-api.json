@@ -1,7 +1,10 @@
 {
   "ai_guides": {
     "file_count": 2,
-    "generated_files": "\u003cvolatile\u003e",
+    "generated_files": [
+      "AGENTS.md",
+      "CLAUDE.md"
+    ],
     "providers": [
       "codex",
       "claude-code"

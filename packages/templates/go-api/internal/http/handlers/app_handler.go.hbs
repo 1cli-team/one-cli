@@ -25,5 +25,5 @@ func (h *AppHandler) Info(c *gin.Context) {
 }
 
 func (h *AppHandler) Docs(c *gin.Context) {
-	c.Redirect(http.StatusTemporaryRedirect, "/api/openapi.yaml")
+	c.Redirect(http.StatusTemporaryRedirect, "/api/docs/index.html")
 }

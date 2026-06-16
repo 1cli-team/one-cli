@@ -152,35 +152,36 @@ func pretty(v any) string {
 // Add new entries when a new test surfaces a new volatile key — keep
 // the set tight: scrubbing too aggressively hides real regressions.
 var volatileKeys = map[string]bool{
-	"created_path":     true, // create: absolute path under tempdir
-	"installed_to":     true, // setup/create: list of absolute skill paths under $HOME
-	"profile_path":     true, // profile-add (legacy v3): absolute path to ~/.config/one/profiles.json
-	"config_path":      true, // profile-add (v4): absolute path to ~/.config/one/config.json
-	"credentials_path": true, // profile-add (v4): absolute path to ~/.config/one/credentials.json
-	"display_path":     true, // error envelopes: relative-or-absolute path, depends on cwd
-	"target_path":      true, // create error: absolute target path
-	"workspace_path":   true,
-	"workspace_root":   true,
-	"root":             true, // status: workspace.root is absolute
-	"updatedAt":        true, // manifest: ISO timestamp
-	"updated_at":       true,
-	"timestamp":        true, // status envelopes
-	"detected_at":      true,
-	"absolute_path":    true,
-	"path":             true, // status subproject entries
-	"node_version":     true, // depends on local node install
-	"go_version":       true,
-	"version_actual":   true,
-	"git_commit":       true,
-	"node_modules":     true,
-	"home":             true,
-	"message":          true, // error envelopes' message embeds tempdir paths and is i18n-mutable; contract is `code`+`schema`
-	"generated_files":  true, // add: list of absolute paths to generated AI guide files
-	"files":            true, // add-spec: list of absolute paths to generated spec files
-	"written_to":       true, // env init: absolute path to one.manifest.json
-	"url":              true, // serve: per-run URL with random port + token
-	"port":             true, // serve: kernel-assigned port when --port 0
-	"token":            true, // serve: 32-byte random per-run session token
+	"created_path":      true, // create: absolute path under tempdir
+	"cwd":               true, // error envelopes: absolute current directory
+	"installed_to":      true, // setup/create: list of absolute skill paths under $HOME
+	"package_json_path": true, // error envelopes: absolute path to package.json
+	"profile_path":      true, // profile-add (legacy v3): absolute path to ~/.config/one/profiles.json
+	"config_path":       true, // profile-add (v4): absolute path to ~/.config/one/config.json
+	"credentials_path":  true, // profile-add (v4): absolute path to ~/.config/one/credentials.json
+	"display_path":      true, // error envelopes: relative-or-absolute path, depends on cwd
+	"target_path":       true, // create error: absolute target path
+	"workspace_path":    true,
+	"workspace_root":    true,
+	"root":              true, // status: workspace.root is absolute
+	"updatedAt":         true, // manifest: ISO timestamp
+	"updated_at":        true,
+	"timestamp":         true, // status envelopes
+	"detected_at":       true,
+	"absolute_path":     true,
+	"path":              true, // status subproject entries
+	"node_version":      true, // depends on local node install
+	"go_version":        true,
+	"version_actual":    true,
+	"git_commit":        true,
+	"node_modules":      true,
+	"home":              true,
+	"message":           true, // error envelopes' message embeds tempdir paths and is i18n-mutable; contract is `code`+`schema`
+	"files":             true, // add-spec: list of absolute paths to generated spec files
+	"written_to":        true, // env init: absolute path to one.manifest.json
+	"url":               true, // serve: per-run URL with random port + token
+	"port":              true, // serve: kernel-assigned port when --port 0
+	"token":             true, // serve: 32-byte random per-run session token
 }
 
 // canonicalize returns a deep copy of m with all volatileKeys scrubbed
