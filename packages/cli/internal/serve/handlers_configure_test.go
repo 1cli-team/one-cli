@@ -155,6 +155,75 @@ func TestGetSection_MasksByDefault_RevealsOnQuery(t *testing.T) {
 	}
 }
 
+func TestUpsert_MaskedCredentialPreservesExistingSecret(t *testing.T) {
+	srv, _ := newTestServer(t)
+	body := strings.NewReader(`{"name":"work","profile":{"siteUrl":"https://x","credentials":{"clientId":"cid","clientSecret":"original-secret"}}}`)
+	if res, raw := authedRequest(t, srv, http.MethodPost, "/api/configure/env/infisical", body); res.StatusCode != 200 {
+		t.Fatalf("seed: %d (%s)", res.StatusCode, raw)
+	}
+
+	update := strings.NewReader(`{"name":"work","profile":{"siteUrl":"https://updated","credentials":{"clientId":"cid-rotated","clientSecret":"********"}}}`)
+	if res, raw := authedRequest(t, srv, http.MethodPost, "/api/configure/env/infisical", update); res.StatusCode != 200 {
+		t.Fatalf("update: %d (%s)", res.StatusCode, raw)
+	}
+
+	cfg, _, err := profile.Load()
+	if err != nil {
+		t.Fatalf("profile.Load: %v", err)
+	}
+	got := cfg.EnvInfisical.Profiles["work"]
+	if got.SiteURL != "https://updated" {
+		t.Errorf("siteUrl should update, got %q", got.SiteURL)
+	}
+	if got.Credentials == nil {
+		t.Fatal("credentials missing")
+	}
+	if got.Credentials.ClientID != "cid-rotated" {
+		t.Errorf("clientId should update, got %q", got.Credentials.ClientID)
+	}
+	if got.Credentials.ClientSecret != "original-secret" {
+		t.Errorf("clientSecret should be preserved, got %q", got.Credentials.ClientSecret)
+	}
+}
+
+func TestGetSection_MasksDeployTokensByDefault(t *testing.T) {
+	srv, _ := newTestServer(t)
+	cases := []struct {
+		path   string
+		body   string
+		secret string
+	}{
+		{
+			path:   "/api/configure/deploy/cloudflare",
+			body:   `{"name":"work","profile":{"accountId":"acct","credentials":{"apiToken":"cloudflare-secret"}}}`,
+			secret: "cloudflare-secret",
+		},
+		{
+			path:   "/api/configure/deploy/edgeone",
+			body:   `{"name":"work","profile":{"region":"ap-guangzhou","credentials":{"apiToken":"edgeone-secret"}}}`,
+			secret: "edgeone-secret",
+		},
+	}
+
+	for _, tc := range cases {
+		if res, raw := authedRequest(t, srv, http.MethodPost, tc.path, strings.NewReader(tc.body)); res.StatusCode != 200 {
+			t.Fatalf("seed %s: %d (%s)", tc.path, res.StatusCode, raw)
+		}
+		_, raw := authedRequest(t, srv, http.MethodGet, tc.path, nil)
+		if strings.Contains(string(raw), tc.secret) {
+			t.Errorf("%s leaked default token: %s", tc.path, raw)
+		}
+		if !strings.Contains(string(raw), "********") {
+			t.Errorf("%s should contain masked sentinel; got %s", tc.path, raw)
+		}
+
+		_, raw = authedRequest(t, srv, http.MethodGet, tc.path+"?reveal=1", nil)
+		if !strings.Contains(string(raw), tc.secret) {
+			t.Errorf("%s reveal=1 should expose plaintext; got %s", tc.path, raw)
+		}
+	}
+}
+
 func TestUse_SwitchesDefault(t *testing.T) {
 	srv, _ := newTestServer(t)
 	for _, n := range []string{"work", "personal"} {

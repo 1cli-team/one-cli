@@ -42,6 +42,16 @@ import { SECTION_META, type SectionKey, type SectionMeta, SECTION_KEYS } from "@
 
 export type AnyProfile = ProfileByPair[keyof ProfileByPair];
 
+const MASKED_SECRET = "********";
+
+function secretInputValue(value: string | undefined): string {
+	return value === MASKED_SECRET ? "" : (value ?? "");
+}
+
+function secretPlaceholder(value: string | undefined, placeholder: string): string | undefined {
+	return value === MASKED_SECRET ? placeholder : undefined;
+}
+
 function isKnownSection(domain: string, backend: string): SectionMeta | null {
 	const key = `${domain}/${backend}`;
 	if (!SECTION_KEYS.includes(key as SectionKey)) return null;
@@ -480,7 +490,11 @@ const BackendFields: React.FC<BackendFieldsProps> = ({ sectionKey, profile, setP
 						<Label>{t("form.fields.clientSecret")}</Label>
 						<Input
 							type="password"
-							value={p.credentials?.clientSecret ?? ""}
+							value={secretInputValue(p.credentials?.clientSecret)}
+							placeholder={secretPlaceholder(
+								p.credentials?.clientSecret,
+								t("form.fields.secretUnchangedPlaceholder"),
+							)}
 							onChange={(e) =>
 								setProfile({
 									...p,
@@ -549,7 +563,11 @@ const BackendFields: React.FC<BackendFieldsProps> = ({ sectionKey, profile, setP
 						<Label>{t("form.fields.accessKeySecret")}</Label>
 						<Input
 							type="password"
-							value={p.credentials?.accessKeySecret ?? ""}
+							value={secretInputValue(p.credentials?.accessKeySecret)}
+							placeholder={secretPlaceholder(
+								p.credentials?.accessKeySecret,
+								t("form.fields.secretUnchangedPlaceholder"),
+							)}
 							onChange={(e) =>
 								setProfile({
 									...p,
@@ -603,7 +621,11 @@ const BackendFields: React.FC<BackendFieldsProps> = ({ sectionKey, profile, setP
 						<Label>{t("form.fields.apiToken")}</Label>
 						<Input
 							type="password"
-							value={p.credentials?.apiToken ?? ""}
+							value={secretInputValue(p.credentials?.apiToken)}
+							placeholder={secretPlaceholder(
+								p.credentials?.apiToken,
+								t("form.fields.secretUnchangedPlaceholder"),
+							)}
 							onChange={(e) =>
 								setProfile({
 									...p,
@@ -631,7 +653,11 @@ const BackendFields: React.FC<BackendFieldsProps> = ({ sectionKey, profile, setP
 						<Label>{t("form.fields.apiToken")}</Label>
 						<Input
 							type="password"
-							value={p.credentials?.apiToken ?? ""}
+							value={secretInputValue(p.credentials?.apiToken)}
+							placeholder={secretPlaceholder(
+								p.credentials?.apiToken,
+								t("form.fields.secretUnchangedPlaceholder"),
+							)}
 							onChange={(e) =>
 								setProfile({
 									...p,
@@ -659,7 +685,11 @@ const BackendFields: React.FC<BackendFieldsProps> = ({ sectionKey, profile, setP
 						<Label>{t("form.fields.apiToken")}</Label>
 						<Input
 							type="password"
-							value={p.credentials?.apiToken ?? ""}
+							value={secretInputValue(p.credentials?.apiToken)}
+							placeholder={secretPlaceholder(
+								p.credentials?.apiToken,
+								t("form.fields.secretUnchangedPlaceholder"),
+							)}
 							onChange={(e) =>
 								setProfile({
 									...p,
@@ -725,7 +755,11 @@ const BackendFields: React.FC<BackendFieldsProps> = ({ sectionKey, profile, setP
 						<Label>{t("form.fields.password")}</Label>
 						<Input
 							type="password"
-							value={p.credentials?.password ?? ""}
+							value={secretInputValue(p.credentials?.password)}
+							placeholder={secretPlaceholder(
+								p.credentials?.password,
+								t("form.fields.secretUnchangedPlaceholder"),
+							)}
 							onChange={(e) =>
 								setProfile({
 									...p,
