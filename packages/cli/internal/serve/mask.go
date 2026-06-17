@@ -74,6 +74,31 @@ func maskVercel(p profile.VercelProfile) profile.VercelProfile {
 	return p
 }
 
+// maskCloudflare returns a copy with the API token redacted. AccountID is
+// left visible for the same reason Vercel team is: it helps identify the
+// profile without exposing the bearer credential.
+func maskCloudflare(p profile.CloudflareProfile) profile.CloudflareProfile {
+	if p.Credentials == nil {
+		return p
+	}
+	creds := *p.Credentials
+	creds.APIToken = masked
+	p.Credentials = &creds
+	return p
+}
+
+// maskEdgeOne returns a copy with the API token redacted. Region is not a
+// secret and stays visible in the list view.
+func maskEdgeOne(p profile.EdgeOneProfile) profile.EdgeOneProfile {
+	if p.Credentials == nil {
+		return p
+	}
+	creds := *p.Credentials
+	creds.APIToken = masked
+	p.Credentials = &creds
+	return p
+}
+
 // maskDotenv is a no-op: the dotenv profile struct is empty. Same
 // rationale as maskKustomize.
 func maskDotenv(p profile.DotenvProfile) profile.DotenvProfile { return p }
@@ -90,6 +115,8 @@ func maskConfig(c profile.Config) profile.Config {
 	}
 	c.DeployKustomize.Profiles = maskMap(c.DeployKustomize.Profiles, maskKustomize)
 	c.DeployVercel.Profiles = maskMap(c.DeployVercel.Profiles, maskVercel)
+	c.DeployCloudflare.Profiles = maskMap(c.DeployCloudflare.Profiles, maskCloudflare)
+	c.DeployEdgeOne.Profiles = maskMap(c.DeployEdgeOne.Profiles, maskEdgeOne)
 	for _, kind := range profile.ContainerKinds() {
 		sec := c.ContainerKindSection(kind)
 		sec.Profiles = maskMap(sec.Profiles, maskContainer)

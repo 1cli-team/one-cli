@@ -134,6 +134,10 @@ func handleUpsert(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, cliErrors.SERVE_PAYLOAD_INVALID, err.Error(), nil)
 		return
 	}
+	if err := preserveMaskedCredentials(domain, backend, body.Name, &p); err != nil {
+		writeProfileError(w, err)
+		return
+	}
 	updated, err := profile.Upsert(profile.Domain(domain), backend, body.Name, p, body.Use)
 	if err != nil {
 		writeProfileError(w, err)
@@ -379,6 +383,106 @@ func decodeSubProfile(domain, backend string, raw json.RawMessage) (profile.Prof
 		return profile.Profile{}, errors.New("unknown (domain, backend) pair")
 	}
 	return p, nil
+}
+
+// preserveMaskedCredentials treats the public mask sentinel as "leave the
+// existing secret unchanged" on updates. The UI edits the default masked
+// GET payload; without this guard an unchanged password field would overwrite
+// the real credential with "********".
+func preserveMaskedCredentials(domain, backend, name string, p *profile.Profile) error {
+	if !profileContainsMaskedCredential(p) {
+		return nil
+	}
+	cfg, _, err := profile.Load()
+	if err != nil {
+		return err
+	}
+	switch {
+	case domain == "env" && backend == "infisical":
+		if p.Infisical == nil || p.Infisical.Credentials == nil ||
+			p.Infisical.Credentials.ClientSecret != masked {
+			return nil
+		}
+		existing, ok := cfg.EnvInfisical.Profiles[name]
+		if ok && existing.Credentials != nil {
+			p.Infisical.Credentials.ClientSecret = existing.Credentials.ClientSecret
+		}
+	case domain == "deploy" && profile.IsS3Compatible(backend):
+		if p.S3 == nil || p.S3.Credentials == nil ||
+			p.S3.Credentials.AccessKeySecret != masked {
+			return nil
+		}
+		sec := cfg.S3CompatSection(backend)
+		if sec == nil {
+			return nil
+		}
+		existing, ok := sec.Profiles[name]
+		if ok && existing.Credentials != nil {
+			p.S3.Credentials.AccessKeySecret = existing.Credentials.AccessKeySecret
+		}
+	case domain == "deploy" && backend == "vercel":
+		if p.Vercel == nil || p.Vercel.Credentials == nil ||
+			p.Vercel.Credentials.APIToken != masked {
+			return nil
+		}
+		existing, ok := cfg.DeployVercel.Profiles[name]
+		if ok && existing.Credentials != nil {
+			p.Vercel.Credentials.APIToken = existing.Credentials.APIToken
+		}
+	case domain == "deploy" && backend == "cloudflare":
+		if p.Cloudflare == nil || p.Cloudflare.Credentials == nil ||
+			p.Cloudflare.Credentials.APIToken != masked {
+			return nil
+		}
+		existing, ok := cfg.DeployCloudflare.Profiles[name]
+		if ok && existing.Credentials != nil {
+			p.Cloudflare.Credentials.APIToken = existing.Credentials.APIToken
+		}
+	case domain == "deploy" && backend == "edgeone":
+		if p.EdgeOne == nil || p.EdgeOne.Credentials == nil ||
+			p.EdgeOne.Credentials.APIToken != masked {
+			return nil
+		}
+		existing, ok := cfg.DeployEdgeOne.Profiles[name]
+		if ok && existing.Credentials != nil {
+			p.EdgeOne.Credentials.APIToken = existing.Credentials.APIToken
+		}
+	case domain == "container" && profile.IsContainerKind(backend):
+		if p.Container == nil || p.Container.Credentials == nil ||
+			p.Container.Credentials.Password != masked {
+			return nil
+		}
+		sec := cfg.ContainerKindSection(backend)
+		if sec == nil {
+			return nil
+		}
+		existing, ok := sec.Profiles[name]
+		if ok && existing.Credentials != nil {
+			p.Container.Credentials.Password = existing.Credentials.Password
+		}
+	}
+	return nil
+}
+
+func profileContainsMaskedCredential(p *profile.Profile) bool {
+	switch {
+	case p == nil:
+		return false
+	case p.Infisical != nil && p.Infisical.Credentials != nil:
+		return p.Infisical.Credentials.ClientSecret == masked
+	case p.S3 != nil && p.S3.Credentials != nil:
+		return p.S3.Credentials.AccessKeySecret == masked
+	case p.Vercel != nil && p.Vercel.Credentials != nil:
+		return p.Vercel.Credentials.APIToken == masked
+	case p.Cloudflare != nil && p.Cloudflare.Credentials != nil:
+		return p.Cloudflare.Credentials.APIToken == masked
+	case p.EdgeOne != nil && p.EdgeOne.Credentials != nil:
+		return p.EdgeOne.Credentials.APIToken == masked
+	case p.Container != nil && p.Container.Credentials != nil:
+		return p.Container.Credentials.Password == masked
+	default:
+		return false
+	}
 }
 
 func decodeJSON(r *http.Request, dst any) error {
