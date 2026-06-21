@@ -108,7 +108,7 @@ const (
 	EDGEONE_PROFILE_INVALID Code = "EDGEONE_PROFILE_INVALID"
 	EDGEONE_DEPLOY_FAILED   Code = "EDGEONE_DEPLOY_FAILED"
 
-	// AI guides / skills.
+	// Agent docs / skills.
 	AI_CONFIG_INVALID     Code = "AI_CONFIG_INVALID"
 	AI_CONFIG_MISSING     Code = "AI_CONFIG_MISSING"
 	AI_GUIDES_FAILED      Code = "AI_GUIDES_FAILED"
@@ -248,7 +248,7 @@ var Codes = map[Code]Definition{
 
 	AI_CONFIG_INVALID:     {Summary: "one.manifest.json#ai is malformed."},
 	AI_CONFIG_MISSING:     {Summary: "Reserved for legacy AI provider gates; current workspaces always render for every supported provider so this code is no longer surfaced."},
-	AI_GUIDES_FAILED:      {Summary: "AI guides refresh failed; see surfaced error message."},
+	AI_GUIDES_FAILED:      {Summary: "Agent docs refresh failed; see surfaced error message."},
 	AI_GUIDE_EXISTS:       {Summary: "Existing AGENTS.md / CLAUDE.md is not managed by One CLI."},
 	AI_NO_SUBPROJECTS:     {Summary: "Workspace has no recognizable projects yet."},
 	AI_PROVIDER_INVALID:   {Summary: "Unknown AI provider; only codex / claude-code are supported."},
