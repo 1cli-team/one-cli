@@ -217,7 +217,7 @@ func (r *addResult) RenderTTY(w io.Writer) {
 		fmt.Fprintf(w, "  Package manager: %s\n", r.PackageManager)
 	}
 	if r.AiGuides.Status == "completed" && len(r.AiGuides.GeneratedFiles) > 0 {
-		fmt.Fprintf(w, "  AI guides: refreshed (%d file%s)\n",
+		fmt.Fprintf(w, "  Agent docs: refreshed (%d file%s)\n",
 			len(r.AiGuides.GeneratedFiles), pluralS(len(r.AiGuides.GeneratedFiles)))
 	}
 }

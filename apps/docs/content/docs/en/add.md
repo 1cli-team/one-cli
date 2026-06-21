@@ -3,7 +3,7 @@ title: one add
 description: Add a templated project to an existing workspace.
 ---
 
-`one add` selects a template from the registry, writes it into the workspace, registers it in the manifest, and syncs template defaults such as Dockerfile, Kustomize, workflows, and AI guides.
+`one add` selects a template from the registry, writes it into the workspace, registers it in the manifest, and syncs template defaults such as Dockerfile, Kustomize, workflows, and agent docs.
 
 There are two entry points:
 
@@ -54,15 +54,21 @@ one add nestjs-api --name api --yes
     "status": "completed",
     "providers": ["codex", "claude-code"],
     "generated_files": [
-      "/abs/path/my-app/AGENTS.md",
-      "/abs/path/my-app/CLAUDE.md"
+      "AGENTS.md",
+      "CLAUDE.md",
+      ".one/agents/conventions.md",
+      ".one/agents/projects/services-user-api.md",
+      ".one/agents/ops/dev.md",
+      ".one/agents/ops/secrets.md",
+      ".one/agents/ops/container.md",
+      ".one/agents/ops/deploy.md"
     ],
-    "file_count": 2
+    "file_count": 8
   }
 }
 ```
 
-`warnings[]` means a compatibility or post-sync step produced a non-blocking warning; the project was still added. `ai_guides.status` tells you whether root `AGENTS.md` / `CLAUDE.md` refreshed successfully. `ai_guides.generated_files` contains absolute paths under the workspace root.
+`warnings[]` means a compatibility or post-sync step produced a non-blocking warning; the project was still added. `ai_guides.status` tells you whether root `AGENTS.md`, `CLAUDE.md`, and `.one/agents/**` refreshed successfully. `ai_guides.generated_files` contains workspace-relative paths.
 
 ## Examples
 
@@ -112,9 +118,9 @@ one add nestjs-api --name user-api --yes -o json | jq
 - Adds `kustomize/base` and `kustomize/overlays/{dev,staging,prod}` for `deploy/kustomize`
 - S3-compatible deploy projects do not write local deploy artifacts; deploy uses the object-storage profile configured by `one configure add deploy/aws-s3 --profile <name>` or another split S3 backend (`deploy/aliyun-oss`, `deploy/r2`, etc.)
 - Adds GitHub Actions workflow entries
-- Refreshes `AGENTS.md` / `CLAUDE.md`
+- Refreshes `AGENTS.md`, `CLAUDE.md`, and `.one/agents/**`
 
-If a non-critical step fails, such as AI guide refresh, the project still exists and the related status is marked `failed` or `skipped`.
+If a non-critical step fails, such as agent-doc refresh, the project still exists and the related status is marked `failed` or `skipped`.
 
 ## Common Errors
 
@@ -138,5 +144,5 @@ Not sure which one to use? Read the [template decision tree](/en/docs/templates/
 ## After Adding
 
 - Check `one.manifest.json#projects[]` to confirm registration
-- AI guides and container / deploy artifacts are synced by `one add`
+- Agent docs and container / deploy artifacts are synced by `one add`
 - `one add` does not install dependencies: JS / TS workspaces install from the root with the package manager; Go projects run `go mod download` in the project directory, then `go mod tidy` only after changing imports or when module metadata needs repair
