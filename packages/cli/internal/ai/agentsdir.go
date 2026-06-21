@@ -58,12 +58,27 @@ func writeClaudePointer(projectRoot string, force bool) error {
 	if string(current) == content {
 		return nil
 	}
-	managed := strings.Contains(string(current), generatedStart) ||
-		strings.Contains(string(current), legacyGeneratedStart) ||
-		strings.Contains(string(current), subprojectsStart)
+	curStr := string(current)
+	managed := strings.Contains(curStr, generatedStart) ||
+		strings.Contains(curStr, legacyGeneratedStart) ||
+		strings.Contains(curStr, subprojectsStart)
 	if !managed && !force {
 		return cliErrors.New(cliErrors.AI_GUIDE_EXISTS,
 			"CLAUDE.md 已存在且不像 One CLI 生成文件，请手动合并或删除后重试。")
+	}
+	if managed {
+		backup := filepath.Join(projectRoot, filepath.FromSlash(agentsRootDir), "claude-legacy.md")
+		if _, err := os.Stat(backup); err != nil {
+			if !errors.Is(err, fs.ErrNotExist) {
+				return err
+			}
+			if err := os.MkdirAll(filepath.Dir(backup), 0o755); err != nil {
+				return err
+			}
+			if err := os.WriteFile(backup, current, 0o644); err != nil {
+				return err
+			}
+		}
 	}
 	return os.WriteFile(path, []byte(content), 0o644)
 }
