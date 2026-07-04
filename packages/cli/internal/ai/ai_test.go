@@ -13,8 +13,25 @@ import (
 func TestRefreshDoesNotLeakWorkspaceAbsolutePath(t *testing.T) {
 	root := t.TempDir()
 	if err := workspace.WriteManifest(root, &workspace.Manifest{
-		Version:  workspace.ManifestVersion,
-		Projects: []workspace.ManifestProject{},
+		Version: workspace.ManifestVersion,
+		Workspace: &workspace.ManifestWorkspace{
+			Name: "demo",
+		},
+		Domains: &workspace.WorkspaceDomains{
+			Env: &workspace.BackendRef{Kind: workspace.EnvBackendDotenv},
+		},
+		Projects: []workspace.ManifestProject{{
+			Name:         "api",
+			RelativeDir:  "services/api",
+			TemplateID:   "go-api",
+			Toolchain:    "go",
+			BuildVersion: workspace.DefaultBuildVersion,
+			Domains: &workspace.ProjectDomains{
+				Container: &workspace.ProjectContainerOverride{},
+				Deploy:    &workspace.ProjectDeployBackend{Kind: workspace.DeployBackendKustomize},
+				Dev:       &workspace.ProjectDevOverride{Command: "go run ./cmd/server"},
+			},
+		}},
 	}); err != nil {
 		t.Fatalf("WriteManifest: %v", err)
 	}
@@ -30,7 +47,16 @@ func TestRefreshDoesNotLeakWorkspaceAbsolutePath(t *testing.T) {
 	if res.Status != "completed" {
 		t.Fatalf("Refresh status = %q, error = %+v", res.Status, res.ErrorBody)
 	}
-	wantFiles := []string{"AGENTS.md", "CLAUDE.md"}
+	wantFiles := []string{
+		"AGENTS.md",
+		"CLAUDE.md",
+		".one/agents/conventions.md",
+		".one/agents/projects/services-api.md",
+		".one/agents/ops/dev.md",
+		".one/agents/ops/secrets.md",
+		".one/agents/ops/container.md",
+		".one/agents/ops/deploy.md",
+	}
 	if !reflect.DeepEqual(res.GeneratedFiles, wantFiles) {
 		t.Fatalf("GeneratedFiles = %v, want %v", res.GeneratedFiles, wantFiles)
 	}
@@ -51,5 +77,12 @@ func TestRefreshDoesNotLeakWorkspaceAbsolutePath(t *testing.T) {
 		if strings.Contains(string(raw), root) {
 			t.Errorf("%s leaked workspace root %q:\n%s", name, root, raw)
 		}
+	}
+	claudeRaw, err := os.ReadFile(filepath.Join(root, "CLAUDE.md"))
+	if err != nil {
+		t.Fatalf("read CLAUDE.md: %v", err)
+	}
+	if got := string(claudeRaw); got != ClaudePointerContent() {
+		t.Fatalf("CLAUDE.md = %q, want %q", got, ClaudePointerContent())
 	}
 }

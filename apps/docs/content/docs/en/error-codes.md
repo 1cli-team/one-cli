@@ -223,9 +223,9 @@ Profile file schema does not match this binary. Upgrade CLI or recreate profiles
 Release-flow backend expected a toolchain or repo state that the workspace does not have.
 
 
-## AI Guides / Skills
+## Agent Docs / Skills
 
-`AGENTS.md`, `CLAUDE.md`, and One CLI skill installation.
+`AGENTS.md`, `CLAUDE.md`, `.one/agents/**`, and One CLI skill installation.
 
 ### `AI_CONFIG_INVALID`
 
@@ -237,7 +237,7 @@ Legacy provider gate; the current CLI renders all supported providers and should
 
 ### `AI_GUIDES_FAILED`
 
-AI guide refresh failed. Read the surfaced error.
+Agent docs refresh failed. Read the surfaced error.
 
 ### `AI_GUIDE_EXISTS`
 

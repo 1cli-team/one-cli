@@ -54,15 +54,21 @@ one add nestjs-api --name api --yes
     "status": "completed",
     "providers": ["codex", "claude-code"],
     "generated_files": [
-      "/abs/path/my-app/AGENTS.md",
-      "/abs/path/my-app/CLAUDE.md"
+      "AGENTS.md",
+      "CLAUDE.md",
+      ".one/agents/conventions.md",
+      ".one/agents/projects/services-user-api.md",
+      ".one/agents/ops/dev.md",
+      ".one/agents/ops/secrets.md",
+      ".one/agents/ops/container.md",
+      ".one/agents/ops/deploy.md"
     ],
-    "file_count": 2
+    "file_count": 8
   }
 }
 ```
 
-`warnings[]` 存在时表示模板兼容性或后置同步有非阻断提示；项目仍然加成功。`ai_guides.status` 表示根目录 `AGENTS.md` / `CLAUDE.md` 是否刷新成功。`ai_guides.generated_files` 是工作区根目录下的绝对路径。
+`warnings[]` 存在时表示模板兼容性或后置同步有非阻断提示；项目仍然加成功。`ai_guides.status` 表示根目录 `AGENTS.md`、`CLAUDE.md` 和 `.one/agents/**` 是否刷新成功。`ai_guides.generated_files` 是工作区相对路径。
 
 ## 示例
 
@@ -112,9 +118,9 @@ one add nestjs-api --name user-api --yes -o json | jq
 - `deploy/kustomize` 工作区根加 `kustomize/base` 和 `kustomize/overlays/{dev,staging,prod}`
 - S3 兼容 deploy 后端不写本地部署产物；部署时使用 `one configure add deploy/aws-s3 --profile <name>` 或其它拆分后的 S3 后端（`deploy/aliyun-oss`、`deploy/r2` 等）配置的对象存储 profile
 - 加 GitHub Actions workflow 条目
-- 刷 `AGENTS.md` / `CLAUDE.md`
+- 刷 `AGENTS.md`、`CLAUDE.md` 和 `.one/agents/**`
 
-如果有失败的 step（比如 AI 指南刷新失败），项目仍然加成功，只是相关字段会标 `failed` / `skipped`。
+如果有失败的 step（比如 agent 文档刷新失败），项目仍然加成功，只是相关字段会标 `failed` / `skipped`。
 
 ## 错误恢复
 
@@ -138,5 +144,5 @@ one add nestjs-api --name user-api --yes -o json | jq
 ## 加完之后
 
 - 检查 `one.manifest.json#projects[]` 确认项目登记
-- AI 指南、容器 / 部署 artefacts 都已由 `one add` 在执行过程中同步完成
+- Agent 文档、容器 / 部署 artefacts 都已由 `one add` 在执行过程中同步完成
 - `one add` 不自动安装依赖：JS / TS 工作区在根目录跑 package manager install；Go 项目进项目目录跑 `go mod download`，修改 imports 或需要修复模块元数据时再跑 `go mod tidy`

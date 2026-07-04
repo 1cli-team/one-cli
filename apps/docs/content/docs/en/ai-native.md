@@ -17,7 +17,7 @@ That layer covers four boundaries:
 
 1. **Automation interface**: agents and CI read structured output instead of scraping terminal text.
 2. **Error recovery**: agents recover from stable codes, context, and remediation hints.
-3. **Engineering contracts**: agents read durable rules from `AGENTS.md` / `CLAUDE.md`.
+3. **Engineering contracts**: agents read durable rules from `AGENTS.md` and `.one/agents/` (`CLAUDE.md` points to `AGENTS.md`).
 4. **Permission boundaries**: local credentials, environment setup, and deployment configuration have explicit owners instead of being guessed by agents.
 
 ## Rule 1: Command Output Must Be Parseable
@@ -97,13 +97,15 @@ The full catalogue is in [Error codes](/en/docs/error-codes/).
 
 ## Rule 3: Engineering Contracts Belong In The Repository
 
-When One CLI creates a workspace or adds a template, it maintains repository-level agent guides:
+When One CLI creates a workspace or adds a template, it maintains a repository-level agent harness:
 
-- `AGENTS.md`: read by Codex and similar agents
-- `CLAUDE.md`: read by Claude Code
-- Each template's own `CLAUDE.md`: copied into the generated subproject with stack-specific rules
+- `AGENTS.md`: the canonical, thin routing entry for Codex and similar agents
+- `CLAUDE.md`: a generated pointer that tells Claude Code to follow `./AGENTS.md`
+- `.one/agents/conventions.md`: workspace-level conventions and One CLI operating rules
+- `.one/agents/projects/<dir>.md`: one stack-specific guide per manifest project, named from `relativeDir` with slashes flattened to hyphens
+- `.one/agents/ops/*.md`: domain operation guides for `one dev`, `one env`, `one container`, and `one deploy` when the manifest enables those domains
 
-These files are not temporary prompts. They are part of the repository. An agent entering the workspace should read them before deciding how to code, run commands, install dependencies, or change configuration.
+These files are not temporary prompts. They are a projection of `one.manifest.json`: the manifest is the source of truth, `AGENTS.md` stays small, and detail files are opened on demand. One CLI does not copy agent stubs into subproject directories.
 
 Example rules:
 
@@ -155,9 +157,9 @@ Inside any One workspace, trigger a missing template to see the `one-cli/error/v
 one add api-fastify --name api --yes -o json
 ```
 
-After adding a real template, check the workspace-level and subproject-level agent guides:
+After adding a real template, check the workspace-level router and centralized detail guides:
 
 ```bash
 one add nestjs-api --name api --yes -o json
-ls AGENTS.md CLAUDE.md services/api/CLAUDE.md
+ls AGENTS.md CLAUDE.md .one/agents/conventions.md .one/agents/projects/services-api.md
 ```

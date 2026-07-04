@@ -72,8 +72,8 @@ var groups = []group{
 		},
 	},
 	{
-		title:  "AI 指南 / Skills",
-		intro:  "`AGENTS.md` / `CLAUDE.md` 生成与 bundled skill 安装。",
+		title:  "Agent 文档 / Skills",
+		intro:  "`AGENTS.md` / `CLAUDE.md` / `.one/agents/**` 生成与 bundled skill 安装。",
 		prefix: []string{"AI_", "SKILLS_"},
 	},
 	{

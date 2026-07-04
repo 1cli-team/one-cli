@@ -1,9 +1,15 @@
 {
   "ai_guides": {
-    "file_count": 2,
+    "file_count": 8,
     "generated_files": [
       "AGENTS.md",
-      "CLAUDE.md"
+      "CLAUDE.md",
+      ".one/agents/conventions.md",
+      ".one/agents/projects/services-user-api.md",
+      ".one/agents/ops/dev.md",
+      ".one/agents/ops/secrets.md",
+      ".one/agents/ops/container.md",
+      ".one/agents/ops/deploy.md"
     ],
     "providers": [
       "codex",

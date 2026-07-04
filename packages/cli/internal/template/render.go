@@ -41,6 +41,8 @@ func CommonVariables(projectName, packageManager string) Variables {
 var excludedTemplateEntries = map[string]struct{}{
 	".git":         {},
 	"node_modules": {},
+	"AGENTS.md":    {},
+	"CLAUDE.md":    {},
 	"go.mod":       {},
 	"go.sum":       {},
 }

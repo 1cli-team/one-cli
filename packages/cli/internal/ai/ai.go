@@ -1,17 +1,13 @@
-// Package ai materialises the workspace-level AI guide files (AGENTS.md
-// for Codex, CLAUDE.md for Claude Code) by aggregating each subproject's
-// per-template ai/ snippet into a single managed block. The on-disk
-// AGENTS.md / CLAUDE.md may carry hand-written content outside the
-// managed block — the renderer never touches those bytes.
+// Package ai materialises the workspace-level agent harness from
+// one.manifest.json. AGENTS.md is the canonical routing entry, CLAUDE.md
+// points at it, and .one/agents/ holds the detailed project and ops docs.
 package ai
 
 import (
 	"errors"
-	"fmt"
 	"io/fs"
 	"path/filepath"
 	"regexp"
-	"sort"
 	"strings"
 
 	"os"
@@ -21,9 +17,9 @@ import (
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/workspace"
 )
 
-// Provider names the canonical AI provider this package can render guides
-// for. Current workspaces always render for every provider in DefaultProviders — there is
-// no per-workspace opt-in field anymore.
+// Provider names the agent surface represented in RefreshResult. Current
+// workspaces always report every provider in DefaultProviders; AGENTS.md is
+// canonical and CLAUDE.md is a pointer to it.
 type Provider string
 
 const (
@@ -31,15 +27,15 @@ const (
 	ProviderClaudeCode Provider = "claude-code"
 )
 
-// DefaultProviders is the list of providers AGENTS.md / CLAUDE.md is
-// rendered for in every workspace. Adding a new provider only requires
-// extending this slice (and ensuring guideFilename / providerLabel
-// recognise it).
+// DefaultProviders is the list of agent surfaces materialised for every
+// workspace.
 var DefaultProviders = []Provider{ProviderCodex, ProviderClaudeCode}
 
 const (
-	generatedStart = "<!-- one ai-guides:start -->"
-	generatedEnd   = "<!-- one ai-guides:end -->"
+	generatedStart       = "<!-- one agents:index:start -->"
+	generatedEnd         = "<!-- one agents:index:end -->"
+	legacyGeneratedStart = "<!-- one ai-guides:start -->"
+	legacyGeneratedEnd   = "<!-- one ai-guides:end -->"
 )
 
 // RefreshResult is the JSON envelope emitted by `add` under
@@ -58,9 +54,9 @@ type errBody struct {
 	Message string `json:"message"`
 }
 
-// Refresh re-renders every AI guide for the workspace. Soft errors (no
+// Refresh re-renders the agent harness for the workspace. Soft errors (no
 // subprojects) become status:"skipped"; everything else surfaces as
-// status:"failed". Current workspaces always render for every provider in
+// status:"failed". Current workspaces always report every provider in
 // DefaultProviders.
 func Refresh(projectRoot string, force bool) RefreshResult {
 	res, err := tryRefresh(projectRoot, force)
@@ -83,39 +79,43 @@ func Refresh(projectRoot string, force bool) RefreshResult {
 func tryRefresh(projectRoot string, force bool) (RefreshResult, error) {
 	if !workspace.HasManifest(projectRoot) {
 		return RefreshResult{}, cliErrors.New(cliErrors.NOT_ONE_PROJECT,
-			"refresh AI guides outside a One workspace")
+			"refresh agent docs outside a One workspace")
 	}
-	rootDirs, err := workspace.ResolveRootDirs(projectRoot, nil)
+	manifest, err := workspace.ReadManifest(projectRoot)
 	if err != nil {
 		return RefreshResult{}, err
 	}
-	subprojects, err := workspace.DiscoverProjects(projectRoot, rootDirs)
-	if err != nil {
-		return RefreshResult{}, err
-	}
-	// Always update the workspace CLAUDE.md sub-project index. Best-effort
-	// — don't fail Refresh if the workspace CLAUDE.md is missing or has
-	// been hand-customized past the markers; subprojects.go handles that
-	// gracefully.
-	_ = writeSubprojectsIndex(projectRoot, subprojects)
-
+	projects := sortedManifestProjects(manifest)
 	providers := append([]Provider{}, DefaultProviders...)
-	if len(subprojects) == 0 {
+	if len(projects) == 0 {
 		return RefreshResult{}, cliErrors.New(cliErrors.AI_NO_SUBPROJECTS,
 			"当前项目未发现可识别的项目。")
 	}
 
-	generated := make([]string, 0, len(providers))
-	for _, p := range providers {
-		filename := guideFilename(p)
-		sections := collectSections(subprojects, p)
-		content := renderGuide(p, sections)
-		path := filepath.Join(projectRoot, filename)
-		if _, err := writeManagedGuide(path, content, force, false); err != nil {
-			return RefreshResult{}, err
-		}
-		generated = append(generated, filename)
+	if err := ensureRootAgentsFile(projectRoot, manifest); err != nil {
+		return RefreshResult{}, err
 	}
+
+	// Always update the canonical AGENTS.md sub-project index. Best-effort
+	// — don't fail Refresh if the user removed the block; subprojects.go
+	// leaves aggressively customised files alone.
+	_ = writeSubprojectsIndex(projectRoot, projects)
+
+	agentsIndex := renderAgentsIndex(manifest, projects)
+	if _, err := writeManagedGuide(filepath.Join(projectRoot, GuideFilename(ProviderCodex)), agentsIndex, force, false); err != nil {
+		return RefreshResult{}, err
+	}
+	if err := writeClaudePointer(projectRoot, force); err != nil {
+		return RefreshResult{}, err
+	}
+	agentFiles, err := writeAgentsDir(projectRoot, manifest, projects)
+	if err != nil {
+		return RefreshResult{}, err
+	}
+
+	generated := make([]string, 0, 2+len(agentFiles))
+	generated = append(generated, GuideFilename(ProviderCodex), GuideFilename(ProviderClaudeCode))
+	generated = append(generated, agentFiles...)
 
 	return RefreshResult{
 		Status:         "completed",
@@ -123,10 +123,6 @@ func tryRefresh(projectRoot string, force bool) (RefreshResult, error) {
 		GeneratedFiles: generated,
 		FileCount:      len(generated),
 	}, nil
-}
-
-func guideFilename(p Provider) string {
-	return GuideFilename(p)
 }
 
 // GuideFilename returns the on-disk filename for a given provider's guide.
@@ -140,7 +136,7 @@ func GuideFilename(p Provider) string {
 }
 
 // ExpectedProviders returns the providers AGENTS.md / CLAUDE.md is
-// rendered for in this workspace. The current schema always returns DefaultProviders;
+// materialised for in this workspace. The current schema always returns DefaultProviders;
 // the function is kept for callers (notably status checks) that want to
 // list expected guide files without referencing the package-level slice
 // directly.
@@ -148,67 +144,19 @@ func ExpectedProviders(_ string) ([]Provider, error) {
 	return append([]Provider{}, DefaultProviders...), nil
 }
 
-func providerLabel(p Provider) string {
-	if p == ProviderCodex {
-		return "Codex"
-	}
-	return "Claude Code"
-}
-
-// section is one rendered chunk of the managed block: every subproject of
-// the same template grouped together with the merged ai/<provider>.md +
-// common.md content.
-type section struct {
-	TemplateID  string
-	Subprojects []workspace.Project
-	Content     string
-}
-
-func collectSections(subs []workspace.Project, p Provider) []section {
-	groups := map[string][]workspace.Project{}
-	for _, s := range subs {
-		groups[s.TemplateID] = append(groups[s.TemplateID], s)
-	}
-	ids := make([]string, 0, len(groups))
-	for id := range groups {
-		ids = append(ids, id)
-	}
-	sort.Strings(ids)
-	out := make([]section, 0, len(ids))
-	for _, id := range ids {
-		content := loadTemplateContent(id, p)
-		if content == "" {
-			content = renderFallbackGuide(id)
-		}
-		out = append(out, section{
-			TemplateID:  id,
-			Subprojects: groups[id],
-			Content:     content,
-		})
-	}
-	return out
-}
-
 // loadTemplateContent reads <template>/CLAUDE.md (the per-template agent
-// guide that template.Render also copies into each scaffolded project) and
-// optionally appends <template>/ai/<provider>.md for provider-specific
-// overrides. Returns empty string if neither file exists; the caller falls
-// back to a generic renderFallbackGuide.
+// guide source) from the bundled templates. Returns empty string when the
+// template has no guide; the caller falls back to renderFallbackGuide.
 //
 // Historically this read <template>/ai/common.md as the source of truth.
 // That file is now obsolete — CLAUDE.md is the canonical per-template
-// guide, written once and consumed both as the workspace aggregate source
-// (here) and as the per-project guide that ships into apps/<name>/.
-func loadTemplateContent(templateID string, p Provider) string {
-	parts := []string{}
+// guide source.
+func loadTemplateContent(templateID string) string {
 	root := filepath.ToSlash(filepath.Join(bundled.TemplatesRoot, templateID))
 	if b := readEmbeddedFile(root + "/CLAUDE.md"); b != "" {
-		parts = append(parts, strings.TrimSpace(b))
+		return strings.TrimSpace(b)
 	}
-	if b := readEmbeddedFile(root + "/ai/" + string(p) + ".md"); b != "" {
-		parts = append(parts, strings.TrimSpace(b))
-	}
-	return strings.TrimSpace(strings.Join(parts, "\n\n"))
+	return ""
 }
 
 func readEmbeddedFile(p string) string {
@@ -226,29 +174,6 @@ func renderFallbackGuide(templateID string) string {
 		"- 先阅读该项目的 README、package.json、脚本和样式/运行时入口，再开始修改。",
 		"- 优先保持现有技术栈和目录约定，不要臆造新的工程层级。",
 	}, "\n")
-}
-
-func renderGuide(p Provider, sections []section) string {
-	filename := guideFilename(p)
-	label := providerLabel(p)
-	var b strings.Builder
-	b.WriteString(generatedStart + "\n")
-	b.WriteString("# " + label + " 工作区 AI 指南\n\n")
-	b.WriteString("本段内容由 One CLI 基于项目模板为 `" + filename + "` 自动生成。请优先修改模板 AI 片段，或通过 `one add` 刷新；不要直接手改这段受管内容。\n\n")
-	b.WriteString("## 工作区\n\n")
-	b.WriteString("- 根目录：当前包含 `one.manifest.json` 的工作区目录\n")
-	b.WriteString("- AI 提供方：`" + string(p) + "`\n")
-	b.WriteString(fmt.Sprintf("- 模板分组数：%d\n", len(sections)))
-	for _, s := range sections {
-		b.WriteString("\n## " + s.TemplateID + "\n\n")
-		b.WriteString("适用项目：\n")
-		for _, sp := range s.Subprojects {
-			b.WriteString("- `" + sp.RelativeDir + "`\n")
-		}
-		b.WriteString("\n" + s.Content + "\n")
-	}
-	b.WriteString("\n" + generatedEnd + "\n")
-	return b.String()
 }
 
 // writeManagedGuide writes content to filePath, splicing into an existing
@@ -270,10 +195,17 @@ func writeManagedGuide(filePath, content string, force, dryRun bool) (string, er
 
 	curStr := string(current)
 	hasManaged := strings.Contains(curStr, generatedStart) && strings.Contains(curStr, generatedEnd)
+	hasLegacyManaged := strings.Contains(curStr, legacyGeneratedStart) && strings.Contains(curStr, legacyGeneratedEnd)
 
-	if hasManaged {
+	if hasManaged || hasLegacyManaged {
 		if !dryRun {
-			pattern := regexp.MustCompile(`(?s)` + regexp.QuoteMeta(generatedStart) + `.*?` + regexp.QuoteMeta(generatedEnd))
+			start := generatedStart
+			end := generatedEnd
+			if hasLegacyManaged && !hasManaged {
+				start = legacyGeneratedStart
+				end = legacyGeneratedEnd
+			}
+			pattern := regexp.MustCompile(`(?s)` + regexp.QuoteMeta(start) + `.*?` + regexp.QuoteMeta(end))
 			next := pattern.ReplaceAllString(curStr, strings.TrimSpace(content))
 			if !strings.HasSuffix(next, "\n") {
 				next += "\n"
@@ -287,7 +219,7 @@ func writeManagedGuide(filePath, content string, force, dryRun bool) (string, er
 
 	if !force {
 		return "", cliErrors.New(cliErrors.AI_GUIDE_EXISTS,
-			filepath.Base(filePath)+" 已存在且不包含 One CLI ai-guides 管理标记，请手动合并或删除后重试。")
+			filepath.Base(filePath)+" 已存在且不包含 One CLI agents:index 管理标记，请手动合并或删除后重试。")
 	}
 	if !dryRun {
 		if err := os.WriteFile(filePath, []byte(content), 0o644); err != nil {

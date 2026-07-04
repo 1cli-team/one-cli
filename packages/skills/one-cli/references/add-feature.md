@@ -2,7 +2,7 @@
 
 Use when the user wants to add a new project to an existing
 workspace using one of the bundled templates. Pick a template, render
-it, infra + CI + AI guides update automatically. The `defaults` declared
+it, infra + CI + agent docs update automatically. The `defaults` declared
 on the template (e.g. `container=docker` + `deploy=kustomize` for
 go-api / nestjs-api / nextjs-app) auto-enable at add time.
 
@@ -68,7 +68,7 @@ Schema: `one-cli/add/v1`. The CLI does all of:
 - Adds Deployment + Service to `k8s/deployment.yaml` (if workspace had it)
 - Writes `.github/workflows/<name>-ci.yml`
 - Updates `one.manifest.json`
-- Refreshes `AGENTS.md` / `CLAUDE.md`
+- Refreshes `AGENTS.md`, `CLAUDE.md`, and `.one/agents/**`
 
 ### Step 3 — Install missing dependencies
 

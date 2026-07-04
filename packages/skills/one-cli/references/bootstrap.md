@@ -80,8 +80,7 @@ Schema: `one-cli/add/v1`. `one add` automatically:
 - Applies template-declared domain defaults such as `container=docker`,
   `deploy=kustomize`, or `deploy=aws-s3`
 - Generates the per-project GitHub Actions workflow
-- Refreshes `AGENTS.md` / `CLAUDE.md` from the template's
-  `ai/common.md`
+- Refreshes `AGENTS.md`, `CLAUDE.md`, and `.one/agents/**`
 
 ### Step 4 — Optional Infisical (managed env vars)
 

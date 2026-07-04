@@ -100,7 +100,7 @@ func TestGenerate_FullLayout(t *testing.T) {
 	// Manifest must be parseable + carry the current minimum: version,
 	// workspace identity, and an empty projects array. The current schema dropped
 	// top-level packageManager and ai blocks (per-project still has
-	// packageManager; AI guides are always rendered).
+	// packageManager; agent docs are generated from the manifest).
 	manifestRaw, err := os.ReadFile(filepath.Join(target, "one.manifest.json"))
 	if err != nil {
 		t.Fatal(err)

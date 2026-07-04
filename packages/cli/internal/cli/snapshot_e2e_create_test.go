@@ -26,7 +26,9 @@ var expectedScaffoldPaths = []string{
 	"pnpm-workspace.yaml",
 	"one.manifest.json",
 	"commitlint.config.js",
+	"AGENTS.md",
 	"CLAUDE.md",
+	filepath.Join(".one", "agents", "conventions.md"),
 }
 
 func TestSnapshot_E2E_Create_Default(t *testing.T) {
@@ -48,6 +50,13 @@ func TestSnapshot_E2E_Create_Default(t *testing.T) {
 		if !fileExists(t, full) {
 			t.Errorf("expected scaffold path missing: %s", full)
 		}
+	}
+	claudeRaw, err := os.ReadFile(filepath.Join(target, "CLAUDE.md"))
+	if err != nil {
+		t.Fatalf("read CLAUDE.md: %v", err)
+	}
+	if string(claudeRaw) != "Follow ./AGENTS.md\n" {
+		t.Errorf("CLAUDE.md should be a pointer to AGENTS.md, got:\n%s", claudeRaw)
 	}
 
 	// Manifest sanity. Schema is the current ManifestVersion.

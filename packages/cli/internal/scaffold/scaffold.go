@@ -63,11 +63,19 @@ func Generate(targetDir string, opts Options) error {
 	if err := os.WriteFile(filepath.Join(targetDir, "commitlint.config.js"), []byte(commitlintConfigContent), 0o644); err != nil {
 		return err
 	}
-	// Workspace-level CLAUDE.md. Always written — it's the agent's entry
-	// point for this workspace, regardless of ai.providers config. The
-	// managed blocks inside it are kept in sync by ai.Refresh /
-	// ai.UpdateSubprojectsIndex on every `one add`.
-	if err := os.WriteFile(filepath.Join(targetDir, "CLAUDE.md"), []byte(buildClaudeMd(opts.ProjectName)), 0o644); err != nil {
+	// Workspace-level agent harness. AGENTS.md is canonical; CLAUDE.md is
+	// a thin pointer so tool-specific files do not drift.
+	if err := os.WriteFile(filepath.Join(targetDir, "AGENTS.md"), []byte(buildRootAgentsMd(opts.ProjectName)), 0o644); err != nil {
+		return err
+	}
+	if err := os.WriteFile(filepath.Join(targetDir, "CLAUDE.md"), []byte(buildClaudeMdPointer()), 0o644); err != nil {
+		return err
+	}
+	agentsDir := filepath.Join(targetDir, ".one", "agents")
+	if err := os.MkdirAll(agentsDir, 0o755); err != nil {
+		return err
+	}
+	if err := os.WriteFile(filepath.Join(agentsDir, "conventions.md"), []byte(buildAgentsConventionsMd()), 0o644); err != nil {
 		return err
 	}
 	if err := writeJSON(filepath.Join(targetDir, ".changeset", "config.json"), changesetConfig); err != nil {

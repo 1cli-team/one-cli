@@ -59,6 +59,43 @@ func TestSnapshot_E2E_Add_AutoEnablesTemplateDefaults(t *testing.T) {
 			t.Errorf("expected template file missing: %s", full)
 		}
 	}
+	if fileExists(t, filepath.Join(svcDir, "CLAUDE.md")) {
+		t.Error("subproject CLAUDE.md should not be rendered; project guide belongs under .one/agents/projects/")
+	}
+	for _, rel := range []string{
+		"AGENTS.md",
+		"CLAUDE.md",
+		".one/agents/conventions.md",
+		".one/agents/projects/services-user-api.md",
+		".one/agents/ops/dev.md",
+		".one/agents/ops/secrets.md",
+		".one/agents/ops/container.md",
+		".one/agents/ops/deploy.md",
+	} {
+		if !fileExists(t, filepath.Join(ws, filepath.FromSlash(rel))) {
+			t.Errorf("expected agent harness file missing: %s", rel)
+		}
+	}
+	claudeRaw, err := os.ReadFile(filepath.Join(ws, "CLAUDE.md"))
+	if err != nil {
+		t.Fatalf("read root CLAUDE.md: %v", err)
+	}
+	if string(claudeRaw) != "Follow ./AGENTS.md\n" {
+		t.Errorf("root CLAUDE.md should be a pointer to AGENTS.md, got:\n%s", claudeRaw)
+	}
+	agentsRaw, err := os.ReadFile(filepath.Join(ws, "AGENTS.md"))
+	if err != nil {
+		t.Fatalf("read root AGENTS.md: %v", err)
+	}
+	for _, want := range []string{
+		"<!-- one agents:index:start -->",
+		".one/agents/projects/services-user-api.md",
+		".one/agents/ops/deploy.md",
+	} {
+		if !strings.Contains(string(agentsRaw), want) {
+			t.Errorf("AGENTS.md missing %q:\n%s", want, agentsRaw)
+		}
+	}
 	goModRaw, err := os.ReadFile(filepath.Join(svcDir, "go.mod"))
 	if err != nil {
 		t.Fatalf("read rendered go.mod: %v", err)
@@ -249,7 +286,7 @@ func TestSnapshot_E2E_Add_NoDefaultsTemplate(t *testing.T) {
 
 // TestSnapshot_E2E_Add_GoLibTemplate verifies the go-lib template
 // renders the golang-standards/project-layout starter (pkg/greeter,
-// go.mod, Taskfile.yml, LICENSE, CLAUDE.md) under packages/<name>/
+// go.mod, Taskfile.yml, LICENSE) under packages/<name>/
 // and — like ts-library — does NOT auto-enable container/docker or
 // deploy/kustomize because it declares no per-subproject defaults.
 func TestSnapshot_E2E_Add_GoLibTemplate(t *testing.T) {
@@ -274,7 +311,6 @@ func TestSnapshot_E2E_Add_GoLibTemplate(t *testing.T) {
 		"go.mod",
 		"Taskfile.yml",
 		"LICENSE",
-		"CLAUDE.md",
 		filepath.Join("pkg", "greeter", "greeter.go"),
 		filepath.Join("pkg", "greeter", "greeter_test.go"),
 	} {
@@ -282,6 +318,12 @@ func TestSnapshot_E2E_Add_GoLibTemplate(t *testing.T) {
 		if !fileExists(t, full) {
 			t.Errorf("expected go-lib artifact missing: %s", full)
 		}
+	}
+	if fileExists(t, filepath.Join(libDir, "CLAUDE.md")) {
+		t.Error("subproject CLAUDE.md should not be rendered for go-lib")
+	}
+	if !fileExists(t, filepath.Join(ws, ".one", "agents", "projects", "packages-mathx.md")) {
+		t.Error("central go-lib project guide missing under .one/agents/projects/")
 	}
 
 	// Dev-only go.mod must NOT leak into the rendered output.

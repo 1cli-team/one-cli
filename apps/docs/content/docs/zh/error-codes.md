@@ -321,9 +321,9 @@ The release-flow backend's expected toolchain or repo state does not match the w
 
 > 没有默认 remediation。具体恢复方式请看错误的 `context` 字段。
 
-## AI 指南 / Skills
+## Agent 文档 / Skills
 
-`AGENTS.md` / `CLAUDE.md` 生成与 bundled skill 安装。
+`AGENTS.md` / `CLAUDE.md` / `.one/agents/**` 生成与 bundled skill 安装。
 
 ### `AI_CONFIG_INVALID`
 
@@ -339,7 +339,7 @@ Reserved for legacy AI provider gates; current workspaces always render for ever
 
 ### `AI_GUIDES_FAILED`
 
-AI guides refresh failed; see surfaced error message.
+Agent docs refresh failed; see surfaced error message.
 
 > 没有默认 remediation。具体恢复方式请看错误的 `context` 字段。
 
