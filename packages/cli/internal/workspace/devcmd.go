@@ -8,7 +8,11 @@ package workspace
 // `one add` variants and migration scripts call into the same source
 // of truth without pulling in the supervisor implementation.
 
-import "strings"
+import (
+	"os"
+	"path/filepath"
+	"strings"
+)
 
 // ResolveDevCommand picks the dev command for a freshly-scaffolded
 // subproject. For Node-style projects (anything that ships a non-empty
@@ -29,4 +33,20 @@ func ResolveDevCommand(scripts map[string]string, toolchain string) string {
 		return "go run ./cmd/server"
 	}
 	return ""
+}
+
+// ResolveScaffoldDevCommand applies the generic command heuristic to a
+// freshly rendered project and verifies toolchain-specific entrypoints that
+// cannot be inferred from package scripts. In particular, Go libraries and
+// Go services share a toolchain, but only services contain cmd/server.
+func ResolveScaffoldDevCommand(scripts map[string]string, toolchain, projectDir string) string {
+	command := ResolveDevCommand(scripts, toolchain)
+	if command == "" || toolchain != "go" {
+		return command
+	}
+	info, err := os.Stat(filepath.Join(projectDir, "cmd", "server"))
+	if err != nil || !info.IsDir() {
+		return ""
+	}
+	return command
 }

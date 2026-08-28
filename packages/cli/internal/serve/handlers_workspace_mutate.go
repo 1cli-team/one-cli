@@ -17,10 +17,13 @@ package serve
 
 import (
 	"errors"
+	"fmt"
 	"net/http"
+	"slices"
 	"strings"
 
 	cliErrors "github.com/torchstellar-team/one-cli/packages/cli/internal/errors"
+	"github.com/torchstellar-team/one-cli/packages/cli/internal/template"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/workspace"
 )
 
@@ -133,6 +136,15 @@ func handlePutProjectDeploy(opts MuxOpts) http.HandlerFunc {
 			writeNotFound(w, "project not found: "+name)
 			return
 		}
+		registry, err := template.Fetch(r.Context(), "")
+		if err != nil {
+			writeManifestErr(w, err)
+			return
+		}
+		if !templateAllowsDeployKind(registry, p.TemplateID, kind) {
+			writeBadPayload(w, fmt.Sprintf("deploy backend %q is not compatible with template %q", kind, p.TemplateID))
+			return
+		}
 		if p.Domains == nil {
 			p.Domains = &workspace.ProjectDomains{}
 		}
@@ -146,6 +158,18 @@ func handlePutProjectDeploy(opts MuxOpts) http.HandlerFunc {
 		}
 		writeOverviewAfterMutate(w, root)
 	}
+}
+
+func templateAllowsDeployKind(registry *template.Registry, templateID, kind string) bool {
+	if registry == nil {
+		return false
+	}
+	for _, entry := range registry.Templates {
+		if entry.ID == templateID {
+			return slices.Contains(entry.Compat["deploy"], kind)
+		}
+	}
+	return false
 }
 
 type containerInitReq struct {

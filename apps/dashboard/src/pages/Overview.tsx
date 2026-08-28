@@ -63,6 +63,7 @@ function issueKey(issue: OverviewIssue): string {
 interface FixTarget {
 	domain: OverviewIssueDomain;
 	projectName?: string;
+	kindOptions?: readonly string[];
 }
 
 interface ProfileFixTarget {
@@ -301,6 +302,8 @@ export const Overview: React.FC<{ data: OverviewPayload }> = ({ data }) => {
 																setFixTarget({
 																	domain: iss.domain,
 																	projectName: p.name,
+																	kindOptions:
+																		iss.domain === "deploy" ? p.compatibleDeployTargets : undefined,
 																})
 															}
 															title={issueText(iss)}
@@ -343,6 +346,7 @@ export const Overview: React.FC<{ data: OverviewPayload }> = ({ data }) => {
 			<MissingConfigDialog
 				domain={fixTarget?.domain ?? null}
 				projectName={fixTarget?.projectName}
+				kindOptions={fixTarget?.kindOptions}
 				open={fixTarget !== null}
 				onOpenChange={(next) => {
 					if (!next) setFixTarget(null);

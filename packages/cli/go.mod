@@ -11,6 +11,7 @@ require (
 	github.com/aymerick/raymond v2.0.2+incompatible
 	github.com/charmbracelet/huh v1.0.0
 	github.com/charmbracelet/lipgloss v1.1.0
+	github.com/creack/pty v1.1.24
 	github.com/infisical/go-sdk v0.7.1
 	github.com/pelletier/go-toml/v2 v2.3.1
 	github.com/pkg/browser v0.0.0-20240102092130-5ac0b6a4141c

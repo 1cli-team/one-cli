@@ -332,4 +332,18 @@ func TestSnapshot_E2E_Add_GoLibTemplate(t *testing.T) {
 	if fileExists(t, filepath.Join(ws, "kustomize")) {
 		t.Error("kustomize/ produced for go-lib (no defaults expected)")
 	}
+
+	// A library has no long-running local entrypoint. Declaring the Go API
+	// fallback here would make the workspace overview claim it can start and
+	// make `one dev` run a cmd/server directory the template does not contain.
+	mf := readManifest(t, ws)
+	projects, _ := mf["projects"].([]any)
+	if len(projects) != 1 {
+		t.Fatalf("manifest: want 1 project, got %d", len(projects))
+	}
+	project := projects[0].(map[string]any)
+	domains, _ := project["domains"].(map[string]any)
+	if dev, exists := domains["dev"]; exists {
+		t.Fatalf("go-lib must not declare a runnable dev command, got %v", dev)
+	}
 }

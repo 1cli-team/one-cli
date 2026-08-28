@@ -8,12 +8,14 @@ package workspace
 // in".
 
 import (
+	"context"
 	"errors"
 	"sort"
 	"strings"
 
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/output"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/profile"
+	"github.com/torchstellar-team/one-cli/packages/cli/internal/template"
 )
 
 // OverviewSchema is the JSON envelope version stamp.
@@ -75,13 +77,14 @@ type OverviewWorkspace struct {
 // default merged with per-project overrides) so the UI can render the
 // effective state without duplicating selector logic.
 type OverviewProject struct {
-	Name        string            `json:"name"`
-	RelativeDir string            `json:"relativeDir"`
-	Kind        string            `json:"kind"`
-	TemplateID  string            `json:"templateId,omitempty"`
-	Toolchain   string            `json:"toolchain,omitempty"`
-	Domains     map[string]string `json:"domains,omitempty"`
-	Issues      []OverviewIssue   `json:"issues,omitempty"`
+	Name                    string            `json:"name"`
+	RelativeDir             string            `json:"relativeDir"`
+	Kind                    string            `json:"kind"`
+	TemplateID              string            `json:"templateId,omitempty"`
+	Toolchain               string            `json:"toolchain,omitempty"`
+	CompatibleDeployTargets []string          `json:"compatibleDeployTargets,omitempty"`
+	Domains                 map[string]string `json:"domains,omitempty"`
+	Issues                  []OverviewIssue   `json:"issues,omitempty"`
 }
 
 // OverviewIssue is one "missing configuration" finding. Message is a short
@@ -116,6 +119,10 @@ func BuildOverview(root string) (Overview, error) {
 	if err != nil {
 		return Overview{Schema: OverviewSchema, Present: false}, err
 	}
+	registry, err := template.Fetch(context.Background(), "")
+	if err != nil {
+		return Overview{Schema: OverviewSchema, Present: false}, err
+	}
 
 	ov := Overview{
 		Schema:    OverviewSchema,
@@ -137,7 +144,7 @@ func BuildOverview(root string) (Overview, error) {
 	}
 
 	for i := range m.Projects {
-		ov.Projects = append(ov.Projects, buildProject(m, profiles, &m.Projects[i]))
+		ov.Projects = append(ov.Projects, buildProject(m, profiles, registry, &m.Projects[i]))
 	}
 	return ov, nil
 }
@@ -172,15 +179,16 @@ func buildWorkspaceSummary(m *Manifest) *OverviewWorkspace {
 	return s
 }
 
-func buildProject(m *Manifest, profiles *profile.Config, p *ManifestProject) OverviewProject {
+func buildProject(m *Manifest, profiles *profile.Config, registry *template.Registry, p *ManifestProject) OverviewProject {
 	kind := projectKindFromDir(p.RelativeDir)
 	out := OverviewProject{
-		Name:        p.Name,
-		RelativeDir: p.RelativeDir,
-		Kind:        kind,
-		TemplateID:  p.TemplateID,
-		Toolchain:   p.Toolchain,
-		Domains:     projectResolvedDomains(m, p),
+		Name:                    p.Name,
+		RelativeDir:             p.RelativeDir,
+		Kind:                    kind,
+		TemplateID:              p.TemplateID,
+		Toolchain:               p.Toolchain,
+		CompatibleDeployTargets: compatibleDeployTargets(registry, p.TemplateID),
+		Domains:                 projectResolvedDomains(m, p),
 	}
 
 	// packages aren't expected to deploy / build containers / have a dev
@@ -206,22 +214,36 @@ func buildProject(m *Manifest, profiles *profile.Config, p *ManifestProject) Ove
 		}
 	}
 
-	hasDeployWorkspaceDefault := m.Domains != nil && m.Domains.Deploy != nil && m.Domains.Deploy.Kind != ""
-	if DeployForProject(m, p.Name).Backend == "" && !hasDeployWorkspaceDefault {
-		out.Issues = append(out.Issues, OverviewIssue{
-			Domain:   IssueDomainDeploy,
-			Severity: IssueSeverityMissing,
-			Message:  "no deploy backend selected for this project",
-			Reason:   IssueReasonBackend,
-		})
-	}
-	if backend := out.Domains[IssueDomainDeploy]; backend != "" {
-		if issue := profileIssue(profiles, m, IssueDomainDeploy, backend, p.Name); issue != nil {
-			out.Issues = append(out.Issues, *issue)
+	if len(out.CompatibleDeployTargets) > 0 {
+		hasDeployWorkspaceDefault := m.Domains != nil && m.Domains.Deploy != nil && m.Domains.Deploy.Kind != ""
+		if DeployForProject(m, p.Name).Backend == "" && !hasDeployWorkspaceDefault {
+			out.Issues = append(out.Issues, OverviewIssue{
+				Domain:   IssueDomainDeploy,
+				Severity: IssueSeverityMissing,
+				Message:  "no deploy backend selected for this project",
+				Reason:   IssueReasonBackend,
+			})
+		}
+		if backend := out.Domains[IssueDomainDeploy]; backend != "" {
+			if issue := profileIssue(profiles, m, IssueDomainDeploy, backend, p.Name); issue != nil {
+				out.Issues = append(out.Issues, *issue)
+			}
 		}
 	}
 
 	return out
+}
+
+func compatibleDeployTargets(registry *template.Registry, templateID string) []string {
+	if registry == nil {
+		return nil
+	}
+	for _, entry := range registry.Templates {
+		if entry.ID == templateID {
+			return append([]string(nil), entry.Compat[IssueDomainDeploy]...)
+		}
+	}
+	return nil
 }
 
 func profileIssue(cfg *profile.Config, m *Manifest, domain, backend, projectName string) *OverviewIssue {

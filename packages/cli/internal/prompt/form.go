@@ -73,7 +73,7 @@ func (f *Form) Run() error {
 		return nil
 	}
 	form := huh.NewForm(huh.NewGroup(f.fields...)).WithTheme(defaultTheme())
-	if err := form.Run(); err != nil {
+	if err := runHuh(form.Run); err != nil {
 		return mapErr(err)
 	}
 	return nil

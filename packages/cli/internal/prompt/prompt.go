@@ -15,6 +15,8 @@ package prompt
 import (
 	stderrors "errors"
 	"fmt"
+	"os"
+	"os/signal"
 
 	"github.com/charmbracelet/huh"
 
@@ -41,7 +43,7 @@ func Text(title, placeholder string, validate func(string) error) (string, error
 	if validate != nil {
 		field = field.Validate(validate)
 	}
-	if err := field.WithTheme(defaultTheme()).Run(); err != nil {
+	if err := runHuh(field.WithTheme(defaultTheme()).Run); err != nil {
 		return "", mapErr(err)
 	}
 	return value, nil
@@ -58,7 +60,7 @@ func Password(title string, validate func(string) error) (string, error) {
 	if validate != nil {
 		field = field.Validate(validate)
 	}
-	if err := field.WithTheme(defaultTheme()).Run(); err != nil {
+	if err := runHuh(field.WithTheme(defaultTheme()).Run); err != nil {
 		return "", mapErr(err)
 	}
 	return value, nil
@@ -76,7 +78,7 @@ func Confirm(title string, defaultValue bool, affirmative, negative string) (boo
 	if negative != "" {
 		field = field.Negative(negative)
 	}
-	if err := field.WithTheme(defaultTheme()).Run(); err != nil {
+	if err := runHuh(field.WithTheme(defaultTheme()).Run); err != nil {
 		return false, mapErr(err)
 	}
 	return value, nil
@@ -95,7 +97,7 @@ func Select[T comparable](title string, options []Option[T]) (T, error) {
 		Title(title).
 		Options(huhOpts...).
 		Value(&value)
-	if err := field.WithTheme(defaultTheme()).Run(); err != nil {
+	if err := runHuh(field.WithTheme(defaultTheme()).Run); err != nil {
 		return value, mapErr(err)
 	}
 	return value, nil
@@ -121,7 +123,7 @@ func MultiSelect[T comparable](title string, options []Option[T], preSelected []
 		Title(title).
 		Options(huhOpts...).
 		Value(&values)
-	if err := field.WithTheme(defaultTheme()).Run(); err != nil {
+	if err := runHuh(field.WithTheme(defaultTheme()).Run); err != nil {
 		return nil, mapErr(err)
 	}
 	return values, nil
@@ -144,6 +146,30 @@ func SelectWithDescriptions[T comparable](title string, options []Option[T]) (T,
 		flat = append(flat, Option[T]{Label: label, Value: opt.Value})
 	}
 	return Select(title, flat)
+}
+
+// runHuh restores the same cooperative Ctrl-C behavior in huh's accessible
+// mode that Bubble Tea provides in its regular terminal mode. huh switches to
+// accessible prompts for TERM=dumb, where a Ctrl-C otherwise terminates the
+// whole process before it can return ErrUserAborted to us.
+func runHuh(run func() error) error {
+	if os.Getenv("TERM") != "dumb" {
+		return run()
+	}
+
+	interrupted := make(chan os.Signal, 1)
+	signal.Notify(interrupted, os.Interrupt)
+	defer signal.Stop(interrupted)
+
+	done := make(chan error, 1)
+	go func() { done <- run() }()
+
+	select {
+	case err := <-done:
+		return err
+	case <-interrupted:
+		return huh.ErrUserAborted
+	}
 }
 
 // mapErr translates huh sentinels into our central error catalogue. Anything

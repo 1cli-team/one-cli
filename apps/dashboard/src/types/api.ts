@@ -362,6 +362,7 @@ export interface OverviewProject {
 	kind: OverviewProjectKind;
 	templateId?: string;
 	toolchain?: string;
+	compatibleDeployTargets?: string[];
 	domains?: Partial<Record<OverviewIssueDomain, string>>;
 	issues?: OverviewIssue[];
 }

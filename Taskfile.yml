@@ -196,15 +196,27 @@ tasks:
           GOOS=$os GOARCH=$arch go build -trimpath -ldflags '{{.LDFLAGS}}' -o "$out" ./cmd/one
 
   test:
+    desc: Run Go tests with race detector and Dashboard interaction tests
+    cmds:
+      - task: test:go
+      - task: test:dashboard
+
+  test:go:
     desc: Run Go tests with race detector
-    deps: [sync-bundled, sync-web]
+    deps: [build]
     dir: '{{.CLI_DIR}}'
     cmds:
       - go test -race ./...
 
+  test:dashboard:
+    desc: Run Dashboard interaction tests
+    deps: [build-web]
+    cmds:
+      - pnpm --dir apps/dashboard run test
+
   test:snapshot:
     desc: Run only the JSON-snapshot tests against testdata/reference
-    deps: [sync-bundled, sync-web]
+    deps: [build]
     dir: '{{.CLI_DIR}}'
     cmds:
       - go test -run Snapshot ./...

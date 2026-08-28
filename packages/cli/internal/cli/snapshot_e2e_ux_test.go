@@ -7,6 +7,8 @@ import (
 	"reflect"
 	"strings"
 	"testing"
+
+	"gopkg.in/yaml.v3"
 )
 
 func TestSnapshot_E2E_CreateDailyText(t *testing.T) {
@@ -169,6 +171,24 @@ func TestSnapshot_E2E_EnvSummarySafeSetAndList(t *testing.T) {
 	}
 	if !strings.Contains(stdout, "TEST_KEY") || strings.Contains(stdout, "super-secret") {
 		t.Fatalf("env list must show names only: %q", stdout)
+	}
+}
+
+func TestSnapshot_E2E_EnvSummaryYAMLKeepsStableProtocolFields(t *testing.T) {
+	tmp := t.TempDir()
+	isolateHome(t, tmp)
+	ws := bootstrapWorkspace(t, tmp, "demo")
+
+	stdout, stderr, code := runBinaryIn(t, ws, "env", "-o", "yaml")
+	if code != 0 || stderr != "" {
+		t.Fatalf("env YAML summary failed: exit=%d stderr=%q", code, stderr)
+	}
+	var summary map[string]any
+	if err := yaml.Unmarshal([]byte(stdout), &summary); err != nil {
+		t.Fatalf("decode env YAML output: %v\n%s", err, stdout)
+	}
+	if summary["schema"] != "one-cli/env-summary/v1" || summary["source"] != "dotenv" || summary["default_environment"] != "dev" {
+		t.Fatalf("unexpected env YAML contract: %v", summary)
 	}
 }
 

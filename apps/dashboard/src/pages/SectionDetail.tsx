@@ -610,16 +610,18 @@ const BackendFields: React.FC<BackendFieldsProps> = ({ sectionKey, profile, setP
 			return (
 				<>
 					<FieldRow>
-						<Label>{t("form.fields.teamSlug")}</Label>
+						<Label htmlFor="vercel-team-slug">{t("form.fields.teamSlug")}</Label>
 						<Input
+							id="vercel-team-slug"
 							value={p.team ?? ""}
 							onChange={(e) => setProfile({ ...p, team: e.target.value })}
 							placeholder={t("form.fields.teamSlugPlaceholder")}
 						/>
 					</FieldRow>
 					<FieldRow>
-						<Label>{t("form.fields.apiToken")}</Label>
+						<Label htmlFor="vercel-api-token">{t("form.fields.apiToken")}</Label>
 						<Input
+							id="vercel-api-token"
 							type="password"
 							value={secretInputValue(p.credentials?.apiToken)}
 							placeholder={secretPlaceholder(

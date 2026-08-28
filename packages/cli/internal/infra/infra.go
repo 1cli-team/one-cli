@@ -94,7 +94,7 @@ func SyncSubproject(opts Options) error {
 	// (or toolchain default) and persist it to the manifest at
 	// projects[].domains.dev.command. `one dev` reads the manifest at
 	// startup — no Procfile.dev artefact is produced.
-	if cmd := workspace.ResolveDevCommand(scripts, string(tc)); cmd != "" {
+	if cmd := workspace.ResolveScaffoldDevCommand(scripts, string(tc), opts.TargetDir); cmd != "" {
 		if err := workspace.UpdateProjectDev(opts.ProjectRoot, relDir, cmd); err != nil {
 			return err
 		}

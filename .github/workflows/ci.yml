@@ -6,7 +6,7 @@
 #    tree (registry/skills/_templates/_web) is gitignored and regenerated
 #    via `task sync-bundled` + `task sync-web`, both of which run as deps
 #    of `task vet` — so vet implicitly bootstraps the bundle here.
-#  - test: Linux PR gate, builds bin/one then runs `go test ./...`.
+#  - test: Linux PR gate, builds bin/one then runs Go + Dashboard tests.
 #    Build is required because internal/cli/snapshot_e2e_test.go skips when
 #    bin/one is missing. Race + macOS checks run on master/manual triggers only.
 #
@@ -64,7 +64,9 @@ jobs:
         with:
           node-version: 20
           cache: pnpm
-          cache-dependency-path: apps/dashboard/pnpm-lock.yaml
+          cache-dependency-path: |
+            pnpm-lock.yaml
+            apps/dashboard/pnpm-lock.yaml
 
       - name: Install task
         run: go install github.com/go-task/task/v3/cmd/task@latest
@@ -113,7 +115,9 @@ jobs:
         with:
           node-version: 20
           cache: pnpm
-          cache-dependency-path: apps/dashboard/pnpm-lock.yaml
+          cache-dependency-path: |
+            pnpm-lock.yaml
+            apps/dashboard/pnpm-lock.yaml
 
       - name: Install task
         run: go install github.com/go-task/task/v3/cmd/task@latest
@@ -128,6 +132,9 @@ jobs:
       - name: Run tests
         working-directory: packages/cli
         run: go test ./...
+
+      - name: Run Dashboard tests
+        run: pnpm --dir apps/dashboard run test
 
   test-race:
     # Race tests are useful but slow on GitHub-hosted runners. Keep them off
@@ -154,7 +161,9 @@ jobs:
         with:
           node-version: 20
           cache: pnpm
-          cache-dependency-path: apps/dashboard/pnpm-lock.yaml
+          cache-dependency-path: |
+            pnpm-lock.yaml
+            apps/dashboard/pnpm-lock.yaml
 
       - name: Install task
         run: go install github.com/go-task/task/v3/cmd/task@latest
@@ -194,7 +203,9 @@ jobs:
         with:
           node-version: 20
           cache: pnpm
-          cache-dependency-path: apps/dashboard/pnpm-lock.yaml
+          cache-dependency-path: |
+            pnpm-lock.yaml
+            apps/dashboard/pnpm-lock.yaml
 
       - name: Install task
         run: go install github.com/go-task/task/v3/cmd/task@latest

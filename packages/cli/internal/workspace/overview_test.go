@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"slices"
 	"testing"
 
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/profile"
@@ -103,6 +104,11 @@ func TestBuildOverview_FullyConfigured_NoIssues(t *testing.T) {
 	if ov.Projects[0].Kind != ProjectKindApp {
 		t.Errorf("kind = %q; want %q", ov.Projects[0].Kind, ProjectKindApp)
 	}
+	if got := ov.Projects[0].CompatibleDeployTargets; !slices.Equal(got, []string{
+		"aliyun-oss", "tencent-cos", "aws-s3", "minio", "rustfs", "r2", "vercel", "cloudflare", "edgeone",
+	}) {
+		t.Fatalf("compatible deploy targets = %v", got)
+	}
 	if ov.Workspace.Domains["env"] != EnvBackendDotenv {
 		t.Errorf("workspace env domain = %q", ov.Workspace.Domains["env"])
 	}
@@ -152,6 +158,37 @@ func TestBuildOverview_AppMissingDeployOnly(t *testing.T) {
 	}
 	if domains[IssueDomainContainer] {
 		t.Errorf("container should not be required before kustomize deploy is selected")
+	}
+}
+
+func TestBuildOverview_NonDeployableAppDoesNotReportMissingDeploy(t *testing.T) {
+	withIsolatedOverviewProfiles(t)
+	tmp := t.TempDir()
+	m := &Manifest{
+		Version:   ManifestVersion,
+		Workspace: &ManifestWorkspace{ID: "demo", Name: "demo"},
+		Domains: &WorkspaceDomains{
+			Env: &BackendRef{Kind: EnvBackendDotenv},
+		},
+		Projects: []ManifestProject{
+			{Name: "mobile", RelativeDir: "apps/mobile", TemplateID: "expo-mobile", Toolchain: "node"},
+		},
+	}
+	if err := WriteManifest(tmp, m); err != nil {
+		t.Fatalf("WriteManifest: %v", err)
+	}
+	ov, err := BuildOverview(tmp)
+	if err != nil {
+		t.Fatalf("BuildOverview: %v", err)
+	}
+	project := ov.Projects[0]
+	if len(project.CompatibleDeployTargets) != 0 {
+		t.Fatalf("expo-mobile deploy targets = %v; want none", project.CompatibleDeployTargets)
+	}
+	for _, issue := range project.Issues {
+		if issue.Domain == IssueDomainDeploy {
+			t.Fatalf("non-deployable app must not report a missing deploy target: %+v", project.Issues)
+		}
 	}
 }
 

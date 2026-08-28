@@ -40,6 +40,7 @@ interface MissingConfigDialogProps {
 	// projectName is required for deploy/container; ignored for env (which
 	// is a workspace-level setting). null closes the dialog.
 	projectName?: string;
+	kindOptions?: readonly string[];
 	open: boolean;
 	onOpenChange: (open: boolean) => void;
 	onUpdated: (overview: Overview) => void;
@@ -48,6 +49,7 @@ interface MissingConfigDialogProps {
 export const MissingConfigDialog: React.FC<MissingConfigDialogProps> = ({
 	domain,
 	projectName,
+	kindOptions,
 	open,
 	onOpenChange,
 	onUpdated,
@@ -73,7 +75,7 @@ export const MissingConfigDialog: React.FC<MissingConfigDialogProps> = ({
 
 	if (!domain) return null;
 
-	const options = KIND_OPTIONS[domain];
+	const options = kindOptions ?? KIND_OPTIONS[domain];
 
 	async function handleSave() {
 		if (!domain || !kind) return;
