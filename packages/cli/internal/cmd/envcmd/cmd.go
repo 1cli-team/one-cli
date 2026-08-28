@@ -27,6 +27,7 @@ package envcmd
 import (
 	"context"
 	"fmt"
+	"io"
 	"os"
 	"strings"
 
@@ -34,6 +35,7 @@ import (
 
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/cliexts"
 	cliErrors "github.com/torchstellar-team/one-cli/packages/cli/internal/errors"
+	"github.com/torchstellar-team/one-cli/packages/cli/internal/helpui"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/i18n"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/output"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/profile"
@@ -50,47 +52,105 @@ func init() {
 
 func buildContributions() []*cobra.Command {
 	parent := &cobra.Command{
-		Use: "env",
-		Long: `本命令操作工作区当前选定的 env 后端
-（manifest.domains.env.kind，dotenv 或 infisical）。
-
-子命令：
-  one env get  <KEY>                  读取一个环境变量值
-  one env set  <KEY[=VALUE]> [VALUE]  写一个环境变量值
-  one env list                        列出所有 KEY
-  one env pull                        从远端拉取并写入本地 .env（仅 infisical）
-  one env switch <backend>            切换工作区后端（dotenv ↔ infisical），可选数据同步
-
-环境选择：
-  manifest.environments.names 是工作区维护的环境名列表（默认 dev / staging / prod）。
-  --env 不传则使用 manifest.environments.default。
-  对 dotenv 后端而言，每个环境对应 <project>/.env.<env> 覆盖文件，加载顺序为
-  .env → .env.<env> → .env.local → .env.<env>.local（后者覆盖前者）。
-  对 infisical 后端而言，--env 直接选 Infisical 项目内对应的环境分区。
-
-项目选择（dotenv）：
-  -p / --project <selector> 接受两种形式：
-    one env set FOO=bar -p web                  # manifest 里 projects[].name
-    one env set FOO=bar -p apps/web             # 相对工作区根的路径
-  不传 -p 时按 cwd 推断（cd 进项目后直接 set 即可）。
-
-Infisical 项目绑定：
-  在 one create --env-provider infisical 时自动完成（前提是已配 env/infisical profile）。
-  profile 暂未配置 / 网络不通时，create 仍然成功；首次跑 env 命令会再尝试一次自动绑定。
-  自动绑定彻底失败的情况下，错误信息会指向 one configure add env/infisical。
-
-凭据 scope：machine 级（siteUrl + clientId/secret）走 one configure add env/infisical，
-不在 manifest 中。`,
+		Use:     "env",
+		Long:    i18n.T("env.tip"),
+		Example: "  one env\n  one env set DATABASE_URL\n  one env list",
+		Args:    cobra.NoArgs,
+		RunE: func(_ *cobra.Command, _ []string) error {
+			root, err := workspace.ResolveProjectRoot("")
+			if err != nil {
+				return err
+			}
+			if !workspace.HasManifest(root) {
+				return cliErrors.New(cliErrors.NOT_ONE_PROJECT, i18n.T("env.workspace_required"))
+			}
+			summary, err := buildEnvSummary(root)
+			if err != nil {
+				return err
+			}
+			output.Emit(&summary)
+			return nil
+		},
 	}
-	parent.AddCommand(
-		newGetCmd(),
-		newSetCmd(),
-		newListCmd(),
-		newPullCmd(),
-		newSwitchCmd(),
-	)
+	children := []*cobra.Command{newGetCmd(), newSetCmd(), newListCmd(), newPullCmd(), newSwitchCmd()}
+	for _, child := range children {
+		helpui.MarkAdvanced(child, "profile")
+	}
+	parent.AddCommand(children...)
 	i18n.MarkShort(parent, "env.short")
+	i18n.MarkLong(parent, "env.tip")
 	return []*cobra.Command{parent}
+}
+
+type envSummary struct {
+	Schema                string   `json:"schema"`
+	Source                string   `json:"source"`
+	DefaultEnvironment    string   `json:"default_environment"`
+	AvailableEnvironments []string `json:"available_environments"`
+	Scope                 string   `json:"scope"`
+	Project               string   `json:"project,omitempty"`
+	Commands              []string `json:"commands"`
+}
+
+func buildEnvSummary(root string) (envSummary, error) {
+	m, err := workspace.ReadManifest(root)
+	if err != nil {
+		return envSummary{}, err
+	}
+	source := workspace.EnvBackend(m)
+	if source == "" {
+		source = workspace.EnvBackendDotenv
+	}
+	defaultEnv := "dev"
+	environments := append([]string(nil), workspace.DefaultEnvironments...)
+	if m.Environments != nil {
+		if strings.TrimSpace(m.Environments.Default) != "" {
+			defaultEnv = m.Environments.Default
+		}
+		if len(m.Environments.Names) > 0 {
+			environments = append([]string(nil), m.Environments.Names...)
+		}
+	}
+	scope := "workspace"
+	project := ""
+	if cwd, cwdErr := os.Getwd(); cwdErr == nil {
+		if p, resolveErr := workspace.ResolveProjectFromCWD(root, cwd); resolveErr == nil && p != nil {
+			scope = "project"
+			project = p.Name
+		}
+	}
+	return envSummary{
+		Schema:                "one-cli/env-summary/v1",
+		Source:                source,
+		DefaultEnvironment:    defaultEnv,
+		AvailableEnvironments: environments,
+		Scope:                 scope,
+		Project:               project,
+		Commands:              []string{"one env set <KEY>", "one env list", "one env get <KEY>"},
+	}, nil
+}
+
+func (s *envSummary) RenderTTY(w io.Writer) {
+	if s == nil {
+		return
+	}
+	source := s.Source
+	if source == workspace.EnvBackendDotenv {
+		source = i18n.T("env.source_dotenv")
+	}
+	scope := i18n.T("env.scope_workspace")
+	if s.Scope == "project" {
+		scope = i18n.Tf("env.scope_project", s.Project)
+	}
+	fmt.Fprintf(w, i18n.T("env.summary_source")+"\n", source)
+	fmt.Fprintf(w, i18n.T("env.summary_default")+"\n", s.DefaultEnvironment)
+	fmt.Fprintf(w, i18n.T("env.summary_available")+"\n", strings.Join(s.AvailableEnvironments, ", "))
+	fmt.Fprintf(w, i18n.T("env.summary_scope")+"\n", scope)
+	fmt.Fprintln(w)
+	fmt.Fprintln(w, i18n.T("env.common_commands"))
+	for _, command := range s.Commands {
+		fmt.Fprintln(w, "  "+command)
+	}
 }
 
 // requireEnv resolves the active env backend for the workspace.
@@ -314,9 +374,11 @@ func newGetCmd() *cobra.Command {
 			return verbNotSupported("get")
 		},
 	}
-	cmd.Flags().StringVarP(&sub, "project", "p", "", "项目名（manifest.projects[].name）或相对路径；默认从 cwd 推导")
-	cmd.Flags().StringVar(&env, "env", "", "环境名（缺省 manifest.environments.default）")
-	cmd.Flags().StringVar(&profileFlag, "profile", "", "一次性使用指定 profile（不改 default）")
+	cmd.Flags().StringVarP(&sub, "project", "p", "", i18n.T("env.flag.project"))
+	cmd.Flags().StringVar(&env, "env", "", i18n.T("env.flag.environment"))
+	cmd.Flags().StringVar(&profileFlag, "profile", "", i18n.T("env.flag.profile"))
+	markEnvFlagUsage(cmd, "project", "env", "profile")
+	i18n.MarkShort(cmd, "env.get.short")
 	return cmd
 }
 
@@ -328,14 +390,8 @@ func newSetCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "set <KEY[=VALUE]> [VALUE]",
 		Short: "写一个环境变量值（dotenv 写到 .env / .env.<env>，infisical 写到对应环境）",
-		Long: `写一个环境变量值。两种调用形式都接受：
-
-  one env set KEY VALUE        # 两个位置参数
-  one env set KEY=VALUE        # 单参数 KEY=VALUE
-  one env set KEY              # 等价于 KEY=（空值）
-
-VALUE 含等号时，单参形式按第一个 = 拆分：one env set DSN=postgres://x=y → KEY="DSN", VALUE="postgres://x=y"。`,
-		Args: cobra.RangeArgs(1, 2),
+		Long:  i18n.T("env.set.tip"),
+		Args:  cobra.RangeArgs(1, 2),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			root, err := workspace.ResolveProjectRoot("")
 			if err != nil {
@@ -347,6 +403,21 @@ VALUE 含等号时，单参形式按第一个 = 拆分：one env set DSN=postgre
 			}
 
 			key, value := parseSetArgs(args)
+			if !setValueProvided(args) {
+				if !output.CanPrompt() {
+					return cliErrors.New(cliErrors.ENV_SET_VALUE_REQUIRED,
+						i18n.T("env.value_required"))
+				}
+				value, err = prompt.Password(i18n.Tf("env.prompt_value", key), func(v string) error {
+					if v == "" {
+						return fmt.Errorf("%s", i18n.T("env.value_empty"))
+					}
+					return nil
+				})
+				if err != nil {
+					return err
+				}
+			}
 
 			// Cross-backend validation: enforce the POSIX env-var
 			// pattern on the key. dotenv would otherwise silently
@@ -381,7 +452,7 @@ VALUE 含等号时，单参形式按第一个 = 拆分：one env set DSN=postgre
 			// both for the backend write itself and to record the KEY
 			// in manifest.projects[i].env.keys (so `one env check`
 			// can later compare envs for completeness).
-			subProject, err := resolveSetSubproject(root, sub)
+			subProject, err := resolveSetSubprojectForSet(root, sub, output.CanPrompt())
 			if err != nil {
 				return err
 			}
@@ -399,14 +470,21 @@ VALUE 含等号时，单参形式按第一个 = 拆分：one env set DSN=postgre
 				if subProject != nil {
 					subPath = subProject.RelativeDir
 				}
-				res, err := dotenv.Set(dotenv.SetInput{
+				setInput := dotenv.SetInput{
 					ProjectRoot:    root,
 					SubprojectPath: subPath,
 					Env:            resolvedEnv,
 					Key:            key,
 					Value:          value,
 					Overwrite:      yes,
-				})
+				}
+				res, err := dotenv.Set(setInput)
+				if retry, confirmErr := confirmOverwrite(err, key, yes); confirmErr != nil {
+					return confirmErr
+				} else if retry {
+					setInput.Overwrite = true
+					res, err = dotenv.Set(setInput)
+				}
 				if err != nil {
 					return err
 				}
@@ -430,7 +508,7 @@ VALUE 含等号时，单参形式按第一个 = 拆分：one env set DSN=postgre
 				if err != nil {
 					return err
 				}
-				res, err := infisical.Set(cmd.Context(), root, infisical.SetInput{
+				setInput := infisical.SetInput{
 					Env:       resolvedEnv,
 					Path:      folder,
 					Key:       key,
@@ -438,7 +516,14 @@ VALUE 含等号时，单参形式按第一个 = 拆分：one env set DSN=postgre
 					Overwrite: yes,
 					Cfg:       cfg,
 					Creds:     creds,
-				})
+				}
+				res, err := infisical.Set(cmd.Context(), root, setInput)
+				if retry, confirmErr := confirmOverwrite(err, key, yes); confirmErr != nil {
+					return confirmErr
+				} else if retry {
+					setInput.Overwrite = true
+					res, err = infisical.Set(cmd.Context(), root, setInput)
+				}
 				if err != nil {
 					return err
 				}
@@ -454,10 +539,13 @@ VALUE 含等号时，单参形式按第一个 = 拆分：one env set DSN=postgre
 			return verbNotSupported("set")
 		},
 	}
-	cmd.Flags().StringVarP(&sub, "project", "p", "", "项目名（manifest.projects[].name）或相对路径；默认从 cwd 推导")
-	cmd.Flags().StringVar(&env, "env", "", "环境名（缺省 manifest.environments.default）")
-	cmd.Flags().StringVar(&profileFlag, "profile", "", "一次性使用指定 profile（不改 default）")
-	cmd.Flags().BoolVarP(&yes, "yes", "y", false, "非交互模式：覆盖已存在值 / 自动确认创建新环境")
+	cmd.Flags().StringVarP(&sub, "project", "p", "", i18n.T("env.flag.project"))
+	cmd.Flags().StringVar(&env, "env", "", i18n.T("env.flag.environment"))
+	cmd.Flags().StringVar(&profileFlag, "profile", "", i18n.T("env.flag.profile"))
+	cmd.Flags().BoolVarP(&yes, "yes", "y", false, i18n.T("env.flag.yes"))
+	markEnvFlagUsage(cmd, "project", "env", "profile", "yes")
+	i18n.MarkShort(cmd, "env.set.short")
+	i18n.MarkLong(cmd, "env.set.tip")
 	return cmd
 }
 
@@ -482,6 +570,29 @@ func resolveSetSubproject(projectRoot, selector string) (*workspace.Project, err
 	return workspace.ResolveProjectFromCWD(projectRoot, cwd)
 }
 
+func resolveSetSubprojectForSet(projectRoot, selector string, interactive bool) (*workspace.Project, error) {
+	p, err := resolveSetSubproject(projectRoot, selector)
+	if err != nil || p != nil || strings.TrimSpace(selector) != "" || !interactive {
+		return p, err
+	}
+	m, err := workspace.ReadManifest(projectRoot)
+	if err != nil || len(m.Projects) == 0 {
+		return nil, err
+	}
+	options := []prompt.Option[string]{{Label: i18n.T("env.scope_workspace_shared"), Value: ""}}
+	for _, project := range m.Projects {
+		options = append(options, prompt.Option[string]{
+			Label: i18n.Tf("env.scope_project_option", project.Name),
+			Value: project.Name,
+		})
+	}
+	chosen, err := prompt.Select(i18n.T("env.prompt_scope"), options)
+	if err != nil || chosen == "" {
+		return nil, err
+	}
+	return workspace.ResolveProjectFromSelector(projectRoot, chosen)
+}
+
 // parseSetArgs accepts both `KEY VALUE` and `KEY=VALUE` invocations and
 // returns (key, value). When the single-arg form contains `=`, the first
 // `=` is the split point — values may legitimately contain `=` (URLs,
@@ -496,6 +607,32 @@ func parseSetArgs(args []string) (string, string) {
 		return first[:idx], first[idx+1:]
 	}
 	return first, ""
+}
+
+func setValueProvided(args []string) bool {
+	return len(args) >= 2 || (len(args) == 1 && strings.IndexByte(args[0], '=') > 0)
+}
+
+func confirmOverwrite(setErr error, key string, yes bool) (bool, error) {
+	if setErr == nil {
+		return false, nil
+	}
+	coded, ok := setErr.(interface{ ErrorCode() string })
+	if !ok || coded.ErrorCode() != string(cliErrors.ENV_SET_OVERWRITE_REQUIRED) {
+		return false, setErr
+	}
+	if yes || !output.CanPrompt() {
+		return false, setErr
+	}
+	overwrite, err := prompt.Confirm(i18n.Tf("env.prompt_overwrite", key), false,
+		i18n.T("common.overwrite"), i18n.T("common.cancel"))
+	if err != nil {
+		return false, err
+	}
+	if !overwrite {
+		return false, cliErrors.New(cliErrors.PROMPT_CANCELLED, i18n.T("common.cancelled")).WithExit0()
+	}
+	return true, nil
 }
 
 // envSetEnvelope wraps the dotenv set result with a flag indicating
@@ -513,7 +650,7 @@ type infisicalSetEnvelope struct {
 }
 
 func confirmCreateEnv(name string, yes bool) error {
-	if yes || !output.IsTTY() {
+	if yes || !output.CanPrompt() {
 		return nil
 	}
 	ok, err := prompt.Confirm(
@@ -595,9 +732,11 @@ func newListCmd() *cobra.Command {
 			return verbNotSupported("list")
 		},
 	}
-	cmd.Flags().StringVarP(&sub, "project", "p", "", "项目名（manifest.projects[].name）或相对路径；默认从 cwd 推导")
-	cmd.Flags().StringVar(&env, "env", "", "环境名（缺省 manifest.environments.default）")
-	cmd.Flags().StringVar(&profileFlag, "profile", "", "一次性使用指定 profile（不改 default）")
+	cmd.Flags().StringVarP(&sub, "project", "p", "", i18n.T("env.flag.project"))
+	cmd.Flags().StringVar(&env, "env", "", i18n.T("env.flag.environment"))
+	cmd.Flags().StringVar(&profileFlag, "profile", "", i18n.T("env.flag.profile"))
+	markEnvFlagUsage(cmd, "project", "env", "profile")
+	i18n.MarkShort(cmd, "env.list.short")
 	return cmd
 }
 
@@ -633,7 +772,7 @@ func newPullCmd() *cobra.Command {
 				return err
 			}
 			var res *infisical.PullResult
-			if err := prompt.Spin("正在从远端拉取环境变量并写入 .env", func() error {
+			if err := prompt.Spin(i18n.T("env.pull.running"), func() error {
 				r, err := infisical.Pull(cmd.Context(), root, infisical.PullInput{
 					Env:     resolvedEnv,
 					Project: project,
@@ -656,10 +795,26 @@ func newPullCmd() *cobra.Command {
 			return nil
 		},
 	}
-	cmd.Flags().StringVar(&env, "env", "", "环境名（缺省 manifest.environments.default）")
-	cmd.Flags().StringVarP(&project, "project", "p", "", "限定一个项目（名字或相对路径；缺省拉所有）")
-	cmd.Flags().BoolVar(&force, "force", false, "覆盖已存在且内容不一致的 .env 文件")
-	cmd.Flags().BoolVar(&dryRun, "dry-run", false, "只汇报会写哪些 key，不实际落盘")
-	cmd.Flags().StringVar(&profileFlag, "profile", "", "一次性使用指定 profile（不改 default）")
+	cmd.Flags().StringVar(&env, "env", "", i18n.T("env.flag.environment"))
+	cmd.Flags().StringVarP(&project, "project", "p", "", i18n.T("env.flag.pull_project"))
+	cmd.Flags().BoolVar(&force, "force", false, i18n.T("env.flag.force"))
+	cmd.Flags().BoolVar(&dryRun, "dry-run", false, i18n.T("env.flag.dry_run"))
+	cmd.Flags().StringVar(&profileFlag, "profile", "", i18n.T("env.flag.profile"))
+	markEnvFlagUsage(cmd, "env", "project", "force", "dry-run", "profile")
+	i18n.MarkShort(cmd, "env.pull.short")
 	return cmd
+}
+
+func markEnvFlagUsage(cmd *cobra.Command, names ...string) {
+	keys := map[string]string{
+		"project": "env.flag.project", "env": "env.flag.environment",
+		"profile": "env.flag.profile", "yes": "env.flag.yes",
+		"force": "env.flag.force", "dry-run": "env.flag.dry_run",
+	}
+	if cmd.Name() == "pull" {
+		keys["project"] = "env.flag.pull_project"
+	}
+	for _, name := range names {
+		i18n.MarkFlagUsage(cmd, name, keys[name])
+	}
 }

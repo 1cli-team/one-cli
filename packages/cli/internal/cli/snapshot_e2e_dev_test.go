@@ -5,8 +5,8 @@ package cli_test
 // each project to the built-in supervisor. Procfile.dev / external
 // runners (overmind etc.) are no longer involved.
 //
-// The surviving tests lock the subcommand-removal contract, the
-// project-selector error envelope, and the manifest-driven start path.
+// The tests lock positional and legacy project selectors, dependency gates,
+// and the manifest-driven start path.
 
 import (
 	"encoding/json"
@@ -16,17 +16,18 @@ import (
 	"testing"
 )
 
-func TestSnapshot_E2E_DevRejectsRemovedSubcommands(t *testing.T) {
+func TestSnapshot_E2E_DevPositionalSelectorUnknown(t *testing.T) {
 	tmp := t.TempDir()
 	isolateHome(t, tmp)
 	ws := bootstrapWorkspace(t, tmp, "ws")
 	for _, sub := range []string{"start", "path"} {
-		_, stderr, code := runBinaryIn(t, ws, "dev", sub)
+		_, stderr, code := runBinaryIn(t, ws, "dev", sub, "-o", "json")
 		if code == 0 {
-			t.Fatalf("expected `one dev %s` to fail post-v0.8 (subcommand removed)", sub)
+			t.Fatalf("expected unknown positional project %q to fail", sub)
 		}
-		if !strings.Contains(stderr, "unknown command") {
-			t.Fatalf("expected cobra unknown-command diagnostic for `dev %s`, got: %s", sub, stderr)
+		got := mustParseJSON(t, firstJSONLine(stderr))
+		if got["error"].(map[string]any)["code"] != "SUBPROJECT_NOT_FOUND" {
+			t.Fatalf("expected SUBPROJECT_NOT_FOUND for `one dev %s`, got: %s", sub, stderr)
 		}
 	}
 }
@@ -77,7 +78,7 @@ func TestSnapshot_E2E_DevFromManifest(t *testing.T) {
 	// the test environment.
 	overrideDevCommand(t, ws, "api", "echo built-in-supervisor-works")
 
-	stdout, stderr, code := runBinaryIn(t, ws, "dev", "-o", "json")
+	stdout, stderr, code := runBinaryIn(t, ws, "dev", "api", "-o", "json")
 	if code != 0 {
 		t.Fatalf("dev failed: %d\n  stderr: %s\n  stdout: %s", code, stderr, stdout)
 	}

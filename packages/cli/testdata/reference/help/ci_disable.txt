@@ -1,0 +1,20 @@
+
+DESCRIPTION
+Disable continuous integration
+
+USAGE
+  one ci disable [project] [flags]
+
+EXAMPLES
+  one ci disable web
+  one ci disable --yes
+
+TIPS
+Removes generated continuous-integration configuration for one project, or every project when no project is provided. Interactive terminals ask for confirmation.
+
+COMMON OPTIONS
+  -o, --output <value>     Output format: json | yaml | text (default: terminal-friendly text, JSON when piped)
+  -y, --yes                Confirm removal without prompting
+
+AUTOMATION AND ADVANCED OPTIONS
+  -p, --project <value>    Select a project by name or workspace-relative path (legacy/automation)

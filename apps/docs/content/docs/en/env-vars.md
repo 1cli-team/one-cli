@@ -49,12 +49,16 @@ Machine-level Infisical credentials are configured with [`one configure add env/
 
 ## Interactive Mode
 
-`one env` does not have a full wizard, but `one env set` can ask for confirmation in TTY mode:
+Bare `one env` shows the current source, default/available environments,
+current scope, and common commands. `one env set` has a safe TTY flow:
 
+- `one env set KEY` reads the value with hidden input.
+- At the workspace root, it asks whether the variable is shared or belongs to a project.
 - When writing to an environment that is not in `manifest.environments.names`, it asks whether to add that environment to the manifest.
 - When overwriting an existing different value, it asks whether to overwrite.
 
-Scripts, CI, and agents should pass `--yes` to skip confirmations. `get`, `list`, and `pull` are explicit-argument commands and do not open a wizard.
+Declining or cancelling exits successfully without an error-style message.
+Scripts and CI pass the value explicitly and use `--yes` for overwrite/new-environment confirmation.
 
 ## dotenv Overlay
 

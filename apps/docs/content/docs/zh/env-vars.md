@@ -49,12 +49,14 @@ one env pull --env staging       # 拉所有项目的 staging 环境变量
 
 ## 交互模式
 
-`one env` 没有完整向导，但 `one env set` 在 TTY 下有两类确认：
+直接运行 `one env` 会显示当前来源、默认/可用环境、当前作用域和常用命令。`one env set` 在 TTY 下提供安全流程：
 
+- `one env set KEY` 使用隐藏输入读取值。
+- 在工作区根执行时，询问变量是工作区共享还是属于某个项目。
 - 写入一个不在 `manifest.environments.names` 里的新环境时，会确认是否把该环境加入 manifest。
 - 覆盖已有不同值时，会确认是否覆盖。
 
-脚本、CI、agent 用 `--yes` 跳过确认；`get` / `list` / `pull` 是显式参数命令，不会打开交互式向导。
+拒绝或取消会正常退出，不显示错误样式。脚本和 CI 显式传值，并用 `--yes` 确认覆盖或新环境。
 
 ## dotenv overlay
 

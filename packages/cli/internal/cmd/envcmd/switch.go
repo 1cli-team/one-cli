@@ -13,6 +13,7 @@ import (
 	"github.com/spf13/cobra"
 
 	cliErrors "github.com/torchstellar-team/one-cli/packages/cli/internal/errors"
+	"github.com/torchstellar-team/one-cli/packages/cli/internal/i18n"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/output"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/prompt"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/secrets/dotenv"
@@ -39,15 +40,15 @@ func (r *SwitchResult) RenderTTY(w io.Writer) {
 	if r == nil {
 		return
 	}
-	fmt.Fprintf(w, "✓ env backend: %s → %s\n", r.From, r.To)
+	fmt.Fprintf(w, i18n.T("env.switch.success")+"\n", r.From, r.To)
 	if r.SkippedSync {
-		fmt.Fprintf(w, "  manifest 已切，未执行数据同步\n")
+		fmt.Fprintln(w, i18n.T("env.switch.skipped_sync"))
 		return
 	}
 	if r.Synced > 0 || r.Conflicts > 0 {
-		fmt.Fprintf(w, "  同步: %d 个 key 推送到 %s\n", r.Synced, r.To)
+		fmt.Fprintf(w, i18n.T("env.switch.synced")+"\n", r.Synced, r.To)
 		if r.Conflicts > 0 {
-			fmt.Fprintf(w, "  冲突: %d 个 key 未推送（加 --overwrite 重跑）\n", r.Conflicts)
+			fmt.Fprintf(w, i18n.T("env.switch.conflicts")+"\n", r.Conflicts)
 		}
 	}
 }
@@ -62,29 +63,8 @@ func newSwitchCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "switch <backend>",
 		Short: "切换工作区的 env 后端 (dotenv / infisical)",
-		Long: `切换工作区当前的 env 后端，可选地把本地 dotenv 数据一并同步到 Infisical。
-
-合法 <backend>: dotenv | infisical
-
-切到 infisical:
-  1. 需要本机已有 default env/infisical profile
-     （没有时报 INFISICAL_AUTH_MISSING，提示先跑 one configure add env/infisical）
-  2. 默认交互式问你是否要把本地 .env 数据同步到 Infisical
-     （--yes 跳过问询直接同步；--no-sync 仅切 manifest 不同步）
-  3. Infisical 已存在的同名 key 默认报 ENV_MIGRATE_CONFLICT；加 --overwrite 覆盖
-
-切到 dotenv:
-  - 只改 manifest，不删 Infisical 数据（安全）
-  - 切回后若需要把 Infisical 已有数据拉到本地，先跑 one env pull
-
-示例:
-  one env switch infisical                  # 交互式
-  one env switch infisical -y               # 非交互：直接同步
-  one env switch infisical --no-sync        # 仅切 manifest 不同步
-  one env switch infisical --overwrite -y   # 覆盖冲突 key
-  one env switch infisical --dry-run        # 只打印计划，不写
-  one env switch dotenv                     # 切回 dotenv（只改 manifest）`,
-		Args: cobra.ExactArgs(1),
+		Long:  i18n.T("env.switch.tip"),
+		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			res, err := runSwitch(cmd.Context(), args[0], switchFlags{
 				yes:       yes,
@@ -99,10 +79,16 @@ func newSwitchCmd() *cobra.Command {
 			return nil
 		},
 	}
-	cmd.Flags().BoolVarP(&yes, "yes", "y", false, "非交互：跳过同步确认，默认执行同步")
-	cmd.Flags().BoolVar(&noSync, "no-sync", false, "只切 manifest 后端，不做数据同步")
-	cmd.Flags().BoolVar(&overwrite, "overwrite", false, "目标 backend 已有同名 key 时覆盖（默认报错）")
-	cmd.Flags().BoolVar(&dryRun, "dry-run", false, "只打印计划，不实际写")
+	cmd.Flags().BoolVarP(&yes, "yes", "y", false, i18n.T("env.switch.flag.yes"))
+	cmd.Flags().BoolVar(&noSync, "no-sync", false, i18n.T("env.switch.flag.no_sync"))
+	cmd.Flags().BoolVar(&overwrite, "overwrite", false, i18n.T("env.switch.flag.overwrite"))
+	cmd.Flags().BoolVar(&dryRun, "dry-run", false, i18n.T("env.flag.dry_run"))
+	i18n.MarkFlagUsage(cmd, "yes", "env.switch.flag.yes")
+	i18n.MarkFlagUsage(cmd, "no-sync", "env.switch.flag.no_sync")
+	i18n.MarkFlagUsage(cmd, "overwrite", "env.switch.flag.overwrite")
+	i18n.MarkFlagUsage(cmd, "dry-run", "env.flag.dry_run")
+	i18n.MarkShort(cmd, "env.switch.short")
+	i18n.MarkLong(cmd, "env.switch.tip")
 	return cmd
 }
 

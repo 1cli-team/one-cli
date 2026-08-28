@@ -1,8 +1,8 @@
 // Package ci dispatches the per-subproject CI workflow rendering to a
 // pkg/ci.Provider. Provider implementations register via init() (see
-// internal/ci/providers/*), and this package just chooses which one
-// runs based on the workspace's manifest.ci selection (or
-// DefaultProviderID when unset).
+// internal/ci/providers/*), and this package chooses the provider requested by
+// the caller (or DefaultProviderID when unset). The standalone `one ci`
+// command is the user-facing owner of these generated workflow files.
 //
 // Public Sync / SyncOptions / SyncResult are kept stable — the move to
 // providers is internal.
@@ -22,7 +22,7 @@ import (
 	_ "github.com/torchstellar-team/one-cli/packages/cli/internal/ci/providers/githubactions"
 )
 
-// SyncOptions bundles inputs from `add`.
+// SyncOptions bundles inputs for one CI workflow render.
 type SyncOptions struct {
 	ProjectRoot    string
 	TargetDir      string

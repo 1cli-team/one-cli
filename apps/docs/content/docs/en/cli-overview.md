@@ -20,6 +20,7 @@ One CLI is a single binary. It creates workspaces, adds projects, manages enviro
 | `one container` | Inspect, build, and push Dockerfile-driven images | `one container info` |
 | `one dev` | Start every project's local dev process in parallel | `one dev` |
 | `one deploy` | Dispatch per-project deploys to kustomize / S3-compatible / Vercel / Cloudflare / EdgeOne | `one deploy --dry-run` |
+| `one ci` | Inspect or manage optional continuous integration | `one ci` |
 | `one run` | Run a command with project `.env` injected | `one run -- npm test` |
 | `one configure` | Configure machine-level endpoint profiles | `one configure` |
 | `one serve` | Launch the local web UI for human profile editing | `one serve` |
@@ -31,7 +32,7 @@ One CLI is a single binary. It creates workspaces, adds projects, manages enviro
 one create [dir] [--name <name>] [--env-provider dotenv|infisical] [--yes]
 ```
 
-`[dir]` is the target directory, not the project name. The default name is `basename(dir)`. Bare `one create` asks for the target directory and optional project name. `dotenv` is the default env provider; pass `--env-provider infisical` explicitly when needed.
+`[dir]` is the target directory. The workspace name defaults to `basename(dir)`. Create produces an empty workspace with local dotenv and `one dev`; it does not configure CI, ask for projects or deployment, or install Coding Agent Skills.
 
 Read [Create](/en/docs/create/).
 
@@ -40,14 +41,10 @@ Read [Create](/en/docs/create/).
 ```bash
 one add # open the interactive picker
 one templates # see available templates
-one add <template-id> --name <project-name> [--deploy-provider <id>] [--yes] # add a specific template and choose a deploy mode
+one add <template-id> --name <project-name> [--yes] # add a specific stack
 ```
 
-For a first run, use bare `one add` and follow the interactive picker for category, template, and project name. For explicit commands, run `one templates` first and put the listed template ID in the `one add <template-id>` position.
-
-API / SSR templates usually enable `container/docker + deploy/kustomize`;
-static web templates usually enable S3-compatible deploy across multiple S3 platforms;
-mobile, library, and Electron templates do not enable deploy / container by default.
+Bare `one add` asks which directory group to add to (application, service, or shared library), then the technology stack, then the project name. Documentation sites are applications. It does not configure CI or ask about deployment. Ordinary add leaves deployment unset until `one deploy <project>`; `--deploy-provider` remains an advanced automation option.
 
 Read [Add](/en/docs/add/).
 
@@ -75,7 +72,7 @@ one env pull [--env <env>] [-p <name|path>] [--force] [--dry-run]
 
 Read [Secrets](/en/docs/env-vars/).
 
-## Machine Profiles
+## Local Connections
 
 ```bash
 one configure
@@ -87,9 +84,10 @@ one configure show <pair> --profile <name> [--reveal]
 one configure use <pair> --profile <name>
 one configure remove <pair> --profile <name>
 one configure locale [auto|zh-CN|en-US]
+one configure open
 ```
 
-`configure` manages machine-level endpoint profiles. Bare `one configure` and `one configure add` open the interactive wizard. Non-interactive scripts should pass both `<pair>` and `--profile`. Configure a profile once on your own machine and reuse it later.
+`configure` manages local connections and preferences. With no connections, bare `one configure` opens the setup wizard; otherwise it shows a concise overview. `show`, `use`, and `remove` allow terminal selection. Scripts keep explicit service IDs and `--profile` names for compatibility. Credentials stay in local files, never the workspace or Git.
 
 Supported `<pair>` values:
 
@@ -101,23 +99,25 @@ Supported `<pair>` values:
 | `deploy` | `aliyun-oss`, `tencent-cos`, `aws-s3`, `minio`, `rustfs`, `r2` |
 | `deploy` | `kustomize`, `vercel`, `cloudflare`, `edgeone` |
 
-`env/dotenv` is the workspace-local `.env` backend and does not need a machine-level profile.
-Profiles are stored in `~/.config/one/config.json` and `~/.config/one/credentials.json`. Sensitive fields are masked unless you explicitly run `show --reveal`.
-When adding tokens, prefer using `one serve` to configure them so you do not hand tokens to an AI agent.
+Local `.env` files do not need a machine-level connection.
+Local connections are stored in `~/.config/one/config.json` and `~/.config/one/credentials.json`. Sensitive fields are masked unless you explicitly run `show --reveal`.
+When adding tokens, prefer `one configure open` so you do not hand tokens to an AI agent.
 
 ## Interactive Mode At A Glance
 
 | Command | Interactive behavior |
 |---|---|
-| `one create` | Yes; no-arg mode asks for target directory and optional project name |
-| `one add` | Yes; no-arg mode picks category, template, project name, and sometimes deploy backend |
-| `one configure` | Yes; bare `one configure` or `one configure add` opens the profile wizard |
+| `one create` | Yes; no-arg mode asks for target directory and optional workspace name |
+| `one add` | Yes; no-arg mode picks project kind, technology stack, and project name |
+| `one configure` | Yes; bare `one configure` or `one configure add` opens the local-connection wizard |
 | `one skills install` | Yes; no-arg mode multi-selects target agents |
-| `one env set` | Partial; confirms unknown environments or overwrites, scripts use `--yes` |
+| `one env set` | Yes; hidden value input, scope selection, and overwrite confirmation; scripts pass the value |
 | `one container build` | Partial; TTY mode can choose a build version, CI uses `--build-version` |
-| `one deploy` | Partial; kustomize build version or missing Cloudflare profile can ask questions, CI should pass explicit flags |
-| `one templates` / `one dev` / `one run` | No wizard; behavior is controlled by arguments |
-| `one serve` | Not a terminal wizard; it opens a local web UI for manual profile editing |
+| `one deploy` | First deployment asks for project, target category/service, and local connection; scripts pass `--provider` and `--profile` |
+| `one dev` | Missing Node dependencies trigger an install confirmation; otherwise starts immediately |
+| `one ci disable` | Asks before removing generated workflow files; refusal exits successfully |
+| `one templates` / `one run` | No wizard; behavior is controlled by arguments |
+| `one serve` | Not a terminal wizard; it opens a local web UI for managing local connections |
 
 ## Local Web UI
 
@@ -142,20 +142,35 @@ one container push  [subproject] [-p <name|path>] [--build-version <version>] [-
 ## Local Development
 
 ```bash
-one dev [-p <name|path>] [--dry-run]
+one dev [project] [--dry-run]
 ```
 
-Reads `projects[].domains.dev.command` from `one.manifest.json` and starts every project in parallel through the built-in supervisor (no third-party runner needed). `-p / --project` starts a single project. `--dry-run` prints the resolved commands without launching them.
+Reads project dev commands and starts every developable project in parallel. The positional project starts only one; `--project` remains for old scripts. Missing Node dependencies can be installed after confirmation.
 
 ## Deployment
 
 ```bash
-one deploy [-p <name|path>] [--profile <name>] [--env <env>] [--env-provider dotenv|infisical] [--build-version <version>] [--dry-run]
+one deploy [project] [--provider <target>] [--profile <connection>] [--dry-run]
 ```
 
-`deploy` dispatches each project to the backend declared in the manifest. Backends / SSR projects usually use `kustomize`; static frontends can use S3-compatible backends; hosted frontends can use Vercel, Cloudflare, or EdgeOne.
+On first deployment, One CLI shows only compatible targets already implemented by this repository, then asks for a local connection. Choosing "configure later" exits successfully without changing the workspace. Later runs reuse the saved project deployment target.
 
 `--env <name>` overrides the deploy target for this run. `--dry-run` prints the docker / kubectl / S3 / platform CLI plan without touching remote systems.
+
+## Continuous Integration
+
+```bash
+one ci
+one ci enable [project]
+one ci sync [project]
+one ci disable [project]
+```
+
+CI is optional and is never added by `one create` or `one add`. The current
+build generates GitHub Actions workflows. Omit `[project]` to operate on all
+projects (`sync` refreshes only projects where CI is already enabled).
+
+Read [Continuous integration](/en/docs/ci/).
 
 ## Run With Env
 
@@ -202,7 +217,8 @@ Scripts should still pass `-o json` explicitly so parsing does not depend on the
 ```bash
 one --version
 one --help
+one help --all
 one <command> --help
 ```
 
-`one --help` shows only top-level commands. Use `one <command> --help` for exact flags, and read [Error codes](/en/docs/error-codes/) for structured failures.
+`one --help` shows the six everyday tasks. Use `one help --all` for the complete command catalogue and `one <command> --help` for exact flags.

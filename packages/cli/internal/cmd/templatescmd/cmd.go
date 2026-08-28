@@ -21,11 +21,12 @@ func buildContributions() []*cobra.Command {
 		Use:  "templates",
 		RunE: runList,
 	}
-	parent.AddCommand(&cobra.Command{
-		Use:   "list",
-		Short: "列出可用模板",
-		RunE:  runList,
-	})
+	list := &cobra.Command{
+		Use:  "list",
+		RunE: runList,
+	}
+	i18n.MarkShort(list, "templates.list.short")
+	parent.AddCommand(list)
 	i18n.MarkShort(parent, "templates.short")
 	return []*cobra.Command{parent}
 }

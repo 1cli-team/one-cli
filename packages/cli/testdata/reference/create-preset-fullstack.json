@@ -1,5 +1,5 @@
 {
-  "ci_enabled": true,
+  "ci_enabled": false,
   "created_in_place": false,
   "created_path": "\u003cvolatile\u003e",
   "deploy_summary": {
@@ -38,8 +38,7 @@
   "schema": "one-cli/create/v3",
   "secrets_backend": "dotenv",
   "skills": {
-    "installed_to": "\u003cvolatile\u003e",
-    "skill_count": 2,
-    "status": "completed"
+    "reason": "manual-install",
+    "status": "skipped"
   }
 }

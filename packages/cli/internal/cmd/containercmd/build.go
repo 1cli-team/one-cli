@@ -12,6 +12,8 @@ import (
 	"github.com/spf13/cobra"
 
 	cliErrors "github.com/torchstellar-team/one-cli/packages/cli/internal/errors"
+	"github.com/torchstellar-team/one-cli/packages/cli/internal/helpui"
+	"github.com/torchstellar-team/one-cli/packages/cli/internal/i18n"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/infra/container"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/output"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/workspace"
@@ -118,5 +120,7 @@ func newBuildCmd() *cobra.Command {
 	cmd.Flags().BoolVar(&dryRun, "dry-run", false, "只打印 build 命令不实际构建")
 	cmd.Flags().StringVar(&profileFlag, "profile", "", "一次性使用指定 container profile（不改 default）")
 	cmd.Flags().StringVarP(&project, "project", "p", "", "只构建指定 subproject（manifest 里的 name 或相对路径）")
+	helpui.MarkAdvanced(cmd, "profile", "project", "build-version")
+	i18n.MarkShort(cmd, "container.build.short")
 	return cmd
 }

@@ -12,6 +12,7 @@ import (
 	"strings"
 
 	cliErrors "github.com/torchstellar-team/one-cli/packages/cli/internal/errors"
+	"github.com/torchstellar-team/one-cli/packages/cli/internal/i18n"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/secrets/dotenv"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/workspace"
 )
@@ -57,11 +58,11 @@ func (r *PullResult) RenderTTY(w io.Writer) {
 	if r == nil {
 		return
 	}
-	mode := "wrote"
+	summaryKey := "env.pull.summary"
 	if r.DryRun {
-		mode = "would write"
+		summaryKey = "env.pull.summary_dry_run"
 	}
-	fmt.Fprintf(w, "Env: %s · %s %d, skipped %d\n", r.Env, mode, r.WrittenCount, r.SkippedCount)
+	fmt.Fprintf(w, i18n.T(summaryKey)+"\n", r.Env, r.WrittenCount, r.SkippedCount)
 	for _, e := range r.PerSubproject {
 		mark := "·"
 		switch e.Status {
@@ -78,7 +79,7 @@ func (r *PullResult) RenderTTY(w io.Writer) {
 		}
 		fmt.Fprintln(w, line)
 		if len(e.KeysWritten) > 0 {
-			fmt.Fprintf(w, "      keys: %s\n", strings.Join(e.KeysWritten, ", "))
+			fmt.Fprintf(w, i18n.T("env.pull.keys")+"\n", strings.Join(e.KeysWritten, ", "))
 		}
 	}
 }

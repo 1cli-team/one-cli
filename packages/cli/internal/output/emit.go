@@ -7,6 +7,7 @@ import (
 	"io"
 	"os"
 
+	"github.com/torchstellar-team/one-cli/packages/cli/internal/i18n"
 	"gopkg.in/yaml.v3"
 )
 
@@ -48,26 +49,49 @@ func Emit(payload any) {
 // addition, callers usually print their own clack `outro` style failure
 // message).
 func EmitError(err *Error) {
+	emitErrorTo(os.Stderr, err)
+}
+
+func emitErrorTo(w io.Writer, err *Error) {
+	// Cooperative cancellation is a valid user choice. Keep the stable error
+	// code internally for control flow, but do not paint it as a failure or
+	// emit a machine error envelope.
+	if err == nil || err.Exit0 {
+		return
+	}
 	switch resolve() {
 	case resolvedJSON:
-		emitJSON(os.Stderr, err.envelope())
+		emitJSON(w, err.envelope())
 	case resolvedYAML:
-		emitYAML(os.Stderr, err.envelope())
+		emitYAML(w, err.envelope())
 	default:
-		fmt.Fprintln(os.Stderr, err.Error())
-		for _, step := range err.Remediation {
+		message := err.Error()
+		if translated := i18n.T("error." + err.Code + ".message"); translated != "error."+err.Code+".message" {
+			message = translated
+		}
+		fmt.Fprintf(w, "✗ %s\n", message)
+		fmt.Fprintf(w, "  %s%s\n", i18n.T("error.code_label"), err.Code)
+		printedHeader := false
+		for index, step := range err.Remediation {
 			if step.Hint == "" && step.Command == "" {
 				continue
 			}
-			if step.Command != "" {
-				if step.Hint != "" {
-					fmt.Fprintf(os.Stderr, "  - %s: %s\n", step.Hint, step.Command)
-				} else {
-					fmt.Fprintf(os.Stderr, "  - %s\n", step.Command)
-				}
-				continue
+			if !printedHeader {
+				fmt.Fprintln(w)
+				fmt.Fprintln(w, i18n.T("error.try_label"))
+				printedHeader = true
 			}
-			fmt.Fprintf(os.Stderr, "  - %s\n", step.Hint)
+			if step.Hint != "" {
+				hint := step.Hint
+				key := fmt.Sprintf("error.%s.hint.%d", err.Code, index)
+				if translated := i18n.T(key); translated != key {
+					hint = translated
+				}
+				fmt.Fprintf(w, "  %s\n", hint)
+			}
+			if step.Command != "" {
+				fmt.Fprintf(w, "    %s\n", step.Command)
+			}
 		}
 	}
 }

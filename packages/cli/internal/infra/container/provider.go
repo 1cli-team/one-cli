@@ -21,8 +21,11 @@ package container
 import (
 	"context"
 	"fmt"
+	"io"
 	"sort"
 	"strings"
+
+	"github.com/torchstellar-team/one-cli/packages/cli/internal/i18n"
 )
 
 // Provider is one container backend. ID returns the bare backend kind
@@ -95,6 +98,20 @@ type InfoResult struct {
 	Projects         []ProjectInfo `json:"projects"`
 }
 
+func (r *InfoResult) RenderTTY(w io.Writer) {
+	if r == nil {
+		return
+	}
+	fmt.Fprintf(w, i18n.T("container.info_title")+"\n", r.Workspace)
+	for _, project := range r.Projects {
+		state := i18n.T("container.artifact_missing")
+		if project.HasArtifact {
+			state = i18n.T("container.artifact_ready")
+		}
+		fmt.Fprintf(w, "  %s  %s\n", project.Name, state)
+	}
+}
+
 // BuildInput addresses Build.
 type BuildInput struct {
 	ProjectRoot string
@@ -125,6 +142,22 @@ type BuildResult struct {
 	Built  []BuildEntry `json:"built"`
 }
 
+func (r *BuildResult) RenderTTY(w io.Writer) {
+	if r == nil {
+		return
+	}
+	for _, entry := range r.Built {
+		fmt.Fprintf(w, i18n.T("container.build_success")+"\n", entry.Project, entry.Image)
+	}
+	if len(r.Built) == 1 {
+		fmt.Fprintln(w)
+		fmt.Fprintf(w, i18n.T("container.build_next_project")+"\n", r.Built[0].Project)
+	} else if len(r.Built) > 1 {
+		fmt.Fprintln(w)
+		fmt.Fprintln(w, i18n.T("container.build_next_all"))
+	}
+}
+
 // PushInput addresses Push. Registry is required (no point pushing to
 // a bare workload tag); Registry.Registry must be non-empty.
 type PushInput struct {
@@ -150,6 +183,15 @@ type PushEntry struct {
 type PushResult struct {
 	Schema string      `json:"schema"`
 	Pushed []PushEntry `json:"pushed"`
+}
+
+func (r *PushResult) RenderTTY(w io.Writer) {
+	if r == nil {
+		return
+	}
+	for _, entry := range r.Pushed {
+		fmt.Fprintf(w, i18n.T("container.push_success")+"\n", entry.Project, entry.Image)
+	}
 }
 
 var registry = map[string]Provider{}

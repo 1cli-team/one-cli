@@ -6,13 +6,10 @@
 //
 // Two checks:
 //
-//   - **rootHelp completeness.** The curated rootHelp constant in
-//     internal/cli/root.go lists every top-level command in a COMMANDS
-//     block. Anyone adding a new subcommand has to remember to update
-//     that constant; anyone removing one has to remember to take it
-//     out. We diff the names in the COMMANDS block against
-//     RootCmd().Commands() in both directions and fail on either side
-//     of the asymmetry.
+//   - **help catalogue completeness.** The concise root help deliberately
+//     lists only the six everyday commands. `one help --all` is generated
+//     from the Cobra tree and must contain every registered top-level
+//     command.
 //
 //   - **Example-block flag existence.** For every command in the
 //     cobra tree, any line in cmd.Long or cmd.Example that looks like
@@ -42,6 +39,7 @@ import (
 	"github.com/spf13/pflag"
 
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/cli"
+	"github.com/torchstellar-team/one-cli/packages/cli/internal/helpui"
 )
 
 func main() {
@@ -52,7 +50,7 @@ func main() {
 			fmt.Fprintf(os.Stderr, "  %s\n", p)
 		}
 		fmt.Fprintln(os.Stderr, "\nFix one of:")
-		fmt.Fprintln(os.Stderr, "  - Update rootHelp in packages/cli/internal/cli/root.go to match registered commands.")
+		fmt.Fprintln(os.Stderr, "  - Keep root help limited to the six everyday commands and keep `one help --all` complete.")
 		fmt.Fprintln(os.Stderr, "  - Update the Example / Long text in the offending cmd.go to use a flag that actually exists.")
 		fmt.Fprintln(os.Stderr, "  - Re-run with UPDATE_SNAPSHOTS=1 if you have also intentionally changed help text:")
 		fmt.Fprintln(os.Stderr, "      UPDATE_SNAPSHOTS=1 go test ./internal/cli/ -run TestHelpSnapshots")
@@ -68,6 +66,7 @@ func run() []string {
 	root := cli.RootCmd()
 	var problems []string
 	problems = append(problems, checkRootHelp(root)...)
+	problems = append(problems, checkAllHelp(root)...)
 	problems = append(problems, checkExampleFlags(root)...)
 	return problems
 }
@@ -95,9 +94,8 @@ func topLevelNames(root *cobra.Command) []string {
 // canonical indent) so we don't match every indented thing in the file.
 var rootHelpCommandRE = regexp.MustCompile(`^  ([a-z][a-z0-9-]*)\s{2,}`)
 
-// checkRootHelp parses the COMMANDS block out of `one --help` (the
-// rootHelp constant) and bidirectionally diffs against registered
-// top-level commands. Missing or extra entries are both reported.
+// checkRootHelp parses the EVERYDAY COMMANDS block out of `one --help` and
+// requires exactly the intentionally small daily command set.
 func checkRootHelp(root *cobra.Command) []string {
 	// Re-render the root help via the same path Execute() takes for
 	// `one --help`. RootCmd does not own the help text directly
@@ -108,7 +106,7 @@ func checkRootHelp(root *cobra.Command) []string {
 	inBlock := false
 	for _, line := range strings.Split(helpText, "\n") {
 		trimmed := strings.TrimSpace(line)
-		if trimmed == "COMMANDS" {
+		if trimmed == "EVERYDAY COMMANDS" || trimmed == "日常命令" {
 			inBlock = true
 			continue
 		}
@@ -125,26 +123,44 @@ func checkRootHelp(root *cobra.Command) []string {
 		}
 	}
 
-	registered := map[string]bool{}
-	for _, n := range topLevelNames(root) {
-		registered[n] = true
+	want := map[string]bool{
+		"create": true, "add": true, "dev": true,
+		"deploy": true, "env": true, "configure": true,
 	}
 
 	var problems []string
-	// Listed but not registered: rootHelp advertises a command that
-	// doesn't exist (deleted or renamed without updating the help).
 	for name := range listed {
-		if !registered[name] {
+		if !want[name] {
 			problems = append(problems,
-				fmt.Sprintf("packages/cli/internal/cli/root.go: rootHelp COMMANDS lists %q but no such top-level command is registered", name))
+				fmt.Sprintf("root help advertises non-everyday command %q", name))
 		}
 	}
-	// Registered but not listed: a new command was added without
-	// updating rootHelp.
-	for name := range registered {
+	for name := range want {
 		if !listed[name] {
 			problems = append(problems,
-				fmt.Sprintf("packages/cli/internal/cli/root.go: top-level command %q is registered but rootHelp COMMANDS does not list it", name))
+				fmt.Sprintf("root help is missing everyday command %q", name))
+		}
+		if root.CommandPath() == "" {
+			continue
+		}
+		if command, _, err := root.Find([]string{name}); err != nil || command == root {
+			problems = append(problems,
+				fmt.Sprintf("root help lists everyday command %q but it is not registered", name))
+		}
+	}
+	sort.Strings(problems)
+	return problems
+}
+
+func checkAllHelp(root *cobra.Command) []string {
+	var buf strings.Builder
+	helpui.RenderAll(root, &buf)
+	text := buf.String()
+	var problems []string
+	for _, name := range topLevelNames(root) {
+		if !regexp.MustCompile(`(?m)^  ` + regexp.QuoteMeta(name) + `\s`).MatchString(text) {
+			problems = append(problems,
+				fmt.Sprintf("one help --all is missing top-level command %q", name))
 		}
 	}
 	sort.Strings(problems)

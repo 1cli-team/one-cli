@@ -1,3 +1,11 @@
+
+DESCRIPTION
+container/ghcr
+
+USAGE
+  one configure add container/ghcr [--profile <name>] [flags]
+
+TIPS
 新增或更新 container/ghcr profile（GitHub Container Registry）。
 
 host 固定为 ghcr.io —— 不需要 --registry。namespace 留空时默认等于
@@ -17,15 +25,12 @@ username（GHCR 的 image path 通常是 ghcr.io/<user-or-org>/<image>）。
       --password $GITHUB_PAT_WRITE_PACKAGES \
       --namespace my-org --use
 
-Usage:
-  one configure add container/ghcr [--profile <name>] [flags]
+COMMON OPTIONS
+  --namespace <value>      GHCR namespace（GitHub user / org；空则默认等于 username）
+  -o, --output <value>     Output format: json | yaml | text (default: terminal-friendly text, JSON when piped)
+  --password <value>       GitHub Personal Access Token（需 write:packages 权限）
+  --use                    Make this the current local connection
+  --username <value>       GitHub username
 
-Flags:
-      --namespace string   GHCR namespace（GitHub user / org；空则默认等于 username）
-      --password string    GitHub Personal Access Token（需 write:packages 权限）
-      --profile string     profile 名（非交互模式必传；交互模式留空则 prompt）
-      --use                把此 profile 设为 default
-      --username string    GitHub username
-
-Global Flags:
-  -o, --output string   输出格式: json | yaml | text（默认 auto：TTY 时人类格式，pipe 时 JSON）
+AUTOMATION AND ADVANCED OPTIONS
+  --profile <value>        Local-connection name (required in non-interactive calls)

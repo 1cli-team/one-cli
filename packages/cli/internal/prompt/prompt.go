@@ -154,8 +154,8 @@ func mapErr(err error) error {
 		return nil
 	}
 	if stderrors.Is(err, huh.ErrUserAborted) {
-		// PROMPT_CANCELLED is a cooperative cancel — emit the envelope,
-		// but exit 0 so scripts treat Ctrl-C the same way TS did.
+		// PROMPT_CANCELLED is a cooperative, quiet exit. Scripts see exit 0
+		// and users do not get a red error after choosing to stop.
 		return cliErrors.New(cliErrors.PROMPT_CANCELLED, "操作已取消。").
 			WithExit0().
 			WithRemediation(output.Remediation{

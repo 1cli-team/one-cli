@@ -80,17 +80,16 @@ Key parts of the produced manifest:
 - `domains.deploy` and `domains.container` — left unset at this stage; filled in when individual projects opt into deploy / container backends
 - `projects: []` — empty unless you passed `--add`
 
-## 4. Default backends wired by `one create`
+## 4. Defaults wired by `one create`
 
-Every new workspace gets three baseline backends installed without you asking:
+Every new workspace gets two baseline capabilities without prompting:
 
 | Domain | Backend | What it gives you |
 |---|---|---|
 | `env` | `dotenv` (or `infisical` if you chose it) | `.env` file management for every project |
-| `ci` | `github-actions` | Per-project `.github/workflows/<name>-ci.yml` files |
 | `dev` | `process` | Each `one add` records a dev command at `projects[].domains.dev.command`, run by [`one dev`](/en/tutorials/dev-local/) via the built-in supervisor |
 
-These do not appear in `one.manifest.json#domains` because they are installed at the workspace level, not as opt-in domains. The CI workflow files appear when you add the first project.
+CI is not configured by `one create` or `one add`, and no workflow file is generated automatically.
 
 ## 5. Auto-installed bundled skill
 

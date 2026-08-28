@@ -115,11 +115,11 @@ Current directory is not a One workspace (one.manifest.json is missing).
 
 ### `PROJECT_NAME_REQUIRED`
 
-Non-interactive create called without a project name.
+Non-interactive create called without a workspace directory.
 
 **Remediation**:
 
-- `provide-name` — 把项目名作为位置参数<br />运行：`one create <project-name>`
+- `provide-name` — 把工作区目录作为位置参数<br />运行：`one create <workspace-directory>`
 
 ### `TARGET_EXISTS`
 
@@ -224,9 +224,15 @@ Workspace 后置同步失败：写入 manifest 后某个后端 sync 回滚或失
 
 插件选择、profile 解析、部署 / CI 产物生成过程中的问题。
 
+### `CI_NOT_ENABLED`
+
+The selected project does not have a generated CI workflow.
+
+> 没有默认 remediation。具体恢复方式请看错误的 `context` 字段。
+
 ### `CI_PROVIDER_UNKNOWN`
 
-one.manifest.json references an unknown CI provider.
+The requested CI provider is not implemented by this build.
 
 > 没有默认 remediation。具体恢复方式请看错误的 `context` 字段。
 
@@ -622,6 +628,12 @@ Container profile is missing required fields for its kind (e.g. acr needs region
 **Remediation**:
 
 - `reconfigure-container` — 重新配置 container profile<br />运行：`one configure add container/<kind> --profile <name> --use`
+
+### `DEPENDENCIES_NOT_INSTALLED`
+
+Node dependencies required for local development are not installed.
+
+> 没有默认 remediation。具体恢复方式请看错误的 `context` 字段。
 
 ### `DOMAIN_INVALID`
 

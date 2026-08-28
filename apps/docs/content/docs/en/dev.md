@@ -1,56 +1,45 @@
 ---
 title: one dev
-description: Start local development processes from Procfile.dev.
+description: Start every developable project, or one selected project.
 ---
 
-`one dev` reads the workspace root `Procfile.dev` and starts local development processes with an available supervisor. `one create` and `one add` sync `Procfile.dev`, so workspaces have this entry point by default.
+`one dev` reads each project's development command from the manifest and runs it through One CLI's built-in supervisor.
 
 ## Usage
 
 ```bash
-one dev [-p <name|path>] [--dry-run]
+one dev [project] [--dry-run]
 ```
 
 ## Options
 
 | option | purpose |
 |---|---|
-| `-p`, `--project <name|path>` | start one project by manifest `name` or `relativeDir` |
+| positional `project` | start one project by manifest `name` or `relativeDir` |
+| `-p`, `--project <name|path>` | legacy selector for scripts and CI |
 | `--dry-run` | print the supervisor command without starting processes |
 | `-o`, `--output <fmt>` | `json` / `yaml` / `text` |
 
 ## Interactive Mode
 
-`one dev` has no wizard. It starts processes directly from the manifest and `Procfile.dev`. Use `--dry-run` when you want to inspect the supervisor command first.
+If a selected Node project has no installed dependencies, a terminal asks whether to run the detected package manager's install command. Confirming installs and continues; declining exits successfully. Non-interactive calls return `DEPENDENCIES_NOT_INSTALLED` with the exact install command.
 
 ## Runner
 
-One CLI looks for a Procfile supervisor on PATH. Supported runners include overmind, hivemind, foreman, and honcho.
+One CLI's built-in supervisor starts all developable projects by default, or one positional project.
 
 ```bash
 one dev
-one dev -p web
-one dev -p apps/web --dry-run
+one dev web
+one dev apps/web --dry-run
 ```
-
-## Procfile.dev
-
-Example:
-
-```text
-api: pnpm --dir services/api dev
-web: pnpm --dir apps/web dev
-```
-
-The project list still comes from `one.manifest.json`; `Procfile.dev` is a generated runtime artifact.
 
 ## Common errors
 
 | code | fix |
 |---|---|
-| `DEV_NO_SUPERVISOR` | install overmind, hivemind, foreman, or honcho |
-| `DEV_PROCFILE_MISSING` | rerun `one add` to trigger Procfile sync, or check workspace generation |
-| `DEV_PROJECT_NOT_FOUND` | use a manifest project `name` or `relativeDir` for `-p` |
+| `DEPENDENCIES_NOT_INSTALLED` | run the install command from remediation, then retry |
+| `SUBPROJECT_NOT_FOUND` | use a project `name` or `relativeDir` |
 
 ## Next
 

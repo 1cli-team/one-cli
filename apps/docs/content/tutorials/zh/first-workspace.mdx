@@ -80,17 +80,16 @@ manifest 关键字段：
 - `domains.deploy`、`domains.container` — 此阶段还没设；后面给单个项目启用 deploy/container backend 时才会写
 - `projects: []` — 空数组（除非你传了 `--add`）
 
-## 4. `one create` 默认接上的 backend
+## 4. `one create` 默认接上的能力
 
-每个新工作区都会**默认装 3 个 baseline backend**，不用你选：
+每个新工作区都会默认接上两项基础能力，不用你选：
 
 | Domain | Backend | 给你啥 |
 |---|---|---|
 | `env` | `dotenv`（或 `infisical`，看你选的） | 每个项目自己的 `.env` 管理 |
-| `ci` | `github-actions` | 每个项目的 `.github/workflows/<name>-ci.yml` |
 | `dev` | `process` | `one add` 时把每个项目的 dev 命令写到 `projects[].domains.dev.command`，[`one dev`](/zh/tutorials/dev-local/) 用内置 supervisor 启动 |
 
-这三个不在 `one.manifest.json#domains` 里 — 它们装在工作区层，不是 per-domain opt-in 的。CI workflow 文件等你加第一个项目时才生成。
+`one create` 和 `one add` 都不会默认配置 CI，也不会自动生成 workflow 文件。
 
 ## 5. 自动装的 bundled skill
 

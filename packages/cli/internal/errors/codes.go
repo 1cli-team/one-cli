@@ -24,6 +24,7 @@ const (
 	// Workspace / project.
 	NOT_ONE_PROJECT            Code = "NOT_ONE_PROJECT"
 	NODE_VERSION_UNSUPPORTED   Code = "NODE_VERSION_UNSUPPORTED"
+	DEPENDENCIES_NOT_INSTALLED Code = "DEPENDENCIES_NOT_INSTALLED"
 	INVALID_NAME               Code = "INVALID_NAME"
 	INVALID_WORKSPACE_ROOTS    Code = "INVALID_WORKSPACE_ROOTS"
 	PROJECT_NAME_REQUIRED      Code = "PROJECT_NAME_REQUIRED"
@@ -83,6 +84,7 @@ const (
 	IMAGE_TAG_NOT_FOUND         Code = "IMAGE_TAG_NOT_FOUND"
 	IMAGE_TAG_REQUIRED          Code = "IMAGE_TAG_REQUIRED"
 	CI_PROVIDER_UNKNOWN         Code = "CI_PROVIDER_UNKNOWN"
+	CI_NOT_ENABLED              Code = "CI_NOT_ENABLED"
 	CI_RENDER_FAILED            Code = "CI_RENDER_FAILED"
 	K8S_PLATFORM_UNDETECTED     Code = "K8S_PLATFORM_UNDETECTED"
 	K8S_PACKAGE_UNSUPPORTED     Code = "K8S_PACKAGE_UNSUPPORTED"
@@ -179,9 +181,10 @@ var Codes = map[Code]Definition{
 
 	NOT_ONE_PROJECT:            {Summary: "Current directory is not a One workspace (one.manifest.json is missing).", Remediation: []output.Remediation{{Action: "create-workspace", Hint: "当前目录缺少 one.manifest.json；请先创建工作区，或 cd 到已有工作区", Command: "one create <dir>"}}},
 	NODE_VERSION_UNSUPPORTED:   {Summary: "Local Node version is below the supported minimum.", Remediation: []output.Remediation{{Action: "upgrade-node", Hint: "升级到 Node.js 18+"}}},
+	DEPENDENCIES_NOT_INSTALLED: {Summary: "Node dependencies required for local development are not installed."},
 	INVALID_NAME:               {Summary: "Project / subproject name fails the ^[a-zA-Z0-9][a-zA-Z0-9_-]*$ pattern.", Remediation: []output.Remediation{{Action: "use-valid-name", Hint: "用 kebab-case；空格替换为 -"}}},
 	INVALID_WORKSPACE_ROOTS:    {Summary: "one.manifest.json#workspace.roots is malformed."},
-	PROJECT_NAME_REQUIRED:      {Summary: "Non-interactive create called without a project name.", Remediation: []output.Remediation{{Action: "provide-name", Hint: "把项目名作为位置参数", Command: "one create <project-name>"}}},
+	PROJECT_NAME_REQUIRED:      {Summary: "Non-interactive create called without a workspace directory.", Remediation: []output.Remediation{{Action: "provide-name", Hint: "把工作区目录作为位置参数", Command: "one create <workspace-directory>"}}},
 	EXISTING_TARGET_NOT_EMPTY:  {Summary: "Target directory exists and is non-empty; create only writes into empty / new directories.", Remediation: []output.Remediation{{Action: "use-different-dir", Hint: "换一个空的目标目录"}, {Action: "remove-target", Hint: "手动删除已存在的目录后重试"}}},
 	TARGET_EXISTS:              {Summary: "Subproject directory already exists.", Remediation: []output.Remediation{{Action: "use-different-name", Hint: "换一个 --name"}}},
 	WORKSPACE_NESTED_FORBIDDEN: {Summary: "Refusing to create a workspace inside an existing workspace; nesting one workspace inside another corrupts both manifests.", Remediation: []output.Remediation{{Action: "use-add", Hint: "在现有工作区里加项目，应该用 one add", Command: "one add <template> --name <subproject-name>"}, {Action: "create-elsewhere", Hint: "或换到工作区外的目录再 one create"}}},
@@ -223,7 +226,8 @@ var Codes = map[Code]Definition{
 	IMAGE_REF_INCOMPLETE:                  {Summary: "Deploy / CI backend needs the container image ref but it is missing or incomplete (registry / name / tag)."},
 	IMAGE_TAG_NOT_FOUND:                   {Summary: "Container push target image tag does not exist in the local Docker daemon.", Remediation: []output.Remediation{{Action: "build-image", Hint: "先构建要推送的镜像", Command: "one container build <subproject>"}}},
 	IMAGE_TAG_REQUIRED:                    {Summary: "Container build needs a version tag but no subproject buildVersion, Git tag, or package version was available.", Remediation: []output.Remediation{{Action: "provide-tag", Hint: "显式指定镜像版本 tag", Command: "one container build <subproject> --build-version v0.1.0"}, {Action: "set-build-version", Hint: "或在 one.manifest.json 里设置 projects[].buildVersion"}, {Action: "create-git-tag", Hint: "或在当前提交上创建 Git tag", Command: "git tag v0.1.0"}}},
-	CI_PROVIDER_UNKNOWN:                   {Summary: "one.manifest.json references an unknown CI provider."},
+	CI_NOT_ENABLED:                        {Summary: "The selected project does not have a generated CI workflow."},
+	CI_PROVIDER_UNKNOWN:                   {Summary: "The requested CI provider is not implemented by this build."},
 	CI_RENDER_FAILED:                      {Summary: "The selected CI provider returned an error while rendering the workflow."},
 	K8S_PLATFORM_UNDETECTED:               {Summary: "Kubernetes node architecture could not be detected before building an image for deploy.", Remediation: []output.Remediation{{Action: "check-k8s", Hint: "确认 kubeconfig/context 可访问并能列出节点", Command: "kubectl get nodes -o wide"}}},
 	K8S_PACKAGE_UNSUPPORTED:               {Summary: "A deploy backend selected a Kubernetes packaging form this build does not bundle."},

@@ -1,3 +1,11 @@
+
+DESCRIPTION
+container/acr
+
+USAGE
+  one configure add container/acr [--profile <name>] [flags]
+
+TIPS
 新增或更新 container/acr profile（阿里云 Aliyun Container Registry）。
 
 host 由 --region 派生为 registry.<region>.aliyuncs.com —— 不需要
@@ -21,16 +29,13 @@ host 由 --region 派生为 registry.<region>.aliyuncs.com —— 不需要
       --namespace my-team \
       --username $ACR_USER --password $ACR_TOKEN --use
 
-Usage:
-  one configure add container/acr [--profile <name>] [flags]
+COMMON OPTIONS
+  --namespace <value>      Aliyun ACR namespace（必填，由你在阿里云控制台创建）
+  -o, --output <value>     Output format: json | yaml | text (default: terminal-friendly text, JSON when piped)
+  --password <value>       Aliyun ACR 登录密码（仓库密码 / RAM AccessKey Secret）
+  --region <value>         阿里云 ACR region（如 cn-hangzhou / cn-shanghai；host 会派生为 registry.<region>.aliyuncs.com）
+  --use                    Make this the current local connection
+  --username <value>       Aliyun ACR 登录账号（个人版用户名 / RAM AKID）
 
-Flags:
-      --namespace string   Aliyun ACR namespace（必填，由你在阿里云控制台创建）
-      --password string    Aliyun ACR 登录密码（仓库密码 / RAM AccessKey Secret）
-      --profile string     profile 名（非交互模式必传；交互模式留空则 prompt）
-      --region string      阿里云 ACR region（如 cn-hangzhou / cn-shanghai；host 会派生为 registry.<region>.aliyuncs.com）
-      --use                把此 profile 设为 default
-      --username string    Aliyun ACR 登录账号（个人版用户名 / RAM AKID）
-
-Global Flags:
-  -o, --output string   输出格式: json | yaml | text（默认 auto：TTY 时人类格式，pipe 时 JSON）
+AUTOMATION AND ADVANCED OPTIONS
+  --profile <value>        Local-connection name (required in non-interactive calls)

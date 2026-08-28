@@ -1,3 +1,11 @@
+
+DESCRIPTION
+env/infisical
+
+USAGE
+  one configure add env/infisical [--profile <name>] [flags]
+
+TIPS
 新增或更新 env/infisical profile。
 
 凭据获取（Infisical 后台）：
@@ -19,15 +27,12 @@
       --client-id $CID --client-secret $CSEC \
       --use
 
-Usage:
-  one configure add env/infisical [--profile <name>] [flags]
+COMMON OPTIONS
+  --client-id <value>      Universal Auth client ID
+  --client-secret <value>  Universal Auth client secret
+  -o, --output <value>     Output format: json | yaml | text (default: terminal-friendly text, JSON when piped)
+  --site-url <value>       Infisical site URL（默认 https://app.infisical.com）
+  --use                    Make this the current local connection
 
-Flags:
-      --client-id string       Universal Auth client ID
-      --client-secret string   Universal Auth client secret
-      --profile string         profile 名（非交互模式必传；交互模式留空则 prompt）
-      --site-url string        Infisical site URL（默认 https://app.infisical.com）
-      --use                    把此 profile 设为 default
-
-Global Flags:
-  -o, --output string   输出格式: json | yaml | text（默认 auto：TTY 时人类格式，pipe 时 JSON）
+AUTOMATION AND ADVANCED OPTIONS
+  --profile <value>        Local-connection name (required in non-interactive calls)

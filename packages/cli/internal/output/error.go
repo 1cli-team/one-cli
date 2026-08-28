@@ -20,10 +20,9 @@ type Error struct {
 	Message     string         `json:"-"`
 	Context     map[string]any `json:"-"`
 	Remediation []Remediation  `json:"-"`
-	// Exit0 marks an error that should still emit the JSON envelope but
-	// produce a zero exit status — used for user-cancelled prompts where
-	// "we communicated something via stderr but the user's choice was
-	// valid". Defaults to false (exit 1).
+	// Exit0 marks a quiet, successful early exit. It is used for user-
+	// cancelled prompts and "configure later" choices: no error-styled TTY
+	// text or structured error envelope is emitted. Defaults to false.
 	Exit0 bool `json:"-"`
 }
 
@@ -48,10 +47,9 @@ func (e *Error) WithRemediation(steps ...Remediation) *Error {
 	return &out
 }
 
-// WithExit0 marks the error as a graceful-exit signal. The envelope still
-// flows through EmitError so the schema stays consistent, but main.go
-// returns exit code 0. Reserved for cooperatively-cancelled flows
-// (Ctrl-C in a prompt, user-chosen "cancel" option, etc.).
+// WithExit0 marks the error as a quiet graceful-exit signal. main.go returns
+// exit code 0 and EmitError suppresses it in every output mode. Reserved for
+// cooperatively-cancelled flows (Ctrl-C, "cancel", "configure later", etc.).
 func (e *Error) WithExit0() *Error {
 	out := *e
 	out.Exit0 = true

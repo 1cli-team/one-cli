@@ -12,6 +12,8 @@ import (
 	"github.com/spf13/cobra"
 
 	cliErrors "github.com/torchstellar-team/one-cli/packages/cli/internal/errors"
+	"github.com/torchstellar-team/one-cli/packages/cli/internal/helpui"
+	"github.com/torchstellar-team/one-cli/packages/cli/internal/i18n"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/infra/container"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/output"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/workspace"
@@ -113,5 +115,7 @@ profile 解析顺序：
 	cmd.Flags().BoolVar(&dryRun, "dry-run", false, "只打印 push 命令不实际推送")
 	cmd.Flags().StringVar(&profileFlag, "profile", "", "一次性使用指定 container profile（不改 default）")
 	cmd.Flags().StringVarP(&project, "project", "p", "", "只推送指定 subproject 的镜像（manifest 里的 name 或相对路径）")
+	helpui.MarkAdvanced(cmd, "profile", "project", "build-version")
+	i18n.MarkShort(cmd, "container.push.short")
 	return cmd
 }

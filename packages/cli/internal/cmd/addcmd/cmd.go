@@ -1,7 +1,7 @@
 // Package addcmd contributes `one add` to the root command via cliexts.
-// Adds a new subproject to the current workspace by rendering a built-in
-// template; applies the template's `defaults` map to the manifest and
-// (for kustomize / docker templates) syncs infra + CI scaffolding.
+// Adds a new project to the current workspace by rendering a built-in
+// technology stack. Ordinary calls configure local development only; CI,
+// deployment, and image-registry choices are not added implicitly.
 //
 // The bulk of the workspace mutation lives in internal/preset.ApplyProject
 // (the same engine driving `one create --preset`). This file is a thin
@@ -20,6 +20,7 @@ import (
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/ai"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/cliexts"
 	cliErrors "github.com/torchstellar-team/one-cli/packages/cli/internal/errors"
+	"github.com/torchstellar-team/one-cli/packages/cli/internal/helpui"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/i18n"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/output"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/preset"
@@ -45,20 +46,10 @@ type addFlags struct {
 func newAddCmd() *cobra.Command {
 	flags := &addFlags{}
 	cmd := &cobra.Command{
-		Use: "add [template-id]",
-		Long: `添加项目到当前工作区。
-
-  位置参数 = 模板 ID（从 one templates 选）：
-    one add nestjs-api --name user-api --yes
-
-模板模式渲染物理模板。
-
-infra / deploy（Dockerfile / Kustomize / S3-compatible deploy / CI 工作流）
-由模板自动决定。API / SSR 模板通常启用
-container/docker + deploy/kustomize；静态前端模板通常启用 deploy/aws-s3。
-container / deploy 是 per-project domain，可随后用
-手编 one.manifest.json 调整 deploy/container 字段。`,
-		Args: cobra.MaximumNArgs(1),
+		Use:     "add [template-id]",
+		Long:    i18n.T("add.tip"),
+		Example: "  one add\n  one add react-spa --name web --yes",
+		Args:    cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			positional := ""
 			if len(args) > 0 {
@@ -67,12 +58,16 @@ container / deploy 是 per-project domain，可随后用
 			return runAdd(cmd, positional, flags)
 		},
 	}
-	cmd.Flags().StringVarP(&flags.name, "name", "n", "", "项目名称（必选）")
-	cmd.Flags().BoolVarP(&flags.yes, "yes", "y", false, "非交互模式")
+	cmd.Flags().StringVarP(&flags.name, "name", "n", "", i18n.T("add.flag.name"))
+	cmd.Flags().BoolVarP(&flags.yes, "yes", "y", false, i18n.T("add.flag.yes"))
 	cmd.Flags().StringVar(&flags.deploy, "deploy-provider", "",
-		"显式选择 deploy 后端（kustomize / aws-s3 / aliyun-oss / vercel ...）；非交互模式或想跳过选择 prompt 时使用。"+
-			"必须在模板的 compat.deploy 列表里。")
+		i18n.T("add.flag.deploy_provider"))
+	i18n.MarkFlagUsage(cmd, "name", "add.flag.name")
+	i18n.MarkFlagUsage(cmd, "yes", "add.flag.yes")
+	i18n.MarkFlagUsage(cmd, "deploy-provider", "add.flag.deploy_provider")
+	helpui.MarkAdvanced(cmd, "deploy-provider")
 	i18n.MarkShort(cmd, "add.short")
+	i18n.MarkLong(cmd, "add.tip")
 	return cmd
 }
 
@@ -133,7 +128,7 @@ func runAdd(cmd *cobra.Command, positional string, flags *addFlags) error {
 			return cliErrors.New(cliErrors.SUBPROJECT_NAME_REQUIRED,
 				"非交互模式下必须通过 --name 指定项目名称。")
 		}
-		got, perr := prompt.Text("项目名称", "user-service", func(v string) error {
+		got, perr := prompt.Text(i18n.T("add.prompt_name"), "user-service", func(v string) error {
 			v = strings.TrimSpace(v)
 			if v == "" {
 				return errors.New("请输入项目名称")
@@ -157,13 +152,14 @@ func runAdd(cmd *cobra.Command, positional string, flags *addFlags) error {
 	// engine `one create --preset` orchestrates over multiple projects).
 	// addcmd remains a thin shell: validate flags, prompt where the
 	// command-specific UX is, then hand off.
-	// Plain `one add` follows the template registry default. Presets pass an
-	// empty container to opt into the preset-level default instead.
+	// Ordinary add deliberately leaves deployment unset. An explicit advanced
+	// flag retains the automation path that configures it immediately.
 	result, err := preset.ApplyProject(cmd.Context(), projectRoot, preset.ProjectInput{
-		Template:  entry,
-		Name:      name,
-		Deploy:    flags.deploy,
-		Container: entry.Defaults["container"],
+		Template:        entry,
+		Name:            name,
+		Deploy:          flags.deploy,
+		Container:       entry.Defaults["container"],
+		DeferDeployment: strings.TrimSpace(flags.deploy) == "",
 	}, interactive)
 	if err != nil {
 		return err
@@ -178,14 +174,15 @@ func runAdd(cmd *cobra.Command, positional string, flags *addFlags) error {
 	guides := ai.Refresh(projectRoot, false)
 
 	output.Emit(&addResult{
-		Schema:         "one-cli/add/v1",
-		SubprojectName: result.Name,
-		TargetPath:     result.TargetPath,
-		TemplateID:     result.TemplateID,
-		Toolchain:      result.Toolchain,
-		PackageManager: result.PackageManager,
-		AiGuides:       guides,
-		Warnings:       result.Warnings,
+		Schema:           "one-cli/add/v1",
+		SubprojectName:   result.Name,
+		TargetPath:       result.TargetPath,
+		TemplateID:       result.TemplateID,
+		Toolchain:        result.Toolchain,
+		PackageManager:   result.PackageManager,
+		AiGuides:         guides,
+		Warnings:         result.Warnings,
+		DeployConfigured: result.DeployBackend != "",
 	})
 
 	return nil
@@ -202,7 +199,8 @@ type addResult struct {
 	// Warnings (v0.5+) carries one entry per template `compat` mismatch.
 	// Empty slice / nil is omitted from the JSON envelope so clean adds
 	// match the pre-v0.5 wire shape.
-	Warnings []string `json:"warnings,omitempty"`
+	Warnings         []string `json:"warnings,omitempty"`
+	DeployConfigured bool     `json:"-"`
 }
 
 // RenderTTY prints a friendly add-success summary.
@@ -210,23 +208,20 @@ func (r *addResult) RenderTTY(w io.Writer) {
 	if r == nil {
 		return
 	}
-	fmt.Fprintf(w, "✓ Added subproject: %s\n", r.SubprojectName)
-	fmt.Fprintf(w, "  Path: %s\n", r.TargetPath)
-	fmt.Fprintf(w, "  Template: %s (%s)\n", r.TemplateID, r.Toolchain)
+	fmt.Fprintf(w, i18n.T("add.success")+"\n", r.SubprojectName)
+	fmt.Fprintf(w, i18n.T("add.location")+"\n", r.TargetPath)
+	fmt.Fprintf(w, i18n.T("add.stack")+"\n", r.TemplateID, r.Toolchain)
 	if r.PackageManager != "" {
-		fmt.Fprintf(w, "  Package manager: %s\n", r.PackageManager)
+		fmt.Fprintf(w, i18n.T("add.package_manager")+"\n", r.PackageManager)
 	}
-	if r.AiGuides.Status == "completed" && len(r.AiGuides.GeneratedFiles) > 0 {
-		fmt.Fprintf(w, "  Agent docs: refreshed (%d file%s)\n",
-			len(r.AiGuides.GeneratedFiles), pluralS(len(r.AiGuides.GeneratedFiles)))
+	if r.DeployConfigured {
+		fmt.Fprintln(w, i18n.T("add.deploy_configured"))
+	} else {
+		fmt.Fprintln(w, i18n.T("add.deploy_deferred"))
 	}
-}
-
-func pluralS(n int) string {
-	if n == 1 {
-		return ""
-	}
-	return "s"
+	fmt.Fprintln(w)
+	fmt.Fprintln(w, i18n.T("common.next_steps"))
+	fmt.Fprintf(w, "  one dev %s\n", r.SubprojectName)
 }
 
 func findTemplate(items []template.Template, id string) *template.Template {
@@ -238,49 +233,47 @@ func findTemplate(items []template.Template, id string) *template.Template {
 	return nil
 }
 
-// categoryLabel returns the bilingual display label used in the
-// interactive picker.
-func categoryLabel(c template.Category) string {
-	switch c {
-	case template.CategoryFrontend:
-		return "前端 (Frontend)"
+type projectKind string
+
+const (
+	kindApplication projectKind = "application"
+	kindService     projectKind = "service"
+	kindLibrary     projectKind = "library"
+)
+
+func projectKindFor(t template.Template) projectKind {
+	switch t.Category {
 	case template.CategoryBackend:
-		return "后端 (Backend)"
+		return kindService
 	case template.CategoryLibrary:
-		return "工具库 (Library)"
+		return kindLibrary
 	default:
-		return string(c)
+		return kindApplication
 	}
 }
 
-// selectTemplateInteractively drives the two-step template picker:
-// first pick a category, then pick a template within that category.
-// The returned string is the template ID.
+func projectKindLabel(k projectKind) string {
+	return i18n.T("add.kind." + string(k))
+}
+
+// selectTemplateInteractively asks what the user wants to add, then which
+// technology stack. runAdd asks for the project name immediately afterwards.
 func selectTemplateInteractively(items []template.Template) (string, error) {
-	order := []template.Category{
-		template.CategoryFrontend,
-		template.CategoryBackend,
-		template.CategoryLibrary,
+	order := []projectKind{
+		kindApplication,
+		kindService,
+		kindLibrary,
 	}
-	grouped := make(map[template.Category][]template.Template, len(order))
+	grouped := make(map[projectKind][]template.Template, len(order))
 	for _, t := range items {
-		grouped[t.Category] = append(grouped[t.Category], t)
+		kind := projectKindFor(t)
+		grouped[kind] = append(grouped[kind], t)
 	}
 
-	available := make([]template.Category, 0, len(order))
+	available := make([]projectKind, 0, len(order))
 	for _, c := range order {
 		if len(grouped[c]) > 0 {
 			available = append(available, c)
-		}
-	}
-	seen := map[template.Category]bool{}
-	for _, c := range order {
-		seen[c] = true
-	}
-	for _, t := range items {
-		if !seen[t.Category] {
-			seen[t.Category] = true
-			available = append(available, t.Category)
 		}
 	}
 
@@ -288,18 +281,18 @@ func selectTemplateInteractively(items []template.Template) (string, error) {
 		return "", cliErrors.New(cliErrors.NO_TEMPLATES, "注册表中没有可用模板。")
 	}
 
-	var chosen template.Category
+	var chosen projectKind
 	if len(available) == 1 {
 		chosen = available[0]
 	} else {
-		opts := make([]prompt.Option[template.Category], 0, len(available))
+		opts := make([]prompt.Option[projectKind], 0, len(available))
 		for _, c := range available {
-			opts = append(opts, prompt.Option[template.Category]{
-				Label: categoryLabel(c),
+			opts = append(opts, prompt.Option[projectKind]{
+				Label: projectKindLabel(c),
 				Value: c,
 			})
 		}
-		picked, err := prompt.Select("选择模板分类", opts)
+		picked, err := prompt.Select(i18n.T("add.prompt_kind"), opts)
 		if err != nil {
 			return "", err
 		}
@@ -315,5 +308,5 @@ func selectTemplateInteractively(items []template.Template) (string, error) {
 			Value:       t.ID,
 		})
 	}
-	return prompt.SelectWithDescriptions("选择模板", tplOpts)
+	return prompt.SelectWithDescriptions(i18n.T("add.prompt_stack"), tplOpts)
 }

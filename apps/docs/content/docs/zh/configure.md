@@ -1,9 +1,9 @@
 ---
 title: one configure
-description: 管理机器级 endpoint profile：Infisical、对象存储、Kubernetes、Vercel、Cloudflare、EdgeOne 和 Docker registry。
+description: 管理部署、环境变量和镜像仓库所需的本机连接与偏好设置。
 ---
 
-`one configure` 管的是**本机 profile**，不是某个 workspace 的业务配置。profile 保存 endpoint、账号和凭据，供 `one env`、`one container`、`one deploy`、`one run` 读取。
+`one configure` 管理**本机连接和偏好设置**，不是工作区业务配置。密钥只保存在本机，不写入工作区或 Git。
 
 ## 用法
 
@@ -17,9 +17,10 @@ one configure show <pair> --profile <name> [--reveal]
 one configure use <pair> --profile <name>
 one configure remove <pair> --profile <name>
 one configure locale [auto|zh-CN|en-US]
+one configure open
 ```
 
-无参 `one configure` 和 `one configure add` 会打开交互式向导；脚本、CI、agent 应显式传 `<pair>`、profile 名和对应 backend flags。
+没有连接时，无参 `one configure` 进入建立连接向导；已有连接时显示简洁概览。`show` / `use` / `remove` 在终端可直接选择已有连接；脚本仍显式传 `<pair>` 和 `--profile`。
 
 ## 交互模式
 
@@ -30,9 +31,9 @@ one configure
 one configure add
 ```
 
-向导会先让你选择要配置的 `(domain, backend)`，例如 `env/infisical`、`deploy/aws-s3`、`container/docker`，再逐项询问 profile 名、endpoint、token、ak/sk、kubeconfig 等字段。敏感字段会以密码输入方式录入。
+向导先选择要连接的服务，再询问连接名称和该服务需要的字段。自动化命令中继续使用稳定服务 ID；敏感字段使用密码式输入。
 
-脚本、CI、agent 不应该等待交互式向导；请显式传 pair、profile 名和 backend 参数。
+脚本和 CI 不应等待交互式向导；请显式传服务 ID、连接名称（`--profile`）和服务参数。
 
 ## 支持的 pair
 

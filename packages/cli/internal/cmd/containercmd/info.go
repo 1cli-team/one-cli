@@ -12,6 +12,7 @@ import (
 	"github.com/spf13/cobra"
 
 	cliErrors "github.com/torchstellar-team/one-cli/packages/cli/internal/errors"
+	"github.com/torchstellar-team/one-cli/packages/cli/internal/i18n"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/infra/container"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/output"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/workspace"
@@ -49,5 +50,6 @@ func newInfoCmd() *cobra.Command {
 			return nil
 		},
 	}
+	i18n.MarkShort(cmd, "container.info.short")
 	return cmd
 }

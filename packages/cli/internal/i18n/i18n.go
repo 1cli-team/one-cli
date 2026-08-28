@@ -1,16 +1,11 @@
 // Package i18n is a minimal message catalog for the CLI's first-pass
 // localisation.
 //
-// Scope (first pass): translate the user-visible help "headline"
-// surface only — the curated root help text and every top-level
-// command's `Short:` field. cmd `Long`, `Example`, error envelopes,
-// and prompts are intentionally NOT routed through this package yet;
-// translating those is much more invasive and adds little value
-// while the dashboard (where most non-Chinese users live) is being
-// localised in parallel. Coverage extends incrementally without
-// breaking the API below.
+// The catalogue covers the user-facing command/help/output surface. Stable
+// protocol values (JSON fields, error codes, provider ids and command-line
+// tokens) deliberately remain untranslated.
 //
-// Why not golang.org/x/text/message? At this scope (~12 keys, 2
+// Why not golang.org/x/text/message? At this scope (flat strings in 2
 // locales), the extra dependency, ICU plural rules, gendered
 // fall-backs, etc. are pure overhead. A flat map[string]string per
 // locale with a simple fallback chain is enough; we can swap in a
@@ -36,9 +31,11 @@ package i18n
 import (
 	"embed"
 	"encoding/json"
+	"fmt"
 	"sync"
 
 	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
 )
 
 //go:embed locales/*.json
@@ -60,6 +57,8 @@ const (
 	// which we store the i18n message key for cmd.Short. RefreshTree
 	// uses it to re-resolve translations after locale changes.
 	AnnotationShort = "one.i18n.short"
+	AnnotationLong  = "one.i18n.long"
+	AnnotationFlag  = "one.i18n.flag"
 )
 
 var (
@@ -156,6 +155,13 @@ func T(key string) string {
 	return key
 }
 
+// Tf returns the active translation formatted with fmt.Sprintf semantics.
+// Stable protocol fields (JSON keys, error codes, provider ids and commands)
+// are passed as arguments rather than translated by the catalogue.
+func Tf(key string, args ...any) string {
+	return fmt.Sprintf(T(key), args...)
+}
+
 // MarkShort records the i18n key for cmd.Short and immediately
 // applies the translation. After locale changes (Init), call
 // RefreshTree(root) so cmd.Short picks up the new locale.
@@ -165,6 +171,47 @@ func MarkShort(cmd *cobra.Command, key string) {
 	}
 	cmd.Annotations[AnnotationShort] = key
 	cmd.Short = T(key)
+}
+
+// MarkLong is the Long counterpart to MarkShort.
+func MarkLong(cmd *cobra.Command, key string) {
+	if cmd.Annotations == nil {
+		cmd.Annotations = map[string]string{}
+	}
+	cmd.Annotations[AnnotationLong] = key
+	cmd.Long = T(key)
+}
+
+// MarkFlagUsage stores a catalogue key on one local flag and refreshes its
+// help text immediately. It is safe to call after StringVar/BoolVar and before
+// the command is mounted on the root.
+func MarkFlagUsage(cmd *cobra.Command, name, key string) {
+	if cmd == nil {
+		return
+	}
+	flag := cmd.Flags().Lookup(name)
+	if flag == nil {
+		flag = cmd.PersistentFlags().Lookup(name)
+	}
+	if flag == nil {
+		return
+	}
+	if flag.Annotations == nil {
+		flag.Annotations = map[string][]string{}
+	}
+	flag.Annotations[AnnotationFlag] = []string{key}
+	flag.Usage = T(key)
+}
+
+func refreshFlagSet(set *pflag.FlagSet) {
+	if set == nil {
+		return
+	}
+	set.VisitAll(func(flag *pflag.Flag) {
+		if keys := flag.Annotations[AnnotationFlag]; len(keys) > 0 {
+			flag.Usage = T(keys[0])
+		}
+	})
 }
 
 // RefreshTree re-evaluates every annotated Short under root in the
@@ -177,6 +224,12 @@ func RefreshTree(root *cobra.Command) {
 	if key, ok := root.Annotations[AnnotationShort]; ok {
 		root.Short = T(key)
 	}
+	if key, ok := root.Annotations[AnnotationLong]; ok {
+		root.Long = T(key)
+	}
+	refreshFlagSet(root.LocalNonPersistentFlags())
+	refreshFlagSet(root.PersistentFlags())
+	refreshFlagSet(root.InheritedFlags())
 	for _, child := range root.Commands() {
 		RefreshTree(child)
 	}

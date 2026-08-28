@@ -3,7 +3,7 @@ title: one create
 description: Create a new One workspace root skeleton.
 ---
 
-`one create` creates the workspace skeleton and installs skills. By default it creates only the workspace root; add projects later with `one add`.
+`one create` creates an empty workspace. It does not ask for projects or deployment, install Coding Agent Skills, or modify local AI-tool settings. Add projects later with `one add`.
 
 ## Usage
 
@@ -16,7 +16,7 @@ one create [dir] [options]
 | Argument | Description |
 |---|---|
 | `dir` | Target directory. Use `.` to create in the current directory with `basename(cwd)` as the name. The target must not exist or must be empty |
-| `-n, --name <name>` | Project name. Defaults to `basename(dir)` |
+| `-n, --name <name>` | Workspace name. Defaults to `basename(dir)` |
 | `-y, --yes` | Non-interactive mode; uses defaults and requires an explicit `dir` |
 | `--env-provider <dotenv\|infisical>` | Env backend selection. Defaults to `dotenv`; pass `infisical` explicitly when needed |
 | `-o, --output <fmt>` | `json` / `yaml` / `text`; default is TTY-aware auto detection |
@@ -26,7 +26,7 @@ one create [dir] [options]
 Running `one create` with no arguments opens terminal questions for:
 
 1. Target directory, such as `./my-app`; use `.` for the current directory.
-2. Project name, optional; when empty, One CLI uses the target directory basename.
+2. Workspace name, optional; when empty, One CLI uses the target directory basename.
 
 `one create` does not ask about deploy / container, and it no longer asks whether to switch to Infisical. The default env backend is `env/dotenv`; use `--env-provider infisical` to choose Infisical at create time.
 
@@ -37,27 +37,26 @@ one create my-app --yes
 one create my-app --yes --env-provider infisical
 ```
 
-## Automatically Enabled Backends
+## Default Workspace Capabilities
 
 `one create` no longer asks users to manually select many plugins.
 
 **Workspace defaults, enabled without terminal questions**
 
-| Domain | Default backend | Behavior |
+| Capability | Default | Behavior |
 |---|---|---|
-| `env` | `env/dotenv` | Reads and writes `.env` files; switch to Infisical with `--env-provider infisical` or later with `one env switch infisical` |
-| `ci` | `ci/github-actions` | Writes `.github/workflows/` |
-| `dev` | `dev/process` | Writes `Procfile.dev`, consumable by mprocs / overmind-style runners |
+| Environment variables | Local `.env` files | Switch to Infisical with `--env-provider infisical` or later with `one env switch infisical` |
+| Local development | `one dev` | Runs project development commands through One CLI's built-in supervisor |
 
-**Deploy / container are template-driven**
+Continuous integration is not configured automatically. Creating a workspace
+does not write files under `.github/workflows/`. After adding a project, enable
+it explicitly with `one ci enable <project>` if needed.
 
-They are not written at create time. `one add <template>` enables them based on template defaults:
+**Deployment is delayed**
 
-| Template | Auto-enabled backend |
-|---|---|
-| `go-api` / `nestjs-api` / `nextjs-app` | `container=docker` + `deploy=kustomize` |
-| `react-spa` / `astro-site` / `starlight-docs` | `deploy=aws-s3` |
-| `expo-mobile` / `ts-library` / `go-lib` / `electron-app` | no deploy / container default |
+Create does not write deployment or container configuration. Ordinary `one add`
+also leaves it unset. The first `one deploy <project>` asks for a compatible
+deployment target and local connection.
 
 ## `--env-provider` Semantics
 
@@ -88,22 +87,20 @@ one configure add env/infisical --profile work \
   "created_in_place": false,
   "package_manager": "pnpm",
   "secrets_backend": "dotenv",
-  "ci_enabled": true,
+  "ci_enabled": false,
   "dev_enabled": true,
   "skills": {
-    "status": "completed",
-    "installed_to": ["/Users/example/.claude/skills"],
-    "skill_count": 2
+    "status": "skipped",
+    "reason": "manual-install"
   }
 }
 ```
 
-`secrets_backend` is the env-domain backend name (`dotenv` / `infisical`). `ci_enabled` and `dev_enabled` are always `true`; CI workflow and `Procfile.dev` are always synced. Container and deploy backends are template-driven and live in `projects[].domains.{container,deploy}`.
+`secrets_backend` is the stable environment-source ID (`dotenv` / `infisical`).
+`ci_enabled` remains in the response for wire compatibility and is `false` by
+default; `dev_enabled` is `true`. Deployment configuration is added later.
 
-`skills.status` can be:
-
-- `"completed"`: skills installed.
-- `"failed"`: workspace creation succeeded, but skill installation failed. Run `one skills install` later.
+`skills.status` is `"skipped"`; run `one skills install` separately if wanted.
 
 ## Examples
 
@@ -111,7 +108,7 @@ one configure add env/infisical --profile work \
 
 ```bash
 one create
-# Asks for target directory and optional project name
+# Asks for target directory and optional workspace name
 ```
 
 ### Non-interactive
@@ -148,9 +145,8 @@ pnpm install
 |---|---|
 | `EXISTING_TARGET_NOT_EMPTY` | Choose an empty directory, or delete the target manually and retry |
 | `INVALID_NAME` | Names must match `^[a-zA-Z0-9][a-zA-Z0-9_-]*$`; replace spaces with `-` |
-| `PROJECT_NAME_REQUIRED` | Pass the positional directory/name in non-interactive mode |
+| `PROJECT_NAME_REQUIRED` | Pass the workspace directory as the positional argument in non-interactive mode |
 | `BACKEND_ID_UNKNOWN` | Invalid `--env-provider`; legal values are `dotenv` / `infisical` |
 | `WORKSPACE_NESTED_FORBIDDEN` | Do not create a workspace inside an existing workspace; use another directory or `one add` |
-| `SKILLS_INSTALL_FAILED` | Check write permission for agent skill directories, or run `one skills install` manually |
 
 Full table: [Error codes](/en/docs/error-codes/).

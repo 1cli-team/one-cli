@@ -115,8 +115,9 @@ Important fields:
 
 | Command | Manifest change |
 |---|---|
-| `one create` | Creates the initial manifest with workspace identity, empty `projects`, `domains.env.kind`, `environments`, and always-on CI / dev conventions |
-| `one add` | Adds an item to `projects[]`, writes template defaults into `projects[].domains.<name>`, writes `projects[].domains.dev.command`, and syncs infra files |
+| `one create` | Creates the initial manifest with workspace identity, empty `projects`, `domains.env.kind`, and `environments`; local development is available but CI is not configured |
+| `one add` | Adds an item to `projects[]`, writes `projects[].domains.dev.command`, and syncs local-development files; CI and deployment remain unset |
+| first `one deploy <project>` | Writes the selected compatible deployment target and its generated artifacts after a local connection is ready |
 | `one env set` | Records key names in env config; values never go into the manifest. Infisical can lazy-bind if not already bound |
 | `one container build` | Writes back `projects[i].domains.container.image` and sometimes `domains.container.config.platform` |
 | `one deploy --env <name>` | Does **not** write the manifest; it only passes `--env` to the current deploy call |
@@ -174,4 +175,4 @@ one add nestjs-api --name api
 cat one.manifest.json
 ```
 
-`projects[]` gains one item, and `projects[0].domains.{container,deploy}` is filled from the `nestjs-api` template defaults.
+`projects[]` gains one item and its dev command. Deployment/container fields remain absent until first deploy.

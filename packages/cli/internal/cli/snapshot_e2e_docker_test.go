@@ -74,7 +74,7 @@ func TestSnapshot_E2E_Container_InfoWhenEnabled(t *testing.T) {
 	isolateHome(t, tmp)
 	ws := bootstrapWorkspace(t, tmp, "ws")
 
-	if _, stderr, code := runBinaryIn(t, ws, "add", "go-api", "--name", "api", "-y", "-o", "json"); code != 0 {
+	if _, stderr, code := runBinaryIn(t, ws, "add", "go-api", "--name", "api", "--deploy-provider", "kustomize", "-y", "-o", "json"); code != 0 {
 		t.Fatalf("add failed: exit %d\n  stderr: %s", code, stderr)
 	}
 
@@ -96,7 +96,7 @@ func TestSnapshot_E2E_Container_PerSubprojectOverrideAfterAdd(t *testing.T) {
 	isolateHome(t, tmp)
 	ws := bootstrapWorkspace(t, tmp, "ws")
 
-	_, stderr, code := runBinaryIn(t, ws, "add", "go-api", "--name", "api", "-y", "-o", "json")
+	_, stderr, code := runBinaryIn(t, ws, "add", "go-api", "--name", "api", "--deploy-provider", "kustomize", "-y", "-o", "json")
 	if code != 0 {
 		t.Fatalf("add failed: exit %d\n  stderr: %s", code, stderr)
 	}
@@ -154,7 +154,7 @@ func TestSnapshot_E2E_Container_BuildUsesSubprojectBuildVersion(t *testing.T) {
 	isolateHome(t, tmp)
 	ws := bootstrapWorkspace(t, tmp, "ws")
 
-	_, stderr, code := runBinaryIn(t, ws, "add", "go-api", "--name", "api", "-y", "-o", "json")
+	_, stderr, code := runBinaryIn(t, ws, "add", "go-api", "--name", "api", "--deploy-provider", "kustomize", "-y", "-o", "json")
 	if code != 0 {
 		t.Fatalf("add failed: exit %d\n  stderr: %s", code, stderr)
 	}
@@ -173,7 +173,7 @@ func TestSnapshot_E2E_Container_BuildIgnoresMachineDefaultProfileByDefault(t *te
 	isolateHome(t, tmp)
 	ws := bootstrapWorkspace(t, tmp, "ws")
 
-	_, stderr, code := runBinaryIn(t, ws, "add", "go-api", "--name", "api", "-y", "-o", "json")
+	_, stderr, code := runBinaryIn(t, ws, "add", "go-api", "--name", "api", "--deploy-provider", "kustomize", "-y", "-o", "json")
 	if code != 0 {
 		t.Fatalf("add failed: exit %d\n  stderr: %s", code, stderr)
 	}
@@ -213,7 +213,7 @@ func TestSnapshot_E2E_Container_BuildLoginFailureGuidesProfileFix(t *testing.T) 
 	isolateHome(t, tmp)
 	ws := bootstrapWorkspace(t, tmp, "ws")
 
-	_, stderr, code := runBinaryIn(t, ws, "add", "go-api", "--name", "api", "-y", "-o", "json")
+	_, stderr, code := runBinaryIn(t, ws, "add", "go-api", "--name", "api", "--deploy-provider", "kustomize", "-y", "-o", "json")
 	if code != 0 {
 		t.Fatalf("add failed: exit %d\n  stderr: %s", code, stderr)
 	}
@@ -305,7 +305,7 @@ func TestSnapshot_E2E_Container_BuildWithoutRegistryProfileUsesLocalTag(t *testi
 	isolateHome(t, tmp)
 	ws := bootstrapWorkspace(t, tmp, "ws")
 
-	_, stderr, code := runBinaryIn(t, ws, "add", "go-api", "--name", "api", "-y", "-o", "json")
+	_, stderr, code := runBinaryIn(t, ws, "add", "go-api", "--name", "api", "--deploy-provider", "kustomize", "-y", "-o", "json")
 	if code != 0 {
 		t.Fatalf("add failed: exit %d\n  stderr: %s", code, stderr)
 	}
@@ -324,7 +324,7 @@ func TestSnapshot_E2E_Container_PushDryRunUsesContainerProfile(t *testing.T) {
 	isolateHome(t, tmp)
 	ws := bootstrapWorkspace(t, tmp, "ws")
 
-	_, stderr, code := runBinaryIn(t, ws, "add", "go-api", "--name", "api", "-y", "-o", "json")
+	_, stderr, code := runBinaryIn(t, ws, "add", "go-api", "--name", "api", "--deploy-provider", "kustomize", "-y", "-o", "json")
 	if code != 0 {
 		t.Fatalf("add failed: exit %d\n  stderr: %s", code, stderr)
 	}
@@ -366,7 +366,7 @@ func TestSnapshot_E2E_Container_PushRetagsLocalBuild(t *testing.T) {
 	isolateHome(t, tmp)
 	ws := bootstrapWorkspace(t, tmp, "ws")
 
-	_, stderr, code := runBinaryIn(t, ws, "add", "go-api", "--name", "api", "-y", "-o", "json")
+	_, stderr, code := runBinaryIn(t, ws, "add", "go-api", "--name", "api", "--deploy-provider", "kustomize", "-y", "-o", "json")
 	if code != 0 {
 		t.Fatalf("add failed: exit %d\n  stderr: %s", code, stderr)
 	}
@@ -422,7 +422,7 @@ func TestSnapshot_E2E_Container_PushRequiresRegistryProfile(t *testing.T) {
 	isolateHome(t, tmp)
 	ws := bootstrapWorkspace(t, tmp, "ws")
 
-	_, stderr, code := runBinaryIn(t, ws, "add", "go-api", "--name", "api", "-y", "-o", "json")
+	_, stderr, code := runBinaryIn(t, ws, "add", "go-api", "--name", "api", "--deploy-provider", "kustomize", "-y", "-o", "json")
 	if code != 0 {
 		t.Fatalf("add failed: exit %d\n  stderr: %s", code, stderr)
 	}

@@ -34,8 +34,10 @@ one env
 one container
 one dev
 one deploy
+one ci                               # optional GitHub Actions workflows
 one run
-one configure                        # AWS-style profile entry; bare configure / configure add opens the wizard
+one configure                        # local connections and preferences
+one configure open                   # local settings page
 one configure add <pair> --profile <name> [backend flags...] [--use]
 one configure list [pair]            # omit pair → aggregate all sections
 one configure current [pair]         # omit pair → aggregate all default profiles
@@ -49,15 +51,15 @@ one skills install
 
 ## `one create [dir]`
 
-Creates a workspace root. It does not create a first project and does not
-install package dependencies.
+Creates an empty workspace root. It does not create a project, install package
+dependencies or Coding Agent Skills, or modify local AI-tool settings.
 
 Flags:
 
-- `-n, --name <name>`: project name; default is `basename(dir)`.
+- `-n, --name <name>`: workspace name; default is `basename(dir)`.
 - `-y, --yes`: non-interactive defaults.
-- `--env-provider <dotenv|infisical>`: pick the env backend. Default `dotenv`;
-  interactive mode prompts before applying.
+- `--env-provider <dotenv|infisical>`: advanced automation override. Ordinary
+  creation always uses local dotenv without prompting.
 - `--preset <id>`: scaffold workspace + projects + deploy + env from a
   reproducible preset id. Implies non-interactive mode and requires `[dir]`.
 - `-o json`: structured output.
@@ -66,14 +68,11 @@ Workspace defaults written to `one.manifest.json` (schema v1):
 
 - `domains.env = { kind: "dotenv" }`
 - `environments = { names: ["dev","staging","prod"], default: "dev" }`
-- GitHub Actions workflow is synced unconditionally. `one add` writes
-  the project's resolved dev command into
-  `projects[].domains.dev.command` so `one dev` can read it (the manifest drops
-  the manifest-level `ci` / `dev` toggles — both are always on).
+- CI is not configured automatically. `one add` writes the project's resolved
+  dev command into `projects[].domains.dev.command` so `one dev` can read it.
 
-`container` and `deploy` are not configured at create time. They land in
-`projects[].domains.container` / `projects[].domains.deploy` when
-`one add` applies the template's `domains.<name>.default`.
+`container` and `deploy` are not configured at create or ordinary add time.
+They land in the project only after first deployment setup.
 
 Schema: `one-cli/create/v2`.
 
@@ -85,42 +84,58 @@ Schema: `one-cli/create/v2`.
   "created_in_place": false,
   "package_manager": "pnpm",
   "secrets_backend": "dotenv",
-  "ci_enabled": true,
+  "ci_enabled": false,
   "dev_enabled": true,
   "skills": {
-    "status": "completed",
-    "installed_to": ["/Users/example/.codex/skills"],
-    "skill_count": 2
+    "status": "skipped",
+    "reason": "manual-install"
   }
 }
 ```
 
-`skills.status` can be `completed` or `failed`. A failed skill install does
-not roll back the workspace; run `one skills install` later.
+Run `one skills install` separately when the user explicitly wants it.
 
 ## `one add <template-id> --name <name>`
 
-Adds a project from the template registry, records it in
-`one.manifest.json#projects[]`, and syncs template-declared defaults.
+Adds a locally developable project from the technology-stack registry and
+records it in `one.manifest.json#projects[]`.
 
 Flags:
 
 - `-n, --name <name>`: project name; required in non-interactive mode.
 - `-y, --yes`: non-interactive mode.
-- `--deploy-provider <id>`: explicit deploy backend (`kustomize` /
+- `--deploy-provider <id>`: advanced automation path that configures deployment
+  immediately (`kustomize` /
   `aliyun-oss` / `tencent-cos` / `aws-s3` / `minio` / `rustfs` / `r2` /
-  `vercel` / `cloudflare` / `edgeone`); required in non-interactive mode
-  when the template's `compat.deploy` lists more than one option. Value must
-  be in that list.
+  `vercel` / `cloudflare` / `edgeone`). Value must be compatible with the stack.
 - `-o json`: structured output.
 
-Template `domains.<name>.default` policy:
-
-- `go-api`, `nestjs-api`, `nextjs-app`: `container=docker` + `deploy=kustomize`.
-- `react-spa`, `astro-site`, `starlight-docs`: `deploy=aws-s3`.
-- `expo-mobile`, `ts-library`, `go-lib`, `electron-app`: no deploy / container default.
+Without the advanced flag, deployment/container fields and artifacts remain
+absent until `one deploy <project>`.
 
 Schema: `one-cli/add/v1`.
+
+## `one ci`
+
+Continuous integration is opt-in. `one create` and `one add` never generate a
+workflow. The standalone commands are:
+
+```bash
+one ci                              # status, schema one-cli/ci-status/v1
+one ci enable [project]             # schema one-cli/ci-enable/v1
+one ci sync [project]               # schema one-cli/ci-sync/v1
+one ci disable [project] [--yes]    # schema one-cli/ci-disable/v1
+```
+
+The current bundled service is GitHub Actions (`ci/github-actions`). `enable`
+without a project covers all projects. `sync` without a project refreshes only
+projects that already have a generated workflow. `disable` without a project
+removes all canonical generated workflows and confirms in an interactive
+terminal; cancellation exits 0 and leaves files unchanged.
+
+`--provider ci/github-actions` and legacy `--project <name|path>` are advanced
+automation options. CI state is represented by canonical workflow files under
+`.github/workflows/`; it is not persisted in `one.manifest.json`.
 
 ## `one templates` (== `one templates list`)
 
@@ -132,8 +147,9 @@ Schema: `one-cli/templates/v1`.
 
 ## Reading workspace state
 
-There is no read-only state command. Read `one.manifest.json` at the
-workspace root directly (`cat one.manifest.json` or any JSON parser).
+Bare `one` inside a workspace is the read-only overview; `one -o json` emits
+`one-cli/workspace-summary/v1`. Read `one.manifest.json` when automation needs
+the detailed model.
 Key fields (schema v1):
 
 - top-level: `version`, `workspace.{id,name}`, `environments.{names,default}`,
@@ -161,11 +177,10 @@ Key fields (schema v1):
   anything else ships to a preview (or, for kustomize, selects the
   matching overlay directory).
 
-To list runtime artifacts (generated CI workflows, kustomize overlays),
-inspect the filesystem next to the manifest. The canonical source of
-truth is the manifest plus the filesystem — there is no separate JSON
-envelope summarising both. The dev commands themselves are recorded
-inside the manifest at `projects[].domains.dev.command`.
+To list deployment artifacts such as kustomize overlays, inspect the filesystem
+next to the manifest. `one ci -o json` summarizes generated CI workflows. The
+canonical source of truth is the manifest plus the filesystem. Dev commands are
+recorded inside the manifest at `projects[].domains.dev.command`.
 
 ## `one env`
 
@@ -230,9 +245,9 @@ Profile resolution order (build / push):
 Configure once with `one configure add container/<kind> --profile <name>`;
 the tag and login flow then "just work" across `build` and `push`.
 
-`go-api` after `one add` works automatically — the template's
-`domains.container.default` populates `projects[].domains.container` so
-the build path knows what to do.
+Container commands become available after deployment setup (or after the
+advanced `one add --deploy-provider ...` automation path) writes the project's
+container configuration.
 
 ## `one dev`
 
@@ -241,13 +256,18 @@ runs every project in parallel through the One CLI built-in supervisor.
 No third-party Procfile runner is required.
 
 ```
-one dev [-p <name|path>] [-d <workspace>] [--dry-run]
+one dev [project] [--dry-run]
 ```
 
-`-p / --project` restricts the supervisor to a single project (selector
+The positional project restricts the supervisor to one project. `-p /
+--project` remains compatible for older scripts (selector
 accepts the manifest project name or its relative path; same shape as
 `one deploy -p`). `--dry-run` prints the resolved commands without
 launching them.
+
+If Node dependencies are missing, an interactive terminal offers to run the
+detected package manager's install command and then continues. Non-interactive
+calls return `DEPENDENCIES_NOT_INSTALLED` with the exact install command.
 
 Each project's command is internally wrapped as
 `one run -p <relativeDir> -- <command>` so the workspace's env backend
@@ -271,11 +291,14 @@ Leaf verb — running it dispatches per project using
 `projects[].domains.deploy.kind`.
 
 ```
-one deploy [-p <name|path>] [-d <workspace>] [--profile <name>] [--env <env>] [--dry-run] [--tag <tag>] [--container-profile <name>]
+one deploy [project] [--provider <target>] [--profile <connection>] [--env <env>] [--dry-run]
 ```
 
-`-p / --project` filters to a single project (by manifest name or relative
-path); without it, every project that declares a deploy backend is run.
+The positional project filters to a single project; `-p / --project` remains
+for compatibility. On first deployment, interactive use asks for project,
+target category, compatible implemented service, and a local connection. A
+"configure later" choice exits 0 without changing the workspace and prints
+the exact recovery command. Scripts pass `--provider` and `--profile`.
 `--env <name>` overrides the deploy target environment for every
 project this run (must exist in `manifest.environments.names`); without
 it, each project uses its own `projects[i].domains.deploy.config.env`
@@ -312,7 +335,7 @@ single project.
 
 Backend behavior:
 
-- `kustomize` (default for non-static projects): auto-builds and pushes
+- `kustomize`: auto-builds and pushes
   the project image, syncs the overlay image/namespace, then runs
   `kubectl apply -k`. With `--dry-run` it prints docker build / docker
   push / kubectl argv without contacting the cluster.
@@ -556,6 +579,8 @@ Install flags:
 | `PROFILE_NONE_CONFIGURED` | env/deploy remote ops | add/use a matching profile |
 | `PROFILE_PLUGIN_INVALID` | profile/deploy | use a profile whose backend matches the target backend |
 | `STATUS_FIX_FAILED` | `create` / `add` post-write sync | retry the failing command; if persistent, inspect `error.context` |
+| `CI_NOT_ENABLED` | `ci sync` | run `one ci enable <project>` first |
+| `CI_PROVIDER_UNKNOWN` | `ci enable` | use an ID from `error.context.available_providers` |
 | `SKILLS_INSTALL_FAILED` | `create` / `skills install` | rerun `one skills install`, fix agent directory permissions |
 | `UNKNOWN_COMMAND` | root | use the current command catalog above |
 | `INFISICAL_AUTH_MISSING` | env/remote run | configure env profile or credentials |

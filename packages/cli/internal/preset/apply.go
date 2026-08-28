@@ -46,7 +46,8 @@ type ApplyOptions struct {
 var applyOrder = []Kind{KindBackend, KindFrontend, KindLibrary}
 
 // Apply renders every project segment in resolved into projectRoot,
-// upserts the manifest, and runs infra + CI sync per project. ai.Refresh
+// upserts the manifest, and runs local/deployment infra sync per project. CI
+// is not generated implicitly. ai.Refresh
 // runs exactly once at the end (skipped if zero projects landed).
 //
 // Apply assumes:

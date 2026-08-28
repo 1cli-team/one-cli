@@ -59,7 +59,7 @@ func TestSnapshot_E2E_Run_NoArgs_PrintsHelp(t *testing.T) {
 	if !strings.Contains(stdout, "注入") {
 		t.Errorf("expected help text on stdout (containing %q), got: %q", "注入", stdout)
 	}
-	if !strings.Contains(stdout, "Usage:") {
+	if !strings.Contains(stdout, "USAGE") {
 		t.Errorf("expected cobra Usage block on stdout, got: %q", stdout)
 	}
 }

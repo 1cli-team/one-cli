@@ -286,8 +286,7 @@ func SetWorkspaceDeployK8sTarget(projectRoot, namespace, kustomizationPath strin
 // applyDomainSelection writes the given namespaced id into the appropriate
 // field on m. Unknown domains are silently ignored — the registry
 // validation test catches mismatches at build time. CI / Dev are not
-// persisted (always-on); selections targeting those domains are
-// silently dropped.
+// persisted; selections targeting those domains are silently dropped.
 func applyDomainSelection(m *Manifest, domain, id string) {
 	bare := stripDomainPrefix(id)
 	switch domain {

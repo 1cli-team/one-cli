@@ -27,6 +27,7 @@ import (
 	"time"
 
 	cliErrors "github.com/torchstellar-team/one-cli/packages/cli/internal/errors"
+	"github.com/torchstellar-team/one-cli/packages/cli/internal/i18n"
 )
 
 const (
@@ -68,8 +69,8 @@ type Result struct {
 // Mirrors the convention every other one-cli command follows: structured
 // modes get the JSON envelope, TTY users get a short readable line.
 func (r Result) RenderTTY(w io.Writer) {
-	fmt.Fprintf(w, "✓ profile UI 已启动: %s\n", r.URL)
-	fmt.Fprintln(w, "  · 在浏览器里编辑 profile；按 Ctrl-C 退出。")
+	fmt.Fprintf(w, i18n.T("serve.started")+"\n", r.URL)
+	fmt.Fprintln(w, i18n.T("serve.instructions"))
 }
 
 // Run binds a listener, calls ready with the Result so the cobra layer can

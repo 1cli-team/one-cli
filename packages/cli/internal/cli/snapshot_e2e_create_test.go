@@ -174,10 +174,8 @@ func TestSnapshot_E2E_Create_NestedInsideWorkspace_Refused(t *testing.T) {
 }
 
 // TestSnapshot_E2E_Create_DefaultEnablesUniversalSet verifies the
-// post-trim defaults policy: `one create -y` auto-enables env/dotenv
-// dev/process is always-on and not persisted; the same goes for
-// ci/github-actions. deploy / container are template-driven (registry
-// defaults applied at `one add` time), so neither is set here.
+// post-trim defaults policy: `one create -y` enables env/dotenv and local
+// development, but does not enable CI. deploy / container are also deferred.
 func TestSnapshot_E2E_Create_DefaultEnablesUniversalSet(t *testing.T) {
 	tmp := t.TempDir()
 	isolateHome(t, tmp)
@@ -191,15 +189,15 @@ func TestSnapshot_E2E_Create_DefaultEnablesUniversalSet(t *testing.T) {
 	if got["secrets_backend"] != "dotenv" {
 		t.Errorf("secrets_backend: want dotenv, got %v", got["secrets_backend"])
 	}
-	if got["ci_enabled"] != true {
-		t.Errorf("ci_enabled: want true, got %v", got["ci_enabled"])
+	if got["ci_enabled"] != false {
+		t.Errorf("ci_enabled: want false, got %v", got["ci_enabled"])
 	}
 	if got["dev_enabled"] != true {
 		t.Errorf("dev_enabled: want true, got %v", got["dev_enabled"])
 	}
 
-	// Current manifest: env backend lives under domains.env.kind; ci / dev are
-	// always-on and have no on-disk representation.
+	// Current manifest: env backend lives under domains.env.kind; ci / dev have
+	// no on-disk representation. CI is not enabled implicitly.
 	mf := readManifest(t, target)
 	if _, has := mf["plugins"]; has {
 		t.Errorf("manifest should not carry legacy plugins map, got %v", mf["plugins"])

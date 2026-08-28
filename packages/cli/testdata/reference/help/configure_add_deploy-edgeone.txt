@@ -1,3 +1,11 @@
+
+DESCRIPTION
+deploy/edgeone
+
+USAGE
+  one configure add deploy/edgeone [--profile <name>] [flags]
+
+TIPS
 新增或更新 deploy/edgeone profile。
 
 凭据使用 EdgeOne Pages API token，和上游命令：
@@ -19,14 +27,11 @@ region 字段对应腾讯云区域 slug（ap-guangzhou / ap-shanghai 等），
       --token $EDGEONE_API_TOKEN \
       --use
 
-Usage:
-  one configure add deploy/edgeone [--profile <name>] [flags]
+COMMON OPTIONS
+  -o, --output <value>     Output format: json | yaml | text (default: terminal-friendly text, JSON when piped)
+  --region <value>         Tencent 区域（可选，如 ap-guangzhou / ap-shanghai；留空默认）
+  --token <value>          EdgeOne API token（edgeone pages deploy --token 使用）
+  --use                    Make this the current local connection
 
-Flags:
-      --profile string   profile 名（非交互模式必传；交互模式留空则 prompt）
-      --region string    Tencent 区域（可选，如 ap-guangzhou / ap-shanghai；留空默认）
-      --token string     EdgeOne API token（edgeone pages deploy --token 使用）
-      --use              把此 profile 设为 default
-
-Global Flags:
-  -o, --output string   输出格式: json | yaml | text（默认 auto：TTY 时人类格式，pipe 时 JSON）
+AUTOMATION AND ADVANCED OPTIONS
+  --profile <value>        Local-connection name (required in non-interactive calls)

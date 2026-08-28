@@ -1,8 +1,8 @@
 # Mode: Bootstrap a New One Workspace
 
-Use when the user wants to create a fresh One CLI workspace from
-scratch. Creates the workspace, optionally adds first projects,
-sets up Infisical env-var backend if asked.
+Use when the user wants to create a fresh One CLI workspace from scratch.
+Creation itself always makes an empty workspace; requested projects are added
+afterward with `one add`.
 
 ## Inputs to extract
 
@@ -53,18 +53,13 @@ useless command round-trip.
 ### Step 2 — Create the workspace
 
 ```bash
-one create <project_name> --yes -o json
+one create <workspace_name> --yes -o json
 ```
 
 Schema: `one-cli/create/v2`. Fields:
 - `created_path` — absolute path of the new workspace
-- `skills.status` — "completed" / "failed"
-- `skills.installed_to` — list of agent skills directories (Claude Code,
-  Cursor, Codex, etc. — multi-agent install since v0.3.0)
-- `skills.skill_count` — how many skills landed
-
-If `skills.status == "failed"`, the workspace still exists; surface
-the error and continue. Don't delete the workspace.
+- `skills.status` — `"skipped"`; creation never edits local AI-tool settings
+- `skills.reason` — `"manual-install"`; `one skills install` is optional
 
 ### Step 3 — Add requested projects
 
@@ -77,10 +72,17 @@ one add <template_id> --name <project_name> --yes -o json
 
 Schema: `one-cli/add/v1`. `one add` automatically:
 - Renders the template into `apps/` / `services/` / `packages/`
-- Applies template-declared domain defaults such as `container=docker`,
-  `deploy=kustomize`, or `deploy=aws-s3`
-- Generates the per-project GitHub Actions workflow
+- Leaves CI unconfigured; no workflow is generated automatically
 - Refreshes `AGENTS.md`, `CLAUDE.md`, and `.one/agents/**`
+
+It does not choose deployment or render deployment/container artifacts. The
+first `one deploy <project>` owns that decision.
+
+If the user explicitly asks for CI, enable it after projects exist:
+
+```bash
+one ci enable <project_name> -o json
+```
 
 ### Step 4 — Optional Infisical (managed env vars)
 
@@ -93,7 +95,7 @@ one env switch infisical -o json
 ```
 
 If the user asked for Infisical before creation and the machine profile
-already exists, prefer `one create <project_name> --yes --env-provider infisical -o json`.
+already exists, prefer `one create <workspace_name> --yes --env-provider infisical -o json`.
 Create-time and switch-time binding attempt to create or bind the
 Infisical project. If the profile, network, or permissions are not ready,
 the workspace can still exist and the next `one env set/get/list/pull`
@@ -129,9 +131,10 @@ pnpm install
 ```
 
 Use `go mod tidy` instead of `go mod download` when the agent changed Go
-imports or when `go.mod` / `go.sum` needs repair. One CLI itself does not
-wrap dependency installation; the bundled skill should do this setup when
-it is needed for the next build / test / run step.
+imports or when `go.mod` / `go.sum` needs repair. `one dev` detects missing
+Node dependencies, asks in an interactive terminal, and continues after the
+correct package-manager install. Agents can still install explicitly for
+build and test preparation.
 
 ### Step 6 — Verify
 
@@ -140,12 +143,10 @@ cat one.manifest.json
 ```
 
 Confirm the expected projects appear in the `projects` array and
-`domains.env.kind` reflects what the user asked for. (CI workflow is
-always synced; each project's dev command lives at
-`projects[].domains.dev.command` and is also always written by
-`one add`.) If something is missing (e.g. a project's container
-section is absent), re-run the relevant `one add` for that project;
-manifest write is idempotent.
+`domains.env.kind` reflects what the user asked for. CI remains unconfigured;
+each project's dev command lives at `projects[].domains.dev.command` and is
+written by `one add`. Missing deploy/container sections are expected until
+first deploy.
 
 ## Mode-specific error recovery
 
@@ -157,14 +158,13 @@ manifest write is idempotent.
 | `INFISICAL_AUTH_MISSING` | Tell user to create an Infisical Universal Auth identity, then run `one configure add env/infisical --profile <name> --client-id <id> --client-secret <secret> --use`. |
 | `INFISICAL_AUTH_FAILED` | Bad client id/secret or rate limit. Rotate the secret in the Infisical web UI. |
 | `INFISICAL_PROJECT_NOT_FOUND` | Project id wrong, or identity has no access. User checks both. |
-| `SKILLS_INSTALL_FAILED` | Workspace still exists; check `~/.claude/skills/` perms (or other detected agent paths). |
 
 ## Success response
 
 Reply in the user's language. Include:
 - Created path
 - Projects added (template + name pairs)
-- Which template-driven deploy / container domains were enabled
-- Whether skills installed and to which agent paths
+- State that deployment remains unconfigured until `one deploy <project>`
+- Mention optional `one skills install` only if useful
 - Whether Infisical was selected / switched successfully
 - Next command if anything was skipped (e.g. `pnpm install`)

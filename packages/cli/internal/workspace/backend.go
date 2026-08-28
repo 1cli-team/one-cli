@@ -232,8 +232,8 @@ func ContainerPlatform(m *Manifest) string {
 // any per-project container / deploy overrides into a single map keyed by
 // domain ("container" / "deploy" / "env"). Empty values are dropped so
 // callers can range without nil-checking. Used by infra.SyncProject to
-// know which backend to run per domain. Note: ci and dev are not part of
-// this map — they are unconditionally synchronised by infra.
+// know which backend to run per domain. CI is not part of this map and is
+// not generated implicitly; dev commands live on each project record.
 //
 // Values are namespaced ids ("env/dotenv", "deploy/kustomize", ...) for
 // compatibility with the existing infra dispatch. The dispatch strips the

@@ -17,7 +17,7 @@ One CLI helps you start and grow product projects without repeating the same set
 
 Use it when your project may need more than a single app: a website, an API, docs, a mobile app, a desktop app, shared libraries, local settings, and a way for AI assistants to understand the project.
 
-One CLI gives you a ready project folder first. You can add more pieces later as the product grows.
+One CLI gives you an empty workspace first. You can add apps, services, documentation sites, and shared libraries as the product grows.
 
 ## Quick Start
 
@@ -29,16 +29,16 @@ curl -fsSL https://1cli.dev/install.sh | bash
 
 Windows users can download a build from [GitHub Releases](https://github.com/1cli-team/one-cli/releases/latest).
 
-Create a project:
+Create a workspace and add a project:
 
 ```bash
 one create my-app
 cd my-app
 one add react-spa --name web
-one dev
+one dev web
 ```
 
-That gives you a project folder, a first app, and a local way to run it.
+That gives you a workspace, a first app, and a local way to run it.
 
 ## Why Use It
 
@@ -71,7 +71,7 @@ See the available starters:
 one templates
 ```
 
-Add one to an existing One CLI project:
+Add one to an existing One CLI workspace:
 
 ```bash
 one add nestjs-api --name api
@@ -81,15 +81,13 @@ one add nestjs-api --name api
 
 | Command | What it helps you do |
 |---|---|
-| `one create <name>` | Start a new project folder |
+| `one create <workspace>` | Create an empty workspace |
 | `one add <starter>` | Add another app, service, docs site, or library |
-| `one templates` | See what you can add |
-| `one configure` | Save local settings for environments, deployment, and images |
-| `one serve` | Open a local browser page for sensitive settings |
-| `one dev` | Run the project locally |
-| `one run -- <cmd>` | Run a command with the right local environment |
-| `one deploy` | Deploy selected parts of the project |
-| `one skills install` | Teach supported AI assistants how to use One CLI |
+| `one dev [project]` | Run every project, or one selected project, locally |
+| `one deploy [project]` | Choose a target on first deploy, then deploy |
+| `one env` | Review and manage environment variables |
+| `one configure` | Manage local connections and preferences |
+| `one ci [enable\|sync\|disable]` | Optionally manage generated GitHub Actions workflows |
 
 Full command docs live at [1cli.dev](https://1cli.dev).
 
@@ -120,7 +118,7 @@ Some projects need environment values, deployment accounts, or image registry se
 For a guided browser-based setup:
 
 ```bash
-one serve
+one configure open
 ```
 
 The page only binds to your local machine by default, so it is a better place for sensitive values than a chat window or a shared document.

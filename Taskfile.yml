@@ -15,6 +15,15 @@ vars:
   VERSION:
     sh: cat VERSION 2>/dev/null || echo 0.0.0-dev
   LDFLAGS: '-s -w -X main.version={{.VERSION}}'
+  LOCAL_VERSION:
+    sh: |
+      base=$(cat VERSION 2>/dev/null || echo 0.0.0)
+      commit=$(git rev-parse --short=7 HEAD 2>/dev/null || echo unknown)
+      dirty=""
+      if [ -n "$(git status --porcelain 2>/dev/null)" ]; then dirty=".dirty"; fi
+      echo "${base}-local.${commit}${dirty}"
+  LOCAL_LDFLAGS: '-s -w -X main.version={{.LOCAL_VERSION}}'
+  LOCAL_GO_PROCS: '{{.LOCAL_GO_PROCS | default "2"}}'
 
 env:
   GOPROXY: '{{.GOPROXY}}'
@@ -155,11 +164,19 @@ tasks:
 
       Requires ~/.local/bin to be on PATH. Add to your shell rc if not:
         export PATH="$HOME/.local/bin:$PATH"
-    deps: [build]
+    deps: [build-local]
     cmds:
       - mkdir -p $HOME/.local/bin
       - ln -sf "$(pwd)/{{.BIN}}" $HOME/.local/bin/one
       - one --version
+
+  build-local:
+    internal: true
+    deps: [sync-bundled, sync-web]
+    dir: '{{.CLI_DIR}}'
+    cmds:
+      - mkdir -p bin
+      - GOMAXPROCS={{.LOCAL_GO_PROCS}} go build -p {{.LOCAL_GO_PROCS}} -trimpath -ldflags '{{.LOCAL_LDFLAGS}}' -o bin/one ./cmd/one
 
   build-all:
     desc: Cross-compile every supported platform under go-dist/

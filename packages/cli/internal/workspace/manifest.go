@@ -266,7 +266,7 @@ func ReadManifest(projectRoot string) (*Manifest, error) {
 				"`projects[].env → projects[].domains.env`，`projects[].container → projects[].domains.container`，" +
 				"`projects[].deploy.target → projects[].domains.deploy.kind`，" +
 				"`projects[].deploy.{vercel,cloudflare,edgeone,kustomize}.* → projects[].domains.deploy.config.*`。" +
-				"(4) 删除字段：ci / dev（始终启用，不再 opt-in）、ai（默认全启用所有 provider）、" +
+				"(4) 删除字段：ci / dev（不再由 manifest 控制）、ai（默认全启用所有 provider）、" +
 				"顶层 packageManager、workspace.roots、environments（旧的 dead map）、所有 profile 字段。" +
 				"(5) 顶层 \"version\" 字段改为 1。"
 		}

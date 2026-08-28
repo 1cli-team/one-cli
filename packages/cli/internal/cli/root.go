@@ -24,10 +24,12 @@ import (
 
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/cliexts"
 	cliErrors "github.com/torchstellar-team/one-cli/packages/cli/internal/errors"
+	"github.com/torchstellar-team/one-cli/packages/cli/internal/helpui"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/i18n"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/output"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/preferences"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/updatecheck"
+	"github.com/torchstellar-team/one-cli/packages/cli/internal/workspace"
 
 	// Side-effect imports: per-command cobra packages. Each registers
 	// its top-level command via cliexts.Register() in its own init();
@@ -41,6 +43,7 @@ import (
 	// cross-domain `one configure` tree; skillscmd contributes
 	// `one skills install`.
 	_ "github.com/torchstellar-team/one-cli/packages/cli/internal/cmd/addcmd"
+	_ "github.com/torchstellar-team/one-cli/packages/cli/internal/cmd/cicmd"
 	_ "github.com/torchstellar-team/one-cli/packages/cli/internal/cmd/configurecmd"
 	_ "github.com/torchstellar-team/one-cli/packages/cli/internal/cmd/containercmd"
 	_ "github.com/torchstellar-team/one-cli/packages/cli/internal/cmd/createcmd"
@@ -79,8 +82,8 @@ var rootCmd = &cobra.Command{
 func RootCmd() *cobra.Command { return rootCmd }
 
 // RootHelp returns the curated rootHelp text — what `one --help` emits.
-// Exposed for verify-help, which parses the COMMANDS block to diff
-// against registered top-level commands. The text is locale-dependent;
+// Exposed for verify-help, which ensures the concise daily command list
+// stays intentional. The text is locale-dependent;
 // callers that need the deterministic English form should call
 // i18n.Init("en-US") first.
 func RootHelp() string { return i18n.T("root.help") }
@@ -121,6 +124,35 @@ func Execute(version string, args []string) error {
 	// paths. See internal/updatecheck.
 	updatecheck.MaybeRefreshAsync(version)
 	defer updatecheck.Notify(version)
+
+	if shouldRenderAllHelp(args) {
+		helpui.RenderAll(rootCmd, os.Stdout)
+		return nil
+	}
+	if isBareInvocation(args) {
+		root, err := workspace.ResolveProjectRoot("")
+		if err != nil {
+			return err
+		}
+		if workspace.HasManifest(root) {
+			summary, err := workspace.BuildSummary(root)
+			if err != nil {
+				var cliErr *output.Error
+				if errors.As(err, &cliErr) {
+					output.EmitError(cliErr)
+					return cliErr
+				}
+				return err
+			}
+			output.Emit(&summary)
+			return nil
+		}
+		// Flags such as `-o text` do not change the bare-command behavior:
+		// outside a workspace the concise everyday help is still the useful
+		// answer.
+		os.Stdout.WriteString(i18n.T("root.help"))
+		return nil
+	}
 
 	// Bypass cobra entirely for root help — emit the curated root help
 	// text in the active locale. Subcommand help (`one env --help`)
@@ -166,9 +198,9 @@ var helpFlags = map[string]struct{}{
 }
 
 // shouldRenderRootHelp reports whether `args` should bypass cobra and
-// render the curated rootHelp text. Returns true for:
-//   - bare invocation: `one`
-//   - help on the root: `one --help`, `one -h`, `one help`
+// render the curated rootHelp text. Returns true for root help requests.
+// A bare invocation is handled earlier: it renders a workspace summary
+// inside a workspace and this help outside one.
 //
 // Returns false for help on a subcommand (`one env --help`,
 // `one help create`) so cobra's per-subcommand help template runs.
@@ -184,6 +216,31 @@ func shouldRenderRootHelp(args []string) bool {
 	// subcommand's own help is rendered.
 	if len(args) > 1 && isKnownSubcommand(args[1]) {
 		return false
+	}
+	return true
+}
+
+func shouldRenderAllHelp(args []string) bool {
+	return len(args) == 2 && args[0] == "help" && args[1] == "--all"
+}
+
+func isBareInvocation(args []string) bool {
+	if len(args) == 0 {
+		return true
+	}
+	for i := 0; i < len(args); i++ {
+		a := args[i]
+		switch {
+		case a == "-o" || a == "--output":
+			i++
+			if i >= len(args) {
+				return false
+			}
+		case strings.HasPrefix(a, "--output="), strings.HasPrefix(a, "-o="):
+		case strings.HasPrefix(a, "-o") && len(a) > 2:
+		default:
+			return false
+		}
 	}
 	return true
 }
@@ -305,6 +362,7 @@ func init() {
 	}
 
 	rootCmd.SetVersionTemplate("{{.Version}}\n")
+	rootCmd.SetHelpFunc(helpui.Render)
 	// Help interception is done in Execute() via shouldRenderRootHelp for
 	// the root command (`one --help` / `one help`). We deliberately do NOT
 	// set SetHelpTemplate / SetUsageTemplate / SetHelpFunc here — those
@@ -320,7 +378,8 @@ func init() {
 	// the canonical Cobra declaration so the flag appears in --help and
 	// cobra accepts the token without "unknown flag" errors.
 	rootCmd.PersistentFlags().StringP("output", "o", "",
-		"输出格式: json | yaml | text（默认 auto：TTY 时人类格式，pipe 时 JSON）")
+		i18n.T("common.flag.output"))
+	i18n.MarkFlagUsage(rootCmd, "output", "common.flag.output")
 }
 
 // (Previously: the rootHelp constant. The curated help text now lives

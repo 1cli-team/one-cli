@@ -44,7 +44,9 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/cliexts"
+	"github.com/torchstellar-team/one-cli/packages/cli/internal/cmd/servecmd"
 	cliErrors "github.com/torchstellar-team/one-cli/packages/cli/internal/errors"
+	"github.com/torchstellar-team/one-cli/packages/cli/internal/helpui"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/i18n"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/output"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/preferences"
@@ -83,66 +85,89 @@ var allPairs = []struct {
 
 func buildContributions() []*cobra.Command {
 	parent := &cobra.Command{
-		Use: "configure",
-		Long: `配置一组 endpoint profile（每个 (domain, backend) 一组），跨工作区共享。
-每个 profile 描述一个 endpoint（一个 Infisical 实例 / 一个 k8s context /
-一个 S3 endpoint / 一个 container registry），并自带凭据。
-
-存储位置（AWS-CLI 风格双文件）：
-  ~/.config/one/config.json       非敏感字段：endpoint / region / default 指针 / workspace 绑定 / credentialSource
-  ~/.config/one/credentials.json  敏感字段：clientSecret / accessKeySecret / registry password
-两个文件都是 mode 0600，仅本人可读；不入 git；不要复制到团队共享 dotfile 仓库。
-
-无参快捷入口（推荐首次使用）：
-  one configure                   交互式向导：选 (domain, backend) 再走对应 add 流程
-  one configure add               同上（add 子命令的快捷入口）
-
-子命令（verb-first 风格）：
-  one configure add <pair> [--profile <name>]     新增 / 更新一个 profile
-  one configure list [pair]                       列出 profile（无 pair 时聚合所有 section）
-  one configure current [pair]                    打印 default profile（无 pair 时聚合所有 section）
-  one configure show <pair> --profile <name>      打印 profile 全文（凭据默认掩码）
-  one configure use <pair> --profile <name>       切换 default profile
-  one configure use <pair> --profile <name> --workspace
-                                                    绑定当前 workspace 的本机 profile（不写 manifest）
-  one configure remove <pair> --profile <name>    删除一个 profile
-
-支持的 (domain, backend) pair：
-  env/infisical     Infisical 机器身份（siteUrl + clientId + clientSecret）
-                    dotenv 不需要 profile（无凭据，工作区直接落本地 .env）
-  deploy/aliyun-oss 阿里云 OSS（S3 协议；endpoint + region + AK/SK）
-  deploy/tencent-cos 腾讯云 COS（S3 协议；endpoint + region + AK/SK）
-  deploy/aws-s3     AWS S3（region + AK/SK；endpoint 留空走 SDK 默认）
-  deploy/minio      MinIO 自部署对象存储（endpoint + AK/SK；默认 path-style）
-  deploy/rustfs     RustFS 自部署对象存储（同 MinIO，默认 path-style）
-  deploy/r2         Cloudflare R2（endpoint + AK/SK；region 通常为 auto）
-  deploy/kustomize  Kubernetes 部署（kubeconfig + context）
-  deploy/vercel     Vercel 部署（API token + 可选 team scope）
-  deploy/cloudflare Cloudflare Workers 部署（API token + 可选 account scope）
-  deploy/edgeone    Tencent EdgeOne Pages 部署（API token）
-  container/docker  通用容器镜像仓库登录（自建 Harbor / Quay / 任何标准 docker registry）
-  container/dockerhub Docker Hub（host 固定为 index.docker.io）
-  container/ghcr    GitHub Container Registry（host 固定为 ghcr.io）
-  container/acr     阿里云 Aliyun Container Registry（host 派生自 region）
-
-profile 解析优先级（每次 one <domain> <verb>，每个 (domain, backend) 各走一遍）：
-  1. --profile <name>
-  2. ~/.config/one/config.json#workspaces[workspaceId].projects[projectName].profiles[domain/backend]
-  3. ~/.config/one/config.json#workspaces[workspaceId].profiles[domain/backend]
-  4. ~/.config/one/config.json#<domain>/<backend>.default`,
-		RunE: runConfigureWizard,
+		Use:     "configure",
+		Long:    i18n.T("configure.tip"),
+		Example: "  one configure\n  one configure open\n  one configure list",
+		RunE:    runConfigure,
 	}
-	parent.AddCommand(
-		buildAddCmd(),
-		buildListCmd(),
-		buildCurrentCmd(),
-		buildShowCmd(),
-		buildUseCmd(),
-		buildRemoveCmd(),
-		buildLocaleCmd(),
-	)
+	children := []*cobra.Command{
+		buildAddCmd(), buildListCmd(), buildCurrentCmd(), buildShowCmd(),
+		buildUseCmd(), buildRemoveCmd(), servecmd.NewOpenCmd(), buildLocaleCmd(),
+	}
+	parent.AddCommand(children...)
 	i18n.MarkShort(parent, "configure.short")
+	i18n.MarkLong(parent, "configure.tip")
 	return []*cobra.Command{parent}
+}
+
+type configureSummary struct {
+	Schema      string                `json:"schema"`
+	Connections []configureConnection `json:"connections"`
+	ConfigPath  string                `json:"config_path"`
+}
+
+type configureConnection struct {
+	ServiceID string `json:"service_id"`
+	Name      string `json:"name"`
+	Default   bool   `json:"default"`
+}
+
+func runConfigure(cmd *cobra.Command, args []string) error {
+	if len(args) > 0 {
+		return runConfigureWizard(cmd, args)
+	}
+	cfg, _, err := profile.Load()
+	if err != nil {
+		return err
+	}
+	connections := collectConnections(cfg)
+	if len(connections) == 0 && output.CanPrompt() {
+		return runConfigureWizard(cmd, nil)
+	}
+	path, _ := profile.ConfigPath()
+	output.Emit(&configureSummary{
+		Schema: "one-cli/configure-summary/v1", Connections: connections, ConfigPath: path,
+	})
+	return nil
+}
+
+func collectConnections(cfg *profile.Config) []configureConnection {
+	result := make([]configureConnection, 0)
+	for _, pair := range allPairs {
+		names, defaultName := listSection(cfg, pair.Domain, pair.Backend)
+		sort.Strings(names)
+		for _, name := range names {
+			result = append(result, configureConnection{
+				ServiceID: profile.SectionKey(pair.Domain, pair.Backend),
+				Name:      name, Default: name == defaultName,
+			})
+		}
+	}
+	return result
+}
+
+func (s *configureSummary) RenderTTY(w io.Writer) {
+	if s == nil {
+		return
+	}
+	fmt.Fprintln(w, i18n.T("configure.summary_title"))
+	if len(s.Connections) == 0 {
+		fmt.Fprintln(w, i18n.T("configure.no_connections"))
+	} else {
+		for _, connection := range s.Connections {
+			marker := ""
+			if connection.Default {
+				marker = i18n.T("configure.default_marker")
+			}
+			domain, backend := splitPair(connection.ServiceID)
+			fmt.Fprintf(w, "  %s  %s%s\n", connection.Name, serviceLabel(domain, backend), marker)
+		}
+	}
+	fmt.Fprintln(w)
+	fmt.Fprintln(w, i18n.T("configure.local_only"))
+	fmt.Fprintf(w, i18n.T("configure.settings_path")+"\n", s.ConfigPath)
+	fmt.Fprintln(w)
+	fmt.Fprintln(w, i18n.T("configure.next_open"))
 }
 
 // ───────────────────── locale ─────────────────────
@@ -167,15 +192,15 @@ func (r *localeResult) RenderTTY(w io.Writer) {
 		return
 	}
 	if r.Updated {
-		fmt.Fprintf(w, "✓ 显示语言已设置为 %s\n", r.StoredLocale)
+		fmt.Fprintf(w, i18n.T("configure.locale_success")+"\n", r.StoredLocale)
 	}
-	fmt.Fprintf(w, "stored:   %s\n", r.StoredLocale)
-	fmt.Fprintf(w, "resolved: %s", r.Resolved)
+	fmt.Fprintf(w, i18n.T("configure.locale_stored")+"\n", r.StoredLocale)
+	fmt.Fprintf(w, i18n.T("configure.locale_resolved"), r.Resolved)
 	if r.StoredLocale == preferences.LocaleAuto && r.Detected != "" {
-		fmt.Fprintf(w, "  (from $LANG / $LC_*)")
+		fmt.Fprint(w, i18n.T("configure.locale_from_env"))
 	}
 	fmt.Fprintln(w)
-	fmt.Fprintf(w, "path:     %s\n", r.ConfigPath)
+	fmt.Fprintf(w, i18n.T("configure.locale_path")+"\n", r.ConfigPath)
 }
 
 func buildLocaleCmd() *cobra.Command {
@@ -248,7 +273,7 @@ func runConfigureWizard(cmd *cobra.Command, args []string) error {
 		return cliErrors.New(cliErrors.UNKNOWN_COMMAND,
 			fmt.Sprintf("`one configure %s` 不是已知子命令；可用 (domain, backend) 见 `one configure --help`", strings.Join(args, " ")))
 	}
-	if !output.IsTTY() {
+	if !output.CanPrompt() {
 		return cliErrors.New(cliErrors.PROFILE_BACKEND_INVALID,
 			"非交互式调用 `one configure [add]` 不支持；请显式指定 `one configure add <domain>/<backend> --profile <name>`，"+
 				"如 `one configure add env/infisical --profile work --client-id ... --client-secret ...`。")
@@ -274,6 +299,13 @@ func runSelectedAddBackend(cmd *cobra.Command, domain profile.Domain, backend st
 	return addCmd.Execute()
 }
 
+// ConfigureService runs the existing interactive connection builder for a
+// concrete service. Deployment uses it on first deploy instead of duplicating
+// credential prompts or storage rules.
+func ConfigureService(cmd *cobra.Command, domain profile.Domain, backend string) error {
+	return runSelectedAddBackend(cmd, domain, backend)
+}
+
 // pickPair prompts the user to choose one (domain, backend) pair from
 // the five supported options. Returns the SectionKey ("env/infisical"
 // etc.) so callers can split it back into the typed pieces.
@@ -283,27 +315,27 @@ func pickPair() (string, error) {
 		label string
 	}
 	choices := []pairChoice{
-		{"env/infisical", "env/infisical     Infisical 机器身份（机器级，跨工作区共享）"},
-		{"deploy/aliyun-oss", "deploy/aliyun-oss 阿里云 OSS（S3 协议）"},
-		{"deploy/tencent-cos", "deploy/tencent-cos 腾讯云 COS（S3 协议）"},
-		{"deploy/aws-s3", "deploy/aws-s3     AWS S3"},
-		{"deploy/minio", "deploy/minio      MinIO 自部署对象存储"},
-		{"deploy/rustfs", "deploy/rustfs     RustFS 自部署对象存储"},
-		{"deploy/r2", "deploy/r2         Cloudflare R2"},
-		{"deploy/kustomize", "deploy/kustomize  Kubernetes 部署（kubeconfig + context）"},
-		{"deploy/vercel", "deploy/vercel     Vercel 部署（API token + 可选 team scope）"},
-		{"deploy/cloudflare", "deploy/cloudflare Cloudflare Workers 部署（API token + 可选 account scope）"},
-		{"deploy/edgeone", "deploy/edgeone    Tencent EdgeOne Pages 部署（API token）"},
-		{"container/docker", "container/docker  通用容器镜像仓库（自建 Harbor / Quay / 任何标准 docker registry）"},
-		{"container/dockerhub", "container/dockerhub Docker Hub（host 固定 index.docker.io）"},
-		{"container/ghcr", "container/ghcr    GitHub Container Registry（host 固定 ghcr.io）"},
-		{"container/acr", "container/acr     阿里云 Aliyun Container Registry（host 派生自 region）"},
+		{"env/infisical", serviceLabel(profile.DomainEnv, "infisical")},
+		{"deploy/aliyun-oss", serviceLabel(profile.DomainDeploy, "aliyun-oss")},
+		{"deploy/tencent-cos", serviceLabel(profile.DomainDeploy, "tencent-cos")},
+		{"deploy/aws-s3", serviceLabel(profile.DomainDeploy, "aws-s3")},
+		{"deploy/minio", serviceLabel(profile.DomainDeploy, "minio")},
+		{"deploy/rustfs", serviceLabel(profile.DomainDeploy, "rustfs")},
+		{"deploy/r2", serviceLabel(profile.DomainDeploy, "r2")},
+		{"deploy/kustomize", serviceLabel(profile.DomainDeploy, "kustomize")},
+		{"deploy/vercel", serviceLabel(profile.DomainDeploy, "vercel")},
+		{"deploy/cloudflare", serviceLabel(profile.DomainDeploy, "cloudflare")},
+		{"deploy/edgeone", serviceLabel(profile.DomainDeploy, "edgeone")},
+		{"container/docker", serviceLabel(profile.DomainContainer, "docker")},
+		{"container/dockerhub", serviceLabel(profile.DomainContainer, "dockerhub")},
+		{"container/ghcr", serviceLabel(profile.DomainContainer, "ghcr")},
+		{"container/acr", serviceLabel(profile.DomainContainer, "acr")},
 	}
 	options := make([]prompt.Option[string], 0, len(choices))
 	for _, c := range choices {
 		options = append(options, prompt.Option[string]{Label: c.label, Value: c.key})
 	}
-	return prompt.Select("配置哪一类?", options)
+	return prompt.Select(i18n.T("configure.prompt_service"), options)
 }
 
 // splitPair turns "env/infisical" back into (DomainEnv, "infisical").
@@ -312,6 +344,15 @@ func pickPair() (string, error) {
 func splitPair(pair string) (profile.Domain, string) {
 	parts := strings.SplitN(pair, "/", 2)
 	return profile.Domain(parts[0]), parts[1]
+}
+
+func serviceLabel(domain profile.Domain, backend string) string {
+	key := "configure.service." + string(domain) + "." + backend
+	label := i18n.T(key)
+	if label == key {
+		return backend
+	}
+	return label
 }
 
 // parsePair turns a positional CLI arg ("env/infisical") into the
@@ -330,6 +371,73 @@ func parsePair(arg string) (profile.Domain, string, error) {
 	}
 	return "", "", cliErrors.New(cliErrors.PROFILE_BACKEND_INVALID,
 		fmt.Sprintf("未知 (domain, backend) pair %q；可选：%s。", arg, strings.Join(valid, " / ")))
+}
+
+type connectionSelection struct {
+	Domain  profile.Domain
+	Backend string
+	Name    string
+}
+
+func resolveExistingConnection(args []string, nameFlag string) (connectionSelection, error) {
+	cfg, _, err := profile.Load()
+	if err != nil {
+		return connectionSelection{}, err
+	}
+	name := strings.TrimSpace(nameFlag)
+	if len(args) == 1 {
+		domain, backend, err := parsePair(args[0])
+		if err != nil {
+			return connectionSelection{}, err
+		}
+		if name != "" {
+			return connectionSelection{Domain: domain, Backend: backend, Name: name}, nil
+		}
+		if !output.CanPrompt() {
+			return connectionSelection{}, cliErrors.New(cliErrors.PROFILE_NOT_FOUND,
+				i18n.T("configure.connection_name_required"))
+		}
+		names, _ := listSection(cfg, domain, backend)
+		sort.Strings(names)
+		if len(names) == 0 {
+			return connectionSelection{}, cliErrors.New(cliErrors.PROFILE_NONE_CONFIGURED,
+				i18n.Tf("configure.no_service_connections", args[0]))
+		}
+		options := make([]prompt.Option[string], 0, len(names))
+		for _, candidate := range names {
+			options = append(options, prompt.Option[string]{Label: candidate, Value: candidate})
+		}
+		selected, err := prompt.Select(i18n.T("configure.prompt_connection"), options)
+		return connectionSelection{Domain: domain, Backend: backend, Name: selected}, err
+	}
+	if !output.CanPrompt() {
+		return connectionSelection{}, cliErrors.New(cliErrors.PROFILE_BACKEND_INVALID,
+			i18n.T("configure.service_required"))
+	}
+	connections := collectConnections(cfg)
+	if len(connections) == 0 {
+		return connectionSelection{}, cliErrors.New(cliErrors.PROFILE_NONE_CONFIGURED,
+			i18n.T("configure.no_connections"))
+	}
+	options := make([]prompt.Option[string], 0, len(connections))
+	for _, connection := range connections {
+		value := connection.ServiceID + "\x00" + connection.Name
+		domain, backend := splitPair(connection.ServiceID)
+		options = append(options, prompt.Option[string]{
+			Label: connection.Name + "  ·  " + serviceLabel(domain, backend),
+			Value: value,
+		})
+	}
+	selected, err := prompt.Select(i18n.T("configure.prompt_connection"), options)
+	if err != nil {
+		return connectionSelection{}, err
+	}
+	parts := strings.SplitN(selected, "\x00", 2)
+	domain, backend, err := parsePair(parts[0])
+	if err != nil {
+		return connectionSelection{}, err
+	}
+	return connectionSelection{Domain: domain, Backend: backend, Name: parts[1]}, nil
 }
 
 // pairCompletion gives shell completion the list of valid pairs as
@@ -351,8 +459,8 @@ func pairCompletion(_ *cobra.Command, args []string, _ string) ([]string, cobra.
 
 func buildAddCmd() *cobra.Command {
 	add := &cobra.Command{
-		Use:   "add [pair] [--profile <name>]",
-		Short: "新增 / 更新一个 profile",
+		Use:   "add [service-id] [--profile <name>]",
+		Short: i18n.T("configure.add.short"),
 		Long: `新增或更新一个 profile。每个 (domain, backend) 一棵 sub-subcommand,
 分别拥有该 backend 的专属 flag(--site-url / --endpoint / --kubeconfig / ...)。
 
@@ -376,6 +484,7 @@ func buildAddCmd() *cobra.Command {
 	for _, p := range allPairs {
 		add.AddCommand(newAddBackendCmd(p.Domain, p.Backend))
 	}
+	i18n.MarkShort(add, "configure.add.short")
 	return add
 }
 
@@ -394,20 +503,14 @@ func (r *addResult) RenderTTY(w io.Writer) {
 	if r == nil {
 		return
 	}
-	verb := "configured"
-	if r.Status == "updated" {
-		verb = "updated"
-	}
 	suffix := ""
 	if r.Default {
-		suffix = "  [default]"
+		suffix = i18n.T("configure.default_marker")
 	}
-	fmt.Fprintf(w, "✓ %s %s/%s profile %q%s\n",
-		verb, r.Domain, r.Backend, r.Name, suffix)
-	fmt.Fprintf(w, "  · config:      %s\n", r.ConfigPath)
-	if r.CredentialsPath != "" {
-		fmt.Fprintf(w, "  · credentials: %s\n", r.CredentialsPath)
-	}
+	fmt.Fprintf(w, i18n.T("configure.add_success")+"\n",
+		r.Name, serviceLabel(profile.Domain(r.Domain), r.Backend), suffix)
+	fmt.Fprintln(w, i18n.T("configure.local_only"))
+	fmt.Fprintf(w, i18n.T("configure.settings_path")+"\n", r.ConfigPath)
 }
 
 // newAddBackendCmd builds one of the five backend-specific
@@ -437,11 +540,11 @@ func newAddBackendCmd(domain profile.Domain, backend string) *cobra.Command {
 	)
 	cmd := &cobra.Command{
 		Use:   fmt.Sprintf("%s/%s [--profile <name>]", domain, backend),
-		Short: fmt.Sprintf("新增 / 更新一个 %s/%s profile", domain, backend),
+		Short: string(domain) + "/" + backend,
 		Long:  addLong(domain, backend),
 		Args:  cobra.NoArgs,
 		RunE: func(_ *cobra.Command, args []string) error {
-			interactive := output.IsTTY()
+			interactive := output.CanPrompt()
 			name, err := resolveProfileName(profileName, interactive)
 			if err != nil {
 				return err
@@ -505,8 +608,10 @@ func newAddBackendCmd(domain profile.Domain, backend string) *cobra.Command {
 			return nil
 		},
 	}
-	cmd.Flags().StringVar(&profileName, "profile", "", "profile 名（非交互模式必传；交互模式留空则 prompt）")
-	cmd.Flags().BoolVar(&setDefault, "use", false, "把此 profile 设为 default")
+	cmd.Flags().StringVar(&profileName, "profile", "", i18n.T("configure.flag.profile"))
+	cmd.Flags().BoolVar(&setDefault, "use", false, i18n.T("configure.flag.use"))
+	i18n.MarkFlagUsage(cmd, "profile", "configure.flag.profile")
+	i18n.MarkFlagUsage(cmd, "use", "configure.flag.use")
 	switch backend {
 	case "infisical":
 		cmd.Flags().StringVar(&siteURL, "site-url", "", "Infisical site URL（默认 https://app.infisical.com）")
@@ -571,6 +676,7 @@ func newAddBackendCmd(domain profile.Domain, backend string) *cobra.Command {
 		cmd.Flags().StringVar(&edgeoneRegion, "region", "",
 			"Tencent 区域（可选，如 ap-guangzhou / ap-shanghai；留空默认）")
 	}
+	helpui.MarkAdvanced(cmd, "profile")
 	return cmd
 }
 
@@ -626,7 +732,7 @@ func resolveProfileName(flag string, interactive bool) (string, error) {
 		return "", cliErrors.New(cliErrors.PROFILE_BACKEND_INVALID,
 			"非交互模式必须通过 --profile 指定 profile 名。")
 	}
-	v, err := prompt.Text("profile 名（如 work / prod）", "", func(s string) error {
+	v, err := prompt.Text(i18n.T("configure.prompt_connection_name"), "work", func(s string) error {
 		if strings.TrimSpace(s) == "" {
 			return fmt.Errorf("不能为空")
 		}
@@ -952,24 +1058,16 @@ type profileEntry struct {
 
 func (r listResult) RenderTTY(w io.Writer) {
 	if len(r.Profiles) == 0 {
-		fmt.Fprintf(w, "（%s/%s 还没有 profile。运行 `one configure add %s/%s <name>` 创建。）\n",
-			r.Domain, r.Backend, r.Domain, r.Backend)
+		fmt.Fprintf(w, i18n.T("configure.no_service_connections")+"\n", r.Domain+"/"+r.Backend)
 		return
 	}
-	tw := tabwriter.NewWriter(w, 0, 2, 2, ' ', 0)
-	fmt.Fprintln(tw, "DEFAULT\tNAME\tCRED SOURCE")
 	for _, p := range r.Profiles {
-		marker := " "
+		marker := ""
 		if p.Default {
-			marker = "*"
+			marker = i18n.T("configure.default_marker")
 		}
-		src := p.CredentialSource
-		if src == "" {
-			src = profile.SourceFile
-		}
-		fmt.Fprintf(tw, "%s\t%s\t%s\n", marker, p.Name, src)
+		fmt.Fprintf(w, "  %s  %s%s\n", p.Name, serviceLabel(profile.Domain(r.Domain), r.Backend), marker)
 	}
-	_ = tw.Flush()
 }
 
 // listAllResult is emitted by `one configure list` (no pair). It
@@ -994,35 +1092,23 @@ func (r listAllResult) RenderTTY(w io.Writer) {
 			continue
 		}
 		any = true
-		header := fmt.Sprintf("%s/%s", s.Domain, s.Backend)
-		if s.Default != "" {
-			header += fmt.Sprintf("  (default: %s)", s.Default)
-		}
-		fmt.Fprintln(w, header)
-		tw := tabwriter.NewWriter(w, 0, 2, 2, ' ', 0)
 		for _, p := range s.Profiles {
-			marker := " "
+			marker := ""
 			if p.Default {
-				marker = "*"
+				marker = i18n.T("configure.default_marker")
 			}
-			src := p.CredentialSource
-			if src == "" {
-				src = profile.SourceFile
-			}
-			fmt.Fprintf(tw, "  %s\t%s\t%s\n", marker, p.Name, src)
+			fmt.Fprintf(w, "  %s  %s%s\n", p.Name, serviceLabel(profile.Domain(s.Domain), s.Backend), marker)
 		}
-		_ = tw.Flush()
-		fmt.Fprintln(w)
 	}
 	if !any {
-		fmt.Fprintln(w, "（还没有任何 profile。运行 `one configure add` 进入交互式向导，或 `one configure add <pair> <name>`。）")
+		fmt.Fprintln(w, i18n.T("configure.no_connections"))
 	}
 }
 
 func buildListCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "list [pair]",
-		Short: "列出 profile（无 pair 时聚合所有 section）",
+		Short: i18n.T("configure.list.short"),
 		Args:  cobra.MaximumNArgs(1),
 		RunE: func(_ *cobra.Command, args []string) error {
 			cfg, _, err := profile.Load()
@@ -1042,6 +1128,7 @@ func buildListCmd() *cobra.Command {
 		},
 		ValidArgsFunction: pairCompletion,
 	}
+	i18n.MarkShort(cmd, "configure.list.short")
 	return cmd
 }
 
@@ -1122,7 +1209,7 @@ type currentResult struct {
 
 func (r currentResult) RenderTTY(w io.Writer) {
 	if r.Default == "" {
-		fmt.Fprintf(w, "（%s/%s 当前没有 default profile。）\n", r.Domain, r.Backend)
+		fmt.Fprintf(w, i18n.T("configure.no_current")+"\n", r.Domain+"/"+r.Backend)
 		return
 	}
 	fmt.Fprintf(w, "%s\n", r.Default)
@@ -1146,9 +1233,9 @@ func (r currentAllResult) RenderTTY(w io.Writer) {
 	for _, s := range r.Defaults {
 		defaultName := s.Default
 		if defaultName == "" {
-			defaultName = "(none)"
+			defaultName = i18n.T("configure.none")
 		}
-		fmt.Fprintf(tw, "%s/%s\t%s\n", s.Domain, s.Backend, defaultName)
+		fmt.Fprintf(tw, "%s\t%s\n", serviceLabel(profile.Domain(s.Domain), s.Backend), defaultName)
 	}
 	_ = tw.Flush()
 }
@@ -1156,7 +1243,7 @@ func (r currentAllResult) RenderTTY(w io.Writer) {
 func buildCurrentCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "current [pair]",
-		Short: "打印 default profile（无 pair 时聚合所有 section）",
+		Short: i18n.T("configure.current.short"),
 		Args:  cobra.MaximumNArgs(1),
 		RunE: func(_ *cobra.Command, args []string) error {
 			cfg, _, err := profile.Load()
@@ -1191,6 +1278,7 @@ func buildCurrentCmd() *cobra.Command {
 		},
 		ValidArgsFunction: pairCompletion,
 	}
+	i18n.MarkShort(cmd, "configure.current.short")
 	return cmd
 }
 
@@ -1207,14 +1295,13 @@ type showResult struct {
 }
 
 func (r showResult) RenderTTY(w io.Writer) {
-	fmt.Fprintf(w, "name:        %s\n", r.Name)
-	fmt.Fprintf(w, "domain:      %s\n", r.Domain)
-	fmt.Fprintf(w, "backend:     %s\n", r.Backend)
+	fmt.Fprintf(w, i18n.T("configure.show_connection")+"\n", r.Name)
+	fmt.Fprintf(w, i18n.T("configure.show_service")+"\n", serviceLabel(profile.Domain(r.Domain), r.Backend))
 	src := r.CredentialSource
 	if src == "" {
 		src = profile.SourceFile
 	}
-	fmt.Fprintf(w, "cred source: %s\n", src)
+	fmt.Fprintf(w, i18n.T("configure.show_credential_source")+"\n", src)
 	if r.Profile.Infisical != nil {
 		i := r.Profile.Infisical
 		fmt.Fprintln(w, "infisical:")
@@ -1284,7 +1371,7 @@ func (r showResult) RenderTTY(w io.Writer) {
 	}
 	if !r.Reveal {
 		fmt.Fprintln(w, "")
-		fmt.Fprintln(w, "（凭据已掩码。--reveal 显示原文。）")
+		fmt.Fprintln(w, i18n.T("configure.show_masked"))
 	}
 }
 
@@ -1294,19 +1381,18 @@ func buildShowCmd() *cobra.Command {
 		profileName string
 	)
 	cmd := &cobra.Command{
-		Use:   "show <pair> --profile <name>",
-		Short: "打印 profile 全文（凭据默认掩码）",
-		Args:  cobra.ExactArgs(1),
+		Use:   "show [service-id] [--profile <name>]",
+		Short: i18n.T("configure.show.short"),
+		Args:  cobra.MaximumNArgs(1),
 		RunE: func(_ *cobra.Command, args []string) error {
-			domain, backend, err := parsePair(args[0])
+			selection, err := resolveExistingConnection(args, profileName)
 			if err != nil {
 				return err
 			}
-			name := strings.TrimSpace(profileName)
 			resolved, err := profile.Resolve(profile.ResolveInput{
-				Domain:       domain,
-				Backend:      backend,
-				FlagOverride: name,
+				Domain:       selection.Domain,
+				Backend:      selection.Backend,
+				FlagOverride: selection.Name,
 			})
 			if err != nil {
 				return err
@@ -1317,9 +1403,9 @@ func buildShowCmd() *cobra.Command {
 			}
 			output.Emit(showResult{
 				Schema:           "one-cli/configure-show/v1",
-				Domain:           string(domain),
-				Backend:          backend,
-				Name:             name,
+				Domain:           string(selection.Domain),
+				Backend:          selection.Backend,
+				Name:             selection.Name,
 				Profile:          p,
 				CredentialSource: resolved.CredSource,
 				Reveal:           reveal,
@@ -1328,9 +1414,12 @@ func buildShowCmd() *cobra.Command {
 		},
 		ValidArgsFunction: pairCompletion,
 	}
-	cmd.Flags().StringVar(&profileName, "profile", "", "profile 名（必填）")
-	_ = cmd.MarkFlagRequired("profile")
-	cmd.Flags().BoolVar(&reveal, "reveal", false, "显示凭据原文（默认掩码为 ********）")
+	cmd.Flags().StringVar(&profileName, "profile", "", i18n.T("configure.flag.profile_existing"))
+	cmd.Flags().BoolVar(&reveal, "reveal", false, i18n.T("configure.flag.reveal"))
+	i18n.MarkFlagUsage(cmd, "profile", "configure.flag.profile_existing")
+	i18n.MarkFlagUsage(cmd, "reveal", "configure.flag.reveal")
+	helpui.MarkAdvanced(cmd, "profile", "reveal")
+	i18n.MarkShort(cmd, "configure.show.short")
 	return cmd
 }
 
@@ -1384,13 +1473,13 @@ type useResult struct {
 func (r useResult) RenderTTY(w io.Writer) {
 	switch r.Scope {
 	case "workspace-project":
-		fmt.Fprintf(w, "✓ workspace %s project %s uses %s/%s profile: %s\n",
-			r.WorkspaceID, r.Project, r.Domain, r.Backend, r.Name)
+		fmt.Fprintf(w, i18n.T("configure.use_project_success")+"\n",
+			r.Name, r.WorkspaceID, r.Project, serviceLabel(profile.Domain(r.Domain), r.Backend))
 	case "workspace":
-		fmt.Fprintf(w, "✓ workspace %s uses %s/%s profile: %s\n",
-			r.WorkspaceID, r.Domain, r.Backend, r.Name)
+		fmt.Fprintf(w, i18n.T("configure.use_workspace_success")+"\n",
+			r.Name, r.WorkspaceID, serviceLabel(profile.Domain(r.Domain), r.Backend))
 	default:
-		fmt.Fprintf(w, "✓ default %s/%s profile: %s\n", r.Domain, r.Backend, r.Name)
+		fmt.Fprintf(w, i18n.T("configure.use_default_success")+"\n", r.Name, serviceLabel(profile.Domain(r.Domain), r.Backend))
 	}
 }
 
@@ -1399,20 +1488,19 @@ func buildUseCmd() *cobra.Command {
 	var bindWorkspace bool
 	var projectName string
 	cmd := &cobra.Command{
-		Use:   "use <pair> --profile <name> [--workspace] [--project <name|path>]",
-		Short: "切换 default profile，或绑定当前 workspace 的 profile",
-		Args:  cobra.ExactArgs(1),
+		Use:   "use [service-id] [--profile <name>] [--workspace] [--project <name|path>]",
+		Short: i18n.T("configure.use.short"),
+		Args:  cobra.MaximumNArgs(1),
 		RunE: func(_ *cobra.Command, args []string) error {
-			domain, backend, err := parsePair(args[0])
+			selection, err := resolveExistingConnection(args, profileName)
 			if err != nil {
 				return err
 			}
-			name := strings.TrimSpace(profileName)
 			result := useResult{
 				Schema:  "one-cli/configure-use/v1",
-				Domain:  string(domain),
-				Backend: backend,
-				Name:    name,
+				Domain:  string(selection.Domain),
+				Backend: selection.Backend,
+				Name:    selection.Name,
 				Scope:   "default",
 			}
 			if bindWorkspace || strings.TrimSpace(projectName) != "" {
@@ -1439,7 +1527,7 @@ func buildUseCmd() *cobra.Command {
 				if m.Workspace != nil {
 					workspaceName = m.Workspace.Name
 				}
-				if err := profile.BindWorkspaceProfile(workspaceID, workspaceName, root, project, domain, backend, name); err != nil {
+				if err := profile.BindWorkspaceProfile(workspaceID, workspaceName, root, project, selection.Domain, selection.Backend, selection.Name); err != nil {
 					return err
 				}
 				result.Scope = "workspace"
@@ -1449,7 +1537,7 @@ func buildUseCmd() *cobra.Command {
 					result.Project = project
 				}
 			} else {
-				if err := profile.SetDefault(domain, backend, name); err != nil {
+				if err := profile.SetDefault(selection.Domain, selection.Backend, selection.Name); err != nil {
 					return err
 				}
 			}
@@ -1458,10 +1546,14 @@ func buildUseCmd() *cobra.Command {
 		},
 		ValidArgsFunction: pairCompletion,
 	}
-	cmd.Flags().StringVar(&profileName, "profile", "", "profile 名（必填）")
-	cmd.Flags().BoolVar(&bindWorkspace, "workspace", false, "绑定到当前 workspace（写入本机 config.json，不修改 default）")
-	cmd.Flags().StringVarP(&projectName, "project", "p", "", "绑定到当前 workspace 的某个 project（名称或相对路径）")
-	_ = cmd.MarkFlagRequired("profile")
+	cmd.Flags().StringVar(&profileName, "profile", "", i18n.T("configure.flag.profile_existing"))
+	cmd.Flags().BoolVar(&bindWorkspace, "workspace", false, i18n.T("configure.flag.workspace"))
+	cmd.Flags().StringVarP(&projectName, "project", "p", "", i18n.T("configure.flag.project"))
+	i18n.MarkFlagUsage(cmd, "profile", "configure.flag.profile_existing")
+	i18n.MarkFlagUsage(cmd, "workspace", "configure.flag.workspace")
+	i18n.MarkFlagUsage(cmd, "project", "configure.flag.project")
+	helpui.MarkAdvanced(cmd, "profile", "project", "workspace")
+	i18n.MarkShort(cmd, "configure.use.short")
 	return cmd
 }
 
@@ -1475,36 +1567,37 @@ type removeResult struct {
 }
 
 func (r removeResult) RenderTTY(w io.Writer) {
-	fmt.Fprintf(w, "✓ removed %s/%s profile %q\n", r.Domain, r.Backend, r.Name)
+	fmt.Fprintf(w, i18n.T("configure.remove_success")+"\n", r.Name, serviceLabel(profile.Domain(r.Domain), r.Backend))
 }
 
 func buildRemoveCmd() *cobra.Command {
 	var profileName string
 	cmd := &cobra.Command{
-		Use:   "remove <pair> --profile <name>",
-		Short: "删除一个 profile",
-		Args:  cobra.ExactArgs(1),
+		Use:   "remove [service-id] [--profile <name>]",
+		Short: i18n.T("configure.remove.short"),
+		Args:  cobra.MaximumNArgs(1),
 		RunE: func(_ *cobra.Command, args []string) error {
-			domain, backend, err := parsePair(args[0])
+			selection, err := resolveExistingConnection(args, profileName)
 			if err != nil {
 				return err
 			}
-			name := strings.TrimSpace(profileName)
-			if err := profile.Remove(domain, backend, name); err != nil {
+			if err := profile.Remove(selection.Domain, selection.Backend, selection.Name); err != nil {
 				return err
 			}
 			output.Emit(removeResult{
 				Schema:  "one-cli/configure-remove/v1",
-				Domain:  string(domain),
-				Backend: backend,
-				Name:    name,
+				Domain:  string(selection.Domain),
+				Backend: selection.Backend,
+				Name:    selection.Name,
 			})
 			return nil
 		},
 		ValidArgsFunction: pairCompletion,
 	}
-	cmd.Flags().StringVar(&profileName, "profile", "", "profile 名（必填）")
-	_ = cmd.MarkFlagRequired("profile")
+	cmd.Flags().StringVar(&profileName, "profile", "", i18n.T("configure.flag.profile_existing"))
+	i18n.MarkFlagUsage(cmd, "profile", "configure.flag.profile_existing")
+	helpui.MarkAdvanced(cmd, "profile")
+	i18n.MarkShort(cmd, "configure.remove.short")
 	return cmd
 }
 

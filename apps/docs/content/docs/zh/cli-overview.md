@@ -20,6 +20,7 @@ description: one 顶层命令、常用子命令、输出模式和 agent 自动�
 | `one container` | 查看、构建、推送 Dockerfile-driven 镜像 | `one container info` |
 | `one dev` | 并行启动所有项目的本地开发进程 | `one dev` |
 | `one deploy` | 按 project 派发 kustomize / S3-compatible / Vercel / Cloudflare / EdgeOne 部署 | `one deploy --dry-run` |
+| `one ci` | 查看或管理可选的持续集成 | `one ci` |
 | `one run` | 注入项目 `.env` 后执行任意命令 | `one run -- npm test` |
 | `one configure` | 配置机器级 endpoint profile | `one configure` |
 | `one serve` | 启动本地 Web UI 手工编辑敏感 profile | `one serve` |
@@ -31,7 +32,7 @@ description: one 顶层命令、常用子命令、输出模式和 agent 自动�
 one create [dir] [--name <name>] [--env-provider dotenv|infisical] [--yes]
 ```
 
-`[dir]` 是目标目录，不是项目名。默认项目名取 `basename(dir)`；需要不同名字时传 `--name`。直接运行 `one create` 会交互式询问目标目录和可选项目名；不传 `--env-provider` 时默认使用 `dotenv`，需要 Infisical 就显式传 `--env-provider infisical`。
+`[dir]` 是目标目录，工作区名称默认取 `basename(dir)`。create 只创建空工作区，默认使用本地 dotenv 和 `one dev`；不配置 CI、不问项目、不问部署，也不安装 Coding Agent Skills。
 
 详见 [`one create`](/zh/docs/create/)。
 
@@ -40,14 +41,10 @@ one create [dir] [--name <name>] [--env-provider dotenv|infisical] [--yes]
 ```bash
 one add # 进入交互界面进行选择
 one templates # 查看有哪些模板
-one add <template-id> --name <project-name> [--deploy-provider <id>] [--yes] # 直接添加某个模板并且选择部署方式
+one add <template-id> --name <project-name> [--yes] # 直接添加某个技术栈
 ```
 
-第一次用时可以直接 `one add`，按交互式选择器选择模板分类、模板和项目名。需要明确命令时，先跑 `one templates`，把输出里的模板 ID 填到 `one add <template-id>` 位置。
-
-API / SSR 模板通常启用 `container/docker + deploy/kustomize`；
-静态前端模板通常启用 S3 兼容部署，支持多个S3 平台；
-移动端、库、Electron 模板默认不参与 deploy / container。
+直接 `one add` 会按目录分成应用、服务、共享库三类，再询问技术栈和项目名；文档站归在应用中。它不配置 CI，也不询问部署。普通 add 保持部署未配置，直到 `one deploy <project>`；`--deploy-provider` 只作为高级自动化选项保留。
 
 详见 [`one add`](/zh/docs/add/)。
 
@@ -75,7 +72,7 @@ one env pull [--env <env>] [-p <name|path>] [--force] [--dry-run]
 
 详见 [`one env`](/zh/docs/env-vars/)。
 
-## 机器级 profile
+## 本机连接
 
 ```bash
 one configure
@@ -87,9 +84,10 @@ one configure show <pair> --profile <name> [--reveal]
 one configure use <pair> --profile <name>
 one configure remove <pair> --profile <name>
 one configure locale [auto|zh-CN|en-US]
+one configure open
 ```
 
-`configure` 是机器级 endpoint / 凭据入口。无参 `one configure` 或 `one configure add` 会打开交互式向导；非交互脚本应显式传 `<pair>` 和 `--profile`。一次配置到自己的电脑上，后续可以复用
+`configure` 管理本机连接和偏好设置。没有连接时，无参调用进入建立连接向导；已有连接时显示简洁概览。`show` / `use` / `remove` 可在终端选择，脚本仍可显式传服务 ID 和 `--profile`。密钥只保存在本机，不写入工作区或 Git。
 
 支持的 `<pair>`：
 
@@ -101,23 +99,25 @@ one configure locale [auto|zh-CN|en-US]
 | `deploy` | `aliyun-oss`, `tencent-cos`, `aws-s3`, `minio`, `rustfs`, `r2` |
 | `deploy` | `kustomize`, `vercel`, `cloudflare`, `edgeone` |
 
-`env/dotenv` 是 workspace 的本地 `.env` 后端，不需要机器级 profile。
-profile 写到 `~/.config/one/config.json` 和 `~/.config/one/credentials.json`。敏感字段默认掩码，只有 `show --reveal` 会显示明文。
-添加的时候推荐使用 one serve 进行 token 的配置，防止 token 给 ai 以后泄漏
+本地 `.env` 文件不需要本机连接。
+本机连接写到 `~/.config/one/config.json` 和 `~/.config/one/credentials.json`。敏感字段默认掩码，只有 `show --reveal` 会显示明文。
+添加 token 时推荐使用 `one configure open`，避免把密钥交给 AI agent。
 
 ## 交互模式速查
 
 | 命令 | 交互模式 |
 |---|---|
-| `one create` | 有；无参时询问目标目录和可选项目名 |
-| `one add` | 有；无参时选择模板分类、模板、项目名，必要时选择 deploy 后端 |
-| `one configure` | 有；无参或 `one configure add` 进入 profile 配置向导 |
+| `one create` | 有；无参时询问目标目录和可选工作区名称 |
+| `one add` | 有；无参时选择项目类型、技术栈和项目名 |
+| `one configure` | 有；无参或 `one configure add` 进入本机连接向导 |
 | `one skills install` | 有；无参时多选要安装到哪些 agent |
-| `one env set` | 半交互；遇到未知环境或覆盖已有值时会确认，脚本用 `--yes` |
+| `one env set` | 有；隐藏输入值、选择作用域、确认覆盖；脚本显式传值 |
 | `one container build` | 半交互；TTY 下缺少构建版本时可选择版本，CI 用 `--build-version` |
-| `one deploy` | 半交互；kustomize 缺少构建版本或 Cloudflare 缺 profile 时可能询问，CI 用显式参数 |
-| `one templates` / `one dev` / `one run` | 无交互式向导；通过参数控制行为 |
-| `one serve` | 不是终端向导；它打开本地 Web UI 让人手工编辑敏感 profile |
+| `one deploy` | 首次部署询问项目、目标类别/服务和本机连接；脚本传 `--provider` / `--profile` |
+| `one dev` | Node 依赖缺失时询问是否安装，否则直接启动 |
+| `one ci disable` | 删除生成的工作流前先确认；拒绝时成功退出 |
+| `one templates` / `one run` | 无交互式向导；通过参数控制行为 |
+| `one serve` | 不是终端向导；它打开本地 Web UI 管理本机连接 |
 
 ## 本地 Web UI
 
@@ -142,20 +142,35 @@ one container push  [subproject] [-p <name|path>] [--build-version <version>] [-
 ## 本地开发
 
 ```bash
-one dev [-p <name|path>] [--dry-run]
+one dev [project] [--dry-run]
 ```
 
-读取 `one.manifest.json` 里每个项目的 `domains.dev.command`，用内置 supervisor 并行启动所有 dev 进程（无需安装第三方 runner）。`-p / --project` 只启动一个项目；`--dry-run` 只打印每个项目的命令。
+读取项目的 dev 命令并用内置 supervisor 并行启动。位置参数只启动一个项目；`--project` 为旧脚本保留。Node 依赖缺失时可确认安装并继续。
 
 ## 部署
 
 ```bash
-one deploy [-p <name|path>] [--profile <name>] [--env <env>] [--env-provider dotenv|infisical] [--build-version <version>] [--dry-run]
+one deploy [project] [--provider <target>] [--profile <connection>] [--dry-run]
 ```
 
-`deploy` 按 project 派发到 manifest 声明的 deploy backend。后端 / SSR 项目通常走 `kustomize`；静态前端可走 S3 兼容后端（Aliyun OSS / Tencent COS / AWS S3 / MinIO / RustFS / R2）；前端托管可走 Vercel / Cloudflare / EdgeOne。
+首次部署只展示当前仓库已经实现、且与技术栈兼容的部署目标，然后询问本机连接。选择“稍后配置”会成功退出且不修改工作区；后续部署复用项目已保存的目标。
 
 `--env <name>` 一次性覆盖目标环境；`--dry-run` 打印 docker / kubectl / s3 / platform CLI 计划，不触碰远端。
+
+## 持续集成
+
+```bash
+one ci
+one ci enable [project]
+one ci sync [project]
+one ci disable [project]
+```
+
+持续集成是可选能力，`one create` 和 `one add` 都不会自动添加。当前版本生成
+GitHub Actions 工作流。不传 `[project]` 时处理全部项目（`sync` 只更新已经启用
+持续集成的项目）。
+
+详见 [持续集成](/zh/docs/ci/)。
 
 ## 注入环境变量后运行
 
@@ -202,7 +217,8 @@ agent / CI 通过 pipe 读取时默认拿 JSON。
 ```bash
 one --version
 one --help
+one help --all
 one <command> --help
 ```
 
-`one --help` 只展示顶层命令；具体 flag 以 `one <command> --help` 为准。想看错误码请读 [错误码大全](/zh/docs/error-codes/)。
+`one --help` 只展示六个日常核心任务；`one help --all` 展示完整命令；具体 flag 以 `one <command> --help` 为准。

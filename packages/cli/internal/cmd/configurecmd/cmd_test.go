@@ -34,6 +34,7 @@ func TestBuildContributionsTreeShape(t *testing.T) {
 		"show":    true,
 		"use":     true,
 		"remove":  true,
+		"open":    true,
 		// `locale` is the first (and so far only) user-global
 		// preference under `configure`. Unlike the verbs above it
 		// doesn't take a (domain, backend) pair — it just reads /
@@ -89,7 +90,7 @@ func TestBuildContributionsTreeShape(t *testing.T) {
 		t.Errorf("missing add sub-subcommand %q", sub)
 	}
 
-	for _, v := range []string{"list", "current", "show", "use", "remove", "locale"} {
+	for _, v := range []string{"list", "current", "show", "use", "remove", "locale", "open"} {
 		if subs := gotVerbs[v]; len(subs) != 0 {
 			t.Errorf("verb %q must have no sub-subcommands (pair is positional); got %v", v, subs)
 		}

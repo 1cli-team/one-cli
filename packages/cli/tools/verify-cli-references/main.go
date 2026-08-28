@@ -93,6 +93,10 @@ func collectCommands(root *cobra.Command) map[string]struct{} {
 			set[alias] = struct{}{}
 		}
 	}
+	// `one help` is handled by the root harness/Cobra rather than mounted as
+	// an ordinary product command. It is still a supported copy-pasteable
+	// invocation (`one help --all`, `one help create`).
+	set["help"] = struct{}{}
 	// Brand-name exemption: `one cli` is the project name (the binary
 	// is `one`, but the project everywhere is "one cli"). It's not a
 	// command and never will be — adding it here lets prose like

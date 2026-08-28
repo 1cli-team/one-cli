@@ -118,6 +118,30 @@ func TestShouldRenderRootHelp(t *testing.T) {
 	}
 }
 
+func TestShouldRenderAllHelp(t *testing.T) {
+	if !shouldRenderAllHelp([]string{"help", "--all"}) {
+		t.Fatal("one help --all should select the complete command catalogue")
+	}
+	for _, args := range [][]string{{"--help"}, {"help"}, {"help", "create"}, {"help", "--all", "extra"}} {
+		if shouldRenderAllHelp(args) {
+			t.Errorf("shouldRenderAllHelp(%q) = true", args)
+		}
+	}
+}
+
+func TestIsBareInvocation(t *testing.T) {
+	for _, args := range [][]string{nil, {"-o", "json"}, {"--output=text"}, {"-ojson"}} {
+		if !isBareInvocation(args) {
+			t.Errorf("isBareInvocation(%q) = false", args)
+		}
+	}
+	for _, args := range [][]string{{"--help"}, {"dev"}, {"-o"}, {"-o", "json", "dev"}} {
+		if isBareInvocation(args) {
+			t.Errorf("isBareInvocation(%q) = true", args)
+		}
+	}
+}
+
 func TestRootHelpDoesNotAdvertiseUnregisteredCommands(t *testing.T) {
 	// The curated help text lives in i18n/locales/*.json and is
 	// fetched via RootHelp(). Check every locale so a new tongue
@@ -138,7 +162,7 @@ func TestIsKnownSubcommand(t *testing.T) {
 	for _, name := range []string{
 		"create", "templates", "add",
 		// Per-domain commands (post capability-interface refactor).
-		"env", "container", "dev", "deploy",
+		"env", "container", "dev", "deploy", "ci",
 		// configure owns the credential CRUD surface (renamed from
 		// `profile` to align with industry standard CLIs); skills owns
 		// bundled-skill installation.

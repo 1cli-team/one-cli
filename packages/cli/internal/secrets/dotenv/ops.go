@@ -27,6 +27,7 @@ import (
 	"strings"
 
 	cliErrors "github.com/torchstellar-team/one-cli/packages/cli/internal/errors"
+	"github.com/torchstellar-team/one-cli/packages/cli/internal/i18n"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/workspace"
 )
 
@@ -105,14 +106,20 @@ func (r *SetResult) RenderTTY(w io.Writer) {
 	if r == nil {
 		return
 	}
-	verb := r.Action
-	if verb == "" {
-		verb = "wrote"
-	}
 	if r.Env != "" {
-		fmt.Fprintf(w, "✓ %s %s in %s (env=%s)\n", verb, r.Key, r.Source, r.Env)
+		fmt.Fprintf(w, i18n.T("env.set_success_env")+"\n", r.Key, r.Source, r.Env)
 	} else {
-		fmt.Fprintf(w, "✓ %s %s in %s\n", verb, r.Key, r.Source)
+		fmt.Fprintf(w, i18n.T("env.set_success")+"\n", r.Key, r.Source)
+	}
+}
+
+// RenderTTY lists names only. Values remain available only through env get.
+func (r *ListResult) RenderTTY(w io.Writer) {
+	if r == nil {
+		return
+	}
+	for _, key := range r.Keys {
+		fmt.Fprintln(w, key)
 	}
 }
 

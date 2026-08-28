@@ -1,3 +1,11 @@
+
+DESCRIPTION
+container/docker
+
+USAGE
+  one configure add container/docker [--profile <name>] [flags]
+
+TIPS
 新增或更新 container/docker profile（通用 Docker registry 协议）。
 
 适配任何走标准 docker registry 协议 + HTTP Basic auth 的镜像仓库：
@@ -17,16 +25,13 @@ Registry / 任何接受 "docker login --password-stdin" 的服务。
       --namespace <your-namespace> \
       --username $REGISTRY_USER --password $REGISTRY_TOKEN --use
 
-Usage:
-  one configure add container/docker [--profile <name>] [flags]
+COMMON OPTIONS
+  --namespace <value>      Registry namespace / owner（如组织名）
+  -o, --output <value>     Output format: json | yaml | text (default: terminal-friendly text, JSON when piped)
+  --password <value>       Registry 登录凭据（PAT / token / 密码）
+  --registry <value>       Registry host（如 your-harbor.example.com；docker kind 必填）
+  --use                    Make this the current local connection
+  --username <value>       Registry 登录名（账号 / robot 账号 / PAT 持有者）
 
-Flags:
-      --namespace string   Registry namespace / owner（如组织名）
-      --password string    Registry 登录凭据（PAT / token / 密码）
-      --profile string     profile 名（非交互模式必传；交互模式留空则 prompt）
-      --registry string    Registry host（如 your-harbor.example.com；docker kind 必填）
-      --use                把此 profile 设为 default
-      --username string    Registry 登录名（账号 / robot 账号 / PAT 持有者）
-
-Global Flags:
-  -o, --output string   输出格式: json | yaml | text（默认 auto：TTY 时人类格式，pipe 时 JSON）
+AUTOMATION AND ADVANCED OPTIONS
+  --profile <value>        Local-connection name (required in non-interactive calls)

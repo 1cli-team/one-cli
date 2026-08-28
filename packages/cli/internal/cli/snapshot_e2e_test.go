@@ -12,6 +12,7 @@ package cli_test
 
 import (
 	"reflect"
+	"regexp"
 	"testing"
 )
 
@@ -20,9 +21,12 @@ func TestSnapshot_E2E_Version(t *testing.T) {
 	if code != 0 {
 		t.Fatalf("expected exit 0, got %d", code)
 	}
-	want := "0.1.0\n"
-	if stdout != want {
-		t.Errorf("stdout mismatch\n  want: %q\n  got:  %q", want, stdout)
+	// Release builds print the base version. `task install-local` appends the
+	// current short commit and an optional dirty marker; both are deliberate,
+	// user-visible formats and must remain snapshot-compatible.
+	want := regexp.MustCompile(`^0\.1\.0(?:-local\.[0-9a-f]{7}(?:\.dirty)?)?\n$`)
+	if !want.MatchString(stdout) {
+		t.Errorf("stdout mismatch\n  want pattern: %s\n  got: %q", want, stdout)
 	}
 }
 

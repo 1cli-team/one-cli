@@ -1,0 +1,18 @@
+
+DESCRIPTION
+Open the local settings page
+
+USAGE
+  one configure open [flags]
+
+EXAMPLES
+  one configure open
+
+TIPS
+Starts a settings page bound only to the local loopback address and opens it in the browser.
+
+COMMON OPTIONS
+  --host <value>           Loopback host for the local settings page
+  --open                   Open the settings page in the default browser
+  -o, --output <value>     Output format: json | yaml | text (default: terminal-friendly text, JSON when piped)
+  --port <value>           Local port (0 chooses an available port)

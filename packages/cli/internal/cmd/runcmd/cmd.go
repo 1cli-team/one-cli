@@ -126,9 +126,9 @@ func runRun(ctx context.Context, flags *runFlags, args []string) error {
 	}
 	if output.IsTTY() {
 		if len(vars) == 0 && source == loaderIDDotenv {
-			fmt.Fprintln(os.Stderr, "⚠ 未找到 .env 或文件为空，继续执行（如需注入变量请创建 .env）")
+			fmt.Fprintln(os.Stderr, i18n.T("run.env_empty"))
 		} else {
-			fmt.Fprintf(os.Stderr, "✓ 注入 %d 个环境变量（来源：%s）\n", len(vars), source)
+			fmt.Fprintf(os.Stderr, i18n.T("run.injected")+"\n", len(vars), source)
 		}
 	}
 

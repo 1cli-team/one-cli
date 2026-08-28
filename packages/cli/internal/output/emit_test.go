@@ -6,6 +6,8 @@ import (
 	"io"
 	"strings"
 	"testing"
+
+	"github.com/torchstellar-team/one-cli/packages/cli/internal/i18n"
 )
 
 type renderable struct {
@@ -151,6 +153,55 @@ func TestError_WithExit0(t *testing.T) {
 	orig := NewError("CANCELLED", "user exit")
 	if orig.Exit0 {
 		t.Errorf("original Exit0 mutated")
+	}
+}
+
+func TestEmitError_Exit0IsQuietInEveryMode(t *testing.T) {
+	t.Cleanup(func() { SetMode(ModeAuto) })
+	for _, mode := range []Mode{ModeTTY, ModeJSON, ModeYAML} {
+		SetMode(mode)
+		var buf bytes.Buffer
+		emitErrorTo(&buf, NewError("PROMPT_CANCELLED", "cancelled").WithExit0())
+		if buf.Len() != 0 {
+			t.Errorf("mode %v emitted cancellation: %q", mode, buf.String())
+		}
+	}
+}
+
+func TestEmitError_TTYHasProblemCodeAndRecovery(t *testing.T) {
+	t.Cleanup(func() { SetMode(ModeAuto) })
+	SetMode(ModeTTY)
+	var buf bytes.Buffer
+	emitErrorTo(&buf, NewError("X", "problem").WithRemediation(Remediation{
+		Hint: "fix it", Command: "one fix",
+	}))
+	got := buf.String()
+	for _, want := range []string{"✗ problem", "X", "fix it", "one fix"} {
+		if !strings.Contains(got, want) {
+			t.Errorf("TTY error missing %q: %q", want, got)
+		}
+	}
+}
+
+func TestEmitError_TTYLocalizesProblemAndRecovery(t *testing.T) {
+	t.Cleanup(func() {
+		SetMode(ModeAuto)
+		_ = i18n.Init(i18n.DefaultLocale)
+	})
+	SetMode(ModeTTY)
+	_ = i18n.Init("zh-CN")
+	var buf bytes.Buffer
+	emitErrorTo(&buf, NewError("INVALID_NAME", "raw message").WithRemediation(Remediation{
+		Hint: "raw hint",
+	}))
+	got := buf.String()
+	for _, want := range []string{"✗ 名称格式不符合要求。", "错误代码：INVALID_NAME", "只使用字母、数字"} {
+		if !strings.Contains(got, want) {
+			t.Errorf("localized TTY error missing %q: %q", want, got)
+		}
+	}
+	if strings.Contains(got, "raw message") || strings.Contains(got, "raw hint") {
+		t.Errorf("localized TTY error leaked fallback prose: %q", got)
 	}
 }
 

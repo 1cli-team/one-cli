@@ -7,8 +7,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/torchstellar-team/one-cli/packages/cli/internal/ci"
 	cliErrors "github.com/torchstellar-team/one-cli/packages/cli/internal/errors"
+	"github.com/torchstellar-team/one-cli/packages/cli/internal/i18n"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/infra"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/prompt"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/template"
@@ -32,6 +32,9 @@ type ProjectInput struct {
 	// Empty means use Docker Hub as the preset default when kustomize is
 	// selected.
 	Container string
+	// DeferDeployment leaves deployment and image-registry selections unset.
+	// Ordinary `one add` uses this so the first `one deploy` owns the choice.
+	DeferDeployment bool
 }
 
 // ProjectResult mirrors what addcmd today emits in its add/v1 envelope,
@@ -52,7 +55,8 @@ type ProjectResult struct {
 
 // ApplyProject renders the template into projectRoot, upserts the
 // manifest, applies template defaults (with the optional deploy
-// override), and runs infra + CI sync. ai.Refresh is the CALLER's
+// override), and runs infra sync. CI is intentionally not generated as a
+// side effect of adding a project. ai.Refresh is the CALLER's
 // responsibility — addcmd does it once per command; preset.Apply does
 // it once per `one create --preset` after all projects land.
 //
@@ -99,7 +103,7 @@ func ApplyProject(ctx context.Context, projectRoot string, in ProjectInput, inte
 	packageManager := defaultPackageManagerFor(string(entry.Toolchain))
 	vars := template.CommonVariables(in.Name, packageManager)
 
-	if err := prompt.Spin(fmt.Sprintf("正在生成模板 %s", entry.ID), func() error {
+	if err := prompt.Spin(i18n.Tf("add.generating", entry.ID), func() error {
 		return template.Render(templateLocalID, targetDir, vars)
 	}); err != nil {
 		if createdFromScratch {
@@ -107,7 +111,7 @@ func ApplyProject(ctx context.Context, projectRoot string, in ProjectInput, inte
 		}
 		return ProjectResult{}, err
 	}
-	prompt.Step(fmt.Sprintf("模板渲染完成 → %s", in.Name))
+	prompt.Step(i18n.Tf("add.generated", in.Name))
 
 	relDir, err := filepath.Rel(projectRoot, targetDir)
 	if err != nil {
@@ -125,20 +129,20 @@ func ApplyProject(ctx context.Context, projectRoot string, in ProjectInput, inte
 		return ProjectResult{}, err
 	}
 
-	// Pick the deploy backend before applying defaults. addcmd's prompt
-	// path falls through unchanged because pickDeployBackend short-
-	// circuits non-interactive callers + single-compat templates.
-	deployBackend, err := pickDeployBackend(entry, in.Deploy, interactive)
-	if err != nil {
-		return ProjectResult{}, err
+	deployBackend := ""
+	if !in.DeferDeployment {
+		deployBackend, err = pickDeployBackend(entry, in.Deploy, interactive)
+		if err != nil {
+			return ProjectResult{}, err
+		}
 	}
 
-	if err := applyTemplateDefaults(projectRoot, entry, in.Name, deployBackend); err != nil {
+	if err := applyTemplateDefaults(projectRoot, entry, in.Name, deployBackend, !in.DeferDeployment); err != nil {
 		return ProjectResult{}, err
 	}
 
 	effectiveDeploy := deployBackend
-	if effectiveDeploy == "" && entry.Defaults != nil {
+	if !in.DeferDeployment && effectiveDeploy == "" && entry.Defaults != nil {
 		effectiveDeploy = entry.Defaults["deploy"]
 	}
 	if effectiveDeploy == "kustomize" && entry.Defaults != nil && entry.Defaults["container"] != "" {
@@ -151,8 +155,10 @@ func ApplyProject(ctx context.Context, projectRoot string, in ProjectInput, inte
 		}
 	}
 
-	if err := promptDeployTargets(projectRoot, entry, in.Name, interactive, deployBackend); err != nil {
-		return ProjectResult{}, err
+	if !in.DeferDeployment {
+		if err := promptDeployTargets(projectRoot, entry, in.Name, interactive, deployBackend); err != nil {
+			return ProjectResult{}, err
+		}
 	}
 
 	addManifest, _ := workspace.ReadManifest(projectRoot)
@@ -164,9 +170,8 @@ func ApplyProject(ctx context.Context, projectRoot string, in ProjectInput, inte
 		}
 	}
 	addSelected := workspace.SelectionForProject(addManifest, thisSub)
-	addCIProvider := "ci/github-actions"
-	if err := prompt.Spin("正在同步基础设施 / CI 配置", func() error {
-		if err := infra.SyncSubproject(infra.Options{
+	if err := prompt.Spin(i18n.T("add.syncing"), func() error {
+		return infra.SyncSubproject(infra.Options{
 			ProjectRoot:    projectRoot,
 			TargetDir:      targetDir,
 			ProjectName:    in.Name,
@@ -174,18 +179,7 @@ func ApplyProject(ctx context.Context, projectRoot string, in ProjectInput, inte
 			Toolchain:      toolchain.Toolchain(entry.Toolchain),
 			PackageManager: toolchain.PackageManager(packageManager),
 			Selected:       addSelected,
-		}); err != nil {
-			return err
-		}
-		_, err := ci.Sync(ci.SyncOptions{
-			ProjectRoot:    projectRoot,
-			TargetDir:      targetDir,
-			ProjectName:    in.Name,
-			Toolchain:      toolchain.Toolchain(entry.Toolchain),
-			PackageManager: toolchain.PackageManager(packageManager),
-			ProviderID:     addCIProvider,
 		})
-		return err
 	}); err != nil {
 		return ProjectResult{}, err
 	}
@@ -205,6 +199,74 @@ func ApplyProject(ctx context.Context, projectRoot string, in ProjectInput, inte
 		DeployBackend:  effectiveDeploy,
 		Warnings:       warningMessages(warnings),
 	}, nil
+}
+
+// ConfigureProjectDeployment applies a compatible deployment choice to an
+// existing project and generates only the deployment/container artifacts.
+// It is the mutation step used by the first-deploy wizard; project source is
+// never re-rendered.
+func ConfigureProjectDeployment(ctx context.Context, projectRoot string, tpl *template.Template, projectName, backend string) error {
+	if tpl == nil {
+		return fmt.Errorf("preset.ConfigureProjectDeployment: nil template")
+	}
+	backend, err := pickDeployBackend(tpl, backend, false)
+	if err != nil {
+		return err
+	}
+	if backend == "" {
+		return cliErrors.New(cliErrors.BACKEND_NOT_ENABLED, "deployment target is required")
+	}
+	if err := applyTemplateDefaults(projectRoot, tpl, projectName, backend, true); err != nil {
+		return err
+	}
+	if backend == "kustomize" {
+		containerKind := "docker"
+		if tpl.Defaults != nil && strings.TrimSpace(tpl.Defaults["container"]) != "" {
+			containerKind = strings.TrimSpace(tpl.Defaults["container"])
+		}
+		if err := workspace.SetProjectContainerKind(projectRoot, projectName, containerKind); err != nil {
+			return err
+		}
+	}
+	if err := promptDeployTargets(projectRoot, tpl, projectName, false, backend); err != nil {
+		return err
+	}
+
+	m, err := workspace.ReadManifest(projectRoot)
+	if err != nil {
+		return err
+	}
+	var project *workspace.ManifestProject
+	for i := range m.Projects {
+		if m.Projects[i].Name == projectName {
+			project = &m.Projects[i]
+			break
+		}
+	}
+	if project == nil {
+		return cliErrors.New(cliErrors.SUBPROJECT_NOT_FOUND, "project not found: "+projectName)
+	}
+	targetDir := filepath.Join(projectRoot, filepath.FromSlash(project.RelativeDir))
+	packageManager := project.PackageManager
+	if packageManager == "" {
+		packageManager = defaultPackageManagerFor(project.Toolchain)
+	}
+	selected := workspace.SelectionForProject(m, project)
+	if err := prompt.Spin(i18n.T("deploy.generating_config"), func() error {
+		return infra.SyncSubproject(infra.Options{
+			ProjectRoot:    projectRoot,
+			TargetDir:      targetDir,
+			ProjectName:    project.Name,
+			TemplateID:     project.TemplateID,
+			Toolchain:      toolchain.Toolchain(project.Toolchain),
+			PackageManager: toolchain.PackageManager(packageManager),
+			Selected:       selected,
+		})
+	}); err != nil {
+		return err
+	}
+	_ = ctx
+	return nil
 }
 
 // pickDeployBackend resolves the deploy backend for a subproject.
@@ -250,7 +312,7 @@ func pickDeployBackend(tpl *template.Template, flagDeploy string, interactive bo
 // selections into the manifest, honouring the deploy override and
 // skipping the container default when a non-kustomize deploy is in use
 // (same precedent as the pre-extraction version in addcmd).
-func applyTemplateDefaults(projectRoot string, tpl *template.Template, subprojectName, deployOverride string) error {
+func applyTemplateDefaults(projectRoot string, tpl *template.Template, subprojectName, deployOverride string, includeDeployment bool) error {
 	if tpl == nil || len(tpl.Defaults) == 0 {
 		return nil
 	}
@@ -260,6 +322,9 @@ func applyTemplateDefaults(projectRoot string, tpl *template.Template, subprojec
 		}
 		if domain == "deploy" && strings.TrimSpace(deployOverride) != "" {
 			backend = deployOverride
+		}
+		if !includeDeployment && (domain == "deploy" || domain == "container") {
+			continue
 		}
 		if domain == "container" && strings.TrimSpace(deployOverride) != "" && deployOverride != "kustomize" {
 			continue

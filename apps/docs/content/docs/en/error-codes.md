@@ -84,7 +84,7 @@ Current directory has no `one.manifest.json`. Run `one create <dir>` or `cd` to 
 
 ### `PROJECT_NAME_REQUIRED`
 
-Non-interactive create was called without a project name. Pass `one create <project-name>`.
+Non-interactive create was called without a workspace directory. Pass `one create <workspace-directory>`.
 
 ### `TARGET_EXISTS`
 
@@ -160,7 +160,13 @@ Backend selection, profile resolution, deployment, and generated delivery artifa
 
 ### `CI_PROVIDER_UNKNOWN`
 
-Manifest references an unknown CI provider.
+The requested CI provider is not implemented by this build. Use the IDs in
+`error.context.available_providers`.
+
+### `CI_NOT_ENABLED`
+
+The selected project has no generated CI workflow. Run the command in
+`error.remediation`, usually `one ci enable <project>`, before syncing it.
 
 ### `CI_RENDER_FAILED`
 

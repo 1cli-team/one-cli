@@ -39,9 +39,9 @@ type Options struct {
 	// Selected names which backend to run per polymorphic domain, keyed
 	// by domain (string form), e.g. {"container": "container/docker",
 	// "deploy": "deploy/kustomize", "env": "env/infisical"}. Empty
-	// domain entries are skipped. The current manifest omits ci / dev from this map; the
-	// dispatcher synchronises Procfile.dev unconditionally and the
-	// caller invokes ci.Sync separately.
+	// domain entries are skipped. The current manifest omits ci / dev from this
+	// map; the dispatcher records the local dev command independently, while CI
+	// is not generated implicitly.
 	Selected map[string]string
 	// Env identifies which environment is being targeted (dev / test /
 	// prod / ""). Empty = env-agnostic, the current default.
@@ -49,7 +49,7 @@ type Options struct {
 }
 
 // SyncSubproject runs each selected backend's Sync against opts. Order
-// is fixed (container → dev → deploy → ci → env) so downstream backends
+// is fixed (container → dev → deploy → env) so downstream backends
 // see artefacts produced upstream.
 func SyncSubproject(opts Options) error {
 	tc := opts.Toolchain

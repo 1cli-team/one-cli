@@ -78,10 +78,24 @@ token 等敏感字段，AI 不应读写；本命令是给你（人类）的入�
 			})
 		},
 	}
-	cmd.Flags().StringVar(&host, "host", "127.0.0.1", "绑定主机（仅接受 loopback：127.0.0.1 / localhost / ::1）")
-	cmd.Flags().IntVar(&port, "port", 0, "监听端口（0 = 由内核分配空闲端口）")
-	cmd.Flags().BoolVar(&open, "open", true, "完成后自动用浏览器打开（CI / headless / 容器场景传 --open=false 关闭）")
+	cmd.Flags().StringVar(&host, "host", "127.0.0.1", i18n.T("serve.flag.host"))
+	cmd.Flags().IntVar(&port, "port", 0, i18n.T("serve.flag.port"))
+	cmd.Flags().BoolVar(&open, "open", true, i18n.T("serve.flag.open"))
+	i18n.MarkFlagUsage(cmd, "host", "serve.flag.host")
+	i18n.MarkFlagUsage(cmd, "port", "serve.flag.port")
+	i18n.MarkFlagUsage(cmd, "open", "serve.flag.open")
 	i18n.MarkShort(cmd, "serve.short")
+	return cmd
+}
+
+// NewOpenCmd exposes the same local settings server under the user-facing
+// `one configure open` path while keeping `one serve` compatible.
+func NewOpenCmd() *cobra.Command {
+	cmd := newServeCmd()
+	cmd.Use = "open"
+	cmd.Example = "  one configure open"
+	i18n.MarkShort(cmd, "configure.open.short")
+	i18n.MarkLong(cmd, "configure.open.tip")
 	return cmd
 }
 
@@ -109,6 +123,6 @@ func maybeOpenBrowser(stderr io.Writer, res serve.Result, open bool) {
 	browser.Stderr = io.Discard
 	browser.Stdout = io.Discard
 	if err := browser.OpenURL(res.URL); err != nil {
-		fmt.Fprintf(stderr, "  · 自动打开浏览器失败（%v），请手动复制上面的 URL\n", err)
+		fmt.Fprintf(stderr, i18n.T("serve.browser_failed")+"\n", err)
 	}
 }

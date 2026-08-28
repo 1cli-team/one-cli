@@ -1,3 +1,11 @@
+
+DESCRIPTION
+deploy/vercel
+
+USAGE
+  one configure add deploy/vercel [--profile <name>] [flags]
+
+TIPS
 新增或更新 deploy/vercel profile。
 
 凭据获取（Vercel 后台）：
@@ -16,14 +24,11 @@ team 字段对应 vercel CLI 的 --scope；留空 = personal account。
       --team my-team \
       --use
 
-Usage:
-  one configure add deploy/vercel [--profile <name>] [flags]
+COMMON OPTIONS
+  -o, --output <value>     Output format: json | yaml | text (default: terminal-friendly text, JSON when piped)
+  --team <value>           Vercel team / org slug（可选，留空 = personal scope）
+  --token <value>          Vercel API token（vercel.com → Account Settings → Tokens）
+  --use                    Make this the current local connection
 
-Flags:
-      --profile string   profile 名（非交互模式必传；交互模式留空则 prompt）
-      --team string      Vercel team / org slug（可选，留空 = personal scope）
-      --token string     Vercel API token（vercel.com → Account Settings → Tokens）
-      --use              把此 profile 设为 default
-
-Global Flags:
-  -o, --output string   输出格式: json | yaml | text（默认 auto：TTY 时人类格式，pipe 时 JSON）
+AUTOMATION AND ADVANCED OPTIONS
+  --profile <value>        Local-connection name (required in non-interactive calls)

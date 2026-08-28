@@ -20,6 +20,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -28,7 +29,9 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/cliexts"
+	"github.com/torchstellar-team/one-cli/packages/cli/internal/cmd/configurecmd"
 	cliErrors "github.com/torchstellar-team/one-cli/packages/cli/internal/errors"
+	"github.com/torchstellar-team/one-cli/packages/cli/internal/helpui"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/i18n"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/infra/deploy"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/infra/kustomize"
@@ -40,9 +43,11 @@ import (
 	_ "github.com/torchstellar-team/one-cli/packages/cli/internal/infra/s3compat"
 	_ "github.com/torchstellar-team/one-cli/packages/cli/internal/infra/vercel"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/output"
+	"github.com/torchstellar-team/one-cli/packages/cli/internal/preset"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/profile"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/prompt"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/secrets"
+	"github.com/torchstellar-team/one-cli/packages/cli/internal/template"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/workspace"
 )
 
@@ -341,43 +346,261 @@ func augmentDeployBuildEnv(parent []string, projectRoot, projectDir string, inje
 	return out
 }
 
+type deployDeferredResult struct {
+	Schema   string `json:"schema"`
+	Project  string `json:"project"`
+	Provider string `json:"provider"`
+	Recovery string `json:"recovery_command"`
+}
+
+func (r *deployDeferredResult) RenderTTY(w io.Writer) {
+	if r == nil {
+		return
+	}
+	fmt.Fprintln(w, i18n.T("deploy.deferred"))
+	fmt.Fprintf(w, i18n.T("deploy.deferred_project")+"\n", r.Project)
+	fmt.Fprintln(w)
+	fmt.Fprintln(w, i18n.T("common.next_steps"))
+	fmt.Fprintln(w, "  "+r.Recovery)
+}
+
+func manifestProjectTarget(root string, p *workspace.ManifestProject, backend string) deployTarget {
+	return deployTarget{
+		Project: workspace.Project{
+			Name: p.Name, RelativeDir: p.RelativeDir,
+			TargetDir: filepath.Join(root, filepath.FromSlash(p.RelativeDir)),
+			Toolchain: p.Toolchain, PackageManager: p.PackageManager, TemplateID: p.TemplateID,
+		},
+		Backend: backend, Toolchain: p.Toolchain, TemplateID: p.TemplateID, PackageManager: p.PackageManager,
+	}
+}
+
+func findManifestProject(m *workspace.Manifest, name string) *workspace.ManifestProject {
+	if m == nil {
+		return nil
+	}
+	for i := range m.Projects {
+		if m.Projects[i].Name == name {
+			return &m.Projects[i]
+		}
+	}
+	return nil
+}
+
+func templateForProject(registry *template.Registry, p *workspace.ManifestProject) *template.Template {
+	if registry == nil || p == nil {
+		return nil
+	}
+	for i := range registry.Templates {
+		if registry.Templates[i].ID == p.TemplateID {
+			return &registry.Templates[i]
+		}
+	}
+	return nil
+}
+
+func compatibleProviders(tpl *template.Template) []string {
+	if tpl == nil || tpl.Compat == nil {
+		return nil
+	}
+	registered := map[string]bool{}
+	for _, id := range deploy.IDs() {
+		registered[id] = true
+	}
+	var result []string
+	for _, id := range tpl.Compat["deploy"] {
+		if registered[id] {
+			result = append(result, id)
+		}
+	}
+	return result
+}
+
+func selectProjectForDeployment(m *workspace.Manifest, registry *template.Registry) (*workspace.ManifestProject, error) {
+	options := []prompt.Option[string]{}
+	for i := range m.Projects {
+		p := &m.Projects[i]
+		if len(compatibleProviders(templateForProject(registry, p))) == 0 {
+			continue
+		}
+		options = append(options, prompt.Option[string]{Label: p.Name, Value: p.Name})
+	}
+	if len(options) == 0 {
+		return nil, cliErrors.New(cliErrors.BACKEND_NOT_ENABLED, i18n.T("deploy.no_compatible_projects"))
+	}
+	name, err := prompt.Select(i18n.T("deploy.prompt_project"), options)
+	if err != nil {
+		return nil, err
+	}
+	return findManifestProject(m, name), nil
+}
+
+func providerCategory(provider string) string {
+	switch provider {
+	case workspace.DeployBackendKustomize:
+		return "kubernetes"
+	case workspace.DeployBackendVercel, workspace.DeployBackendCloudflare, workspace.DeployBackendEdgeOne:
+		return "platform"
+	default:
+		return "static"
+	}
+}
+
+func providerDisplayLabel(provider string) string {
+	key := "deploy.provider." + provider
+	label := i18n.T(key)
+	if label == key {
+		return provider
+	}
+	return label
+}
+
+func selectCompatibleProvider(compatible []string) (string, error) {
+	categoryOrder := []string{"static", "platform", "kubernetes"}
+	grouped := map[string][]string{}
+	for _, provider := range compatible {
+		category := providerCategory(provider)
+		grouped[category] = append(grouped[category], provider)
+	}
+	categoryOptions := []prompt.Option[string]{}
+	for _, category := range categoryOrder {
+		if len(grouped[category]) > 0 {
+			categoryOptions = append(categoryOptions, prompt.Option[string]{
+				Label: i18n.T("deploy.category." + category), Value: category,
+			})
+		}
+	}
+	category, err := prompt.Select(i18n.T("deploy.prompt_category"), categoryOptions)
+	if err != nil {
+		return "", err
+	}
+	providerOptions := make([]prompt.Option[string], 0, len(grouped[category]))
+	for _, provider := range grouped[category] {
+		providerOptions = append(providerOptions, prompt.Option[string]{Label: providerDisplayLabel(provider), Value: provider})
+	}
+	return prompt.Select(i18n.T("deploy.prompt_provider"), providerOptions)
+}
+
+func configureFirstDeployment(cmd *cobra.Command, root string, m *workspace.Manifest, p *workspace.ManifestProject, registry *template.Registry, providerFlag, profileFlag string) (deployTarget, error) {
+	tpl := templateForProject(registry, p)
+	compatible := compatibleProviders(tpl)
+	if len(compatible) == 0 {
+		return deployTarget{}, cliErrors.New(cliErrors.BACKEND_NOT_ENABLED,
+			i18n.Tf("deploy.project_not_deployable", p.Name))
+	}
+	providerID := strings.TrimPrefix(strings.TrimSpace(providerFlag), "deploy/")
+	if providerID == "" {
+		if !output.CanPrompt() {
+			return deployTarget{}, cliErrors.New(cliErrors.BACKEND_NOT_ENABLED,
+				i18n.Tf("deploy.provider_required", p.Name)).
+				WithRemediation(output.Remediation{Action: "choose-deployment-target", Command: "one deploy " + p.Name + " --provider <target> --profile <connection>"})
+		}
+		var err error
+		providerID, err = selectCompatibleProvider(compatible)
+		if err != nil {
+			return deployTarget{}, err
+		}
+	}
+	allowed := false
+	for _, id := range compatible {
+		if id == providerID {
+			allowed = true
+			break
+		}
+	}
+	if !allowed {
+		return deployTarget{}, cliErrors.New(cliErrors.PROFILE_BACKEND_INVALID,
+			i18n.Tf("deploy.provider_incompatible", providerID, p.Name, strings.Join(compatible, ", ")))
+	}
+	target := manifestProjectTarget(root, p, providerID)
+	resolved, err := resolveDeployProfile(root, profileFlag, target)
+	if err != nil {
+		return deployTarget{}, err
+	}
+	if resolved == nil {
+		if !output.CanPrompt() {
+			return deployTarget{}, cliErrors.New(cliErrors.PROFILE_NONE_CONFIGURED,
+				i18n.Tf("deploy.connection_required", providerID)).
+				WithRemediation(output.Remediation{
+					Action: "configure-connection", Command: "one configure add deploy/" + providerID + " --profile <connection>",
+				})
+		}
+		choice, err := prompt.Select(i18n.Tf("deploy.prompt_missing_connection", providerID), []prompt.Option[string]{
+			{Label: i18n.T("deploy.configure_now"), Value: "now"},
+			{Label: i18n.T("deploy.configure_later"), Value: "later"},
+		})
+		if err != nil {
+			return deployTarget{}, err
+		}
+		if choice == "later" {
+			recovery := "one deploy " + p.Name
+			output.Emit(&deployDeferredResult{
+				Schema: "one-cli/deploy-deferred/v1", Project: p.Name, Provider: providerID, Recovery: recovery,
+			})
+			return deployTarget{}, cliErrors.New(cliErrors.PROMPT_CANCELLED, i18n.T("deploy.deferred")).WithExit0()
+		}
+		if err := configurecmd.ConfigureService(cmd, profile.DomainDeploy, providerID); err != nil {
+			return deployTarget{}, err
+		}
+		resolved, err = resolveDeployProfile(root, profileFlag, target)
+		if err != nil {
+			return deployTarget{}, err
+		}
+		if resolved == nil {
+			return deployTarget{}, cliErrors.New(cliErrors.PROFILE_NONE_CONFIGURED,
+				i18n.Tf("deploy.connection_required", providerID))
+		}
+	}
+	// Only now, after the user has chosen a usable local connection, mutate
+	// workspace deployment state and generate its artifacts.
+	if err := preset.ConfigureProjectDeployment(cmd.Context(), root, tpl, p.Name, providerID); err != nil {
+		return deployTarget{}, err
+	}
+	_ = m
+	return target, nil
+}
+
 func newDeployCmd() *cobra.Command {
 	var (
-		profileFlag, buildVersion, project string
-		envProvider                        string
-		envFlag                            string
-		dryRun                             bool
+		profileFlag, providerFlag, buildVersion, project string
+		envProvider                                      string
+		envFlag                                          string
+		dryRun                                           bool
 	)
 	cmd := &cobra.Command{
-		Use: "deploy",
-		Long: `本命令逐个 project 派发到其声明的 deploy 后端。混合工作区
-（前端走 aws-s3 / aliyun-oss / vercel、后端走 kustomize）在一次 ` + "`one deploy`" + ` 内完成各类部署。
-
-profile 解析每个 project 各自走一遍：
-  --profile <name>                          # 一次性覆盖（所有 project 都用这个）
-  → config.json#workspaces[workspaceId].projects[project].profiles[deploy/backend]
-  → config.json#workspaces[workspaceId].profiles[deploy/backend]
-  → ~/.config/one/config.json#deploy/<backend>.default # machine default
-
-env 目标环境（vercel / cloudflare / edgeone / kustomize 后端）按以下顺序解析：
-  --env <name>                              # 一次性覆盖（所有 project 都用这个）
-  → projects[i].domains.deploy.config.env   # project 自己的 pin（manifest）
-  → "prod"                                  # 默认生产部署
-kustomize 把 env 名映射到 overlay 路径 kustomize/overlays/<env>，覆盖
-workspace 级别的 manifest.domains.deploy.config.kustomizationPath。
-
-machine-level endpoint / 凭据用顶层 ` + "`one configure <domain>/<backend>`" + ` 管理，
-对应：one configure deploy/aliyun-oss ... / one configure deploy/aws-s3 ... /
-one configure deploy/kustomize ... / one configure deploy/vercel ... 等。
-
-可用 backend：` + strings.Join(deploy.IDs(), " / ") + `（按字典序，由已注册的 provider 决定）。`,
-		Args: cobra.NoArgs,
+		Use:     "deploy [project]",
+		Long:    i18n.T("deploy.tip"),
+		Example: "  one deploy\n  one deploy web\n  one deploy web --provider vercel --profile work",
+		Args:    cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
+			positional := ""
+			if len(args) > 0 {
+				positional = args[0]
+			}
+			if positional != "" && project != "" && positional != project {
+				return cliErrors.New(cliErrors.ONE_CLI_ERROR,
+					i18n.T("deploy.selector_conflict"))
+			}
+			if positional != "" {
+				project = positional
+			}
 			root, err := workspace.ResolveProjectRoot("")
 			if err != nil {
 				return err
 			}
-			targets, err := deployTargets(root)
+			if !workspace.HasManifest(root) {
+				return cliErrors.New(cliErrors.NOT_ONE_PROJECT, i18n.T("deploy.workspace_required"))
+			}
+			m, err := workspace.ReadManifest(root)
+			if err != nil {
+				return err
+			}
+			registry, err := template.Fetch(cmd.Context(), "")
+			if err != nil {
+				return err
+			}
+
+			configuredTargets, err := deployTargets(root)
 			if err != nil {
 				return err
 			}
@@ -385,15 +608,54 @@ one configure deploy/kustomize ... / one configure deploy/vercel ... 等。
 			if err != nil {
 				return err
 			}
-			targets, err = filterDeployTargets(targets, selector)
-			if err != nil {
-				return err
+			var targets []deployTarget
+			if selector == "" && strings.TrimSpace(providerFlag) == "" && len(configuredTargets) > 0 {
+				targets = configuredTargets
+			} else {
+				var selectedProject *workspace.ManifestProject
+				if selector != "" {
+					sub, resolveErr := workspace.ResolveProjectFromSelector(root, selector)
+					if resolveErr != nil {
+						return resolveErr
+					}
+					if sub != nil {
+						selectedProject = findManifestProject(m, sub.Name)
+					}
+					if selectedProject == nil {
+						return cliErrors.New(cliErrors.SUBPROJECT_NOT_FOUND,
+							i18n.Tf("deploy.project_not_found", selector)).
+							WithContext(map[string]any{"selector": selector, "available_projects": workspace.ProjectNames(m)})
+					}
+				} else if !output.CanPrompt() {
+					if len(m.Projects) == 1 && strings.TrimSpace(providerFlag) != "" {
+						selectedProject = &m.Projects[0]
+					} else {
+						return cliErrors.New(cliErrors.BACKEND_NOT_ENABLED,
+							i18n.T("deploy.project_required")).
+							WithRemediation(output.Remediation{Action: "choose-project", Command: "one deploy <project> --provider <target> --profile <connection>"})
+					}
+				} else {
+					selectedProject, err = selectProjectForDeployment(m, registry)
+					if err != nil {
+						return err
+					}
+				}
+
+				existingBackend := workspace.DeployForProject(m, selectedProject.Name).Backend
+				if existingBackend != "" && strings.TrimSpace(providerFlag) == "" {
+					targets = []deployTarget{manifestProjectTarget(root, selectedProject, existingBackend)}
+				} else {
+					target, configureErr := configureFirstDeployment(cmd, root, m, selectedProject, registry, providerFlag, profileFlag)
+					if configureErr != nil {
+						return configureErr
+					}
+					targets = []deployTarget{target}
+					m, err = workspace.ReadManifest(root)
+					if err != nil {
+						return err
+					}
+				}
 			}
-			if len(targets) == 0 {
-				return cliErrors.New(cliErrors.BACKEND_NOT_ENABLED,
-					"工作区没有任何 subproject 声明 deploy 后端。在 projects[i] 中配置 deploy 后再试。")
-			}
-			m, _ := workspace.ReadManifest(root)
 			if err := applyEnvOverride(m, envFlag); err != nil {
 				return err
 			}
@@ -408,7 +670,7 @@ one configure deploy/kustomize ... / one configure deploy/vercel ... 等。
 			for _, t := range targets {
 				if output.IsTTY() {
 					fmt.Fprintf(cmd.OutOrStderr(),
-						"→ deploying project %q via %s\n", t.Project.Name, t.Backend)
+						i18n.T("deploy.starting")+"\n", t.Project.Name, providerDisplayLabel(t.Backend))
 				}
 				p, ok := deploy.Get(t.Backend)
 				if !ok {
@@ -438,7 +700,7 @@ one configure deploy/kustomize ... / one configure deploy/vercel ... 等。
 				if err != nil {
 					return err
 				}
-				injection, err := deploy.LoadInjectionEnv(context.Background(), input, deploy.LoadInjectionOptions{
+				injection, err := deploy.LoadInjectionEnv(cmd.Context(), input, deploy.LoadInjectionOptions{
 					LoaderID: providerID,
 					EnvName:  envFlag,
 				})
@@ -449,11 +711,11 @@ one configure deploy/kustomize ... / one configure deploy/vercel ... 等。
 					input.InjectedEnv = injection.Vars
 					input.InjectedEnvSource = injection.Source
 				}
-				buildLines, err := autoBuildBeforeDeploy(context.Background(), input, t, m, dryRun)
+				buildLines, err := autoBuildBeforeDeploy(cmd.Context(), input, t, m, dryRun)
 				if err != nil {
 					return err
 				}
-				res, err := p.Apply(context.Background(), input)
+				res, err := p.Apply(cmd.Context(), input)
 				if err != nil {
 					return err
 				}
@@ -485,13 +747,24 @@ one configure deploy/kustomize ... / one configure deploy/vercel ... 等。
 			return nil
 		},
 	}
-	cmd.Flags().BoolVar(&dryRun, "dry-run", false, "只打印将执行的命令 / 计划")
-	cmd.Flags().StringVar(&profileFlag, "profile", "", "一次性使用指定 profile（覆盖所有 project）")
-	cmd.Flags().StringVar(&buildVersion, "build-version", "", "非交互/CI 用镜像版本（如 v0.1.0）；TTY 未传时会提示选择（仅 kustomize 后端有效）")
-	cmd.Flags().StringVarP(&project, "project", "p", "", "只部署指定 subproject（manifest 里的 name 或相对路径）")
-	cmd.Flags().StringVar(&envProvider, "env-provider", "", "env provider: dotenv | infisical（默认取 workspace manifest 中已选的值）")
-	cmd.Flags().StringVar(&envFlag, "env", "", "deploy 目标环境名 + 环境变量环境名（必须在 manifest.environments.names；空=按 manifest 走）")
+	cmd.Flags().BoolVar(&dryRun, "dry-run", false, i18n.T("deploy.flag.dry_run"))
+	cmd.Flags().StringVar(&profileFlag, "profile", "", i18n.T("deploy.flag.profile"))
+	cmd.Flags().StringVar(&providerFlag, "provider", "", i18n.T("deploy.flag.provider"))
+	cmd.Flags().StringVar(&buildVersion, "build-version", "", i18n.T("deploy.flag.build_version"))
+	cmd.Flags().StringVarP(&project, "project", "p", "", i18n.T("deploy.flag.project"))
+	cmd.Flags().StringVar(&envProvider, "env-provider", "", i18n.T("deploy.flag.env_provider"))
+	cmd.Flags().StringVar(&envFlag, "env", "", i18n.T("deploy.flag.env"))
+	for name, key := range map[string]string{
+		"dry-run": "deploy.flag.dry_run", "profile": "deploy.flag.profile",
+		"provider": "deploy.flag.provider", "build-version": "deploy.flag.build_version",
+		"project": "deploy.flag.project", "env-provider": "deploy.flag.env_provider",
+		"env": "deploy.flag.env",
+	} {
+		i18n.MarkFlagUsage(cmd, name, key)
+	}
+	helpui.MarkAdvanced(cmd, "profile", "provider", "project", "build-version", "env-provider")
 	i18n.MarkShort(cmd, "deploy.short")
+	i18n.MarkLong(cmd, "deploy.tip")
 	return cmd
 }
 

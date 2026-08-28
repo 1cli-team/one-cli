@@ -75,4 +75,4 @@ one run --env staging -- npm run e2e
 
 - [环境变量注入命令](/zh/tutorials/run-passthrough/) — 真实使用场景
 - [`one env`](/zh/docs/env-vars/) — 设置 / 拉取环境变量
-- [`one dev`](/zh/docs/dev/) — 启动整个 Procfile.dev
+- [`one dev`](/zh/docs/dev/) — 启动全部可开发项目

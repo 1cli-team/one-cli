@@ -2,13 +2,9 @@ package cli_test
 
 // E2E coverage of `one add` template mode.
 //
-// Each template declares a `defaults` map in registry.json (e.g.
-// go-api / nestjs-api / nextjs-app → container/docker), which `one add`
-// auto-applies. Workspace-level defaults (env/dotenv +
-// ci/github-actions + dev/process) come from `one create`. Templates
-// without `defaults` (ts-library, expo-mobile, electron-app,
-// astro-site, react-spa, starlight-docs) skip that
-// auto-application.
+// Ordinary `one add` renders a locally developable project and deliberately
+// leaves deployment/container choices unset. The advanced
+// --deploy-provider path remains available for automation.
 
 import (
 	"os"
@@ -17,24 +13,18 @@ import (
 	"testing"
 )
 
-// TestSnapshot_E2E_Add_AutoEnablesTemplateDefaults verifies adding
-// go-api (which declares defaults for container/docker +
-// deploy/kustomize) auto-enables BOTH:
-//
-//   - container/docker per-subproject (writes Dockerfile and stamps
-//     projects[0].plugins.container)
-//   - deploy/kustomize per-subproject (writes kustomize manifests and
-//     stamps projects[0].plugins.deploy)
-//
-// — without any explicit per-domain flag from the user.
-func TestSnapshot_E2E_Add_AutoEnablesTemplateDefaults(t *testing.T) {
+// TestSnapshot_E2E_Add_DefersDeploymentDefaults locks the central UX rule:
+// adding a project does not choose a deployment target or render deploy
+// artifacts, even when the technology stack has historical defaults.
+func TestSnapshot_E2E_Add_DefersDeploymentDefaults(t *testing.T) {
 	tmp := t.TempDir()
 	isolateHome(t, tmp)
 	ws := bootstrapWorkspace(t, tmp, "ws")
 
 	// go-api is the simplest template that exercises a non-default
 	// toolchain (Go) without depending on node/pnpm at scaffold time.
-	// Its `defaults` map declares container/docker + deploy/kustomize.
+	// Its technology-stack entry supports container/docker +
+	// deploy/kustomize, but ordinary add must not select either one.
 	stdout, stderr, code := runBinaryIn(t, ws, "add", "go-api", "--name", "user-api", "-y", "-o", "json")
 	if code != 0 {
 		t.Fatalf("add failed: exit %d\n  stdout: %s\n  stderr: %s", code, stdout, stderr)
@@ -69,8 +59,6 @@ func TestSnapshot_E2E_Add_AutoEnablesTemplateDefaults(t *testing.T) {
 		".one/agents/projects/services-user-api.md",
 		".one/agents/ops/dev.md",
 		".one/agents/ops/secrets.md",
-		".one/agents/ops/container.md",
-		".one/agents/ops/deploy.md",
 	} {
 		if !fileExists(t, filepath.Join(ws, filepath.FromSlash(rel))) {
 			t.Errorf("expected agent harness file missing: %s", rel)
@@ -90,7 +78,6 @@ func TestSnapshot_E2E_Add_AutoEnablesTemplateDefaults(t *testing.T) {
 	for _, want := range []string{
 		"<!-- one agents:index:start -->",
 		".one/agents/projects/services-user-api.md",
-		".one/agents/ops/deploy.md",
 	} {
 		if !strings.Contains(string(agentsRaw), want) {
 			t.Errorf("AGENTS.md missing %q:\n%s", want, agentsRaw)
@@ -139,10 +126,11 @@ func TestSnapshot_E2E_Add_AutoEnablesTemplateDefaults(t *testing.T) {
 		t.Errorf("rendered openapi.yaml must use Swagger UI-compatible OpenAPI 3.0.x, got:\n%s", openAPIRaw)
 	}
 
-	// go-api's `defaults` auto-enables container/docker
-	// per-subproject, so Dockerfile MUST exist.
-	if !fileExists(t, filepath.Join(svcDir, "Dockerfile")) {
-		t.Error("Dockerfile missing despite go-api defaults=[container=docker]")
+	if fileExists(t, filepath.Join(svcDir, "Dockerfile")) {
+		t.Error("ordinary add must not render a Dockerfile before deployment is chosen")
+	}
+	if fileExists(t, filepath.Join(ws, ".github", "workflows", "ci-services-user-api.yml")) {
+		t.Error("ordinary add must not generate CI configuration")
 	}
 	for _, rel := range []string{
 		"kustomize/base/user-api.yaml",
@@ -151,13 +139,13 @@ func TestSnapshot_E2E_Add_AutoEnablesTemplateDefaults(t *testing.T) {
 		"kustomize/overlays/staging/kustomization.yaml",
 		"kustomize/overlays/prod/kustomization.yaml",
 	} {
-		if !fileExists(t, filepath.Join(ws, filepath.FromSlash(rel))) {
-			t.Errorf("expected deploy/kustomize artifact missing: %s", rel)
+		if fileExists(t, filepath.Join(ws, filepath.FromSlash(rel))) {
+			t.Errorf("ordinary add unexpectedly rendered deployment artifact: %s", rel)
 		}
 	}
 
-	// Manifest must list the new subproject AND record the per-subproject
-	// container + deploy sections under the manifest domains block.
+	// Manifest lists the project and its dev command, but deployment/container
+	// remain absent until first deploy.
 	mf := readManifest(t, ws)
 	subs, _ := mf["projects"].([]any)
 	if len(subs) != 1 {
@@ -165,12 +153,11 @@ func TestSnapshot_E2E_Add_AutoEnablesTemplateDefaults(t *testing.T) {
 	}
 	sub0 := subs[0].(map[string]any)
 	domains, _ := sub0["domains"].(map[string]any)
-	if _, ok := domains["container"].(map[string]any); !ok {
-		t.Errorf("subproject.domains.container should be present (empty object means Dockerfile owned), got %v", domains["container"])
+	if _, ok := domains["container"]; ok {
+		t.Errorf("subproject.domains.container should be absent, got %v", domains["container"])
 	}
-	deploy, _ := domains["deploy"].(map[string]any)
-	if deploy == nil || deploy["kind"] != "kustomize" {
-		t.Errorf("subproject.domains.deploy.kind: want kustomize, got %v", domains["deploy"])
+	if _, ok := domains["deploy"]; ok {
+		t.Errorf("subproject.domains.deploy should be absent, got %v", domains["deploy"])
 	}
 	if sub0["buildVersion"] != "0.1.0" {
 		t.Errorf("subproject.buildVersion: want 0.1.0, got %v", sub0["buildVersion"])
@@ -182,7 +169,7 @@ func TestSnapshot_E2E_Add_S3BucketDefaultsToProjectID(t *testing.T) {
 	isolateHome(t, tmp)
 	ws := bootstrapWorkspace(t, tmp, "ws")
 
-	_, stderr, code := runBinaryIn(t, ws, "add", "react-spa", "--name", "web", "-y", "-o", "json")
+	_, stderr, code := runBinaryIn(t, ws, "add", "react-spa", "--name", "web", "--deploy-provider", "aws-s3", "-y", "-o", "json")
 	if code != 0 {
 		t.Fatalf("add failed: exit %d\n  stderr: %s", code, stderr)
 	}

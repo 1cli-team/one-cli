@@ -1,3 +1,11 @@
+
+DESCRIPTION
+deploy/cloudflare
+
+USAGE
+  one configure add deploy/cloudflare [--profile <name>] [flags]
+
+TIPS
 新增或更新 deploy/cloudflare profile。
 
 凭据获取（Cloudflare 后台）：
@@ -21,14 +29,11 @@ account-id 字段对应 wrangler 的 CLOUDFLARE_ACCOUNT_ID；多账号 token 必
       --account-id $CLOUDFLARE_ACCOUNT_ID \
       --use
 
-Usage:
-  one configure add deploy/cloudflare [--profile <name>] [flags]
+COMMON OPTIONS
+  --account-id <value>     Cloudflare Account ID（可选，多账号 token 必填；dash 右侧栏 Account ID）
+  -o, --output <value>     Output format: json | yaml | text (default: terminal-friendly text, JSON when piped)
+  --token <value>          Cloudflare API token（dash.cloudflare.com → My Profile → API Tokens，需 Edit Workers 权限）
+  --use                    Make this the current local connection
 
-Flags:
-      --account-id string   Cloudflare Account ID（可选，多账号 token 必填；dash 右侧栏 Account ID）
-      --profile string      profile 名（非交互模式必传；交互模式留空则 prompt）
-      --token string        Cloudflare API token（dash.cloudflare.com → My Profile → API Tokens，需 Edit Workers 权限）
-      --use                 把此 profile 设为 default
-
-Global Flags:
-  -o, --output string   输出格式: json | yaml | text（默认 auto：TTY 时人类格式，pipe 时 JSON）
+AUTOMATION AND ADVANCED OPTIONS
+  --profile <value>        Local-connection name (required in non-interactive calls)

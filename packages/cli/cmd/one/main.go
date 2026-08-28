@@ -20,9 +20,8 @@ func main() {
 		// need to surface the non-zero exit status here.
 		var cliErr *output.Error
 		if errors.As(err, &cliErr) && cliErr.Exit0 {
-			// Cooperative cancel (e.g. Ctrl-C in a prompt). Envelope was
-			// emitted; treat as graceful exit so scripts and parent
-			// processes don't see a fake failure.
+			// Cooperative cancel (e.g. Ctrl-C or "configure later") is
+			// intentionally quiet and successful.
 			return
 		}
 		os.Exit(1)

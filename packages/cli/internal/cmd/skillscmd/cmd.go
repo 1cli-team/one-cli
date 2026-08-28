@@ -73,6 +73,7 @@ skills materialize 到 ~/.one/skills-store/one-bundled/<skill-name>/，每个
 		"目标 agent ID（可重复；不传则交互式多选）")
 	cmd.Flags().BoolVarP(&flags.yes, "yes", "y", false,
 		"非交互：装到所有检测到的 agent，跳过 prompt")
+	i18n.MarkShort(cmd, "skills.install.short")
 	return cmd
 }
 

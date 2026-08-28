@@ -2,7 +2,10 @@ package i18n
 
 import (
 	"sort"
+	"strings"
 	"testing"
+
+	"github.com/spf13/cobra"
 )
 
 func TestT_FallsBackToKey(t *testing.T) {
@@ -10,6 +13,24 @@ func TestT_FallsBackToKey(t *testing.T) {
 	// A key we never added returns itself.
 	if got := T("does.not.exist"); got != "does.not.exist" {
 		t.Errorf("unknown key: want fallthrough to key, got %q", got)
+	}
+}
+
+func TestRefreshTreeUpdatesFlagUsage(t *testing.T) {
+	t.Cleanup(func() { _ = Init(DefaultLocale) })
+	_ = Init("en-US")
+	cmd := &cobra.Command{Use: "x"}
+	cmd.Flags().String("name", "", T("add.flag.name"))
+	MarkFlagUsage(cmd, "name", "add.flag.name")
+	cmd.PersistentFlags().String("output", "", T("common.flag.output"))
+	MarkFlagUsage(cmd, "output", "common.flag.output")
+	_ = Init("zh-CN")
+	RefreshTree(cmd)
+	if got := cmd.Flags().Lookup("name").Usage; got != T("add.flag.name") || got == "Project name" {
+		t.Fatalf("flag usage was not refreshed: %q", got)
+	}
+	if got := cmd.PersistentFlags().Lookup("output").Usage; got != T("common.flag.output") || strings.HasPrefix(got, "Output format") {
+		t.Fatalf("persistent flag usage was not refreshed: %q", got)
 	}
 }
 

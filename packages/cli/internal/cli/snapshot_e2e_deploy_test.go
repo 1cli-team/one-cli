@@ -16,10 +16,10 @@ func TestSnapshot_E2E_DeploySubprojectWebUsesS3DefaultWhenWorkspacePreferredIsK8
 	isolateHome(t, tmp)
 	ws := bootstrapWorkspace(t, tmp, "ws")
 
-	if _, stderr, code := runBinaryIn(t, ws, "add", "react-spa", "--name", "web", "-y", "-o", "json"); code != 0 {
+	if _, stderr, code := runBinaryIn(t, ws, "add", "react-spa", "--name", "web", "--deploy-provider", "aws-s3", "-y", "-o", "json"); code != 0 {
 		t.Fatalf("add web failed: exit %d\n  stderr: %s", code, stderr)
 	}
-	if _, stderr, code := runBinaryIn(t, ws, "add", "go-api", "--name", "api", "-y", "-o", "json"); code != 0 {
+	if _, stderr, code := runBinaryIn(t, ws, "add", "go-api", "--name", "api", "--deploy-provider", "kustomize", "-y", "-o", "json"); code != 0 {
 		t.Fatalf("add api failed: exit %d\n  stderr: %s", code, stderr)
 	}
 	if err := workspace.SetProjectDeployBucket(ws, "web", "test"); err != nil {
@@ -64,7 +64,7 @@ func TestSnapshot_E2E_DeployK8sRequiresSetup(t *testing.T) {
 	isolateHome(t, tmp)
 	ws := bootstrapWorkspace(t, tmp, "ws")
 
-	_, stderr, code := runBinaryIn(t, ws, "add", "go-api", "--name", "api", "-y", "-o", "json")
+	_, stderr, code := runBinaryIn(t, ws, "add", "go-api", "--name", "api", "--deploy-provider", "kustomize", "-y", "-o", "json")
 	if code != 0 {
 		t.Fatalf("add failed: exit %d\n  stderr: %s", code, stderr)
 	}
@@ -90,7 +90,7 @@ func TestSnapshot_E2E_DeployK8sDryRunUsesSetupTarget(t *testing.T) {
 	ws := bootstrapWorkspace(t, tmp, "demo")
 	kubeconfig := writeTestKubeconfig(t, tmp, "cn-prod", "cn-prod", "us-prod")
 
-	if _, stderr, code := runBinaryIn(t, ws, "add", "go-api", "--name", "api", "-y", "-o", "json"); code != 0 {
+	if _, stderr, code := runBinaryIn(t, ws, "add", "go-api", "--name", "api", "--deploy-provider", "kustomize", "-y", "-o", "json"); code != 0 {
 		t.Fatalf("add failed: exit %d\n  stderr: %s", code, stderr)
 	}
 	if err := workspace.SetWorkspaceDeployTarget(ws, "prod", "kustomize/overlays/prod"); err != nil {
@@ -140,7 +140,7 @@ func TestSnapshot_E2E_DeployK8sDryRunDefaultsNamespaceToProjectID(t *testing.T) 
 	ws := bootstrapWorkspace(t, tmp, "demo")
 	kubeconfig := writeTestKubeconfig(t, tmp, "cn-prod", "cn-prod")
 
-	if _, stderr, code := runBinaryIn(t, ws, "add", "go-api", "--name", "api", "-y", "-o", "json"); code != 0 {
+	if _, stderr, code := runBinaryIn(t, ws, "add", "go-api", "--name", "api", "--deploy-provider", "kustomize", "-y", "-o", "json"); code != 0 {
 		t.Fatalf("add failed: exit %d\n  stderr: %s", code, stderr)
 	}
 	if err := workspace.SetWorkspaceDeployTarget(ws, "", "kustomize/overlays/prod"); err != nil {
@@ -188,7 +188,7 @@ func TestSnapshot_E2E_DeployK8sRequiresContainerProfile(t *testing.T) {
 	ws := bootstrapWorkspace(t, tmp, "demo")
 	kubeconfig := writeTestKubeconfig(t, tmp, "cn-prod", "cn-prod")
 
-	if _, stderr, code := runBinaryIn(t, ws, "add", "go-api", "--name", "api", "-y", "-o", "json"); code != 0 {
+	if _, stderr, code := runBinaryIn(t, ws, "add", "go-api", "--name", "api", "--deploy-provider", "kustomize", "-y", "-o", "json"); code != 0 {
 		t.Fatalf("add failed: exit %d\n  stderr: %s", code, stderr)
 	}
 	if err := workspace.SetWorkspaceDeployTarget(ws, "prod", "kustomize/overlays/prod"); err != nil {

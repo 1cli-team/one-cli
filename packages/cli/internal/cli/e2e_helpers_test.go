@@ -303,12 +303,9 @@ func jsonContains(s, key string) bool {
 // fresh workspace under HOME-isolated tempdir, returning the workspace
 // root. The caller is expected to have already called isolateHome(t, tmp).
 //
-// Used by add / status E2E tests that need a real workspace
-// to operate on but don't themselves test create's output. Note that
-// v0.5+ this writes WorkspaceDefaults (env/dotenv + ci/github-actions +
-// dev/process) into manifest.plugins; tests that need the workspace
-// without one of those domains should call clearManifestDomain
-// after bootstrap.
+// Used by add / status E2E tests that need a real workspace to operate on but
+// don't themselves test create's output. Current defaults enable env/dotenv
+// and local development; CI, deployment, and container remain unset.
 func bootstrapWorkspace(t *testing.T, tmp, name string) string {
 	t.Helper()
 	target := filepath.Join(tmp, name)

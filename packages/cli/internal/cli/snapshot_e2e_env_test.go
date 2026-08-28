@@ -20,9 +20,7 @@ func TestSnapshot_E2E_Env_HelpListsSubcommands(t *testing.T) {
 	}
 	// Each Available Command must show up in --help. Drift here means
 	// somebody renamed or removed a subcommand without updating callers.
-	// `init` was removed in the profile refactor; `profile` parent is
-	// the new entry point for endpoint setup.
-	for _, sub := range []string{"set", "get", "list", "pull", "profile"} {
+	for _, sub := range []string{"set", "get", "list", "pull", "switch"} {
 		if !strings.Contains(stdout, sub) {
 			t.Errorf("`one env --help` does not mention subcommand %q", sub)
 		}

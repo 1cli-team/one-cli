@@ -1,8 +1,7 @@
 // Package createcmd contributes `one create` to the root command via
 // cliexts. Scaffolds a new workspace (one.manifest.json + folder skeleton),
-// applies the default backend selection (env/dotenv | ci/github-actions |
-// dev/process; optionally swaps env to infisical), and installs the
-// bundled skill to the user's agent paths.
+// applies the default workspace capabilities (local .env | one dev).
+// Projects, CI, and deployment targets are intentionally deferred.
 package createcmd
 
 import (
@@ -17,6 +16,7 @@ import (
 
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/cliexts"
 	cliErrors "github.com/torchstellar-team/one-cli/packages/cli/internal/errors"
+	"github.com/torchstellar-team/one-cli/packages/cli/internal/helpui"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/i18n"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/output"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/preset"
@@ -24,7 +24,6 @@ import (
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/scaffold"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/secrets/dotenv"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/secrets/infisical"
-	"github.com/torchstellar-team/one-cli/packages/cli/internal/skills"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/template"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/workspace"
 )
@@ -38,12 +37,12 @@ func buildContributions() []*cobra.Command {
 }
 
 // workspaceDefaultEnables are the default backend ids stamped into
-// the manifest when scaffolding a new workspace. ci and dev have a
-// single canonical implementation; env defaults to dotenv (lowest-
-// friction; the interactive prompt may swap to env/infisical).
+// the manifest when scaffolding a new workspace. env defaults to dotenv
+// (lowest-friction), while dev uses the built-in process runner. CI is not
+// enabled implicitly. Advanced automation may override the env source with
+// --env-provider.
 var workspaceDefaultEnables = []string{
 	"env/dotenv",
-	"ci/github-actions",
 	"dev/process",
 }
 
@@ -63,34 +62,10 @@ type createFlags struct {
 func newCreateCmd() *cobra.Command {
 	flags := &createFlags{}
 	cmd := &cobra.Command{
-		Use: "create [dir]",
-		Long: `创建工作区。
-
-位置参数 [dir] 是 **目标目录**（不是项目名）。可以是相对路径或绝对路径。
-默认 项目名 = basename(dir)；如需不同名字用 --name 显式指定。
-
-示例：
-  one create my-app                    # 创建 ./my-app/，项目名 my-app
-  one create services/billing          # 创建 ./services/billing/，名 billing
-  one create /tmp/sandbox --name demo  # 创建 /tmp/sandbox/，名 demo
-  one create .                          # 在当前目录创建，名 = basename(cwd)
-
-工作区默认配置（自动应用）：
-  env       - dotenv（.env 系列文件读写，零配置）
-  ci        - GitHub Actions 工作流
-  dev       - Procfile.dev（overmind / hivemind / foreman / honcho 可读）
-
-需要 Infisical 托管环境变量？两种方式：
-  - create 时显式选：one create my-app --env-provider infisical
-  - 后期再切换：    one env switch infisical
-
-deploy / container 由模板自动决定，不在 create 时落盘：
-  go-api / nestjs-api / nextjs-app                       → Dockerfile + kustomize
-  react-spa / astro-site / starlight-docs                → aws-s3 (静态部署)
-  expo-mobile / ts-library / electron-app                → 不参与 deploy / container
-
-会自动安装 bundled skill 到本机 agent。`,
-		Args: cobra.MaximumNArgs(1),
+		Use:     "create [dir]",
+		Long:    i18n.T("create.tip"),
+		Example: "  one create demo\n  one create . --name demo\n  one create demo --yes",
+		Args:    cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			dir := ""
 			if len(args) > 0 {
@@ -99,15 +74,22 @@ deploy / container 由模板自动决定，不在 create 时落盘：
 			return runCreate(cmd, dir, flags)
 		},
 	}
-	cmd.Flags().StringVarP(&flags.name, "name", "n", "", "项目名称（默认 basename(dir)）")
-	cmd.Flags().BoolVarP(&flags.yes, "yes", "y", false, "非交互模式：使用全部默认值")
+	cmd.Flags().StringVarP(&flags.name, "name", "n", "", i18n.T("create.flag.name"))
+	cmd.Flags().BoolVarP(&flags.yes, "yes", "y", false, i18n.T("create.flag.yes"))
 	cmd.Flags().StringVar(&flags.envProvider, "env-provider", "",
-		"env provider: dotenv | infisical（默认 dotenv；要 Infisical 也可后期 one env switch infisical）")
+		i18n.T("create.flag.env_provider"))
 	cmd.Flags().StringVar(&flags.preset, "preset", "",
-		"preset id（如 `1.bnek.fnav.ei`）：一次性 scaffold 工作区 + 项目 + deploy + env。隐含 -y，必须传 [dir]。")
+		i18n.T("create.flag.preset"))
 	cmd.Flags().StringVar(&flags.projectNames, "project-names", "",
-		"--preset 模式下按展开顺序指定子项目名，逗号分隔（如 `api,web,shared`）。")
+		i18n.T("create.flag.project_names"))
+	i18n.MarkFlagUsage(cmd, "name", "create.flag.name")
+	i18n.MarkFlagUsage(cmd, "yes", "create.flag.yes")
+	i18n.MarkFlagUsage(cmd, "env-provider", "create.flag.env_provider")
+	i18n.MarkFlagUsage(cmd, "preset", "create.flag.preset")
+	i18n.MarkFlagUsage(cmd, "project-names", "create.flag.project_names")
+	helpui.MarkAdvanced(cmd, "env-provider", "preset", "project-names")
 	i18n.MarkShort(cmd, "create.short")
+	i18n.MarkLong(cmd, "create.tip")
 	return cmd
 }
 
@@ -129,7 +111,7 @@ func runCreate(cmd *cobra.Command, rawDir string, flags *createFlags) error {
 		return runCreateWithPreset(cmd, cwd, rawDir, flags)
 	}
 
-	interactive := !flags.yes && output.IsTTY()
+	interactive := !flags.yes && output.CanPrompt()
 
 	// validateDir is the unified target-directory validator: same logic
 	// the post-form code path runs (existence + emptiness + nesting),
@@ -192,8 +174,8 @@ func runCreate(cmd *cobra.Command, rawDir string, flags *createFlags) error {
 	if rawDir == "" && flags.name == "" && interactive {
 		var dirInput, nameInput string
 		if err := prompt.NewForm().
-			Text(&dirInput, "目标目录（输入 . 表示使用当前目录）", "./my-app", validateDir).
-			Text(&nameInput, "项目名称（留空则用目录的基础名）", "", validateNameOptional).
+			Text(&dirInput, i18n.T("create.prompt_dir"), "./my-app", validateDir).
+			Text(&nameInput, i18n.T("create.prompt_name"), "", validateNameOptional).
 			Run(); err != nil {
 			return err
 		}
@@ -205,7 +187,7 @@ func runCreate(cmd *cobra.Command, rawDir string, flags *createFlags) error {
 				"非交互模式下必须提供 [dir] 位置参数（使用 `.` 表示当前目录）。").
 				WithContext(map[string]any{"interactive": false})
 		}
-		got, err := prompt.Text("目标目录（输入 . 表示使用当前目录）", "./my-app", validateDir)
+		got, err := prompt.Text(i18n.T("create.prompt_dir"), "./my-app", validateDir)
 		if err != nil {
 			return err
 		}
@@ -222,7 +204,7 @@ func runCreate(cmd *cobra.Command, rawDir string, flags *createFlags) error {
 	}
 	if !workspace.IsValidProjectName(projectName) {
 		return cliErrors.New(cliErrors.INVALID_NAME,
-			fmt.Sprintf("项目名称格式不合法: %q（来自 --name 或 basename(dir)）", projectName))
+			fmt.Sprintf("工作区名称格式不合法: %q（来自 --name 或 basename(dir)）", projectName))
 	}
 
 	displayPath := relativeOrAbs(cwd, targetDir, useCurrentDir)
@@ -281,7 +263,7 @@ func runCreate(cmd *cobra.Command, rawDir string, flags *createFlags) error {
 		K8s:    false,
 	}
 
-	if err := prompt.Spin("正在生成工作区骨架", func() error {
+	if err := prompt.Spin(i18n.T("create.generating"), func() error {
 		return scaffold.Generate(targetDir, options)
 	}); err != nil {
 		// Roll back fresh-create-from-scratch directory on failure, so a
@@ -291,7 +273,7 @@ func runCreate(cmd *cobra.Command, rawDir string, flags *createFlags) error {
 		}
 		return err
 	}
-	prompt.Step(fmt.Sprintf("骨架生成完成 → %s", displayPath))
+	prompt.Step(i18n.Tf("create.generated", displayPath))
 
 	// Apply backend selections to the manifest. Domains that need a
 	// project (container / deploy) defer their first Sync to `one add`;
@@ -327,7 +309,7 @@ func runCreate(cmd *cobra.Command, rawDir string, flags *createFlags) error {
 				// surfaced as a soft warning — backend stays stamped,
 				// projectId stays empty, and the first env command will
 				// retry lazy auto-bind with a clearer error message.
-				_ = prompt.Spin("正在绑定 Infisical 项目", func() error {
+				_ = prompt.Spin(i18n.T("create.binding_env"), func() error {
 					_, err := infisical.Init(cmd.Context(), targetDir, infisical.InitInput{
 						ProjectName: projectName,
 					})
@@ -344,17 +326,9 @@ func runCreate(cmd *cobra.Command, rawDir string, flags *createFlags) error {
 	// We don't surface it in the JSON envelope (TS doesn't either).
 	_ = scaffold.InitGitRepo(targetDir)
 
-	var skillsResult skillsPayload
-	_ = prompt.Spin("正在安装 skill 到本机 agent", func() error {
-		skillsResult = installSkills()
-		return nil
-	})
-	if skillsResult.Status == "failed" {
-		// Match TS behaviour: workspace creation succeeded, skills install
-		// failed. Set non-zero exit code but emit the result envelope so
-		// agents see what happened.
-		cmd.SetContext(cmd.Context()) // no-op; reserved for future ctx tagging
-	}
+	// Skills are an explicit opt-in (`one skills install`). Keep the stable
+	// envelope field so existing automation can distinguish the new policy.
+	skillsResult := skillsPayload{Status: "skipped", Reason: "manual-install"}
 
 	// v2 envelope: replaces the v1 `enabled_backends []string` with
 	// per-domain semantic fields. `secrets_backend` names the env
@@ -387,10 +361,6 @@ func runCreate(cmd *cobra.Command, rawDir string, flags *createFlags) error {
 	}
 	output.Emit(&payload)
 
-	if skillsResult.Status == "failed" {
-		// Non-fatal but surfaces non-zero exit, mirroring TS.
-		os.Exit(1)
-	}
 	return nil
 }
 
@@ -411,32 +381,27 @@ func (r *createResult) RenderTTY(w io.Writer) {
 	if r == nil {
 		return
 	}
-	fmt.Fprintf(w, "✓ Workspace created: %s\n", r.ProjectName)
-	fmt.Fprintf(w, "  Path: %s\n", r.CreatedPath)
-	fmt.Fprintf(w, "  Package manager: %s\n", r.PackageManager)
-	if r.SecretsBackend != "" {
-		fmt.Fprintf(w, "  Env backend: %s\n", r.SecretsBackend)
+	fmt.Fprintf(w, i18n.T("create.success")+"\n", r.ProjectName)
+	fmt.Fprintf(w, i18n.T("create.location")+"\n", r.CreatedPath)
+	fmt.Fprintf(w, i18n.T("create.package_manager")+"\n", r.PackageManager)
+	if r.SecretsBackend == "" || r.SecretsBackend == workspace.EnvBackendDotenv {
+		fmt.Fprintln(w, i18n.T("create.env_local"))
+	} else {
+		fmt.Fprintf(w, i18n.T("create.env_source")+"\n", r.SecretsBackend)
 	}
 	if r.CIEnabled {
-		fmt.Fprintln(w, "  CI: enabled")
+		fmt.Fprintln(w, i18n.T("create.ci_github"))
 	}
 	if r.DevEnabled {
-		fmt.Fprintln(w, "  Dev runner: enabled")
-	}
-	switch r.Skills.Status {
-	case "completed":
-		fmt.Fprintln(w, "  Skills: installed")
-	case "failed":
-		if r.Skills.Error != nil {
-			fmt.Fprintf(w, "  Skills: ✗ %s (%s)\n", r.Skills.Error.Message, r.Skills.Error.Code)
-		} else {
-			fmt.Fprintln(w, "  Skills: ✗ install failed")
-		}
+		fmt.Fprintln(w, i18n.T("create.dev_enabled"))
 	}
 	fmt.Fprintln(w)
-	fmt.Fprintln(w, "Next steps:")
+	fmt.Fprintln(w, i18n.T("common.next_steps"))
 	fmt.Fprintf(w, "  cd %s\n", r.CreatedPath)
-	fmt.Fprintln(w, "  one add <template> --name <subproject-name>")
+	fmt.Fprintln(w, "  one add")
+	fmt.Fprintln(w)
+	fmt.Fprintln(w, i18n.T("common.optional"))
+	fmt.Fprintln(w, "  one skills install")
 }
 
 type skillsPayload struct {
@@ -450,27 +415,6 @@ type skillsPayload struct {
 type skillsError struct {
 	Code    string `json:"code"`
 	Message string `json:"message"`
-}
-
-func installSkills() skillsPayload {
-	res, err := skills.Install()
-	if err != nil {
-		var cliErr *output.Error
-		code := string(cliErrors.SKILLS_INSTALL_FAILED)
-		message := err.Error()
-		if errors.As(err, &cliErr) {
-			code = cliErr.Code
-		}
-		return skillsPayload{
-			Status: "failed",
-			Error:  &skillsError{Code: code, Message: message},
-		}
-	}
-	return skillsPayload{
-		Status:      "completed",
-		InstalledTo: res.InstalledTo,
-		SkillCount:  res.SkillCount,
-	}
 }
 
 func relativeOrAbs(cwd, targetDir string, useCurrentDir bool) string {
@@ -543,10 +487,9 @@ func parsePresetProjectNames(raw string, want int) ([]string, error) {
 // resolveCreateEnables resolves the list of backend ids to enable when
 // scaffolding a new workspace. The post-trim policy:
 //
-//  1. workspaceDefaultEnables baseline (env/dotenv + ci/github-actions
-//     + dev/process) — always applied unless overridden by --env-provider.
-//     ci and dev have exactly one registered backend each so there's
-//     nothing to pick. env defaults to dotenv because it's the
+//  1. workspaceDefaultEnables baseline (env/dotenv + dev/process) — always
+//     applied unless overridden by --env-provider. CI is intentionally not
+//     selected by default. env defaults to dotenv because it's the
 //     lowest-friction option for solo / OSS users.
 //
 //  2. --env-provider flag explicitly picks dotenv or infisical.
@@ -726,7 +669,7 @@ func runCreateWithPreset(cmd *cobra.Command, cwd, rawDir string, flags *createFl
 	}
 	if !workspace.IsValidProjectName(projectName) {
 		return cliErrors.New(cliErrors.INVALID_NAME,
-			fmt.Sprintf("项目名称格式不合法: %q（来自 --name 或 basename(dir)）", projectName))
+			fmt.Sprintf("工作区名称格式不合法: %q（来自 --name 或 basename(dir)）", projectName))
 	}
 	displayPath := relativeOrAbs(cwd, targetDir, useCurrentDir)
 
@@ -763,7 +706,7 @@ func runCreateWithPreset(cmd *cobra.Command, cwd, rawDir string, flags *createFl
 		Docker:         false,
 		K8s:            false,
 	}
-	if err := prompt.Spin("正在生成工作区骨架", func() error {
+	if err := prompt.Spin(i18n.T("create.generating"), func() error {
 		return scaffold.Generate(targetDir, options)
 	}); err != nil {
 		if createdFromScratch && !useCurrentDir {
@@ -771,12 +714,12 @@ func runCreateWithPreset(cmd *cobra.Command, cwd, rawDir string, flags *createFl
 		}
 		return err
 	}
-	prompt.Step(fmt.Sprintf("骨架生成完成 → %s", displayPath))
+	prompt.Step(i18n.Tf("create.generated", displayPath))
 
-	// Step 6: apply workspace-level backend selection (env / ci / dev).
+	// Step 6: apply workspace-level backend selection (env / dev). Presets do
+	// not implicitly opt the workspace into CI either.
 	enables := []string{
 		"env/" + effectiveEnv,
-		"ci/github-actions",
 		"dev/process",
 	}
 	canonicalEnables := []string{}
@@ -801,7 +744,7 @@ func runCreateWithPreset(cmd *cobra.Command, cwd, rawDir string, flags *createFl
 			return cliErrors.New(cliErrors.STATUS_FIX_FAILED,
 				fmt.Sprintf("env/infisical 同步失败: %v", err))
 		}
-		_ = prompt.Spin("正在绑定 Infisical 项目", func() error {
+		_ = prompt.Spin(i18n.T("create.binding_env"), func() error {
 			_, bindErr := infisical.Init(cmd.Context(), targetDir, infisical.InitInput{
 				ProjectName: projectName,
 			})
@@ -824,14 +767,9 @@ func runCreateWithPreset(cmd *cobra.Command, cwd, rawDir string, flags *createFl
 		partialState = "partial_projects"
 	}
 
-	// Step 8: best-effort git init and skill install (unchanged from
-	// the non-preset path).
+	// Step 8: best-effort git init. Skills remain an explicit opt-in.
 	_ = scaffold.InitGitRepo(targetDir)
-	var skillsResult skillsPayload
-	_ = prompt.Spin("正在安装 skill 到本机 agent", func() error {
-		skillsResult = installSkills()
-		return nil
-	})
+	skillsResult := skillsPayload{Status: "skipped", Reason: "manual-install"}
 
 	// If preset.Apply failed mid-way, surface the failure but still
 	// emit a partial envelope so agents can program around it.
@@ -854,7 +792,7 @@ func runCreateWithPreset(cmd *cobra.Command, cwd, rawDir string, flags *createFl
 		CreatedInPlace: useCurrentDir,
 		PackageManager: options.PackageManager,
 		SecretsBackend: effectiveEnv,
-		CIEnabled:      true,
+		CIEnabled:      false,
 		DevEnabled:     true,
 		Projects:       presetProjectsPayload(applyResult.Projects),
 		DeploySummary:  applyResult.SummarizeDeploys(),
@@ -870,9 +808,6 @@ func runCreateWithPreset(cmd *cobra.Command, cwd, rawDir string, flags *createFl
 	}
 	output.Emit(&payload)
 
-	if skillsResult.Status == "failed" {
-		os.Exit(1)
-	}
 	return nil
 }
 
@@ -945,16 +880,16 @@ func (r *createPresetResult) RenderTTY(w io.Writer) {
 	if r == nil {
 		return
 	}
-	fmt.Fprintf(w, "✓ Workspace created from preset: %s\n", r.Preset.ID)
-	fmt.Fprintf(w, "  Path: %s\n", r.CreatedPath)
+	fmt.Fprintf(w, i18n.T("create.preset_success")+"\n", r.Preset.ID)
+	fmt.Fprintf(w, i18n.T("create.location")+"\n", r.CreatedPath)
 	for _, p := range r.Projects {
 		if p.DeployBackend != "" {
-			fmt.Fprintf(w, "  + %s (%s, deploy=%s)\n", p.Name, p.TemplateID, p.DeployBackend)
+			fmt.Fprintf(w, i18n.T("create.preset_project_deployed")+"\n", p.Name, p.TemplateID, p.DeployBackend)
 		} else {
-			fmt.Fprintf(w, "  + %s (%s)\n", p.Name, p.TemplateID)
+			fmt.Fprintf(w, i18n.T("create.preset_project")+"\n", p.Name, p.TemplateID)
 		}
 	}
-	fmt.Fprintf(w, "  Env: %s\n", r.EnvSummary.Backend)
+	fmt.Fprintf(w, i18n.T("create.env_source")+"\n", r.EnvSummary.Backend)
 }
 
 // findEnclosingWorkspace walks up from targetDir looking for a one.manifest.json.

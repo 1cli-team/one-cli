@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	cliErrors "github.com/torchstellar-team/one-cli/packages/cli/internal/errors"
+	"github.com/torchstellar-team/one-cli/packages/cli/internal/i18n"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/output"
 )
 
@@ -45,11 +46,7 @@ func (r *SetResult) RenderTTY(w io.Writer) {
 	if r == nil {
 		return
 	}
-	verb := r.Action
-	if verb == "" {
-		verb = "wrote"
-	}
-	fmt.Fprintf(w, "✓ %s %s at %s (env=%s)\n", verb, r.Key, r.Path, r.Env)
+	fmt.Fprintf(w, i18n.T("env.set_success_remote")+"\n", r.Key, r.Path, r.Env)
 }
 
 // Set writes a single key into Infisical. Auto-detects whether the key
@@ -210,15 +207,8 @@ func (r *ListResult) RenderTTY(w io.Writer) {
 	if r == nil {
 		return
 	}
-	fmt.Fprintf(w, "Path: %s · env: %s · %d key%s\n",
-		r.Path, r.Env, r.Total, func() string {
-			if r.Total == 1 {
-				return ""
-			}
-			return "s"
-		}())
 	for _, k := range r.Keys {
-		fmt.Fprintf(w, "  %s\n", k)
+		fmt.Fprintln(w, k)
 	}
 }
 

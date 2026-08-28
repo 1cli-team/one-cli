@@ -3,20 +3,22 @@ title: one deploy
 description: 按项目派发到 kustomize、S3-compatible、Vercel、Cloudflare 或 EdgeOne 部署后端。
 ---
 
-`one deploy` 是 per-project 部署入口。它读取每个项目的 `projects[].domains.deploy.kind`，再派发给对应后端：后端 / SSR 常见是 `kustomize`，静态前端常见是 S3-compatible 对象存储，也可以使用 Vercel、Cloudflare、EdgeOne。
+`one deploy` 是按项目部署入口。第一次部署时选择兼容的部署目标和本机连接，后续部署复用项目配置。
 
 ## 用法
 
 ```bash
-one deploy [-p <name|path>] [--profile <name>] [--env <env>] [--env-provider dotenv|infisical] [--build-version <version>] [--dry-run]
+one deploy [project] [--provider <target>] [--profile <connection>] [--env <env>] [--dry-run]
 ```
 
 ## 参数
 
 | 参数 | 说明 |
 |---|---|
-| `-p, --project <name|path>` | 只部署一个项目；支持 manifest 里的 `name` 或 `relativeDir` |
-| `--profile <name>` | 本次部署临时使用指定 deploy profile |
+| 位置参数 `project` | 只部署一个项目；支持 manifest 里的 `name` 或 `relativeDir` |
+| `-p, --project <name|path>` | 为旧脚本和 CI 保留的选择参数 |
+| `--provider <target>` | 自动化首次部署时显式指定目标 |
+| `--profile <name>` | 本次使用指定本机连接 |
 | `--env <env>` | 覆盖部署目标环境，同时作为环境变量注入环境 |
 | `--env-provider dotenv|infisical` | 覆盖 workspace manifest 里选择的 env provider |
 | `--build-version <version>` | 非交互 / CI 用镜像版本；主要用于 kustomize 自动构建 |
@@ -24,12 +26,14 @@ one deploy [-p <name|path>] [--profile <name>] [--env <env>] [--env-provider dot
 
 ## 交互模式
 
-`one deploy` 不是完整向导，但 TTY 下有少量补全式询问：
+尚未配置部署的项目在 TTY 下依次询问：
 
-- kustomize 部署需要镜像版本且没有传 `--build-version` 时，会沿用 `one container build` 的版本选择逻辑。
-- Cloudflare 部署缺少可用 profile，且你没有显式传 `--profile` 时，可能会询问 API token / account ID 并保存一个默认 profile。
+1. 部署哪个项目（未传时）
+2. 部署目标类别
+3. 当前版本已实现且与技术栈兼容的具体服务
+4. 缺少本机连接时选择“现在配置”或“稍后配置”
 
-脚本、CI、agent 应显式传 `--profile`、`--env`、`--build-version`，并先用 `--dry-run` 确认计划。
+选择“稍后配置”会以 0 退出、不修改工作区，并打印准确恢复命令。脚本使用 `one deploy <project> --provider <target> --profile <connection>`。
 
 ## 后端
 
@@ -68,8 +72,8 @@ manifest 不再保存本机 profile 名。用 `one configure use <pair> --profil
 
 ```bash
 one deploy --dry-run
-one deploy -p web --env staging --dry-run
-one deploy -p api --profile prod-k8s --build-version v0.1.0
+one deploy web --env staging --dry-run
+one deploy api --provider kustomize --profile prod-k8s --build-version v0.1.0
 ```
 
 ## 输出 schema
@@ -90,7 +94,7 @@ dry-run 会优先打印将执行的命令行，适合 CI 或上线前确认。
 
 | 错误码 | 处理 |
 |---|---|
-| `BACKEND_NOT_ENABLED` | 目标项目没有 deploy backend；换模板或补 `projects[].domains.deploy` |
+| `BACKEND_NOT_ENABLED` | 非交互调用请显式指定项目和部署目标 |
 | `PROFILE_NOT_FOUND` | `one configure list deploy/<backend>` 看本机已有 profile |
 | `PROFILE_NONE_CONFIGURED` | 先 `one configure add deploy/<backend> <name> --use` |
 | `ENV_UNKNOWN_ENVIRONMENT` | 把环境名加入 `manifest.environments.names`，或换成已有环境 |

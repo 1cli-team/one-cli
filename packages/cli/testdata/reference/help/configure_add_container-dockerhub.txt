@@ -1,3 +1,11 @@
+
+DESCRIPTION
+container/dockerhub
+
+USAGE
+  one configure add container/dockerhub [--profile <name>] [flags]
+
+TIPS
 新增或更新 container/dockerhub profile（Docker Hub）。
 
 host 固定为 index.docker.io —— 不需要 --registry。namespace 留空时
@@ -16,15 +24,12 @@ Security → Personal access tokens）而不是登录密码。
       --password $DOCKER_HUB_PAT \
       --namespace my-org --use
 
-Usage:
-  one configure add container/dockerhub [--profile <name>] [flags]
+COMMON OPTIONS
+  --namespace <value>      Docker Hub namespace（个人账号名 / 组织名；空则默认等于 username）
+  -o, --output <value>     Output format: json | yaml | text (default: terminal-friendly text, JSON when piped)
+  --password <value>       Docker Hub access token (PAT)
+  --use                    Make this the current local connection
+  --username <value>       Docker Hub username
 
-Flags:
-      --namespace string   Docker Hub namespace（个人账号名 / 组织名；空则默认等于 username）
-      --password string    Docker Hub access token (PAT)
-      --profile string     profile 名（非交互模式必传；交互模式留空则 prompt）
-      --use                把此 profile 设为 default
-      --username string    Docker Hub username
-
-Global Flags:
-  -o, --output string   输出格式: json | yaml | text（默认 auto：TTY 时人类格式，pipe 时 JSON）
+AUTOMATION AND ADVANCED OPTIONS
+  --profile <value>        Local-connection name (required in non-interactive calls)

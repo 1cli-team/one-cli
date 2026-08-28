@@ -1,3 +1,11 @@
+
+DESCRIPTION
+Show or set the display language (auto / zh-CN / en-US)
+
+USAGE
+  one configure locale [auto|zh-CN|en-US] [flags]
+
+TIPS
 查看或设置 one CLI 的显示语言。
 
 无参形式：打印当前生效的语言（preferences.json 中存储的值 + 实际解析结果）。
@@ -11,8 +19,5 @@
 dashboard（`one serve` 起的本地 UI）共享这份 preferences.json，
 所以在 dashboard 里切换语言也会写到这里；反之亦然。
 
-Usage:
-  one configure locale [auto|zh-CN|en-US] [flags]
-
-Global Flags:
-  -o, --output string   输出格式: json | yaml | text（默认 auto：TTY 时人类格式，pipe 时 JSON）
+COMMON OPTIONS
+  -o, --output <value>     Output format: json | yaml | text (default: terminal-friendly text, JSON when piped)

@@ -1,10 +1,9 @@
 // Package ci is the public contract for one-cli's CI providers.
 //
 // A Provider renders a CI workflow file (e.g. .github/workflows/ci-X.yml)
-// for one subproject. It is the user-selectable axis under the
-// CI domain. Multiple provider
-// implementations can register; the user picks one in their manifest
-// selection (manifest.ci section).
+// for one project. Multiple provider implementations can register; callers
+// select one explicitly or use DefaultProviderID. Provider selection is not
+// persisted in one.manifest.json.
 //
 // Stability: Provider is a public type. New methods can be added with
 // default-implementation helpers but existing methods are stable.
@@ -71,8 +70,7 @@ func Providers() []Provider {
 	return providers
 }
 
-// Lookup returns the provider with the matching ID, or nil. Used by
-// the dispatcher in internal/ci to honor manifest.ci.
+// Lookup returns the provider with the matching ID, or nil.
 func Lookup(id string) Provider {
 	for _, p := range providers {
 		if p.ID() == id {
@@ -82,7 +80,7 @@ func Lookup(id string) Provider {
 	return nil
 }
 
-// DefaultProviderID is the provider used when manifest.ci is empty.
-// GitHub Actions is the only bundled provider; out-of-tree providers
-// can register via Register and be selected via manifest.ci.
+// DefaultProviderID is used when a caller does not select a provider.
+// GitHub Actions is the only bundled provider; out-of-tree providers can
+// register via Register and be selected explicitly by callers.
 const DefaultProviderID = "ci/github-actions"

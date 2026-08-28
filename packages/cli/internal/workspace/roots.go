@@ -19,6 +19,7 @@ var DefaultRootDirs = []string{"apps", "services", "packages"}
 // dependency-based project classification.
 type PackageJSON struct {
 	Name            string            `json:"name"`
+	PackageManager  string            `json:"packageManager,omitempty"`
 	Dependencies    map[string]string `json:"dependencies,omitempty"`
 	DevDependencies map[string]string `json:"devDependencies,omitempty"`
 }

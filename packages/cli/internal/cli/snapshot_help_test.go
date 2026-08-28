@@ -13,9 +13,9 @@ package cli
 // Refresh fixtures with: UPDATE_SNAPSHOTS=1 go test ./internal/cli/ -run TestHelpSnapshots
 //
 // Pair with tools/verify-help, which enforces structural invariants
-// snapshots cannot catch (rootHelp lists every registered command;
-// every flag named in an Example: block actually exists on that
-// command).
+// snapshots cannot catch (rootHelp lists exactly the everyday commands,
+// `one help --all` lists every registered command, and every flag named in
+// an Example block exists).
 
 import (
 	"bytes"
@@ -178,7 +178,7 @@ func TestHelpSnapshots(t *testing.T) {
 // TestRootHelpSnapshot locks the curated root help text (the
 // i18n-resolved "root.help" key). Bypasses cobra because `one --help`
 // does too (see shouldRenderRootHelp in Execute). Catches drift in
-// the manually-maintained COMMANDS block.
+// the deliberately concise everyday-command block.
 //
 // Renders in DefaultLocale (en-US) for snapshot determinism — the
 // snapshot is the English fixture; per-locale snapshots can be

@@ -1,3 +1,11 @@
+
+DESCRIPTION
+Load environment variables and run a command
+
+USAGE
+  one run [-p <name|path>] [--env-provider dotenv|infisical] [--env <name>] -- <cmd> [args...]
+
+TIPS
 把项目环境变量注入到任意命令，类似 infisical run。
 
 项目解析：
@@ -24,13 +32,8 @@
   one run --env-provider dotenv -- npm test       # 强制走 dotenv（离线场景）
   one run --env staging -- npm run e2e            # 用 staging 环境的密钥
 
-Usage:
-  one run [-p <name|path>] [--env-provider dotenv|infisical] [--env <name>] -- <cmd> [args...]
-
-Flags:
-      --env string            环境名（默认取 manifest.environments.default）
-      --env-provider string   env provider: dotenv | infisical（默认取 workspace manifest 中已选的值）
-  -p, --project string        项目名（manifest.projects[].name）或相对路径；默认从 cwd 推导
-
-Global Flags:
-  -o, --output string   输出格式: json | yaml | text（默认 auto：TTY 时人类格式，pipe 时 JSON）
+COMMON OPTIONS
+  --env <value>            环境名（默认取 manifest.environments.default）
+  --env-provider <value>   env provider: dotenv | infisical（默认取 workspace manifest 中已选的值）
+  -o, --output <value>     Output format: json | yaml | text (default: terminal-friendly text, JSON when piped)
+  -p, --project <value>    项目名（manifest.projects[].name）或相对路径；默认从 cwd 推导

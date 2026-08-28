@@ -1,3 +1,11 @@
+
+DESCRIPTION
+deploy/aliyun-oss
+
+USAGE
+  one configure add deploy/aliyun-oss [--profile <name>] [flags]
+
+TIPS
 新增或更新 deploy/aliyun-oss profile。
 
 阿里云 OSS（S3 协议）。所有 S3-protocol 兼容后端共享同一 profile 结构（endpoint + region +
@@ -19,17 +27,14 @@ projects[i].deploy.bucket，不存在 profile 里。
 
 通常不需要 --force-path-style。
 
-Usage:
-  one configure add deploy/aliyun-oss [--profile <name>] [flags]
+COMMON OPTIONS
+  --access-key-id <value>  AccessKey ID
+  --access-key-secret <value> AccessKey Secret
+  --endpoint <value>       S3 endpoint URL（如 https://oss-<region>.aliyuncs.com）
+  --force-path-style       用 path-style 寻址（MinIO / RustFS 默认开启；AWS / Aliyun / 腾讯 / R2 通常关闭）
+  -o, --output <value>     Output format: json | yaml | text (default: terminal-friendly text, JSON when piped)
+  --region <value>         Region（如 cn-hangzhou / cn-shanghai）
+  --use                    Make this the current local connection
 
-Flags:
-      --access-key-id string       AccessKey ID
-      --access-key-secret string   AccessKey Secret
-      --endpoint string            S3 endpoint URL（如 https://oss-<region>.aliyuncs.com）
-      --force-path-style           用 path-style 寻址（MinIO / RustFS 默认开启；AWS / Aliyun / 腾讯 / R2 通常关闭）
-      --profile string             profile 名（非交互模式必传；交互模式留空则 prompt）
-      --region string              Region（如 cn-hangzhou / cn-shanghai）
-      --use                        把此 profile 设为 default
-
-Global Flags:
-  -o, --output string   输出格式: json | yaml | text（默认 auto：TTY 时人类格式，pipe 时 JSON）
+AUTOMATION AND ADVANCED OPTIONS
+  --profile <value>        Local-connection name (required in non-interactive calls)
