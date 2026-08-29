@@ -11,6 +11,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/torchstellar-team/one-cli/packages/cli/internal/workspace"
 )
 
 func TestSnapshot_E2E_Env_HelpListsSubcommands(t *testing.T) {
@@ -78,5 +80,39 @@ func TestSnapshot_E2E_Env_DotenvBackend_SetWritesToOverlay(t *testing.T) {
 	}
 	if !strings.Contains(string(body), "FOO=bar") {
 		t.Errorf(".env.dev missing expected line; got: %q", body)
+	}
+}
+
+func TestSnapshot_E2E_Env_DotenvBackend_SetPreservesRawProjectPath(t *testing.T) {
+	tmp := t.TempDir()
+	isolateHome(t, tmp)
+	ws := bootstrapWorkspace(t, tmp, "ws")
+
+	stdout, stderr, code := runBinaryIn(t, ws,
+		"env", "set", "SHARED_KEY", "shared-value",
+		"-p", "shared", "--env", "dev",
+		"-o", "json",
+	)
+	if code != 0 {
+		t.Fatalf("expected exit 0, got %d\n  stdout: %s\n  stderr: %s", code, stdout, stderr)
+	}
+
+	body, err := os.ReadFile(filepath.Join(ws, "shared", ".env.dev"))
+	if err != nil {
+		t.Fatalf("read raw-path .env.dev: %v", err)
+	}
+	if !strings.Contains(string(body), "SHARED_KEY=shared-value") {
+		t.Fatalf("raw-path .env.dev missing expected line; got: %q", body)
+	}
+	if _, err := os.Stat(filepath.Join(ws, ".env.dev")); !os.IsNotExist(err) {
+		t.Fatalf("raw project selector must not write the workspace-root .env.dev: %v", err)
+	}
+
+	manifest, err := workspace.ReadManifest(ws)
+	if err != nil {
+		t.Fatalf("read manifest: %v", err)
+	}
+	if keys := workspace.WorkspaceEnvKeys(manifest); len(keys) != 0 {
+		t.Fatalf("ad-hoc raw paths must not be recorded as workspace keys: %v", keys)
 	}
 }

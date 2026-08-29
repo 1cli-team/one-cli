@@ -131,7 +131,9 @@ The current bundled service is GitHub Actions (`ci/github-actions`). `enable`
 without a project covers all projects. `sync` without a project refreshes only
 projects that already have a generated workflow. `disable` without a project
 removes all canonical generated workflows and confirms in an interactive
-terminal; cancellation exits 0 and leaves files unchanged.
+terminal; cancellation exits 0 and leaves files unchanged. Non-interactive
+calls must pass `--yes`; otherwise the command returns
+`CI_DISABLE_CONFIRMATION_REQUIRED` without deleting a workflow.
 
 `--provider ci/github-actions` and legacy `--project <name|path>` are advanced
 automation options. CI state is represented by canonical workflow files under
@@ -579,6 +581,7 @@ Install flags:
 | `PROFILE_NONE_CONFIGURED` | env/deploy remote ops | add/use a matching profile |
 | `PROFILE_PLUGIN_INVALID` | profile/deploy | use a profile whose backend matches the target backend |
 | `STATUS_FIX_FAILED` | `create` / `add` post-write sync | retry the failing command; if persistent, inspect `error.context` |
+| `CI_DISABLE_CONFIRMATION_REQUIRED` | `ci disable` non-interactive | review the selected projects, then rerun with `--yes` |
 | `CI_NOT_ENABLED` | `ci sync` | run `one ci enable <project>` first |
 | `CI_PROVIDER_UNKNOWN` | `ci enable` | use an ID from `error.context.available_providers` |
 | `SKILLS_INSTALL_FAILED` | `create` / `skills install` | rerun `one skills install`, fix agent directory permissions |

@@ -63,17 +63,7 @@ func testCIDisableCtrlCIsQuietInTTY(t *testing.T, term string) {
 		close(readDone)
 	}()
 
-	if term != "dumb" {
-		waitForTTYOutput(t, &output, "\x1b]11;?", 5*time.Second)
-		if _, err := ptmx.Write([]byte("\x1b]11;rgb:0000/0000/0000\x1b\\")); err != nil {
-			t.Fatalf("reply to terminal background query: %v", err)
-		}
-		waitForTTYOutput(t, &output, "\x1b[6n", 5*time.Second)
-		if _, err := ptmx.Write([]byte("\x1b[1;1R")); err != nil {
-			t.Fatalf("reply to terminal cursor query: %v", err)
-		}
-	}
-	waitForTTYOutput(t, &output, "Disable continuous integration", 5*time.Second)
+	waitForTTYPrompt(t, &output, ptmx, "Disable continuous integration", 5*time.Second)
 	if _, err := ptmx.Write([]byte{3}); err != nil {
 		t.Fatalf("send Ctrl-C: %v", err)
 	}
@@ -198,6 +188,33 @@ func waitForTTYOutput(t *testing.T, output *lockedBuffer, want string, timeout t
 	for time.Now().Before(deadline) {
 		if strings.Contains(output.String(), want) {
 			return
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+	t.Fatalf("timed out waiting for %q in PTY output:\n%s", want, output.String())
+}
+
+func waitForTTYPrompt(t *testing.T, output *lockedBuffer, terminal io.Writer, want string, timeout time.Duration) {
+	t.Helper()
+	deadline := time.Now().Add(timeout)
+	backgroundReplied := false
+	cursorReplied := false
+	for time.Now().Before(deadline) {
+		got := output.String()
+		if strings.Contains(got, want) {
+			return
+		}
+		if !backgroundReplied && strings.Contains(got, "\x1b]11;?") {
+			if _, err := terminal.Write([]byte("\x1b]11;rgb:0000/0000/0000\x1b\\")); err != nil {
+				t.Fatalf("reply to terminal background query: %v", err)
+			}
+			backgroundReplied = true
+		}
+		if !cursorReplied && strings.Contains(got, "\x1b[6n") {
+			if _, err := terminal.Write([]byte("\x1b[1;1R")); err != nil {
+				t.Fatalf("reply to terminal cursor query: %v", err)
+			}
+			cursorReplied = true
 		}
 		time.Sleep(10 * time.Millisecond)
 	}

@@ -56,6 +56,7 @@ func TestEveryCodeHasDefinition(t *testing.T) {
 		cliErrors.PROFILE_BACKEND_INVALID,
 		cliErrors.IMAGE_REF_INCOMPLETE,
 		cliErrors.IMAGE_TAG_NOT_FOUND,
+		cliErrors.CI_DISABLE_CONFIRMATION_REQUIRED,
 		cliErrors.CI_PROVIDER_UNKNOWN,
 		cliErrors.CI_RENDER_FAILED,
 		cliErrors.K8S_PACKAGE_UNSUPPORTED,

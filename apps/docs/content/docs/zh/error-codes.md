@@ -224,6 +224,12 @@ Workspace 后置同步失败：写入 manifest 后某个后端 sync 回滚或失
 
 插件选择、profile 解析、部署 / CI 产物生成过程中的问题。
 
+### `CI_DISABLE_CONFIRMATION_REQUIRED`
+
+A non-interactive CI disable requires explicit --yes confirmation.
+
+> 没有默认 remediation。具体恢复方式请看错误的 `context` 字段。
+
 ### `CI_NOT_ENABLED`
 
 The selected project does not have a generated CI workflow.

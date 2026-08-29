@@ -136,6 +136,7 @@ workspaces.
 | `EXISTING_TARGET_NOT_EMPTY` | Target exists and is non-empty. Ask the user to pick a different directory, or to delete the existing one. `create` no longer overwrites. |
 | `AI_GUIDE_EXISTS` | `AGENTS.md` / `CLAUDE.md` is user-managed. Don't fight it. |
 | `PROMPT_CANCELLED` | User pressed Ctrl-C. Treat as graceful exit. |
+| `CI_DISABLE_CONFIRMATION_REQUIRED` | Review the selected projects, then rerun `one ci disable ... --yes`. |
 | `CI_NOT_ENABLED` | Run `one ci enable <project>` before `one ci sync <project>`. |
 | `UNKNOWN_COMMAND` | Misspelled command. Read `references/REFERENCE.md` for the current command surface. |
 | `INFISICAL_*` | See `references/REFERENCE.md` for the full Infisical error matrix. |

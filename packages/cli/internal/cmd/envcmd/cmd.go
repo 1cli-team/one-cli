@@ -456,23 +456,25 @@ func newSetCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
+			targetSelector := resolveSetTargetSelector(sub, subProject)
 
 			recordKey := func() error {
 				if subProject != nil {
 					return workspace.RecordProjectEnvKey(root, subProject.Name, key)
 				}
-				return workspace.RecordWorkspaceEnvKey(root, key)
+				if targetSelector == "" {
+					return workspace.RecordWorkspaceEnvKey(root, key)
+				}
+				// Raw paths are intentionally not represented in the manifest:
+				// they do not identify a declared project or workspace scope.
+				return nil
 			}
 
 			switch backend {
 			case workspace.EnvBackendDotenv:
-				subPath := ""
-				if subProject != nil {
-					subPath = subProject.RelativeDir
-				}
 				setInput := dotenv.SetInput{
 					ProjectRoot:    root,
-					SubprojectPath: subPath,
+					SubprojectPath: targetSelector,
 					Env:            resolvedEnv,
 					Key:            key,
 					Value:          value,
@@ -504,7 +506,7 @@ func newSetCmd() *cobra.Command {
 				if err != nil {
 					return err
 				}
-				folder, err := resolveInfisicalFolderPath(root, cfg, sub)
+				folder, err := resolveInfisicalFolderPath(root, cfg, targetSelector)
 				if err != nil {
 					return err
 				}
@@ -591,6 +593,17 @@ func resolveSetSubprojectForSet(projectRoot, selector string, interactive bool) 
 		return nil, err
 	}
 	return workspace.ResolveProjectFromSelector(projectRoot, chosen)
+}
+
+// resolveSetTargetSelector normalizes the backend target after project-scope
+// resolution. A declared or interactively selected project always uses its
+// manifest relativeDir; an unmatched explicit selector remains a raw backend
+// path; an empty selector with no project is workspace scope.
+func resolveSetTargetSelector(selector string, project *workspace.Project) string {
+	if project != nil {
+		return project.RelativeDir
+	}
+	return strings.TrimSpace(selector)
 }
 
 // parseSetArgs accepts both `KEY VALUE` and `KEY=VALUE` invocations and

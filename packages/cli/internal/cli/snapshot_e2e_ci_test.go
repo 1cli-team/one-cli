@@ -106,6 +106,18 @@ func TestSnapshot_E2E_CIOptionalLifecycle(t *testing.T) {
 		t.Fatalf("enable without selector should cover every project: %v", allEnabled)
 	}
 
+	_, stderr, code = runBinaryIn(t, ws, "ci", "disable", "web", "-o", "json")
+	if code == 0 {
+		t.Fatal("non-interactive disable without --yes should fail")
+	}
+	disableError := mustParseJSON(t, firstJSONLine(stderr))
+	if disableError["error"].(map[string]any)["code"] != "CI_DISABLE_CONFIRMATION_REQUIRED" {
+		t.Fatalf("unexpected disable confirmation error: %v", disableError)
+	}
+	if !fileExists(t, webWorkflow) {
+		t.Fatal("unconfirmed non-interactive disable must preserve the workflow")
+	}
+
 	stdout, stderr, code = runBinaryIn(t, ws, "ci", "disable", "web", "--yes", "-o", "json")
 	if code != 0 || stderr != "" {
 		t.Fatalf("ci disable failed: exit=%d stderr=%q", code, stderr)

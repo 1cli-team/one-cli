@@ -80,20 +80,21 @@ const (
 	PROFILE_BACKEND_INVALID               Code = "PROFILE_BACKEND_INVALID"
 	PROFILE_CREDENTIAL_SOURCE_UNSUPPORTED Code = "PROFILE_CREDENTIAL_SOURCE_UNSUPPORTED"
 
-	IMAGE_REF_INCOMPLETE        Code = "IMAGE_REF_INCOMPLETE"
-	IMAGE_TAG_NOT_FOUND         Code = "IMAGE_TAG_NOT_FOUND"
-	IMAGE_TAG_REQUIRED          Code = "IMAGE_TAG_REQUIRED"
-	CI_PROVIDER_UNKNOWN         Code = "CI_PROVIDER_UNKNOWN"
-	CI_NOT_ENABLED              Code = "CI_NOT_ENABLED"
-	CI_RENDER_FAILED            Code = "CI_RENDER_FAILED"
-	K8S_PLATFORM_UNDETECTED     Code = "K8S_PLATFORM_UNDETECTED"
-	K8S_PACKAGE_UNSUPPORTED     Code = "K8S_PACKAGE_UNSUPPORTED"
-	REGISTRY_CREDENTIAL_MISSING Code = "REGISTRY_CREDENTIAL_MISSING"
-	CONTAINER_KIND_UNKNOWN      Code = "CONTAINER_KIND_UNKNOWN"
-	CONTAINER_PROFILE_INVALID   Code = "CONTAINER_PROFILE_INVALID"
-	RELEASE_FLOW_MISMATCH       Code = "RELEASE_FLOW_MISMATCH"
-	ENV_PROFILE_NOT_FOUND       Code = "ENV_PROFILE_NOT_FOUND"
-	LOCAL_ORCH_PORT_CONFLICT    Code = "LOCAL_ORCH_PORT_CONFLICT"
+	IMAGE_REF_INCOMPLETE             Code = "IMAGE_REF_INCOMPLETE"
+	IMAGE_TAG_NOT_FOUND              Code = "IMAGE_TAG_NOT_FOUND"
+	IMAGE_TAG_REQUIRED               Code = "IMAGE_TAG_REQUIRED"
+	CI_DISABLE_CONFIRMATION_REQUIRED Code = "CI_DISABLE_CONFIRMATION_REQUIRED"
+	CI_NOT_ENABLED                   Code = "CI_NOT_ENABLED"
+	CI_PROVIDER_UNKNOWN              Code = "CI_PROVIDER_UNKNOWN"
+	CI_RENDER_FAILED                 Code = "CI_RENDER_FAILED"
+	K8S_PLATFORM_UNDETECTED          Code = "K8S_PLATFORM_UNDETECTED"
+	K8S_PACKAGE_UNSUPPORTED          Code = "K8S_PACKAGE_UNSUPPORTED"
+	REGISTRY_CREDENTIAL_MISSING      Code = "REGISTRY_CREDENTIAL_MISSING"
+	CONTAINER_KIND_UNKNOWN           Code = "CONTAINER_KIND_UNKNOWN"
+	CONTAINER_PROFILE_INVALID        Code = "CONTAINER_PROFILE_INVALID"
+	RELEASE_FLOW_MISMATCH            Code = "RELEASE_FLOW_MISMATCH"
+	ENV_PROFILE_NOT_FOUND            Code = "ENV_PROFILE_NOT_FOUND"
+	LOCAL_ORCH_PORT_CONFLICT         Code = "LOCAL_ORCH_PORT_CONFLICT"
 
 	// Vercel deploy backend.
 	VERCEL_CLI_MISSING     Code = "VERCEL_CLI_MISSING"
@@ -226,6 +227,7 @@ var Codes = map[Code]Definition{
 	IMAGE_REF_INCOMPLETE:                  {Summary: "Deploy / CI backend needs the container image ref but it is missing or incomplete (registry / name / tag)."},
 	IMAGE_TAG_NOT_FOUND:                   {Summary: "Container push target image tag does not exist in the local Docker daemon.", Remediation: []output.Remediation{{Action: "build-image", Hint: "先构建要推送的镜像", Command: "one container build <subproject>"}}},
 	IMAGE_TAG_REQUIRED:                    {Summary: "Container build needs a version tag but no subproject buildVersion, Git tag, or package version was available.", Remediation: []output.Remediation{{Action: "provide-tag", Hint: "显式指定镜像版本 tag", Command: "one container build <subproject> --build-version v0.1.0"}, {Action: "set-build-version", Hint: "或在 one.manifest.json 里设置 projects[].buildVersion"}, {Action: "create-git-tag", Hint: "或在当前提交上创建 Git tag", Command: "git tag v0.1.0"}}},
+	CI_DISABLE_CONFIRMATION_REQUIRED:      {Summary: "A non-interactive CI disable requires explicit --yes confirmation."},
 	CI_NOT_ENABLED:                        {Summary: "The selected project does not have a generated CI workflow."},
 	CI_PROVIDER_UNKNOWN:                   {Summary: "The requested CI provider is not implemented by this build."},
 	CI_RENDER_FAILED:                      {Summary: "The selected CI provider returned an error while rendering the workflow."},

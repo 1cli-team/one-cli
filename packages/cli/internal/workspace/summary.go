@@ -105,18 +105,32 @@ func BuildSummary(root string) (Summary, error) {
 }
 
 // ProjectDependenciesInstalled reports whether a project can start without a
-// package-manager install. Node workspaces share root node_modules; non-Node
-// toolchains do not have a separate install phase here.
+// package-manager install. Node package managers may place a direct dependency
+// in either the project or workspace node_modules, so check every dependency
+// declared by the project rather than treating any node_modules directory as
+// proof that a newly added project was included in the last install.
 func ProjectDependenciesInstalled(root, projectDir, toolchain string) bool {
 	if strings.TrimSpace(toolchain) != "node" {
 		return true
 	}
-	for _, dir := range []string{filepath.Join(root, "node_modules"), filepath.Join(projectDir, "node_modules")} {
-		if info, err := os.Stat(dir); err == nil && info.IsDir() {
-			return true
+	pkg, err := ReadPackageJSON(projectDir)
+	if err != nil || pkg == nil {
+		return false
+	}
+	for name := range mergeDeps(pkg) {
+		installed := false
+		for _, modulesDir := range []string{filepath.Join(projectDir, "node_modules"), filepath.Join(root, "node_modules")} {
+			dependencyDir := filepath.Join(modulesDir, filepath.FromSlash(name))
+			if info, statErr := os.Stat(dependencyDir); statErr == nil && info.IsDir() {
+				installed = true
+				break
+			}
+		}
+		if !installed {
+			return false
 		}
 	}
-	return false
+	return true
 }
 
 func bestNextCommand(projects []SummaryProject) string {

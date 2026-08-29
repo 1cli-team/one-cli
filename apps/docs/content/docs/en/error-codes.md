@@ -158,6 +158,11 @@ A backend sync failed or rolled back after manifest write. Re-run the command af
 
 Backend selection, profile resolution, deployment, and generated delivery artifacts.
 
+### `CI_DISABLE_CONFIRMATION_REQUIRED`
+
+A non-interactive `one ci disable` call did not pass `--yes`. Review the
+selected projects and rerun with explicit confirmation; no workflow was removed.
+
 ### `CI_PROVIDER_UNKNOWN`
 
 The requested CI provider is not implemented by this build. Use the IDs in

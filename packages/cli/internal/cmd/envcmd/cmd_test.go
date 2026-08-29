@@ -100,3 +100,24 @@ func TestResolveInfisicalFolderPath(t *testing.T) {
 		}
 	})
 }
+
+func TestResolveSetTargetSelector(t *testing.T) {
+	project := &workspace.Project{Name: "web", RelativeDir: "apps/web"}
+	for _, tc := range []struct {
+		name     string
+		selector string
+		project  *workspace.Project
+		want     string
+	}{
+		{name: "interactive project choice", project: project, want: "apps/web"},
+		{name: "declared project overrides name selector", selector: "web", project: project, want: "apps/web"},
+		{name: "raw selector is preserved", selector: " shared ", want: "shared"},
+		{name: "workspace scope remains empty", want: ""},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := resolveSetTargetSelector(tc.selector, tc.project); got != tc.want {
+				t.Fatalf("selector = %q, want %q", got, tc.want)
+			}
+		})
+	}
+}

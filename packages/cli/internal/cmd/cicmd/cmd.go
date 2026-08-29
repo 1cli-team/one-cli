@@ -269,6 +269,24 @@ func runDisable(selector string, yes bool) error {
 			enabledCount++
 		}
 	}
+	if enabledCount > 0 && !yes && !output.CanPrompt() {
+		command := "one ci disable --yes"
+		if strings.TrimSpace(selector) != "" {
+			command = "one ci disable " + selector + " --yes"
+		}
+		return cliErrors.New(cliErrors.CI_DISABLE_CONFIRMATION_REQUIRED,
+			i18n.T("ci.error.confirmation_required")).
+			WithContext(map[string]any{
+				"enabled_projects": enabledCount,
+				"selector":         selector,
+			}).
+			WithRemediation(output.Remediation{
+				Action:      "confirm-disable",
+				Hint:        i18n.T("ci.error.confirmation_hint"),
+				Command:     command,
+				Destructive: true,
+			})
+	}
 	if enabledCount > 0 && output.CanPrompt() && !yes {
 		confirmed, promptErr := prompt.Confirm(
 			i18n.Tf("ci.disable.confirm", enabledCount),

@@ -33,6 +33,10 @@ next command.
 Refusing the disable confirmation or pressing Ctrl-C is a normal cancellation:
 the command exits successfully and does not modify files.
 
+Non-interactive calls never treat the absence of a terminal as consent. Pass
+`--yes` explicitly or the command returns `CI_DISABLE_CONFIRMATION_REQUIRED`
+without removing any workflow.
+
 ## Files and workspace state
 
 For GitHub Actions, One CLI writes one canonical file per project under
@@ -58,6 +62,7 @@ scripts; everyday help prefers the positional project.
 
 | Code | Recovery |
 |---|---|
+| `CI_DISABLE_CONFIRMATION_REQUIRED` | Review the target projects, then rerun with `--yes` |
 | `CI_NOT_ENABLED` | Run `one ci enable <project>`, then retry sync |
 | `CI_PROVIDER_UNKNOWN` | Use an ID from `error.context.available_providers` |
 | `CI_RENDER_FAILED` | Inspect the project and workflow path in the error context |

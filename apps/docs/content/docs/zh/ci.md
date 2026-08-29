@@ -31,6 +31,9 @@ one ci disable [project]
 
 拒绝停用确认或按 Ctrl-C 都属于正常取消：命令以 0 退出，文件保持不变。
 
+非交互调用不会把“没有终端”视为同意删除。必须显式传入 `--yes`，否则命令返回
+`CI_DISABLE_CONFIRMATION_REQUIRED`，并保留全部工作流文件。
+
 ## 文件与工作区状态
 
 GitHub Actions 的标准文件按项目写入 `.github/workflows/`。持续集成选择不会写入
@@ -54,6 +57,7 @@ one ci disable web --yes -o json
 
 | 错误码 | 处理 |
 |---|---|
+| `CI_DISABLE_CONFIRMATION_REQUIRED` | 检查目标项目后，带 `--yes` 重新运行 |
 | `CI_NOT_ENABLED` | 先运行 `one ci enable <project>`，再重试 sync |
 | `CI_PROVIDER_UNKNOWN` | 使用 `error.context.available_providers` 中的 ID |
 | `CI_RENDER_FAILED` | 检查错误 context 中的项目和工作流路径 |
