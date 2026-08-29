@@ -40,7 +40,11 @@ export function I18nProvider({ children }: I18nProviderProps) {
 		void (async () => {
 			try {
 				const p = await getPreferences();
-				if (p.stored_locale === "auto" || p.stored_locale === "zh-CN" || p.stored_locale === "en-US") {
+				if (
+					p.stored_locale === "auto" ||
+					p.stored_locale === "zh-CN" ||
+					p.stored_locale === "en-US"
+				) {
 					setMode(p.stored_locale);
 				}
 			} catch {

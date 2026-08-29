@@ -9,6 +9,7 @@ import type React from "react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
+import { useBackendCatalog } from "@/api/catalog";
 import { setProjectContainer, setProjectDeploy, setWorkspaceEnv } from "@/api/workspace";
 import { Button } from "@/components/ui/button";
 import {
@@ -21,19 +22,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/useToast";
-import {
-	CONTAINER_KINDS,
-	DEPLOY_KINDS,
-	ENV_KINDS,
-	type Overview,
-	type OverviewIssueDomain,
-} from "@/types/api";
-
-const KIND_OPTIONS: Record<OverviewIssueDomain, readonly string[]> = {
-	env: ENV_KINDS,
-	deploy: DEPLOY_KINDS,
-	container: CONTAINER_KINDS,
-};
+import type { Overview, OverviewIssueDomain } from "@/types/api";
 
 interface MissingConfigDialogProps {
 	domain: OverviewIssueDomain | null;
@@ -56,6 +45,7 @@ export const MissingConfigDialog: React.FC<MissingConfigDialogProps> = ({
 }) => {
 	const { t } = useTranslation();
 	const toast = useToast();
+	const catalog = useBackendCatalog();
 	const [kind, setKind] = useState("");
 	const [image, setImage] = useState("");
 	const [saving, setSaving] = useState(false);
@@ -75,7 +65,8 @@ export const MissingConfigDialog: React.FC<MissingConfigDialogProps> = ({
 
 	if (!domain) return null;
 
-	const options = kindOptions ?? KIND_OPTIONS[domain];
+	const options =
+		kindOptions ?? (catalog.byDomain.get(domain) ?? []).map((backend) => backend.name);
 
 	async function handleSave() {
 		if (!domain || !kind) return;

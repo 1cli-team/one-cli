@@ -30,10 +30,10 @@ go-dist/
 # `task vet` / `test` / `build`, so the normal Taskfile flow always
 # repopulates them. Fresh clone followed by `go build` directly will
 # fail until one of those tasks has run at least once.
-packages/cli/internal/bundled/registry.json
-packages/cli/internal/bundled/skills/
-packages/cli/internal/bundled/_templates/
-packages/cli/internal/bundled/_web/
+packages/cli/internal/resources/bundled/registry.json
+packages/cli/internal/resources/bundled/skills/
+packages/cli/internal/resources/bundled/_templates/
+packages/cli/internal/resources/bundled/_web/
 
 # go-task
 .task/

@@ -6,7 +6,7 @@ description: One CLI error-code reference for code, context, and remediation han
 import { Callout } from "fumadocs-ui/components/callout";
 
 <Callout type="info">
-This page mirrors the generated Chinese reference from `internal/errors/codes.go`. When adding codes, update the source registry and regenerate the docs.
+This page mirrors the generated Chinese reference from `internal/platform/errors/codes.go`. When adding codes, update the source registry and regenerate the docs.
 </Callout>
 
 ## What This Is

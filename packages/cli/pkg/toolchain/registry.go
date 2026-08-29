@@ -1,12 +1,10 @@
 package toolchain
 
-// registry holds all bundled toolchain adapters keyed by their Toolchain
-// id. Adapter packages call Register from init() so the registry is
-// fully populated before any subcommand runs.
+// registry holds bundled toolchain adapters keyed by their Toolchain id.
+// The CLI composition root registers its adapters explicitly.
 //
-// Concurrency: registry is written only during program initialization
-// (Go guarantees init functions run sequentially) and read during
-// command execution. No mutex is needed.
+// This registry remains a public compatibility surface for callers of pkg;
+// new internal backend registries are instance-scoped instead.
 var registry = map[Toolchain]Adapter{}
 
 // Register adds an adapter to the registry. Multiple registrations for

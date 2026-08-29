@@ -15,7 +15,7 @@ one --version                   # 验证装好
 
 工具链：**Go 1.25+**、**Node 20+**、**pnpm 10+**。`go-task`（不是 GNU make）是任务总线，跨平台一致。
 
-> **fresh-clone 提示**：`packages/cli/internal/bundled/` 整个目录是 gitignore 的——
+> **fresh-clone 提示**：`packages/cli/internal/resources/bundled/` 整个目录是 gitignore 的——
 > registry / skills / templates / dashboard dist 都由 `task sync-bundled` +
 > `task sync-web` 按需重建，作为 `task vet` / `test` / `build` 的依赖自动跑。
 > 第一次 `task install-local` 会触发 `pnpm install + vite build`，~30s；之后
@@ -29,6 +29,9 @@ one --version                   # 验证装好
 
 ```bash
 task --list                 # 看可用任务（这是真源）
+pnpm install               # 从根目录安装所有 Node workspace 依赖
+task check                  # 与 PR CI 完全一致的 monorepo 验证入口
+pnpm check                  # 根目录快捷入口，等价于 task check
 task build                  # 编译到 packages/cli/bin/one
 task test                   # 全套 Go 测试 + race detector
 task vet                    # go vet
@@ -50,14 +53,15 @@ task pre-push               # 推前必跑（含上面所有 + verify-docs）
    （`feat:`、`fix:`、`chore:`、`docs:`、`test:`、`refactor:` 等）
 5. 推送 + 开 PR
 
-CI 会跑跟 `task pre-push` 等价的检查。
+PR CI 会并行执行 `task check:static` 与 `task check:test`，两者合起来与本地
+`task check` 完全一致；`task pre-push` 会在此基础上额外运行 Go race detector。
 
 ## 改不同部分的注意事项
 
 ### 改 Go 代码（`packages/cli/internal/` / `packages/cli/pkg/`）
 
 - 公开 API（`packages/cli/pkg/`）改动要考虑 semver；详见 [CLAUDE.md 的 Public API stability](./CLAUDE.md)
-- 加新错误码：在 `packages/cli/internal/errors/codes.go` 注册 `Code` 常量 + `Codes` map 条目；测试会强制对应；改完跑 `task gen-error-codes` 刷新文档
+- 加新错误码：在 `packages/cli/internal/platform/errors/codes.go` 注册 `Code` 常量 + `Codes` map 条目；测试会强制对应；改完跑 `task gen-error-codes` 刷新文档
 
 ### 改 skills（`packages/skills/<name>/`）
 
@@ -74,21 +78,22 @@ CI 会跑跟 `task pre-push` 等价的检查。
 ### 改 dashboard（`apps/dashboard/`，`one serve` 的 UI）
 
 - React + Vite，pnpm 管理
-- 本地开发：`pnpm --dir apps/dashboard dev`
+- 本地开发：先在仓库根目录运行 `pnpm install`，再运行 `pnpm --filter one-serve-web dev`
+- 静态检查：`task check:dashboard`；架构护栏和交互测试包含在 `task check:test`
 - 改完后 `task vet` / `test` / `build` 会自动跑 `sync-web`（pnpm install + vite build）
-  并刷 `packages/cli/internal/bundled/_web/`
+  并刷 `packages/cli/internal/resources/bundled/_web/`
 
 ### 改文档站（`apps/docs/`）
 
 - 文档站是 Next.js + Fumadocs SSG
-- 本地预览：`pnpm --dir apps/docs install && pnpm --dir apps/docs dev`
+- 本地预览：先在仓库根目录运行 `pnpm install`，再运行 `pnpm docs:dev`
 - 线上部署：Vercel 项目 Root Directory 指向 `apps/docs`，Output Directory 用 `dist`，域名绑定 `1cli.dev`
 - `apps/docs/content/docs/reference/error-codes.md` **不要手工编辑**——跑 `task gen-error-codes` 重生成
 - 新增页面要更新对应目录的 `meta.json`（sidebar 顺序）
 
 ### 改 install.sh（`apps/docs/public/install.sh`）
 
-- 改完跑 `task test` —— `packages/cli/internal/cli/install_sh_test.go` 会做静态检查（语法、必要 sentinels、wrap-in-main 不变量）
+- 改完跑 `task test` —— `packages/cli/tests/e2e/install_sh_test.go` 会做静态检查（语法、必要 sentinels、wrap-in-main 不变量）
 
 ## 测试约定
 
@@ -96,10 +101,10 @@ CI 会跑跟 `task pre-push` 等价的检查。
 task test                                                 # 默认全套
 (cd packages/cli && go test ./internal/foo)               # 单个包
 (cd packages/cli && go test -run TestX ./...)             # 单个 test
-(cd packages/cli && UPDATE_SNAPSHOTS=1 go test ./internal/cli)   # 重生成 e2e snapshot fixtures
+(cd packages/cli && UPDATE_SNAPSHOTS=1 go test ./tests/e2e)     # 重生成 e2e snapshot fixtures
 ```
 
-E2E snapshot 测试位于 `packages/cli/internal/cli/snapshot_e2e_*_test.go`，依赖 `packages/cli/bin/one` 存在 —— 跑 `task build` 之后再跑。
+E2E snapshot 测试位于 `packages/cli/tests/e2e/snapshot_e2e_*_test.go`，依赖 `packages/cli/bin/one` 存在 —— 跑 `task build` 之后再跑。
 
 ## 发布流程
 
@@ -110,12 +115,12 @@ echo "0.4.3" > VERSION
 # 2. 改 CHANGELOG.md（unreleased 段升级为新版本）
 
 # 3. 跑 e2e 测试里 hard-coded 的 want 字面量
-sed -i.bak 's/want := "0.4.2/want := "0.4.3/' packages/cli/internal/cli/snapshot_e2e_test.go
+sed -i.bak 's/want := "0.4.2/want := "0.4.3/' packages/cli/tests/e2e/snapshot_e2e_test.go
 
 # 4. task pre-push 全绿
 
 # 5. commit
-git add VERSION CHANGELOG.md packages/cli/internal/cli/snapshot_e2e_test.go
+git add VERSION CHANGELOG.md packages/cli/tests/e2e/snapshot_e2e_test.go
 git commit -m "chore(release): v0.4.3"
 
 # 6. push + tag
@@ -147,7 +152,7 @@ packages/cli/                    # Go module（module path 含 /packages/cli 后
   cmd/one/main.go                # 二进制入口（薄壳）
   internal/                      # 业务逻辑
   pkg/                           # 公开 Go API（semver 保护）
-  internal/bundled/              # go:embed 镜像，目录整个 gitignore，
+  internal/resources/bundled/              # go:embed 镜像，目录整个 gitignore，
                                  # 由 task sync-bundled + sync-web 重建
   testdata/                      # Go 测试 fixtures
   tools/                         # 内部生成器 / 校验器

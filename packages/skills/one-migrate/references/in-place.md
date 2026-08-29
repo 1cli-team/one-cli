@@ -11,7 +11,7 @@ already wired up, etc.). Otherwise prefer `side-by-side.md`.
   `WORKSPACE_NESTED_FORBIDDEN`
 
 So this path hand-writes the workspace scaffold files. The complete
-set is fixed by `packages/cli/internal/scaffold/scaffold.go` — when
+set is fixed by `packages/cli/internal/modules/creation/workspace_files.go` — when
 in doubt, re-read that file for the authoritative list.
 
 ## Inputs to extract
@@ -44,7 +44,7 @@ Walk upward yourself; if any ancestor has it, this skill doesn't apply.
 ### Step 3 — Relocate sub-projects to canonical roots
 
 Allowed root directories: `apps/`, `services/`, `packages/`
-(hard-wired in `packages/cli/internal/workspace/roots.go`).
+(hard-wired in `packages/cli/internal/core/workspace/roots.go`).
 
 For each entry in `source_projects` whose current path **doesn't**
 already sit under one of those roots:
@@ -65,7 +65,7 @@ If the existing repo uses a different layout (`src/`, `frontend/`,
 ### Step 4 — Write workspace-root scaffold files
 
 Create these files at the repo root. Match the `one create` output
-verbatim (sources in `packages/cli/internal/scaffold/content.go`).
+verbatim (sources in `packages/cli/internal/modules/creation/workspace_content.go`).
 Skip a file if it already exists and the user wants their version
 preserved — surface the conflict instead of overwriting.
 
@@ -130,7 +130,7 @@ coverage
 
 - `commitlint.config.js` — `module.exports = { extends: ['@commitlint/config-conventional'] };`
 - `.husky/pre-commit`, `.husky/commit-msg` — see
-  `packages/cli/internal/scaffold/content.go` for verbatim content
+  `packages/cli/internal/modules/creation/workspace_content.go` for verbatim content
 - `.changeset/config.json` — see same file
 - `CLAUDE.md` — workspace-level agent guide. If the user already has
   one, leave it alone.
@@ -157,7 +157,7 @@ careful Edit). The full schema is in `references/manifest.md`.
 After writing, **verify**:
 
 ```bash
-cat one.manifest.json | jq '.version'        # → 5
+cat one.manifest.json | jq '.version'        # → 1
 cat one.manifest.json | jq '.projects | length'   # → expected count
 ```
 

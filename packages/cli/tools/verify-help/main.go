@@ -38,8 +38,8 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 
-	"github.com/torchstellar-team/one-cli/packages/cli/internal/cli"
-	"github.com/torchstellar-team/one-cli/packages/cli/internal/helpui"
+	"github.com/torchstellar-team/one-cli/packages/cli/internal/bootstrap/cli"
+	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/helpui"
 )
 
 func main() {
@@ -53,7 +53,7 @@ func main() {
 		fmt.Fprintln(os.Stderr, "  - Keep root help limited to the six everyday commands and keep `one help --all` complete.")
 		fmt.Fprintln(os.Stderr, "  - Update the Example / Long text in the offending cmd.go to use a flag that actually exists.")
 		fmt.Fprintln(os.Stderr, "  - Re-run with UPDATE_SNAPSHOTS=1 if you have also intentionally changed help text:")
-		fmt.Fprintln(os.Stderr, "      UPDATE_SNAPSHOTS=1 go test ./internal/cli/ -run TestHelpSnapshots")
+		fmt.Fprintln(os.Stderr, "      UPDATE_SNAPSHOTS=1 go test ./tests/e2e/ -run TestHelpSnapshots")
 		os.Exit(1)
 	}
 	root := cli.RootCmd()
@@ -171,7 +171,7 @@ func checkAllHelp(root *cobra.Command) []string {
 // render it through the same `one --help` path Execute() uses
 // (shouldRenderRootHelp → os.Stdout.WriteString(rootHelp)) by calling
 // the package-level test helper. Since rootHelp is an unexported
-// constant, we expose it only via cli.RootHelp(); see internal/cli.
+// constant, we expose it only via cli.RootHelp(); see internal/bootstrap/cli.
 func rootHelpText() string {
 	return cli.RootHelp()
 }

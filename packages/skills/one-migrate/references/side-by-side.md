@@ -146,7 +146,7 @@ pnpm install                            # picks up all node projects in apps/ser
 
 ```bash
 # Manifest is structurally valid
-cat one.manifest.json | jq '.version'   # → 5
+cat one.manifest.json | jq '.version'   # → 1
 cat one.manifest.json | jq '.projects | length'   # → expected count
 
 # Smoke-test a project end-to-end

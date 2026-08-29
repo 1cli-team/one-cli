@@ -32,19 +32,17 @@ jobs:
       - name: Set up pnpm
         uses: pnpm/action-setup@v4
         with:
-          version: 10.14.0
+          run_install: false
 
       - name: Set up Node
         uses: actions/setup-node@v4
         with:
           node-version: "22"
           cache: pnpm
-          cache-dependency-path: apps/docs/pnpm-lock.yaml
+          cache-dependency-path: pnpm-lock.yaml
 
       - name: Install docs deps
-        working-directory: apps/docs
-        run: pnpm install --frozen-lockfile
+        run: pnpm --filter one-cli-docs install --frozen-lockfile
 
       - name: Build docs site
-        working-directory: apps/docs
-        run: pnpm build
+        run: pnpm docs:build

@@ -23,24 +23,9 @@ SUBCOMMANDS
   env/infisical  env/infisical
 
 TIPS
-新增或更新一个 profile。每个 (domain, backend) 一棵 sub-subcommand,
-分别拥有该 backend 的专属 flag(--site-url / --endpoint / --kubeconfig / ...)。
-
-无参形式(TTY): 进入交互式向导,先选 (domain, backend) 再走对应流程。
-非交互模式(CI / -y): 必须指定 pair 和 --profile,如:
-
-  one configure add env/infisical --profile work --client-id $CID --client-secret $CSEC --use
-  one configure add deploy/aliyun-oss --profile web-prod \
-      --endpoint https://oss-<region>.aliyuncs.com \
-      --region <region> --access-key-id $AK --access-key-secret $SK --use
-  one configure add container/docker --profile prod \
-      --registry <your-registry-host> --namespace <your-namespace> \
-      --username $REGISTRY_USER --password $REGISTRY_TOKEN --use
-
-行为:
-  - 第一次配某个 name → status=completed,自动设为 default
-  - 同名再跑一次     → status=updated(覆盖凭据)
-  - 加 --use         → 显式切到这个 profile
+新增或更新一个 Profile。每个 Backend 的输入字段、默认值和敏感字段
+都来自 Backend Catalog；无参 TTY 调用会先选择 Backend，非交互调用必须显式
+指定 Backend 与 --profile。
 
 COMMON OPTIONS
   -o, --output <value>     Output format: json | yaml | text (default: terminal-friendly text, JSON when piped)

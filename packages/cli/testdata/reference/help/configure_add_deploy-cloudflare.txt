@@ -6,33 +6,21 @@ USAGE
   one configure add deploy/cloudflare [--profile <name>] [flags]
 
 TIPS
-新增或更新 deploy/cloudflare profile。
+新增或更新 deploy/cloudflare Profile。
 
-凭据获取（Cloudflare 后台）：
-  My Profile → API Tokens → Create Token
-  最小权限：Account → Workers Scripts: Edit。覆盖 Pages 静态资源时同时
-  勾选 Account → Cloudflare Pages: Edit。
-
-account-id 字段对应 wrangler 的 CLOUDFLARE_ACCOUNT_ID；多账号 token 必填，
-单账号 token 留空即可（wrangler 会从 token 推断）。
-
-部署时凭据通过 CLOUDFLARE_API_TOKEN / CLOUDFLARE_ACCOUNT_ID 环境变量
-传给 wrangler，**不会**出现在 argv 里。
+字段由 Backend Catalog 提供：
+  --account-id  可选
+  --token  必填
 
 示例：
-  # 交互（推荐）
-  one configure add deploy/cloudflare
+  one configure add deploy/cloudflare --profile work --account-id <account-id> --token <token>
 
-  # 非交互（CI / 脚本）
-  one configure add deploy/cloudflare --profile work \
-      --token $CLOUDFLARE_API_TOKEN \
-      --account-id $CLOUDFLARE_ACCOUNT_ID \
-      --use
+第一次创建会自动成为 default；同名调用会更新，--use 会显式切换 default。
 
 COMMON OPTIONS
-  --account-id <value>     Cloudflare Account ID（可选，多账号 token 必填；dash 右侧栏 Account ID）
+  --account-id <value>     account id
   -o, --output <value>     Output format: json | yaml | text (default: terminal-friendly text, JSON when piped)
-  --token <value>          Cloudflare API token（dash.cloudflare.com → My Profile → API Tokens，需 Edit Workers 权限）
+  --token <value>          token（必填）
   --use                    Make this the current local connection
 
 AUTOMATION AND ADVANCED OPTIONS

@@ -14,27 +14,29 @@
 
 import { AlertTriangle, ArrowRight, FolderTree, Layers, Package } from "lucide-react";
 import type React from "react";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
 import { mutate } from "swr";
-import { type ProfileByPair, upsertProfile } from "@/api/configure";
+import { useBackendCatalog } from "@/api/catalog";
 import { overviewKey } from "@/api/workspace";
 import { MissingConfigDialog } from "@/components/MissingConfigDialog";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
-import { useToast } from "@/hooks/useToast";
-import { type AnyProfile, ProfileForm, emptyProfile } from "@/pages/SectionDetail";
+import {
+	emptyProfile,
+	ProfileEditorDialog,
+	type ProfileEditorTarget,
+} from "@/features/profile-editor/ProfileEditorDialog";
 import type {
+	BackendSpec,
 	Overview as OverviewPayload,
 	OverviewIssue,
 	OverviewIssueDomain,
 	OverviewProjectKind,
 	SectionKey,
 } from "@/types/api";
-import { SECTION_KEYS } from "@/types/api";
 
 const KIND_ICON: Record<OverviewProjectKind, React.ComponentType<{ className?: string }>> = {
 	app: Layers,
@@ -66,41 +68,36 @@ interface FixTarget {
 	kindOptions?: readonly string[];
 }
 
-interface ProfileFixTarget {
-	sectionKey: SectionKey;
-	name: string;
-	mode: "add" | "edit";
-}
-
-function isSectionKey(value: string | undefined): value is SectionKey {
-	return Boolean(value && SECTION_KEYS.includes(value as SectionKey));
-}
-
-function profileIssueSection(issue: OverviewIssue): SectionKey | null {
-	if (isSectionKey(issue.section)) return issue.section;
+function profileIssueSection(
+	issue: OverviewIssue,
+	knownBackends: ReadonlyMap<SectionKey, BackendSpec>,
+): SectionKey | null {
+	if (issue.section && knownBackends.has(issue.section)) return issue.section;
 	const fallback = issue.backend ? `${issue.domain}/${issue.backend}` : undefined;
-	if (isSectionKey(fallback)) return fallback;
+	if (fallback && knownBackends.has(fallback as SectionKey)) return fallback as SectionKey;
 	return null;
 }
 
-function profileIssueLabel(issue: OverviewIssue): string {
-	return profileIssueSection(issue) ?? issue.section ?? `${issue.domain}/${issue.backend ?? ""}`;
+function profileIssueLabel(
+	issue: OverviewIssue,
+	knownBackends: ReadonlyMap<SectionKey, BackendSpec>,
+): string {
+	return (
+		profileIssueSection(issue, knownBackends) ??
+		issue.section ??
+		`${issue.domain}/${issue.backend ?? ""}`
+	);
 }
 
 export const Overview: React.FC<{ data: OverviewPayload }> = ({ data }) => {
 	const { t } = useTranslation();
-	const toast = useToast();
+	const catalog = useBackendCatalog();
 	const ws = data.workspace;
 	const workspaceIssues = sortIssues(data.issues);
 	const projects = data.projects ?? [];
 
 	const [fixTarget, setFixTarget] = useState<FixTarget | null>(null);
-	const [profileFixTarget, setProfileFixTarget] = useState<ProfileFixTarget | null>(null);
-	const [profileDialogSnapshot, setProfileDialogSnapshot] = useState<ProfileFixTarget | null>(null);
-
-	useEffect(() => {
-		if (profileFixTarget) setProfileDialogSnapshot(profileFixTarget);
-	}, [profileFixTarget]);
+	const [profileFixTarget, setProfileFixTarget] = useState<ProfileEditorTarget | null>(null);
 
 	// The mutate endpoints return the rebuilt Overview; push it straight
 	// into the SWR cache (no revalidate) so the page repaints instantly.
@@ -121,39 +118,22 @@ export const Overview: React.FC<{ data: OverviewPayload }> = ({ data }) => {
 
 	const issueBadgeLabel = (issue: OverviewIssue) =>
 		issue.reason === "profile"
-			? profileIssueLabel(issue)
+			? profileIssueLabel(issue, catalog.byID)
 			: t(`overview.issue.label.${issue.domain}`, { defaultValue: issue.domain });
 
 	const openProfileFix = (issue: OverviewIssue) => {
-		const sectionKey = profileIssueSection(issue);
+		const sectionKey = profileIssueSection(issue, catalog.byID);
 		if (!sectionKey) return;
+		const backend = catalog.byID.get(sectionKey);
+		if (!backend) return;
 		setProfileFixTarget({
-			sectionKey,
+			backend,
 			name: issue.profile || "default",
+			profile: emptyProfile(backend),
 			mode: issue.profile ? "edit" : "add",
+			hasDefault: Boolean(issue.profile),
 		});
 	};
-
-	async function handleProfileSubmit(name: string, profile: AnyProfile, use: boolean) {
-		if (!profileFixTarget) return;
-		const [domain, backend] = profileFixTarget.sectionKey.split("/");
-		try {
-			const res = await upsertProfile(domain, backend, {
-				name,
-				profile: profile as ProfileByPair[SectionKey],
-				use,
-			});
-			toast.success(
-				res.status === "updated" ? t("toast.updated", { name }) : t("toast.created", { name }),
-				{ description: res.default ? t("toast.setDefaultAfterSaveHint") : undefined },
-			);
-			setProfileFixTarget(null);
-			void mutate(overviewKey);
-		} catch (err) {
-			const e = err as { code?: string; message: string };
-			toast.error(e.message, { description: e.code });
-		}
-	}
 
 	return (
 		<div className="space-y-6">
@@ -197,7 +177,7 @@ export const Overview: React.FC<{ data: OverviewPayload }> = ({ data }) => {
 							{workspaceIssues.map((iss) => (
 								<li key={issueKey(iss)} className="flex items-center gap-2">
 									<span>{issueText(iss)}</span>
-									{iss.reason === "profile" && profileIssueSection(iss) ? (
+									{iss.reason === "profile" && profileIssueSection(iss, catalog.byID) ? (
 										<button
 											type="button"
 											onClick={() => openProfileFix(iss)}
@@ -278,7 +258,7 @@ export const Overview: React.FC<{ data: OverviewPayload }> = ({ data }) => {
 										{issues.length > 0 ? (
 											<div className="flex flex-wrap gap-1">
 												{issues.map((iss) =>
-													iss.reason === "profile" && profileIssueSection(iss) ? (
+													iss.reason === "profile" && profileIssueSection(iss, catalog.byID) ? (
 														<button
 															key={issueKey(iss)}
 															type="button"
@@ -354,26 +334,15 @@ export const Overview: React.FC<{ data: OverviewPayload }> = ({ data }) => {
 				onUpdated={handleUpdated}
 			/>
 
-			<Dialog
-				open={profileFixTarget !== null}
-				onOpenChange={(next) => {
-					if (!next) setProfileFixTarget(null);
+			<ProfileEditorDialog
+				target={profileFixTarget}
+				onOpenChange={(open) => {
+					if (!open) setProfileFixTarget(null);
 				}}
-			>
-				<DialogContent>
-					{profileDialogSnapshot ? (
-						<ProfileForm
-							sectionKey={profileDialogSnapshot.sectionKey}
-							initialName={profileDialogSnapshot.name}
-							initialProfile={emptyProfile(profileDialogSnapshot.sectionKey)}
-							mode={profileDialogSnapshot.mode}
-							hasDefault={profileDialogSnapshot.mode === "edit"}
-							onCancel={() => setProfileFixTarget(null)}
-							onSubmit={handleProfileSubmit}
-						/>
-					) : null}
-				</DialogContent>
-			</Dialog>
+				onSaved={() => {
+					void mutate(overviewKey);
+				}}
+			/>
 		</div>
 	);
 };

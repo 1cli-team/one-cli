@@ -196,7 +196,7 @@
 		--surface-subtle: rgb(14 23 38 / 0.75);
 		--surface-raised: rgb(14 23 38 / 0.92);
 		--text-muted: var(--muted-foreground);
-		--hero-glow-primary: rgb(234 88 12 / 0.20);
+		--hero-glow-primary: rgb(234 88 12 / 0.2);
 		--hero-glow-info: rgb(19 194 194 / 0.14);
 	}
 }

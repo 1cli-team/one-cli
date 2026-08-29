@@ -6,30 +6,24 @@ USAGE
   one configure add container/dockerhub [--profile <name>] [flags]
 
 TIPS
-新增或更新 container/dockerhub profile（Docker Hub）。
+新增或更新 container/dockerhub Profile。
 
-host 固定为 index.docker.io —— 不需要 --registry。namespace 留空时
-默认等于 username（Docker Hub 的个人 / 组织目录通常等于账号名）。
-
-凭据建议用 Docker Hub 的 Personal Access Token（Account Settings →
-Security → Personal access tokens）而不是登录密码。
+字段由 Backend Catalog 提供：
+  --username  必填
+  --namespace  可选
+  --password  必填
 
 示例：
-  # 交互（推荐）
-  one configure add container/dockerhub
+  one configure add container/dockerhub --profile prod --username <username> --namespace <namespace> --password <password>
 
-  # 非交互（CI / 脚本）
-  one configure add container/dockerhub --profile prod \
-      --username $DOCKER_HUB_USER \
-      --password $DOCKER_HUB_PAT \
-      --namespace my-org --use
+第一次创建会自动成为 default；同名调用会更新，--use 会显式切换 default。
 
 COMMON OPTIONS
-  --namespace <value>      Docker Hub namespace（个人账号名 / 组织名；空则默认等于 username）
+  --namespace <value>      namespace
   -o, --output <value>     Output format: json | yaml | text (default: terminal-friendly text, JSON when piped)
-  --password <value>       Docker Hub access token (PAT)
+  --password <value>       password（必填）
   --use                    Make this the current local connection
-  --username <value>       Docker Hub username
+  --username <value>       username（必填）
 
 AUTOMATION AND ADVANCED OPTIONS
   --profile <value>        Local-connection name (required in non-interactive calls)

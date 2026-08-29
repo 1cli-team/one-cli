@@ -6,28 +6,21 @@ USAGE
   one configure add deploy/vercel [--profile <name>] [flags]
 
 TIPS
-新增或更新 deploy/vercel profile。
+新增或更新 deploy/vercel Profile。
 
-凭据获取（Vercel 后台）：
-  Account Settings → Tokens → Create Token
-  可选 scope：personal 或某个 team。
-
-team 字段对应 vercel CLI 的 --scope；留空 = personal account。
+字段由 Backend Catalog 提供：
+  --team  可选
+  --token  必填
 
 示例：
-  # 交互（推荐）
-  one configure add deploy/vercel
+  one configure add deploy/vercel --profile work --team <team> --token <token>
 
-  # 非交互（CI / 脚本）
-  one configure add deploy/vercel --profile work \
-      --token $VERCEL_TOKEN \
-      --team my-team \
-      --use
+第一次创建会自动成为 default；同名调用会更新，--use 会显式切换 default。
 
 COMMON OPTIONS
   -o, --output <value>     Output format: json | yaml | text (default: terminal-friendly text, JSON when piped)
-  --team <value>           Vercel team / org slug（可选，留空 = personal scope）
-  --token <value>          Vercel API token（vercel.com → Account Settings → Tokens）
+  --team <value>           team
+  --token <value>          token（必填）
   --use                    Make this the current local connection
 
 AUTOMATION AND ADVANCED OPTIONS

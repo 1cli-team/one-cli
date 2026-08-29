@@ -39,20 +39,17 @@ function resolveFromMode(mode: LocaleMode): SupportedLocale {
 	return detectBrowserLocale();
 }
 
-export const useLocaleStore = createStore<LocaleState>(
-	(set) => {
-		const initial = readStored();
-		return {
-			mode: initial,
-			resolved: resolveFromMode(initial),
-			setMode: (m) => {
-				if (typeof localStorage !== "undefined") {
-					localStorage.setItem(STORAGE_KEY, m);
-				}
-				set({ mode: m, resolved: resolveFromMode(m) });
-			},
-			setResolved: (r) => set({ resolved: r }),
-		};
-	},
-	"localeStore",
-);
+export const useLocaleStore = createStore<LocaleState>((set) => {
+	const initial = readStored();
+	return {
+		mode: initial,
+		resolved: resolveFromMode(initial),
+		setMode: (m) => {
+			if (typeof localStorage !== "undefined") {
+				localStorage.setItem(STORAGE_KEY, m);
+			}
+			set({ mode: m, resolved: resolveFromMode(m) });
+		},
+		setResolved: (r) => set({ resolved: r }),
+	};
+}, "localeStore");

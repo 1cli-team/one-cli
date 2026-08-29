@@ -153,7 +153,7 @@ verb-noun-target 习惯。**不保留旧顺序的 alias** — 老脚本会报 `U
   `SchemaRender`
 - `internal/infra/kustomize.Render` / `RenderInput` / `RenderResult` /
   `SchemaRender`
-- `internal/localorch/process.Path` / `PathInput` / `PathResult` /
+- `internal/modules/development/process.Path` / `PathInput` / `PathResult` /
   `SchemaPath`
 
   这些都是 `internal/`，不影响下游 `pkg/` 导入者。
@@ -823,7 +823,7 @@ unaffected; existing snapshot tests passed without modification.
 
 `PROMPT_CANCELLED` (Ctrl-C from a prompt) emits the JSON envelope but
 exits 0 — graceful cancel matches the TS behaviour. New `output.Error`
-field `Exit0` carries that signal from `internal/prompt` to `main()`.
+field `Exit0` carries that signal from `internal/platform/prompt` to `main()`.
 
 ### Also in 0.3.0 — command surface refactor (rolled in from the unreleased pivot)
 

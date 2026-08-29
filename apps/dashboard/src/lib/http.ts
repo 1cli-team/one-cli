@@ -49,7 +49,7 @@ class HttpClient {
 
 		this.instance.interceptors.request.use((config) => {
 			if (sessionToken) {
-				config.params = { ...(config.params ?? {}), token: sessionToken };
+				config.params = { ...config.params, token: sessionToken };
 			}
 			return config;
 		});

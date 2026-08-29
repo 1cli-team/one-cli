@@ -1,13 +1,14 @@
 # PR-time test gate. Keeps the merge path fast while preserving slower
 # compatibility checks on master/manual runs.
 #
-# Two jobs:
-#  - lint: documentation drift, go vet, gofmt cleanliness. The whole bundled
+# Two PR jobs call the same subtasks used by the local `task check` entrypoint:
+#  - lint: `task check:static` covers documentation drift, Go vet/gofmt, and
+#    Dashboard lint/format. The whole bundled
 #    tree (registry/skills/_templates/_web) is gitignored and regenerated
 #    via `task sync-bundled` + `task sync-web`, both of which run as deps
 #    of `task vet` — so vet implicitly bootstraps the bundle here.
-#  - test: Linux PR gate, builds bin/one then runs Go + Dashboard tests.
-#    Build is required because internal/cli/snapshot_e2e_test.go skips when
+#  - test: `task check:test` builds bin/one then runs Go + Dashboard tests.
+#    Build is required because tests/e2e snapshot tests skip when
 #    bin/one is missing. Race + macOS checks run on master/manual triggers only.
 #
 # Both jobs need Node + pnpm because sync-web runs `pnpm install` +
@@ -51,12 +52,16 @@ jobs:
         with:
           go-version-file: packages/cli/go.mod
           cache: true
-          cache-dependency-path: packages/cli/go.sum
+          cache-dependency-path: |
+            go.work
+            go.work.sum
+            packages/cli/go.sum
+            packages/kernel/go.mod
 
       - name: Set up pnpm
         uses: pnpm/action-setup@v4
         with:
-          # packageManager pin in apps/dashboard/package.json drives version selection.
+          # The root packageManager pin drives version selection for every workspace app.
           run_install: false
 
       - name: Set up Node
@@ -64,34 +69,19 @@ jobs:
         with:
           node-version: 20
           cache: pnpm
-          cache-dependency-path: |
-            pnpm-lock.yaml
-            apps/dashboard/pnpm-lock.yaml
+          cache-dependency-path: pnpm-lock.yaml
 
       - name: Install task
         run: go install github.com/go-task/task/v3/cmd/task@latest
 
       - name: Download Go modules
-        working-directory: packages/cli
-        run: go mod download
-
-      - name: Verify documentation in sync
-        run: task verify-docs
-
-      - name: go vet
-        # Implicitly runs sync-bundled + sync-web first, materialising the
-        # gitignored bundle so the //go:embed directives compile.
-        run: task vet
-
-      - name: Check gofmt
-        working-directory: packages/cli
         run: |
-          changed=$(gofmt -l .)
-          if [ -n "$changed" ]; then
-            echo "Files need gofmt — run 'task fmt' locally:" >&2
-            echo "$changed" >&2
-            exit 1
-          fi
+          go -C packages/kernel mod download
+          go -C packages/cli mod download
+
+      - name: Run static gate
+        # Calls the same static subtask as local `task check`.
+        run: task check:static
 
   test:
     runs-on: ubuntu-latest
@@ -103,7 +93,11 @@ jobs:
         with:
           go-version-file: packages/cli/go.mod
           cache: true
-          cache-dependency-path: packages/cli/go.sum
+          cache-dependency-path: |
+            go.work
+            go.work.sum
+            packages/cli/go.sum
+            packages/kernel/go.mod
 
       - name: Set up pnpm
         uses: pnpm/action-setup@v4
@@ -115,26 +109,19 @@ jobs:
         with:
           node-version: 20
           cache: pnpm
-          cache-dependency-path: |
-            pnpm-lock.yaml
-            apps/dashboard/pnpm-lock.yaml
+          cache-dependency-path: pnpm-lock.yaml
 
       - name: Install task
         run: go install github.com/go-task/task/v3/cmd/task@latest
 
       - name: Download Go modules
-        working-directory: packages/cli
-        run: go mod download
+        run: |
+          go -C packages/kernel mod download
+          go -C packages/cli mod download
 
-      - name: Build binary
-        run: task build
-
-      - name: Run tests
-        working-directory: packages/cli
-        run: go test ./...
-
-      - name: Run Dashboard tests
-        run: pnpm --dir apps/dashboard run test
+      - name: Run test gate
+        # Calls the same test subtask as local `task check`.
+        run: task check:test
 
   test-race:
     # Race tests are useful but slow on GitHub-hosted runners. Keep them off
@@ -149,7 +136,11 @@ jobs:
         with:
           go-version-file: packages/cli/go.mod
           cache: true
-          cache-dependency-path: packages/cli/go.sum
+          cache-dependency-path: |
+            go.work
+            go.work.sum
+            packages/cli/go.sum
+            packages/kernel/go.mod
 
       - name: Set up pnpm
         uses: pnpm/action-setup@v4
@@ -161,16 +152,15 @@ jobs:
         with:
           node-version: 20
           cache: pnpm
-          cache-dependency-path: |
-            pnpm-lock.yaml
-            apps/dashboard/pnpm-lock.yaml
+          cache-dependency-path: pnpm-lock.yaml
 
       - name: Install task
         run: go install github.com/go-task/task/v3/cmd/task@latest
 
       - name: Download Go modules
-        working-directory: packages/cli
-        run: go mod download
+        run: |
+          go -C packages/kernel mod download
+          go -C packages/cli mod download
 
       - name: Build binary
         run: task build
@@ -191,7 +181,11 @@ jobs:
         with:
           go-version-file: packages/cli/go.mod
           cache: true
-          cache-dependency-path: packages/cli/go.sum
+          cache-dependency-path: |
+            go.work
+            go.work.sum
+            packages/cli/go.sum
+            packages/kernel/go.mod
 
       - name: Set up pnpm
         uses: pnpm/action-setup@v4
@@ -203,20 +197,15 @@ jobs:
         with:
           node-version: 20
           cache: pnpm
-          cache-dependency-path: |
-            pnpm-lock.yaml
-            apps/dashboard/pnpm-lock.yaml
+          cache-dependency-path: pnpm-lock.yaml
 
       - name: Install task
         run: go install github.com/go-task/task/v3/cmd/task@latest
 
       - name: Download Go modules
-        working-directory: packages/cli
-        run: go mod download
+        run: |
+          go -C packages/kernel mod download
+          go -C packages/cli mod download
 
-      - name: Build binary
-        run: task build
-
-      - name: Run tests
-        working-directory: packages/cli
-        run: go test ./...
+      - name: Run test gate
+        run: task check:test

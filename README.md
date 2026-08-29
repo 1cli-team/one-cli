@@ -145,6 +145,8 @@ If you want to work on One CLI itself, the repository is organized like this:
 Common contributor commands:
 
 ```bash
+pnpm install
+task check
 task build
 task test
 task verify-docs

@@ -5,10 +5,9 @@
 // Run via Taskfile: `task verify-cli-references`. Exits non-zero with a
 // list of file:line offenders on any drift.
 //
-// Source of truth: cobra command tree, accessed via cli.RootCmd(). All
-// side-effect command registrations have run by the time RootCmd()
-// returns, so this stays in sync automatically when commands are added,
-// removed, or renamed.
+// Source of truth: cobra command tree, accessed via cli.RootCmd(). RootCmd
+// returns the explicitly assembled graph, so this stays in sync automatically
+// when commands are added, removed, or renamed.
 //
 // What we scan:
 //   - Top-level: README.md, CLAUDE.md, CONTRIBUTING.md
@@ -40,7 +39,7 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/torchstellar-team/one-cli/packages/cli/internal/cli"
+	"github.com/torchstellar-team/one-cli/packages/cli/internal/bootstrap/cli"
 )
 
 func main() {

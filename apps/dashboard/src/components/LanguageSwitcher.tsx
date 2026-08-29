@@ -45,14 +45,8 @@ export function LanguageSwitcher() {
 			</DropdownMenuTrigger>
 			<DropdownMenuContent align="end" sideOffset={6}>
 				{OPTIONS.map((opt) => (
-					<DropdownMenuItem
-						key={opt.mode}
-						onSelect={() => setMode(opt.mode)}
-						className="gap-2"
-					>
-						<Check
-							className={`h-3.5 w-3.5 ${mode === opt.mode ? "opacity-100" : "opacity-0"}`}
-						/>
+					<DropdownMenuItem key={opt.mode} onSelect={() => setMode(opt.mode)} className="gap-2">
+						<Check className={`h-3.5 w-3.5 ${mode === opt.mode ? "opacity-100" : "opacity-0"}`} />
 						<span>{t(opt.labelKey)}</span>
 					</DropdownMenuItem>
 				))}

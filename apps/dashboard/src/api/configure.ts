@@ -4,41 +4,13 @@
 
 import http from "@/lib/http";
 import type {
-	CloudflareProfile,
+	AnyProfile,
 	ConfigResponse,
-	ContainerProfile,
-	DotenvProfile,
-	EdgeOneProfile,
-	InfisicalProfile,
-	KustomizeProfile,
 	RemoveResponse,
-	S3Profile,
 	SectionResponse,
 	UpsertResponse,
 	UseResponse,
-	VercelProfile,
 } from "@/types/api";
-
-// AnyTypedSection is the union the section-fetch funcs return — narrowed
-// at the call site by the caller's choice of section.
-export type ProfileByPair = {
-	"env/infisical": InfisicalProfile;
-	"env/dotenv": DotenvProfile;
-	"deploy/aliyun-oss": S3Profile;
-	"deploy/tencent-cos": S3Profile;
-	"deploy/aws-s3": S3Profile;
-	"deploy/minio": S3Profile;
-	"deploy/rustfs": S3Profile;
-	"deploy/r2": S3Profile;
-	"deploy/kustomize": KustomizeProfile;
-	"deploy/vercel": VercelProfile;
-	"deploy/cloudflare": CloudflareProfile;
-	"deploy/edgeone": EdgeOneProfile;
-	"container/docker": ContainerProfile;
-	"container/dockerhub": ContainerProfile;
-	"container/ghcr": ContainerProfile;
-	"container/acr": ContainerProfile;
-};
 
 export const configKey = "/configure";
 
@@ -52,20 +24,20 @@ export function sectionKey(domain: string, backend: string, reveal = false): str
 	return `/configure/${domain}/${backend}` + (reveal ? "?reveal=1" : "");
 }
 
-export async function getSection<K extends keyof ProfileByPair>(
+export async function getSection(
 	domain: string,
 	backend: string,
 	reveal = false,
-): Promise<SectionResponse<ProfileByPair[K]>> {
-	return http.get<SectionResponse<ProfileByPair[K]>>(`/configure/${domain}/${backend}`, {
+): Promise<SectionResponse<AnyProfile>> {
+	return http.get<SectionResponse<AnyProfile>>(`/configure/${domain}/${backend}`, {
 		params: reveal ? { reveal: 1 } : undefined,
 	});
 }
 
-export async function upsertProfile<K extends keyof ProfileByPair>(
+export async function upsertProfile(
 	domain: string,
 	backend: string,
-	body: { name: string; profile: ProfileByPair[K]; use?: boolean },
+	body: { name: string; profile: AnyProfile; use?: boolean },
 ): Promise<UpsertResponse> {
 	return http.post<UpsertResponse>(`/configure/${domain}/${backend}`, body);
 }
@@ -75,9 +47,7 @@ export async function removeProfile(
 	backend: string,
 	name: string,
 ): Promise<RemoveResponse> {
-	return http.delete<RemoveResponse>(
-		`/configure/${domain}/${backend}/${encodeURIComponent(name)}`,
-	);
+	return http.delete<RemoveResponse>(`/configure/${domain}/${backend}/${encodeURIComponent(name)}`);
 }
 
 export async function setDefault(

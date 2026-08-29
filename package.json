@@ -3,6 +3,7 @@
   "private": true,
   "packageManager": "pnpm@10.14.0",
   "scripts": {
+    "check": "task check",
     "docs:dev": "pnpm --filter one-cli-docs dev",
     "docs:build": "pnpm --filter one-cli-docs build"
   }

@@ -1,7 +1,7 @@
 # `one.manifest.json` — Schema v1 Reference for Hand-Writing
 
 The CLI's read path is the source of truth:
-`packages/cli/internal/workspace/manifest.go`. Anything that
+`packages/cli/internal/core/workspace/manifest.go`. Anything that
 disagrees with that file is wrong. This page is the
 "copy-paste a valid manifest" cheat sheet you need when migrating —
 `one create` writes a minimal manifest and `one add` extends it, but
@@ -173,7 +173,7 @@ in the manifest — round-tripping may drop unknown fields.
 ## Generating `workspace.id`
 
 `one create` calls `workspace.GenerateProjectID(name)`
-(`packages/cli/internal/workspace/strings.go:61`): kebab-case the
+(`packages/cli/internal/core/workspace/strings.go`): kebab-case the
 name, append 6 hex chars (`crypto/rand`). When you write a manifest
 by hand:
 
@@ -212,7 +212,7 @@ For a Go project: drop `packageManager`, set `"toolchain": "go"`.
 ## Validating after a write
 
 ```bash
-cat one.manifest.json | jq '.version'              # → 5
+cat one.manifest.json | jq '.version'              # → 1
 cat one.manifest.json | jq '.workspace.name'       # → expected string
 cat one.manifest.json | jq '.projects | length'    # → expected count
 

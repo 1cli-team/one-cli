@@ -146,5 +146,5 @@ For the complete code → recovery mapping see `references/REFERENCE.md`.
 ## References
 
 - One CLI repo: <https://github.com/1cli-team/one-cli>
-- Error code reference: <https://github.com/1cli-team/one-cli/blob/master/packages/cli/internal/errors/codes.go> (Codes registry — source of truth)
+- Error code reference: <https://github.com/1cli-team/one-cli/blob/master/packages/cli/internal/platform/errors/codes.go> (Codes registry — source of truth)
 - Agent Skills format spec: <https://agentskills.io/specification>

@@ -7,19 +7,17 @@ import type React from "react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
 import useSWR from "swr";
+import { BACKEND_DOMAINS, humanizeBackendName, useBackendCatalog } from "@/api/catalog";
 import { configKey, getConfig } from "@/api/configure";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-	type Config,
-	SECTION_DOMAINS,
-	SECTION_KEYS_BY_DOMAIN,
-	SECTION_META,
-	type SectionKey,
-} from "@/types/api";
+import type { Config, SectionKey } from "@/types/api";
 
-function defaultFor(cfg: Config | undefined, key: SectionKey): { defaultName: string; count: number } {
+function defaultFor(
+	cfg: Config | undefined,
+	key: SectionKey,
+): { defaultName: string; count: number } {
 	if (!cfg) return { defaultName: "", count: 0 };
 	const sec = cfg[key];
 	return {
@@ -31,6 +29,7 @@ function defaultFor(cfg: Config | undefined, key: SectionKey): { defaultName: st
 export const SectionsHome: React.FC = () => {
 	const { t } = useTranslation();
 	const { data, error, isLoading } = useSWR(configKey, () => getConfig(false));
+	const catalog = useBackendCatalog();
 
 	// Auth comes from EITHER ?token= on the initial URL OR a one_serve_token
 	// cookie the Go landing handler drops on first GET /. The cookie is
@@ -40,13 +39,13 @@ export const SectionsHome: React.FC = () => {
 	// We let the API request go through and surface any real 401 via the
 	// error branch below.
 
-	if (error) {
+	if (error || catalog.error) {
 		return (
 			<Alert variant="destructive">
 				<AlertTitle>{t("home.loadFailedTitle")}</AlertTitle>
 				<AlertDescription>
-					{error.message}
-					{error.code ? <span className="ml-2 text-xs opacity-75">[{error.code}]</span> : null}
+					{(error ?? catalog.error).message}
+					{error?.code ? <span className="ml-2 text-xs opacity-75">[{error.code}]</span> : null}
 				</AlertDescription>
 			</Alert>
 		);
@@ -56,9 +55,11 @@ export const SectionsHome: React.FC = () => {
 		<div className="space-y-8">
 			<h1 className="text-xl font-semibold tracking-tight">{t("home.title")}</h1>
 
-			{SECTION_DOMAINS.map((domain) => {
-				const keys = SECTION_KEYS_BY_DOMAIN[domain];
-				if (keys.length === 0) return null;
+			{BACKEND_DOMAINS.map((domain) => {
+				const backends = (catalog.byDomain.get(domain) ?? []).filter(
+					(backend) => backend.profile.configurable,
+				);
+				if (backends.length === 0) return null;
 				const groupLabel = t(`sections.groupLabel.${domain}`, { defaultValue: domain });
 				return (
 					<section key={domain} className="space-y-3">
@@ -69,19 +70,18 @@ export const SectionsHome: React.FC = () => {
 							<span className="text-[11px] text-muted-foreground/60 font-mono">{domain}</span>
 						</div>
 						<div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
-							{keys.map((key) => {
-								const meta = SECTION_META[key];
-								const { defaultName, count } = defaultFor(data?.config, key);
-								const title = t(`sections.${meta.domain}.${meta.backend}.title`, {
-									defaultValue: meta.title,
+							{backends.map((backend) => {
+								const { defaultName, count } = defaultFor(data?.config, backend.id);
+								const title = t(`sections.${backend.domain}.${backend.name}.title`, {
+									defaultValue: humanizeBackendName(backend.name),
 								});
-								const description = t(`sections.${meta.domain}.${meta.backend}.description`, {
-									defaultValue: meta.description,
+								const description = t(`sections.${backend.domain}.${backend.name}.description`, {
+									defaultValue: backend.id,
 								});
 								return (
 									<Link
-										key={key}
-										to={`/section/${meta.domain}/${meta.backend}`}
+										key={backend.id}
+										to={`/section/${backend.domain}/${backend.name}`}
 										className="group rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
 									>
 										<Card className="h-full transition-colors hover:border-primary/50">
@@ -93,7 +93,7 @@ export const SectionsHome: React.FC = () => {
 															<span className="truncate">{title}</span>
 														</CardTitle>
 														<p className="text-[11px] font-mono text-muted-foreground">
-															{meta.key}
+															{backend.id}
 														</p>
 														<CardDescription>{description}</CardDescription>
 													</div>
@@ -112,7 +112,7 @@ export const SectionsHome: React.FC = () => {
 												) : (
 													<span className="text-muted-foreground">{t("home.noDefault")}</span>
 												)}
-												{isLoading ? (
+												{isLoading || catalog.isLoading ? (
 													<span className="text-muted-foreground">{t("home.loading")}</span>
 												) : null}
 											</CardContent>

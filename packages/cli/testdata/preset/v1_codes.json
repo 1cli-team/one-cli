@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "doc": "Frozen v1 preset code table. Entries here are LOAD-BEARING: once a (code, id) pair lands, it never changes. Tests in packages/cli/internal/preset/codes_test.go enforce this — additions are allowed, renames and removals fail CI.",
+  "doc": "Frozen v1 preset code table. Entries here are LOAD-BEARING: once a (code, id) pair lands, it never changes. Tests in packages/cli/internal/modules/preset/codes_test.go enforce this — additions are allowed, renames and removals fail CI.",
   "templates": [
     { "code": "as", "template_id": "astro-site" },
     { "code": "ea", "template_id": "electron-app" },

@@ -3,7 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { HttpResponse, http } from "msw";
 import { setupServer } from "msw/node";
 import { MemoryRouter } from "react-router-dom";
-import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import i18n from "@/lib/i18n";
 import { Overview } from "@/pages/Overview";
 import type { Overview as OverviewPayload } from "@/types/api";
@@ -14,6 +14,13 @@ describe("workspace overview", () => {
 	beforeAll(async () => {
 		server.listen({ onUnhandledRequest: "error" });
 		await i18n.changeLanguage("en-US");
+	});
+	beforeEach(() => {
+		server.use(
+			http.get("http://localhost/api/catalog", () =>
+				HttpResponse.json({ schema: "one-cli/catalog/v1", backends: [] }),
+			),
+		);
 	});
 	afterEach(() => server.resetHandlers());
 	afterAll(() => server.close());

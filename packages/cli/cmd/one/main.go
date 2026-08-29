@@ -1,13 +1,13 @@
 // Command one is the AI Native monorepo workspace orchestrator. This is the
-// thin CLI entry point — the actual command handlers live in internal/cli.
+// thin CLI entry point — the actual command handlers live in internal/bootstrap/cli.
 package main
 
 import (
 	"errors"
 	"os"
 
-	"github.com/torchstellar-team/one-cli/packages/cli/internal/cli"
-	"github.com/torchstellar-team/one-cli/packages/cli/internal/output"
+	"github.com/torchstellar-team/one-cli/packages/cli/internal/bootstrap/cli"
+	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/output"
 )
 
 // version is overridden at build time via -ldflags. The default matches

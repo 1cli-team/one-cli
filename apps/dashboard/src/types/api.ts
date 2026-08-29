@@ -1,238 +1,49 @@
-// types/api.ts mirrors the Go shapes in internal/profile + the response
-// envelopes in internal/serve/handlers_profile.go. Keep in sync — when the
-// Go side adds a field, surface it here.
+// types/api.ts mirrors the transport-neutral shapes exposed by the Go
+// application layer. Backend identities and profile fields intentionally come
+// from GET /api/catalog instead of a second hard-coded frontend registry.
 
-// ──────────────────────────── per-backend profile types ─────────────────
-
-export interface InfisicalCredentials {
-	clientId: string;
-	clientSecret: string;
+export type BackendDomain = "env" | "deploy" | "container";
+export type SectionKey = `${BackendDomain}/${string}`;
+export type ProfileValue = string | number | boolean | null | AnyProfile | ProfileValue[];
+export interface AnyProfile {
+	[key: string]: ProfileValue | undefined;
 }
 
-export interface InfisicalProfile {
-	siteUrl: string;
-	credentials?: InfisicalCredentials;
+export type BackendFieldType = "string" | "secret" | "boolean";
+
+export interface BackendFieldSpec {
+	path: string;
+	input_name: string;
+	type: BackendFieldType;
+	label_key: string;
+	required?: boolean;
+	placeholder?: string;
+	default?: ProfileValue;
 }
 
-export interface S3Credentials {
-	accessKeyId: string;
-	accessKeySecret: string;
+export interface BackendRequirement {
+	kind: "binary" | "capability" | "profile";
+	name: string;
+	optional?: boolean;
 }
 
-export interface S3Profile {
-	endpoint?: string;
-	region?: string;
-	forcePathStyle?: boolean;
-	credentials?: S3Credentials;
+export interface BackendSpec {
+	id: SectionKey;
+	domain: BackendDomain;
+	name: string;
+	capabilities: string[];
+	traits?: string[];
+	requirements?: BackendRequirement[];
+	profile: {
+		configurable: boolean;
+		fields?: BackendFieldSpec[];
+	};
 }
 
-export interface KustomizeProfile {
-	kubeconfigPath?: string;
-	kubeconfigContext?: string;
+export interface CatalogResponse {
+	schema: "one-cli/catalog/v1";
+	backends: BackendSpec[];
 }
-
-// Dotenv carries no fields today; keep the type so the wire shape stays
-// uniform across sections (handler still accepts {} for the body).
-export type DotenvProfile = Record<string, never>;
-
-export interface ContainerCredentials {
-	username: string;
-	password: string;
-}
-
-// ContainerProfile is shared across all four container backend kinds
-// (docker / dockerhub / ghcr / acr). Only `docker` reads `registry`;
-// `acr` reads `region` (host is derived from it); `dockerhub` and
-// `ghcr` ignore both (host is fixed). Mirrors profile.ContainerProfile
-// in packages/cli/internal/profile/types.go.
-export interface ContainerProfile {
-	registry?: string;
-	region?: string;
-	namespace?: string;
-	credentials?: ContainerCredentials;
-}
-
-export interface VercelCredentials {
-	apiToken: string;
-}
-
-export interface VercelProfile {
-	team?: string;
-	credentials?: VercelCredentials;
-}
-
-export interface CloudflareCredentials {
-	apiToken: string;
-}
-
-export interface CloudflareProfile {
-	accountId?: string;
-	credentials?: CloudflareCredentials;
-}
-
-export interface EdgeOneCredentials {
-	apiToken: string;
-}
-
-export interface EdgeOneProfile {
-	region?: string;
-	credentials?: EdgeOneCredentials;
-}
-
-// ──────────────────────────── (domain, backend) pairs ───────────────────
-
-export const SECTION_KEYS = [
-	"env/infisical",
-	"deploy/aliyun-oss",
-	"deploy/tencent-cos",
-	"deploy/aws-s3",
-	"deploy/minio",
-	"deploy/rustfs",
-	"deploy/r2",
-	"deploy/kustomize",
-	"deploy/vercel",
-	"deploy/cloudflare",
-	"deploy/edgeone",
-	"container/docker",
-	"container/dockerhub",
-	"container/ghcr",
-	"container/acr",
-] as const;
-
-export type SectionKey = (typeof SECTION_KEYS)[number];
-
-// Canonical order for grouping the sidebar / home grid by domain.
-export const SECTION_DOMAINS = ["env", "deploy", "container"] as const;
-export type SectionDomain = (typeof SECTION_DOMAINS)[number];
-
-// SECTION_KEYS_BY_DOMAIN preserves the SECTION_KEYS within-group order
-// (which is also the canonical CLI display order). Empty arrays are
-// possible if a domain has every backend stripped (env after PR 2
-// removes dotenv, container has just docker — both still non-empty).
-export const SECTION_KEYS_BY_DOMAIN: Record<SectionDomain, SectionKey[]> = {
-	env: SECTION_KEYS.filter((k) => k.startsWith("env/")),
-	deploy: SECTION_KEYS.filter((k) => k.startsWith("deploy/")),
-	container: SECTION_KEYS.filter((k) => k.startsWith("container/")),
-};
-
-// SectionMeta describes one (domain, backend) pair for the list view.
-// Labels are zh-CN to match the rest of the CLI's user-facing strings.
-export interface SectionMeta {
-	key: SectionKey;
-	domain: "env" | "deploy" | "container";
-	backend: string;
-	title: string;
-	description: string;
-}
-
-export const SECTION_META: Record<SectionKey, SectionMeta> = {
-	"env/infisical": {
-		key: "env/infisical",
-		domain: "env",
-		backend: "infisical",
-		title: "Infisical",
-		description: "Universal Auth 凭据 + Infisical site URL（env 域）",
-	},
-	"deploy/aliyun-oss": {
-		key: "deploy/aliyun-oss",
-		domain: "deploy",
-		backend: "aliyun-oss",
-		title: "Aliyun OSS",
-		description: "阿里云 OSS endpoint + AK/SK（deploy 域，S3 协议）",
-	},
-	"deploy/tencent-cos": {
-		key: "deploy/tencent-cos",
-		domain: "deploy",
-		backend: "tencent-cos",
-		title: "Tencent COS",
-		description: "腾讯云 COS endpoint + AK/SK（deploy 域，S3 协议）",
-	},
-	"deploy/aws-s3": {
-		key: "deploy/aws-s3",
-		domain: "deploy",
-		backend: "aws-s3",
-		title: "AWS S3",
-		description: "AWS S3 region + AK/SK（deploy 域；endpoint 留空走 SDK 默认）",
-	},
-	"deploy/minio": {
-		key: "deploy/minio",
-		domain: "deploy",
-		backend: "minio",
-		title: "MinIO",
-		description: "MinIO 自部署对象存储（deploy 域，path-style 寻址）",
-	},
-	"deploy/rustfs": {
-		key: "deploy/rustfs",
-		domain: "deploy",
-		backend: "rustfs",
-		title: "RustFS",
-		description: "RustFS 自部署对象存储（deploy 域，path-style 寻址）",
-	},
-	"deploy/r2": {
-		key: "deploy/r2",
-		domain: "deploy",
-		backend: "r2",
-		title: "Cloudflare R2",
-		description: "Cloudflare R2 endpoint + AK/SK（deploy 域）",
-	},
-	"deploy/kustomize": {
-		key: "deploy/kustomize",
-		domain: "deploy",
-		backend: "kustomize",
-		title: "Kustomize",
-		description: "kubeconfig context（deploy 域）",
-	},
-	"deploy/vercel": {
-		key: "deploy/vercel",
-		domain: "deploy",
-		backend: "vercel",
-		title: "Vercel",
-		description: "Vercel API token + 可选 team slug（deploy 域）",
-	},
-	"deploy/cloudflare": {
-		key: "deploy/cloudflare",
-		domain: "deploy",
-		backend: "cloudflare",
-		title: "Cloudflare",
-		description: "Cloudflare API token + 可选 account ID（deploy 域）",
-	},
-	"deploy/edgeone": {
-		key: "deploy/edgeone",
-		domain: "deploy",
-		backend: "edgeone",
-		title: "EdgeOne Pages",
-		description: "Tencent EdgeOne Pages token + 可选 region（deploy 域）",
-	},
-	"container/docker": {
-		key: "container/docker",
-		domain: "container",
-		backend: "docker",
-		title: "Docker Registry",
-		description: "通用 Docker registry 协议（自建 Harbor / Quay / 任意私有 registry）",
-	},
-	"container/dockerhub": {
-		key: "container/dockerhub",
-		domain: "container",
-		backend: "dockerhub",
-		title: "Docker Hub",
-		description: "Docker Hub（host 固定 index.docker.io；username + PAT）",
-	},
-	"container/ghcr": {
-		key: "container/ghcr",
-		domain: "container",
-		backend: "ghcr",
-		title: "GitHub Container Registry",
-		description: "GHCR（host 固定 ghcr.io；GitHub PAT，需 write:packages）",
-	},
-	"container/acr": {
-		key: "container/acr",
-		domain: "container",
-		backend: "acr",
-		title: "Aliyun ACR",
-		description:
-			"阿里云 Container Registry（host 由 region 派生为 registry.<region>.aliyuncs.com）",
-	},
-};
 
 // ──────────────────────────── per-section payload shape ─────────────────
 
@@ -241,25 +52,7 @@ export interface Section<T> {
 	profiles?: Record<string, T>;
 }
 
-export interface Config {
-	version: number;
-	"env/infisical"?: Section<InfisicalProfile>;
-	"env/dotenv"?: Section<DotenvProfile>;
-	"deploy/aliyun-oss"?: Section<S3Profile>;
-	"deploy/tencent-cos"?: Section<S3Profile>;
-	"deploy/aws-s3"?: Section<S3Profile>;
-	"deploy/minio"?: Section<S3Profile>;
-	"deploy/rustfs"?: Section<S3Profile>;
-	"deploy/r2"?: Section<S3Profile>;
-	"deploy/kustomize"?: Section<KustomizeProfile>;
-	"deploy/vercel"?: Section<VercelProfile>;
-	"deploy/cloudflare"?: Section<CloudflareProfile>;
-	"deploy/edgeone"?: Section<EdgeOneProfile>;
-	"container/docker"?: Section<ContainerProfile>;
-	"container/dockerhub"?: Section<ContainerProfile>;
-	"container/ghcr"?: Section<ContainerProfile>;
-	"container/acr"?: Section<ContainerProfile>;
-}
+export type Config = { version: number } & Partial<Record<SectionKey, Section<AnyProfile>>>;
 
 // ──────────────────────────── server response envelopes ─────────────────
 
@@ -384,21 +177,3 @@ export interface Overview {
 	projects?: OverviewProject[];
 	issues?: OverviewIssue[];
 }
-
-// Backend kinds accepted by the manifest-mutate endpoints in
-// internal/serve/handlers_workspace_mutate.go. Kept in sync by hand with
-// the knownEnvKinds / knownDeployKinds / knownContainerKinds maps there.
-export const ENV_KINDS = ["dotenv", "infisical"] as const;
-export const DEPLOY_KINDS = [
-	"kustomize",
-	"vercel",
-	"cloudflare",
-	"edgeone",
-	"aws-s3",
-	"aliyun-oss",
-	"tencent-cos",
-	"minio",
-	"rustfs",
-	"r2",
-] as const;
-export const CONTAINER_KINDS = ["docker", "dockerhub", "ghcr", "acr"] as const;

@@ -2,8 +2,9 @@ import { ChevronRight } from "lucide-react";
 import type React from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useMatch } from "react-router-dom";
+import { humanizeBackendName, useBackendCatalog } from "@/api/catalog";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
-import { SECTION_META, type SectionKey } from "@/types/api";
+import type { SectionKey } from "@/types/api";
 
 export const TopBar: React.FC = () => {
 	const sectionMatch = useMatch("/section/:domain/:backend");
@@ -37,10 +38,13 @@ const ProfileCrumb: React.FC = () => {
 
 const SectionCrumb: React.FC<{ match: { domain?: string; backend?: string } }> = ({ match }) => {
 	const { t } = useTranslation();
+	const catalog = useBackendCatalog();
 	const key = `${match.domain ?? ""}/${match.backend ?? ""}` as SectionKey;
-	const meta = SECTION_META[key];
-	const title = meta
-		? t(`sections.${meta.domain}.${meta.backend}.title`, { defaultValue: meta.title })
+	const backend = catalog.byID.get(key);
+	const title = backend
+		? t(`sections.${backend.domain}.${backend.name}.title`, {
+				defaultValue: humanizeBackendName(backend.name),
+			})
 		: key;
 	return (
 		<>
@@ -49,8 +53,8 @@ const SectionCrumb: React.FC<{ match: { domain?: string; backend?: string } }> =
 			</Link>
 			<ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />
 			<span className="font-medium text-foreground">{title}</span>
-			{meta ? (
-				<span className="ml-1.5 text-xs font-normal text-muted-foreground">{meta.key}</span>
+			{backend ? (
+				<span className="ml-1.5 text-xs font-normal text-muted-foreground">{backend.id}</span>
 			) : null}
 		</>
 	);

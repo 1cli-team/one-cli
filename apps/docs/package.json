@@ -35,6 +35,5 @@
     "postcss": "^8.5.0",
     "tailwindcss": "^4.0.0",
     "typescript": "^5.7.0"
-  },
-  "packageManager": "pnpm@10.14.0"
+  }
 }

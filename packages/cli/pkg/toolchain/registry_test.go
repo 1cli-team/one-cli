@@ -4,12 +4,11 @@ import (
 	"sort"
 	"testing"
 
-	// Side-effect import: bundled adapters register themselves on init.
-	// We deliberately import the public API only, mirroring how
-	// downstream consumers will write tests.
-	_ "github.com/torchstellar-team/one-cli/packages/cli/internal/toolchain"
+	internaltoolchain "github.com/torchstellar-team/one-cli/packages/cli/internal/adapters/toolchain"
 	"github.com/torchstellar-team/one-cli/packages/cli/pkg/toolchain"
 )
+
+func init() { internaltoolchain.RegisterBundled() }
 
 func TestRegistry_BundledAdaptersPresent(t *testing.T) {
 	got := toolchain.Registered()
