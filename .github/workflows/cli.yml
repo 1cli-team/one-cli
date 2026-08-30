@@ -158,16 +158,24 @@ jobs:
           task --force verify-versions
           git diff --check
 
-          expected_files=$(printf '%s\n' \
+          required_files=$(printf '%s\n' \
             VERSION \
-            go.work.sum \
             packages/skills/one-cli/SKILL.md \
             apps/docs/content/docs/en/installation.md \
             apps/docs/content/docs/zh/installation.md | sort)
+          allowed_optional_files=$(printf '%s\n' \
+            go.work.sum)
           actual_files=$(git diff --name-only | sort)
-          if [[ "$actual_files" != "$expected_files" ]]; then
+          unexpected=$(comm -23 \
+            <(printf '%s\n' "$actual_files") \
+            <(printf '%s\n' "$required_files" "$allowed_optional_files" | sort))
+          missing=$(comm -23 \
+            <(printf '%s\n' "$required_files") \
+            <(printf '%s\n' "$actual_files"))
+          if [[ -n "$unexpected" || -n "$missing" ]]; then
             echo "Version synchronization changed an unexpected file set." >&2
-            diff -u <(printf '%s\n' "$expected_files") <(printf '%s\n' "$actual_files") || true
+            [[ -n "$unexpected" ]] && echo "Unexpected: $unexpected" >&2
+            [[ -n "$missing" ]] && echo "Missing: $missing" >&2
             exit 1
           fi
 
@@ -184,10 +192,10 @@ jobs:
           git switch -c "$BRANCH"
           git add \
             VERSION \
-            go.work.sum \
             packages/skills/one-cli/SKILL.md \
             apps/docs/content/docs/en/installation.md \
             apps/docs/content/docs/zh/installation.md
+          git diff --quiet go.work.sum 2>/dev/null || git add go.work.sum
           git commit -m "chore: bump version to ${TAG#v}"
           git push origin "HEAD:refs/heads/${BRANCH}"
 
