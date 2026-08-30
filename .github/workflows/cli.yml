@@ -212,10 +212,11 @@ jobs:
               [[ "$candidate" =~ ^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]] || continue
               candidate_release="$(jq -c --arg tag "$candidate" \
                 '[.[][] | select(.tag_name == $tag)][0] // empty' <<< "$releases_json")"
-              if [[ -n "$candidate_release" &&
-                "$(jq -r '[.draft, .prerelease] | @tsv' <<< "$candidate_release")" == $'false\tfalse' ]]; then
-                latest_published_tag="$candidate"
-                break
+              if [[ -n "$candidate_release" ]]; then
+                if [[ "$(jq -r '[.draft, .prerelease] | @tsv' <<< "$candidate_release")" == $'false\tfalse' ]]; then
+                  latest_published_tag="$candidate"
+                  break
+                fi
               fi
             done < <(git tag --list 'v*' --sort=-version:refname)
 
