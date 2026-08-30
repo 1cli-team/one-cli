@@ -142,7 +142,7 @@ one configure add container/ghcr --profile ghcr        # GHCR username + PAT
 例：装一个特定旧版本到自定义目录：
 
 ```bash
-curl -fsSL https://1cli.dev/install.sh | ONE_VERSION=v0.1.1 ONE_INSTALL_DIR=/opt/bin bash
+curl -fsSL https://1cli.dev/install.sh | ONE_VERSION=v0.1.0 ONE_INSTALL_DIR=/opt/bin bash
 ```
 
 ## 卸载
