@@ -9,7 +9,9 @@ package profile
 // config.json.
 
 import (
+	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -356,5 +358,282 @@ func TestRemove_ClearsCache(t *testing.T) {
 	cachePath, _ := CachePath(DomainEnv, "infisical", "work")
 	if _, err := os.Stat(cachePath); !os.IsNotExist(err) {
 		t.Errorf("cache file should be gone after remove, stat err=%v", err)
+	}
+}
+
+func TestRemove_RejectsEnvironmentBindingsThenCleansLegacyAfterUnbind(t *testing.T) {
+	withIsolatedConfig(t)
+	firstRoot := t.TempDir()
+	secondRoot := t.TempDir()
+	for _, root := range []string{firstRoot, secondRoot} {
+		if err := os.WriteFile(filepath.Join(root, "sentinel.txt"), []byte("repository\n"), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	seedInfisicalProfiles(t, "removed", "kept")
+	if _, err := Upsert(DomainDeploy, "vercel", "removed", Profile{
+		Backend: "vercel",
+		Vercel: &VercelProfile{Credentials: &VercelCredentials{
+			APIToken: "same-name-other-section",
+		}},
+	}, false); err != nil {
+		t.Fatal(err)
+	}
+	if err := SetDefault(DomainEnv, "infisical", "kept"); err != nil {
+		t.Fatal(err)
+	}
+
+	for _, binding := range []struct {
+		workspaceID string
+		root        string
+		project     string
+		environment string
+		name        string
+	}{
+		{"first", firstRoot, "", "dev", "removed"},
+		{"first", firstRoot, "web", "preview", "removed"},
+		{"first", firstRoot, "api", "preview", "kept"},
+		{"second", secondRoot, "web", "prod", "removed"},
+	} {
+		if err := BindEnvironmentProfile(
+			binding.workspaceID, binding.workspaceID, binding.root, binding.project,
+			binding.environment, DomainEnv, "infisical", binding.name,
+		); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := BindEnvironmentProfile(
+		"first", "first", firstRoot, "web", "preview",
+		DomainDeploy, "vercel", "removed",
+	); err != nil {
+		t.Fatal(err)
+	}
+	for _, binding := range []struct {
+		workspaceID string
+		root        string
+		project     string
+		name        string
+	}{
+		{"first", firstRoot, "", "removed"},
+		{"first", firstRoot, "web", "removed"},
+		{"first", firstRoot, "api", "kept"},
+		{"second", secondRoot, "web", "removed"},
+	} {
+		if err := BindWorkspaceProfile(
+			binding.workspaceID, binding.workspaceID, binding.root, binding.project,
+			DomainEnv, "infisical", binding.name,
+		); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := BindWorkspaceProfile(
+		"first", "first", firstRoot, "web", DomainDeploy, "vercel", "removed",
+	); err != nil {
+		t.Fatal(err)
+	}
+	if err := WriteCache(DomainEnv, "infisical", "removed", &CacheEntry{
+		Token: "still-valid", ExpiresAt: time.Now().Add(time.Hour),
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	configPath, err := ConfigPath()
+	if err != nil {
+		t.Fatal(err)
+	}
+	credentialsPath, err := CredentialsPath()
+	if err != nil {
+		t.Fatal(err)
+	}
+	bindingsPath, err := BindingsPath()
+	if err != nil {
+		t.Fatal(err)
+	}
+	cachePath, err := CachePath(DomainEnv, "infisical", "removed")
+	if err != nil {
+		t.Fatal(err)
+	}
+	localPaths := []string{configPath, credentialsPath, bindingsPath, cachePath}
+	beforeRejectedRemove := make(map[string][]byte, len(localPaths))
+	for _, path := range localPaths {
+		beforeRejectedRemove[path], err = os.ReadFile(path)
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	err = Remove(DomainEnv, "infisical", "removed")
+	var coded interface{ ErrorCode() string }
+	if !errors.As(err, &coded) || coded.ErrorCode() != "PROFILE_IN_USE" {
+		t.Fatalf("remove error = %v, want PROFILE_IN_USE", err)
+	}
+	for _, path := range localPaths {
+		after, readErr := os.ReadFile(path)
+		if readErr != nil {
+			t.Fatal(readErr)
+		}
+		if !bytes.Equal(after, beforeRejectedRemove[path]) {
+			t.Fatalf("rejected remove changed %s", path)
+		}
+	}
+
+	targetBindings := []struct {
+		root, project, environment string
+	}{
+		{firstRoot, "", "dev"},
+		{firstRoot, "web", "preview"},
+		{secondRoot, "web", "prod"},
+	}
+	for _, binding := range targetBindings {
+		got, err := EnvironmentProfileBinding(
+			binding.root, binding.project, binding.environment, DomainEnv, "infisical",
+		)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if got != "removed" {
+			t.Fatalf("rejected remove lost binding: %#v = %q", binding, got)
+		}
+		if err := UnbindEnvironmentProfile(
+			binding.root, binding.project, binding.environment, DomainEnv, "infisical",
+		); err != nil {
+			t.Fatal(err)
+		}
+	}
+	bindingsAfterUnbind, err := os.ReadFile(bindingsPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := Remove(DomainEnv, "infisical", "removed"); err != nil {
+		t.Fatal(err)
+	}
+	bindingsAfterRemove, err := os.ReadFile(bindingsPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Equal(bindingsAfterRemove, bindingsAfterUnbind) {
+		t.Fatal("Profile removal changed the independent environment binding store")
+	}
+	for _, binding := range targetBindings {
+		got, err := EnvironmentProfileBinding(
+			binding.root, binding.project, binding.environment, DomainEnv, "infisical",
+		)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if got != "" {
+			t.Fatalf("explicit unbind did not persist: %#v = %q", binding, got)
+		}
+	}
+	kept, err := EnvironmentProfileBinding(
+		firstRoot, "api", "preview", DomainEnv, "infisical",
+	)
+	if err != nil || kept != "kept" {
+		t.Fatalf("unrelated environment binding = %q, err = %v", kept, err)
+	}
+	otherSection, err := EnvironmentProfileBinding(
+		firstRoot, "web", "preview", DomainDeploy, "vercel",
+	)
+	if err != nil || otherSection != "removed" {
+		t.Fatalf("same name in another typed section = %q, err = %v", otherSection, err)
+	}
+
+	cfg, _, err := Load()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, exists := cfg.EnvInfisical.Profiles["removed"]; exists {
+		t.Fatal("removed Profile definition remains")
+	}
+	if _, exists := cfg.DeployVercel.Profiles["removed"]; !exists {
+		t.Fatal("same Profile name in another typed section was removed")
+	}
+	sectionKey := SectionKey(DomainEnv, "infisical")
+	for workspaceID, workspace := range cfg.Workspaces {
+		if workspace.Profiles[sectionKey] == "removed" {
+			t.Fatalf("legacy Workspace binding remains for %s", workspaceID)
+		}
+		for projectName, project := range workspace.Projects {
+			if project.Profiles[sectionKey] == "removed" {
+				t.Fatalf("legacy Project binding remains for %s/%s", workspaceID, projectName)
+			}
+		}
+	}
+	if cfg.Workspaces["first"].Projects["api"].Profiles[sectionKey] != "kept" {
+		t.Fatalf("unrelated legacy binding was removed: %#v", cfg.Workspaces["first"])
+	}
+	if cfg.Workspaces["first"].Projects["web"].Profiles[SectionKey(DomainDeploy, "vercel")] != "removed" {
+		t.Fatalf("same-name legacy binding in another section was removed: %#v", cfg.Workspaces["first"])
+	}
+	if cfg.Workspaces["second"].Root != secondRoot {
+		t.Fatalf("Workspace registration metadata was removed: %#v", cfg.Workspaces["second"])
+	}
+	if _, err := os.Stat(cachePath); !os.IsNotExist(err) {
+		t.Fatalf("cache file should be removed after successful delete: %v", err)
+	}
+	for _, root := range []string{firstRoot, secondRoot} {
+		raw, err := os.ReadFile(filepath.Join(root, "sentinel.txt"))
+		if err != nil || string(raw) != "repository\n" {
+			t.Fatalf("repository changed at %s: raw=%q err=%v", root, raw, err)
+		}
+	}
+}
+
+func TestRemove_BindingReadFailureLeavesAllProfileBytesUnchanged(t *testing.T) {
+	withIsolatedConfig(t)
+	root := t.TempDir()
+	seedInfisicalProfiles(t, "work")
+	if err := BindWorkspaceProfile(
+		"workspace-id", "demo", root, "web", DomainEnv, "infisical", "work",
+	); err != nil {
+		t.Fatal(err)
+	}
+	if err := WriteCache(DomainEnv, "infisical", "work", &CacheEntry{
+		Token: "cached", ExpiresAt: time.Now().Add(time.Hour),
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	configPath, err := ConfigPath()
+	if err != nil {
+		t.Fatal(err)
+	}
+	credentialsPath, err := CredentialsPath()
+	if err != nil {
+		t.Fatal(err)
+	}
+	bindingsPath, err := BindingsPath()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(bindingsPath, []byte(`{"version":1,"workspaces":`), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	cachePath, err := CachePath(DomainEnv, "infisical", "work")
+	if err != nil {
+		t.Fatal(err)
+	}
+	paths := []string{configPath, credentialsPath, bindingsPath, cachePath}
+	before := make(map[string][]byte, len(paths))
+	for _, path := range paths {
+		before[path], err = os.ReadFile(path)
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	err = Remove(DomainEnv, "infisical", "work")
+	var coded interface{ ErrorCode() string }
+	if !errors.As(err, &coded) || coded.ErrorCode() != "PROFILE_FILE_INVALID" {
+		t.Fatalf("remove error = %v, want PROFILE_FILE_INVALID", err)
+	}
+	for _, path := range paths {
+		after, readErr := os.ReadFile(path)
+		if readErr != nil {
+			t.Fatal(readErr)
+		}
+		if !bytes.Equal(after, before[path]) {
+			t.Fatalf("failed remove changed %s", path)
+		}
 	}
 }

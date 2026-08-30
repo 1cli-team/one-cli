@@ -44,8 +44,10 @@ import catalog "github.com/torchstellar-team/one-cli/packages/cli/internal/core/
 // Bumped on incompatible shape changes.
 //
 // The current schema uses per-section profile pointers named `default`.
-// Shared one.manifest.json no longer stores profile names; this file
-// owns both global defaults and per-workspace overrides.
+// Shared one.manifest.json no longer stores profile names. This file owns
+// global defaults and keeps the legacy, environment-agnostic per-workspace
+// overrides readable; new environment-aware choices live independently in
+// profile-bindings.json.
 const SchemaVersion = 1
 
 // MinSupportedVersion is the oldest on-disk schema this binary still
@@ -81,8 +83,9 @@ type Config struct {
 	ContainerACR       Section[ContainerProfile]  `json:"container/acr,omitempty"`
 }
 
-// WorkspaceConfig stores machine-local profile choices for one shared
-// workspace. The key in Config.Workspaces is manifest.workspace.id.
+// WorkspaceConfig stores legacy, environment-agnostic machine-local profile
+// choices for one shared workspace. The key in Config.Workspaces is
+// manifest.workspace.id.
 // Profiles maps "domain/backend" (for example "env/infisical") to the
 // local profile name that should be used in that workspace. Projects
 // optionally overrides those choices for a manifest project name.

@@ -28,16 +28,18 @@ func FetchSecretsForSubproject(ctx context.Context, projectRoot, relativeDir, en
 	if err != nil {
 		return nil, err
 	}
-	profileName, creds, siteURL, err := requireProfileCreds(projectRoot, "")
+	env, err := SanitizeEnvName(envOrDefault(envName, cfg.DefaultEnvOrFallback()))
+	if err != nil {
+		return nil, err
+	}
+	profileName, creds, siteURL, err := requireProfileCredsForContext(
+		projectRoot, "", env, manifestProjectName(projectRoot, relativeDir),
+	)
 	if err != nil {
 		return nil, err
 	}
 	cfg.SiteURL = siteURL
 	cfg.ProfileName = profileName
-	env, err := SanitizeEnvName(envOrDefault(envName, cfg.DefaultEnvOrFallback()))
-	if err != nil {
-		return nil, err
-	}
 	client, err := NewClient(ctx, cfg, creds)
 	if err != nil {
 		return nil, err
@@ -69,6 +71,26 @@ func FetchSecretsForSubproject(ctx context.Context, projectRoot, relativeDir, en
 		}
 	}
 	return merged, nil
+}
+
+// manifestProjectName maps the loader's relative directory back to the stable
+// project name used by Profile bindings. Unknown/root paths intentionally fall
+// back to Workspace scope.
+func manifestProjectName(projectRoot, relativeDir string) string {
+	relativeDir = workspace.ToPosixPath(relativeDir)
+	if relativeDir == "" || relativeDir == "." {
+		return ""
+	}
+	m, err := workspace.ReadManifest(projectRoot)
+	if err != nil || m == nil {
+		return ""
+	}
+	for _, project := range m.Projects {
+		if workspace.ToPosixPath(project.RelativeDir) == relativeDir {
+			return project.Name
+		}
+	}
+	return ""
 }
 
 // isFolderNotFound reports whether err is the structured

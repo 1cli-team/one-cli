@@ -45,7 +45,7 @@ one configure show <pair> --profile <name> [--reveal]
 one configure use <pair> --profile <name>
 one configure remove <pair> --profile <name>
 one configure locale [auto|zh-CN|en-US]
-one serve                            # loopback-only web UI for human profile editing
+one serve                            # loopback-only Workspace / Project / Profile Dashboard
 one skills install
 ```
 
@@ -67,7 +67,7 @@ Flags:
 Workspace defaults written to `one.manifest.json` (schema v1):
 
 - `domains.env = { kind: "dotenv" }`
-- `environments = { names: ["dev","staging","prod"], default: "dev" }`
+- `environments = { names: ["dev","preview","prod"], default: "dev" }`
 - CI is not configured automatically. `one add` writes the project's resolved
   dev command into `projects[].domains.dev.command` so `one dev` can read it.
 
@@ -540,6 +540,31 @@ PROFILE_VERSION_UNSUPPORTED. Profile names can recur across backends
 within the same domain (e.g. `prod` under both `deploy/aliyun-oss` and
 `deploy/kustomize`) — the per-(domain, backend) command path keeps them
 distinct without disambiguation flags.
+
+## `one serve`
+
+Starts the loopback-only Dashboard for observed Workspaces, their Projects,
+and machine-level Profiles. It can run inside or outside a Workspace.
+
+Workspace discovery is persisted in the XDG-aware
+`~/.config/one/workspaces.json` registry:
+
+- successful `one create` records the new Workspace;
+- `one serve` from a Workspace root or descendant records or refreshes that
+  Workspace;
+- `one serve` outside a Workspace loads the historical registry without
+  creating a new entry.
+
+The registry stores only a local opaque entry ID, Manifest Workspace identity,
+name, canonical root, and timestamps. Projects and Backend settings stay in
+`one.manifest.json`; Profiles and credentials stay in their existing machine
+stores. Missing paths remain visible until the user explicitly chooses Forget,
+which removes only the registry entry.
+
+The Dashboard selects the launch Workspace first, or the most recently seen
+ready Workspace. Registry-scoped API routes use
+`/api/workspaces/{entryId}/...`; the server resolves the root and revalidates
+the Manifest, so clients never submit an arbitrary filesystem path.
 
 ## `one skills`
 

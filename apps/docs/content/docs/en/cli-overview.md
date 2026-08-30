@@ -23,7 +23,7 @@ One CLI is a single binary. It creates workspaces, adds projects, manages enviro
 | `one ci` | Inspect or manage optional continuous integration | `one ci` |
 | `one run` | Run a command with project `.env` injected | `one run -- npm test` |
 | `one configure` | Configure machine-level endpoint profiles | `one configure` |
-| `one serve` | Launch the local web UI for human profile editing | `one serve` |
+| `one serve` | Launch the local Workspace, Project, and Profile Dashboard | `one serve` |
 | `one skills` | Install or refresh the bundled `one-cli` skill | `one skills install` |
 
 ## Create Workspaces
@@ -100,7 +100,7 @@ Supported `<pair>` values:
 | `deploy` | `kustomize`, `vercel`, `cloudflare`, `edgeone` |
 
 Local `.env` files do not need a machine-level connection.
-Local connections are stored in `~/.config/one/config.json` and `~/.config/one/credentials.json`. Sensitive fields are masked unless you explicitly run `show --reveal`.
+Local connections are stored in `~/.config/one/config.json` and `~/.config/one/credentials.json`. Environment-aware Workspace/Project selections contain names only and live in `~/.config/one/profile-bindings.json`. Sensitive fields are masked unless you explicitly run `show --reveal`; none of these files changes `one.manifest.json`.
 When adding tokens, prefer `one configure open` so you do not hand tokens to an AI agent.
 
 ## Interactive Mode At A Glance
@@ -117,7 +117,7 @@ When adding tokens, prefer `one configure open` so you do not hand tokens to an 
 | `one dev` | Missing Node dependencies trigger an install confirmation; otherwise starts immediately |
 | `one ci disable` | Asks before removing generated workflow files; refusal exits successfully |
 | `one templates` / `one run` | No wizard; behavior is controlled by arguments |
-| `one serve` | Not a terminal wizard; it opens a local web UI for managing local connections |
+| `one serve` | Not a terminal wizard; it opens a local Dashboard for Workspaces, Projects, and local connections |
 
 ## Local Web UI
 
@@ -125,7 +125,7 @@ When adding tokens, prefer `one configure open` so you do not hand tokens to an 
 one serve [--host 127.0.0.1] [--port 0] [--open=false]
 ```
 
-Starts a loopback-only HTTP server for humans to edit `env / deploy / container` profiles in a browser. This path handles API keys, kubeconfig paths, and registry tokens, so it is intentionally not an AI-agent credential-editing interface.
+Starts a loopback-only HTTP server for humans to edit `env / deploy / container` Profiles and select environment-aware local bindings. Workspace code, Project settings, Backend choices, and `one.manifest.json` are view-only. This path handles API keys, kubeconfig paths, and registry tokens, so it is intentionally not an AI-agent credential-editing interface.
 
 Read [Serve](/en/docs/serve/).
 
@@ -137,7 +137,7 @@ one container build [subproject] [-p <name|path>] [--build-version <version>] [-
 one container push  [subproject] [-p <name|path>] [--build-version <version>] [--dry-run] [--profile <name>]
 ```
 
-`one container` reads each project's Dockerfile and manifest container config. Bare `build` creates a local `<workload>:<version>` image. Passing `--profile`, or pinning a registry profile in the manifest, produces a registry-qualified tag and performs login. `push` requires a registry profile and can retag the local image before pushing.
+`one container` reads each project's Dockerfile and manifest container config. Bare `build` creates a local `<workload>:<version>` image. Passing `--profile`, or resolving a machine-local registry binding/default, produces a registry-qualified tag and performs login. `push` requires a registry Profile and can retag the local image before pushing.
 
 ## Local Development
 

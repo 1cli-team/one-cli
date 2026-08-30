@@ -161,7 +161,7 @@ If you are changing One CLI itself, read [CONTRIBUTING.md](https://github.com/1c
 git clone https://github.com/1cli-team/one-cli
 cd one-cli
 brew install go go-task     # macOS; adapt for Linux
-task install-local           # build current branch and symlink to ~/.local/bin/one
+task install                 # package Dashboard + CLI, then symlink to ~/.local/bin/one
 hash -r
 which one
 one --version

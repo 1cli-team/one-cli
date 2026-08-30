@@ -15,10 +15,12 @@ package profile
 // Lookup precedence (first non-empty wins):
 //
 //   1. --profile <name> flag                           (one-shot, doesn't touch default)
-//   2. config.json#workspaces[workspaceID].projects[projectName].profiles[domain/backend]
-//   3. config.json#workspaces[workspaceID].profiles[domain/backend]
-//   4. ~/.config/one/config.json#<domain>/<backend>.default (machine default)
-//   5. (no profile) → PROFILE_NONE_CONFIGURED if the backend needs one.
+//   2. profile-bindings.json#[canonicalRoot][environment].projects[projectName]
+//   3. profile-bindings.json#[canonicalRoot][environment].profiles
+//   4. config.json#workspaces[workspaceID].projects[projectName].profiles[domain/backend]
+//   5. config.json#workspaces[workspaceID].profiles[domain/backend]
+//   6. ~/.config/one/config.json#<domain>/<backend>.default (machine default)
+//   7. (no profile) → PROFILE_NONE_CONFIGURED if the backend needs one.
 //
 // CredentialSource handling: only "file" / "" is wired up. Any other
 // value surfaces PROFILE_CREDENTIAL_SOURCE_UNSUPPORTED — an explicit
@@ -42,12 +44,14 @@ import (
 // (envcmd → "infisical", containercmd → "docker", deploycmd → the
 // subproject's declared backend).
 type ResolveInput struct {
-	Domain       Domain
-	Backend      string
-	FlagOverride string // value of --profile flag, "" if unset
-	WorkspaceID  string // manifest.workspace.id, "" if unavailable
-	ProjectName  string // manifest.projects[].name, "" for workspace scope
-	SkipDefault  bool   // when true, only flag/workspace bindings are considered
+	Domain        Domain
+	Backend       string
+	FlagOverride  string // value of --profile flag, "" if unset
+	WorkspaceID   string // manifest.workspace.id, "" if unavailable
+	WorkspaceRoot string // workspace root; paired with Environment for local environment bindings
+	ProjectName   string // manifest.projects[].name, "" for workspace scope
+	Environment   string // safe environment id (for example dev / preview / prod / staging)
+	SkipDefault   bool   // when true, only flag/workspace bindings are considered
 }
 
 // Resolved is the answer Resolve hands back. Name is the picked
@@ -59,7 +63,7 @@ type ResolveInput struct {
 type Resolved struct {
 	Name       string
 	Profile    Profile
-	Source     string // "flag" / "workspace-project" / "workspace" / "default"
+	Source     string // "flag" / "workspace-project-environment" / "workspace-environment" / legacy / "default"
 	CredSource string // "file" / "env" / "command:..." / "keyring"
 }
 
@@ -109,22 +113,44 @@ func Resolve(in ResolveInput) (*Resolved, error) {
 		return finalize(name, "flag")
 	}
 
-	// 2. per-project workspace binding
+	// 2-3. Environment-aware bindings are keyed by canonical checkout root.
+	// WorkspaceRoot by itself is allowed for backwards-compatible callers;
+	// Environment opts the call into the new binding store and therefore also
+	// requires a root.
+	if in.Environment != "" {
+		if strings.TrimSpace(in.WorkspaceRoot) == "" {
+			return nil, invalidBindingValue("workspace root", in.WorkspaceRoot)
+		}
+		projectBinding, workspaceBinding, err := environmentBindingNamesAt(
+			in.WorkspaceRoot, in.Environment, in.ProjectName, sectionKey,
+		)
+		if err != nil {
+			return nil, err
+		}
+		if projectBinding != "" {
+			return finalize(projectBinding, "workspace-project-environment")
+		}
+		if workspaceBinding != "" {
+			return finalize(workspaceBinding, "workspace-environment")
+		}
+	}
+
+	// 4. legacy per-project workspace binding
 	if name := workspaceProjectBinding(cfg, in.WorkspaceID, in.ProjectName, sectionKey); name != "" {
 		return finalize(name, "workspace-project")
 	}
 
-	// 3. workspace binding
+	// 5. legacy workspace binding
 	if name := workspaceBinding(cfg, in.WorkspaceID, sectionKey); name != "" {
 		return finalize(name, "workspace")
 	}
 
-	// 4. machine default for this (domain, backend)
+	// 6. machine default for this (domain, backend)
 	if name := strings.TrimSpace(defaultName); name != "" && !in.SkipDefault {
 		return finalize(name, "default")
 	}
 
-	// 5. nothing matched
+	// 7. nothing matched
 	return nil, cliErrors.New(cliErrors.PROFILE_NONE_CONFIGURED,
 		fmt.Sprintf("没有配置 %s profile。先 `one configure %s/%s add <name>` 创建。",
 			sectionKey, in.Domain, in.Backend)).

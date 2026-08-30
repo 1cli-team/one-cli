@@ -89,7 +89,7 @@ func TestInstallSh_RequiredSentinels(t *testing.T) {
 			want: []string{"ONE_VERSION"},
 		},
 		{
-			why:  "ONE_INSTALL_DIR env var matches `task install-local` convention",
+			why:  "ONE_INSTALL_DIR env var matches `task install` convention",
 			want: []string{"ONE_INSTALL_DIR"},
 		},
 		{

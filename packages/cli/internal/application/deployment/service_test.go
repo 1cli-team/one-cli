@@ -2,6 +2,7 @@ package deployment
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"reflect"
 	"testing"
@@ -55,6 +56,23 @@ func (s builderStub) Build(ctx context.Context, input deployport.BuildInput) ([]
 type loaderStub struct {
 	id   string
 	vars map[string]string
+}
+
+type recordingLoader struct {
+	id           string
+	environments []string
+	vars         map[string]string
+}
+
+func (s *recordingLoader) ID() string               { return s.id }
+func (*recordingLoader) Priority() secrets.Priority { return secrets.PriorityFilesystem }
+func (*recordingLoader) Available(string) bool      { return true }
+func (s *recordingLoader) Load(
+	_ context.Context,
+	_, _, environment string,
+) (map[string]string, error) {
+	s.environments = append(s.environments, environment)
+	return s.vars, nil
 }
 
 func (s loaderStub) ID() string               { return s.id }
@@ -118,7 +136,8 @@ func TestExecuteOwnsDeploymentWorkflowOrder(t *testing.T) {
 	events := []string{}
 	resolver := profileResolverStub{resolve: func(input profile.ResolveInput) (*profile.Resolved, error) {
 		events = append(events, "profile")
-		if input.WorkspaceID != "ws-demo" || input.ProjectName != "web" || input.FlagOverride != "prod" {
+		if input.WorkspaceID != "ws-demo" || input.WorkspaceRoot != root ||
+			input.Environment != "staging" || input.ProjectName != "web" || input.FlagOverride != "prod" {
 			t.Fatalf("profile input = %#v", input)
 		}
 		return &profile.Resolved{Name: "prod"}, nil
@@ -134,7 +153,8 @@ func TestExecuteOwnsDeploymentWorkflowOrder(t *testing.T) {
 		_ context.Context, input deployport.ApplyInput,
 	) (*deployport.ApplyResult, error) {
 		events = append(events, "apply")
-		if input.InjectedEnv["TOKEN"] != "secret" || input.InjectedEnvSource != "dotenv" {
+		if input.Environment != "staging" || input.InjectedEnv["TOKEN"] != "secret" ||
+			input.InjectedEnvSource != "dotenv" {
 			t.Fatalf("apply input = %#v", input)
 		}
 		return &deployport.ApplyResult{Schema: "deploy/test", CommandLines: []string{"vercel deploy"}}, nil
@@ -178,14 +198,86 @@ func TestResolveProfileTurnsMissingConfigurationIntoNil(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	resolved, err := service.ResolveProfile(&workspace.Manifest{}, "", Target{Backend: "vercel"})
+	resolved, err := service.ResolveProfile("", &workspace.Manifest{}, "", Target{Backend: "vercel"})
 	if err != nil || resolved != nil {
 		t.Fatalf("ResolveProfile() = %#v, %v", resolved, err)
 	}
 
 	other := errors.New("read failed")
 	service.profiles = profileResolverStub{err: other}
-	if _, err := service.ResolveProfile(&workspace.Manifest{}, "", Target{Backend: "vercel"}); !errors.Is(err, other) {
+	if _, err := service.ResolveProfile("", &workspace.Manifest{}, "", Target{Backend: "vercel"}); !errors.Is(err, other) {
 		t.Fatalf("ResolveProfile() error = %v", err)
+	}
+}
+
+func TestExecuteUsesSamePerTargetEnvironmentForProfilesAndSecretInjection(t *testing.T) {
+	root := t.TempDir()
+	previewConfig, err := json.Marshal(map[string]string{"env": "preview"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	manifest := &workspace.Manifest{
+		Version:      workspace.ManifestVersion,
+		Workspace:    &workspace.ManifestWorkspace{ID: "ws-demo", Name: "demo"},
+		Environments: &workspace.Environments{Names: []string{"dev", "preview", "prod"}, Default: "dev"},
+		Domains: &workspace.WorkspaceDomains{
+			Env: &workspace.BackendRef{Kind: workspace.EnvBackendDotenv},
+		},
+		Projects: []workspace.ManifestProject{
+			{
+				Name: "web", RelativeDir: "apps/web", Toolchain: "node",
+				Domains: &workspace.ProjectDomains{Deploy: &workspace.ProjectDeployBackend{
+					Kind: workspace.DeployBackendVercel, Config: previewConfig,
+				}},
+			},
+			{
+				Name: "api", RelativeDir: "services/api", Toolchain: "go",
+				Domains: &workspace.ProjectDomains{Deploy: &workspace.ProjectDeployBackend{
+					Kind: workspace.DeployBackendVercel,
+				}},
+			},
+		},
+	}
+	if err := workspace.WriteManifest(root, manifest); err != nil {
+		t.Fatal(err)
+	}
+
+	var profileEnvironments []string
+	resolver := profileResolverStub{resolve: func(input profile.ResolveInput) (*profile.Resolved, error) {
+		profileEnvironments = append(profileEnvironments, input.Environment)
+		return &profile.Resolved{Name: "connection-" + input.Environment}, nil
+	}}
+	loader := &recordingLoader{
+		id: "dotenv", vars: map[string]string{"TOKEN": "secret"},
+	}
+	service, err := NewService(
+		catalog.Builtin(),
+		deployport.MustRegistry(providerStub{id: workspace.DeployBackendVercel}),
+		resolver,
+		secrets.MustRegistry(loader),
+		builderStub{},
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	targets := []Target{
+		manifestProjectTarget(root, &manifest.Projects[0], workspace.DeployBackendVercel),
+		manifestProjectTarget(root, &manifest.Projects[1], workspace.DeployBackendVercel),
+	}
+	if _, err := service.Execute(context.Background(), ExecuteRequest{
+		ProjectRoot: root,
+		Manifest:    manifest,
+		Targets:     targets,
+		EnvProvider: workspace.EnvBackendDotenv,
+		DryRun:      true,
+	}, nil); err != nil {
+		t.Fatal(err)
+	}
+	want := []string{"preview", "prod"}
+	if !reflect.DeepEqual(profileEnvironments, want) {
+		t.Fatalf("profile environments = %#v; want %#v", profileEnvironments, want)
+	}
+	if !reflect.DeepEqual(loader.environments, want) {
+		t.Fatalf("injection environments = %#v; want %#v", loader.environments, want)
 	}
 }

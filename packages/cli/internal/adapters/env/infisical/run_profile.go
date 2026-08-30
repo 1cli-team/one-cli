@@ -8,8 +8,10 @@ package infisical
 // Resolution chain (handled by profile.Resolve):
 //
 //   1. --profile <name>              one-shot flag override
-//   2. workspace binding             ~/.config/one/config.json#workspaces
-//   3. machine default               ~/.config/one/config.json#env/infisical.default
+//   2. project + environment binding ~/.config/one/profile-bindings.json
+//   3. workspace + environment binding
+//   4. legacy workspace/project binding
+//   5. machine default               ~/.config/one/config.json#env/infisical.default
 
 import (
 	"strings"
@@ -28,15 +30,27 @@ import (
 // profileFlag is the value of --profile (one-shot override); pass ""
 // when the caller has no such flag.
 func resolveProfileCreds(projectRoot, profileFlag string) (profileName string, creds *Credentials, siteURL string, err error) {
+	return resolveProfileCredsForContext(projectRoot, profileFlag, "", "")
+}
+
+// resolveProfileCredsForContext is the runtime-aware variant used by `one
+// run`. The workspace root, selected environment, and manifest project name
+// address machine-local bindings; the manifest itself remains read-only.
+func resolveProfileCredsForContext(
+	projectRoot, profileFlag, environment, projectName string,
+) (profileName string, creds *Credentials, siteURL string, err error) {
 	workspaceID := ""
 	if m, mErr := workspace.ReadManifest(projectRoot); mErr == nil {
 		workspaceID = workspace.WorkspaceID(m)
 	}
 	resolved, rErr := profile.Resolve(profile.ResolveInput{
-		Domain:       profile.DomainEnv,
-		Backend:      "infisical",
-		FlagOverride: profileFlag,
-		WorkspaceID:  workspaceID,
+		Domain:        profile.DomainEnv,
+		Backend:       "infisical",
+		FlagOverride:  profileFlag,
+		WorkspaceID:   workspaceID,
+		WorkspaceRoot: projectRoot,
+		Environment:   environment,
+		ProjectName:   projectName,
 	})
 	if rErr != nil {
 		// "no profile configured anywhere" is the cheap-path expected case
@@ -76,7 +90,15 @@ func runCredsAvailable(projectRoot string) bool {
 // Returns INFISICAL_AUTH_MISSING with an actionable remediation when
 // no profile is configured / the resolved profile lacks credentials.
 func requireProfileCreds(projectRoot, profileFlag string) (string, *Credentials, string, error) {
-	name, creds, siteURL, err := resolveProfileCreds(projectRoot, profileFlag)
+	return requireProfileCredsForContext(projectRoot, profileFlag, "", "")
+}
+
+func requireProfileCredsForContext(
+	projectRoot, profileFlag, environment, projectName string,
+) (string, *Credentials, string, error) {
+	name, creds, siteURL, err := resolveProfileCredsForContext(
+		projectRoot, profileFlag, environment, projectName,
+	)
 	if err != nil {
 		return "", nil, "", err
 	}

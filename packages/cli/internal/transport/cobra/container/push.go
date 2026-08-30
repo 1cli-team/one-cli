@@ -20,8 +20,8 @@ import (
 
 func newPushCmd(deps Dependencies) *cobra.Command {
 	var (
-		buildVersion, profileFlag, project string
-		dryRun                             bool
+		buildVersion, profileFlag, project, environment string
+		dryRun                                          bool
 	)
 	cmd := &cobra.Command{
 		Use:   "push",
@@ -33,8 +33,9 @@ push 必须知道 registry host 才能拼出完整的镜像 tag。
 
 profile 解析顺序：
   --profile <name>                          # 一次性覆盖
-  → config.json#workspaces[workspaceId].projects[subproject].profiles[container/kind]
-  → config.json#workspaces[workspaceId].profiles[container/kind]
+  → Dashboard 为 Project + --env 环境选择的 profile
+  → Dashboard 为 Workspace + --env 环境选择的 profile
+  → 旧版 Workspace/Project profile 绑定
   → ~/.config/one/config.json#container/<kind>.default`,
 		Args: cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -66,24 +67,39 @@ profile 解析顺序：
 						fmt.Sprintf("没有名为 %s 且启用了容器构建的项目", sub))
 				}
 			}
-			kind := containerKindForInvocation(manifest, sub)
-			reg, err := resolveContainerRegistry(deps, root, profileFlag, kind, sub)
-			if err != nil {
-				return err
+			targets := names
+			if sub != "" {
+				targets = []string{sub}
 			}
-			res, err := deps.Service.Push(cmd.Context(), kind, container.PushInput{
-				ProjectRoot: root,
-				Project:     sub,
-				TargetNames: names,
-				Tag:         buildVersion,
-				DryRun:      dryRun,
-				Registry:    reg,
-			})
-			if err != nil {
-				return err
+			combined := &container.PushResult{}
+			for _, target := range targets {
+				kind := containerKindForInvocation(manifest, target)
+				reg, err := resolveContainerRegistry(
+					deps, root, profileFlag, kind, target, environment,
+				)
+				if err != nil {
+					return err
+				}
+				result, err := deps.Service.Push(cmd.Context(), kind, container.PushInput{
+					ProjectRoot: root,
+					Project:     target,
+					TargetNames: []string{target},
+					Tag:         buildVersion,
+					DryRun:      dryRun,
+					Registry:    reg,
+				})
+				if err != nil {
+					return err
+				}
+				if result != nil {
+					if combined.Schema == "" {
+						combined.Schema = result.Schema
+					}
+					combined.Pushed = append(combined.Pushed, result.Pushed...)
+				}
 			}
-			if dryRun && res != nil {
-				for _, e := range res.Pushed {
+			if dryRun {
+				for _, e := range combined.Pushed {
 					if e.Retagged && e.SourceImage != "" {
 						fmt.Fprintln(cmd.OutOrStdout(), "docker tag "+e.SourceImage+" "+e.Image)
 					}
@@ -91,9 +107,7 @@ profile 解析顺序：
 				}
 				return nil
 			}
-			if res != nil {
-				output.Emit(res)
-			}
+			output.Emit(combined)
 			return nil
 		},
 	}
@@ -101,7 +115,8 @@ profile 解析顺序：
 	cmd.Flags().BoolVar(&dryRun, "dry-run", false, "只打印 push 命令不实际推送")
 	cmd.Flags().StringVar(&profileFlag, "profile", "", "一次性使用指定 container profile（不改 default）")
 	cmd.Flags().StringVarP(&project, "project", "p", "", "只推送指定 subproject 的镜像（manifest 里的 name 或相对路径）")
-	helpui.MarkAdvanced(cmd, "profile", "project", "build-version")
+	cmd.Flags().StringVar(&environment, "env", "", "使用指定环境的 container profile（如 dev / preview / prod）")
+	helpui.MarkAdvanced(cmd, "profile", "project", "build-version", "env")
 	i18n.MarkShort(cmd, "container.push.short")
 	return cmd
 }

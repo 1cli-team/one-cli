@@ -52,7 +52,7 @@ func newRootCommand() *cobra.Command {
 	groups := [][]*cobra.Command{
 		addcmd.Commands(deps.creation),
 		cicmd.Commands(deps.ci),
-		configurecmd.Commands(deps.catalog, deps.profiles, deps.workspaces),
+		configurecmd.Commands(deps.catalog, deps.profiles, deps.workspaces, deps.registry),
 		containercmd.Commands(containercmd.Dependencies{
 			Service: deps.containers,
 		}),
@@ -68,6 +68,7 @@ func newRootCommand() *cobra.Command {
 		runcmd.Commands(deps.loaders),
 		servecmd.Commands(servecmd.Dependencies{
 			Catalog: deps.catalog, Profiles: deps.profiles, Workspaces: deps.workspaces,
+			Registry: deps.registry,
 		}),
 		skillscmd.Commands(),
 		templatescmd.Commands(),

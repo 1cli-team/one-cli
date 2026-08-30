@@ -141,6 +141,7 @@ apps/dashboard/src/
   architecture/        executable frontend dependency rules
   features/
     profile-editor/    Catalog-driven profile editing workflow
+    project-settings/  Desktop project matrix and project inspector workflow
   pages/               route composition and page-specific presentation
 ```
 
@@ -166,9 +167,10 @@ Rules:
 7. Credentials remain typed and are resolved immediately before the adapter
    call that needs them.
 8. The backend catalog is the only source for backend identity, capabilities,
-   requirements, profile type, form metadata, and secret-field disclosure
-   policy. `core/profile` dispatches typed schema access by profile type;
-   application workflows never maintain a second codec registry.
+   requirements, profile type, credential-form metadata, safe project-setting
+   fields, and secret-field disclosure policy. `core/profile` dispatches typed
+   schema access by profile type; application workflows never maintain a
+   second codec or project-form registry.
 9. Cleanup is LIFO, idempotent, and best-effort. It covers local temporary
    resources; it does not pretend that an external cloud deployment is a
    reversible transaction.
@@ -251,11 +253,46 @@ Creation is one Template-driven compiled workflow:
 - workload-name and kebab-case policy come from `core/workspace`, rather than
   being duplicated by adapter helper packages.
 
-Dashboard workspace reads and mutations enter through
-`application/workspace.Service`. It owns Overview construction, Backend
-validation, Project lookup, Template/deployment compatibility, and atomic
-manifest publication. HTTP handlers only decode requests, map application
-errors to status codes, and render the returned Overview.
+Dashboard Workspace reads and machine-local Profile selections enter through
+`application/workspace.Service`. The service owns Overview construction,
+Backend validation, Project lookup, Template/deployment compatibility, and
+Profile-binding policy, but has no manifest-publication capability.
+`one.manifest.json` is a read-only fact source for every `one serve` request:
+the Project projection exposes its values plus resolved Profile names/sources,
+never Profile values or credentials. Environment-aware Workspace and Project
+selections are stored in XDG-aware
+`~/.config/one/profile-bindings.json` v1. The store is keyed by canonical
+Workspace root and safe environment id, and its Workspace/Project maps contain
+only `domain/backend -> Profile name` selections. Keeping the canonical root
+in the key isolates two repository copies even when their manifests share one
+Workspace id. The Dashboard UI exposes `dev`, `preview`, and `prod` as URL
+state (`?env=`), not as a manifest migration; the core/API contract also
+accepts safe custom environment ids for non-UI workflows. HTTP handlers only
+decode requests, resolve the trusted Workspace root, map application errors,
+and render application envelopes.
+Historical manifest-mutation route paths fail closed with HTTP 409 and
+`SERVE_REPOSITORY_READ_ONLY`; they never silently ignore a requested write.
+
+Workspace discovery across invocations is a separate machine-local registry,
+not Profile state and not Kernel state. `one create` observes a Workspace only
+after successful creation; `one serve` observes the nearest manifest found by
+walking up from its launch directory. Both update the XDG-aware
+`workspaces.json` through `application/workspace.RegistryService` and the local
+registry adapter. The registry stores only an opaque local entry id, manifest
+identity, canonical root, display name, and observation timestamps. Projects,
+Backend configuration, Profile values, and credentials are always read from
+their authoritative stores.
+
+The opaque local entry id is the Dashboard routing identity. Manifest
+`workspace.id` cannot fill that role because copying a repository also copies
+its manifest identity. Repeated observations of one canonical root are
+idempotent; two live roots with one manifest identity remain separate and are
+reported as a conflict instead of being silently re-keyed. Missing paths stay
+visible until an explicit Forget operation. Plural `/api/workspaces/*` routes
+resolve that opaque id server-side and revalidate the manifest before every
+read or local Profile-binding mutation; clients never submit an arbitrary
+filesystem root. Existing singular `/api/workspace/*` routes remain pinned to
+the launch Workspace for wire compatibility.
 
 CI is an application workflow with a public provider compatibility seam:
 
@@ -334,6 +371,15 @@ boundary:
   backend, and reuses it for CRUD, resolution, deterministic JSON emission,
   credential split/merge/stripping, section inspection, payload decoding, and
   credential-source access;
+- Profile definitions/defaults remain in `config.json`, secrets remain in
+  `credentials.json`, and legacy Workspace/Project selections in
+  `config.json#workspaces` remain readable. The additive
+  `profile-bindings.json` store does not change either schema-v1 file or
+  `one.manifest.json`;
+- resolution is deterministic: one-shot flag, environment-aware Project
+  selection, environment-aware Workspace selection, legacy Project selection,
+  legacy Workspace selection, then machine default. Environment-aware keys use
+  canonical Workspace root rather than manifest Workspace id;
 - `application/configure` owns profile use cases, disclosure masking, and
   masked-secret preservation, but consumes the typed `core/profile` schema API
   instead of registering another codec table;
@@ -351,8 +397,20 @@ boundary:
   genuinely new profile shape requires one schema policy factory.
 
 The Dashboard loads `GET /api/catalog` once through an immutable SWR cache and
-derives its navigation and form fields from that response. Adding a backend no
-longer requires duplicating backend lists and form switches across the UI.
+derives credential and project configuration fields from that response. Adding
+a backend no longer requires duplicating backend lists and form switches across
+the UI. `features/project-settings` owns the desktop project matrix, lazy
+project-detail read, right-side inspector, explicit-save forms, and project
+Profile binding controls. Manifest-owned Project fields are rendered read-only;
+the only writable Project control submits a Profile name for the current
+environment to the machine-local binding store. Backend identity is always
+derived server-side from the manifest, so the browser cannot change Backend or
+repository configuration.
+The router preserves `?env=dev|preview|prod` across Workspace and Project links.
+The global Settings page hides the selector because Profile definitions/CRUD
+are machine-global rather than environment-scoped; preserved query state still
+returns users to the same Workspace/Project binding namespace. The query does
+not require or create a manifest environment.
 `features/profile-editor` owns nested profile values, the Catalog-driven form,
 dialog lifetime, upsert/toast behavior, and save notification. Routed pages
 provide only an editor target and their own post-save cache refresh, so
@@ -385,9 +443,12 @@ Internal migration must preserve:
 - current command names, flags, help contracts, and exit behavior;
 - `one.manifest.json` v1;
 - `~/.config/one/config.json` and `credentials.json` v1;
-- profile resolution order;
+- the legacy profile resolution order, extended ahead of it by optional
+  Project+Environment and Workspace+Environment bindings from the additive
+  machine-local `profile-bindings.json` v1 store;
 - structured success envelopes and `one-cli/error/v1` error codes;
 - existing public packages under `packages/cli/pkg`.
 
-New HTTP endpoints may be added, but existing endpoints and payloads remain
-compatible until a separately planned public migration.
+New HTTP endpoints may be added. Existing read and Profile-management payloads
+remain compatible; historical Dashboard routes that wrote a repository are a
+deliberate safety exception and now return an explicit read-only error.

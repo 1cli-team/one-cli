@@ -66,6 +66,29 @@ describe("Dashboard dependency boundaries", () => {
 
 		expect(violations, violations.join("\n")).toEqual([]);
 	});
+
+	it("keeps interactive primitives inside components/ui", () => {
+		const violations: string[] = [];
+		const forbidden = [
+			{ pattern: /<button\b/g, label: "native <button>" },
+			{ pattern: /<input\b/g, label: "native <input>" },
+			{ pattern: /<select\b/g, label: "native <select>" },
+			{ pattern: /<textarea\b/g, label: "native <textarea>" },
+			{ pattern: /\bwindow\.confirm\s*\(/g, label: "window.confirm" },
+		] as const;
+
+		for (const file of productionSourceFiles()) {
+			const source = sourcePath(file);
+			if (inArea(source, "components/ui")) continue;
+			const contents = readFileSync(file, "utf8");
+			for (const { pattern, label } of forbidden) {
+				if (pattern.test(contents)) violations.push(`${source} uses ${label}`);
+				pattern.lastIndex = 0;
+			}
+		}
+
+		expect(violations, violations.join("\n")).toEqual([]);
+	});
 });
 
 function productionSourceFiles(root = SOURCE_ROOT): string[] {

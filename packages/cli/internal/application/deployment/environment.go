@@ -75,6 +75,29 @@ func readDeployEnvironment(deployment *workspace.ProjectDeployBackend) (string, 
 	return strings.TrimSpace(config.Environment), nil
 }
 
+// deployProfileEnvironment returns the environment whose machine-local
+// Profile binding applies to a deploy target. A project without an explicit
+// deploy environment follows the deploy contract's production default.
+func deployProfileEnvironment(manifest *workspace.Manifest, projectName string) string {
+	project := findManifestProject(manifest, projectName)
+	if project != nil && project.Domains != nil {
+		if environment, err := readDeployEnvironment(project.Domains.Deploy); err == nil && environment != "" {
+			return environment
+		}
+	}
+	return "prod"
+}
+
+func effectiveDeployEnvironment(
+	manifest *workspace.Manifest,
+	projectName, override string,
+) string {
+	if environment := strings.TrimSpace(override); environment != "" {
+		return environment
+	}
+	return deployProfileEnvironment(manifest, projectName)
+}
+
 func setDeployEnvironment(deployment *workspace.ProjectDeployBackend, environment string) error {
 	if deployment == nil {
 		return nil

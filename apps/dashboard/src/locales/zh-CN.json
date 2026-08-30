@@ -1,9 +1,8 @@
 {
 	"sidebar": {
 		"brand": "one serve",
-		"home": "概览",
-		"profile": "凭据 profile",
-		"loopbackOnly": "127.0.0.1 only",
+		"home": "首页",
+		"settings": "设置",
 		"themeToDark": "切深色",
 		"themeToLight": "切浅色",
 		"language": "语言",
@@ -12,9 +11,101 @@
 		"languageEn": "English"
 	},
 	"topbar": {
-		"home": "概览",
+		"home": "Workspace",
+		"workspaces": "Workspaces",
+		"settings": "设置",
 		"profile": "凭据 profile",
 		"sectionsRoot": "配置分区"
+	},
+	"environmentSwitcher": {
+		"label": "环境",
+		"dev": "开发",
+		"preview": "预览",
+		"prod": "生产"
+	},
+	"workspaces": {
+		"workspaceLabel": "Workspace",
+		"loading": "正在加载 Workspace",
+		"retry": "重试",
+		"openProfiles": "打开凭据 Profile",
+		"home": {
+			"title": "工作区",
+			"description": "查看本机已登记的工作区并继续管理项目。",
+			"loading": "正在加载工作区…",
+			"loadFailedTitle": "无法加载工作区",
+			"loadFailedDescription": "无法读取本机工作区注册表。",
+			"retry": "重试",
+			"registryCount": "{{count}} 个工作区",
+			"projectCount": "{{count}} 个项目",
+			"currentSession": "本次 one serve",
+			"workspaceId": "Workspace ID",
+			"idUnavailable": "不可用",
+			"projects": "项目",
+			"projectCountUnavailable": "不可用",
+			"lastDetected": "最近识别",
+			"emptyTitle": "尚未登记工作区",
+			"emptyDescription": "运行 one create 创建工作区，或在已有工作区中运行 one serve 进行登记。",
+			"listLabel": "已登记的工作区"
+		},
+		"rail": {
+			"title": "Workspaces",
+			"empty": "执行 one create，或在 Workspace 内执行 one serve，即可登记到这里。",
+			"loadFailed": "无法加载 Workspace 注册表。"
+		},
+		"status": {
+			"ready": "可用",
+			"missing": "目录不存在",
+			"invalid": "Manifest 无效",
+			"identity-missing": "缺少 Workspace ID",
+			"identity-conflict": "Workspace ID 冲突"
+		},
+		"conflict": {
+			"title": "只读：另一个目录正在使用相同的 Workspace ID",
+			"description": "你仍可查看其中的 Project，但配置操作已禁用，避免复制出来的 Workspace 共享并串用 Profile 绑定。"
+		},
+		"state": {
+			"missing": {
+				"title": "Workspace 目录当前不可用",
+				"description": "目录可能已移动、被删除，或者所在磁盘尚未挂载。在新位置执行 one serve 即可刷新注册记录。"
+			},
+			"invalid": {
+				"title": "Workspace Manifest 无效",
+				"description": "修复该目录中的 one.manifest.json，然后重新在 Workspace 内执行 one serve。"
+			},
+			"identity-missing": {
+				"title": "Workspace 缺少稳定 ID",
+				"description": "请先在 one.manifest.json 中补齐 workspace.id，再配置 Project 级 Profile。"
+			},
+			"identity-conflict": {
+				"title": "Workspace ID 重复",
+				"description": "Workspace 仍可查看，但为了避免 Profile 绑定串用，配置保持只读。"
+			}
+		},
+		"forget": {
+			"short": "忘记 Workspace",
+			"action": "忘记 {{name}}",
+			"confirm": "要忘记 Workspace「{{name}}」吗？这里只会移除本机注册记录，不会删除项目文件或 Profile。",
+			"done": "已忘记 {{name}}",
+			"failed": "无法忘记 Workspace",
+			"pageHint": "可点击左侧该 Workspace 旁的垃圾桶，只移除它的本机注册记录。"
+		},
+		"registryError": {
+			"title": "Workspace 注册表不可用",
+			"description": "One Serve 无法读取本机 Workspace 注册表；Project 文件和凭据 Profile 均未被修改。"
+		},
+		"overviewError": {
+			"title": "无法打开 {{name}}",
+			"description": "Workspace 已登记，但当前无法加载其概览。"
+		},
+		"unknown": {
+			"title": "找不到 Workspace",
+			"description": "这条注册记录已不存在，请从左侧选择其他 Workspace。",
+			"back": "选择 Workspace"
+		},
+		"noneReady": {
+			"title": "没有可用的 Workspace",
+			"description": "可在左侧选择异常 Workspace 查看修复提示，或进入有效 Workspace 执行 one serve。"
+		}
 	},
 	"notFound": {
 		"message": "404 — 页面未找到"
@@ -26,6 +117,11 @@
 		"devDetails": "开发模式错误详情",
 		"reload": "重新加载",
 		"home": "返回首页"
+	},
+	"settings": {
+		"title": "设置",
+		"description": "管理可供 Workspace 和 Project 使用的机器级凭据 Profile。",
+		"loadFailedTitle": "加载设置失败"
 	},
 	"sections": {
 		"groupLabel": {
@@ -188,6 +284,117 @@
 	"http": {
 		"networkError": "网络请求失败，请检查网络连接。"
 	},
+	"projects": {
+		"title": "项目配置矩阵",
+		"description": "从一处查看并配置 manifest 中的全部项目。",
+		"search": "搜索项目、路径或 backend",
+		"kindFilter": "按项目类型筛选",
+		"kinds": {
+			"all": "全部类型"
+		},
+		"empty": {
+			"title": "没有匹配的项目",
+			"description": "调整搜索词或项目类型筛选。"
+		},
+		"matrix": {
+			"project": "项目",
+			"environment": "Environment",
+			"container": "Container",
+			"deploy": "Deploy",
+			"status": "状态",
+			"notApplicable": "不适用",
+			"notConfigured": "未配置",
+			"profileMissing": "凭据待补充",
+			"setupRequired": "需要配置",
+			"ready": "配置可用",
+			"healthy": "正常",
+			"issueCount": "{{count}} 项待处理",
+			"configureDomain": "为 {{project}} 配置 {{domain}}"
+		}
+	},
+	"projectInspector": {
+		"tabs": {
+			"label": "项目配置分区",
+			"overview": "概览",
+			"environment": "环境",
+			"container": "容器",
+			"deploy": "部署"
+		},
+		"loadFailed": "无法加载项目配置",
+		"retry": "重试",
+		"backend": "Backend",
+		"inheritedBackend": "继承的 {{domain}} backend",
+		"manifestReadOnly": "Manifest · 只读",
+		"profileOnly": "仅 Profile 绑定",
+		"saved": "项目 Profile 绑定已保存",
+		"saveFailed": "保存项目 Profile 绑定失败",
+		"saveHint": "只修改当前环境对应的机器本地 Profile 绑定。",
+		"save": "保存 Profile",
+		"saving": "保存中…",
+		"values": {
+			"enabled": "已启用",
+			"disabled": "已禁用"
+		},
+		"unsavedChangesTitle": "放弃未保存的修改？",
+		"unsavedChanges": "当前修改尚未保存。要放弃修改并继续吗？",
+		"discardAndContinue": "放弃并继续",
+		"general": {
+			"title": "项目概览",
+			"description": "项目元数据来自 one.manifest.json，在 Dashboard 中全部只读。",
+			"template": "Template",
+			"toolchain": "Toolchain",
+			"path": "项目路径",
+			"buildVersion": "构建版本",
+			"packageManager": "包管理器",
+			"packageManagerAutomatic": "自动检测",
+			"devCommand": "开发命令"
+		},
+		"environment": {
+			"title": "环境配置",
+			"description": "环境 Manifest 配置只读；这里只能为当前环境选择机器本地 Profile。",
+			"path": "环境文件路径",
+			"inherits": "继承工作区环境",
+			"inheritsHint": "项目变量会覆盖同名工作区变量。",
+			"disabled": "禁用项目环境",
+			"disabledHint": "运行项目命令时不注入环境变量。",
+			"keys": "已声明变量名"
+		},
+		"container": {
+			"title": "容器配置",
+			"description": "容器 Manifest 配置只读；这里只能为当前环境选择机器本地 Profile。",
+			"enabled": "启用容器构建",
+			"enabledHint": "允许 one container 为这个项目构建镜像。",
+			"image": "镜像地址",
+			"namespace": "镜像命名空间"
+		},
+		"deploy": {
+			"title": "部署配置",
+			"description": "部署 Manifest 配置只读；这里只能为当前环境选择机器本地 Profile。",
+			"notSupported": "这个项目的 Template 不支持部署目标。",
+			"environmentDefault": "使用默认环境",
+			"compatibleTargets": "兼容目标"
+		},
+		"profile": {
+			"label": "项目 Profile",
+			"description": "选择仅对这个项目和当前环境生效的机器级凭据。",
+			"notRequired": "这个 Backend 不需要凭据 Profile。",
+			"loading": "正在加载凭据 Profile…",
+			"loadFailed": "无法加载凭据 Profile。",
+			"automatic": "自动解析（工作区 / 默认）",
+			"inherited": "继承 {{name}}（{{source}}）",
+			"none": "尚未解析到 Profile",
+			"manage": "前往设置管理"
+		}
+	},
+	"project": {
+		"fields": {
+			"bucket": "Bucket",
+			"environment": "部署环境",
+			"projectId": "Project ID",
+			"projectName": "项目名称",
+			"workerName": "Worker 名称"
+		}
+	},
 	"overview": {
 		"untitledWorkspace": "未命名 workspace",
 		"environments": "环境",
@@ -196,6 +403,41 @@
 		"allGood": "✓ 配置齐全",
 		"workspaceIssuesTitle": "工作区级配置缺失",
 		"manageProfilesCta": "管理凭据 profile",
+		"profileSafety": "Profile 保存在本机配置中，凭据不会写入 manifest。",
+		"workspaceEnv": {
+			"title": "工作区环境变量",
+			"scope": "Workspace 级",
+			"readOnly": "只读",
+			"description": "Backend 来自 manifest，在这里仅供查看；你只需为当前环境选择机器级 Profile。",
+			"localBinding": "机器本地 Profile 绑定",
+			"backend": "Backend",
+			"backendReadOnly": "来自 manifest · 只读",
+			"backendSource": "请在 Dashboard 外通过 one.manifest.json 配置。",
+			"backendMissing": "未配置",
+			"loading": "正在加载 Workspace Profile 绑定…",
+			"loadFailed": "无法加载 Workspace Profile 绑定。",
+			"missingBackendCli": "尚未配置环境变量 Backend，请先使用 One CLI 配置，再选择 Profile。",
+			"save": "保存",
+			"saving": "保存中…",
+			"saved": "Workspace Profile 已保存",
+			"saveFailed": "无法保存 Workspace Profile",
+			"profile": {
+				"label": "Profile",
+				"description": "为这个 Workspace 和当前环境选择一个机器本地的凭据 Profile。",
+				"notRequired": "这个 Backend 不需要凭据 Profile。",
+				"loading": "正在加载凭据 Profile…",
+				"loadFailed": "无法加载凭据 Profile。",
+				"automatic": "自动解析（机器默认）",
+				"inherited": "自动 · {{name}}（{{source}}）",
+				"none": "当前未解析到 Profile",
+				"manage": "前往设置管理"
+			}
+		},
+		"metrics": {
+			"projects": "项目",
+			"healthy": "正常",
+			"attention": "待处理"
+		},
 		"kinds": {
 			"app": "App",
 			"service": "Service",
@@ -216,29 +458,8 @@
 			}
 		},
 		"fix": {
-			"cta": "去配置",
 			"profileCta": "补凭据",
-			"title": {
-				"container": "配置 container backend",
-				"deploy": "配置 deploy backend",
-				"env": "配置 workspace env backend"
-			},
-			"description": {
-				"container": "为「{{project}}」选择容器镜像 backend，写入 manifest 的 projects[].domains.container。",
-				"deploy": "为「{{project}}」选择部署 backend，写入 manifest 的 projects[].domains.deploy.kind。",
-				"env": "选择整个 workspace 的环境变量 backend，写入 manifest 的 domains.env.kind。"
-			},
-			"kindLabel": "Backend 类型",
-			"kindPlaceholder": "选择一个 backend…",
-			"imageLabel": "镜像地址（可选）",
-			"imagePlaceholder": "ghcr.io/org/web:latest",
-			"note": "这里只写入 manifest 的 backend 选择；对应的凭据 profile（API key / token 等）请到「{{section}}」分区配置。",
-			"sectionLink": "对应凭据分区",
-			"save": "保存",
-			"saving": "保存中…",
-			"cancel": "取消",
-			"saved": "已更新 {{domain}} 配置",
-			"failed": "保存失败"
+			"cliHint": "请使用 One CLI 配置这个 Backend。"
 		}
 	}
 }

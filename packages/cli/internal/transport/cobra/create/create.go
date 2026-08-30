@@ -151,6 +151,9 @@ func runCreate(deps Dependencies, cmd *cobra.Command, rawDir string, flags *crea
 			result.EnvironmentWarn,
 		))
 	}
+	if result.RegistryWarn != nil {
+		prompt.Step(i18n.Tf("create.registry_warning", result.RegistryWarn))
+	}
 
 	// Skills are an explicit opt-in (`one skills install`). Keep the stable
 	// envelope field so existing automation can distinguish the new policy.

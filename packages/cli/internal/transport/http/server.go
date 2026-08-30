@@ -1,5 +1,6 @@
 // Package serve implements `one serve` — a local HTTP server that exposes
-// ~/.config/one/config.json and credentials.json for editing through a web UI. The server binds
+// observed Workspaces, safe Project settings, and machine-level Profiles
+// through a web UI. The server binds
 // to 127.0.0.1 by default and gates /api/* with three independent defenses:
 // Host header validation (defeats DNS rebinding), Origin validation on
 // mutations (defeats cross-origin form submits), and a per-session token
@@ -45,9 +46,8 @@ const (
 //
 // WorkspaceRoot is the absolute path to the One workspace the user ran
 // `one serve` from (resolved by walking up from cwd for one.manifest.json).
-// Empty string means "no workspace detected"; the workspace overview
-// endpoint will return {present: false} in that case and the dashboard will
-// fall back to the profile-editing landing page.
+// Empty string means "no workspace detected"; the Dashboard can still select
+// a previously observed Workspace from RegistryService.
 type Opts struct {
 	Host             string
 	Port             int
@@ -57,6 +57,7 @@ type Opts struct {
 	Catalog          *catalog.Catalog
 	ProfileService   *configureapp.ProfileService
 	WorkspaceService *workspaceapp.Service
+	RegistryService  *workspaceapp.RegistryService
 }
 
 // Result is the envelope payload Run hands back to its caller before
@@ -143,6 +144,7 @@ func Run(ctx context.Context, opts Opts, ready func(Result)) error {
 		Catalog:          opts.Catalog,
 		ProfileService:   opts.ProfileService,
 		WorkspaceService: opts.WorkspaceService,
+		RegistryService:  opts.RegistryService,
 	})
 	server := &http.Server{
 		Handler:           mux,

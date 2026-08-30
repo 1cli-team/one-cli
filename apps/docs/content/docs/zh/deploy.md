@@ -62,11 +62,15 @@ one deploy [project] [--provider <target>] [--profile <connection>] [--env <env>
 每个 deploy target 独立解析 profile：
 
 1. `--profile <name>`
-2. `~/.config/one/config.json#workspaces[workspaceId].projects[project].profiles[deploy/backend]`
-3. `~/.config/one/config.json#workspaces[workspaceId].profiles[deploy/backend]`
-4. `~/.config/one/config.json#deploy/<backend>.default`
+2. `profile-bindings.json` 中 Project + environment 的 `deploy/<backend>` 绑定
+3. `profile-bindings.json` 中 Workspace + environment 的 `deploy/<backend>` 绑定
+4. `config.json#workspaces` 中的旧 Project 绑定
+5. `config.json#workspaces` 中的旧 Workspace 绑定
+6. `~/.config/one/config.json#deploy/<backend>.default`
 
-manifest 不再保存本机 profile 名。用 `one configure use <pair> --profile <name> --workspace` 绑定当前工作区；需要只绑定某个项目时加 `--project <name|path>`。
+环境感知的 key 使用规范化 Workspace root。deploy 解析使用 Project 已配置的部署环境，没有时回退 `prod`；单次覆盖使用 `--profile`。在 `one serve` 中选择每个环境的 Workspace/Project Profile 名。Dashboard 环境来自 `?env=`，切换它不会改动部署环境或 Manifest。
+
+manifest 永远不保存本机 Profile 名。`one configure use <pair> --profile <name> --workspace` 和 `--project <name|path>` 仍可创建兼容的无环境旧绑定。
 
 ## 示例
 

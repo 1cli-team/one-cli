@@ -45,10 +45,18 @@ func (s *Service) Get(ctx context.Context, input GetInput) (*GetResult, error) {
 			Key: result.Key, Value: result.Value,
 		}, nil
 	case workspace.EnvBackendInfisical:
-		if err := s.ensureInfisicalBound(ctx, root); err != nil {
+		projectName := profileProjectName(resolution.Workspace, input.Project)
+		if err := s.ensureInfisicalBound(
+			ctx, resolution.Workspace, input.Profile, environment, projectName,
+		); err != nil {
 			return nil, err
 		}
-		config, credentials, err := s.resolveInfisical(resolution.Workspace, input.Profile)
+		config, credentials, err := s.resolveInfisical(
+			resolution.Workspace,
+			input.Profile,
+			environment,
+			projectName,
+		)
 		if err != nil {
 			return nil, err
 		}
@@ -100,10 +108,18 @@ func (s *Service) List(ctx context.Context, input ListInput) (*ListResult, error
 			Environment: result.Env, Keys: result.Keys,
 		}, nil
 	case workspace.EnvBackendInfisical:
-		if err := s.ensureInfisicalBound(ctx, root); err != nil {
+		projectName := profileProjectName(resolution.Workspace, input.Project)
+		if err := s.ensureInfisicalBound(
+			ctx, resolution.Workspace, input.Profile, environment, projectName,
+		); err != nil {
 			return nil, err
 		}
-		config, credentials, err := s.resolveInfisical(resolution.Workspace, input.Profile)
+		config, credentials, err := s.resolveInfisical(
+			resolution.Workspace,
+			input.Profile,
+			environment,
+			projectName,
+		)
 		if err != nil {
 			return nil, err
 		}
@@ -231,10 +247,18 @@ func (s *Service) Set(ctx context.Context, input SetInput) (*SetResult, error) {
 			Key: result.Key, Action: result.Action, CreatedEnvironment: createdEnvironment,
 		}, nil
 	case workspace.EnvBackendInfisical:
-		if err := s.ensureInfisicalBound(ctx, root); err != nil {
+		projectName := ""
+		if project != nil {
+			projectName = project.Name
+		}
+		if err := s.ensureInfisicalBound(
+			ctx, resolution.Workspace, input.Profile, environment, projectName,
+		); err != nil {
 			return nil, err
 		}
-		config, credentials, err := s.resolveInfisical(resolution.Workspace, input.Profile)
+		config, credentials, err := s.resolveInfisical(
+			resolution.Workspace, input.Profile, environment, projectName,
+		)
 		if err != nil {
 			return nil, err
 		}
@@ -278,33 +302,101 @@ func (s *Service) Pull(ctx context.Context, input PullInput) (*PullResult, error
 		return nil, err
 	}
 	root := resolution.Workspace.Root()
-	if err := s.ensureInfisicalBound(ctx, root); err != nil {
-		return nil, err
-	}
-	config, credentials, err := s.resolveInfisical(resolution.Workspace, input.Profile)
+	targets, err := infisicalPullTargets(resolution.Workspace, input.Project)
 	if err != nil {
 		return nil, err
 	}
-	result, err := infisical.Pull(ctx, root, infisical.PullInput{
-		Env: resolution.Scope.Environment(), Project: input.Project,
-		Force: input.Force, DryRun: input.DryRun, Cfg: config, Creds: credentials,
-	})
-	if result == nil || err != nil {
+	first := targets[0]
+	if err := s.ensureInfisicalBound(
+		ctx, resolution.Workspace, input.Profile, resolution.Scope.Environment(), first.projectName,
+	); err != nil {
 		return nil, err
 	}
-	entries := make([]PullEntry, 0, len(result.PerSubproject))
-	for _, entry := range result.PerSubproject {
-		entries = append(entries, PullEntry{
+	aggregated := &PullResult{
+		Environment: resolution.Scope.Environment(), DryRun: input.DryRun,
+		PerSubproject: []PullEntry{},
+	}
+	for _, target := range targets {
+		config, credentials, err := s.resolveInfisical(
+			resolution.Workspace,
+			input.Profile,
+			resolution.Scope.Environment(),
+			target.projectName,
+		)
+		if err != nil {
+			return nil, err
+		}
+		result, err := s.pullInfisical(ctx, root, infisical.PullInput{
+			Env: resolution.Scope.Environment(), Project: target.selector,
+			Force: input.Force, DryRun: input.DryRun, Cfg: config, Creds: credentials,
+		})
+		if result == nil || err != nil {
+			return nil, err
+		}
+		appendInfisicalPullResult(aggregated, result)
+	}
+	return aggregated, nil
+}
+
+type infisicalPullTarget struct {
+	selector    string
+	projectName string
+}
+
+func infisicalPullTargets(
+	activeWorkspace execution.Workspace,
+	selector string,
+) ([]infisicalPullTarget, error) {
+	selector = strings.TrimSpace(selector)
+	if selector != "" {
+		return []infisicalPullTarget{{
+			selector: selector, projectName: profileProjectName(activeWorkspace, selector),
+		}}, nil
+	}
+	manifest := activeWorkspace.Manifest()
+	targets := make([]infisicalPullTarget, 0, len(manifest.Projects)+1)
+	if len(workspace.WorkspaceEnvKeys(manifest)) > 0 {
+		targets = append(targets, infisicalPullTarget{selector: "/"})
+	}
+	for _, project := range manifest.Projects {
+		override, err := infisical.LoadSubprojectConfig(
+			activeWorkspace.Root(), project.RelativeDir,
+		)
+		if err != nil {
+			return nil, err
+		}
+		if override != nil && override.Disabled {
+			continue
+		}
+		targets = append(targets, infisicalPullTarget{
+			selector: project.Name, projectName: project.Name,
+		})
+	}
+	if len(targets) == 0 {
+		// Preserve the adapter's MANIFEST_MISSING_OR_EMPTY error for an
+		// empty/all-disabled workspace instead of manufacturing a new error
+		// at the module boundary.
+		targets = append(targets, infisicalPullTarget{})
+	}
+	return targets, nil
+}
+
+func appendInfisicalPullResult(target *PullResult, source *infisical.PullResult) {
+	if target.Schema == "" {
+		target.Schema = source.Schema
+	}
+	if target.Environment == "" {
+		target.Environment = source.Env
+	}
+	target.WrittenCount += source.WrittenCount
+	target.SkippedCount += source.SkippedCount
+	for _, entry := range source.PerSubproject {
+		target.PerSubproject = append(target.PerSubproject, PullEntry{
 			Name: entry.Name, RelativeDir: entry.RelativeDir,
 			InfisicalPath: entry.InfisicalPath, EnvFilePath: entry.EnvFilePath,
 			Status: entry.Status, Reason: entry.Reason, KeysWritten: entry.KeysWritten,
 		})
 	}
-	return &PullResult{
-		Schema: result.Schema, Environment: result.Env, DryRun: result.DryRun,
-		WrittenCount: result.WrittenCount, SkippedCount: result.SkippedCount,
-		PerSubproject: entries,
-	}, nil
 }
 
 func resolveSetTarget(activeWorkspace execution.Workspace, selector string) (*workspace.Project, string) {
@@ -319,6 +411,20 @@ func resolveSetTarget(activeWorkspace execution.Workspace, selector string) (*wo
 		return project, project.RelativeDir
 	}
 	return nil, ""
+}
+
+func profileProjectName(activeWorkspace execution.Workspace, selector string) string {
+	selector = strings.TrimSpace(selector)
+	if selector != "" {
+		if project, ok := activeWorkspace.Project(selector); ok {
+			return project.Name
+		}
+		return ""
+	}
+	if project, ok := activeWorkspace.ProjectFromWorkingDirectory(); ok {
+		return project.Name
+	}
+	return ""
 }
 
 func contains(values []string, target string) bool {

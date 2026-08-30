@@ -3,14 +3,12 @@
 package workspace
 
 import (
-	"context"
 	"errors"
-	"fmt"
-	"slices"
 	"strings"
+	"sync"
 
 	catalog "github.com/torchstellar-team/one-cli/packages/cli/internal/core/backend"
-	"github.com/torchstellar-team/one-cli/packages/cli/internal/core/template"
+	"github.com/torchstellar-team/one-cli/packages/cli/internal/core/profile"
 	workspacecore "github.com/torchstellar-team/one-cli/packages/cli/internal/core/workspace"
 )
 
@@ -20,112 +18,46 @@ var (
 )
 
 type Service struct {
-	catalog *catalog.Catalog
+	catalog  *catalog.Catalog
+	profiles ProfileAccess
+	mu       sync.RWMutex
 }
 
-func NewService(backendCatalog *catalog.Catalog) (*Service, error) {
+// ProfileAccess is the narrow machine-profile capability needed by project
+// settings. The configure application service implements this interface; the
+// workspace package never needs profile values and only exposes the resolved
+// profile name and its precedence source.
+type ProfileAccess interface {
+	BindWorkspaceProfile(string, string, string, string, profile.Domain, string, string) error
+	UnbindWorkspaceProfile(string, string, profile.Domain, string) error
+	BindEnvironmentProfile(string, string, string, string, string, profile.Domain, string, string) error
+	UnbindEnvironmentProfile(string, string, string, profile.Domain, string) error
+	EnvironmentProfileBinding(string, string, string, profile.Domain, string) (string, error)
+	Resolve(profile.ResolveInput) (*profile.Resolved, error)
+}
+
+// NewService constructs the workspace use-case boundary. profiles is optional
+// so existing non-Dashboard callers and focused tests keep their lightweight
+// construction path; production composition injects the configure service.
+func NewService(backendCatalog *catalog.Catalog, profiles ...ProfileAccess) (*Service, error) {
 	if backendCatalog == nil {
 		return nil, errors.New("workspace: backend catalog is required")
 	}
-	return &Service{catalog: backendCatalog}, nil
+	var profileAccess ProfileAccess
+	if len(profiles) > 0 {
+		profileAccess = profiles[0]
+	}
+	return &Service{catalog: backendCatalog, profiles: profileAccess}, nil
 }
 
-func (s *Service) Overview(root string) (workspacecore.Overview, error) {
-	return workspacecore.BuildOverview(root)
-}
-
-func (s *Service) SetEnvironment(root, backend string) (workspacecore.Overview, error) {
-	backend = strings.TrimSpace(backend)
-	if _, ok := s.catalog.Lookup(catalog.DomainEnv, backend); !ok {
-		return workspacecore.Overview{}, fmt.Errorf("%w: unknown env backend %q", ErrInvalidInput, backend)
+func (s *Service) Overview(root string, environments ...string) (workspacecore.Overview, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	environment := ""
+	if len(environments) > 0 {
+		environment = strings.TrimSpace(environments[0])
 	}
-	manifest, err := workspacecore.ReadManifest(root)
-	if err != nil {
-		return workspacecore.Overview{}, err
-	}
-	if manifest.Domains == nil {
-		manifest.Domains = &workspacecore.WorkspaceDomains{}
-	}
-	if manifest.Domains.Env == nil {
-		manifest.Domains.Env = &workspacecore.BackendRef{}
-	}
-	manifest.Domains.Env.Kind = backend
-	if err := workspacecore.WriteManifest(root, manifest); err != nil {
-		return workspacecore.Overview{}, err
-	}
-	return s.Overview(root)
-}
-
-func (s *Service) SetProjectDeployment(
-	ctx context.Context,
-	root, projectName, backend string,
-) (workspacecore.Overview, error) {
-	backend = strings.TrimSpace(backend)
-	if _, ok := s.catalog.Lookup(catalog.DomainDeploy, backend); !ok {
-		return workspacecore.Overview{}, fmt.Errorf("%w: unknown deploy backend %q", ErrInvalidInput, backend)
-	}
-	manifest, err := workspacecore.ReadManifest(root)
-	if err != nil {
-		return workspacecore.Overview{}, err
-	}
-	project := findProject(manifest, projectName)
-	if project == nil {
-		return workspacecore.Overview{}, fmt.Errorf("%w: %s", ErrProjectNotFound, projectName)
-	}
-	registry, err := template.Fetch(ctx, "")
-	if err != nil {
-		return workspacecore.Overview{}, err
-	}
-	if !templateAllowsDeployment(registry, project.TemplateID, backend) {
-		return workspacecore.Overview{}, fmt.Errorf(
-			"%w: deploy backend %q is not compatible with template %q",
-			ErrInvalidInput,
-			backend,
-			project.TemplateID,
-		)
-	}
-	if project.Domains == nil {
-		project.Domains = &workspacecore.ProjectDomains{}
-	}
-	if project.Domains.Deploy == nil {
-		project.Domains.Deploy = &workspacecore.ProjectDeployBackend{}
-	}
-	project.Domains.Deploy.Kind = backend
-	if err := workspacecore.WriteManifest(root, manifest); err != nil {
-		return workspacecore.Overview{}, err
-	}
-	return s.Overview(root)
-}
-
-func (s *Service) SetProjectContainer(
-	root, projectName, backend, image string,
-) (workspacecore.Overview, error) {
-	backend = strings.TrimSpace(backend)
-	if backend != "" {
-		if _, ok := s.catalog.Lookup(catalog.DomainContainer, backend); !ok {
-			return workspacecore.Overview{}, fmt.Errorf("%w: unknown container backend %q", ErrInvalidInput, backend)
-		}
-	}
-	manifest, err := workspacecore.ReadManifest(root)
-	if err != nil {
-		return workspacecore.Overview{}, err
-	}
-	project := findProject(manifest, projectName)
-	if project == nil {
-		return workspacecore.Overview{}, fmt.Errorf("%w: %s", ErrProjectNotFound, projectName)
-	}
-	if project.Domains == nil {
-		project.Domains = &workspacecore.ProjectDomains{}
-	}
-	if project.Domains.Container == nil {
-		project.Domains.Container = &workspacecore.ProjectContainerOverride{}
-	}
-	project.Domains.Container.Kind = backend
-	project.Domains.Container.Image = strings.TrimSpace(image)
-	if err := workspacecore.WriteManifest(root, manifest); err != nil {
-		return workspacecore.Overview{}, err
-	}
-	return s.Overview(root)
+	return workspacecore.BuildOverview(root, environment)
 }
 
 func findProject(manifest *workspacecore.Manifest, name string) *workspacecore.ManifestProject {
@@ -138,16 +70,4 @@ func findProject(manifest *workspacecore.Manifest, name string) *workspacecore.M
 		}
 	}
 	return nil
-}
-
-func templateAllowsDeployment(registry *template.Registry, templateID, backend string) bool {
-	if registry == nil {
-		return false
-	}
-	for _, entry := range registry.Templates {
-		if entry.ID == templateID {
-			return slices.Contains(entry.Compat["deploy"], backend)
-		}
-	}
-	return false
 }

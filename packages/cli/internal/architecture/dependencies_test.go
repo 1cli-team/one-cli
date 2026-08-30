@@ -4,6 +4,7 @@ import (
 	"go/parser"
 	"go/token"
 	"io/fs"
+	"os"
 	"path/filepath"
 	"runtime"
 	"strconv"
@@ -76,6 +77,37 @@ func TestDependencyDirection(t *testing.T) {
 				t.Fatal(err)
 			}
 		})
+	}
+}
+
+// TestDashboardWorkspaceApplicationCannotWriteManifest makes the product
+// boundary executable: the Dashboard application may project repository
+// state, but its only mutations are machine-local profile bindings.
+func TestDashboardWorkspaceApplicationCannotWriteManifest(t *testing.T) {
+	_, currentFile, _, ok := runtimeCaller()
+	if !ok {
+		t.Fatal("resolve architecture test path")
+	}
+	root := filepath.Join(filepath.Dir(filepath.Dir(currentFile)), "application", "workspace")
+	err := filepath.WalkDir(root, func(path string, entry fs.DirEntry, walkErr error) error {
+		if walkErr != nil {
+			return walkErr
+		}
+		if entry.IsDir() || filepath.Ext(path) != ".go" || strings.HasSuffix(path, "_test.go") {
+			return nil
+		}
+		contents, err := os.ReadFile(path)
+		if err != nil {
+			return err
+		}
+		if strings.Contains(string(contents), "WriteManifest") {
+			relative, _ := filepath.Rel(root, path)
+			t.Errorf("application/workspace/%s may not call WriteManifest", filepath.ToSlash(relative))
+		}
+		return nil
+	})
+	if err != nil {
+		t.Fatal(err)
 	}
 }
 

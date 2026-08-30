@@ -1,7 +1,7 @@
-// Package servecmd contributes `one serve` — a local HTTP server with a web
-// UI for editing ~/.config/one/config.json and credentials.json. AI agents
-// read these files at their peril (they hold Infisical secrets, kubeconfig
-// paths, container registry tokens), so the UI is the human-only path.
+// Package servecmd contributes `one serve` — a local Dashboard for observed
+// Workspaces, their Projects, and machine-level Profiles. AI agents read
+// credential files at their peril, so sensitive Profile editing remains a
+// human-only browser path.
 package servecmd
 
 import (
@@ -28,6 +28,7 @@ type Dependencies struct {
 	Catalog    *catalog.Catalog
 	Profiles   *configureapp.ProfileService
 	Workspaces *workspaceapp.Service
+	Registry   *workspaceapp.RegistryService
 }
 
 func Commands(deps Dependencies) []*cobra.Command {
@@ -42,9 +43,10 @@ func newServeCmd(deps Dependencies) *cobra.Command {
 	)
 	cmd := &cobra.Command{
 		Use: "serve",
-		Long: `启动一个本地 HTTP 服务，在浏览器里手工编辑 profile（env / deploy /
-container 各 backend）。Profile 含 API key、kubeconfig path、registry
-token 等敏感字段，AI 不应读写；本命令是给你（人类）的入口。
+		Long: `启动一个本地 HTTP 服务，在浏览器里查看本机 Workspace、配置其中的
+Project，并管理 profile（env / deploy / container 各 backend）。Profile
+含 API key、kubeconfig path、registry token 等敏感字段，AI 不应读写；
+本命令是给你（人类）的入口。
 
 默认行为：绑定 127.0.0.1 + 内核分配空闲端口 + 自动用系统默认浏览器
 打开 URL（带一次性 session token）。打印 URL 后阻塞，按 Ctrl-C 退出。
@@ -66,11 +68,12 @@ token 等敏感字段，AI 不应读写；本命令是给你（人类）的入�
 
 			// WalkUpToManifest fails with NOT_ONE_PROJECT when there's no
 			// one.manifest.json anywhere up the tree. That's fine here —
-			// `one serve` is happy to run outside a workspace (the
-			// profile-editor surface works either way); only the new
-			// Overview endpoint cares, and it returns {present: false}
-			// when WorkspaceRoot == "".
-			workspaceRoot, _ := workspace.WalkUpToManifest("")
+			// `one serve` is happy to run outside a workspace: it still
+			// loads the persisted registry and machine-level Profiles.
+			workspaceRoot, registryWarn := discoverServeWorkspace(ctx, "", deps.Registry)
+			if registryWarn != nil {
+				fmt.Fprintln(cmd.ErrOrStderr(), i18n.Tf("serve.registry_warning", registryWarn))
+			}
 
 			return serve.Run(ctx, serve.Opts{
 				Host:             host,
@@ -79,6 +82,7 @@ token 等敏感字段，AI 不应读写；本命令是给你（人类）的入�
 				Catalog:          deps.Catalog,
 				ProfileService:   deps.Profiles,
 				WorkspaceService: deps.Workspaces,
+				RegistryService:  deps.Registry,
 			}, func(res serve.Result) {
 				output.Emit(res)
 				maybeOpenBrowser(cmd.ErrOrStderr(), res, open)
@@ -93,6 +97,25 @@ token 等敏感字段，AI 不应读写；本命令是给你（人类）的入�
 	i18n.MarkFlagUsage(cmd, "open", "serve.flag.open")
 	i18n.MarkShort(cmd, "serve.short")
 	return cmd
+}
+
+// discoverServeWorkspace keeps optional Workspace discovery and registration
+// in one testable boundary. Running outside a Workspace is valid: the server
+// still exposes machine-level profiles and the previously observed registry.
+func discoverServeWorkspace(
+	ctx context.Context,
+	start string,
+	registry *workspaceapp.RegistryService,
+) (string, error) {
+	root, err := workspace.WalkUpToManifest(start)
+	if err != nil {
+		return "", nil
+	}
+	if registry == nil {
+		return root, nil
+	}
+	_, err = registry.Observe(ctx, root, "serve")
+	return root, err
 }
 
 // NewOpenCmd exposes the same local settings server under the user-facing

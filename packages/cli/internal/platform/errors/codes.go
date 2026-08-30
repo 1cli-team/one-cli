@@ -76,6 +76,7 @@ const (
 	PROFILE_VERSION_UNSUPPORTED           Code = "PROFILE_VERSION_UNSUPPORTED"
 	PROFILE_NOT_FOUND                     Code = "PROFILE_NOT_FOUND"
 	PROFILE_ALREADY_EXISTS                Code = "PROFILE_ALREADY_EXISTS"
+	PROFILE_IN_USE                        Code = "PROFILE_IN_USE"
 	PROFILE_NONE_CONFIGURED               Code = "PROFILE_NONE_CONFIGURED"
 	PROFILE_BACKEND_INVALID               Code = "PROFILE_BACKEND_INVALID"
 	PROFILE_CREDENTIAL_SOURCE_UNSUPPORTED Code = "PROFILE_CREDENTIAL_SOURCE_UNSUPPORTED"
@@ -157,10 +158,11 @@ const (
 	RUN_COMMAND_NOT_FOUND Code = "RUN_COMMAND_NOT_FOUND"
 
 	// Serve — local HTTP UI for editing profiles.
-	SERVE_PORT_BUSY       Code = "SERVE_PORT_BUSY"
-	SERVE_BIND_FORBIDDEN  Code = "SERVE_BIND_FORBIDDEN"
-	SERVE_TOKEN_INVALID   Code = "SERVE_TOKEN_INVALID"
-	SERVE_PAYLOAD_INVALID Code = "SERVE_PAYLOAD_INVALID"
+	SERVE_PORT_BUSY            Code = "SERVE_PORT_BUSY"
+	SERVE_BIND_FORBIDDEN       Code = "SERVE_BIND_FORBIDDEN"
+	SERVE_TOKEN_INVALID        Code = "SERVE_TOKEN_INVALID"
+	SERVE_PAYLOAD_INVALID      Code = "SERVE_PAYLOAD_INVALID"
+	SERVE_REPOSITORY_READ_ONLY Code = "SERVE_REPOSITORY_READ_ONLY"
 )
 
 // Definition holds the metadata associated with a Code: a short summary
@@ -217,11 +219,12 @@ var Codes = map[Code]Definition{
 	BACKEND_NOT_ENABLED:                   {Summary: "A domain command was invoked in a workspace where that domain is not configured.", Remediation: []output.Remediation{{Action: "configure-domain", Hint: "在 one.manifest.json 的 domains 块中配置该域（domains.env.kind / projects[].domains.container 等），或选用声明它的模板再 one add"}}},
 	BACKEND_VERB_NOT_SUPPORTED:            {Summary: "The active backend in this domain does not implement the requested verb (e.g. `one env pull` against the dotenv backend).", Remediation: []output.Remediation{{Action: "switch-backend", Hint: "切换到支持该 verb 的同 domain backend（例如 env 域改用 infisical）"}}},
 	BACKEND_INTERFACE_MISMATCH:            {Summary: "Internal: the dispatched backend failed its capability assertion. Build-side bug; should never reach end users."},
-	PROFILE_FILE_INVALID:                  {Summary: "~/.config/one/config.json or credentials.json failed to parse as JSON.", Remediation: []output.Remediation{{Action: "edit-profile-file", Hint: "手动检查并修复对应文件，或删除后重新 `one configure add <domain>/<backend> --profile <name>`", Command: "rm ~/.config/one/config.json ~/.config/one/credentials.json"}}},
-	PROFILE_VERSION_UNSUPPORTED:           {Summary: "config.json or credentials.json schema version does not match this binary.", Remediation: []output.Remediation{{Action: "upgrade-cli", Hint: "升级 one cli 到最新版本，或删除两个文件后重建配置"}}},
+	PROFILE_FILE_INVALID:                  {Summary: "One of config.json, credentials.json, or profile-bindings.json failed to parse as JSON.", Remediation: []output.Remediation{{Action: "edit-profile-file", Hint: "根据 error.context.path 检查并修复对应的机器本地文件；删除 profile-bindings.json 只会清除本机选择，不会删除凭据或修改仓库"}}},
+	PROFILE_VERSION_UNSUPPORTED:           {Summary: "A machine-local Profile file schema does not match this binary.", Remediation: []output.Remediation{{Action: "upgrade-cli", Hint: "升级 one cli，或仅重建 error.context.path 指向的不兼容机器本地文件；无需升级 one.manifest.json"}}},
 	PROFILE_NOT_FOUND:                     {Summary: "Requested profile does not exist under the (domain/backend) section.", Remediation: []output.Remediation{{Action: "list-profiles", Command: "one configure list env/infisical"}, {Action: "add-profile", Hint: "创建新 profile", Command: "one configure add env/infisical --profile <name>"}}},
 	PROFILE_ALREADY_EXISTS:                {Summary: "A profile with this name already exists. Re-run `one configure add <domain>/<backend> --profile <name>` to update existing credentials, or pick a different name."},
-	PROFILE_NONE_CONFIGURED:               {Summary: "No profile resolved from --profile / workspace binding / machine default. The backend needs an endpoint to talk to.", Remediation: []output.Remediation{{Action: "add-profile", Hint: "创建第一个 profile（替换 <domain>/<backend> 为对应 pair，如 env/infisical / deploy/aws-s3 / container/docker）", Command: "one configure add <domain>/<backend> --profile work"}}},
+	PROFILE_IN_USE:                        {Summary: "The Profile is still selected by one or more environment-aware Workspace or Project bindings.", Remediation: []output.Remediation{{Action: "unbind-profile", Hint: "先在 Dashboard 中把对应 Workspace / Project Profile 选择改为 Automatic，再删除"}}},
+	PROFILE_NONE_CONFIGURED:               {Summary: "No Profile resolved from --profile, environment-aware Project/Workspace bindings, legacy bindings, or the machine default.", Remediation: []output.Remediation{{Action: "add-profile", Hint: "创建第一个 profile（替换 <domain>/<backend> 为对应 pair，如 env/infisical / deploy/aws-s3 / container/docker）", Command: "one configure add <domain>/<backend> --profile work"}}},
 	PROFILE_BACKEND_INVALID:               {Summary: "Profile.backend value is not recognised, or it doesn't belong to the declared domain."},
 	PROFILE_CREDENTIAL_SOURCE_UNSUPPORTED: {Summary: "Profile's credentialSource is set to a value this build does not implement (only `file` is wired up so far).", Remediation: []output.Remediation{{Action: "use-file-source", Hint: "把 config.json 中该 profile 的 credentialSource 改回 \"file\"（或删除该字段），并确保对应密钥写在 credentials.json"}}},
 	IMAGE_REF_INCOMPLETE:                  {Summary: "Deploy / CI backend needs the container image ref but it is missing or incomplete (registry / name / tag)."},
@@ -288,10 +291,11 @@ var Codes = map[Code]Definition{
 	RUN_DOTENV_MISSING:    {Summary: "one run could not find a .env file for the resolved subproject.", Remediation: []output.Remediation{{Action: "pull-secrets", Hint: "先把 Infisical 环境变量拉到项目 .env", Command: "one env pull"}, {Action: "specify-subproject", Hint: "或显式指定项目（按 manifest 里的 name 或相对路径）", Command: "one run -p <name|path> -- <cmd>"}}},
 	RUN_COMMAND_NOT_FOUND: {Summary: "one run could not locate the requested executable on PATH.", Remediation: []output.Remediation{{Action: "check-spelling", Hint: "确认命令名拼写正确"}, {Action: "use-package-runner", Hint: "对于 npm script，使用包管理器调用", Command: "one run -- npm run <script>"}}},
 
-	SERVE_PORT_BUSY:       {Summary: "one serve 无法绑定请求的端口（被占用或权限不足）。", Remediation: []output.Remediation{{Action: "use-random-port", Hint: "改用随机端口（让内核分配空闲端口）", Command: "one serve --port 0"}, {Action: "pick-different-port", Hint: "或显式换一个空闲端口", Command: "one serve --port 17900"}}},
-	SERVE_BIND_FORBIDDEN:  {Summary: "one serve 拒绝绑定到非 loopback 地址（profile 文件含敏感凭据，仅 127.0.0.1 / localhost 才安全）。", Remediation: []output.Remediation{{Action: "use-loopback", Hint: "改用 127.0.0.1（默认）", Command: "one serve --host 127.0.0.1"}}},
-	SERVE_TOKEN_INVALID:   {Summary: "请求未携带有效的 session token。Token 在启动 `one serve` 时打印的 URL 中（?token=...），并在首次访问后写入 cookie。"},
-	SERVE_PAYLOAD_INVALID: {Summary: "POST/PUT 请求体不是合法 JSON 或缺少必要字段。"},
+	SERVE_PORT_BUSY:            {Summary: "one serve 无法绑定请求的端口（被占用或权限不足）。", Remediation: []output.Remediation{{Action: "use-random-port", Hint: "改用随机端口（让内核分配空闲端口）", Command: "one serve --port 0"}, {Action: "pick-different-port", Hint: "或显式换一个空闲端口", Command: "one serve --port 17900"}}},
+	SERVE_BIND_FORBIDDEN:       {Summary: "one serve 拒绝绑定到非 loopback 地址（profile 文件含敏感凭据，仅 127.0.0.1 / localhost 才安全）。", Remediation: []output.Remediation{{Action: "use-loopback", Hint: "改用 127.0.0.1（默认）", Command: "one serve --host 127.0.0.1"}}},
+	SERVE_TOKEN_INVALID:        {Summary: "请求未携带有效的 session token。Token 在启动 `one serve` 时打印的 URL 中（?token=...），并在首次访问后写入 cookie。"},
+	SERVE_PAYLOAD_INVALID:      {Summary: "POST/PUT 请求体不是合法 JSON 或缺少必要字段。"},
+	SERVE_REPOSITORY_READ_ONLY: {Summary: "Dashboard 只读查看工作区代码和 one.manifest.json；仅机器本地 profile 配置可修改。"},
 }
 
 // Definition returns the metadata for a code, or zero-value if unknown.

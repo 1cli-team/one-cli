@@ -35,7 +35,7 @@ projects and selects backends.
     "name": "my-workspace"             // matches ^[a-zA-Z0-9][a-zA-Z0-9_-]*$
   },
   "environments": {                    // optional; same default seed used by `one create`
-    "names": ["dev", "staging", "prod"],
+    "names": ["dev", "preview", "prod"],
     "default": "dev"                   // MUST appear in names
   },
   "domains": {                         // optional; workspace-level backend selection
@@ -95,7 +95,7 @@ projects and selects backends.
 
 | Field | Required | Type | Notes |
 |---|---|---|---|
-| `names` | when present | `string[]` | Default seed when written: `["dev","staging","prod"]`. |
+| `names` | when present | `string[]` | Default seed when written: `["dev","preview","prod"]`. Existing `staging` environments remain valid. |
 | `default` | when present | `string` | Must be one of `names`. Used when `--env` is omitted. |
 
 If you omit `environments` entirely, env commands still work when the

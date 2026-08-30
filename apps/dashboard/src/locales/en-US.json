@@ -1,9 +1,8 @@
 {
 	"sidebar": {
 		"brand": "one serve",
-		"home": "Overview",
-		"profile": "Credential profiles",
-		"loopbackOnly": "127.0.0.1 only",
+		"home": "Home",
+		"settings": "Settings",
 		"themeToDark": "Switch to dark mode",
 		"themeToLight": "Switch to light mode",
 		"language": "Language",
@@ -12,9 +11,101 @@
 		"languageEn": "English"
 	},
 	"topbar": {
-		"home": "Overview",
+		"home": "Workspace",
+		"workspaces": "Workspaces",
+		"settings": "Settings",
 		"profile": "Credential profiles",
 		"sectionsRoot": "Sections"
+	},
+	"environmentSwitcher": {
+		"label": "Environment",
+		"dev": "Development",
+		"preview": "Preview",
+		"prod": "Production"
+	},
+	"workspaces": {
+		"workspaceLabel": "Workspace",
+		"loading": "Loading workspace",
+		"retry": "Retry",
+		"openProfiles": "Open credential profiles",
+		"home": {
+			"title": "Workspaces",
+			"description": "Open a registered Workspace and manage its projects.",
+			"loading": "Loading Workspaces…",
+			"loadFailedTitle": "Could not load Workspaces",
+			"loadFailedDescription": "The local Workspace registry could not be read.",
+			"retry": "Retry",
+			"registryCount": "{{count}} registered Workspaces",
+			"projectCount": "{{count}} Projects",
+			"currentSession": "This one serve session",
+			"workspaceId": "Workspace ID",
+			"idUnavailable": "Not available",
+			"projects": "Projects",
+			"projectCountUnavailable": "Unavailable",
+			"lastDetected": "Last detected",
+			"emptyTitle": "No Workspaces yet",
+			"emptyDescription": "Run one create to create a Workspace, or run one serve inside an existing Workspace to register it.",
+			"listLabel": "Registered Workspaces"
+		},
+		"rail": {
+			"title": "Workspaces",
+			"empty": "Run one create, or run one serve inside a workspace, to add it here.",
+			"loadFailed": "Workspace registry could not be loaded."
+		},
+		"status": {
+			"ready": "Ready",
+			"missing": "Path missing",
+			"invalid": "Invalid manifest",
+			"identity-missing": "Workspace ID missing",
+			"identity-conflict": "Workspace ID conflict"
+		},
+		"conflict": {
+			"title": "Read-only: this Workspace ID is used by another path",
+			"description": "You can inspect its Projects, but configuration is disabled to prevent Profile bindings from crossing between copied Workspaces."
+		},
+		"state": {
+			"missing": {
+				"title": "The Workspace path is unavailable",
+				"description": "The folder may have moved, been deleted, or be on a drive that is not mounted. Run one serve from its new location to refresh the registry."
+			},
+			"invalid": {
+				"title": "The Workspace manifest is invalid",
+				"description": "Repair one.manifest.json at this path, then run one serve in the Workspace again."
+			},
+			"identity-missing": {
+				"title": "This Workspace has no stable ID",
+				"description": "Add workspace.id to one.manifest.json before configuring project-scoped Profiles."
+			},
+			"identity-conflict": {
+				"title": "This Workspace ID is duplicated",
+				"description": "The Workspace remains available for inspection, but configuration is read-only."
+			}
+		},
+		"forget": {
+			"short": "Forget Workspace",
+			"action": "Forget {{name}}",
+			"confirm": "Forget Workspace \"{{name}}\"? This only removes the local registry entry; no project files or Profiles will be deleted.",
+			"done": "Forgot {{name}}",
+			"failed": "Could not forget Workspace",
+			"pageHint": "Use the trash action beside this Workspace in the left rail to forget only its local registry entry."
+		},
+		"registryError": {
+			"title": "Workspace registry unavailable",
+			"description": "One Serve could not read the machine-local Workspace registry. Project files and credential Profiles have not been changed."
+		},
+		"overviewError": {
+			"title": "Could not open {{name}}",
+			"description": "The Workspace was registered, but its current overview could not be loaded."
+		},
+		"unknown": {
+			"title": "Workspace not found",
+			"description": "This registry entry no longer exists. Choose another Workspace from the left rail.",
+			"back": "Choose a Workspace"
+		},
+		"noneReady": {
+			"title": "No available Workspaces",
+			"description": "Select an unavailable Workspace in the left rail for repair guidance, or run one serve inside a valid Workspace."
+		}
 	},
 	"notFound": {
 		"message": "404 — Page not found"
@@ -26,6 +117,11 @@
 		"devDetails": "Development error details",
 		"reload": "Reload",
 		"home": "Back home"
+	},
+	"settings": {
+		"title": "Settings",
+		"description": "Manage the machine-level credential profiles available to your Workspaces and Projects.",
+		"loadFailedTitle": "Failed to load Settings"
 	},
 	"sections": {
 		"groupLabel": {
@@ -188,6 +284,117 @@
 	"http": {
 		"networkError": "Network request failed — check your connection."
 	},
+	"projects": {
+		"title": "Project configuration",
+		"description": "Review and configure every project declared in the manifest from one place.",
+		"search": "Search project, path, or backend",
+		"kindFilter": "Filter by project kind",
+		"kinds": {
+			"all": "All kinds"
+		},
+		"empty": {
+			"title": "No matching projects",
+			"description": "Adjust the search or project-kind filter."
+		},
+		"matrix": {
+			"project": "Project",
+			"environment": "Environment",
+			"container": "Container",
+			"deploy": "Deploy",
+			"status": "Status",
+			"notApplicable": "Not applicable",
+			"notConfigured": "Not configured",
+			"profileMissing": "Credentials required",
+			"setupRequired": "Setup required",
+			"ready": "Configured",
+			"healthy": "Healthy",
+			"issueCount": "{{count}} to resolve",
+			"configureDomain": "Configure {{domain}} for {{project}}"
+		}
+	},
+	"projectInspector": {
+		"tabs": {
+			"label": "Project configuration sections",
+			"overview": "Overview",
+			"environment": "Environment",
+			"container": "Container",
+			"deploy": "Deploy"
+		},
+		"loadFailed": "Unable to load project configuration",
+		"retry": "Retry",
+		"backend": "Backend",
+		"inheritedBackend": "Inherited {{domain}} backend",
+		"manifestReadOnly": "Manifest · read-only",
+		"profileOnly": "Profile binding only",
+		"saved": "Project Profile binding saved",
+		"saveFailed": "Could not save the project Profile binding",
+		"saveHint": "Only the machine-local Profile binding for this environment is changed.",
+		"save": "Save Profile",
+		"saving": "Saving…",
+		"values": {
+			"enabled": "Enabled",
+			"disabled": "Disabled"
+		},
+		"unsavedChangesTitle": "Discard unsaved changes?",
+		"unsavedChanges": "You have unsaved changes. Discard them and continue?",
+		"discardAndContinue": "Discard and continue",
+		"general": {
+			"title": "Project overview",
+			"description": "Project metadata comes from one.manifest.json and is read-only in the Dashboard.",
+			"template": "Template",
+			"toolchain": "Toolchain",
+			"path": "Project path",
+			"buildVersion": "Build version",
+			"packageManager": "Package manager",
+			"packageManagerAutomatic": "Detect automatically",
+			"devCommand": "Development command"
+		},
+		"environment": {
+			"title": "Environment configuration",
+			"description": "Environment manifest values are read-only. You can only choose the machine-local Profile for the selected environment.",
+			"path": "Environment file path",
+			"inherits": "Inherit workspace environment",
+			"inheritsHint": "Project variables override workspace variables with the same name.",
+			"disabled": "Disable project environment",
+			"disabledHint": "Do not inject environment variables into project commands.",
+			"keys": "Declared variable names"
+		},
+		"container": {
+			"title": "Container configuration",
+			"description": "Container manifest values are read-only. You can only choose the machine-local Profile for the selected environment.",
+			"enabled": "Enable container builds",
+			"enabledHint": "Allow one container to build an image for this project.",
+			"image": "Image address",
+			"namespace": "Image namespace"
+		},
+		"deploy": {
+			"title": "Deployment configuration",
+			"description": "Deployment manifest values are read-only. You can only choose the machine-local Profile for the selected environment.",
+			"notSupported": "This project's Template does not support a deployment target.",
+			"environmentDefault": "Use default environment",
+			"compatibleTargets": "Compatible targets"
+		},
+		"profile": {
+			"label": "Project profile",
+			"description": "Choose machine-level credentials scoped to this project and environment.",
+			"notRequired": "This backend does not require a credential profile.",
+			"loading": "Loading credential profiles…",
+			"loadFailed": "Could not load credential profiles.",
+			"automatic": "Resolve automatically (workspace / default)",
+			"inherited": "Inherit {{name}} ({{source}})",
+			"none": "No profile currently resolves",
+			"manage": "Manage in Settings"
+		}
+	},
+	"project": {
+		"fields": {
+			"bucket": "Bucket",
+			"environment": "Deployment environment",
+			"projectId": "Project ID",
+			"projectName": "Project name",
+			"workerName": "Worker name"
+		}
+	},
 	"overview": {
 		"untitledWorkspace": "Untitled workspace",
 		"environments": "Environments",
@@ -196,6 +403,41 @@
 		"allGood": "✓ All set",
 		"workspaceIssuesTitle": "Workspace-level configuration missing",
 		"manageProfilesCta": "Manage credential profiles",
+		"profileSafety": "Profiles stay in machine-local configuration; credentials never enter the manifest.",
+		"workspaceEnv": {
+			"title": "Workspace environment",
+			"scope": "Workspace scope",
+			"readOnly": "Read-only",
+			"description": "The Backend comes from the manifest and is read-only here. Choose the machine-level Profile for the selected environment.",
+			"localBinding": "Machine-local Profile binding",
+			"backend": "Backend",
+			"backendReadOnly": "Manifest · read-only",
+			"backendSource": "Configured outside the Dashboard in one.manifest.json.",
+			"backendMissing": "Not configured",
+			"loading": "Loading workspace Profile binding…",
+			"loadFailed": "Could not load the workspace Profile binding.",
+			"missingBackendCli": "No environment Backend is configured. Configure it with One CLI before selecting a Profile.",
+			"save": "Save",
+			"saving": "Saving…",
+			"saved": "Workspace Profile saved",
+			"saveFailed": "Could not save the workspace Profile",
+			"profile": {
+				"label": "Profile",
+				"description": "Choose a machine-local credential Profile for this workspace and environment.",
+				"notRequired": "This backend does not require a credential profile.",
+				"loading": "Loading credential profiles…",
+				"loadFailed": "Could not load credential profiles.",
+				"automatic": "Resolve automatically (machine default)",
+				"inherited": "Automatic · {{name}} ({{source}})",
+				"none": "No Profile currently resolves",
+				"manage": "Manage in Settings"
+			}
+		},
+		"metrics": {
+			"projects": "Projects",
+			"healthy": "Healthy",
+			"attention": "Attention"
+		},
 		"kinds": {
 			"app": "App",
 			"service": "Service",
@@ -216,29 +458,8 @@
 			}
 		},
 		"fix": {
-			"cta": "Configure",
 			"profileCta": "Add credentials",
-			"title": {
-				"container": "Configure container backend",
-				"deploy": "Configure deploy backend",
-				"env": "Configure workspace env backend"
-			},
-			"description": {
-				"container": "Pick a container image backend for \"{{project}}\" — writes to manifest projects[].domains.container.",
-				"deploy": "Pick a deploy backend for \"{{project}}\" — writes to manifest projects[].domains.deploy.kind.",
-				"env": "Pick the environment-variable backend for the whole workspace — writes to manifest domains.env.kind."
-			},
-			"kindLabel": "Backend kind",
-			"kindPlaceholder": "Select a backend…",
-			"imageLabel": "Image (optional)",
-			"imagePlaceholder": "ghcr.io/org/web:latest",
-			"note": "This only writes the backend selection to the manifest. Configure the matching credential profile (API key / token) in the \"{{section}}\" section.",
-			"sectionLink": "credential section",
-			"save": "Save",
-			"saving": "Saving…",
-			"cancel": "Cancel",
-			"saved": "Updated {{domain}} configuration",
-			"failed": "Save failed"
+			"cliHint": "Configure this Backend with One CLI."
 		}
 	}
 }

@@ -27,7 +27,7 @@ The block below uses `jsonc` so the fields can be explained inline. The real `on
     "name": "demo-app" // Workspace name, usually from the directory or --name
   },
   "environments": { // Environments known to the workspace
-    "names": ["dev", "staging", "prod"], // Available environment names
+    "names": ["dev", "preview", "prod"], // Default environment names for new workspaces
     "default": "dev" // Default environment when --env is omitted
   },
   "domains": { // Workspace-level domain defaults

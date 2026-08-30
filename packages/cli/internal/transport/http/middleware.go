@@ -53,9 +53,15 @@ type MuxOpts struct {
 	// ProfileService is the profile use-case boundary shared with Cobra. Nil is
 	// filled with the local v1 repository for compatibility with existing tests.
 	ProfileService *configureapp.ProfileService
-	// WorkspaceService owns Overview and manifest selection mutations. Nil is
+	// WorkspaceService owns read-only manifest projections and machine-local
+	// Profile bindings. It has no repository-publication capability. Nil is
 	// filled from Catalog for compatibility with direct BuildMux tests.
 	WorkspaceService *workspaceapp.Service
+	// RegistryService owns the persisted machine-local Workspace index. It is
+	// optional so older embedders and focused tests keep working; when absent,
+	// GET /workspaces returns an empty compatibility response and scoped routes
+	// fail closed instead of accepting a client-supplied filesystem path.
+	RegistryService *workspaceapp.RegistryService
 }
 
 const tokenCookie = "one_serve_token"
@@ -78,7 +84,7 @@ func BuildMux(opts MuxOpts) http.Handler {
 		opts.ProfileService = service
 	}
 	if opts.WorkspaceService == nil {
-		service, err := workspaceapp.NewService(opts.Catalog)
+		service, err := workspaceapp.NewService(opts.Catalog, opts.ProfileService)
 		if err != nil {
 			panic(err)
 		}
@@ -90,6 +96,7 @@ func BuildMux(opts MuxOpts) http.Handler {
 	registerPreferencesRoutes(api, opts)
 	registerWorkspaceRoutes(api, opts)
 	registerWorkspaceMutateRoutes(api, opts)
+	registerWorkspacesRoutes(api, opts)
 
 	root := http.NewServeMux()
 	root.Handle("/api/", http.StripPrefix("/api", api))

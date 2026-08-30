@@ -34,9 +34,8 @@ import (
 // for "infisical", S3 for any S3-compatible deploy backend, etc.) —
 // checked by writeProfile.
 func Add(domain Domain, backend, name string, profile Profile, setDefault bool) error {
-	if name == "" {
-		return cliErrors.New(cliErrors.PROFILE_BACKEND_INVALID,
-			"profile 名不能为空。")
+	if err := ValidateName(name); err != nil {
+		return err
 	}
 	if err := validateBackend(domain, backend); err != nil {
 		return err
@@ -75,9 +74,8 @@ func Add(domain Domain, backend, name string, profile Profile, setDefault bool) 
 // automatically" rule as Add: explicit true forces default, otherwise
 // default flips only when the section has no default profile yet.
 func Upsert(domain Domain, backend, name string, profile Profile, setDefault bool) (updated bool, err error) {
-	if name == "" {
-		return false, cliErrors.New(cliErrors.PROFILE_BACKEND_INVALID,
-			"profile 名不能为空。")
+	if err := ValidateName(name); err != nil {
+		return false, err
 	}
 	if err := validateBackend(domain, backend); err != nil {
 		return false, err
@@ -113,8 +111,13 @@ func Upsert(domain Domain, backend, name string, profile Profile, setDefault boo
 // removed profile was default for its section, default is reset to ""
 // (caller can show "no default profile; pick one with `profile use`");
 // we deliberately don't auto-pick a new default to avoid surprising
-// the user.
+// the user. An environment-aware binding blocks deletion with PROFILE_IN_USE;
+// callers must explicitly unbind it first so the independent binding store and
+// Profile files never need a non-atomic cross-file cascade.
 func Remove(domain Domain, backend, name string) error {
+	if err := ValidateName(name); err != nil {
+		return err
+	}
 	cfg, _, err := Load()
 	if err != nil {
 		return err
@@ -127,8 +130,25 @@ func Remove(domain Domain, backend, name string) error {
 	if !ok {
 		return invalidProfilePair(domain, resolvedBackend)
 	}
-	policy.remove(cfg, name)
-	if err := Save(cfg); err != nil {
+	err = withEnvironmentProfileBindingReferences(
+		domain, resolvedBackend, name,
+		func(references []environmentProfileBindingReference) error {
+			if len(references) > 0 {
+				return cliErrors.New(cliErrors.PROFILE_IN_USE,
+					fmt.Sprintf("profile %q 仍被 %d 个环境绑定引用；请先在 Dashboard 中选择 Automatic 解绑。", name, len(references))).
+					WithContext(map[string]any{
+						"section":       SectionKey(domain, resolvedBackend),
+						"name":          name,
+						"binding_count": len(references),
+						"bindings":      references,
+					})
+			}
+			removeLegacyProfileBindings(cfg, domain, resolvedBackend, name)
+			policy.remove(cfg, name)
+			return Save(cfg)
+		},
+	)
+	if err != nil {
 		return err
 	}
 	// Best-effort cache cleanup — never block remove on cache errors.
@@ -136,11 +156,53 @@ func Remove(domain Domain, backend, name string) error {
 	return nil
 }
 
+// removeLegacyProfileBindings drops the environment-agnostic Workspace and
+// Project references from the same Config value that Remove saves with the
+// Profile deletion. Workspace registration metadata (name/root) is retained.
+func removeLegacyProfileBindings(cfg *Config, domain Domain, backend, name string) {
+	if cfg == nil || len(cfg.Workspaces) == 0 {
+		return
+	}
+	sectionKey := SectionKey(domain, backend)
+	for workspaceID, workspace := range cfg.Workspaces {
+		if workspace.Profiles[sectionKey] == name {
+			delete(workspace.Profiles, sectionKey)
+		}
+		if len(workspace.Profiles) == 0 {
+			workspace.Profiles = nil
+		}
+		for projectName, project := range workspace.Projects {
+			if project.Profiles[sectionKey] == name {
+				delete(project.Profiles, sectionKey)
+			}
+			if project.IsEmpty() {
+				delete(workspace.Projects, projectName)
+			} else {
+				workspace.Projects[projectName] = project
+			}
+		}
+		if len(workspace.Projects) == 0 {
+			workspace.Projects = nil
+		}
+		if workspace.IsEmpty() {
+			delete(cfg.Workspaces, workspaceID)
+		} else {
+			cfg.Workspaces[workspaceID] = workspace
+		}
+	}
+	if len(cfg.Workspaces) == 0 {
+		cfg.Workspaces = nil
+	}
+}
+
 // SetDefault sets the default profile for a (domain, backend). When backend
 // is empty, the function searches across every backend in the domain
 // and disambiguates the same way Remove does. Returns PROFILE_NOT_FOUND
 // when name doesn't exist in the resolved section.
 func SetDefault(domain Domain, backend, name string) error {
+	if err := ValidateName(name); err != nil {
+		return err
+	}
 	cfg, _, err := Load()
 	if err != nil {
 		return err
@@ -167,10 +229,8 @@ func BindWorkspaceProfile(workspaceID, workspaceName, root, projectName string, 
 		return cliErrors.New(cliErrors.PROFILE_BACKEND_INVALID,
 			"workspace id 不能为空；请确认 one.manifest.json#workspace.id 已设置。")
 	}
-	name = strings.TrimSpace(name)
-	if name == "" {
-		return cliErrors.New(cliErrors.PROFILE_BACKEND_INVALID,
-			"profile 名不能为空。")
+	if err := ValidateName(name); err != nil {
+		return err
 	}
 	if err := validateBackend(domain, backend); err != nil {
 		return err
@@ -213,6 +273,65 @@ func BindWorkspaceProfile(workspaceID, workspaceName, root, projectName string, 
 	return Save(cfg)
 }
 
+// UnbindWorkspaceProfile removes one machine-local workspace or project
+// profile choice. It is idempotent and only edits Config.Workspaces; profile
+// definitions and credentials remain untouched. Empty projectName removes the
+// workspace-level choice, while a non-empty projectName removes only that
+// project's override so resolution falls back to workspace/default precedence.
+func UnbindWorkspaceProfile(
+	workspaceID, projectName string,
+	domain Domain,
+	backend string,
+) error {
+	workspaceID = strings.TrimSpace(workspaceID)
+	if workspaceID == "" {
+		return cliErrors.New(cliErrors.PROFILE_BACKEND_INVALID,
+			"workspace id 不能为空；请确认 one.manifest.json#workspace.id 已设置。")
+	}
+	if err := validateBackend(domain, backend); err != nil {
+		return err
+	}
+	cfg, _, err := Load()
+	if err != nil {
+		return err
+	}
+	if cfg.Workspaces == nil {
+		return nil
+	}
+	ws, ok := cfg.Workspaces[workspaceID]
+	if !ok {
+		return nil
+	}
+	key := SectionKey(domain, backend)
+	changed := false
+	if projectName = strings.TrimSpace(projectName); projectName != "" {
+		project, exists := ws.Projects[projectName]
+		if exists {
+			if _, exists := project.Profiles[key]; exists {
+				delete(project.Profiles, key)
+				changed = true
+			}
+			if project.IsEmpty() {
+				delete(ws.Projects, projectName)
+			} else {
+				ws.Projects[projectName] = project
+			}
+		}
+	} else if _, exists := ws.Profiles[key]; exists {
+		delete(ws.Profiles, key)
+		changed = true
+	}
+	if !changed {
+		return nil
+	}
+	if ws.IsEmpty() {
+		delete(cfg.Workspaces, workspaceID)
+	} else {
+		cfg.Workspaces[workspaceID] = ws
+	}
+	return Save(cfg)
+}
+
 // resolveBackendFromName fills in `backend` when the caller didn't
 // know which backend a profile name lives under. The new top-level
 // `one configure <domain>/<backend> ...` tree always passes an explicit
@@ -225,9 +344,8 @@ func BindWorkspaceProfile(workspaceID, workspaceName, root, projectName string, 
 // PROFILE_BACKEND_INVALID listing the candidate backends; no match
 // returns PROFILE_NOT_FOUND with the union of available names.
 func resolveBackendFromName(cfg *Config, domain Domain, backend, name string) (string, error) {
-	if name == "" {
-		return "", cliErrors.New(cliErrors.PROFILE_BACKEND_INVALID,
-			"profile 名不能为空。")
+	if err := ValidateName(name); err != nil {
+		return "", err
 	}
 	if backend != "" {
 		if err := validateBackend(domain, backend); err != nil {

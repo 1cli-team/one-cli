@@ -25,21 +25,43 @@ import (
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/core/workspace"
 )
 
-func resolveBuildPlatform(projectRoot string, manifest *workspace.Manifest) string {
+type kubeNodePlatformDetector func(kubeconfigPath, kubeconfigContext string) string
+
+func resolveBuildPlatform(
+	projectRoot string,
+	manifest *workspace.Manifest,
+	projectName string,
+	environment string,
+	detector kubeNodePlatformDetector,
+) string {
 	if platform := strings.TrimSpace(workspace.ContainerPlatform(manifest)); platform != "" {
 		return platform
 	}
-	return detectK8sBuildPlatform(projectRoot, manifest)
+	return detectK8sBuildPlatform(projectRoot, manifest, projectName, environment, detector)
 }
 
-func detectK8sBuildPlatform(projectRoot string, m *workspace.Manifest) string {
-	if m == nil || m.Domains == nil || m.Domains.Deploy == nil {
+func detectK8sBuildPlatform(
+	projectRoot string,
+	m *workspace.Manifest,
+	projectName string,
+	environment string,
+	detector kubeNodePlatformDetector,
+) string {
+	if !projectUsesKustomize(m, projectName) {
 		return ""
 	}
+	if environment = strings.TrimSpace(environment); environment == "" {
+		environment = containerDefaultEnvironment(m)
+	} else {
+		environment = workspace.ProfileBindingEnvironment(m, environment)
+	}
 	resolved, err := profile.Resolve(profile.ResolveInput{
-		Domain:      profile.DomainDeploy,
-		Backend:     workspace.DeployBackendKustomize,
-		WorkspaceID: workspace.WorkspaceID(m),
+		Domain:        profile.DomainDeploy,
+		Backend:       workspace.DeployBackendKustomize,
+		WorkspaceID:   workspace.WorkspaceID(m),
+		WorkspaceRoot: projectRoot,
+		ProjectName:   strings.TrimSpace(projectName),
+		Environment:   environment,
 	})
 	if err != nil || resolved.Profile.Kustomize == nil {
 		return ""
@@ -48,7 +70,36 @@ func detectK8sBuildPlatform(projectRoot string, m *workspace.Manifest) string {
 	if strings.TrimSpace(kp.KubeconfigPath) == "" {
 		return ""
 	}
-	return detectKubeNodePlatform(kp.KubeconfigPath, kp.KubeconfigContext)
+	if detector == nil {
+		detector = detectKubeNodePlatform
+	}
+	return detector(kp.KubeconfigPath, kp.KubeconfigContext)
+}
+
+func projectUsesKustomize(m *workspace.Manifest, projectName string) bool {
+	if m == nil {
+		return false
+	}
+	if backend := strings.TrimSpace(workspace.DeployForProject(m, projectName).Backend); backend != "" {
+		return backend == workspace.DeployBackendKustomize
+	}
+	return m.Domains != nil && m.Domains.Deploy != nil &&
+		strings.TrimSpace(m.Domains.Deploy.Kind) == workspace.DeployBackendKustomize
+}
+
+func containerDefaultEnvironment(manifest *workspace.Manifest) string {
+	if manifest == nil || manifest.Environments == nil {
+		return ""
+	}
+	if value := strings.TrimSpace(manifest.Environments.Default); value != "" {
+		return value
+	}
+	for _, candidate := range manifest.Environments.Names {
+		if value := strings.TrimSpace(candidate); value != "" {
+			return value
+		}
+	}
+	return ""
 }
 
 func detectKubeNodePlatform(kubeconfigPath, kubeconfigContext string) string {

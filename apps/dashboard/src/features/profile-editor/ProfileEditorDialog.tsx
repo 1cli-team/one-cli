@@ -1,19 +1,22 @@
-import { Loader2, Save } from "lucide-react";
+import { Save } from "lucide-react";
 import type React from "react";
 import { useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { humanizeBackendName } from "@/api/catalog";
 import { upsertProfile } from "@/api/configure";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
 	Dialog,
 	DialogContent,
 	DialogDescription,
+	DialogFooter,
 	DialogHeader,
 	DialogTitle,
 } from "@/components/ui/dialog";
+import { Field, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { Spinner } from "@/components/ui/spinner";
 import { useToast } from "@/hooks/useToast";
 import type {
 	AnyProfile,
@@ -149,7 +152,7 @@ const ProfileForm: React.FC<ProfileFormProps> = ({
 			</DialogHeader>
 			<form onSubmit={handleSubmit} className="space-y-3">
 				<FieldRow>
-					<Label htmlFor="profile-name">{t("form.profileName")}</Label>
+					<FieldLabel htmlFor="profile-name">{t("form.profileName")}</FieldLabel>
 					<Input
 						id="profile-name"
 						value={name}
@@ -163,38 +166,34 @@ const ProfileForm: React.FC<ProfileFormProps> = ({
 				<BackendFields backend={backend} profile={profile} setProfile={setProfile} />
 
 				<FieldRow>
-					<label className="flex items-center gap-2 text-sm">
-						<input
-							type="checkbox"
+					<div className="flex items-center gap-2">
+						<Checkbox
+							id="profile-set-default"
 							checked={use}
-							onChange={(event) => setUse(event.target.checked)}
+							onCheckedChange={(checked) => setUse(checked === true)}
 						/>
-						<span>
+						<FieldLabel htmlFor="profile-set-default" className="text-sm font-normal">
 							{hasDefault ? t("form.setDefaultAfterSave") : t("form.setDefaultAfterSaveAuto")}
-						</span>
-					</label>
+						</FieldLabel>
+					</div>
 				</FieldRow>
 
-				<div className="flex items-center justify-end gap-2 pt-2">
+				<DialogFooter className="pt-2">
 					<Button type="button" variant="outline" onClick={onCancel}>
 						{t("form.cancel")}
 					</Button>
 					<Button type="submit" disabled={submitting || !name.trim()}>
-						{submitting ? (
-							<Loader2 className="h-4 w-4 animate-spin" />
-						) : (
-							<Save className="h-4 w-4" />
-						)}
+						{submitting ? <Spinner /> : <Save className="h-4 w-4" />}
 						{t("form.save")}
 					</Button>
-				</div>
+				</DialogFooter>
 			</form>
 		</>
 	);
 };
 
 const FieldRow: React.FC<React.PropsWithChildren> = ({ children }) => (
-	<div className="grid gap-2">{children}</div>
+	<Field className="gap-2">{children}</Field>
 );
 
 interface BackendFieldsProps {
@@ -213,15 +212,18 @@ const BackendFields: React.FC<BackendFieldsProps> = ({ backend, profile, setProf
 		if (field.type === "boolean") {
 			return (
 				<FieldRow key={field.path}>
-					<label htmlFor={inputID} className="flex items-center gap-2 text-sm">
-						<input
+					<div className="flex items-center gap-2">
+						<Checkbox
 							id={inputID}
-							type="checkbox"
 							checked={value === true}
-							onChange={(event) => setProfile(setPath(profile, field.path, event.target.checked))}
+							onCheckedChange={(checked) =>
+								setProfile(setPath(profile, field.path, checked === true))
+							}
 						/>
-						<span>{label}</span>
-					</label>
+						<FieldLabel htmlFor={inputID} className="text-sm font-normal">
+							{label}
+						</FieldLabel>
+					</div>
 				</FieldRow>
 			);
 		}
@@ -229,7 +231,7 @@ const BackendFields: React.FC<BackendFieldsProps> = ({ backend, profile, setProf
 		const maskedPlaceholder = t("form.fields.secretUnchangedPlaceholder");
 		return (
 			<FieldRow key={field.path}>
-				<Label htmlFor={inputID}>{label}</Label>
+				<FieldLabel htmlFor={inputID}>{label}</FieldLabel>
 				<Input
 					id={inputID}
 					type={field.type === "secret" ? "password" : "text"}

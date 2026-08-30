@@ -60,11 +60,15 @@ For an unconfigured project, TTY mode asks in this order:
 ## Profile resolution
 
 1. `--profile <name>`
-2. `~/.config/one/config.json#workspaces[workspaceId].projects[project].profiles[deploy/backend]`
-3. `~/.config/one/config.json#workspaces[workspaceId].profiles[deploy/backend]`
-4. `~/.config/one/config.json#deploy/<backend>.default`
+2. Project + environment `deploy/<backend>` binding in `profile-bindings.json`
+3. Workspace + environment `deploy/<backend>` binding in `profile-bindings.json`
+4. legacy Project binding in `config.json#workspaces`
+5. legacy Workspace binding in `config.json#workspaces`
+6. `~/.config/one/config.json#deploy/<backend>.default`
 
-Manifest files never store local profile names. Bind one locally with `one configure use <pair> --profile <name> --workspace`, or add `--project <name|path>` for a single project.
+Environment-aware keys use the canonical Workspace root. For deploy resolution, the environment is the Project's configured deploy environment, falling back to `prod`; use `--profile` for a one-shot override. Select per-environment Workspace/Project names in `one serve`. The Dashboard environment comes from `?env=` and selecting it never changes the deploy environment or Manifest.
+
+Manifest files never store local Profile names. `one configure use <pair> --profile <name> --workspace` and `--project <name|path>` continue to create compatible, environment-agnostic legacy bindings.
 
 ## Examples
 

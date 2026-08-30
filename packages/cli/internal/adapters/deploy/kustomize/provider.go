@@ -63,7 +63,9 @@ func (p providerImpl) Apply(ctx context.Context, in deploy.ApplyInput) (*deploy.
 	// container.image to the just-pushed reference so kustomize
 	// overlay sync below can pick it up.
 	if containerEnabledForProject(in.Manifest, in.Project.Name) {
-		reg, err := resolveContainerRegistryForDeploy(in.ProjectRoot, in.Project.Name)
+		reg, err := resolveContainerRegistryForDeploy(
+			in.ProjectRoot, in.Manifest, in.Project.Name, in.Environment,
+		)
 		if err != nil {
 			return nil, err
 		}
@@ -175,13 +177,24 @@ func containerEnabledForProject(m *workspace.Manifest, projectName string) bool 
 // registry endpoint by dispatching to docker.ResolveRegistry. The
 // project's container.kind (manifest field, default "docker") picks
 // which of the four kinds to resolve against.
-func resolveContainerRegistryForDeploy(projectRoot, subproject string) (*container.Registry, error) {
-	m, _ := workspace.ReadManifest(projectRoot)
-	kind := workspace.ContainerKindForProject(m, subproject)
+func resolveContainerRegistryForDeploy(
+	projectRoot string,
+	manifest *workspace.Manifest,
+	subproject, environment string,
+) (*container.Registry, error) {
+	kind := workspace.ContainerKindForProject(manifest, subproject)
+	environment = strings.TrimSpace(environment)
+	if environment == "" {
+		environment = envForProject(manifest, subproject)
+	}
+	if environment == "" {
+		environment = "prod"
+	}
 	return docker.ResolveRegistry(docker.ResolveRegistryInput{
 		ProjectRoot:     projectRoot,
 		Kind:            kind,
 		Subproject:      subproject,
+		Environment:     environment,
 		RequireRegistry: true,
 	})
 }

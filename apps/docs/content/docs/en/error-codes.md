@@ -215,11 +215,15 @@ Profile uses a credential source this build cannot read. Use `file` source.
 
 ### `PROFILE_FILE_INVALID`
 
-`~/.config/one/config.json` or `credentials.json` is invalid JSON. Repair or delete and recreate profiles.
+One of `~/.config/one/config.json`, `credentials.json`, or `profile-bindings.json` is invalid JSON. Repair the exact path in `error.context`; deleting `profile-bindings.json` removes local selections, not Profile credentials or repository files.
+
+### `PROFILE_IN_USE`
+
+The Profile is still selected by an environment-aware Workspace or Project binding. Choose **Automatic** for every referencing binding in the Dashboard, then delete the Profile.
 
 ### `PROFILE_NONE_CONFIGURED`
 
-No profile resolved from `--profile`, workspace binding, or machine default. Run `one configure add <domain>/<backend> --profile work`.
+No Profile resolved from `--profile`, environment-aware Project/Workspace bindings, legacy bindings, or machine default. Run `one configure add <domain>/<backend> --profile work`.
 
 ### `PROFILE_NOT_FOUND`
 
@@ -227,7 +231,7 @@ Requested profile does not exist. Run `one configure list <pair>` or add the pro
 
 ### `PROFILE_VERSION_UNSUPPORTED`
 
-Profile file schema does not match this binary. Upgrade CLI or recreate profiles.
+One machine-local Profile file schema does not match this binary. Upgrade CLI or recreate only the incompatible file; this never requires a Manifest upgrade.
 
 ### `RELEASE_FLOW_MISMATCH`
 
@@ -456,6 +460,10 @@ Local dotenv file required by `one run` is missing.
 ### `SERVE_PORT_BUSY`
 
 Requested serve port is busy. Choose another or use `--port 0`.
+
+### `SERVE_REPOSITORY_READ_ONLY`
+
+The Dashboard rejected a repository or `one.manifest.json` mutation with HTTP 409. Make that configuration change through source control/code review; only machine Profiles and environment-aware Profile bindings are writable in `one serve`.
 
 ### `SERVE_TOKEN_INVALID`
 

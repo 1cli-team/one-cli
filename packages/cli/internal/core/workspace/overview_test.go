@@ -84,7 +84,6 @@ func TestBuildOverview_FullyConfigured_NoIssues(t *testing.T) {
 	}, true); err != nil {
 		t.Fatalf("upsert container profile: %v", err)
 	}
-
 	ov, err := BuildOverview(tmp)
 	if err != nil {
 		t.Fatalf("BuildOverview: %v", err)
@@ -114,6 +113,65 @@ func TestBuildOverview_FullyConfigured_NoIssues(t *testing.T) {
 	}
 	if ov.Projects[0].Domains["deploy"] != DeployBackendVercel {
 		t.Errorf("project deploy domain = %q", ov.Projects[0].Domains["deploy"])
+	}
+}
+
+func TestBuildOverview_KustomizeRequiresProfileButNotKubeconfigPath(t *testing.T) {
+	withIsolatedOverviewProfiles(t)
+	root := t.TempDir()
+	manifest := &Manifest{
+		Version:   ManifestVersion,
+		Workspace: &ManifestWorkspace{ID: "demo", Name: "demo"},
+		Domains: &WorkspaceDomains{
+			Env:       &BackendRef{Kind: EnvBackendDotenv},
+			Deploy:    &BackendRef{Kind: DeployBackendKustomize},
+			Container: &BackendRef{Kind: ContainerBackendDocker},
+		},
+		Projects: []ManifestProject{{
+			Name: "api", RelativeDir: "services/api", TemplateID: "go-api", Toolchain: "go",
+			Domains: &ProjectDomains{Container: &ProjectContainerOverride{}},
+		}},
+	}
+	if err := WriteManifest(root, manifest); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := profile.Upsert(profile.DomainContainer, ContainerBackendDocker, "registry", profile.Profile{
+		Backend: ContainerBackendDocker,
+		Container: &profile.ContainerProfile{
+			Registry: "registry.example.com",
+			Credentials: &profile.ContainerCredentials{
+				Username: "user", Password: "pass",
+			},
+		},
+	}, true); err != nil {
+		t.Fatal(err)
+	}
+
+	missing, err := BuildOverview(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(missing.Projects) != 1 || len(missing.Projects[0].Issues) != 1 {
+		t.Fatalf("missing kustomize profile issues = %#v", missing.Projects)
+	}
+	issue := missing.Projects[0].Issues[0]
+	if issue.Domain != IssueDomainDeploy || issue.Backend != DeployBackendKustomize ||
+		issue.Reason != IssueReasonProfile {
+		t.Fatalf("kustomize issue = %#v", issue)
+	}
+
+	if _, err := profile.Upsert(profile.DomainDeploy, DeployBackendKustomize, "current-context", profile.Profile{
+		Backend:   DeployBackendKustomize,
+		Kustomize: &profile.KustomizeProfile{},
+	}, true); err != nil {
+		t.Fatal(err)
+	}
+	configured, err := BuildOverview(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(configured.Projects[0].Issues) != 0 {
+		t.Fatalf("empty kubeconfigPath should use kubectl defaults: %#v", configured.Projects[0].Issues)
 	}
 }
 
@@ -325,6 +383,12 @@ func TestBuildOverview_WorkspaceDefaultsSuppressProjectMisses(t *testing.T) {
 	}, true); err != nil {
 		t.Fatalf("upsert container profile: %v", err)
 	}
+	if _, err := profile.Upsert(profile.DomainDeploy, DeployBackendKustomize, "cluster", profile.Profile{
+		Backend:   DeployBackendKustomize,
+		Kustomize: &profile.KustomizeProfile{},
+	}, true); err != nil {
+		t.Fatalf("upsert kustomize profile: %v", err)
+	}
 	ov, err := BuildOverview(tmp)
 	if err != nil {
 		t.Fatalf("BuildOverview: %v", err)
@@ -377,6 +441,101 @@ func TestBuildOverview_SelectedBackendMissingCredentials(t *testing.T) {
 	}
 	if iss.Section != "env/infisical" || iss.Profile != "empty" {
 		t.Fatalf("issue section/profile = %q/%q", iss.Section, iss.Profile)
+	}
+}
+
+func TestBuildOverviewResolvesProfileForSelectedEnvironmentWithoutWritingManifest(t *testing.T) {
+	withIsolatedOverviewProfiles(t)
+	root := t.TempDir()
+	manifest := &Manifest{
+		Version:      ManifestVersion,
+		Workspace:    &ManifestWorkspace{ID: "demo", Name: "demo"},
+		Environments: &Environments{Names: []string{"dev", "staging", "prod"}, Default: "dev"},
+		Domains: &WorkspaceDomains{
+			Env: &BackendRef{Kind: EnvBackendInfisical},
+		},
+		Projects: []ManifestProject{{
+			Name: "web", RelativeDir: "apps/web", TemplateID: "react-spa", Toolchain: "node",
+		}},
+	}
+	if err := WriteManifest(root, manifest); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := profile.Upsert(profile.DomainEnv, EnvBackendInfisical, "broken-default", profile.Profile{
+		Backend: EnvBackendInfisical,
+		Infisical: &profile.InfisicalProfile{
+			SiteURL: "https://app.infisical.com",
+		},
+	}, true); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := profile.Upsert(profile.DomainEnv, EnvBackendInfisical, "production", profile.Profile{
+		Backend: EnvBackendInfisical,
+		Infisical: &profile.InfisicalProfile{
+			SiteURL: "https://app.infisical.com",
+			Credentials: &profile.InfisicalCredentials{
+				ClientID: "client", ClientSecret: "secret",
+			},
+		},
+	}, false); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := profile.Upsert(profile.DomainEnv, EnvBackendInfisical, "legacy-preview", profile.Profile{
+		Backend: EnvBackendInfisical,
+		Infisical: &profile.InfisicalProfile{
+			SiteURL: "https://app.infisical.com",
+			Credentials: &profile.InfisicalCredentials{
+				ClientID: "preview-client", ClientSecret: "preview-secret",
+			},
+		},
+	}, false); err != nil {
+		t.Fatal(err)
+	}
+	if err := profile.BindEnvironmentProfile(
+		"demo", "demo", root, "", "prod",
+		profile.DomainEnv, EnvBackendInfisical, "production",
+	); err != nil {
+		t.Fatal(err)
+	}
+	if err := profile.BindEnvironmentProfile(
+		"demo", "demo", root, "", "staging",
+		profile.DomainEnv, EnvBackendInfisical, "legacy-preview",
+	); err != nil {
+		t.Fatal(err)
+	}
+	manifestPath := filepath.Join(root, ManifestFilename)
+	before, err := os.ReadFile(manifestPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	production, err := BuildOverview(root, "prod")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if production.Environment != "prod" || len(production.Issues) != 0 {
+		t.Fatalf("prod overview = %#v", production)
+	}
+	preview, err := BuildOverview(root, "preview")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if preview.Environment != "preview" || len(preview.Issues) != 0 {
+		t.Fatalf("preview overview = %#v", preview)
+	}
+	development, err := BuildOverview(root, "dev")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(development.Issues) != 1 || development.Issues[0].Profile != "broken-default" {
+		t.Fatalf("dev overview = %#v", development)
+	}
+	after, err := os.ReadFile(manifestPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(after) != string(before) {
+		t.Fatal("BuildOverview changed one.manifest.json")
 	}
 }
 

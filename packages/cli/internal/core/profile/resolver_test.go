@@ -221,3 +221,68 @@ func TestResolve_ProjectBindingOverridesWorkspaceBinding(t *testing.T) {
 		t.Errorf("project binding did not win: source=%q name=%q", resolved.Source, resolved.Name)
 	}
 }
+
+func TestUnbindWorkspaceProfileRestoresPrecedenceAndCleansProjectOverride(t *testing.T) {
+	withIsolatedConfig(t)
+	for _, name := range []string{"default", "workspace", "project"} {
+		if _, err := Upsert(DomainDeploy, "vercel", name, Profile{
+			Backend: "vercel",
+			Vercel: &VercelProfile{
+				Team:        name,
+				Credentials: &VercelCredentials{APIToken: "token-" + name},
+			},
+		}, name == "default"); err != nil {
+			t.Fatalf("seed %s: %v", name, err)
+		}
+	}
+	if err := BindWorkspaceProfile(
+		"ws-demo", "demo", "/tmp/demo", "", DomainDeploy, "vercel", "workspace",
+	); err != nil {
+		t.Fatalf("bind workspace: %v", err)
+	}
+	if err := BindWorkspaceProfile(
+		"ws-demo", "demo", "/tmp/demo", "web", DomainDeploy, "vercel", "project",
+	); err != nil {
+		t.Fatalf("bind project: %v", err)
+	}
+
+	if err := UnbindWorkspaceProfile("ws-demo", "web", DomainDeploy, "vercel"); err != nil {
+		t.Fatalf("unbind project: %v", err)
+	}
+	resolved, err := Resolve(ResolveInput{
+		Domain: DomainDeploy, Backend: "vercel", WorkspaceID: "ws-demo", ProjectName: "web",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resolved.Source != "workspace" || resolved.Name != "workspace" {
+		t.Fatalf("after project unbind = %#v, want workspace binding", resolved)
+	}
+	config, _, err := Load()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, exists := config.Workspaces["ws-demo"].Projects["web"]; exists {
+		t.Fatal("empty project binding entry was not removed")
+	}
+	if got := config.DeployVercel.Profiles["project"].Credentials; got == nil || got.APIToken != "token-project" {
+		t.Fatalf("unbind changed profile credentials: %#v", got)
+	}
+
+	if err := UnbindWorkspaceProfile("ws-demo", "", DomainDeploy, "vercel"); err != nil {
+		t.Fatalf("unbind workspace: %v", err)
+	}
+	resolved, err = Resolve(ResolveInput{
+		Domain: DomainDeploy, Backend: "vercel", WorkspaceID: "ws-demo", ProjectName: "web",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resolved.Source != "default" || resolved.Name != "default" {
+		t.Fatalf("after workspace unbind = %#v, want machine default", resolved)
+	}
+	// Removing the same binding twice is a no-op.
+	if err := UnbindWorkspaceProfile("ws-demo", "", DomainDeploy, "vercel"); err != nil {
+		t.Fatalf("idempotent unbind: %v", err)
+	}
+}

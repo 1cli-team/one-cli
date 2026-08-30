@@ -26,6 +26,11 @@ import (
 
 type Dependencies struct {
 	Service *containermodule.Service
+
+	// detectKubeNodePlatform is injectable so build planning can be tested
+	// without depending on a caller's kubectl binary or active cluster. The
+	// production command falls back to detectKubeNodePlatform when it is nil.
+	detectKubeNodePlatform kubeNodePlatformDetector
 }
 
 func Commands(deps Dependencies) []*cobra.Command {

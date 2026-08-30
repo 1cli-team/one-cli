@@ -23,6 +23,10 @@ type ProfileRepository interface {
 	Remove(profile.Domain, string, string) error
 	SetDefault(profile.Domain, string, string) error
 	BindWorkspaceProfile(string, string, string, string, profile.Domain, string, string) error
+	UnbindWorkspaceProfile(string, string, profile.Domain, string) error
+	BindEnvironmentProfile(string, string, string, string, string, profile.Domain, string, string) error
+	UnbindEnvironmentProfile(string, string, string, profile.Domain, string) error
+	EnvironmentProfileBinding(string, string, string, profile.Domain, string) (string, error)
 	Resolve(profile.ResolveInput) (*profile.Resolved, error)
 	ConfigPath() (string, error)
 	CredentialsPath() (string, error)
@@ -61,6 +65,40 @@ func (LocalProfileRepository) BindWorkspaceProfile(
 	return profile.BindWorkspaceProfile(
 		workspaceID, workspaceName, root, projectName, domain, backend, name,
 	)
+}
+
+func (LocalProfileRepository) UnbindWorkspaceProfile(
+	workspaceID, projectName string,
+	domain profile.Domain,
+	backend string,
+) error {
+	return profile.UnbindWorkspaceProfile(workspaceID, projectName, domain, backend)
+}
+
+func (LocalProfileRepository) BindEnvironmentProfile(
+	workspaceID, workspaceName, root, projectName, environment string,
+	domain profile.Domain,
+	backend, name string,
+) error {
+	return profile.BindEnvironmentProfile(
+		workspaceID, workspaceName, root, projectName, environment, domain, backend, name,
+	)
+}
+
+func (LocalProfileRepository) UnbindEnvironmentProfile(
+	root, projectName, environment string,
+	domain profile.Domain,
+	backend string,
+) error {
+	return profile.UnbindEnvironmentProfile(root, projectName, environment, domain, backend)
+}
+
+func (LocalProfileRepository) EnvironmentProfileBinding(
+	root, projectName, environment string,
+	domain profile.Domain,
+	backend string,
+) (string, error) {
+	return profile.EnvironmentProfileBinding(root, projectName, environment, domain, backend)
 }
 
 func (LocalProfileRepository) Resolve(input profile.ResolveInput) (*profile.Resolved, error) {
@@ -269,6 +307,52 @@ func (s *ProfileService) BindWorkspaceProfile(
 	return s.repository.BindWorkspaceProfile(
 		workspaceID, workspaceName, root, projectName, domain, backend, name,
 	)
+}
+
+func (s *ProfileService) UnbindWorkspaceProfile(
+	workspaceID, projectName string,
+	domain profile.Domain,
+	backend string,
+) error {
+	if _, err := s.Lookup(domain, backend); err != nil {
+		return err
+	}
+	return s.repository.UnbindWorkspaceProfile(workspaceID, projectName, domain, backend)
+}
+
+func (s *ProfileService) BindEnvironmentProfile(
+	workspaceID, workspaceName, root, projectName, environment string,
+	domain profile.Domain,
+	backend, name string,
+) error {
+	if _, err := s.Lookup(domain, backend); err != nil {
+		return err
+	}
+	return s.repository.BindEnvironmentProfile(
+		workspaceID, workspaceName, root, projectName, environment, domain, backend, name,
+	)
+}
+
+func (s *ProfileService) UnbindEnvironmentProfile(
+	root, projectName, environment string,
+	domain profile.Domain,
+	backend string,
+) error {
+	if _, err := s.Lookup(domain, backend); err != nil {
+		return err
+	}
+	return s.repository.UnbindEnvironmentProfile(root, projectName, environment, domain, backend)
+}
+
+func (s *ProfileService) EnvironmentProfileBinding(
+	root, projectName, environment string,
+	domain profile.Domain,
+	backend string,
+) (string, error) {
+	if _, err := s.Lookup(domain, backend); err != nil {
+		return "", err
+	}
+	return s.repository.EnvironmentProfileBinding(root, projectName, environment, domain, backend)
 }
 
 func (s *ProfileService) Resolve(input profile.ResolveInput) (*profile.Resolved, error) {

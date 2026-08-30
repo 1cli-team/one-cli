@@ -20,13 +20,26 @@ import (
 
 type Service struct {
 	environments *environmentmodule.Service
+	observer     WorkspaceObserver
 }
 
-func NewService(environments *environmentmodule.Service) (*Service, error) {
+// WorkspaceObserver is the optional machine-local discovery hook invoked
+// after a workspace has been created successfully. Discovery is auxiliary:
+// a registry failure must never roll back an otherwise valid workspace.
+type WorkspaceObserver func(context.Context, string, string) error
+
+func NewService(
+	environments *environmentmodule.Service,
+	observers ...WorkspaceObserver,
+) (*Service, error) {
 	if environments == nil {
 		return nil, errors.New("creation: environment service is required")
 	}
-	return &Service{environments: environments}, nil
+	var observer WorkspaceObserver
+	if len(observers) > 0 {
+		observer = observers[0]
+	}
+	return &Service{environments: environments, observer: observer}, nil
 }
 
 type WorkspaceInput struct {
@@ -47,6 +60,7 @@ type WorkspaceResult struct {
 	EnvBackend      string
 	InfisicalBound  bool
 	EnvironmentWarn error
+	RegistryWarn    error
 	Preset          PresetResult
 	PartialState    string
 }
@@ -159,6 +173,9 @@ func (s *Service) CreateWorkspace(ctx context.Context, input WorkspaceInput) (Wo
 	}
 
 	_ = initGitRepo(input.TargetDir)
+	if s.observer != nil {
+		result.RegistryWarn = s.observer(ctx, input.TargetDir, "create")
+	}
 	return result, nil
 }
 

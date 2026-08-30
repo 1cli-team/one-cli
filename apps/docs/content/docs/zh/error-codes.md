@@ -296,15 +296,23 @@ Profile's credentialSource is set to a value this build does not implement (only
 
 ### `PROFILE_FILE_INVALID`
 
-~/.config/one/config.json or credentials.json failed to parse as JSON.
+One of config.json, credentials.json, or profile-bindings.json failed to parse as JSON.
 
 **Remediation**:
 
-- `edit-profile-file` — 手动检查并修复对应文件，或删除后重新 `one configure add <domain>/<backend> --profile <name>`<br />运行：`rm ~/.config/one/config.json ~/.config/one/credentials.json`
+- `edit-profile-file` — 根据 error.context.path 检查并修复对应的机器本地文件；删除 profile-bindings.json 只会清除本机选择，不会删除凭据或修改仓库
+
+### `PROFILE_IN_USE`
+
+The Profile is still selected by one or more environment-aware Workspace or Project bindings.
+
+**Remediation**:
+
+- `unbind-profile` — 先在 Dashboard 中把对应 Workspace / Project Profile 选择改为 Automatic，再删除
 
 ### `PROFILE_NONE_CONFIGURED`
 
-No profile resolved from --profile / workspace binding / machine default. The backend needs an endpoint to talk to.
+No Profile resolved from --profile, environment-aware Project/Workspace bindings, legacy bindings, or the machine default.
 
 **Remediation**:
 
@@ -321,11 +329,11 @@ Requested profile does not exist under the (domain/backend) section.
 
 ### `PROFILE_VERSION_UNSUPPORTED`
 
-config.json or credentials.json schema version does not match this binary.
+A machine-local Profile file schema does not match this binary.
 
 **Remediation**:
 
-- `upgrade-cli` — 升级 one cli 到最新版本，或删除两个文件后重建配置
+- `upgrade-cli` — 升级 one cli，或仅重建 error.context.path 指向的不兼容机器本地文件；无需升级 one.manifest.json
 
 ### `RELEASE_FLOW_MISMATCH`
 
@@ -774,6 +782,12 @@ one serve 无法绑定请求的端口（被占用或权限不足）。
 
 - `use-random-port` — 改用随机端口（让内核分配空闲端口）<br />运行：`one serve --port 0`
 - `pick-different-port` — 或显式换一个空闲端口<br />运行：`one serve --port 17900`
+
+### `SERVE_REPOSITORY_READ_ONLY`
+
+Dashboard 只读查看工作区代码和 one.manifest.json；仅机器本地 profile 配置可修改。
+
+> 没有默认 remediation。具体恢复方式请看错误的 `context` 字段。
 
 ### `SERVE_TOKEN_INVALID`
 

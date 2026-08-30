@@ -20,8 +20,8 @@ import (
 
 func newBuildCmd(deps Dependencies) *cobra.Command {
 	var (
-		buildVersion, profileFlag, project string
-		dryRun                             bool
+		buildVersion, profileFlag, project, environment string
+		dryRun                                          bool
 	)
 	cmd := &cobra.Command{
 		Use:   "build [subproject]",
@@ -56,41 +56,52 @@ func newBuildCmd(deps Dependencies) *cobra.Command {
 						fmt.Sprintf("没有名为 %s 且启用了容器构建的项目", sub))
 				}
 			}
-			profileSubproject := sub
-			if profileSubproject == "" && len(names) == 1 {
-				profileSubproject = names[0]
-			}
-			kind := containerKindForInvocation(manifest, profileSubproject)
-			reg, err := resolveBuildContainerRegistry(deps, root, profileFlag, kind, profileSubproject)
-			if err != nil {
-				return err
-			}
-			platform := resolveBuildPlatform(root, manifest)
 			buildTag, err := resolveBuildTag(manifest, sub, names, buildVersion)
 			if err != nil {
 				return err
 			}
-			res, err := deps.Service.Build(cmd.Context(), kind, container.BuildInput{
-				ProjectRoot: root,
-				Project:     sub,
-				TargetNames: names,
-				Tag:         buildTag,
-				Platform:    platform,
-				DryRun:      dryRun,
-				Registry:    reg,
-			})
-			if err != nil {
-				return err
+			targets := names
+			if sub != "" {
+				targets = []string{sub}
 			}
-			if dryRun && res != nil {
-				for _, e := range res.Built {
+			combined := &container.BuildResult{}
+			for _, target := range targets {
+				platform := resolveBuildPlatform(
+					root, manifest, target, environment, deps.detectKubeNodePlatform,
+				)
+				kind := containerKindForInvocation(manifest, target)
+				reg, err := resolveBuildContainerRegistry(
+					deps, root, profileFlag, kind, target, environment,
+				)
+				if err != nil {
+					return err
+				}
+				result, err := deps.Service.Build(cmd.Context(), kind, container.BuildInput{
+					ProjectRoot: root,
+					Project:     target,
+					TargetNames: []string{target},
+					Tag:         buildTag,
+					Platform:    platform,
+					DryRun:      dryRun,
+					Registry:    reg,
+				})
+				if err != nil {
+					return err
+				}
+				if result != nil {
+					if combined.Schema == "" {
+						combined.Schema = result.Schema
+					}
+					combined.Built = append(combined.Built, result.Built...)
+				}
+			}
+			if dryRun {
+				for _, e := range combined.Built {
 					fmt.Fprintln(cmd.OutOrStdout(), strings.Join(e.Argv, " "))
 				}
 				return nil
 			}
-			if res != nil {
-				output.Emit(res)
-			}
+			output.Emit(combined)
 			return nil
 		},
 	}
@@ -98,7 +109,8 @@ func newBuildCmd(deps Dependencies) *cobra.Command {
 	cmd.Flags().BoolVar(&dryRun, "dry-run", false, "只打印 build 命令不实际构建")
 	cmd.Flags().StringVar(&profileFlag, "profile", "", "一次性使用指定 container profile（不改 default）")
 	cmd.Flags().StringVarP(&project, "project", "p", "", "只构建指定 subproject（manifest 里的 name 或相对路径）")
-	helpui.MarkAdvanced(cmd, "profile", "project", "build-version")
+	cmd.Flags().StringVar(&environment, "env", "", "使用指定环境的 container profile（如 dev / preview / prod）")
+	helpui.MarkAdvanced(cmd, "profile", "project", "build-version", "env")
 	i18n.MarkShort(cmd, "container.build.short")
 	return cmd
 }

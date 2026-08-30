@@ -5,9 +5,11 @@
 package environment
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
+	"github.com/torchstellar-team/one-cli/packages/cli/internal/adapters/env/infisical"
 	configureapp "github.com/torchstellar-team/one-cli/packages/cli/internal/application/configure"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/application/execution"
 	catalog "github.com/torchstellar-team/one-cli/packages/cli/internal/core/backend"
@@ -17,8 +19,11 @@ import (
 )
 
 type Service struct {
-	catalog  *catalog.Catalog
-	profiles *configureapp.ProfileService
+	catalog       *catalog.Catalog
+	profiles      *configureapp.ProfileService
+	initInfisical func(context.Context, string, infisical.InitInput) (*infisical.InitResult, error)
+	setInfisical  func(context.Context, string, infisical.SetInput) (*infisical.SetResult, error)
+	pullInfisical func(context.Context, string, infisical.PullInput) (*infisical.PullResult, error)
 }
 
 func NewService(
@@ -31,7 +36,10 @@ func NewService(
 	if profiles == nil {
 		return nil, fmt.Errorf("modules: environment profile service is required")
 	}
-	return &Service{catalog: backendCatalog, profiles: profiles}, nil
+	return &Service{
+		catalog: backendCatalog, profiles: profiles,
+		initInfisical: infisical.Init, setInfisical: infisical.Set, pullInfisical: infisical.Pull,
+	}, nil
 }
 
 type resolveInput struct {

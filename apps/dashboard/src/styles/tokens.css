@@ -87,6 +87,7 @@
 		--radius-scale-xl: 0.75rem;
 		--radius-scale-2xl: 1rem;
 		--radius-scale-full: 9999px;
+		--radius: var(--radius-scale-lg);
 
 		--shadow-scale-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
 		--shadow-scale-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -1px rgb(0 0 0 / 0.06);
@@ -161,24 +162,24 @@
 	}
 
 	:root[data-theme="dark"] {
-		--background: rgb(7 13 24);
+		--background: rgb(8 13 22);
 		--foreground: rgb(238 244 252);
-		--card: rgb(14 23 38 / 0.92);
+		--card: rgb(14 22 34 / 0.94);
 		--card-foreground: rgb(238 244 252);
-		--popover: rgb(15 24 41);
+		--popover: rgb(15 23 36);
 		--popover-foreground: rgb(238 244 252);
 		--primary: rgb(251 146 60);
 		--primary-foreground: rgb(26 10 4);
 		--secondary: rgb(67 20 7);
 		--secondary-foreground: rgb(254 215 170);
-		--muted: rgb(28 22 17);
-		--muted-foreground: rgb(168 162 158);
+		--muted: rgb(24 33 47);
+		--muted-foreground: rgb(148 163 184);
 		--accent: rgb(42 13 4);
 		--accent-foreground: rgb(254 215 170);
 		--destructive: rgb(248 113 113);
 		--destructive-foreground: rgb(12 20 34);
-		--border: rgb(74 50 35);
-		--input: rgb(74 50 35);
+		--border: rgb(45 58 76);
+		--input: rgb(51 65 85);
 		--ring: rgb(251 146 60);
 		--success-surface: var(--color-success-900);
 		--success-border: var(--color-success-400);
@@ -193,8 +194,8 @@
 		--error-border: var(--color-error-400);
 		--error-foreground: var(--color-error-100);
 
-		--surface-subtle: rgb(14 23 38 / 0.75);
-		--surface-raised: rgb(14 23 38 / 0.92);
+		--surface-subtle: rgb(14 22 34 / 0.78);
+		--surface-raised: rgb(14 22 34 / 0.94);
 		--text-muted: var(--muted-foreground);
 		--hero-glow-primary: rgb(234 88 12 / 0.2);
 		--hero-glow-info: rgb(19 194 194 / 0.14);

@@ -1,9 +1,13 @@
 package kustomize
 
 import (
+	"bytes"
 	"encoding/json"
+	"os"
+	"path/filepath"
 	"testing"
 
+	"github.com/torchstellar-team/one-cli/packages/cli/internal/core/profile"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/core/workspace"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/ports/deploy"
 )
@@ -151,6 +155,93 @@ func TestEndpointFromInputFallsBackToWorkspaceKustomizationPath(t *testing.T) {
 	})
 	if ep.KustomizationPath != "infra/overlays/canary" {
 		t.Fatalf("KustomizationPath = %q, want infra/overlays/canary", ep.KustomizationPath)
+	}
+}
+
+func TestContainerRegistryUsesApplyEnvironmentInsteadOfDiskDeployEnvironment(t *testing.T) {
+	configRoot := t.TempDir()
+	t.Setenv("XDG_CONFIG_HOME", configRoot)
+	t.Setenv("HOME", configRoot)
+	root := t.TempDir()
+	diskManifest := &workspace.Manifest{
+		Version:      workspace.ManifestVersion,
+		Workspace:    &workspace.ManifestWorkspace{ID: "workspace-id", Name: "demo"},
+		Environments: &workspace.Environments{Names: []string{"dev", "prod"}, Default: "dev"},
+		Projects: []workspace.ManifestProject{{
+			Name: "api", RelativeDir: "services/api", Toolchain: "go",
+			Domains: &workspace.ProjectDomains{
+				Container: &workspace.ProjectContainerOverride{Kind: workspace.ContainerBackendDocker},
+				Deploy:    &workspace.ProjectDeployBackend{Kind: workspace.DeployBackendKustomize},
+			},
+		}},
+	}
+	if err := EncodeProjectConfig(&diskManifest.Projects[0], &ProjectConfig{Env: "prod"}); err != nil {
+		t.Fatal(err)
+	}
+	if err := workspace.WriteManifest(root, diskManifest); err != nil {
+		t.Fatal(err)
+	}
+	manifestPath := filepath.Join(root, workspace.ManifestFilename)
+	before, err := os.ReadFile(manifestPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	for _, entry := range []struct {
+		environment, name, registry string
+	}{
+		{environment: "dev", name: "development", registry: "dev.registry.example.com"},
+		{environment: "prod", name: "production", registry: "prod.registry.example.com"},
+	} {
+		if _, err := profile.Upsert(
+			profile.DomainContainer,
+			workspace.ContainerBackendDocker,
+			entry.name,
+			profile.Profile{
+				Backend: workspace.ContainerBackendDocker,
+				Container: &profile.ContainerProfile{
+					Registry: entry.registry,
+					Credentials: &profile.ContainerCredentials{
+						Username: entry.name, Password: "secret",
+					},
+				},
+			},
+			false,
+		); err != nil {
+			t.Fatal(err)
+		}
+		if err := profile.BindEnvironmentProfile(
+			"workspace-id", "demo", root, "api", entry.environment,
+			profile.DomainContainer, workspace.ContainerBackendDocker, entry.name,
+		); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	inMemoryManifest, err := workspace.ReadManifest(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := EncodeProjectConfig(&inMemoryManifest.Projects[0], &ProjectConfig{Env: "dev"}); err != nil {
+		t.Fatal(err)
+	}
+	registry, err := resolveContainerRegistryForDeploy(
+		root, inMemoryManifest, "api", "dev",
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if registry.ProfileName != "development" ||
+		registry.ProfileSource != "workspace-project-environment" ||
+		registry.Registry != "dev.registry.example.com" {
+		t.Fatalf("registry = %#v", registry)
+	}
+	after, err := os.ReadFile(manifestPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Equal(after, before) {
+		t.Fatal("container Profile resolution persisted the CLI environment override")
 	}
 }
 

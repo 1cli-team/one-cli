@@ -38,6 +38,21 @@ export interface BackendSpec {
 		configurable: boolean;
 		fields?: BackendFieldSpec[];
 	};
+	project?: {
+		configurable: boolean;
+		fields?: ProjectFieldSpec[];
+	};
+}
+
+export type ProjectFieldType = "string" | "environment";
+
+export interface ProjectFieldSpec {
+	path: string;
+	input_name: string;
+	type: ProjectFieldType;
+	label_key: string;
+	required?: boolean;
+	placeholder?: string;
 }
 
 export interface CatalogResponse {
@@ -129,9 +144,8 @@ export interface HttpError {
 // ──────────────────────────── workspace overview ────────────────────────
 //
 // Mirrors workspace.Overview in packages/cli/internal/workspace/overview.go.
-// Returned by GET /api/workspace/overview. `present: false` means `one
-// serve` was launched outside a workspace; the home page falls back to the
-// profile-editor view in that case.
+// Returned by singular or registry-scoped Workspace overview routes.
+// `present: false` is retained for the legacy launch-root route.
 
 export type OverviewIssueDomain = "container" | "deploy" | "env";
 export type OverviewIssueSeverity = "missing";
@@ -173,7 +187,103 @@ export interface Overview {
 	schema: "one-cli/workspace-overview/v1";
 	present: boolean;
 	root?: string;
+	environment?: string;
 	workspace?: OverviewWorkspaceSummary;
 	projects?: OverviewProject[];
 	issues?: OverviewIssue[];
+}
+
+// ───────────────────────── workspace registry ──────────────────────────
+
+export type WorkspaceRegistryStatus =
+	| "ready"
+	| "missing"
+	| "invalid"
+	| "identity-missing"
+	| "identity-conflict";
+
+export interface WorkspaceRegistryEntry {
+	entryId: string;
+	id?: string;
+	name: string;
+	root: string;
+	status: WorkspaceRegistryStatus;
+	projectCount: number;
+	lastSeenAt: string;
+}
+
+export interface WorkspacesResponse {
+	schema: "one-cli/workspaces/v1";
+	currentEntryId?: string;
+	workspaces: WorkspaceRegistryEntry[];
+}
+
+// ─────────────────────────── project configuration ─────────────────────
+
+export interface ProfileBinding {
+	name: string;
+	source: "workspace-project" | "workspace" | "default" | string;
+}
+
+export type ProjectProfileBinding = ProfileBinding;
+
+export interface WorkspaceProfileSettings {
+	schema: "one-cli/workspace-profile/v1";
+	root: string;
+	environment?: string;
+	domain: "env";
+	backend?: string;
+	configurable: boolean;
+	selectedProfile?: string;
+	profile?: ProfileBinding;
+}
+
+export interface ProjectEnvironmentSettings {
+	backend?: string;
+	path?: string;
+	inherits: boolean;
+	disabled: boolean;
+	keys?: string[];
+	selectedProfile?: string;
+	profile?: ProjectProfileBinding;
+}
+
+export interface ProjectContainerSettings {
+	enabled: boolean;
+	backend?: string;
+	image?: string;
+	namespace?: string;
+	selectedProfile?: string;
+	profile?: ProjectProfileBinding;
+}
+
+export interface ProjectDeploySettings {
+	backend?: string;
+	compatibleTargets?: string[];
+	config?: Record<string, ProfileValue>;
+	selectedProfile?: string;
+	profile?: ProjectProfileBinding;
+}
+
+export interface ProjectSettings {
+	name: string;
+	relativeDir: string;
+	kind: OverviewProjectKind;
+	templateId?: string;
+	toolchain?: string;
+	packageManager?: string;
+	buildVersion?: string;
+	devCommand?: string;
+	defaultEnvironment?: string;
+	availableEnvironments?: string[];
+	environment: ProjectEnvironmentSettings;
+	container: ProjectContainerSettings;
+	deploy: ProjectDeploySettings;
+}
+
+export interface ProjectSettingsResponse {
+	schema: "one-cli/workspace-project/v1";
+	root: string;
+	environment?: string;
+	project: ProjectSettings;
 }

@@ -109,6 +109,10 @@ h6 {
 
 /* 焦点样式 */
 :focus-visible {
-	outline: 2px solid #1677ff;
+	outline: 2px solid var(--ring);
 	outline-offset: 2px;
+}
+
+::selection {
+	background: rgb(234 88 12 / 0.22);
 }

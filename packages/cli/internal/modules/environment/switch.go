@@ -22,8 +22,6 @@ type SwitchPlan struct {
 	From         string
 	To           string
 	ManifestPath string
-	config       *infisical.WorkspaceConfig
-	credentials  *infisical.Credentials
 	tuples       []dotenvTuple
 }
 
@@ -55,10 +53,9 @@ func (s *Service) PlanSwitch(scope execution.Scope, target string) (SwitchPlan, 
 	if target == workspace.EnvBackendDotenv {
 		return plan, nil
 	}
-	plan.config, plan.credentials, err = s.resolveInfisical(resolution.Workspace, "")
-	if err != nil {
-		return SwitchPlan{}, err
-	}
+	// Resolve credentials during Switch, not while planning: every dotenv
+	// tuple can select a different machine-local Profile by project and
+	// environment, and PlanSwitch does not yet know whether sync will run.
 	plan.tuples, err = collectDotenvTuples(
 		resolution.Workspace.Root(), resolution.Workspace.Manifest(),
 	)
@@ -99,13 +96,22 @@ func (s *Service) Switch(
 		return result, nil
 	}
 	if options.Sync && len(plan.tuples) > 0 {
-		if err := s.ensureInfisicalBound(ctx, plan.Workspace.Root()); err != nil {
+		first := plan.tuples[0]
+		if err := s.ensureInfisicalBound(
+			ctx, plan.Workspace, "", first.environment, first.project,
+		); err != nil {
 			return nil, err
 		}
 		for _, tuple := range plan.tuples {
-			_, err := infisical.Set(ctx, plan.Workspace.Root(), infisical.SetInput{
+			config, credentials, err := s.resolveInfisical(
+				plan.Workspace, "", tuple.environment, tuple.project,
+			)
+			if err != nil {
+				return nil, err
+			}
+			_, err = s.setInfisical(ctx, plan.Workspace.Root(), infisical.SetInput{
 				Env: tuple.environment, Path: tuple.path, Key: tuple.key, Value: tuple.value,
-				Overwrite: options.Overwrite, Cfg: plan.config, Creds: plan.credentials,
+				Overwrite: options.Overwrite, Cfg: config, Creds: credentials,
 			})
 			if err != nil {
 				var outputError *output.Error

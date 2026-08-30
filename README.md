@@ -87,6 +87,7 @@ one add nestjs-api --name api
 | `one deploy [project]` | Choose a target on first deploy, then deploy |
 | `one env` | Review and manage environment variables |
 | `one configure` | Manage local connections and preferences |
+| `one serve` | Inspect Workspaces and Projects; manage local Profiles and bindings |
 | `one ci [enable\|sync\|disable]` | Optionally manage generated GitHub Actions workflows |
 
 Full command docs live at [1cli.dev](https://1cli.dev).
@@ -121,13 +122,15 @@ For a guided browser-based setup:
 one configure open
 ```
 
-The page only binds to your local machine by default, so it is a better place for sensitive values than a chat window or a shared document.
+The page only binds to your local machine by default, so it is a better place for sensitive values than a chat window or a shared document. Workspace code, Project fields, Backend choices, and `one.manifest.json` are view-only in the Dashboard. Its writable surface is limited to machine Profiles and the Profile name selected for a Workspace or Project in an environment.
+
+Profile definitions and credentials live in `~/.config/one/config.json` and `credentials.json`. They are machine-global, so Profile CRUD in Settings is not environment-scoped. The Dashboard UI offers Development, Preview, and Production binding contexts; those selections live separately in `~/.config/one/profile-bindings.json`, keyed by canonical Workspace root and environment. The core/API can also store safe custom environment IDs for non-UI workflows. These files never upgrade or modify the repository manifest.
 
 ## Project Map
 
 Every One CLI project has a `one.manifest.json` file at the root. Most users do not need to edit it by hand.
 
-Think of it as the project map. It records which parts exist, where they live, and which starter created them. One CLI reads it when you add, run, or deploy parts of the project.
+Think of it as the project map. It records which parts exist, where they live, and which starter created them. One CLI reads it when you add, run, deploy, or inspect parts of the project. `one serve` never writes it; repository changes stay in the normal code-review workflow.
 
 ## Repository Layout
 
@@ -139,7 +142,7 @@ If you want to work on One CLI itself, the repository is organized like this:
 | `packages/templates` | Starters used by `one add` |
 | `packages/skills` | Guidance installed for AI assistants |
 | `apps/docs` | Documentation website |
-| `apps/dashboard` | Local settings UI opened by `one serve` |
+| `apps/dashboard` | Local Workspace, Project, and Profile Dashboard opened by `one serve` |
 | `assets` | Brand assets, including the logo |
 
 Common contributor commands:

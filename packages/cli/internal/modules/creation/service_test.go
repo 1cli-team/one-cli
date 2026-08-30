@@ -2,6 +2,7 @@ package creation
 
 import (
 	"context"
+	"errors"
 	"os"
 	"path/filepath"
 	"testing"
@@ -12,6 +13,32 @@ import (
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/core/workspace"
 	environmentmodule "github.com/torchstellar-team/one-cli/packages/cli/internal/modules/environment"
 )
+
+func TestCreateWorkspaceObservesOnlyAfterSuccessfulCreation(t *testing.T) {
+	target := filepath.Join(t.TempDir(), "observed")
+	wantWarning := errors.New("registry unavailable")
+	var observedRoot, observedSource string
+	service := newCreationService(t, func(_ context.Context, root, source string) error {
+		observedRoot, observedSource = root, source
+		if !workspace.HasManifest(root) {
+			t.Fatal("observer ran before the manifest was published")
+		}
+		return wantWarning
+	})
+
+	result, err := service.CreateWorkspace(context.Background(), WorkspaceInput{
+		TargetDir: target, Name: "observed", EnvBackend: workspace.EnvBackendDotenv,
+	})
+	if err != nil {
+		t.Fatalf("CreateWorkspace() error = %v", err)
+	}
+	if !errors.Is(result.RegistryWarn, wantWarning) {
+		t.Fatalf("RegistryWarn = %v, want %v", result.RegistryWarn, wantWarning)
+	}
+	if observedRoot != target || observedSource != "create" {
+		t.Fatalf("Observe(root, source) = (%q, %q)", observedRoot, observedSource)
+	}
+}
 
 func TestServiceOwnsWorkspaceAndProjectCreation(t *testing.T) {
 	service := newCreationService(t)
@@ -73,7 +100,11 @@ func TestServiceOwnsWorkspaceAndProjectCreation(t *testing.T) {
 }
 
 func TestCreateWorkspaceRechecksTargetBeforeMutation(t *testing.T) {
-	service := newCreationService(t)
+	observed := false
+	service := newCreationService(t, func(context.Context, string, string) error {
+		observed = true
+		return nil
+	})
 	target := t.TempDir()
 	marker := filepath.Join(target, "keep.txt")
 	if err := os.WriteFile(marker, []byte("user data"), 0o644); err != nil {
@@ -89,9 +120,12 @@ func TestCreateWorkspaceRechecksTargetBeforeMutation(t *testing.T) {
 	if raw, readErr := os.ReadFile(marker); readErr != nil || string(raw) != "user data" {
 		t.Fatalf("existing target was mutated: raw=%q err=%v", raw, readErr)
 	}
+	if observed {
+		t.Fatal("failed creation must not be registered")
+	}
 }
 
-func newCreationService(t *testing.T) *Service {
+func newCreationService(t *testing.T, observers ...WorkspaceObserver) *Service {
 	t.Helper()
 	backendCatalog := catalog.Builtin()
 	profiles, err := configureapp.NewProfileService(
@@ -105,7 +139,7 @@ func newCreationService(t *testing.T) *Service {
 	if err != nil {
 		t.Fatal(err)
 	}
-	service, err := NewService(environments)
+	service, err := NewService(environments, observers...)
 	if err != nil {
 		t.Fatal(err)
 	}

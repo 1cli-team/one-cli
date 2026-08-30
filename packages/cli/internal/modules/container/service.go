@@ -126,6 +126,7 @@ type ResolveRegistryInput struct {
 	Backend         string
 	Profile         string
 	Project         string
+	Environment     string
 	RequireRegistry bool
 	SkipDefault     bool
 }
@@ -139,6 +140,7 @@ func (s *Service) ResolveRegistry(input ResolveRegistryInput) (*containermodel.R
 		Kind:            input.Backend,
 		ProfileFlag:     input.Profile,
 		Subproject:      input.Project,
+		Environment:     input.Environment,
 		RequireRegistry: input.RequireRegistry,
 		SkipDefault:     input.SkipDefault,
 	})

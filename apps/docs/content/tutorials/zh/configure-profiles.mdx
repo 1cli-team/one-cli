@@ -90,11 +90,13 @@ one configure remove deploy/aws-s3 --profile old
 跑需要 profile 的命令时（`one deploy` / `one env pull` / `one container push`），One CLI 按这个顺序选：
 
 1. **`--profile` flag**（最高优先，一次性）
-2. **本机 project 绑定** — `~/.config/one/config.json#workspaces[workspaceId].projects[project].profiles[...]`
-3. **本机 workspace 绑定** — 用 `one configure use <pair> --profile <name> --workspace` 设置
-4. **本机 default 指针** — `one configure use <pair> --profile <name>` 设的（或第一个加入的 profile，如果没显式设过）
+2. **环境感知 Project 绑定** — `profile-bindings.json` 中规范化 root + environment + Project 对应的 Profile 名
+3. **环境感知 Workspace 绑定** — 该规范化 root + environment 的 Workspace 级名字
+4. **旧本机 Project 绑定** — `config.json#workspaces[workspaceId].projects[project].profiles[...]`
+5. **旧本机 Workspace 绑定** — 用 `one configure use <pair> --profile <name> --workspace` 设置
+6. **本机 default 指针** — `one configure use <pair> --profile <name>` 设的（或第一个加入的 profile，如果没显式设过）
 
-manifest 不再保存本机 profile 名。`one configure current <pair>` 报的是 default 指针（第 4 层）。要 debug 具体某条命令会选哪个，跑 `-o json --dry-run`：
+manifest 不再保存本机 Profile 名。Dashboard 只把第 2–3 层的名字写到本机文件，永远不改代码库。`one configure current <pair>` 报的是 default 指针（第 6 层）。要 debug 具体某条命令会选哪个，跑 `-o json --dry-run`：
 
 ```bash
 one deploy -p api --env staging -o json --dry-run | jq '.profile'

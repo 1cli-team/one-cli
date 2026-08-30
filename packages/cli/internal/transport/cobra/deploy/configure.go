@@ -122,7 +122,7 @@ func configureFirstDeployment(
 	if err != nil {
 		return deploymentapp.Target{}, err
 	}
-	resolved, err := service.ResolveProfile(m, profileFlag, target)
+	resolved, err := service.ResolveProfile(root, m, profileFlag, target)
 	if err != nil {
 		return deploymentapp.Target{}, err
 	}
@@ -151,7 +151,7 @@ func configureFirstDeployment(
 		if err := configurecmd.ConfigureService(deps.Catalog, deps.Profiles, cmd, profile.DomainDeploy, providerID); err != nil {
 			return deploymentapp.Target{}, err
 		}
-		resolved, err = service.ResolveProfile(m, profileFlag, target)
+		resolved, err = service.ResolveProfile(root, m, profileFlag, target)
 		if err != nil {
 			return deploymentapp.Target{}, err
 		}

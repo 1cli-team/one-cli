@@ -1,6 +1,7 @@
 import type React from "react";
 import { useEffect } from "react";
 import { Toaster } from "@/components/ui/sonner";
+import { TooltipProvider } from "@/components/ui/tooltip";
 import { useThemeStore } from "@/lib/stores/theme";
 
 export const ThemeProvider: React.FC<React.PropsWithChildren> = ({ children }) => {
@@ -16,9 +17,9 @@ export const ThemeProvider: React.FC<React.PropsWithChildren> = ({ children }) =
 	}, [mode]);
 
 	return (
-		<>
+		<TooltipProvider delayDuration={300}>
 			{children}
 			<Toaster />
-		</>
+		</TooltipProvider>
 	);
 };

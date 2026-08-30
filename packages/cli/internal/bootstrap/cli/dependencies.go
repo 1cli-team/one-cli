@@ -1,6 +1,8 @@
 package cli
 
 import (
+	"context"
+
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/adapters/ci/githubactions"
 	deploybuild "github.com/torchstellar-team/one-cli/packages/cli/internal/adapters/deploy/build"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/adapters/deploy/cloudflare"
@@ -11,6 +13,7 @@ import (
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/adapters/env/dotenv"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/adapters/env/infisical"
 	internaltoolchain "github.com/torchstellar-team/one-cli/packages/cli/internal/adapters/toolchain"
+	workspaceregistrylocal "github.com/torchstellar-team/one-cli/packages/cli/internal/adapters/workspaceregistry/local"
 	ciapp "github.com/torchstellar-team/one-cli/packages/cli/internal/application/ci"
 	configureapp "github.com/torchstellar-team/one-cli/packages/cli/internal/application/configure"
 	deploymentapp "github.com/torchstellar-team/one-cli/packages/cli/internal/application/deployment"
@@ -36,6 +39,7 @@ type dependencies struct {
 	loaders      *secrets.Registry
 	ci           *ciapp.Service
 	workspaces   *workspaceapp.Service
+	registry     *workspaceapp.RegistryService
 }
 
 func composeDependencies() dependencies {
@@ -45,7 +49,8 @@ func composeDependencies() dependencies {
 	profiles := mustProfileService(backendCatalog)
 	containers := mustContainerService(backendCatalog)
 	environments := mustEnvironmentService(backendCatalog, profiles)
-	creation := mustCreationService(environments)
+	registry := mustWorkspaceRegistryService()
+	creation := mustCreationService(environments, registry)
 
 	return dependencies{
 		catalog:      backendCatalog,
@@ -55,20 +60,43 @@ func composeDependencies() dependencies {
 		environments: environments,
 		loaders:      secrets.MustRegistry(infisical.Loader(), dotenv.Loader()),
 		ci:           mustCIService(pkgci.MustRegistry(githubactions.Provider{})),
-		workspaces:   mustWorkspaceService(backendCatalog),
+		workspaces:   mustWorkspaceService(backendCatalog, profiles),
+		registry:     registry,
 	}
 }
 
-func mustWorkspaceService(backendCatalog *catalog.Catalog) *workspaceapp.Service {
-	service, err := workspaceapp.NewService(backendCatalog)
+func mustWorkspaceRegistryService() *workspaceapp.RegistryService {
+	repository, err := workspaceregistrylocal.New()
+	if err != nil {
+		panic(err)
+	}
+	service, err := workspaceapp.NewRegistryService(repository)
 	if err != nil {
 		panic(err)
 	}
 	return service
 }
 
-func mustCreationService(environments *environmentmodule.Service) *creationmodule.Service {
-	service, err := creationmodule.NewService(environments)
+func mustWorkspaceService(
+	backendCatalog *catalog.Catalog,
+	profiles *configureapp.ProfileService,
+) *workspaceapp.Service {
+	service, err := workspaceapp.NewService(backendCatalog, profiles)
+	if err != nil {
+		panic(err)
+	}
+	return service
+}
+
+func mustCreationService(
+	environments *environmentmodule.Service,
+	registry *workspaceapp.RegistryService,
+) *creationmodule.Service {
+	observe := creationmodule.WorkspaceObserver(func(ctx context.Context, root, source string) error {
+		_, err := registry.Observe(ctx, root, source)
+		return err
+	})
+	service, err := creationmodule.NewService(environments, observe)
 	if err != nil {
 		panic(err)
 	}

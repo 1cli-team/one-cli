@@ -35,6 +35,21 @@ func field(path, inputName string, kind FieldType, label string, required bool) 
 	return FieldSpec{Path: path, InputName: inputName, Type: kind, LabelKey: label, Required: required}
 }
 
+func projectField(path, inputName string, kind ProjectFieldType, label, placeholder string, required bool) ProjectFieldSpec {
+	return ProjectFieldSpec{
+		Path: path, InputName: inputName, Type: kind, LabelKey: label,
+		Placeholder: placeholder, Required: required,
+	}
+}
+
+func deployProjectSpec(fields ...ProjectFieldSpec) ProjectSpec {
+	return ProjectSpec{Configurable: true, Fields: fields}
+}
+
+func deployEnvironmentField() ProjectFieldSpec {
+	return projectField("env", "environment", ProjectFieldEnvironment, "project.fields.environment", "", false)
+}
+
 func envDotenvSpec() BackendSpec {
 	return spec(
 		BackendID{Domain: DomainEnv, Name: EnvDotenv},
@@ -65,7 +80,7 @@ func deployKustomizeSpec() BackendSpec {
 		field("kubeconfigContext", "kubeconfig-context", FieldString, "form.fields.kubeconfigContext", false),
 	}
 	fields[0].Placeholder = "~/.kube/config"
-	return spec(
+	result := spec(
 		BackendID{Domain: DomainDeploy, Name: DeployKustomize},
 		[]Capability{CapabilityDeploy, CapabilityScaffold},
 		ProfileSpec{Configurable: true, Type: ProfileTypeKustomize, Fields: fields},
@@ -73,6 +88,8 @@ func deployKustomizeSpec() BackendSpec {
 		Requirement{Kind: RequirementCapability, Name: string(CapabilityContainerBuild)},
 		Requirement{Kind: RequirementCapability, Name: string(CapabilityContainerPush)},
 	)
+	result.Project = deployProjectSpec(deployEnvironmentField())
+	return result
 }
 
 func s3Spec(name, endpoint, region string, pathStyle bool) BackendSpec {
@@ -94,11 +111,15 @@ func s3Spec(name, endpoint, region string, pathStyle bool) BackendSpec {
 		Requirement{Kind: RequirementProfile, Name: "deploy/" + name},
 	)
 	result.Traits = []Trait{TraitS3Compatible}
+	result.Project = deployProjectSpec(
+		projectField("bucket", "bucket", ProjectFieldString, "project.fields.bucket", "my-static-site", false),
+		deployEnvironmentField(),
+	)
 	return result
 }
 
 func deployVercelSpec() BackendSpec {
-	return spec(
+	result := spec(
 		BackendID{Domain: DomainDeploy, Name: DeployVercel},
 		[]Capability{CapabilityDeploy, CapabilityScaffold},
 		ProfileSpec{Configurable: true, Type: ProfileTypeVercel, Fields: []FieldSpec{
@@ -108,10 +129,16 @@ func deployVercelSpec() BackendSpec {
 		Requirement{Kind: RequirementProfile, Name: "deploy/vercel"},
 		Requirement{Kind: RequirementBinary, Name: "vercel"},
 	)
+	result.Project = deployProjectSpec(
+		projectField("projectId", "project-id", ProjectFieldString, "project.fields.projectId", "prj_...", false),
+		projectField("projectName", "project-name", ProjectFieldString, "project.fields.projectName", "my-project", false),
+		deployEnvironmentField(),
+	)
+	return result
 }
 
 func deployCloudflareSpec() BackendSpec {
-	return spec(
+	result := spec(
 		BackendID{Domain: DomainDeploy, Name: DeployCloudflare},
 		[]Capability{CapabilityDeploy, CapabilityScaffold},
 		ProfileSpec{Configurable: true, Type: ProfileTypeCloudflare, Fields: []FieldSpec{
@@ -121,10 +148,15 @@ func deployCloudflareSpec() BackendSpec {
 		Requirement{Kind: RequirementProfile, Name: "deploy/cloudflare"},
 		Requirement{Kind: RequirementBinary, Name: "wrangler"},
 	)
+	result.Project = deployProjectSpec(
+		projectField("workerName", "worker-name", ProjectFieldString, "project.fields.workerName", "my-worker", false),
+		deployEnvironmentField(),
+	)
+	return result
 }
 
 func deployEdgeOneSpec() BackendSpec {
-	return spec(
+	result := spec(
 		BackendID{Domain: DomainDeploy, Name: DeployEdgeOne},
 		[]Capability{CapabilityDeploy, CapabilityScaffold},
 		ProfileSpec{Configurable: true, Type: ProfileTypeEdgeOne, Fields: []FieldSpec{
@@ -134,6 +166,11 @@ func deployEdgeOneSpec() BackendSpec {
 		Requirement{Kind: RequirementProfile, Name: "deploy/edgeone"},
 		Requirement{Kind: RequirementBinary, Name: "edgeone"},
 	)
+	result.Project = deployProjectSpec(
+		projectField("projectName", "project-name", ProjectFieldString, "project.fields.projectName", "my-project", false),
+		deployEnvironmentField(),
+	)
+	return result
 }
 
 func containerSpec(name string) BackendSpec {

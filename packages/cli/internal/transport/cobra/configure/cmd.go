@@ -55,8 +55,13 @@ func Commands(
 	backendCatalog *catalog.Catalog,
 	profiles *configureapp.ProfileService,
 	workspaces *workspaceapp.Service,
+	registries ...*workspaceapp.RegistryService,
 ) []*cobra.Command {
-	return buildContributions(backendCatalog, profiles, workspaces)
+	var registry *workspaceapp.RegistryService
+	if len(registries) > 0 {
+		registry = registries[0]
+	}
+	return buildContributions(backendCatalog, profiles, workspaces, registry)
 }
 
 type supportedPair struct {
@@ -81,7 +86,12 @@ func buildContributions(
 	backendCatalog *catalog.Catalog,
 	profiles *configureapp.ProfileService,
 	workspaces *workspaceapp.Service,
+	registries ...*workspaceapp.RegistryService,
 ) []*cobra.Command {
+	var registry *workspaceapp.RegistryService
+	if len(registries) > 0 {
+		registry = registries[0]
+	}
 	parent := &cobra.Command{
 		Use:     "configure",
 		Long:    i18n.T("configure.tip"),
@@ -94,6 +104,7 @@ func buildContributions(
 		buildAddCmd(backendCatalog, profiles), buildListCmd(profiles), buildCurrentCmd(profiles), buildShowCmd(profiles),
 		buildUseCmd(profiles), buildRemoveCmd(profiles), servecmd.NewOpenCmd(servecmd.Dependencies{
 			Catalog: backendCatalog, Profiles: profiles, Workspaces: workspaces,
+			Registry: registry,
 		}), buildLocaleCmd(),
 	}
 	parent.AddCommand(children...)

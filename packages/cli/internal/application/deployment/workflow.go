@@ -68,7 +68,12 @@ func (s *Service) Execute(
 		if observer != nil {
 			observer.TargetStarted(target)
 		}
-		resolved, err := s.ResolveProfile(request.Manifest, request.Profile, target)
+		effectiveEnvironment := effectiveDeployEnvironment(
+			request.Manifest, target.Project.Name, request.Environment,
+		)
+		resolved, err := s.resolveProfile(
+			request.ProjectRoot, request.Manifest, request.Profile, effectiveEnvironment, target,
+		)
 		if err != nil {
 			return results, err
 		}
@@ -82,6 +87,7 @@ func (s *Service) Execute(
 			ProjectRoot: request.ProjectRoot,
 			Project:     target.Project,
 			Toolchain:   target.Toolchain,
+			Environment: effectiveEnvironment,
 			Manifest:    request.Manifest,
 			Resolved:    resolved,
 			DryRun:      request.DryRun,
@@ -89,7 +95,7 @@ func (s *Service) Execute(
 			Stderr:      request.Stderr,
 		}
 		injection, err := deployport.LoadInjectionEnv(ctx, input, deployport.LoadInjectionOptions{
-			Loaders: s.loaders, LoaderID: envProvider, EnvName: request.Environment,
+			Loaders: s.loaders, LoaderID: envProvider, EnvName: effectiveEnvironment,
 		})
 		if err != nil {
 			return results, err
@@ -127,14 +133,32 @@ func (s *Service) Execute(
 }
 
 func (s *Service) ResolveProfile(
+	projectRoot string,
 	manifest *workspace.Manifest,
 	profileFlag string,
 	target Target,
 ) (*profile.Resolved, error) {
+	return s.resolveProfile(
+		projectRoot,
+		manifest,
+		profileFlag,
+		deployProfileEnvironment(manifest, target.Project.Name),
+		target,
+	)
+}
+
+func (s *Service) resolveProfile(
+	projectRoot string,
+	manifest *workspace.Manifest,
+	profileFlag, environment string,
+	target Target,
+) (*profile.Resolved, error) {
+	environment = workspace.ProfileBindingEnvironment(manifest, environment)
 	resolved, err := s.profiles.Resolve(profile.ResolveInput{
 		Domain: profile.DomainDeploy, Backend: target.Backend,
 		FlagOverride: profileFlag, WorkspaceID: workspace.WorkspaceID(manifest),
-		ProjectName: target.Project.Name,
+		WorkspaceRoot: projectRoot, ProjectName: target.Project.Name,
+		Environment: environment,
 	})
 	if err != nil {
 		if coded, ok := err.(interface{ ErrorCode() string }); ok &&

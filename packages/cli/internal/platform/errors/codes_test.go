@@ -91,6 +91,7 @@ func TestEveryCodeHasDefinition(t *testing.T) {
 		cliErrors.INFISICAL_FOLDER_NOT_FOUND,
 		cliErrors.RUN_DOTENV_MISSING,
 		cliErrors.RUN_COMMAND_NOT_FOUND,
+		cliErrors.SERVE_REPOSITORY_READ_ONLY,
 	}
 	for _, code := range allCodes {
 		def := code.Definition()

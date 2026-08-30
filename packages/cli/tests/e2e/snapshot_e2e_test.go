@@ -21,7 +21,7 @@ func TestSnapshot_E2E_Version(t *testing.T) {
 	if code != 0 {
 		t.Fatalf("expected exit 0, got %d", code)
 	}
-	// Release builds print the base version. `task install-local` appends the
+	// Release builds print the base version. `task install` appends the
 	// current short commit and an optional dirty marker; both are deliberate,
 	// user-visible formats and must remain snapshot-compatible.
 	want := regexp.MustCompile(`^0\.1\.0(?:-local\.[0-9a-f]{7}(?:\.dirty)?)?\n$`)

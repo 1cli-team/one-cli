@@ -50,6 +50,9 @@ func (e *CacheEntry) IsExpired(now time.Time) bool {
 // CachePath returns the cache file path for one (domain, backend,
 // profile) triple. Does not create the file.
 func CachePath(domain Domain, backend, name string) (string, error) {
+	if err := ValidateName(name); err != nil {
+		return "", err
+	}
 	root, err := CacheDir()
 	if err != nil {
 		return "", err
@@ -92,12 +95,12 @@ func ReadCache(domain Domain, backend, name string) (*CacheEntry, error) {
 // backend, name). Creates parent dirs at 0700 and writes the file at
 // 0600.
 func WriteCache(domain Domain, backend, name string, entry *CacheEntry) error {
-	if entry == nil {
-		return errors.New("profile: nil cache entry")
-	}
 	path, err := CachePath(domain, backend, name)
 	if err != nil {
 		return err
+	}
+	if entry == nil {
+		return errors.New("profile: nil cache entry")
 	}
 	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
 		return err

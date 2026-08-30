@@ -27,7 +27,7 @@ description: 工作区台账文件 — 谁在写、什么时候改、漂移会�
     "name": "demo-app" // 工作区名，通常来自 one create 的目录名或 --name
   },
   "environments": { // 工作区支持的环境集合
-    "names": ["dev", "staging", "prod"], // 可用环境名
+    "names": ["dev", "preview", "prod"], // 新 Workspace 的默认环境名
     "default": "dev" // 不显式传 --env 时使用的默认环境
   },
   "domains": { // 工作区级 domain 默认配置

@@ -25,7 +25,7 @@ const DefaultEnvironment = "dev"
 // DefaultEnvironments is the canonical env list stamped into new Infisical
 // workspaces. Order matters because defaultEnv resolution prefers the first
 // matching entry.
-var DefaultEnvironments = []string{"dev", "staging", "prod"}
+var DefaultEnvironments = []string{"dev", "preview", "prod"}
 
 // WorkspaceConfig is the runtime view of one.manifest.json#domains.env (when
 // kind=infisical) merged with the workspace-level environments section.

@@ -13,26 +13,21 @@ import (
 
 func (s *Service) resolveInfisical(
 	activeWorkspace execution.Workspace,
-	profileFlag string,
+	profileFlag, environment, projectName string,
 ) (*infisical.WorkspaceConfig, *infisical.Credentials, error) {
-	resolved, err := s.profiles.Resolve(profile.ResolveInput{
-		Domain:       profile.DomainEnv,
-		Backend:      workspace.EnvBackendInfisical,
-		FlagOverride: profileFlag,
-		WorkspaceID:  workspace.WorkspaceID(activeWorkspace.Manifest()),
-	})
-	if err != nil {
-		if coded, ok := err.(interface{ ErrorCode() string }); ok &&
-			coded.ErrorCode() == "PROFILE_NONE_CONFIGURED" {
-			return nil, nil, nil
-		}
+	resolved, err := s.resolveInfisicalProfile(
+		activeWorkspace, profileFlag, environment, projectName,
+	)
+	if err != nil || resolved == nil {
 		return nil, nil, err
 	}
 	if resolved.Profile.Infisical == nil {
 		return nil, nil, nil
 	}
 	value := resolved.Profile.Infisical
-	config := &infisical.WorkspaceConfig{SiteURL: value.SiteURL}
+	config := &infisical.WorkspaceConfig{
+		SiteURL: value.SiteURL, ProfileName: resolved.Name,
+	}
 	var credentials *infisical.Credentials
 	if value.Credentials != nil {
 		credentials = &infisical.Credentials{
@@ -42,12 +37,51 @@ func (s *Service) resolveInfisical(
 	return config, credentials, nil
 }
 
-func (s *Service) ensureInfisicalBound(ctx context.Context, projectRoot string) error {
+func (s *Service) resolveInfisicalProfile(
+	activeWorkspace execution.Workspace,
+	profileFlag, environment, projectName string,
+) (*profile.Resolved, error) {
+	environment = workspace.ProfileBindingEnvironment(activeWorkspace.Manifest(), environment)
+	resolved, err := s.profiles.Resolve(profile.ResolveInput{
+		Domain:        profile.DomainEnv,
+		Backend:       workspace.EnvBackendInfisical,
+		FlagOverride:  profileFlag,
+		WorkspaceID:   workspace.WorkspaceID(activeWorkspace.Manifest()),
+		WorkspaceRoot: activeWorkspace.Root(),
+		Environment:   environment,
+		ProjectName:   projectName,
+	})
+	if err != nil {
+		if coded, ok := err.(interface{ ErrorCode() string }); ok &&
+			coded.ErrorCode() == "PROFILE_NONE_CONFIGURED" {
+			return nil, nil
+		}
+		return nil, err
+	}
+	return resolved, nil
+}
+
+func (s *Service) ensureInfisicalBound(
+	ctx context.Context,
+	activeWorkspace execution.Workspace,
+	profileFlag, environment, projectName string,
+) error {
+	projectRoot := activeWorkspace.Root()
 	config, _ := infisical.LoadWorkspaceConfig(projectRoot)
-	if config == nil || strings.TrimSpace(config.ProjectID) != "" {
+	if config != nil && strings.TrimSpace(config.ProjectID) != "" {
 		return nil
 	}
-	_, err := infisical.Init(ctx, projectRoot, infisical.InitInput{})
+	resolved, err := s.resolveInfisicalProfile(
+		activeWorkspace, profileFlag, environment, projectName,
+	)
+	if err != nil {
+		return err
+	}
+	profileName := ""
+	if resolved != nil {
+		profileName = resolved.Name
+	}
+	_, err = s.initInfisical(ctx, projectRoot, infisical.InitInput{ProfileName: profileName})
 	return err
 }
 

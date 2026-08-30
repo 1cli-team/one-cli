@@ -26,12 +26,16 @@ func containerKindForInvocation(manifest *workspace.Manifest, subproject string)
 // Push callers expect REGISTRY_CREDENTIAL_MISSING when no profile is
 // set; Build callers use resolveBuildContainerRegistry which tolerates
 // a nil result.
-func resolveContainerRegistry(deps Dependencies, projectRoot, profileFlag, kind, subproject string) (*container.Registry, error) {
+func resolveContainerRegistry(
+	deps Dependencies,
+	projectRoot, profileFlag, kind, subproject, environment string,
+) (*container.Registry, error) {
 	return deps.Service.ResolveRegistry(containermodule.ResolveRegistryInput{
 		ProjectRoot:     projectRoot,
 		Backend:         kind,
 		Profile:         profileFlag,
 		Project:         subproject,
+		Environment:     environment,
 		RequireRegistry: true,
 	})
 }
@@ -40,12 +44,16 @@ func resolveContainerRegistry(deps Dependencies, projectRoot, profileFlag, kind,
 // profile pin exists at flag-, project-, or workspace-level, it
 // returns nil so Build falls back to a local-only `<workload>:<tag>`
 // image with no registry prefix and no docker login.
-func resolveBuildContainerRegistry(deps Dependencies, projectRoot, profileFlag, kind, subproject string) (*container.Registry, error) {
+func resolveBuildContainerRegistry(
+	deps Dependencies,
+	projectRoot, profileFlag, kind, subproject, environment string,
+) (*container.Registry, error) {
 	return deps.Service.ResolveRegistry(containermodule.ResolveRegistryInput{
 		ProjectRoot:     projectRoot,
 		Backend:         kind,
 		Profile:         profileFlag,
 		Project:         subproject,
+		Environment:     environment,
 		RequireRegistry: false,
 		SkipDefault:     true,
 	})

@@ -13,6 +13,12 @@ type profileRepositoryStub struct {
 	config  *profile.Config
 	upsert  profile.Profile
 	updated bool
+	unbound struct {
+		workspaceID string
+		projectName string
+		domain      profile.Domain
+		backend     string
+	}
 }
 
 func (r *profileRepositoryStub) Load() (*profile.Config, *profile.CredentialsFile, error) {
@@ -44,6 +50,32 @@ func (*profileRepositoryStub) BindWorkspaceProfile(
 	string, string, string, string, profile.Domain, string, string,
 ) error {
 	return nil
+}
+func (r *profileRepositoryStub) UnbindWorkspaceProfile(
+	workspaceID, projectName string, domain profile.Domain, backend string,
+) error {
+	r.unbound.workspaceID = workspaceID
+	r.unbound.projectName = projectName
+	r.unbound.domain = domain
+	r.unbound.backend = backend
+	return nil
+}
+
+func (*profileRepositoryStub) BindEnvironmentProfile(
+	string, string, string, string, string, profile.Domain, string, string,
+) error {
+	return nil
+}
+
+func (*profileRepositoryStub) UnbindEnvironmentProfile(
+	string, string, string, profile.Domain, string,
+) error {
+	return nil
+}
+func (*profileRepositoryStub) EnvironmentProfileBinding(
+	string, string, string, profile.Domain, string,
+) (string, error) {
+	return "", nil
 }
 func (*profileRepositoryStub) Resolve(profile.ResolveInput) (*profile.Resolved, error) {
 	return nil, nil
@@ -87,6 +119,23 @@ func TestProfileServiceUsesCatalogOrder(t *testing.T) {
 	}
 	if !reflect.DeepEqual(got, want) {
 		t.Fatalf("ProfileBackends() = %#v, want %#v", got, want)
+	}
+}
+
+func TestProfileServiceUnbindsProjectProfileThroughRepository(t *testing.T) {
+	t.Parallel()
+	repository := &profileRepositoryStub{config: &profile.Config{}}
+	service := testProfileService(t, repository)
+	if err := service.UnbindWorkspaceProfile(
+		"ws-demo", "web", profile.DomainDeploy, catalog.DeployVercel,
+	); err != nil {
+		t.Fatal(err)
+	}
+	if repository.unbound.workspaceID != "ws-demo" ||
+		repository.unbound.projectName != "web" ||
+		repository.unbound.domain != profile.DomainDeploy ||
+		repository.unbound.backend != catalog.DeployVercel {
+		t.Fatalf("unbind input = %#v", repository.unbound)
 	}
 }
 

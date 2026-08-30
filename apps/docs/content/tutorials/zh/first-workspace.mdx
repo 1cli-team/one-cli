@@ -73,9 +73,9 @@ cat one.manifest.json | jq
 
 manifest 关键字段：
 
-- `version: 5` — schema 版本必须是 5
+- `version: 1` — schema 版本必须是 1
 - `workspace.id` — 自动生成的 UUID
-- `environments.names: ["dev", "staging", "prod"]`、`default: "dev"`
+- `environments.names: ["dev", "preview", "prod"]`、`default: "dev"`
 - `domains.env` — 你选的 secrets backend (`dotenv` 或 `infisical`)
 - `domains.deploy`、`domains.container` — 此阶段还没设；后面给单个项目启用 deploy/container backend 时才会写
 - `projects: []` — 空数组（除非你传了 `--add`）

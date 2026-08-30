@@ -134,4 +134,43 @@ describe("profile editor dialog", () => {
 			});
 		});
 	});
+
+	it("sends the default-profile choice from the checkbox", async () => {
+		let requestBody: unknown;
+		server.use(
+			http.post("http://localhost/api/configure/deploy/vercel", async ({ request }) => {
+				requestBody = await request.json();
+				return HttpResponse.json({
+					schema: "one-cli/serve-configure-upsert/v1",
+					status: "updated",
+					domain: "deploy",
+					backend: "vercel",
+					name: "production",
+					default: true,
+				});
+			}),
+		);
+
+		render(
+			<MemoryRouter>
+				<ProfileEditorDialog
+					target={{
+						backend: vercelBackend,
+						name: "production",
+						profile: { team: "one-team", credentials: { apiToken: "********" } },
+						mode: "edit",
+						hasDefault: true,
+					}}
+					onOpenChange={() => {}}
+				/>
+			</MemoryRouter>,
+		);
+
+		await userEvent.click(screen.getByLabelText("Set default after save"));
+		await userEvent.click(screen.getByRole("button", { name: "Save" }));
+
+		await waitFor(() => {
+			expect(requestBody).toMatchObject({ name: "production", use: true });
+		});
+	});
 });

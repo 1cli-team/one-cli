@@ -28,6 +28,7 @@ type ResolveRegistryInput struct {
 	Kind            string
 	ProfileFlag     string
 	Subproject      string
+	Environment     string
 	RequireRegistry bool
 	SkipDefault     bool
 }
@@ -58,17 +59,25 @@ func ResolveRegistry(in ResolveRegistryInput) (*container.Registry, error) {
 	}
 
 	workspaceID := ""
+	environment := strings.TrimSpace(in.Environment)
 	if m, err := workspace.ReadManifest(in.ProjectRoot); err == nil {
 		workspaceID = workspace.WorkspaceID(m)
+		if environment == "" {
+			environment = defaultProfileEnvironment(m)
+		} else {
+			environment = workspace.ProfileBindingEnvironment(m, environment)
+		}
 	}
 
 	resolved, err := profile.Resolve(profile.ResolveInput{
-		Domain:       profile.DomainContainer,
-		Backend:      kind,
-		FlagOverride: in.ProfileFlag,
-		WorkspaceID:  workspaceID,
-		ProjectName:  in.Subproject,
-		SkipDefault:  in.SkipDefault,
+		Domain:        profile.DomainContainer,
+		Backend:       kind,
+		FlagOverride:  in.ProfileFlag,
+		WorkspaceID:   workspaceID,
+		WorkspaceRoot: in.ProjectRoot,
+		Environment:   environment,
+		ProjectName:   in.Subproject,
+		SkipDefault:   in.SkipDefault,
 	})
 	if err != nil {
 		if cliErr, ok := err.(interface{ ErrorCode() string }); ok &&
@@ -108,6 +117,21 @@ func ResolveRegistry(in ResolveRegistryInput) (*container.Registry, error) {
 		ProfileName:   resolved.Name,
 		ProfileSource: resolved.Source,
 	}, nil
+}
+
+func defaultProfileEnvironment(manifest *workspace.Manifest) string {
+	if manifest == nil || manifest.Environments == nil {
+		return ""
+	}
+	if value := strings.TrimSpace(manifest.Environments.Default); value != "" {
+		return value
+	}
+	for _, candidate := range manifest.Environments.Names {
+		if value := strings.TrimSpace(candidate); value != "" {
+			return value
+		}
+	}
+	return ""
 }
 
 // hostForKind derives the registry host string for one kind. docker

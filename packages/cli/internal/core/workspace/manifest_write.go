@@ -2,7 +2,12 @@ package workspace
 
 import (
 	"encoding/json"
+	"errors"
+	"fmt"
+	"io"
+	"io/fs"
 	"os"
+	"path/filepath"
 	"sort"
 )
 
@@ -71,9 +76,11 @@ func UpsertManifestProject(projectRoot string, input ManifestProjectInput) error
 }
 
 // WriteManifest persists the manifest to disk with 2-space indentation and
-// a trailing newline (fs-extra parity). Preserves the top-level
-// configuration fields verbatim — callers that want to mutate them
-// should use the UpdateManifest* helpers below.
+// a trailing newline (fs-extra parity). Publication is atomic: bytes are
+// written to a sibling temporary file, synced, closed, and then renamed over
+// the destination. Existing file permissions are preserved. Callers that want
+// to mutate top-level configuration should use the UpdateManifest* helpers
+// below.
 func WriteManifest(projectRoot string, m *Manifest) error {
 	out := *m
 	out.Version = ManifestVersion
@@ -92,7 +99,68 @@ func WriteManifest(projectRoot string, m *Manifest) error {
 		return err
 	}
 	b = append(b, '\n')
-	return os.WriteFile(ManifestPath(projectRoot), b, 0o644)
+	return atomicWriteManifest(ManifestPath(projectRoot), b, 0o644)
+}
+
+type renameManifestFile func(string, string) error
+
+func atomicWriteManifest(path string, data []byte, defaultMode fs.FileMode) error {
+	return atomicWriteManifestWithRename(path, data, defaultMode, os.Rename)
+}
+
+// atomicWriteManifestWithRename keeps publication injectable for focused
+// failure-safety tests without process-global hooks. Production always passes
+// os.Rename through atomicWriteManifest.
+func atomicWriteManifestWithRename(
+	path string,
+	data []byte,
+	defaultMode fs.FileMode,
+	rename renameManifestFile,
+) error {
+	dir := filepath.Dir(path)
+	mode := defaultMode.Perm()
+	info, err := os.Stat(path)
+	switch {
+	case err == nil:
+		mode = info.Mode().Perm()
+	case !errors.Is(err, fs.ErrNotExist):
+		return fmt.Errorf("stat manifest before atomic write: %w", err)
+	}
+
+	tmp, err := os.CreateTemp(dir, "."+filepath.Base(path)+"-*.tmp")
+	if err != nil {
+		return fmt.Errorf("create manifest temp file: %w", err)
+	}
+	tmpPath := tmp.Name()
+	closed := false
+	defer func() {
+		if !closed {
+			_ = tmp.Close()
+		}
+		_ = os.Remove(tmpPath)
+	}()
+
+	if err := tmp.Chmod(mode); err != nil {
+		return fmt.Errorf("set manifest temp permissions: %w", err)
+	}
+	written, err := tmp.Write(data)
+	if err != nil {
+		return fmt.Errorf("write manifest temp file: %w", err)
+	}
+	if written != len(data) {
+		return fmt.Errorf("write manifest temp file: %w", io.ErrShortWrite)
+	}
+	if err := tmp.Sync(); err != nil {
+		return fmt.Errorf("sync manifest temp file: %w", err)
+	}
+	if err := tmp.Close(); err != nil {
+		return fmt.Errorf("close manifest temp file: %w", err)
+	}
+	closed = true
+	if err := rename(tmpPath, path); err != nil {
+		return fmt.Errorf("publish manifest atomically: %w", err)
+	}
+	return nil
 }
 
 // EnvInit is the atomic input for InitWorkspaceEnv: an env backend kind +

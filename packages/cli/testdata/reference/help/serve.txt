@@ -6,9 +6,10 @@ USAGE
   one serve [flags]
 
 TIPS
-启动一个本地 HTTP 服务，在浏览器里手工编辑 profile（env / deploy /
-container 各 backend）。Profile 含 API key、kubeconfig path、registry
-token 等敏感字段，AI 不应读写；本命令是给你（人类）的入口。
+启动一个本地 HTTP 服务，在浏览器里查看本机 Workspace、配置其中的
+Project，并管理 profile（env / deploy / container 各 backend）。Profile
+含 API key、kubeconfig path、registry token 等敏感字段，AI 不应读写；
+本命令是给你（人类）的入口。
 
 默认行为：绑定 127.0.0.1 + 内核分配空闲端口 + 自动用系统默认浏览器
 打开 URL（带一次性 session token）。打印 URL 后阻塞，按 Ctrl-C 退出。

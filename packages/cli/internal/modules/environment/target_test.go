@@ -8,8 +8,113 @@ import (
 
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/adapters/env/infisical"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/application/execution"
+	"github.com/torchstellar-team/one-cli/packages/cli/internal/core/profile"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/core/workspace"
 )
+
+func TestResolveInfisicalUsesEnvironmentProjectProfileBinding(t *testing.T) {
+	configRoot := t.TempDir()
+	t.Setenv("XDG_CONFIG_HOME", configRoot)
+	t.Setenv("HOME", configRoot)
+	root := t.TempDir()
+	if err := workspace.WriteManifest(root, &workspace.Manifest{
+		Version:   workspace.ManifestVersion,
+		Workspace: &workspace.ManifestWorkspace{ID: "workspace-id", Name: "demo"},
+		Domains: &workspace.WorkspaceDomains{
+			Env: &workspace.BackendRef{Kind: workspace.EnvBackendInfisical},
+		},
+		Projects: []workspace.ManifestProject{{
+			Name: "web", RelativeDir: "apps/web", Toolchain: "node",
+		}},
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := profile.Upsert(profile.DomainEnv, workspace.EnvBackendInfisical, "preview-web", profile.Profile{
+		Backend: workspace.EnvBackendInfisical,
+		Infisical: &profile.InfisicalProfile{
+			SiteURL: "https://example.infisical.test",
+			Credentials: &profile.InfisicalCredentials{
+				ClientID: "preview-client", ClientSecret: "preview-secret",
+			},
+		},
+	}, false); err != nil {
+		t.Fatal(err)
+	}
+	if err := profile.BindEnvironmentProfile(
+		"workspace-id", "demo", root, "web", "preview",
+		profile.DomainEnv, workspace.EnvBackendInfisical, "preview-web",
+	); err != nil {
+		t.Fatal(err)
+	}
+	activeWorkspace := executionWorkspaceAt(t, root, root)
+	config, credentials, err := newTestService(t).resolveInfisical(
+		activeWorkspace, "", "preview", "web",
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if config == nil || config.SiteURL != "https://example.infisical.test" ||
+		credentials == nil || credentials.ClientID != "preview-client" ||
+		credentials.ClientSecret != "preview-secret" {
+		t.Fatalf("resolved config=%#v credentials=%#v", config, credentials)
+	}
+}
+
+func TestEnsureInfisicalBoundPassesContextualProfileToInit(t *testing.T) {
+	configRoot := t.TempDir()
+	t.Setenv("XDG_CONFIG_HOME", configRoot)
+	t.Setenv("HOME", configRoot)
+	root := t.TempDir()
+	if err := workspace.WriteManifest(root, &workspace.Manifest{
+		Version:      workspace.ManifestVersion,
+		Workspace:    &workspace.ManifestWorkspace{ID: "workspace-id", Name: "demo"},
+		Environments: &workspace.Environments{Names: []string{"dev", "staging", "prod"}, Default: "dev"},
+		Domains: &workspace.WorkspaceDomains{
+			Env: &workspace.BackendRef{Kind: workspace.EnvBackendInfisical},
+		},
+		Projects: []workspace.ManifestProject{{
+			Name: "web", RelativeDir: "apps/web", Toolchain: "node",
+		}},
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := profile.Upsert(profile.DomainEnv, workspace.EnvBackendInfisical, "preview-web", profile.Profile{
+		Backend: workspace.EnvBackendInfisical,
+		Infisical: &profile.InfisicalProfile{
+			SiteURL: "https://example.infisical.test",
+			Credentials: &profile.InfisicalCredentials{
+				ClientID: "preview-client", ClientSecret: "preview-secret",
+			},
+		},
+	}, false); err != nil {
+		t.Fatal(err)
+	}
+	if err := profile.BindEnvironmentProfile(
+		"workspace-id", "demo", root, "web", "staging",
+		profile.DomainEnv, workspace.EnvBackendInfisical, "preview-web",
+	); err != nil {
+		t.Fatal(err)
+	}
+
+	service := newTestService(t)
+	var initRoot string
+	var initInput infisical.InitInput
+	service.initInfisical = func(
+		_ context.Context, projectRoot string, input infisical.InitInput,
+	) (*infisical.InitResult, error) {
+		initRoot, initInput = projectRoot, input
+		return &infisical.InitResult{}, nil
+	}
+	activeWorkspace := executionWorkspaceAt(t, root, root)
+	if err := service.ensureInfisicalBound(
+		context.Background(), activeWorkspace, "", "preview", "web",
+	); err != nil {
+		t.Fatal(err)
+	}
+	if initRoot != root || initInput.ProfileName != "preview-web" {
+		t.Fatalf("Init(%q, %#v); want contextual profile preview-web", initRoot, initInput)
+	}
+}
 
 func TestResolveInfisicalFolderPath(t *testing.T) {
 	root := t.TempDir()

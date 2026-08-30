@@ -9,12 +9,12 @@ export const App: React.FC = () => {
 		// the viewport so only <main> scrolls when a page is taller than the
 		// viewport (e.g. /profile with many profile cards). Without this,
 		// the whole document scrolls and the sidebar disappears off-screen.
-		<div className="flex h-screen overflow-hidden bg-background text-foreground">
+		<div className="flex h-screen min-w-[1180px] overflow-hidden bg-background text-foreground">
 			<AppSidebar />
 			<div className="flex min-w-0 flex-1 flex-col">
 				<TopBar />
-				<main className="flex-1 overflow-y-auto px-6 py-6">
-					<div className="mx-auto w-full max-w-6xl">
+				<main className="flex-1 overflow-y-auto px-7 py-6">
+					<div className="mx-auto w-full max-w-[1480px]">
 						<AppRoutes />
 					</div>
 				</main>

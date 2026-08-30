@@ -73,9 +73,9 @@ cat one.manifest.json | jq
 
 Key parts of the produced manifest:
 
-- `version: 5` — required schema version
+- `version: 1` — required schema version
 - `workspace.id` — generated UUID
-- `environments.names: ["dev", "staging", "prod"]` and `default: "dev"`
+- `environments.names: ["dev", "preview", "prod"]` and `default: "dev"`
 - `domains.env` — the env backend you chose (`dotenv` or `infisical`)
 - `domains.deploy` and `domains.container` — left unset at this stage; filled in when individual projects opt into deploy / container backends
 - `projects: []` — empty unless you passed `--add`

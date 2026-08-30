@@ -6,13 +6,13 @@ description: 多环境环境变量 — set / get / list / pull 子命令的完�
 `one env` 管 monorepo 多环境变量。两种后端：
 
 - **dotenv**（默认）：本地文件系统。每个项目持有 `.env` + `.env.<env>` + `.env.local` + `.env.<env>.local` 的 overlay。
-- **infisical**：[Infisical](https://infisical.com/)。同一个工作区共享一个 Infisical project，环境（dev / staging / prod / ...）是 project 内分区。
+- **infisical**：[Infisical](https://infisical.com/)。同一个工作区共享一个 Infisical project，环境（dev / preview / prod / ...）是 project 内分区。
 
 完整工作流和心智模型见 [环境变量指南](/zh/tutorials/env-vars/)。
 
 ## 环境模型
 
-`manifest.environments.names` 是工作区的环境列表（`one create` 默认 `["dev","staging","prod"]`），`manifest.environments.default` 是不传 `--env` 时的回退值（默认 `dev`）。
+`manifest.environments.names` 是工作区的环境列表（`one create` 默认 `["dev","preview","prod"]`），`manifest.environments.default` 是不传 `--env` 时的回退值（默认 `dev`）。已有 Workspace 里的 `staging` 仍然有效；当 Manifest 只声明 `staging` 而没有 `preview` 时，Dashboard 的“预览环境”绑定会映射到 `staging`。
 
 `--env` 解析链：
 
@@ -216,7 +216,7 @@ Workspace 级 env 后端写在 `one.manifest.json#domains.env`，环境列表写
 }
 ```
 
-值本身永远不进 manifest；manifest 只记录 backend、profile、folder path 和 key 名。
+值本身和本机 Profile 名永远不进 Manifest；Manifest 只记录 Backend、folder path 和 key 名，机器 Profile 定义与环境感知绑定位于 `~/.config/one/`。
 
 ## 凭据安全
 

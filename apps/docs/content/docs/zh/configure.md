@@ -88,8 +88,15 @@ one configure add container/ghcr --profile ghcr \
 命令实际使用 profile 时按这个顺序找：
 
 1. 命令行 `--profile <name>`
-2. `one.manifest.json` 里的 project / workspace profile pin
-3. `~/.config/one/config.json` 里对应 `domain/backend.default`
+2. `profile-bindings.json` 中的 Project + environment 绑定
+3. `profile-bindings.json` 中的 Workspace + environment 绑定
+4. `config.json#workspaces` 中的旧 Project 绑定
+5. `config.json#workspaces` 中的旧 Workspace 绑定
+6. `~/.config/one/config.json` 里对应 `domain/backend.default`
+
+环境绑定按规范化 Workspace root、environment 和 `(domain, backend)` 定位，只保存 Profile 名。Dashboard UI 通过 `?env=` 只提供 `dev`、`preview`、`prod`；核心/API 也接受其他工作流传入的安全自定义 ID。全局 Settings 中的 Profile CRUD 不按环境分区。空环境保持旧解析链。
+
+`one.manifest.json` 永远不保存本机 Profile 名。`one configure use ... --workspace` 和 `--project` 作为旧绑定仍兼容；需要每个环境不同选择时使用 `one serve`。
 
 同名 profile 可以存在于不同 backend 下，例如 `deploy/aws-s3` 和 `deploy/kustomize` 都可以有 `prod`。
 
@@ -97,12 +104,13 @@ one configure add container/ghcr --profile ghcr \
 
 ```text
 ~/.config/one/
-├── config.json         # 非敏感字段：endpoint、region、default 指针
-├── credentials.json    # 敏感字段：clientSecret、accessKeySecret、password
-└── cache/              # 短期 token 缓存
+├── config.json             # Profile 非敏感字段、default、旧绑定
+├── credentials.json        # 敏感字段：clientSecret、accessKeySecret、password
+├── profile-bindings.json   # v1：规范化 root + environment -> Profile 名
+└── cache/                  # 短期 token 缓存
 ```
 
-两个 JSON 文件都是 `0600`。`show` 默认掩码敏感字段，只有 `show --reveal` 会输出明文。
+三个 JSON 文件都是 mode `0600` 的机器本地文件；`profile-bindings.json` 只含名字。它们都不会修改或升级 `one.manifest.json`。`show` 默认掩码敏感字段，只有 `show --reveal` 会输出明文。
 
 ## 输出 schema
 
@@ -124,14 +132,14 @@ one configure add container/ghcr --profile ghcr \
 | `PROFILE_NONE_CONFIGURED` | 先跑 `one configure add <pair> --profile <name> --use` |
 | `PROFILE_NOT_FOUND` | `one configure list <pair>` 看本机已有 profile |
 | `PROFILE_BACKEND_INVALID` | 确认 profile 所在 backend 与目标 project 的 deploy/container backend 一致 |
-| `PROFILE_FILE_INVALID` | 手工修复或删除 `~/.config/one/config.json` / `credentials.json` 后重建 |
-| `PROFILE_VERSION_UNSUPPORTED` | 旧格式配置不兼容，按当前 `(domain, backend)` 重新配置 |
+| `PROFILE_FILE_INVALID` | 修复错误 context 指向的文件（`config.json`、`credentials.json` 或 `profile-bindings.json`） |
+| `PROFILE_VERSION_UNSUPPORTED` | 升级 One CLI，或只重建不兼容的机器本地文件 |
 
 完整码表：[错误码大全](/zh/docs/error-codes/)。
 
 ## 进一步阅读
 
-- [`one serve`](/zh/docs/serve/) — 用本地 Web UI 手工编辑这些 profile
+- [`one serve`](/zh/docs/serve/) — 编辑 Profile 并选择环境感知的本机绑定
 - [`one env`](/zh/docs/env-vars/) — 使用 `env/infisical` profile
 - [`one deploy`](/zh/docs/deploy/) — 使用 deploy profile
 - [`one container`](/zh/docs/container/) — 使用 container profile

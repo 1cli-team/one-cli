@@ -53,7 +53,7 @@ type ManifestWorkspace struct {
 }
 
 // Environments is the workspace-level environment-name registry. Names are
-// the deployment target names ("dev" / "staging" / "prod" by default), used
+// the deployment target names ("dev" / "preview" / "prod" by default), used
 // in three independent places:
 //   - secrets backends enumerate `Names` to know which env files / Infisical
 //     environments exist
@@ -61,7 +61,7 @@ type ManifestWorkspace struct {
 //   - projects[].domains.deploy.config.env validates against `Names`
 //
 // Default is the env name used when --env is omitted; it must appear in
-// Names. New workspaces seed `["dev","staging","prod"]` with default "dev".
+// Names. New workspaces seed `["dev","preview","prod"]` with default "dev".
 type Environments struct {
 	Names   []string `json:"names,omitempty"`
 	Default string   `json:"default,omitempty"`
@@ -71,7 +71,7 @@ type Environments struct {
 // fresh manifest.environments.names. Same value is mirrored by the
 // infisical package; defining it here keeps the workspace layer
 // independent of any specific secrets backend.
-var DefaultEnvironments = []string{"dev", "staging", "prod"}
+var DefaultEnvironments = []string{"dev", "preview", "prod"}
 
 // WorkspaceDomains is the workspace-level backend selection block. Each
 // field is optional and represents the selected backend for that domain.

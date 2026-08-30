@@ -6,13 +6,13 @@ description: "Full reference for multi-environment variables: set / get / list /
 `one env` manages monorepo environment variables across environments. There are two backends:
 
 - **dotenv** (default): local filesystem. Each project has overlays such as `.env`, `.env.<env>`, `.env.local`, and `.env.<env>.local`.
-- **infisical**: one workspace shares one Infisical project; environments such as dev / staging / prod are sections inside that project.
+- **infisical**: one workspace shares one Infisical project; environments such as dev / preview / prod are sections inside that project.
 
 For the full workflow and mental model, read [Environment variables guide](/en/tutorials/env-vars/).
 
 ## Environment Model
 
-`manifest.environments.names` is the workspace environment list. `one create` defaults to `["dev","staging","prod"]`. `manifest.environments.default` is the fallback when `--env` is omitted; default is `dev`.
+`manifest.environments.names` is the workspace environment list. `one create` defaults to `["dev","preview","prod"]`. `manifest.environments.default` is the fallback when `--env` is omitted; default is `dev`. Existing workspaces that use `staging` remain valid; the Dashboard's Preview binding maps to `staging` when that legacy name is present and `preview` is not.
 
 `--env` resolution:
 
@@ -218,7 +218,7 @@ Project path overrides live in `projects[].domains.env`:
 }
 ```
 
-Values never go into the manifest. The manifest records backend, profile, folder path, and key names.
+Values and local Profile names never go into the Manifest. The Manifest records the Backend, folder path, and key names; machine Profile definitions and environment-aware bindings stay under `~/.config/one/`.
 
 ## Credential Safety
 

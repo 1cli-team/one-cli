@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/core/profile"
+	"github.com/torchstellar-team/one-cli/packages/cli/internal/core/workspace"
 )
 
 func TestHostForKind(t *testing.T) {
@@ -138,6 +139,58 @@ func TestResolveRegistry_UnknownKind(t *testing.T) {
 	}
 	if !contains(err.Error(), "totally-not-a-kind") {
 		t.Errorf("error should mention the unknown kind, got: %v", err)
+	}
+}
+
+func TestResolveRegistryUsesEnvironmentProjectBinding(t *testing.T) {
+	configRoot := t.TempDir()
+	t.Setenv("XDG_CONFIG_HOME", configRoot)
+	t.Setenv("HOME", configRoot)
+	root := t.TempDir()
+	manifest := &workspace.Manifest{
+		Version:      workspace.ManifestVersion,
+		Workspace:    &workspace.ManifestWorkspace{ID: "workspace-id", Name: "demo"},
+		Environments: &workspace.Environments{Names: []string{"dev", "prod"}, Default: "dev"},
+		Projects: []workspace.ManifestProject{{
+			Name: "api", RelativeDir: "services/api", Toolchain: "go",
+		}},
+	}
+	if err := workspace.WriteManifest(root, manifest); err != nil {
+		t.Fatal(err)
+	}
+	for _, entry := range []struct{ name, username string }{
+		{"development", "dev-user"}, {"production", "prod-user"},
+	} {
+		if _, err := profile.Upsert(profile.DomainContainer, "docker", entry.name, profile.Profile{
+			Backend: "docker",
+			Container: &profile.ContainerProfile{
+				Registry: "registry.example.com",
+				Credentials: &profile.ContainerCredentials{
+					Username: entry.username, Password: "secret",
+				},
+			},
+		}, false); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := profile.BindEnvironmentProfile(
+		"workspace-id", "demo", root, "api", "prod",
+		profile.DomainContainer, "docker", "production",
+	); err != nil {
+		t.Fatal(err)
+	}
+
+	registry, err := ResolveRegistry(ResolveRegistryInput{
+		ProjectRoot: root, Kind: "docker", Subproject: "api", Environment: "prod",
+		RequireRegistry: true,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if registry.ProfileName != "production" ||
+		registry.ProfileSource != "workspace-project-environment" ||
+		registry.Username != "prod-user" {
+		t.Fatalf("registry = %#v", registry)
 	}
 }
 

@@ -168,13 +168,17 @@ tasks:
           exit 1
         fi
 
-  install-local:
-    desc: Build + symlink packages/cli/bin/one to ~/.local/bin/one for local testing
+  install:
+    aliases: [install-local]
+    desc: Build the embedded Dashboard and CLI, then install one to ~/.local/bin/one
     summary: |
-      One-shot dev install: builds the binary and creates a symlink at
+      One-shot developer install: builds the Dashboard, refreshes all bundled
+      assets, compiles the CLI with local version metadata, and creates a symlink at
       ~/.local/bin/one pointing at the absolute path of packages/cli/bin/one
       in this checkout. Subsequent `task build` invocations rebuild the
       binary in place; the symlink keeps working.
+
+      `task install-local` remains a compatibility alias.
 
       Idempotent — safe to re-run after switching branches.
 
@@ -184,7 +188,7 @@ tasks:
     cmds:
       - mkdir -p $HOME/.local/bin
       - ln -sf "$(pwd)/{{.BIN}}" $HOME/.local/bin/one
-      - one --version
+      - $HOME/.local/bin/one --version
 
   build-local:
     internal: true

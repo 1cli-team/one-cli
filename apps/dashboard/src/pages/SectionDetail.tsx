@@ -1,8 +1,8 @@
-// SectionDetail renders one catalog-backed profile section. Backend identity,
+// SectionDetail renders one catalog-backed Settings section. Backend identity,
 // defaults and fields come from GET /api/catalog, so adding an adapter does not
 // require another switch in the Dashboard.
 
-import { Check, Eye, EyeOff, Loader2, Plus, Star, Trash2 } from "lucide-react";
+import { Check, Eye, EyeOff, Plus, Star, Trash2 } from "lucide-react";
 import type React from "react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -10,10 +10,22 @@ import { useParams } from "react-router-dom";
 import useSWR from "swr";
 import { humanizeBackendName, useBackendCatalog } from "@/api/catalog";
 import { getSection, removeProfile, sectionKey, setDefault } from "@/api/configure";
+import {
+	AlertDialog,
+	AlertDialogAction,
+	AlertDialogCancel,
+	AlertDialogContent,
+	AlertDialogDescription,
+	AlertDialogFooter,
+	AlertDialogHeader,
+	AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { Empty, EmptyDescription, EmptyHeader } from "@/components/ui/empty";
+import { Spinner } from "@/components/ui/spinner";
 import {
 	Table,
 	TableBody,
@@ -55,6 +67,8 @@ export const SectionDetail: React.FC = () => {
 	const { t } = useTranslation();
 	const [reveal, setReveal] = useState(false);
 	const [editorTarget, setEditorTarget] = useState<ProfileEditorTarget | null>(null);
+	const [profileToRemove, setProfileToRemove] = useState<string | null>(null);
+	const [removing, setRemoving] = useState(false);
 
 	const swrKey = backend ? sectionKey(backend.domain, backend.name, reveal) : null;
 	const { data, error, isLoading, mutate } = useSWR(swrKey, () => {
@@ -65,7 +79,7 @@ export const SectionDetail: React.FC = () => {
 	if (catalog.error) {
 		return (
 			<Alert variant="destructive">
-				<AlertTitle>{t("home.loadFailedTitle")}</AlertTitle>
+				<AlertTitle>{t("settings.loadFailedTitle")}</AlertTitle>
 				<AlertDescription>{catalog.error.message}</AlertDescription>
 			</Alert>
 		);
@@ -73,7 +87,7 @@ export const SectionDetail: React.FC = () => {
 	if (catalog.isLoading) {
 		return (
 			<div className="flex items-center gap-2 text-sm text-muted-foreground">
-				<Loader2 className="h-4 w-4 animate-spin" /> {t("detail.loading")}
+				<Spinner /> {t("detail.loading")}
 			</div>
 		);
 	}
@@ -106,14 +120,17 @@ export const SectionDetail: React.FC = () => {
 	}
 
 	async function onRemove(name: string) {
-		if (!window.confirm(t("detail.confirmRemove", { name }))) return;
+		setRemoving(true);
 		try {
 			await removeProfile(selectedBackend.domain, selectedBackend.name, name);
 			toast.success(t("toast.removed", { name }));
+			setProfileToRemove(null);
 			void refresh();
 		} catch (err) {
 			const e = err as { code?: string; message: string };
 			toast.error(e.message, { description: e.code });
+		} finally {
+			setRemoving(false);
 		}
 	}
 
@@ -176,18 +193,47 @@ export const SectionDetail: React.FC = () => {
 				}}
 			/>
 
+			<AlertDialog
+				open={profileToRemove !== null}
+				onOpenChange={(open) => {
+					if (!open && !removing) setProfileToRemove(null);
+				}}
+			>
+				<AlertDialogContent>
+					<AlertDialogHeader>
+						<AlertDialogTitle>{t("detail.remove")}</AlertDialogTitle>
+						<AlertDialogDescription>
+							{profileToRemove ? t("detail.confirmRemove", { name: profileToRemove }) : ""}
+						</AlertDialogDescription>
+					</AlertDialogHeader>
+					<AlertDialogFooter>
+						<AlertDialogCancel disabled={removing}>{t("form.cancel")}</AlertDialogCancel>
+						<AlertDialogAction
+							variant="destructive"
+							disabled={removing}
+							onClick={(event) => {
+								event.preventDefault();
+								if (profileToRemove) void onRemove(profileToRemove);
+							}}
+						>
+							{t("detail.remove")}
+						</AlertDialogAction>
+					</AlertDialogFooter>
+				</AlertDialogContent>
+			</AlertDialog>
+
 			<div className="space-y-3">
 				{isLoading ? (
 					<div className="flex items-center gap-2 text-sm text-muted-foreground">
-						<Loader2 className="h-4 w-4 animate-spin" /> {t("detail.loading")}
+						<Spinner /> {t("detail.loading")}
 					</div>
 				) : null}
 				{!isLoading && profileNames.length === 0 ? (
-					<Card>
-						<CardContent className="py-8 text-center text-sm text-muted-foreground">
-							{t("detail.empty")}
-						</CardContent>
-					</Card>
+					<Empty className="min-h-40 border border-dashed border-border">
+						<EmptyHeader>
+							<EmptyDescription>{t("detail.empty")}</EmptyDescription>
+						</EmptyHeader>
+					</Empty>
 				) : null}
 				{profileNames.length > 0 ? (
 					<Card>
@@ -246,7 +292,7 @@ export const SectionDetail: React.FC = () => {
 															<Button
 																size="sm"
 																variant="destructive"
-																onClick={() => onRemove(name)}
+																onClick={() => setProfileToRemove(name)}
 															>
 																<Trash2 className="h-4 w-4" /> {t("detail.remove")}
 															</Button>

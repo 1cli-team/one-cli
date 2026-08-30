@@ -2,15 +2,236 @@ import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { HttpResponse, http } from "msw";
 import { setupServer } from "msw/node";
-import { MemoryRouter } from "react-router-dom";
-import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { MemoryRouter, useLocation } from "react-router-dom";
+import useSWR, { SWRConfig } from "swr";
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import {
+	getOverview,
+	overviewKeyFor,
+	projectProfileBindingKey,
+	projectSettingsKey,
+	workspaceProfileBindingKey,
+} from "@/api/workspace";
+import { EnvironmentSelector } from "@/features/environment-context/EnvironmentSelector";
+import { environmentFromSearch } from "@/features/environment-context/environment";
 import i18n from "@/lib/i18n";
 import { Overview } from "@/pages/Overview";
-import type { Overview as OverviewPayload } from "@/types/api";
+import type {
+	BackendDomain,
+	BackendSpec,
+	Overview as OverviewPayload,
+	ProjectSettingsResponse,
+} from "@/types/api";
 
 const server = setupServer();
 
-describe("workspace overview", () => {
+const catalogBackends: BackendSpec[] = [
+	{
+		id: "env/dotenv",
+		domain: "env",
+		name: "dotenv",
+		capabilities: ["env-load"],
+		profile: { configurable: false },
+		project: { configurable: false },
+	},
+	{
+		id: "env/infisical",
+		domain: "env",
+		name: "infisical",
+		capabilities: ["env-load"],
+		profile: { configurable: true, fields: [] },
+		project: { configurable: false },
+	},
+	{
+		id: "container/docker",
+		domain: "container",
+		name: "docker",
+		capabilities: ["container-build"],
+		profile: { configurable: true, fields: [] },
+		project: { configurable: false },
+	},
+	{
+		id: "deploy/kustomize",
+		domain: "deploy",
+		name: "kustomize",
+		capabilities: ["deploy"],
+		profile: { configurable: true, fields: [] },
+		project: { configurable: true, fields: [] },
+	},
+	{
+		id: "deploy/vercel",
+		domain: "deploy",
+		name: "vercel",
+		capabilities: ["deploy"],
+		profile: { configurable: true, fields: [] },
+		project: {
+			configurable: true,
+			fields: [
+				{
+					path: "projectName",
+					input_name: "project-name",
+					type: "string",
+					label_key: "project.fields.projectName",
+				},
+				{
+					path: "env",
+					input_name: "environment",
+					type: "environment",
+					label_key: "project.fields.environment",
+				},
+			],
+		},
+	},
+];
+
+const overview: OverviewPayload = {
+	schema: "one-cli/workspace-overview/v1",
+	present: true,
+	root: "/workspace/demo",
+	workspace: {
+		id: "demo",
+		name: "demo",
+		manifestVersion: 1,
+		defaultEnvironment: "dev",
+		environments: ["dev", "preview", "prod"],
+		domains: { env: "dotenv" },
+	},
+	projects: [
+		{
+			name: "web",
+			relativeDir: "apps/web",
+			kind: "app",
+			templateId: "react-spa",
+			toolchain: "node",
+			compatibleDeployTargets: ["vercel"],
+			domains: { env: "dotenv", container: "docker", deploy: "vercel" },
+		},
+		{
+			name: "api",
+			relativeDir: "services/api",
+			kind: "service",
+			templateId: "go-api",
+			toolchain: "go",
+			compatibleDeployTargets: ["kustomize"],
+			domains: { env: "dotenv", container: "docker", deploy: "kustomize" },
+		},
+		{
+			name: "shared",
+			relativeDir: "packages/shared",
+			kind: "package",
+			templateId: "typescript-package",
+			toolchain: "node",
+			domains: { env: "dotenv" },
+		},
+	],
+};
+
+const webSettings: ProjectSettingsResponse = {
+	schema: "one-cli/workspace-project/v1",
+	root: "/workspace/demo",
+	environment: "dev",
+	project: {
+		name: "web",
+		relativeDir: "apps/web",
+		kind: "app",
+		templateId: "react-spa",
+		toolchain: "node",
+		packageManager: "pnpm",
+		buildVersion: "1.0.0",
+		devCommand: "pnpm dev",
+		availableEnvironments: ["dev", "preview", "prod"],
+		environment: {
+			backend: "infisical",
+			path: ".env",
+			inherits: true,
+			disabled: false,
+			keys: ["API_URL"],
+			selectedProfile: "work",
+			profile: { name: "work", source: "workspace-project-environment" },
+		},
+		container: {
+			enabled: true,
+			backend: "docker",
+			image: "ghcr.io/one/web:latest",
+			namespace: "one",
+			selectedProfile: "registry-main",
+			profile: { name: "registry-main", source: "workspace-project-environment" },
+		},
+		deploy: {
+			backend: "vercel",
+			compatibleTargets: ["vercel"],
+			config: { projectName: "old-web", env: "dev" },
+			selectedProfile: "production",
+			profile: { name: "production", source: "workspace-project-environment" },
+		},
+	},
+};
+
+const OverviewHarness: React.FC<{
+	data: OverviewPayload;
+	workspaceEntryId?: string;
+	readOnly?: boolean;
+	revalidateOverview?: boolean;
+}> = ({ data, workspaceEntryId, readOnly, revalidateOverview }) => {
+	const { search } = useLocation();
+	const environment = environmentFromSearch(search);
+	const current = useSWR<OverviewPayload>(
+		overviewKeyFor(workspaceEntryId, environment),
+		revalidateOverview ? () => getOverview(workspaceEntryId, environment) : null,
+		{
+			fallbackData: data,
+			revalidateOnMount: false,
+		},
+	);
+
+	return (
+		<>
+			<EnvironmentSelector />
+			<output data-testid="environment-search">{search}</output>
+			<Overview
+				data={current.data ?? data}
+				workspaceEntryId={workspaceEntryId}
+				readOnly={readOnly}
+			/>
+		</>
+	);
+};
+
+function renderOverview(
+	data: OverviewPayload = overview,
+	workspaceEntryId?: string,
+	readOnly?: boolean,
+	revalidateOverview?: boolean,
+	environment = "dev",
+) {
+	return render(
+		<SWRConfig value={{ provider: () => new Map() }}>
+			<MemoryRouter initialEntries={[`/?env=${environment}`]}>
+				<OverviewHarness
+					data={data}
+					workspaceEntryId={workspaceEntryId}
+					readOnly={readOnly}
+					revalidateOverview={revalidateOverview}
+				/>
+			</MemoryRouter>
+		</SWRConfig>,
+	);
+}
+
+function sectionResponse(domain: BackendDomain, backend: string, profiles: string[]) {
+	return {
+		schema: "one-cli/serve-configure-section/v1",
+		domain,
+		backend,
+		reveal: false,
+		section: {
+			default: profiles[0],
+			profiles: Object.fromEntries(profiles.map((name) => [name, {}])),
+		},
+	};
+}
+
+describe("workspace overview Profile-only configuration", () => {
 	beforeAll(async () => {
 		server.listen({ onUnhandledRequest: "error" });
 		await i18n.changeLanguage("en-US");
@@ -18,111 +239,623 @@ describe("workspace overview", () => {
 	beforeEach(() => {
 		server.use(
 			http.get("http://localhost/api/catalog", () =>
-				HttpResponse.json({ schema: "one-cli/catalog/v1", backends: [] }),
+				HttpResponse.json({ schema: "one-cli/catalog/v1", backends: catalogBackends }),
+			),
+			http.get("http://localhost/api/workspace/profile-bindings/env", ({ request }) =>
+				HttpResponse.json({
+					schema: "one-cli/workspace-profile/v1",
+					root: "/workspace/demo",
+					environment: new URL(request.url).searchParams.get("env") ?? "",
+					domain: "env",
+					backend: "dotenv",
+					configurable: false,
+					selectedProfile: "",
+				}),
+			),
+			http.get("http://localhost/api/workspaces/:entryId/profile-bindings/env", ({ request }) =>
+				HttpResponse.json({
+					schema: "one-cli/workspace-profile/v1",
+					root: "/workspace/demo",
+					environment: new URL(request.url).searchParams.get("env") ?? "",
+					domain: "env",
+					backend: "dotenv",
+					configurable: false,
+					selectedProfile: "",
+				}),
 			),
 		);
 	});
-	afterEach(() => server.resetHandlers());
+	afterEach(() => {
+		server.resetHandlers();
+		vi.restoreAllMocks();
+	});
 	afterAll(() => server.close());
 
-	it("offers only deployment targets compatible with the project's technology stack", async () => {
+	it("lists every manifest project and filters the matrix", async () => {
 		const user = userEvent.setup();
-		const data = {
-			schema: "one-cli/workspace-overview/v1",
-			present: true,
-			root: "/workspace/demo",
-			workspace: { id: "demo", name: "demo", manifestVersion: 1 },
-			projects: [
-				{
-					name: "api",
-					relativeDir: "services/api",
-					kind: "service",
-					templateId: "go-api",
-					toolchain: "go",
-					compatibleDeployTargets: ["kustomize"],
-					issues: [
-						{
-							domain: "deploy",
-							severity: "missing",
-							reason: "backend",
-							message: "deploy target is not configured",
-						},
-					],
-				},
-			],
-		} as OverviewPayload;
+		renderOverview();
 
-		render(
-			<MemoryRouter>
-				<Overview data={data} />
-			</MemoryRouter>,
+		expect(screen.getByRole("button", { name: "web apps/web" })).toBeDefined();
+		expect(screen.getByRole("button", { name: "api services/api" })).toBeDefined();
+		expect(screen.getByRole("button", { name: "shared packages/shared" })).toBeDefined();
+
+		await user.type(
+			screen.getByRole("textbox", { name: "Search project, path, or backend" }),
+			"shared",
 		);
+		expect(screen.getByRole("button", { name: "shared packages/shared" })).toBeDefined();
+		expect(screen.queryByRole("button", { name: "web apps/web" })).toBeNull();
 
-		expect(screen.getByRole("heading", { name: "demo" })).toBeDefined();
-		expect(screen.getByText("api")).toBeDefined();
-		await user.click(screen.getByRole("button", { name: "deploy" }));
-
-		const dialog = await screen.findByRole("dialog");
-		const select = within(dialog).getByLabelText("Backend kind");
-		const choices = within(select)
-			.getAllByRole("option")
-			.map((option) => option.getAttribute("value"));
-		expect(choices).toContain("kustomize");
-		expect(choices).not.toContain("vercel");
+		await user.clear(screen.getByRole("textbox", { name: "Search project, path, or backend" }));
+		await user.selectOptions(
+			screen.getByRole("combobox", { name: "Filter by project kind" }),
+			"service",
+		);
+		expect(screen.getByRole("button", { name: "api services/api" })).toBeDefined();
+		expect(screen.queryByRole("button", { name: "web apps/web" })).toBeNull();
 	});
 
-	it("saves a compatible deployment target through the workspace HTTP API", async () => {
-		let receivedKind = "";
+	it("routes global Profile management and missing-credential repair through Settings", () => {
+		renderOverview({
+			...overview,
+			issues: [
+				{
+					domain: "deploy",
+					severity: "missing",
+					reason: "profile",
+					backend: "vercel",
+					section: "deploy/vercel",
+					profile: "production",
+					message: "Vercel credentials are missing",
+				},
+			],
+		});
+
+		expect(screen.getByRole("link", { name: "Add credentials" }).getAttribute("href")).toBe(
+			"/settings/deploy/vercel?env=dev",
+		);
+		expect(
+			screen.getByRole("link", { name: "Manage credential profiles" }).getAttribute("href"),
+		).toBe("/settings?env=dev");
+	});
+
+	it("makes the project total the primary workspace metric", () => {
+		renderOverview();
+		const projectMetric = screen.getByLabelText("Projects: 3");
+		expect(projectMetric.querySelector("span")?.className).toContain("text-3xl");
+	});
+
+	it("uses environment-specific SWR keys for every workspace projection", () => {
+		expect(overviewKeyFor("demo-entry", "dev")).toBe("/workspaces/demo-entry/overview?env=dev");
+		expect(workspaceProfileBindingKey("demo-entry", "preview")).toBe(
+			"/workspaces/demo-entry/profile-bindings/env?env=preview",
+		);
+		expect(projectSettingsKey("web app", "demo-entry", "prod")).toBe(
+			"/workspaces/demo-entry/projects/web%20app?env=prod",
+		);
+		expect(projectProfileBindingKey("web", "deploy", undefined, "dev")).toBe(
+			"/workspace/projects/web/profile-bindings/deploy?env=dev",
+		);
+		expect(projectSettingsKey("web", undefined, "dev")).not.toBe(
+			projectSettingsKey("web", undefined, "prod"),
+		);
+	});
+
+	it("keeps the workspace backend read-only and saves only an env-scoped Profile", async () => {
+		let requestBody: unknown;
+		let receivedEnvironment = "";
 		let receivedToken = "";
+		let legacyWrites = 0;
+		let overviewRequests = 0;
+		const configurableOverview: OverviewPayload = {
+			...overview,
+			workspace: {
+				...overview.workspace!,
+				domains: { ...overview.workspace?.domains, env: "infisical" },
+			},
+			issues: [
+				{
+					domain: "env",
+					severity: "missing",
+					reason: "profile",
+					backend: "infisical",
+					section: "env/infisical",
+					message: "Infisical credentials are missing",
+				},
+			],
+		};
 		server.use(
-			http.put("http://localhost/api/workspace/projects/api/deploy", async ({ request }) => {
-				const body = (await request.json()) as { kind?: string };
-				receivedKind = body.kind ?? "";
-				receivedToken = new URL(request.url).searchParams.get("token") ?? "";
+			http.get("http://localhost/api/workspaces/demo-entry/overview", ({ request }) => {
+				overviewRequests += 1;
+				expect(new URL(request.url).searchParams.get("env")).toBe("dev");
+				return HttpResponse.json({ ...configurableOverview, issues: [] });
+			}),
+			http.get("http://localhost/api/workspaces/demo-entry/profile-bindings/env", () =>
+				HttpResponse.json({
+					schema: "one-cli/workspace-profile/v1",
+					root: "/workspace/demo",
+					environment: "dev",
+					domain: "env",
+					backend: "infisical",
+					configurable: true,
+					selectedProfile: "",
+					profile: { name: "work", source: "default" },
+				}),
+			),
+			http.get("http://localhost/api/configure/env/infisical", () =>
+				HttpResponse.json(sectionResponse("env", "infisical", ["work", "personal"])),
+			),
+			http.put(
+				"http://localhost/api/workspaces/demo-entry/profile-bindings/env",
+				async ({ request }) => {
+					requestBody = await request.json();
+					const url = new URL(request.url);
+					receivedEnvironment = url.searchParams.get("env") ?? "";
+					receivedToken = url.searchParams.get("token") ?? "";
+					return HttpResponse.json({
+						schema: "one-cli/workspace-profile/v1",
+						root: "/workspace/demo",
+						environment: "dev",
+						domain: "env",
+						backend: "infisical",
+						configurable: true,
+						selectedProfile: "personal",
+						profile: { name: "personal", source: "workspace-environment" },
+					});
+				},
+			),
+			http.put("http://localhost/api/workspaces/demo-entry/domains/env", () => {
+				legacyWrites += 1;
+				return HttpResponse.json(configurableOverview);
+			}),
+		);
+		const user = userEvent.setup();
+		renderOverview(configurableOverview, "demo-entry", false, true);
+
+		const region = await screen.findByRole("region", { name: "Workspace environment" });
+		expect(within(region).getByText("infisical")).toBeDefined();
+		expect(within(region).queryByRole("combobox", { name: "Backend" })).toBeNull();
+		const profile = await within(region).findByRole("combobox", { name: "Profile" });
+		await user.selectOptions(profile, "personal");
+		await user.click(within(region).getByRole("button", { name: "Save" }));
+
+		await waitFor(() => expect(requestBody).toEqual({ profile: "personal" }));
+		expect(receivedEnvironment).toBe("dev");
+		expect(receivedToken).toBe("test-token");
+		expect(legacyWrites).toBe(0);
+		await waitFor(() => expect(overviewRequests).toBe(1));
+	});
+
+	it("unbinds a direct workspace Profile with an explicit empty value", async () => {
+		let requestBody: unknown;
+		const configurableOverview: OverviewPayload = {
+			...overview,
+			workspace: {
+				...overview.workspace!,
+				domains: { ...overview.workspace?.domains, env: "infisical" },
+			},
+		};
+		server.use(
+			http.get("http://localhost/api/workspace/profile-bindings/env", () =>
+				HttpResponse.json({
+					schema: "one-cli/workspace-profile/v1",
+					root: "/workspace/demo",
+					environment: "dev",
+					domain: "env",
+					backend: "infisical",
+					configurable: true,
+					selectedProfile: "personal",
+					profile: { name: "personal", source: "workspace-environment" },
+				}),
+			),
+			http.get("http://localhost/api/configure/env/infisical", () =>
+				HttpResponse.json(sectionResponse("env", "infisical", ["work", "personal"])),
+			),
+			http.put("http://localhost/api/workspace/profile-bindings/env", async ({ request }) => {
+				requestBody = await request.json();
 				return HttpResponse.json({
-					schema: "one-cli/workspace-overview/v1",
-					present: true,
-					workspace: { id: "demo", name: "demo", manifestVersion: 1 },
-					projects: [],
+					schema: "one-cli/workspace-profile/v1",
+					root: "/workspace/demo",
+					environment: "dev",
+					domain: "env",
+					backend: "infisical",
+					configurable: true,
+					selectedProfile: "",
+					profile: { name: "work", source: "default" },
 				});
 			}),
 		);
 		const user = userEvent.setup();
-		const data = {
-			schema: "one-cli/workspace-overview/v1",
-			present: true,
-			workspace: { id: "demo", name: "demo", manifestVersion: 1 },
-			projects: [
-				{
-					name: "api",
-					relativeDir: "services/api",
-					kind: "service",
-					templateId: "go-api",
-					compatibleDeployTargets: ["kustomize"],
-					issues: [
-						{
-							domain: "deploy",
-							severity: "missing",
-							reason: "backend",
-							message: "deploy target is not configured",
-						},
-					],
-				},
-			],
-		} as OverviewPayload;
+		renderOverview(configurableOverview);
 
-		render(
-			<MemoryRouter>
-				<Overview data={data} />
-			</MemoryRouter>,
+		const region = await screen.findByRole("region", { name: "Workspace environment" });
+		const profile = await within(region).findByRole("combobox", { name: "Profile" });
+		expect((profile as HTMLSelectElement).value).toBe("personal");
+		await user.selectOptions(profile, "");
+		await user.click(within(region).getByRole("button", { name: "Save" }));
+		await waitFor(() => expect(requestBody).toEqual({ profile: "" }));
+	});
+
+	it("guards an unsaved Workspace Profile selection before changing environment", async () => {
+		const requestedEnvironments: string[] = [];
+		const configurableOverview: OverviewPayload = {
+			...overview,
+			workspace: {
+				...overview.workspace!,
+				domains: { ...overview.workspace?.domains, env: "infisical" },
+			},
+		};
+		server.use(
+			http.get("http://localhost/api/workspace/profile-bindings/env", ({ request }) => {
+				const selectedEnvironment = new URL(request.url).searchParams.get("env") ?? "";
+				requestedEnvironments.push(selectedEnvironment);
+				const selectedProfile = selectedEnvironment === "preview" ? "preview-base" : "work";
+				return HttpResponse.json({
+					schema: "one-cli/workspace-profile/v1",
+					root: "/workspace/demo",
+					environment: selectedEnvironment,
+					domain: "env",
+					backend: "infisical",
+					configurable: true,
+					selectedProfile,
+					profile: { name: selectedProfile, source: "workspace-environment" },
+				});
+			}),
+			http.get("http://localhost/api/configure/env/infisical", () =>
+				HttpResponse.json(
+					sectionResponse("env", "infisical", ["work", "personal", "preview-base"]),
+				),
+			),
+		);
+		const user = userEvent.setup();
+		renderOverview(configurableOverview);
+		const region = await screen.findByRole("region", { name: "Workspace environment" });
+		const profile = await within(region).findByRole("combobox", { name: "Profile" });
+		await user.selectOptions(profile, "personal");
+
+		await user.click(screen.getByRole("radio", { name: "Preview" }));
+		let discardDialog = await screen.findByRole("alertdialog");
+		expect(screen.getByTestId("environment-search").textContent).toBe("?env=dev");
+		expect((profile as HTMLSelectElement).value).toBe("personal");
+
+		await user.click(within(discardDialog).getByRole("button", { name: "Cancel" }));
+		await waitFor(() => expect(screen.queryByRole("alertdialog")).toBeNull());
+		expect(screen.getByTestId("environment-search").textContent).toBe("?env=dev");
+		expect(
+			(within(region).getByRole("combobox", { name: "Profile" }) as HTMLSelectElement).value,
+		).toBe("personal");
+
+		await user.click(screen.getByRole("radio", { name: "Preview" }));
+		discardDialog = await screen.findByRole("alertdialog");
+		await user.click(within(discardDialog).getByRole("button", { name: "Discard and continue" }));
+
+		await waitFor(() =>
+			expect(screen.getByTestId("environment-search").textContent).toBe("?env=preview"),
+		);
+		await waitFor(() => expect(requestedEnvironments).toContain("preview"));
+		expect(
+			((await screen.findByRole("combobox", { name: "Profile" })) as HTMLSelectElement).value,
+		).toBe("preview-base");
+	});
+
+	it("keeps workspace Profile selection disabled for an identity conflict", async () => {
+		const configurableOverview: OverviewPayload = {
+			...overview,
+			workspace: {
+				...overview.workspace!,
+				domains: { ...overview.workspace?.domains, env: "infisical" },
+			},
+		};
+		server.use(
+			http.get("http://localhost/api/workspaces/demo-entry/profile-bindings/env", () =>
+				HttpResponse.json({
+					schema: "one-cli/workspace-profile/v1",
+					root: "/workspace/demo",
+					environment: "dev",
+					domain: "env",
+					backend: "infisical",
+					configurable: true,
+					selectedProfile: "",
+					profile: { name: "work", source: "default" },
+				}),
+			),
+			http.get("http://localhost/api/configure/env/infisical", () =>
+				HttpResponse.json(sectionResponse("env", "infisical", ["work"])),
+			),
+		);
+		renderOverview(configurableOverview, "demo-entry", true);
+
+		const region = await screen.findByRole("region", { name: "Workspace environment" });
+		expect(
+			(within(region).getByRole("combobox", { name: "Profile" }) as HTMLSelectElement).disabled,
+		).toBe(true);
+		expect(
+			(within(region).getByRole("button", { name: "Save" }) as HTMLButtonElement).disabled,
+		).toBe(true);
+	});
+
+	it("explains when the workspace backend does not use Profiles", async () => {
+		renderOverview();
+		const region = await screen.findByRole("region", { name: "Workspace environment" });
+		expect(
+			within(region).getByText("This backend does not require a credential profile."),
+		).toBeDefined();
+		expect(within(region).queryByRole("combobox")).toBeNull();
+	});
+
+	it("renders every General manifest field as read-only and fetches the selected environment", async () => {
+		let receivedEnvironment = "";
+		server.use(
+			http.get("http://localhost/api/workspace/projects/web", ({ request }) => {
+				receivedEnvironment = new URL(request.url).searchParams.get("env") ?? "";
+				return HttpResponse.json(webSettings);
+			}),
+		);
+		const user = userEvent.setup();
+		renderOverview();
+		await user.click(screen.getByRole("button", { name: "web apps/web" }));
+		const inspector = await screen.findByRole("dialog");
+
+		expect(await within(inspector).findByText("Manifest · read-only")).toBeDefined();
+		expect(within(inspector).getByText("1.0.0")).toBeDefined();
+		expect(within(inspector).getByText("pnpm")).toBeDefined();
+		expect(within(inspector).getByText("pnpm dev")).toBeDefined();
+		expect(within(inspector).queryByLabelText("Build version")).toBeNull();
+		expect(within(inspector).queryByLabelText("Package manager")).toBeNull();
+		expect(within(inspector).queryByRole("button", { name: "Save Profile" })).toBeNull();
+		expect(receivedEnvironment).toBe("dev");
+	});
+
+	it.each([
+		{
+			domain: "env" as const,
+			buttonName: "Configure env for web",
+			backend: "infisical",
+			initial: "work",
+			next: "personal",
+			legacyPath: "/api/workspace/projects/web/environment",
+		},
+		{
+			domain: "container" as const,
+			buttonName: "Configure container for web",
+			backend: "docker",
+			initial: "registry-main",
+			next: "registry-backup",
+			legacyPath: "/api/workspace/projects/web/settings/container",
+		},
+		{
+			domain: "deploy" as const,
+			buttonName: "Configure deploy for web",
+			backend: "vercel",
+			initial: "production",
+			next: "preview-team",
+			legacyPath: "/api/workspace/projects/web/settings/deploy",
+		},
+	])("saves only {profile} through the $domain binding endpoint", async (testCase) => {
+		let requestBody: unknown;
+		let receivedEnvironment = "";
+		let receivedToken = "";
+		let legacyWrites = 0;
+		server.use(
+			http.get("http://localhost/api/workspace/projects/web", () => HttpResponse.json(webSettings)),
+			http.get(`http://localhost/api/configure/${testCase.domain}/${testCase.backend}`, () =>
+				HttpResponse.json(
+					sectionResponse(testCase.domain, testCase.backend, [testCase.initial, testCase.next]),
+				),
+			),
+			http.put(
+				`http://localhost/api/workspace/projects/web/profile-bindings/${testCase.domain}`,
+				async ({ request }) => {
+					requestBody = await request.json();
+					const url = new URL(request.url);
+					receivedEnvironment = url.searchParams.get("env") ?? "";
+					receivedToken = url.searchParams.get("token") ?? "";
+					return HttpResponse.json({
+						...webSettings,
+						project: {
+							...webSettings.project,
+							[testCase.domain === "env" ? "environment" : testCase.domain]: {
+								...webSettings.project[testCase.domain === "env" ? "environment" : testCase.domain],
+								selectedProfile: testCase.next,
+								profile: {
+									name: testCase.next,
+									source: "workspace-project-environment",
+								},
+							},
+						},
+					});
+				},
+			),
+			http.put(`http://localhost${testCase.legacyPath}`, () => {
+				legacyWrites += 1;
+				return HttpResponse.json(webSettings);
+			}),
+		);
+		const user = userEvent.setup();
+		renderOverview();
+		await user.click(screen.getByRole("button", { name: testCase.buttonName }));
+		const inspector = await screen.findByRole("dialog");
+		const profile = await within(inspector).findByLabelText("Project profile");
+		expect((profile as HTMLSelectElement).value).toBe(testCase.initial);
+		await user.selectOptions(profile, testCase.next);
+		await user.click(within(inspector).getByRole("button", { name: "Save Profile" }));
+
+		await waitFor(() => expect(requestBody).toEqual({ profile: testCase.next }));
+		expect(Object.keys(requestBody as Record<string, unknown>)).toEqual(["profile"]);
+		expect(receivedEnvironment).toBe("dev");
+		expect(receivedToken).toBe("test-token");
+		expect(legacyWrites).toBe(0);
+		if (testCase.domain === "deploy") {
+			expect(within(inspector).queryByLabelText("Project name")).toBeNull();
+			expect(within(inspector).getByText("old-web")).toBeDefined();
+		}
+	});
+
+	it("shows a stale Profile selection and can return it to Automatic", async () => {
+		let requestBody: unknown;
+		const staleSettings: ProjectSettingsResponse = {
+			...webSettings,
+			project: {
+				...webSettings.project,
+				deploy: {
+					...webSettings.project.deploy,
+					selectedProfile: "deleted-profile",
+					profile: undefined,
+				},
+			},
+		};
+		server.use(
+			http.get("http://localhost/api/workspace/projects/web", () =>
+				HttpResponse.json(staleSettings),
+			),
+			http.get("http://localhost/api/configure/deploy/vercel", () =>
+				HttpResponse.json(sectionResponse("deploy", "vercel", ["production"])),
+			),
+			http.put(
+				"http://localhost/api/workspace/projects/web/profile-bindings/deploy",
+				async ({ request }) => {
+					requestBody = await request.json();
+					return HttpResponse.json({
+						...staleSettings,
+						project: {
+							...staleSettings.project,
+							deploy: {
+								...staleSettings.project.deploy,
+								selectedProfile: "",
+								profile: { name: "production", source: "default" },
+							},
+						},
+					});
+				},
+			),
+		);
+		const user = userEvent.setup();
+		renderOverview();
+		await user.click(screen.getByRole("button", { name: "Configure deploy for web" }));
+		const inspector = await screen.findByRole("dialog");
+		const profile = await within(inspector).findByLabelText("Project profile");
+		expect((profile as HTMLSelectElement).value).toBe("deleted-profile");
+		expect(within(profile).getByRole("option", { name: "deleted-profile" })).toBeDefined();
+
+		await user.selectOptions(profile, "");
+		await user.click(within(inspector).getByRole("button", { name: "Save Profile" }));
+
+		await waitFor(() => expect(requestBody).toEqual({ profile: "" }));
+		await waitFor(() =>
+			expect((within(inspector).getByLabelText("Project profile") as HTMLSelectElement).value).toBe(
+				"",
+			),
+		);
+	});
+
+	it("preserves the dirty guard for an unsaved Profile selection", async () => {
+		server.use(
+			http.get("http://localhost/api/workspace/projects/web", () => HttpResponse.json(webSettings)),
+			http.get("http://localhost/api/configure/deploy/vercel", () =>
+				HttpResponse.json(sectionResponse("deploy", "vercel", ["production", "preview-team"])),
+			),
+		);
+		const user = userEvent.setup();
+		renderOverview();
+		await user.click(screen.getByRole("button", { name: "Configure deploy for web" }));
+		const inspector = await screen.findByRole("dialog");
+		const profile = await within(inspector).findByLabelText("Project profile");
+		await user.selectOptions(profile, "preview-team");
+
+		await user.click(within(inspector).getByRole("tab", { name: "Overview" }));
+		let discardDialog = await screen.findByRole("alertdialog");
+		expect(within(inspector).getByLabelText("Project profile")).toBeDefined();
+		await user.click(within(discardDialog).getByRole("button", { name: "Cancel" }));
+		await waitFor(() => expect(screen.queryByRole("alertdialog")).toBeNull());
+
+		await user.click(within(inspector).getByRole("button", { name: "Close" }));
+		discardDialog = await screen.findByRole("alertdialog");
+		expect(inspector.isConnected).toBe(true);
+		await user.click(within(discardDialog).getByRole("button", { name: "Discard and continue" }));
+		await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+	});
+
+	it("does not change environment until an unsaved Profile selection is discarded", async () => {
+		const requestedEnvironments: string[] = [];
+		server.use(
+			http.get("http://localhost/api/workspace/projects/web", ({ request }) => {
+				requestedEnvironments.push(new URL(request.url).searchParams.get("env") ?? "");
+				return HttpResponse.json(webSettings);
+			}),
+			http.get("http://localhost/api/configure/deploy/vercel", () =>
+				HttpResponse.json(sectionResponse("deploy", "vercel", ["production", "preview-team"])),
+			),
+		);
+		const user = userEvent.setup();
+		renderOverview();
+		await user.click(screen.getByRole("button", { name: "Configure deploy for web" }));
+		const inspector = await screen.findByRole("dialog");
+		const profile = await within(inspector).findByLabelText("Project profile");
+		await user.selectOptions(profile, "preview-team");
+
+		await user.click(screen.getByRole("radio", { name: "Preview" }));
+		let discardDialog = await screen.findByRole("alertdialog");
+		expect(screen.getByTestId("environment-search").textContent).toBe("?env=dev");
+		expect((within(inspector).getByLabelText("Project profile") as HTMLSelectElement).value).toBe(
+			"preview-team",
 		);
 
-		await user.click(screen.getByRole("button", { name: "deploy" }));
-		const dialog = await screen.findByRole("dialog");
-		await user.selectOptions(within(dialog).getByLabelText("Backend kind"), "kustomize");
-		await user.click(within(dialog).getByRole("button", { name: "Save" }));
+		await user.click(within(discardDialog).getByRole("button", { name: "Cancel" }));
+		await waitFor(() => expect(screen.queryByRole("alertdialog")).toBeNull());
+		expect(screen.getByTestId("environment-search").textContent).toBe("?env=dev");
 
-		await waitFor(() => expect(receivedKind).toBe("kustomize"));
-		expect(receivedToken).toBe("test-token");
+		await user.click(screen.getByRole("radio", { name: "Preview" }));
+		discardDialog = await screen.findByRole("alertdialog");
+		await user.click(within(discardDialog).getByRole("button", { name: "Discard and continue" }));
+
+		await waitFor(() =>
+			expect(screen.getByTestId("environment-search").textContent).toBe("?env=preview"),
+		);
+		await waitFor(() => expect(requestedEnvironments).toContain("preview"));
+	});
+
+	it("scopes project reads and empty Profile writes to workspace and preview environment", async () => {
+		let requestBody: unknown;
+		let readEnvironment = "";
+		let writeEnvironment = "";
+		server.use(
+			http.get("http://localhost/api/workspaces/demo-entry/projects/web", ({ request }) => {
+				readEnvironment = new URL(request.url).searchParams.get("env") ?? "";
+				return HttpResponse.json({ ...webSettings, environment: "preview" });
+			}),
+			http.get("http://localhost/api/configure/deploy/vercel", () =>
+				HttpResponse.json(sectionResponse("deploy", "vercel", ["production"])),
+			),
+			http.put(
+				"http://localhost/api/workspaces/demo-entry/projects/web/profile-bindings/deploy",
+				async ({ request }) => {
+					requestBody = await request.json();
+					writeEnvironment = new URL(request.url).searchParams.get("env") ?? "";
+					return HttpResponse.json({
+						...webSettings,
+						environment: "preview",
+						project: {
+							...webSettings.project,
+							deploy: {
+								...webSettings.project.deploy,
+								selectedProfile: "",
+								profile: { name: "production", source: "default" },
+							},
+						},
+					});
+				},
+			),
+		);
+		const user = userEvent.setup();
+		renderOverview(overview, "demo-entry", false, false, "preview");
+		await user.click(screen.getByRole("button", { name: "Configure deploy for web" }));
+		const inspector = await screen.findByRole("dialog");
+		const profile = await within(inspector).findByLabelText("Project profile");
+		await user.selectOptions(profile, "");
+		await user.click(within(inspector).getByRole("button", { name: "Save Profile" }));
+
+		await waitFor(() => expect(requestBody).toEqual({ profile: "" }));
+		expect(readEnvironment).toBe("preview");
+		expect(writeEnvironment).toBe("preview");
 	});
 });

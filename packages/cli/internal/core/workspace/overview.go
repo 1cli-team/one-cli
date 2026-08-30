@@ -51,12 +51,13 @@ const (
 // false when there is no manifest at the captured root; in that case all
 // other fields are zero.
 type Overview struct {
-	Schema    string             `json:"schema"`
-	Present   bool               `json:"present"`
-	Root      string             `json:"root,omitempty"`
-	Workspace *OverviewWorkspace `json:"workspace,omitempty"`
-	Projects  []OverviewProject  `json:"projects,omitempty"`
-	Issues    []OverviewIssue    `json:"issues,omitempty"`
+	Schema      string             `json:"schema"`
+	Present     bool               `json:"present"`
+	Root        string             `json:"root,omitempty"`
+	Environment string             `json:"environment,omitempty"`
+	Workspace   *OverviewWorkspace `json:"workspace,omitempty"`
+	Projects    []OverviewProject  `json:"projects,omitempty"`
+	Issues      []OverviewIssue    `json:"issues,omitempty"`
 }
 
 // OverviewWorkspace surfaces workspace-level identity and the bare backend
@@ -104,9 +105,13 @@ type OverviewIssue struct {
 // payload. Empty root or missing manifest is not an error — returns
 // {Present: false}. Any malformed-manifest error from ReadManifest bubbles
 // up unchanged so the handler can return a proper error envelope.
-func BuildOverview(root string) (Overview, error) {
+func BuildOverview(root string, environments ...string) (Overview, error) {
+	environment := ""
+	if len(environments) > 0 {
+		environment = strings.TrimSpace(environments[0])
+	}
 	if strings.TrimSpace(root) == "" {
-		return Overview{Schema: OverviewSchema, Present: false}, nil
+		return Overview{Schema: OverviewSchema, Present: false, Environment: environment}, nil
 	}
 	m, err := ReadManifest(root)
 	if err != nil {
@@ -115,6 +120,7 @@ func BuildOverview(root string) (Overview, error) {
 	if m == nil || !HasManifest(root) {
 		return Overview{Schema: OverviewSchema, Present: false}, nil
 	}
+	profileEnvironment := ProfileBindingEnvironment(m, environment)
 	profiles, _, err := profile.Load()
 	if err != nil {
 		return Overview{Schema: OverviewSchema, Present: false}, err
@@ -125,11 +131,12 @@ func BuildOverview(root string) (Overview, error) {
 	}
 
 	ov := Overview{
-		Schema:    OverviewSchema,
-		Present:   true,
-		Root:      root,
-		Workspace: buildWorkspaceSummary(m),
-		Projects:  make([]OverviewProject, 0, len(m.Projects)),
+		Schema:      OverviewSchema,
+		Present:     true,
+		Root:        root,
+		Environment: environment,
+		Workspace:   buildWorkspaceSummary(m),
+		Projects:    make([]OverviewProject, 0, len(m.Projects)),
 	}
 
 	if m.Domains == nil || m.Domains.Env == nil || strings.TrimSpace(m.Domains.Env.Kind) == "" {
@@ -139,12 +146,12 @@ func BuildOverview(root string) (Overview, error) {
 			Message:  "workspace env backend is not selected",
 			Reason:   IssueReasonBackend,
 		})
-	} else if issue := profileIssue(profiles, m, IssueDomainEnv, m.Domains.Env.Kind, ""); issue != nil {
+	} else if issue := profileIssue(profiles, m, root, profileEnvironment, IssueDomainEnv, m.Domains.Env.Kind, ""); issue != nil {
 		ov.Issues = append(ov.Issues, *issue)
 	}
 
 	for i := range m.Projects {
-		ov.Projects = append(ov.Projects, buildProject(m, profiles, registry, &m.Projects[i]))
+		ov.Projects = append(ov.Projects, buildProject(root, profileEnvironment, m, profiles, registry, &m.Projects[i]))
 	}
 	return ov, nil
 }
@@ -179,7 +186,13 @@ func buildWorkspaceSummary(m *Manifest) *OverviewWorkspace {
 	return s
 }
 
-func buildProject(m *Manifest, profiles *profile.Config, registry *template.Registry, p *ManifestProject) OverviewProject {
+func buildProject(
+	root, environment string,
+	m *Manifest,
+	profiles *profile.Config,
+	registry *template.Registry,
+	p *ManifestProject,
+) OverviewProject {
 	kind := projectKindFromDir(p.RelativeDir)
 	out := OverviewProject{
 		Name:                    p.Name,
@@ -209,7 +222,7 @@ func buildProject(m *Manifest, profiles *profile.Config, registry *template.Regi
 		}
 	}
 	if backend := out.Domains[IssueDomainContainer]; backend != "" {
-		if issue := profileIssue(profiles, m, IssueDomainContainer, backend, p.Name); issue != nil {
+		if issue := profileIssue(profiles, m, root, environment, IssueDomainContainer, backend, p.Name); issue != nil {
 			out.Issues = append(out.Issues, *issue)
 		}
 	}
@@ -225,7 +238,7 @@ func buildProject(m *Manifest, profiles *profile.Config, registry *template.Regi
 			})
 		}
 		if backend := out.Domains[IssueDomainDeploy]; backend != "" {
-			if issue := profileIssue(profiles, m, IssueDomainDeploy, backend, p.Name); issue != nil {
+			if issue := profileIssue(profiles, m, root, environment, IssueDomainDeploy, backend, p.Name); issue != nil {
 				out.Issues = append(out.Issues, *issue)
 			}
 		}
@@ -246,19 +259,25 @@ func compatibleDeployTargets(registry *template.Registry, templateID string) []s
 	return nil
 }
 
-func profileIssue(cfg *profile.Config, m *Manifest, domain, backend, projectName string) *OverviewIssue {
+func profileIssue(
+	cfg *profile.Config,
+	m *Manifest,
+	root, environment, domain, backend, projectName string,
+) *OverviewIssue {
 	if cfg == nil || backend == "" {
 		return nil
 	}
-	if backend == EnvBackendDotenv || backend == DeployBackendKustomize || backend == DeployBackendEdgeOne {
+	if backend == EnvBackendDotenv || backend == DeployBackendEdgeOne {
 		return nil
 	}
 	section := profile.SectionKey(profile.Domain(domain), backend)
 	resolved, err := profile.Resolve(profile.ResolveInput{
-		Domain:      profile.Domain(domain),
-		Backend:     backend,
-		WorkspaceID: manifestWorkspaceID(m),
-		ProjectName: projectName,
+		Domain:        profile.Domain(domain),
+		Backend:       backend,
+		WorkspaceID:   manifestWorkspaceID(m),
+		WorkspaceRoot: root,
+		Environment:   environment,
+		ProjectName:   projectName,
 	})
 	if err != nil {
 		requestedProfile := profileNameFromResolveError(err)
@@ -324,7 +343,11 @@ func profileComplete(backend string, p profile.Profile) bool {
 	case p.Dotenv != nil:
 		return true
 	case p.Kustomize != nil:
-		return strings.TrimSpace(p.Kustomize.KubeconfigPath) != ""
+		// kubectl's normal lookup chain already supports an omitted
+		// kubeconfigPath (KUBECONFIG, then ~/.kube/config). Kustomize still
+		// needs an explicit Profile object so the user can choose a machine
+		// connection/context, but the path inside that object is optional.
+		return true
 	case p.EdgeOne != nil:
 		// EdgeOne supports `edgeone login`; an inline token is useful but not mandatory.
 		return true

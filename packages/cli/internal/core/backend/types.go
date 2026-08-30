@@ -166,6 +166,39 @@ type ProfileSpec struct {
 	Fields       []FieldSpec `json:"fields,omitempty"`
 }
 
+// ProjectFieldType is the transport-neutral control used to edit one
+// backend-owned value in projects[i].domains.<domain>.config. It is separate
+// from FieldType because project settings are safe workspace metadata, while
+// profile fields may contain machine-local credentials.
+type ProjectFieldType string
+
+const (
+	ProjectFieldString      ProjectFieldType = "string"
+	ProjectFieldEnvironment ProjectFieldType = "environment"
+)
+
+// ProjectFieldSpec describes a safe, backend-owned project setting. Path is
+// slash-separated and relative to the backend config object; InputName is a
+// stable, non-localized form identifier. Environment fields are rendered from
+// the workspace's declared environment names by clients such as Dashboard.
+type ProjectFieldSpec struct {
+	Path        string           `json:"path"`
+	InputName   string           `json:"input_name"`
+	Type        ProjectFieldType `json:"type"`
+	LabelKey    string           `json:"label_key"`
+	Required    bool             `json:"required,omitempty"`
+	Placeholder string           `json:"placeholder,omitempty"`
+}
+
+// ProjectSpec describes the backend-owned fields that may be persisted in a
+// project's manifest config. It contains schema metadata only, never values or
+// credentials. Container's common kind/image/namespace settings deliberately
+// stay outside this backend-specific schema.
+type ProjectSpec struct {
+	Configurable bool               `json:"configurable"`
+	Fields       []ProjectFieldSpec `json:"fields,omitempty"`
+}
+
 // BackendSpec is the immutable descriptor shared by CLI, HTTP, Dashboard,
 // validation, and backend dispatch.
 type BackendSpec struct {
@@ -175,6 +208,7 @@ type BackendSpec struct {
 	Traits       []Trait       `json:"traits,omitempty"`
 	Requirements []Requirement `json:"requirements,omitempty"`
 	Profile      ProfileSpec   `json:"profile"`
+	Project      ProjectSpec   `json:"project"`
 }
 
 // MarshalJSON exposes the normalized ID components without storing a second,
@@ -190,6 +224,7 @@ func (s BackendSpec) MarshalJSON() ([]byte, error) {
 		Traits       []Trait       `json:"traits,omitempty"`
 		Requirements []Requirement `json:"requirements,omitempty"`
 		Profile      ProfileSpec   `json:"profile"`
+		Project      ProjectSpec   `json:"project"`
 	}
 	return json.Marshal(wireBackendSpec{
 		Pair:         s.Pair,
@@ -199,6 +234,7 @@ func (s BackendSpec) MarshalJSON() ([]byte, error) {
 		Traits:       s.Traits,
 		Requirements: s.Requirements,
 		Profile:      s.Profile,
+		Project:      s.Project,
 	})
 }
 

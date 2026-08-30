@@ -23,7 +23,7 @@ description: one 顶层命令、常用子命令、输出模式和 agent 自动�
 | `one ci` | 查看或管理可选的持续集成 | `one ci` |
 | `one run` | 注入项目 `.env` 后执行任意命令 | `one run -- npm test` |
 | `one configure` | 配置机器级 endpoint profile | `one configure` |
-| `one serve` | 启动本地 Web UI 手工编辑敏感 profile | `one serve` |
+| `one serve` | 启动本地 Workspace、Project 与 Profile Dashboard | `one serve` |
 | `one skills` | 安装 / 刷新 bundled `one-cli` skill | `one skills install` |
 
 ## 创建 workspace
@@ -100,7 +100,7 @@ one configure open
 | `deploy` | `kustomize`, `vercel`, `cloudflare`, `edgeone` |
 
 本地 `.env` 文件不需要本机连接。
-本机连接写到 `~/.config/one/config.json` 和 `~/.config/one/credentials.json`。敏感字段默认掩码，只有 `show --reveal` 会显示明文。
+本机连接写到 `~/.config/one/config.json` 和 `~/.config/one/credentials.json`。环境感知的 Workspace/Project 选择只保存名字，位于 `~/.config/one/profile-bindings.json`。敏感字段默认掩码，只有 `show --reveal` 会显示明文；这些文件都不会改动 `one.manifest.json`。
 添加 token 时推荐使用 `one configure open`，避免把密钥交给 AI agent。
 
 ## 交互模式速查
@@ -117,7 +117,7 @@ one configure open
 | `one dev` | Node 依赖缺失时询问是否安装，否则直接启动 |
 | `one ci disable` | 删除生成的工作流前先确认；拒绝时成功退出 |
 | `one templates` / `one run` | 无交互式向导；通过参数控制行为 |
-| `one serve` | 不是终端向导；它打开本地 Web UI 管理本机连接 |
+| `one serve` | 不是终端向导；它打开本地 Dashboard 管理 Workspace、Project 与本机连接 |
 
 ## 本地 Web UI
 
@@ -125,7 +125,7 @@ one configure open
 one serve [--host 127.0.0.1] [--port 0] [--open=false]
 ```
 
-启动仅绑定 loopback 的本地 HTTP 服务，用浏览器手工编辑 `env / deploy / container` profile。这个入口会处理 API key、kubeconfig path、registry token 等敏感字段，设计上是给人类使用，不给 AI agent 直接读写凭据。
+启动仅绑定 loopback 的本地 HTTP 服务，用浏览器手工编辑 `env / deploy / container` Profile，并选择环境感知的本机绑定。Workspace 代码、Project 设置、Backend 和 `one.manifest.json` 都只读。这个入口会处理 API key、kubeconfig path、registry token 等敏感字段，设计上是给人类使用，不给 AI agent 直接读写凭据。
 
 详见 [`one serve`](/zh/docs/serve/)。
 
@@ -137,7 +137,7 @@ one container build [subproject] [-p <name|path>] [--build-version <version>] [-
 one container push  [subproject] [-p <name|path>] [--build-version <version>] [--dry-run] [--profile <name>]
 ```
 
-`one container` 读取每个项目的 Dockerfile 和 manifest 里的 container 配置。裸 `build` 默认本地构建 `<workload>:<version>`；传 `--profile` 或 manifest pin 了 registry profile 时，会使用 registry-qualified tag 并执行登录。`push` 需要 registry profile，必要时会把本地镜像 retag 后推送。
+`one container` 读取每个项目的 Dockerfile 和 manifest 里的 container 配置。裸 `build` 默认本地构建 `<workload>:<version>`；传 `--profile` 或解析到机器本地 registry 绑定/default 时，会使用 registry-qualified tag 并执行登录。`push` 需要 registry Profile，必要时会把本地镜像 retag 后推送。
 
 ## 本地开发
 

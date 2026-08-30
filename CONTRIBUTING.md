@@ -9,7 +9,7 @@ brew install go go-task node    # macOS；Linux 用 apt / dnf 类比
 npm i -g pnpm                   # 或 corepack enable && corepack prepare pnpm@10
 git clone https://github.com/1cli-team/one-cli
 cd one-cli
-task install-local              # 编译 + symlink packages/cli/bin/one 到 ~/.local/bin/one
+task install                    # 打包 Dashboard + CLI，再 symlink 到 ~/.local/bin/one
 one --version                   # 验证装好
 ```
 
@@ -18,7 +18,7 @@ one --version                   # 验证装好
 > **fresh-clone 提示**：`packages/cli/internal/resources/bundled/` 整个目录是 gitignore 的——
 > registry / skills / templates / dashboard dist 都由 `task sync-bundled` +
 > `task sync-web` 按需重建，作为 `task vet` / `test` / `build` 的依赖自动跑。
-> 第一次 `task install-local` 会触发 `pnpm install + vite build`，~30s；之后
+> 第一次 `task install` 会触发 `pnpm install + vite build`，~30s；之后
 > task fingerprint 命中，几乎零成本。如果你直接跑 `go build` 而不走 Taskfile，
 > 会看到 `pattern all:_templates: no matching files found` 这种报错——跑一次
 > `task sync-bundled && task sync-web` 就好。
@@ -36,7 +36,7 @@ task build                  # 编译到 packages/cli/bin/one
 task test                   # 全套 Go 测试 + race detector
 task vet                    # go vet
 task fmt                    # gofmt
-task install-local          # build + symlink（开发用）
+task install                # 打包 + symlink（开发用；install-local 仍是兼容别名）
 task pre-push               # 推前必跑（含上面所有 + verify-docs）
 ```
 

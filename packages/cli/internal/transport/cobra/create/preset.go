@@ -168,6 +168,9 @@ func runCreateWithPreset(deps Dependencies, cmd *cobra.Command, cwd, rawDir stri
 			creationResult.EnvironmentWarn,
 		))
 	}
+	if creationResult.RegistryWarn != nil {
+		prompt.Step(i18n.Tf("create.registry_warning", creationResult.RegistryWarn))
+	}
 	skillsResult := skillsPayload{Status: "skipped", Reason: "manual-install"}
 
 	// Step 6: emit the v3 envelope.

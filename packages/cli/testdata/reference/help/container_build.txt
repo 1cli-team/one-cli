@@ -11,5 +11,6 @@ COMMON OPTIONS
 
 AUTOMATION AND ADVANCED OPTIONS
   --build-version <value>  非交互/CI 用镜像版本（如 v0.1.0）；TTY 未传且无 Git/package 默认版本时会提示选择
+  --env <value>            使用指定环境的 container profile（如 dev / preview / prod）
   --profile <value>        一次性使用指定 container profile（不改 default）
   -p, --project <value>    只构建指定 subproject（manifest 里的 name 或相对路径）

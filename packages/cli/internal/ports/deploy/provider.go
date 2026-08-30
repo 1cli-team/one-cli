@@ -45,6 +45,11 @@ type ApplyInput struct {
 	ProjectRoot string
 	Project     workspace.Project
 	Toolchain   string
+	// Environment is the target's effective deploy environment after CLI
+	// overrides and project defaults have been resolved. Nested provider
+	// workflows (for example Kustomize's container build/push) must reuse it
+	// instead of re-deriving an environment from the on-disk manifest.
+	Environment string
 	Manifest    *workspace.Manifest
 	Resolved    *profile.Resolved
 	DryRun      bool

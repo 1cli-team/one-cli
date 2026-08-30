@@ -284,6 +284,8 @@ func statusForCode(code string) int {
 		return http.StatusNotFound
 	case string(cliErrors.PROFILE_ALREADY_EXISTS):
 		return http.StatusConflict
+	case string(cliErrors.PROFILE_IN_USE):
+		return http.StatusConflict
 	case string(cliErrors.PROFILE_BACKEND_INVALID), string(cliErrors.SERVE_PAYLOAD_INVALID):
 		return http.StatusBadRequest
 	default:
