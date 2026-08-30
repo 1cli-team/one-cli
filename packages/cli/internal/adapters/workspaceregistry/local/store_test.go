@@ -250,6 +250,42 @@ func TestStoreContextDeadlineAlsoBoundsInProcessLock(t *testing.T) {
 	}
 }
 
+func TestStoreBackgroundContextWaitsPastShortLockContention(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "one", "workspaces.json")
+	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	externalLock := flock.New(path + ".lock")
+	if err := externalLock.Lock(); err != nil {
+		t.Fatal(err)
+	}
+	const hold = 2200 * time.Millisecond
+	timer := time.AfterFunc(hold, func() {
+		_ = externalLock.Unlock()
+	})
+	defer func() {
+		timer.Stop()
+		_ = externalLock.Unlock()
+	}()
+
+	started := time.Now()
+	err := NewAt(path).Update(context.Background(), func(registry *workspace.Registry) error {
+		registry.Workspaces = append(registry.Workspaces, workspace.RegistryEntry{
+			EntryID:      "wsr_after_contention",
+			Root:         "/workspace/after-contention",
+			RegisteredAt: time.Unix(1, 0).UTC(),
+			LastSeenAt:   time.Unix(1, 0).UTC(),
+		})
+		return nil
+	})
+	if err != nil {
+		t.Fatalf("Update after short contention: %v", err)
+	}
+	if elapsed := time.Since(started); elapsed < hold {
+		t.Fatalf("Update returned before contention ended: %s < %s", elapsed, hold)
+	}
+}
+
 func TestStoreMutatorErrorDoesNotPublish(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "one", "workspaces.json")
 	store := NewAt(path)
