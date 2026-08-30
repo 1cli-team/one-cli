@@ -1,55 +1,20 @@
-// Overview renders the workspace `one serve` was launched in: identity,
-// environment list, and a card per sub-project with badges for any missing
-// configuration domains (container / deploy / env). When the workspace
-// itself is missing a workspace-scoped backend (env), that surfaces as a
-// top-of-page alert so we don't duplicate it under every project card.
-// Dev command is deliberately not surfaced — `one add` derives it from
-// package.json scripts, and an empty value is a valid "this project does
-// not participate in `one dev`" signal, not a missing-config issue.
-//
-// Every missing-config badge is clickable: backend issues open
-// MissingConfigDialog, while profile issues open the credential form in-place.
-// Successful manifest/profile changes refresh the SWR cache so badges flip
-// green without a reload.
-
-import { AlertTriangle, ArrowRight, FolderTree, Layers, Package } from "lucide-react";
+import { AlertTriangle, CheckCircle2, Copy, FolderKanban, Layers3 } from "lucide-react";
 import type React from "react";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Link } from "react-router-dom";
-import { mutate } from "swr";
-import { type ProfileByPair, upsertProfile } from "@/api/configure";
-import { overviewKey } from "@/api/workspace";
-import { MissingConfigDialog } from "@/components/MissingConfigDialog";
+import { useLocation } from "react-router-dom";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
-import { useToast } from "@/hooks/useToast";
-import { type AnyProfile, ProfileForm, emptyProfile } from "@/pages/SectionDetail";
-import type {
-	Overview as OverviewPayload,
-	OverviewIssue,
-	OverviewIssueDomain,
-	OverviewProjectKind,
-	SectionKey,
-} from "@/types/api";
-import { SECTION_KEYS } from "@/types/api";
-
-const KIND_ICON: Record<OverviewProjectKind, React.ComponentType<{ className?: string }>> = {
-	app: Layers,
-	service: FolderTree,
-	package: Package,
-};
-
-// Issue domains we surface as badges, in the order users care about most.
-const ISSUE_DOMAIN_ORDER: OverviewIssueDomain[] = ["deploy", "container", "env"];
-
-function sortIssues(issues: OverviewIssue[] | undefined): OverviewIssue[] {
-	if (!issues) return [];
-	const rank = new Map(ISSUE_DOMAIN_ORDER.map((d, i) => [d, i]));
-	return [...issues].sort((a, b) => (rank.get(a.domain) ?? 99) - (rank.get(b.domain) ?? 99));
-}
+import { Card, CardContent } from "@/components/ui/card";
+import { EnvironmentLink } from "@/features/environment-context/EnvironmentLink";
+import { environmentFromSearch } from "@/features/environment-context/environment";
+import {
+	ProjectInspector,
+	type ProjectInspectorTarget,
+} from "@/features/project-settings/ProjectInspector";
+import { ProjectMatrix } from "@/features/project-settings/ProjectMatrix";
+import { WorkspaceEnvironmentSettings } from "@/features/workspace-settings/WorkspaceEnvironmentSettings";
+import type { Overview as OverviewPayload, OverviewIssue } from "@/types/api";
 
 function issueKey(issue: OverviewIssue): string {
 	return [issue.domain, issue.reason ?? "backend", issue.backend ?? "", issue.profile ?? ""].join(
@@ -57,57 +22,31 @@ function issueKey(issue: OverviewIssue): string {
 	);
 }
 
-// FixTarget is what the dialog needs to know: which domain, and (for
-// per-project issues) which project. env is workspace-scoped, so it has no
-// project.
-interface FixTarget {
-	domain: OverviewIssueDomain;
-	projectName?: string;
+function profileIssueSettingsPath(issue: OverviewIssue): string {
+	const section = issue.section ?? (issue.backend ? `${issue.domain}/${issue.backend}` : "");
+	const [domain, backend, extra] = section.split("/");
+	if (!domain || !backend || extra) return "/settings";
+	return `/settings/${encodeURIComponent(domain)}/${encodeURIComponent(backend)}`;
 }
 
-interface ProfileFixTarget {
-	sectionKey: SectionKey;
-	name: string;
-	mode: "add" | "edit";
-}
-
-function isSectionKey(value: string | undefined): value is SectionKey {
-	return Boolean(value && SECTION_KEYS.includes(value as SectionKey));
-}
-
-function profileIssueSection(issue: OverviewIssue): SectionKey | null {
-	if (isSectionKey(issue.section)) return issue.section;
-	const fallback = issue.backend ? `${issue.domain}/${issue.backend}` : undefined;
-	if (isSectionKey(fallback)) return fallback;
-	return null;
-}
-
-function profileIssueLabel(issue: OverviewIssue): string {
-	return profileIssueSection(issue) ?? issue.section ?? `${issue.domain}/${issue.backend ?? ""}`;
-}
-
-export const Overview: React.FC<{ data: OverviewPayload }> = ({ data }) => {
+export const Overview: React.FC<{
+	data: OverviewPayload;
+	workspaceEntryId?: string;
+	readOnly?: boolean;
+}> = ({ data, workspaceEntryId, readOnly }) => {
 	const { t } = useTranslation();
-	const toast = useToast();
-	const ws = data.workspace;
-	const workspaceIssues = sortIssues(data.issues);
+	const { search } = useLocation();
+	const environment = environmentFromSearch(search);
+	const workspace = data.workspace;
 	const projects = data.projects ?? [];
-
-	const [fixTarget, setFixTarget] = useState<FixTarget | null>(null);
-	const [profileFixTarget, setProfileFixTarget] = useState<ProfileFixTarget | null>(null);
-	const [profileDialogSnapshot, setProfileDialogSnapshot] = useState<ProfileFixTarget | null>(null);
-
-	useEffect(() => {
-		if (profileFixTarget) setProfileDialogSnapshot(profileFixTarget);
-	}, [profileFixTarget]);
-
-	// The mutate endpoints return the rebuilt Overview; push it straight
-	// into the SWR cache (no revalidate) so the page repaints instantly.
-	const handleUpdated = (next: OverviewPayload) => {
-		void mutate(overviewKey, next, { revalidate: false });
-	};
-
-	const issueText = (issue: OverviewIssue) =>
+	const [inspector, setInspector] = useState<ProjectInspectorTarget | null>(null);
+	const healthyProjects = projects.filter((project) => (project.issues?.length ?? 0) === 0).length;
+	const projectIssues = projects.reduce(
+		(count, project) => count + (project.issues?.length ?? 0),
+		0,
+	);
+	const attentionIssues = projectIssues + (data.issues?.length ?? 0);
+	const issueMessage = (issue: OverviewIssue) =>
 		issue.reason === "profile"
 			? t("overview.issue.missingProfile", {
 					section: issue.section ?? `${issue.domain}/${issue.backend ?? ""}`,
@@ -118,258 +57,165 @@ export const Overview: React.FC<{ data: OverviewPayload }> = ({ data }) => {
 					defaultValue: issue.message,
 				});
 
-	const issueBadgeLabel = (issue: OverviewIssue) =>
-		issue.reason === "profile"
-			? profileIssueLabel(issue)
-			: t(`overview.issue.label.${issue.domain}`, { defaultValue: issue.domain });
-
-	const openProfileFix = (issue: OverviewIssue) => {
-		const sectionKey = profileIssueSection(issue);
-		if (!sectionKey) return;
-		setProfileFixTarget({
-			sectionKey,
-			name: issue.profile || "default",
-			mode: issue.profile ? "edit" : "add",
-		});
-	};
-
-	async function handleProfileSubmit(name: string, profile: AnyProfile, use: boolean) {
-		if (!profileFixTarget) return;
-		const [domain, backend] = profileFixTarget.sectionKey.split("/");
-		try {
-			const res = await upsertProfile(domain, backend, {
-				name,
-				profile: profile as ProfileByPair[SectionKey],
-				use,
-			});
-			toast.success(
-				res.status === "updated" ? t("toast.updated", { name }) : t("toast.created", { name }),
-				{ description: res.default ? t("toast.setDefaultAfterSaveHint") : undefined },
-			);
-			setProfileFixTarget(null);
-			void mutate(overviewKey);
-		} catch (err) {
-			const e = err as { code?: string; message: string };
-			toast.error(e.message, { description: e.code });
-		}
-	}
-
 	return (
 		<div className="space-y-6">
-			<header className="space-y-2">
-				<div className="flex items-baseline gap-2">
-					<h1 className="text-xl font-semibold tracking-tight">
-						{ws?.name || t("overview.untitledWorkspace")}
-					</h1>
-					{ws?.id ? (
-						<Badge variant="outline" className="font-mono">
-							{ws.id}
-						</Badge>
-					) : null}
-				</div>
-				{data.root ? (
-					<p className="text-xs font-mono text-muted-foreground truncate">{data.root}</p>
-				) : null}
-				{ws?.environments && ws.environments.length > 0 ? (
-					<div className="flex items-center gap-2 text-xs text-muted-foreground">
-						<span>{t("overview.environments")}</span>
-						<span className="flex flex-wrap gap-1">
-							{ws.environments.map((name) => (
-								<Badge
-									key={name}
-									variant={name === ws.defaultEnvironment ? "default" : "secondary"}
-								>
-									{name}
-								</Badge>
-							))}
-						</span>
+			<Card className="relative overflow-hidden rounded-xl">
+				<div className="pointer-events-none absolute -right-16 -top-24 h-64 w-64 rounded-full bg-primary/8 blur-3xl" />
+				<CardContent className="relative flex items-start justify-between gap-8 px-6 py-5">
+					<div className="min-w-0">
+						<div className="flex items-center gap-2">
+							<div className="grid h-9 w-9 place-items-center rounded-lg bg-primary text-primary-foreground shadow-sm">
+								<FolderKanban className="h-4 w-4" />
+							</div>
+							<div>
+								<div className="flex items-center gap-2">
+									<h1 className="text-xl font-semibold tracking-tight">
+										{workspace?.name || t("overview.untitledWorkspace")}
+									</h1>
+									{workspace?.id ? (
+										<Badge variant="outline" className="font-mono">
+											{workspace.id}
+										</Badge>
+									) : null}
+								</div>
+								<p className="mt-0.5 max-w-2xl truncate font-mono text-[11px] text-muted-foreground">
+									{data.root}
+								</p>
+							</div>
+						</div>
 					</div>
-				) : null}
-			</header>
 
-			{workspaceIssues.length > 0 ? (
+					<div className="grid shrink-0 grid-cols-3 divide-x divide-border overflow-hidden rounded-lg border border-border bg-background/70">
+						<WorkspaceMetric
+							label={t("overview.metrics.projects")}
+							value={projects.length}
+							primary
+						/>
+						<WorkspaceMetric
+							label={t("overview.metrics.healthy")}
+							value={healthyProjects}
+							positive={healthyProjects === projects.length}
+						/>
+						<WorkspaceMetric
+							label={t("overview.metrics.attention")}
+							value={attentionIssues}
+							warning={attentionIssues > 0}
+						/>
+					</div>
+				</CardContent>
+			</Card>
+
+			{readOnly ? (
+				<Alert>
+					<Copy className="h-4 w-4" />
+					<AlertTitle>{t("workspaces.conflict.title")}</AlertTitle>
+					<AlertDescription>{t("workspaces.conflict.description")}</AlertDescription>
+				</Alert>
+			) : null}
+
+			<WorkspaceEnvironmentSettings
+				key={`${workspaceEntryId ?? "current"}:${environment}:${workspace?.domains?.env ?? ""}`}
+				currentBackend={workspace?.domains?.env}
+				environment={environment}
+				workspaceEntryId={workspaceEntryId}
+				readOnly={readOnly}
+			/>
+
+			{(data.issues?.length ?? 0) > 0 ? (
 				<Alert variant="destructive">
 					<AlertTriangle className="h-4 w-4" />
 					<AlertTitle>{t("overview.workspaceIssuesTitle")}</AlertTitle>
 					<AlertDescription>
-						<ul className="mt-1 space-y-1">
-							{workspaceIssues.map((iss) => (
-								<li key={issueKey(iss)} className="flex items-center gap-2">
-									<span>{issueText(iss)}</span>
-									{iss.reason === "profile" && profileIssueSection(iss) ? (
-										<button
-											type="button"
-											onClick={() => openProfileFix(iss)}
-											className="rounded border border-current/30 px-1.5 py-0.5 text-[11px] font-medium hover:bg-current/10"
+						<div className="mt-1 flex flex-wrap gap-x-5 gap-y-2">
+							{data.issues?.map((issue) => (
+								<div key={issueKey(issue)} className="flex items-center gap-2">
+									<span>{issueMessage(issue)}</span>
+									{issue.reason === "profile" ? (
+										<EnvironmentLink
+											to={profileIssueSettingsPath(issue)}
+											className="rounded border border-current/30 px-2 py-0.5 text-[11px] font-medium hover:bg-current/10"
 										>
 											{t("overview.fix.profileCta")}
-										</button>
+										</EnvironmentLink>
 									) : (
-										<button
-											type="button"
-											onClick={() => setFixTarget({ domain: iss.domain })}
-											className="rounded border border-current/30 px-1.5 py-0.5 text-[11px] font-medium hover:bg-current/10"
-										>
-											{t("overview.fix.cta")}
-										</button>
+										<span className="text-[11px] font-medium">{t("overview.fix.cliHint")}</span>
 									)}
-								</li>
+								</div>
 							))}
-						</ul>
+						</div>
 					</AlertDescription>
 				</Alert>
 			) : null}
 
-			<section className="space-y-3">
-				<div className="flex items-baseline gap-2 border-b border-border/60 pb-1.5">
-					<h2 className="text-sm font-semibold tracking-wide uppercase text-muted-foreground">
-						{t("overview.projects")}
-					</h2>
-					<span className="text-[11px] text-muted-foreground/60 font-mono">{projects.length}</span>
-				</div>
-				{projects.length === 0 ? (
-					<p className="text-sm text-muted-foreground">{t("overview.empty")}</p>
-				) : (
-					<div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
-						{projects.map((p) => {
-							const Icon = KIND_ICON[p.kind] ?? Layers;
-							const issues = sortIssues(p.issues);
-							return (
-								<Card key={p.name} className="h-full">
-									<CardHeader>
-										<div className="flex items-start justify-between gap-2">
-											<div className="space-y-1 min-w-0">
-												<CardTitle className="flex items-center gap-2">
-													<Icon className="h-4 w-4 text-primary shrink-0" />
-													<span className="truncate">{p.name}</span>
-												</CardTitle>
-												<p className="text-[11px] font-mono text-muted-foreground truncate">
-													{p.relativeDir}
-												</p>
-												<CardDescription className="flex flex-wrap items-center gap-1">
-													<Badge variant="outline">
-														{t(`overview.kinds.${p.kind}`, { defaultValue: p.kind })}
-													</Badge>
-													{p.toolchain ? (
-														<Badge variant="secondary" className="font-mono">
-															{p.toolchain}
-														</Badge>
-													) : null}
-													{p.templateId ? (
-														<Badge variant="secondary" className="font-mono">
-															{p.templateId}
-														</Badge>
-													) : null}
-												</CardDescription>
-											</div>
-										</div>
-									</CardHeader>
-									<CardContent className="space-y-2 text-xs">
-										{p.domains && Object.keys(p.domains).length > 0 ? (
-											<div className="flex flex-wrap gap-1">
-												{Object.entries(p.domains).map(([dom, kind]) => (
-													<Badge key={dom} variant="outline" className="font-mono">
-														{dom}: {kind}
-													</Badge>
-												))}
-											</div>
-										) : null}
-										{issues.length > 0 ? (
-											<div className="flex flex-wrap gap-1">
-												{issues.map((iss) =>
-													iss.reason === "profile" && profileIssueSection(iss) ? (
-														<button
-															key={issueKey(iss)}
-															type="button"
-															onClick={() => openProfileFix(iss)}
-															title={issueText(iss)}
-															className="rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-														>
-															<Badge
-																variant="destructive"
-																className="cursor-pointer hover:opacity-90"
-															>
-																<AlertTriangle className="h-3 w-3" />
-																{issueBadgeLabel(iss)}
-															</Badge>
-														</button>
-													) : (
-														<button
-															key={issueKey(iss)}
-															type="button"
-															onClick={() =>
-																setFixTarget({
-																	domain: iss.domain,
-																	projectName: p.name,
-																})
-															}
-															title={issueText(iss)}
-															className="rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-														>
-															<Badge
-																variant="destructive"
-																className="cursor-pointer hover:opacity-90"
-															>
-																<AlertTriangle className="h-3 w-3" />
-																{issueBadgeLabel(iss)}
-															</Badge>
-														</button>
-													),
-												)}
-											</div>
-										) : (
-											<span className="text-emerald-600 dark:text-emerald-400">
-												{t("overview.allGood")}
-											</span>
-										)}
-									</CardContent>
-								</Card>
-							);
-						})}
-					</div>
-				)}
-			</section>
-
-			<div className="pt-2">
-				<Link
-					to="/profile"
-					className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
-				>
-					{t("overview.manageProfilesCta")}
-					<ArrowRight className="h-3 w-3" />
-				</Link>
-			</div>
-
-			<MissingConfigDialog
-				domain={fixTarget?.domain ?? null}
-				projectName={fixTarget?.projectName}
-				open={fixTarget !== null}
-				onOpenChange={(next) => {
-					if (!next) setFixTarget(null);
-				}}
-				onUpdated={handleUpdated}
+			<ProjectMatrix
+				projects={projects}
+				workspaceEnvironment={workspace?.domains?.env}
+				readOnly={readOnly}
+				onInspect={(project, tab) => setInspector({ project, tab })}
 			/>
 
-			<Dialog
-				open={profileFixTarget !== null}
-				onOpenChange={(next) => {
-					if (!next) setProfileFixTarget(null);
+			<Card className="border-dashed shadow-none">
+				<CardContent className="flex items-center justify-between px-4 py-3 text-xs text-muted-foreground">
+					<span className="inline-flex items-center gap-2">
+						<Layers3 className="h-3.5 w-3.5" />
+						{t("overview.profileSafety")}
+					</span>
+					<EnvironmentLink to="/settings" className="font-medium text-primary hover:underline">
+						{t("overview.manageProfilesCta")}
+					</EnvironmentLink>
+				</CardContent>
+			</Card>
+
+			<ProjectInspector
+				target={inspector}
+				environment={environment}
+				workspaceEntryId={workspaceEntryId}
+				readOnly={readOnly}
+				onOpenChange={(open) => {
+					if (!open) setInspector(null);
 				}}
-			>
-				<DialogContent>
-					{profileDialogSnapshot ? (
-						<ProfileForm
-							sectionKey={profileDialogSnapshot.sectionKey}
-							initialName={profileDialogSnapshot.name}
-							initialProfile={emptyProfile(profileDialogSnapshot.sectionKey)}
-							mode={profileDialogSnapshot.mode}
-							hasDefault={profileDialogSnapshot.mode === "edit"}
-							onCancel={() => setProfileFixTarget(null)}
-							onSubmit={handleProfileSubmit}
-						/>
-					) : null}
-				</DialogContent>
-			</Dialog>
+			/>
 		</div>
 	);
 };
+
+const WorkspaceMetric: React.FC<{
+	label: string;
+	value: number;
+	positive?: boolean;
+	warning?: boolean;
+	primary?: boolean;
+}> = ({ label, value, positive, warning, primary }) => (
+	<div
+		aria-label={`${label}: ${value}`}
+		className={
+			primary
+				? "min-w-32 bg-primary/[0.04] px-5 py-3.5 text-left"
+				: "min-w-24 px-4 py-3 text-center"
+		}
+	>
+		<div className={`flex items-center gap-1.5 ${primary ? "justify-start" : "justify-center"}`}>
+			{positive ? <CheckCircle2 className="h-3.5 w-3.5 text-success-foreground" /> : null}
+			<span
+				className={
+					primary
+						? "text-3xl font-semibold leading-none tabular-nums text-primary"
+						: warning
+							? "text-lg font-semibold text-warning-foreground"
+							: "text-lg font-semibold"
+				}
+			>
+				{value}
+			</span>
+		</div>
+		<p
+			className={
+				primary
+					? "mt-1.5 whitespace-nowrap text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground"
+					: "mt-0.5 whitespace-nowrap text-[10px] uppercase tracking-wider text-muted-foreground"
+			}
+		>
+			{label}
+		</p>
+	</div>
+);

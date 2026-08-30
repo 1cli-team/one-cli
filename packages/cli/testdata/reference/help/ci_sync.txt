@@ -1,0 +1,19 @@
+
+DESCRIPTION
+Refresh continuous-integration configuration
+
+USAGE
+  one ci sync [project] [flags]
+
+EXAMPLES
+  one ci sync
+  one ci sync web
+
+TIPS
+Regenerates configuration for one enabled project, or every project that already has continuous integration enabled.
+
+COMMON OPTIONS
+  -o, --output <value>     Output format: json | yaml | text (default: terminal-friendly text, JSON when piped)
+
+AUTOMATION AND ADVANCED OPTIONS
+  -p, --project <value>    Select a project by name or workspace-relative path (legacy/automation)

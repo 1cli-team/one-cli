@@ -6,13 +6,13 @@ description: "Full reference for multi-environment variables: set / get / list /
 `one env` manages monorepo environment variables across environments. There are two backends:
 
 - **dotenv** (default): local filesystem. Each project has overlays such as `.env`, `.env.<env>`, `.env.local`, and `.env.<env>.local`.
-- **infisical**: one workspace shares one Infisical project; environments such as dev / staging / prod are sections inside that project.
+- **infisical**: one workspace shares one Infisical project; environments such as dev / preview / prod are sections inside that project.
 
 For the full workflow and mental model, read [Environment variables guide](/en/tutorials/env-vars/).
 
 ## Environment Model
 
-`manifest.environments.names` is the workspace environment list. `one create` defaults to `["dev","staging","prod"]`. `manifest.environments.default` is the fallback when `--env` is omitted; default is `dev`.
+`manifest.environments.names` is the workspace environment list. `one create` defaults to `["dev","preview","prod"]`. `manifest.environments.default` is the fallback when `--env` is omitted; default is `dev`. Existing workspaces that use `staging` remain valid; the Dashboard's Preview binding maps to `staging` when that legacy name is present and `preview` is not.
 
 `--env` resolution:
 
@@ -49,12 +49,16 @@ Machine-level Infisical credentials are configured with [`one configure add env/
 
 ## Interactive Mode
 
-`one env` does not have a full wizard, but `one env set` can ask for confirmation in TTY mode:
+Bare `one env` shows the current source, default/available environments,
+current scope, and common commands. `one env set` has a safe TTY flow:
 
+- `one env set KEY` reads the value with hidden input.
+- At the workspace root, it asks whether the variable is shared or belongs to a project.
 - When writing to an environment that is not in `manifest.environments.names`, it asks whether to add that environment to the manifest.
 - When overwriting an existing different value, it asks whether to overwrite.
 
-Scripts, CI, and agents should pass `--yes` to skip confirmations. `get`, `list`, and `pull` are explicit-argument commands and do not open a wizard.
+Declining or cancelling exits successfully without an error-style message.
+Scripts and CI pass the value explicitly and use `--yes` for overwrite/new-environment confirmation.
 
 ## dotenv Overlay
 
@@ -214,7 +218,7 @@ Project path overrides live in `projects[].domains.env`:
 }
 ```
 
-Values never go into the manifest. The manifest records backend, profile, folder path, and key names.
+Values and local Profile names never go into the Manifest. The Manifest records the Backend, folder path, and key names; machine Profile definitions and environment-aware bindings stay under `~/.config/one/`.
 
 ## Credential Safety
 

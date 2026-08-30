@@ -1,12 +1,14 @@
-切换 default profile，或绑定当前 workspace 的 profile
 
-Usage:
-  one configure use <pair> --profile <name> [--workspace] [--project <name|path>] [flags]
+DESCRIPTION
+Switch the current local connection
 
-Flags:
-      --profile string   profile 名（必填）
-  -p, --project string   绑定到当前 workspace 的某个 project（名称或相对路径）
-      --workspace        绑定到当前 workspace（写入本机 config.json，不修改 default）
+USAGE
+  one configure use [service-id] [--profile <name>] [--workspace] [--project <name|path>] [flags]
 
-Global Flags:
-  -o, --output string   输出格式: json | yaml | text（默认 auto：TTY 时人类格式，pipe 时 JSON）
+COMMON OPTIONS
+  -o, --output <value>     Output format: json | yaml | text (default: terminal-friendly text, JSON when piped)
+
+AUTOMATION AND ADVANCED OPTIONS
+  --profile <value>        Existing local-connection name; interactive terminals may select one
+  -p, --project <value>    Use this connection for one project in the current workspace
+  --workspace              Use this connection for the current workspace

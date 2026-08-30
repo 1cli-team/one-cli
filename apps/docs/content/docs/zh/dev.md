@@ -1,61 +1,50 @@
 ---
 title: one dev
-description: 用 Procfile.dev 启动本地开发进程。
+description: 启动全部可开发项目，或只启动一个项目。
 ---
 
-`one dev` 读取 workspace 根目录的 `Procfile.dev`，用本机可用的 supervisor 启动开发进程。`one create` 和 `one add` 会同步 `Procfile.dev`，所以 workspace 默认具备本地开发编排入口。
+`one dev` 从 manifest 读取每个项目的开发命令，并用 One CLI 内置 supervisor 运行。
 
 ## 用法
 
 ```bash
-one dev [-p <name|path>] [--dry-run]
+one dev [project] [--dry-run]
 ```
 
 ## 参数
 
 | 参数 | 说明 |
 |---|---|
-| `-p, --project <name|path>` | 只启动一个项目；支持 manifest 里的 `name` 或 `relativeDir` |
+| 位置参数 `project` | 只启动一个项目；支持 manifest 里的 `name` 或 `relativeDir` |
+| `-p, --project <name|path>` | 为旧脚本和 CI 保留的选择参数 |
 | `--dry-run` | 只打印将调用的 supervisor 命令，不启动进程 |
 | `-o, --output <fmt>` | `json` / `yaml` / `text`（默认按 TTY 检测） |
 
 ## 交互模式
 
-`one dev` 没有交互式向导；它按 manifest 和 `Procfile.dev` 直接启动进程。需要先确认会跑什么时，用 `--dry-run`。
+选中的 Node 项目缺少依赖时，终端会询问是否运行检测到的包管理器安装命令。确认后安装并继续，拒绝则成功退出；非交互调用返回 `DEPENDENCIES_NOT_INSTALLED` 和准确安装命令。
 
 ## 运行方式
 
-CLI 会按本机 PATH 查找 Procfile supervisor。支持的 runner 包括 overmind、hivemind、foreman、honcho；全部缺失时返回 `DEV_NO_SUPERVISOR`。
+内置 supervisor 默认启动全部可开发项目，也可用位置参数只启动一个。
 
 ```bash
 one dev
-one dev -p web
-one dev -p apps/web --dry-run
+one dev web
+one dev apps/web --dry-run
 ```
-
-## Procfile.dev
-
-`Procfile.dev` 的每一行对应一个本地进程：
-
-```text
-api: pnpm --dir services/api dev
-web: pnpm --dir apps/web dev
-```
-
-如果新增项目后文件缺失或旧了，重新跑相关 `one add` 或检查模板同步。不要手工把它当成业务配置源；真正的项目列表仍以 `one.manifest.json` 为准。
 
 ## 错误恢复
 
 | 错误码 | 处理 |
 |---|---|
-| `DEV_NO_SUPERVISOR` | 安装 overmind / hivemind / foreman / honcho 中任意一个 |
-| `DEV_PROCFILE_MISSING` | 重新跑一次 `one add` 触发 Procfile 同步，或检查 workspace 是否完整 |
-| `DEV_PROJECT_NOT_FOUND` | 用 manifest 里的 `name` 或 `relativeDir` 作为 `-p` |
+| `DEPENDENCIES_NOT_INSTALLED` | 执行 remediation 给出的安装命令，再重试 |
+| `SUBPROJECT_NOT_FOUND` | 使用项目 `name` 或 `relativeDir` |
 
 完整码表：[错误码大全](/zh/docs/error-codes/)。
 
 ## 进一步阅读
 
-- [本地开发编排](/zh/tutorials/dev-local/) — 从 Procfile 到 supervisor 的完整流程
+- [本地开发编排](/zh/tutorials/dev-local/) — 内置 supervisor 的完整流程
 - [`one run`](/zh/docs/run/) — 只给单条命令注入环境变量
 - [manifest](/zh/docs/manifest/) — 项目列表的来源

@@ -1,13 +1,12 @@
-List available templates
 
-Usage:
+DESCRIPTION
+List available technology stacks
+
+USAGE
   one templates [flags]
-  one templates [command]
 
-Available Commands:
-  list        列出可用模板
+SUBCOMMANDS
+  list           List available technology stacks
 
-Global Flags:
-  -o, --output string   输出格式: json | yaml | text（默认 auto：TTY 时人类格式，pipe 时 JSON）
-
-Use "one templates [command] --help" for more information about a command.
+COMMON OPTIONS
+  -o, --output <value>     Output format: json | yaml | text (default: terminal-friendly text, JSON when piped)

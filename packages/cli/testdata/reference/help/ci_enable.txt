@@ -1,0 +1,21 @@
+
+DESCRIPTION
+Enable continuous integration
+
+USAGE
+  one ci enable [project] [flags]
+
+EXAMPLES
+  one ci enable
+  one ci enable web
+  one ci enable web --provider ci/github-actions
+
+TIPS
+Generates continuous-integration configuration for one project, or every project when no project is provided.
+
+COMMON OPTIONS
+  -o, --output <value>     Output format: json | yaml | text (default: terminal-friendly text, JSON when piped)
+
+AUTOMATION AND ADVANCED OPTIONS
+  -p, --project <value>    Select a project by name or workspace-relative path (legacy/automation)
+  --provider <value>       Continuous-integration provider ID (currently ci/github-actions)

@@ -11,7 +11,7 @@
 #
 # Configurable env vars:
 #   ONE_VERSION       Pin a version (vX.Y.Z). Default: follow $ONE_LATEST_URL.
-#   ONE_INSTALL_DIR   Install dir. Default: $HOME/.local/bin (matches `task install-local`).
+#   ONE_INSTALL_DIR   Install dir. Default: $HOME/.local/bin (matches `task install`).
 #   ONE_FORCE         Set to 1 to allow downgrade, force-reinstall the same version,
 #                     or overwrite an existing binary whose version can't be read.
 #   ONE_REPO_URL      Override the GitHub repo URL. Default: https://github.com/1cli-team/one-cli.

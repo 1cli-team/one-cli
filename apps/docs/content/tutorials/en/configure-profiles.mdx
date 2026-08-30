@@ -90,11 +90,13 @@ one configure remove deploy/aws-s3 --profile old
 When you run a command that needs a profile (e.g. `one deploy`, `one env pull`, `one container push`), One CLI picks one in this order:
 
 1. **`--profile` flag** on the current command (highest priority; one-shot use).
-2. **Local project binding** — `~/.config/one/config.json#workspaces[workspaceId].projects[project].profiles[...]`.
-3. **Local workspace binding** — set with `one configure use <pair> --profile <name> --workspace`.
-4. **Machine default pointer** — whatever `one configure use <pair> --profile <name>` last set (or the first profile, if none was explicitly chosen).
+2. **Environment-aware Project binding** — a Profile name in `profile-bindings.json` for canonical root + environment + Project.
+3. **Environment-aware Workspace binding** — the Workspace-level name for that canonical root + environment.
+4. **Legacy local Project binding** — `config.json#workspaces[workspaceId].projects[project].profiles[...]`.
+5. **Legacy local Workspace binding** — set with `one configure use <pair> --profile <name> --workspace`.
+6. **Machine default pointer** — whatever `one configure use <pair> --profile <name>` last set (or the first profile, if none was explicitly chosen).
 
-Manifest files do not store local profile names. `one configure current <pair>` reports the default pointer (level 4). To debug what a specific command will pick, dry-run with `-o json`:
+Manifest files do not store local Profile names. The Dashboard writes levels 2–3 as names only; it never edits repository files. `one configure current <pair>` reports the default pointer (level 6). To debug what a specific command will pick, dry-run with `-o json`:
 
 ```bash
 one deploy -p api --env staging -o json --dry-run | jq '.profile'

@@ -27,7 +27,7 @@ description: 工作区台账文件 — 谁在写、什么时候改、漂移会�
     "name": "demo-app" // 工作区名，通常来自 one create 的目录名或 --name
   },
   "environments": { // 工作区支持的环境集合
-    "names": ["dev", "staging", "prod"], // 可用环境名
+    "names": ["dev", "preview", "prod"], // 新 Workspace 的默认环境名
     "default": "dev" // 不显式传 --env 时使用的默认环境
   },
   "domains": { // 工作区级 domain 默认配置
@@ -115,8 +115,9 @@ description: 工作区台账文件 — 谁在写、什么时候改、漂移会�
 
 | 命令 | 改 manifest |
 |---|---|
-| `one create` | 创建初始 manifest，含 `workspace` 身份 + 空 `projects` 数组；同时写入 `domains.env.kind`、`environments`，并启用 always-on 的 CI / dev 约定 |
-| `one add` | 给 `projects[]` 加一项；按模板的 `domains.<name>.default` 把每个 backend 写到 `projects[].domains.<name>`；同时写入 `projects[].domains.dev.command`，并跑 infra Sync 重对齐磁盘 |
+| `one create` | 创建初始 manifest，含 `workspace` 身份 + 空 `projects` 数组；同时写入 `domains.env.kind`、`environments`，本地开发可用但不配置 CI |
+| `one add` | 给 `projects[]` 加一项，写入 `projects[].domains.dev.command`，同步本地开发；CI 与部署保持未配置 |
+| 首次 `one deploy <project>` | 本机连接准备好后写入所选兼容部署目标及其生成产物 |
 | `one env set` | 把变量名记到 `domains.env.config.keys` 或 `projects[i].domains.env.keys`（值不进 manifest）；Infisical 未绑定时会触发 lazy auto-bind |
 | `one container build` | 写回 `projects[i].domains.container.image`，并按需写 `domains.container.config.platform` |
 | `one deploy --env <name>` | **不写** manifest；只把 `--env` 透传给当前 deploy 调用 |
@@ -173,4 +174,4 @@ one add nestjs-api --name api
 cat one.manifest.json
 ```
 
-看 `projects[]` 多了一条，`projects[0].domains.{container,deploy}` 按 nestjs-api 模板的 defaults 自动填好。
+看 `projects[]` 多了一条并带有 dev 命令；部署 / 镜像字段直到首次部署前都保持为空。

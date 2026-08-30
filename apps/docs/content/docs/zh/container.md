@@ -39,7 +39,7 @@ one container build -p services/api --build-version v0.1.0
 one container build --dry-run
 ```
 
-默认构建本地 tag：`<workload>:<version>`。当传 `--profile`，或 manifest 里 pin 了 container profile 时，会拼出 registry-qualified tag：`<registry>/[namespace/]<workload>:<version>`，并在有 username/password 时先执行 `docker login`。
+默认构建本地 tag：`<workload>:<version>`。当传 `--profile`，或本机 Profile 解析选中 registry 连接时，会拼出 registry-qualified tag：`<registry>/[namespace/]<workload>:<version>`，并在有 username/password 时先执行 `docker login`。
 
 `--build-version` 是非交互 / CI 用版本号。TTY 模式没传版本时，CLI 会从 manifest、Git 或项目元数据推断，必要时提示选择。
 
@@ -61,9 +61,13 @@ one container push -p apps/web --build-version v0.1.0 --dry-run
 `build` / `push` 使用 Docker registry profile 的顺序：
 
 1. `--profile <name>`
-2. `~/.config/one/config.json#workspaces[workspaceId].projects[project].profiles[container/kind]`
-3. `~/.config/one/config.json#workspaces[workspaceId].profiles[container/kind]`
-4. `~/.config/one/config.json#container/<kind>.default`
+2. `profile-bindings.json` 中 Project + environment 的 `container/<kind>` 绑定
+3. `profile-bindings.json` 中 Workspace + environment 的 `container/<kind>` 绑定
+4. `config.json#workspaces` 中的旧 Project 绑定
+5. `config.json#workspaces` 中的旧 Workspace 绑定
+6. `~/.config/one/config.json#container/<kind>.default`
+
+Container 命令使用 Manifest 默认环境（或第一个已声明环境）作为绑定 key。该 key 只在本机并按规范化 root 隔离；Profile 名永远不进 Manifest。用 `one serve` 为各环境选不同 Profile，或用 `--profile` 单次覆盖 build/push。
 
 配置一次即可复用：
 

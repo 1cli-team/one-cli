@@ -16,7 +16,7 @@ into a valid One CLI workspace. The output is always the same shape:
 
 - `one.manifest.json` (schema v1) at the workspace root
 - code under `apps/` / `services/` / `packages/` (the three hard-wired
-  roots; see `packages/cli/internal/workspace/roots.go`)
+  roots; see `packages/cli/internal/core/workspace/roots.go`)
 - workspace-level tooling files (`pnpm-workspace.yaml`, root
   `package.json`, `.gitignore`, `CLAUDE.md`, etc.)
 
@@ -97,7 +97,7 @@ the user — **never invent a new ID**.
 ### 4. Projects live in one of three roots
 
 `apps/`, `services/`, `packages/` are hard-coded in
-`packages/cli/internal/workspace/roots.go` (no user override). Convention:
+`packages/cli/internal/core/workspace/roots.go` (no user override). Convention:
 
 - frontend / user-facing → `apps/`
 - backend / API / worker → `services/`
@@ -115,7 +115,7 @@ doubt — don't guess.
 ### 6. Manifest schema is v1, period
 
 `one.manifest.json.version` must be `1`. The CLI rejects anything
-else (`packages/cli/internal/workspace/manifest.go:241`). After writing
+else (`packages/cli/internal/core/workspace/manifest.go`). After writing
 the manifest, verify with:
 
 ```bash
@@ -162,8 +162,8 @@ skill for the full table.)
   `references/side-by-side.md`, `references/in-place.md`,
   `references/manifest.md`
 - Companion skill: `one-cli` (for `one create` / `one add` / per-domain commands)
-- Manifest schema source: `packages/cli/internal/workspace/manifest.go`
-- Workspace scaffold inventory: `packages/cli/internal/scaffold/scaffold.go`
+- Manifest schema source: `packages/cli/internal/core/workspace/manifest.go`
+- Workspace scaffold inventory: `packages/cli/internal/modules/creation/workspace_files.go`
 - Template registry: `packages/templates/registry.json`
-- Error code reference: <https://github.com/1cli-team/one-cli/blob/master/packages/cli/internal/errors/codes.go>
+- Error code reference: <https://github.com/1cli-team/one-cli/blob/master/packages/cli/internal/platform/errors/codes.go>
 - Agent Skills format spec: <https://agentskills.io/specification>

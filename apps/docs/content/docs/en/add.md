@@ -3,7 +3,7 @@ title: one add
 description: Add a templated project to an existing workspace.
 ---
 
-`one add` selects a template from the registry, writes it into the workspace, registers it in the manifest, and syncs template defaults such as Dockerfile, Kustomize, workflows, and agent docs.
+`one add` selects a technology stack, writes a locally developable project into the workspace, registers it in the manifest, and refreshes agent docs. CI and deployment remain unconfigured by default.
 
 There are two entry points:
 
@@ -32,7 +32,11 @@ The workspace root uses pnpm. Each project's toolchain comes from the template: 
 
 ## Interactive Mode
 
-Running `one add` with no arguments opens a terminal picker, which is best for first-time use or when you do not know the template ID yet. It asks for template category, template, project name, and, when a template supports multiple deploy backends, the deploy backend for that project.
+Running `one add` with no arguments asks, in order: what you want to add
+(application, service, or shared library), which technology stack to use, and
+the project name. These three groups match the generated directories:
+`apps/`, `services/`, and `packages/`. Documentation sites are applications
+and appear in the first group. It does not ask about deployment.
 
 Non-interactive calls should pass both template ID and project name:
 
@@ -81,8 +85,8 @@ one add
 
 This flow asks for:
 
-1. Template category, such as Frontend / Backend / Library
-2. Template ID, such as `nestjs-api`
+1. Project kind: application / service / shared library
+2. Technology stack, such as `nestjs-api`
 3. Project name, such as `api`
 
 Use this path when you are not sure which template ID to type.
@@ -113,11 +117,9 @@ one add nestjs-api --name user-api --yes -o json | jq
 ## What Gets Synced
 
 - Registers the project in `one.manifest.json#projects[]`
-- Writes `projects[].domains.{container,deploy}` from template defaults
-- Adds a `Dockerfile` for `container/docker` projects
-- Adds `kustomize/base` and `kustomize/overlays/{dev,staging,prod}` for `deploy/kustomize`
-- S3-compatible deploy projects do not write local deploy artifacts; deploy uses the object-storage profile configured by `one configure add deploy/aws-s3 --profile <name>` or another split S3 backend (`deploy/aliyun-oss`, `deploy/r2`, etc.)
-- Adds GitHub Actions workflow entries
+- Writes the project's local development command
+- Leaves continuous integration unconfigured
+- Leaves deployment and image configuration absent until first deploy
 - Refreshes `AGENTS.md`, `CLAUDE.md`, and `.one/agents/**`
 
 If a non-critical step fails, such as agent-doc refresh, the project still exists and the related status is marked `failed` or `skipped`.
@@ -144,5 +146,7 @@ Not sure which one to use? Read the [template decision tree](/en/docs/templates/
 ## After Adding
 
 - Check `one.manifest.json#projects[]` to confirm registration
-- Agent docs and container / deploy artifacts are synced by `one add`
+- Agent docs and local-development configuration are synced by `one add`
+- Run `one dev <project>` next; choose deployment later with `one deploy <project>`
+- Optionally run `one ci enable <project>` to generate its GitHub Actions workflow
 - `one add` does not install dependencies: JS / TS workspaces install from the root with the package manager; Go projects run `go mod download` in the project directory, then `go mod tidy` only after changing imports or when module metadata needs repair

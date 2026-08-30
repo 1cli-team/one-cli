@@ -1,5 +1,5 @@
 // gen-error-codes renders apps/docs/content/docs/zh/error-codes.md
-// from internal/errors.Codes (the source of truth).
+// from internal/platform/errors.Codes (the source of truth).
 //
 // Run via Taskfile: `task gen-error-codes`. Diff the result; commit.
 //
@@ -17,7 +17,7 @@ import (
 	"sort"
 	"strings"
 
-	cliErrors "github.com/torchstellar-team/one-cli/packages/cli/internal/errors"
+	cliErrors "github.com/torchstellar-team/one-cli/packages/cli/internal/platform/errors"
 )
 
 type group struct {
@@ -137,13 +137,13 @@ func render() (string, error) {
 	var b strings.Builder
 	b.WriteString(`---
 title: 错误码大全
-description: One CLI 所有错误码的 code / context / remediation 参考。本文件由 internal/errors/codes.go 自动生成，请勿手工编辑。
+description: One CLI 所有错误码的 code / context / remediation 参考。本文件由 internal/platform/errors/codes.go 自动生成，请勿手工编辑。
 ---
 
 import { Callout } from "fumadocs-ui/components/callout";
 
 <Callout type="info">
-本页由 ` + "`task gen-error-codes`" + ` 从 ` + "`internal/errors/codes.go`" + ` 自动生成。
+本页由 ` + "`task gen-error-codes`" + ` 从 ` + "`internal/platform/errors/codes.go`" + ` 自动生成。
 要改文案，改源文件后重跑命令；不要手工编辑这个 .md。
 </Callout>
 

@@ -17,7 +17,9 @@ project_name: one-cli
 
 before:
   hooks:
+    - go -C packages/kernel mod tidy
     - go -C packages/cli mod tidy
+    - go work sync
 
 builds:
   - id: one

@@ -1,33 +1,29 @@
-新增或更新 env/infisical profile。
 
-凭据获取（Infisical 后台）：
-  Organization → Access Control → Identities → 新建 Universal Auth
-  identity，记下 client id 与 client secret。
+DESCRIPTION
+env/infisical
 
-行为：
-  - 第一次配某个 name → status=completed，自动设为 default
-  - 同名再跑一次     → status=updated（覆盖凭据）
-  - 加 --use         → 显式切到这个 profile
-
-示例：
-  # 交互（推荐）
-  one configure add env/infisical
-
-  # 非交互（CI / 脚本）
-  one configure add env/infisical --profile work \
-      --site-url https://infisical.company.com \
-      --client-id $CID --client-secret $CSEC \
-      --use
-
-Usage:
+USAGE
   one configure add env/infisical [--profile <name>] [flags]
 
-Flags:
-      --client-id string       Universal Auth client ID
-      --client-secret string   Universal Auth client secret
-      --profile string         profile 名（非交互模式必传；交互模式留空则 prompt）
-      --site-url string        Infisical site URL（默认 https://app.infisical.com）
-      --use                    把此 profile 设为 default
+TIPS
+新增或更新 env/infisical Profile。
 
-Global Flags:
-  -o, --output string   输出格式: json | yaml | text（默认 auto：TTY 时人类格式，pipe 时 JSON）
+字段由 Backend Catalog 提供：
+  --site-url  可选
+  --client-id  必填
+  --client-secret  必填
+
+示例：
+  one configure add env/infisical --profile work --site-url https://infisical.company.com --client-id <client-id> --client-secret <client-secret>
+
+第一次创建会自动成为 default；同名调用会更新，--use 会显式切换 default。
+
+COMMON OPTIONS
+  --client-id <value>      client id（必填）
+  --client-secret <value>  client secret（必填）
+  -o, --output <value>     Output format: json | yaml | text (default: terminal-friendly text, JSON when piped)
+  --site-url <value>       site url（如 https://infisical.company.com）
+  --use                    Make this the current local connection
+
+AUTOMATION AND ADVANCED OPTIONS
+  --profile <value>        Local-connection name (required in non-interactive calls)

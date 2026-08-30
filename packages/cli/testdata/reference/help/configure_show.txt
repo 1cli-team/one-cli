@@ -1,11 +1,13 @@
-打印 profile 全文（凭据默认掩码）
 
-Usage:
-  one configure show <pair> --profile <name> [flags]
+DESCRIPTION
+Show a local connection (secrets masked by default)
 
-Flags:
-      --profile string   profile 名（必填）
-      --reveal           显示凭据原文（默认掩码为 ********）
+USAGE
+  one configure show [service-id] [--profile <name>] [flags]
 
-Global Flags:
-  -o, --output string   输出格式: json | yaml | text（默认 auto：TTY 时人类格式，pipe 时 JSON）
+COMMON OPTIONS
+  -o, --output <value>     Output format: json | yaml | text (default: terminal-friendly text, JSON when piped)
+
+AUTOMATION AND ADVANCED OPTIONS
+  --profile <value>        Existing local-connection name; interactive terminals may select one
+  --reveal                 Display credential values instead of masking them

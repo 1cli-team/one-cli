@@ -6,8 +6,8 @@
 //
 // Stability: this package's exported surface is the integration point
 // for future external extensions. Implementations live in
-// internal/toolchain/, which registers itself via init() when imported
-// for side-effects from internal/cli.
+// internal/toolchain/, which the CLI composition root registers explicitly
+// for side-effects from internal/bootstrap/cli.
 package toolchain
 
 // Toolchain is the canonical id stamped into the registry / manifest.

@@ -1,20 +1,24 @@
 // Package ci is the public contract for one-cli's CI providers.
 //
 // A Provider renders a CI workflow file (e.g. .github/workflows/ci-X.yml)
-// for one subproject. It is the user-selectable axis under the
-// CI domain. Multiple provider
-// implementations can register; the user picks one in their manifest
-// selection (manifest.ci section).
+// for one project. Multiple provider implementations can register; callers
+// select one explicitly or use DefaultProviderID. Provider selection is not
+// persisted in one.manifest.json.
 //
 // Stability: Provider is a public type. New methods can be added with
 // default-implementation helpers but existing methods are stable.
 package ci
 
-import "github.com/torchstellar-team/one-cli/packages/cli/pkg/toolchain"
+import (
+	"fmt"
+	"strings"
+	"sync"
 
-// Input describes one subproject's CI workflow needs. Mirrors the
-// previous internal/ci.SyncOptions but exposed publicly so out-of-tree
-// providers can implement Render against a stable shape.
+	"github.com/torchstellar-team/one-cli/packages/cli/pkg/toolchain"
+)
+
+// Input describes one subproject's CI workflow needs so out-of-tree providers
+// can render against a stable shape.
 type Input struct {
 	// ProjectRoot is the absolute path to the workspace root.
 	ProjectRoot string
@@ -46,35 +50,62 @@ type Provider interface {
 	// "ci/github-actions".
 	ID() string
 	// WorkflowFilename returns the path (slash form, relative to
-	// ProjectRoot) where this provider would write the workflow for
-	// the given input. Used by the dispatcher to short-circuit a
-	// rewrite when the file is up to date.
+	// ProjectRoot) where this provider writes the workflow for the given input.
+	// The application uses the same path for status and removal.
 	WorkflowFilename(in Input) string
 	// Render produces the workflow file contents.
 	Render(in Input) string
 }
 
-// providers holds registered CI providers.
-var providers []Provider
+// Registry is an immutable-by-convention provider set owned by one caller.
+type Registry struct {
+	providers []Provider
+}
 
-// Register adds a provider to the active set. Called from each
-// provider package's init().
-func Register(p Provider) {
-	if p == nil {
-		return
+func NewRegistry(providers ...Provider) (*Registry, error) {
+	seen := make(map[string]struct{}, len(providers))
+	copyOfProviders := make([]Provider, 0, len(providers))
+	for _, provider := range providers {
+		if provider == nil {
+			return nil, fmt.Errorf("ci: nil provider")
+		}
+		id := strings.TrimSpace(provider.ID())
+		if id == "" {
+			return nil, fmt.Errorf("ci: provider with empty ID")
+		}
+		if _, exists := seen[id]; exists {
+			return nil, fmt.Errorf("ci: provider %q already registered", id)
+		}
+		seen[id] = struct{}{}
+		copyOfProviders = append(copyOfProviders, provider)
 	}
-	providers = append(providers, p)
+	return &Registry{providers: copyOfProviders}, nil
 }
 
-// Providers returns the registered providers in registration order.
-func Providers() []Provider {
-	return providers
+func MustRegistry(providers ...Provider) *Registry {
+	registry, err := NewRegistry(providers...)
+	if err != nil {
+		panic(err)
+	}
+	return registry
 }
 
-// Lookup returns the provider with the matching ID, or nil. Used by
-// the dispatcher in internal/ci to honor manifest.ci.
-func Lookup(id string) Provider {
-	for _, p := range providers {
+// Providers returns a defensive copy in construction order.
+func (r *Registry) Providers() []Provider {
+	if r == nil {
+		return nil
+	}
+	out := make([]Provider, len(r.providers))
+	copy(out, r.providers)
+	return out
+}
+
+// Lookup returns the provider with the matching ID, or nil.
+func (r *Registry) Lookup(id string) Provider {
+	if r == nil {
+		return nil
+	}
+	for _, p := range r.providers {
 		if p.ID() == id {
 			return p
 		}
@@ -82,7 +113,45 @@ func Lookup(id string) Provider {
 	return nil
 }
 
-// DefaultProviderID is the provider used when manifest.ci is empty.
-// GitHub Actions is the only bundled provider; out-of-tree providers
-// can register via Register and be selected via manifest.ci.
+// The functions below preserve the original public extension API. One CLI's
+// internal composition does not use this process-global compatibility set;
+// new in-process applications should prefer NewRegistry.
+var compatibilityProviders struct {
+	sync.RWMutex
+	providers []Provider
+}
+
+// Register adds a provider to the legacy public compatibility set.
+func Register(provider Provider) {
+	if provider == nil {
+		return
+	}
+	compatibilityProviders.Lock()
+	compatibilityProviders.providers = append(compatibilityProviders.providers, provider)
+	compatibilityProviders.Unlock()
+}
+
+// Providers returns the legacy public compatibility providers.
+func Providers() []Provider {
+	compatibilityProviders.RLock()
+	defer compatibilityProviders.RUnlock()
+	out := make([]Provider, len(compatibilityProviders.providers))
+	copy(out, compatibilityProviders.providers)
+	return out
+}
+
+// Lookup finds a provider in the legacy public compatibility set.
+func Lookup(id string) Provider {
+	compatibilityProviders.RLock()
+	defer compatibilityProviders.RUnlock()
+	for _, provider := range compatibilityProviders.providers {
+		if provider.ID() == id {
+			return provider
+		}
+	}
+	return nil
+}
+
+// DefaultProviderID is used when a caller does not select a provider.
+// GitHub Actions is the only bundled provider.
 const DefaultProviderID = "ci/github-actions"

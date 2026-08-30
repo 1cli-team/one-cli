@@ -49,7 +49,11 @@ jobs:
         with:
           go-version-file: packages/cli/go.mod
           cache: true
-          cache-dependency-path: packages/cli/go.sum
+          cache-dependency-path: |
+            go.work
+            go.work.sum
+            packages/cli/go.sum
+            packages/kernel/go.mod
 
       - name: Set up pnpm
         uses: pnpm/action-setup@v4
@@ -61,10 +65,10 @@ jobs:
         with:
           node-version: 20
           cache: pnpm
-          cache-dependency-path: apps/dashboard/pnpm-lock.yaml
+          cache-dependency-path: pnpm-lock.yaml
 
       - name: Sync bundled assets
-        # packages/cli/internal/bundled/* (registry.json, skills/,
+        # packages/cli/internal/resources/bundled/* (registry.json, skills/,
         # _templates/, _web/) is gitignored and regenerated here. Without
         # this step goreleaser would build a binary with empty embeds.
         run: |

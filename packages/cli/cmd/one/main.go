@@ -1,13 +1,13 @@
 // Command one is the AI Native monorepo workspace orchestrator. This is the
-// thin CLI entry point — the actual command handlers live in internal/cli.
+// thin CLI entry point — the actual command handlers live in internal/bootstrap/cli.
 package main
 
 import (
 	"errors"
 	"os"
 
-	"github.com/torchstellar-team/one-cli/packages/cli/internal/cli"
-	"github.com/torchstellar-team/one-cli/packages/cli/internal/output"
+	"github.com/torchstellar-team/one-cli/packages/cli/internal/bootstrap/cli"
+	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/output"
 )
 
 // version is overridden at build time via -ldflags. The default matches
@@ -20,9 +20,8 @@ func main() {
 		// need to surface the non-zero exit status here.
 		var cliErr *output.Error
 		if errors.As(err, &cliErr) && cliErr.Exit0 {
-			// Cooperative cancel (e.g. Ctrl-C in a prompt). Envelope was
-			// emitted; treat as graceful exit so scripts and parent
-			// processes don't see a fake failure.
+			// Cooperative cancel (e.g. Ctrl-C or "configure later") is
+			// intentionally quiet and successful.
 			return
 		}
 		os.Exit(1)

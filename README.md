@@ -17,7 +17,7 @@ One CLI helps you start and grow product projects without repeating the same set
 
 Use it when your project may need more than a single app: a website, an API, docs, a mobile app, a desktop app, shared libraries, local settings, and a way for AI assistants to understand the project.
 
-One CLI gives you a ready project folder first. You can add more pieces later as the product grows.
+One CLI gives you an empty workspace first. You can add apps, services, documentation sites, and shared libraries as the product grows.
 
 ## Quick Start
 
@@ -29,16 +29,16 @@ curl -fsSL https://1cli.dev/install.sh | bash
 
 Windows users can download a build from [GitHub Releases](https://github.com/1cli-team/one-cli/releases/latest).
 
-Create a project:
+Create a workspace and add a project:
 
 ```bash
 one create my-app
 cd my-app
 one add react-spa --name web
-one dev
+one dev web
 ```
 
-That gives you a project folder, a first app, and a local way to run it.
+That gives you a workspace, a first app, and a local way to run it.
 
 ## Why Use It
 
@@ -71,7 +71,7 @@ See the available starters:
 one templates
 ```
 
-Add one to an existing One CLI project:
+Add one to an existing One CLI workspace:
 
 ```bash
 one add nestjs-api --name api
@@ -81,15 +81,14 @@ one add nestjs-api --name api
 
 | Command | What it helps you do |
 |---|---|
-| `one create <name>` | Start a new project folder |
+| `one create <workspace>` | Create an empty workspace |
 | `one add <starter>` | Add another app, service, docs site, or library |
-| `one templates` | See what you can add |
-| `one configure` | Save local settings for environments, deployment, and images |
-| `one serve` | Open a local browser page for sensitive settings |
-| `one dev` | Run the project locally |
-| `one run -- <cmd>` | Run a command with the right local environment |
-| `one deploy` | Deploy selected parts of the project |
-| `one skills install` | Teach supported AI assistants how to use One CLI |
+| `one dev [project]` | Run every project, or one selected project, locally |
+| `one deploy [project]` | Choose a target on first deploy, then deploy |
+| `one env` | Review and manage environment variables |
+| `one configure` | Manage local connections and preferences |
+| `one serve` | Inspect Workspaces and Projects; manage local Profiles and bindings |
+| `one ci [enable\|sync\|disable]` | Optionally manage generated GitHub Actions workflows |
 
 Full command docs live at [1cli.dev](https://1cli.dev).
 
@@ -120,16 +119,18 @@ Some projects need environment values, deployment accounts, or image registry se
 For a guided browser-based setup:
 
 ```bash
-one serve
+one configure open
 ```
 
-The page only binds to your local machine by default, so it is a better place for sensitive values than a chat window or a shared document.
+The page only binds to your local machine by default, so it is a better place for sensitive values than a chat window or a shared document. Workspace code, Project fields, Backend choices, and `one.manifest.json` are view-only in the Dashboard. Its writable surface is limited to machine Profiles and the Profile name selected for a Workspace or Project in an environment.
+
+Profile definitions and credentials live in `~/.config/one/config.json` and `credentials.json`. They are machine-global, so Profile CRUD in Settings is not environment-scoped. The Dashboard UI offers Development, Preview, and Production binding contexts; those selections live separately in `~/.config/one/profile-bindings.json`, keyed by canonical Workspace root and environment. The core/API can also store safe custom environment IDs for non-UI workflows. These files never upgrade or modify the repository manifest.
 
 ## Project Map
 
 Every One CLI project has a `one.manifest.json` file at the root. Most users do not need to edit it by hand.
 
-Think of it as the project map. It records which parts exist, where they live, and which starter created them. One CLI reads it when you add, run, or deploy parts of the project.
+Think of it as the project map. It records which parts exist, where they live, and which starter created them. One CLI reads it when you add, run, deploy, or inspect parts of the project. `one serve` never writes it; repository changes stay in the normal code-review workflow.
 
 ## Repository Layout
 
@@ -141,12 +142,14 @@ If you want to work on One CLI itself, the repository is organized like this:
 | `packages/templates` | Starters used by `one add` |
 | `packages/skills` | Guidance installed for AI assistants |
 | `apps/docs` | Documentation website |
-| `apps/dashboard` | Local settings UI opened by `one serve` |
+| `apps/dashboard` | Local Workspace, Project, and Profile Dashboard opened by `one serve` |
 | `assets` | Brand assets, including the logo |
 
 Common contributor commands:
 
 ```bash
+pnpm install
+task check
 task build
 task test
 task verify-docs

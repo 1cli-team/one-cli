@@ -161,7 +161,7 @@ rm ~/.local/bin/one
 git clone https://github.com/1cli-team/one-cli
 cd one-cli
 brew install go go-task     # macOS；Linux 类比
-task install-local           # 编译当前分支并 symlink 到 ~/.local/bin/one
+task install                 # 打包 Dashboard + CLI，再 symlink 到 ~/.local/bin/one
 hash -r
 which one
 one --version

@@ -1,3 +1,5 @@
+sharedWorkspaceLockfile: true
+
 packages:
   - "apps/*"
   - "packages/*"

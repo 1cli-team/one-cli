@@ -39,7 +39,7 @@ one container build -p services/api --build-version v0.1.0
 one container build --dry-run
 ```
 
-By default, build creates a local tag: `<workload>:<version>`. When `--profile` is passed, or the manifest pins a container profile, the tag becomes `<registry>/[namespace/]<workload>:<version>` and Docker login runs when credentials are present.
+By default, build creates a local tag: `<workload>:<version>`. When `--profile` is passed or local Profile resolution selects a registry connection, the tag becomes `<registry>/[namespace/]<workload>:<version>` and Docker login runs when credentials are present.
 
 Schema: `one-cli/container-build/v2`.
 
@@ -57,9 +57,13 @@ Schema: `one-cli/container-push/v1`.
 ## Profile resolution
 
 1. `--profile <name>`
-2. `~/.config/one/config.json#workspaces[workspaceId].projects[project].profiles[container/kind]`
-3. `~/.config/one/config.json#workspaces[workspaceId].profiles[container/kind]`
-4. `~/.config/one/config.json#container/<kind>.default`
+2. Project + environment `container/<kind>` binding in `profile-bindings.json`
+3. Workspace + environment `container/<kind>` binding in `profile-bindings.json`
+4. legacy Project binding in `config.json#workspaces`
+5. legacy Workspace binding in `config.json#workspaces`
+6. `~/.config/one/config.json#container/<kind>.default`
+
+Container commands use the Manifest's default environment (or its first declared environment) as the binding key. The key is local and canonical-root-scoped; the Profile name never enters the Manifest. Use `one serve` to choose a different Profile per environment, or `--profile` for a one-shot build/push override.
 
 Configure once:
 

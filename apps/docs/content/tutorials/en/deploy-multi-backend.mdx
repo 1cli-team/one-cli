@@ -1,6 +1,6 @@
 ---
 title: Service deploy
-description: All 10 deploy backends compared. Mixed workspaces. Multi-environment trees. Per-project flags, profile pinning, and dry-run.
+description: All 10 deploy backends compared. Mixed workspaces. Multi-environment trees. Per-project local Profile bindings and dry-run.
 ---
 
 `one deploy` runs every project's deploy step in one go, dispatching each project to its declared backend. A workspace with a Next.js front end on Vercel and a NestJS API on Kubernetes ships both with a single `one deploy`.
@@ -57,26 +57,11 @@ Per-backend behavior:
 
 Default env resolution: `projects[*].domains.deploy.<provider>.env` → `manifest.environments.default` → `prod`.
 
-## Per-project pinning
+## Per-project local Profile binding
 
-To make `one deploy` always use a specific profile or environment for a project, pin it in the manifest:
+The Manifest records the deploy Backend and its repository-owned configuration, but never a local Profile name. To make this checkout use `prod-cluster` for the `api` Project in `prod`, run `one serve`, select **Production**, open `api`, and choose that Profile. The Dashboard writes only the name to `~/.config/one/profile-bindings.json`; it does not edit `one.manifest.json`.
 
-```json
-{
-  "name": "api",
-  "domains": {
-    "deploy": {
-      "kind": "kustomize",
-      "profile": "prod-cluster",
-      "config": {
-        "kustomizationPath": "k8s/overlays/prod"
-      }
-    }
-  }
-}
-```
-
-The pin is what makes a deploy *reproducible* — the same `one deploy -p api` from any machine targets the same cluster, as long as the named profile exists.
+This boundary is intentional: the repository makes the Backend and target environment reviewable, while each machine or CI runner maps them to its own credentials. Another checkout, even with the same Manifest Workspace ID, gets an independent binding because the local store is keyed by canonical root. CI can also use an explicit one-shot `--profile`.
 
 ## Mixed-backend workspace example
 

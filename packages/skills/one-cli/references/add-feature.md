@@ -1,10 +1,9 @@
 # Mode: Add a Project (Template Path)
 
-Use when the user wants to add a new project to an existing
-workspace using one of the bundled templates. Pick a template, render
-it, infra + CI + agent docs update automatically. The `defaults` declared
-on the template (e.g. `container=docker` + `deploy=kustomize` for
-go-api / nestjs-api / nextjs-app) auto-enable at add time.
+Use when the user wants to add a new project to an existing workspace using
+one of the bundled technology stacks. It renders a locally developable
+project; deployment is deliberately configured later, on the first
+`one deploy <project>`.
 
 ## Inputs to extract
 
@@ -63,12 +62,16 @@ Schema: `one-cli/add/v1`. The CLI does all of:
 - Renders template into `apps/<name>/` (frontend) / `services/<name>/`
   (backend) / `packages/<name>/` (library), based on the template's
   category
-- Writes `Dockerfile` if missing
-- Adds an entry to `docker-compose.yml` (if workspace had it)
-- Adds Deployment + Service to `k8s/deployment.yaml` (if workspace had it)
-- Writes `.github/workflows/<name>-ci.yml`
+- Does not generate CI workflow files by default
 - Updates `one.manifest.json`
 - Refreshes `AGENTS.md`, `CLAUDE.md`, and `.one/agents/**`
+- Leaves deployment and image configuration absent until first deploy
+
+If the user explicitly requests CI, run it as a separate step after add:
+
+```bash
+one ci enable <project_name> -o json
+```
 
 ### Step 3 — Install missing dependencies
 
@@ -94,10 +97,9 @@ Use the detected package manager for Node workspaces (`pnpm`, `npm`, or
 cat one.manifest.json
 ```
 
-Expect the new project in `projects[]`. Inspect the rendered
-files on disk to confirm the expected artefacts landed (Dockerfile,
-`.github/workflows/<name>-ci.yml`, etc.). If something is missing,
-re-run `one add` for that project — the writer is idempotent.
+Expect the new project and its dev command in `projects[]`. Deployment and
+container fields should be absent after an ordinary add. Use bare `one` to see
+the next recommended command.
 
 ## Mode-specific error recovery
 
@@ -112,6 +114,5 @@ re-run `one add` for that project — the writer is idempotent.
 
 Tell the user:
 - Project name + template + target directory
-- Whether infra (Docker / K8s) integration happened
-- The dev command to start it (look at the rendered `package.json`'s
-  `scripts.dev` or the README in the rendered template)
+- That deployment will be chosen later
+- The next command: `one dev <project_name>`

@@ -5,10 +5,9 @@
 // Run via Taskfile: `task verify-cli-references`. Exits non-zero with a
 // list of file:line offenders on any drift.
 //
-// Source of truth: cobra command tree, accessed via cli.RootCmd(). All
-// side-effect command registrations have run by the time RootCmd()
-// returns, so this stays in sync automatically when commands are added,
-// removed, or renamed.
+// Source of truth: cobra command tree, accessed via cli.RootCmd(). RootCmd
+// returns the explicitly assembled graph, so this stays in sync automatically
+// when commands are added, removed, or renamed.
 //
 // What we scan:
 //   - Top-level: README.md, CLAUDE.md, CONTRIBUTING.md
@@ -40,7 +39,7 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/torchstellar-team/one-cli/packages/cli/internal/cli"
+	"github.com/torchstellar-team/one-cli/packages/cli/internal/bootstrap/cli"
 )
 
 func main() {
@@ -93,6 +92,10 @@ func collectCommands(root *cobra.Command) map[string]struct{} {
 			set[alias] = struct{}{}
 		}
 	}
+	// `one help` is handled by the root harness/Cobra rather than mounted as
+	// an ordinary product command. It is still a supported copy-pasteable
+	// invocation (`one help --all`, `one help create`).
+	set["help"] = struct{}{}
 	// Brand-name exemption: `one cli` is the project name (the binary
 	// is `one`, but the project everywhere is "one cli"). It's not a
 	// command and never will be — adding it here lets prose like

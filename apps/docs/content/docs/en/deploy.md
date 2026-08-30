@@ -3,20 +3,22 @@ title: one deploy
 description: Dispatch projects to kustomize, S3-compatible storage, Vercel, Cloudflare, or EdgeOne deploy backends.
 ---
 
-`one deploy` is the per-project deploy entry point. It reads `projects[].domains.deploy.kind` and dispatches each project to the matching backend.
+`one deploy` is the per-project deploy entry point. The first deployment chooses a compatible target and local connection; later runs reuse that project setup.
 
 ## Usage
 
 ```bash
-one deploy [-p <name|path>] [--profile <name>] [--env <env>] [--env-provider dotenv|infisical] [--build-version <version>] [--dry-run]
+one deploy [project] [--provider <target>] [--profile <connection>] [--env <env>] [--dry-run]
 ```
 
 ## Options
 
 | option | purpose |
 |---|---|
-| `-p`, `--project <name|path>` | deploy one project by manifest `name` or `relativeDir` |
-| `--profile <name>` | one-shot deploy profile override |
+| positional `project` | deploy one project by manifest `name` or `relativeDir` |
+| `-p`, `--project <name|path>` | legacy selector for scripts and CI |
+| `--provider <target>` | explicit first-deploy target for automation |
+| `--profile <name>` | one-shot local-connection override |
 | `--env <env>` | override both deploy target environment and env-var environment |
 | `--env-provider dotenv|infisical` | override the workspace env provider |
 | `--build-version <version>` | CI/non-interactive image version, mainly for kustomize auto-build |
@@ -24,12 +26,14 @@ one deploy [-p <name|path>] [--profile <name>] [--env <env>] [--env-provider dot
 
 ## Interactive Mode
 
-`one deploy` is not a full wizard, but TTY mode can ask for a few missing values:
+For an unconfigured project, TTY mode asks in this order:
 
-- Kustomize deploys need an image version. When `--build-version` is omitted, One CLI can use the same version picker as `one container build`.
-- Cloudflare deploys can ask for API token / account ID and save a default profile when no usable profile exists and `--profile` was not passed.
+1. Project (when omitted)
+2. Deployment-target category
+3. A compatible service already implemented by this build
+4. Whether to configure a missing local connection now or later
 
-Scripts, CI, and agents should pass `--profile`, `--env`, and `--build-version` explicitly, then use `--dry-run` to inspect the plan.
+"Configure later" exits 0, does not modify the workspace, and prints the exact recovery command. Scripts use `one deploy <project> --provider <target> --profile <connection>`.
 
 ## Backends
 
@@ -56,18 +60,22 @@ Scripts, CI, and agents should pass `--profile`, `--env`, and `--build-version` 
 ## Profile resolution
 
 1. `--profile <name>`
-2. `~/.config/one/config.json#workspaces[workspaceId].projects[project].profiles[deploy/backend]`
-3. `~/.config/one/config.json#workspaces[workspaceId].profiles[deploy/backend]`
-4. `~/.config/one/config.json#deploy/<backend>.default`
+2. Project + environment `deploy/<backend>` binding in `profile-bindings.json`
+3. Workspace + environment `deploy/<backend>` binding in `profile-bindings.json`
+4. legacy Project binding in `config.json#workspaces`
+5. legacy Workspace binding in `config.json#workspaces`
+6. `~/.config/one/config.json#deploy/<backend>.default`
 
-Manifest files never store local profile names. Bind one locally with `one configure use <pair> --profile <name> --workspace`, or add `--project <name|path>` for a single project.
+Environment-aware keys use the canonical Workspace root. For deploy resolution, the environment is the Project's configured deploy environment, falling back to `prod`; use `--profile` for a one-shot override. Select per-environment Workspace/Project names in `one serve`. The Dashboard environment comes from `?env=` and selecting it never changes the deploy environment or Manifest.
+
+Manifest files never store local Profile names. `one configure use <pair> --profile <name> --workspace` and `--project <name|path>` continue to create compatible, environment-agnostic legacy bindings.
 
 ## Examples
 
 ```bash
 one deploy --dry-run
-one deploy -p web --env staging --dry-run
-one deploy -p api --profile prod-k8s --build-version v0.1.0
+one deploy web --env staging --dry-run
+one deploy api --provider kustomize --profile prod-k8s --build-version v0.1.0
 ```
 
 ## Output schemas
@@ -84,7 +92,7 @@ one deploy -p api --profile prod-k8s --build-version v0.1.0
 
 | code | fix |
 |---|---|
-| `BACKEND_NOT_ENABLED` | choose a deploy-enabled template or add `projects[].domains.deploy` |
+| `BACKEND_NOT_ENABLED` | select a project and explicit target in non-interactive calls |
 | `PROFILE_NOT_FOUND` | run `one configure list deploy/<backend>` |
 | `PROFILE_NONE_CONFIGURED` | run `one configure add deploy/<backend> <name> --use` |
 | `ENV_UNKNOWN_ENVIRONMENT` | add the env to `manifest.environments.names` or use an existing name |

@@ -3,7 +3,7 @@ title: one add
 description: 往工作区里加一个模板化项目。
 ---
 
-`one add` 从模板注册表选一个模板写入工作区，登记到 manifest，并按模板的 `defaults` 同步 Dockerfile / Kustomize / workflow 等产物。
+`one add` 选择技术栈，生成一个可本地开发的项目并登记到 manifest，同时刷新 Agent 文档。CI 和部署默认都保持未配置。
 
 有两条入口：
 
@@ -32,7 +32,7 @@ one add [template-id] --name <project-name> [--deploy-provider <backend>] [optio
 
 ## 交互模式
 
-直接运行 `one add` 会进入终端交互式选择器，适合第一次使用或不确定模板 ID 时使用。它会依次询问模板分类、模板、项目名；如果模板支持多个 deploy 后端，还会询问本项目使用哪个 deploy 后端。
+直接运行 `one add` 会依次询问：想添加什么（应用、服务或共享库）、选择技术栈、输入项目名。三类与生成目录 `apps/`、`services/`、`packages/` 对应；文档站属于应用，显示在第一类中。不会询问部署目标。
 
 非交互场景要显式传模板 ID 和项目名：
 
@@ -81,8 +81,8 @@ one add
 
 这个流程会依次询问：
 
-1. 模板分类（Frontend / Backend / Library）
-2. 具体模板（比如 `nestjs-api`）
+1. 项目类型（应用 / 服务 / 共享库）
+2. 技术栈（比如 `nestjs-api`）
 3. 项目名（比如 `api`）
 
 不确定模板 ID 时，用这一种最稳。
@@ -113,11 +113,9 @@ one add nestjs-api --name user-api --yes -o json | jq
 ## 加完会自动做的事
 
 - 把项目登记到 `one.manifest.json#projects[]`
-- 写入 `projects[].domains.{container,deploy}` 字段（按模板的 `domains.<name>.default`）
-- `container/docker` 项目根加 `Dockerfile`
-- `deploy/kustomize` 工作区根加 `kustomize/base` 和 `kustomize/overlays/{dev,staging,prod}`
-- S3 兼容 deploy 后端不写本地部署产物；部署时使用 `one configure add deploy/aws-s3 --profile <name>` 或其它拆分后的 S3 后端（`deploy/aliyun-oss`、`deploy/r2` 等）配置的对象存储 profile
-- 加 GitHub Actions workflow 条目
+- 写入项目的本地开发命令
+- 持续集成保持未配置
+- 部署和镜像配置保持为空，首次部署时再生成
 - 刷 `AGENTS.md`、`CLAUDE.md` 和 `.one/agents/**`
 
 如果有失败的 step（比如 agent 文档刷新失败），项目仍然加成功，只是相关字段会标 `failed` / `skipped`。
@@ -144,5 +142,7 @@ one add nestjs-api --name user-api --yes -o json | jq
 ## 加完之后
 
 - 检查 `one.manifest.json#projects[]` 确认项目登记
-- Agent 文档、容器 / 部署 artefacts 都已由 `one add` 在执行过程中同步完成
+- Agent 文档和本地开发配置会由 `one add` 同步
+- 下一步运行 `one dev <project>`；需要部署时再运行 `one deploy <project>`
+- 如需持续集成，单独运行 `one ci enable <project>` 生成 GitHub Actions 工作流
 - `one add` 不自动安装依赖：JS / TS 工作区在根目录跑 package manager install；Go 项目进项目目录跑 `go mod download`，修改 imports 或需要修复模块元数据时再跑 `go mod tidy`

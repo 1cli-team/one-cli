@@ -1,0 +1,23 @@
+
+DESCRIPTION
+Manage optional continuous integration
+
+USAGE
+  one ci [flags]
+
+SUBCOMMANDS
+  disable        Disable continuous integration
+  enable         Enable continuous integration
+  sync           Refresh continuous-integration configuration
+
+EXAMPLES
+  one ci
+  one ci enable web
+  one ci sync
+  one ci disable web
+
+TIPS
+Shows and manages optional continuous integration. Workspaces and projects do not enable it automatically; the current build supports GitHub Actions.
+
+COMMON OPTIONS
+  -o, --output <value>     Output format: json | yaml | text (default: terminal-friendly text, JSON when piped)

@@ -1,9 +1,9 @@
 ---
 title: one configure
-description: 管理机器级 endpoint profile：Infisical、对象存储、Kubernetes、Vercel、Cloudflare、EdgeOne 和 Docker registry。
+description: 管理部署、环境变量和镜像仓库所需的本机连接与偏好设置。
 ---
 
-`one configure` 管的是**本机 profile**，不是某个 workspace 的业务配置。profile 保存 endpoint、账号和凭据，供 `one env`、`one container`、`one deploy`、`one run` 读取。
+`one configure` 管理**本机连接和偏好设置**，不是工作区业务配置。密钥只保存在本机，不写入工作区或 Git。
 
 ## 用法
 
@@ -17,9 +17,10 @@ one configure show <pair> --profile <name> [--reveal]
 one configure use <pair> --profile <name>
 one configure remove <pair> --profile <name>
 one configure locale [auto|zh-CN|en-US]
+one configure open
 ```
 
-无参 `one configure` 和 `one configure add` 会打开交互式向导；脚本、CI、agent 应显式传 `<pair>`、profile 名和对应 backend flags。
+没有连接时，无参 `one configure` 进入建立连接向导；已有连接时显示简洁概览。`show` / `use` / `remove` 在终端可直接选择已有连接；脚本仍显式传 `<pair>` 和 `--profile`。
 
 ## 交互模式
 
@@ -30,9 +31,9 @@ one configure
 one configure add
 ```
 
-向导会先让你选择要配置的 `(domain, backend)`，例如 `env/infisical`、`deploy/aws-s3`、`container/docker`，再逐项询问 profile 名、endpoint、token、ak/sk、kubeconfig 等字段。敏感字段会以密码输入方式录入。
+向导先选择要连接的服务，再询问连接名称和该服务需要的字段。自动化命令中继续使用稳定服务 ID；敏感字段使用密码式输入。
 
-脚本、CI、agent 不应该等待交互式向导；请显式传 pair、profile 名和 backend 参数。
+脚本和 CI 不应等待交互式向导；请显式传服务 ID、连接名称（`--profile`）和服务参数。
 
 ## 支持的 pair
 
@@ -87,8 +88,15 @@ one configure add container/ghcr --profile ghcr \
 命令实际使用 profile 时按这个顺序找：
 
 1. 命令行 `--profile <name>`
-2. `one.manifest.json` 里的 project / workspace profile pin
-3. `~/.config/one/config.json` 里对应 `domain/backend.default`
+2. `profile-bindings.json` 中的 Project + environment 绑定
+3. `profile-bindings.json` 中的 Workspace + environment 绑定
+4. `config.json#workspaces` 中的旧 Project 绑定
+5. `config.json#workspaces` 中的旧 Workspace 绑定
+6. `~/.config/one/config.json` 里对应 `domain/backend.default`
+
+环境绑定按规范化 Workspace root、environment 和 `(domain, backend)` 定位，只保存 Profile 名。Dashboard UI 通过 `?env=` 只提供 `dev`、`preview`、`prod`；核心/API 也接受其他工作流传入的安全自定义 ID。全局 Settings 中的 Profile CRUD 不按环境分区。空环境保持旧解析链。
+
+`one.manifest.json` 永远不保存本机 Profile 名。`one configure use ... --workspace` 和 `--project` 作为旧绑定仍兼容；需要每个环境不同选择时使用 `one serve`。
 
 同名 profile 可以存在于不同 backend 下，例如 `deploy/aws-s3` 和 `deploy/kustomize` 都可以有 `prod`。
 
@@ -96,12 +104,13 @@ one configure add container/ghcr --profile ghcr \
 
 ```text
 ~/.config/one/
-├── config.json         # 非敏感字段：endpoint、region、default 指针
-├── credentials.json    # 敏感字段：clientSecret、accessKeySecret、password
-└── cache/              # 短期 token 缓存
+├── config.json             # Profile 非敏感字段、default、旧绑定
+├── credentials.json        # 敏感字段：clientSecret、accessKeySecret、password
+├── profile-bindings.json   # v1：规范化 root + environment -> Profile 名
+└── cache/                  # 短期 token 缓存
 ```
 
-两个 JSON 文件都是 `0600`。`show` 默认掩码敏感字段，只有 `show --reveal` 会输出明文。
+三个 JSON 文件都是 mode `0600` 的机器本地文件；`profile-bindings.json` 只含名字。它们都不会修改或升级 `one.manifest.json`。`show` 默认掩码敏感字段，只有 `show --reveal` 会输出明文。
 
 ## 输出 schema
 
@@ -123,14 +132,14 @@ one configure add container/ghcr --profile ghcr \
 | `PROFILE_NONE_CONFIGURED` | 先跑 `one configure add <pair> --profile <name> --use` |
 | `PROFILE_NOT_FOUND` | `one configure list <pair>` 看本机已有 profile |
 | `PROFILE_BACKEND_INVALID` | 确认 profile 所在 backend 与目标 project 的 deploy/container backend 一致 |
-| `PROFILE_FILE_INVALID` | 手工修复或删除 `~/.config/one/config.json` / `credentials.json` 后重建 |
-| `PROFILE_VERSION_UNSUPPORTED` | 旧格式配置不兼容，按当前 `(domain, backend)` 重新配置 |
+| `PROFILE_FILE_INVALID` | 修复错误 context 指向的文件（`config.json`、`credentials.json` 或 `profile-bindings.json`） |
+| `PROFILE_VERSION_UNSUPPORTED` | 升级 One CLI，或只重建不兼容的机器本地文件 |
 
 完整码表：[错误码大全](/zh/docs/error-codes/)。
 
 ## 进一步阅读
 
-- [`one serve`](/zh/docs/serve/) — 用本地 Web UI 手工编辑这些 profile
+- [`one serve`](/zh/docs/serve/) — 编辑 Profile 并选择环境感知的本机绑定
 - [`one env`](/zh/docs/env-vars/) — 使用 `env/infisical` profile
 - [`one deploy`](/zh/docs/deploy/) — 使用 deploy profile
 - [`one container`](/zh/docs/container/) — 使用 container profile

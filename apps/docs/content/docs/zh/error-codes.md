@@ -1,12 +1,12 @@
 ---
 title: 错误码大全
-description: One CLI 所有错误码的 code / context / remediation 参考。本文件由 internal/errors/codes.go 自动生成，请勿手工编辑。
+description: One CLI 所有错误码的 code / context / remediation 参考。本文件由 internal/platform/errors/codes.go 自动生成，请勿手工编辑。
 ---
 
 import { Callout } from "fumadocs-ui/components/callout";
 
 <Callout type="info">
-本页由 `task gen-error-codes` 从 `internal/errors/codes.go` 自动生成。
+本页由 `task gen-error-codes` 从 `internal/platform/errors/codes.go` 自动生成。
 要改文案，改源文件后重跑命令；不要手工编辑这个 .md。
 </Callout>
 
@@ -115,11 +115,11 @@ Current directory is not a One workspace (one.manifest.json is missing).
 
 ### `PROJECT_NAME_REQUIRED`
 
-Non-interactive create called without a project name.
+Non-interactive create called without a workspace directory.
 
 **Remediation**:
 
-- `provide-name` — 把项目名作为位置参数<br />运行：`one create <project-name>`
+- `provide-name` — 把工作区目录作为位置参数<br />运行：`one create <workspace-directory>`
 
 ### `TARGET_EXISTS`
 
@@ -224,9 +224,21 @@ Workspace 后置同步失败：写入 manifest 后某个后端 sync 回滚或失
 
 插件选择、profile 解析、部署 / CI 产物生成过程中的问题。
 
+### `CI_DISABLE_CONFIRMATION_REQUIRED`
+
+A non-interactive CI disable requires explicit --yes confirmation.
+
+> 没有默认 remediation。具体恢复方式请看错误的 `context` 字段。
+
+### `CI_NOT_ENABLED`
+
+The selected project does not have a generated CI workflow.
+
+> 没有默认 remediation。具体恢复方式请看错误的 `context` 字段。
+
 ### `CI_PROVIDER_UNKNOWN`
 
-one.manifest.json references an unknown CI provider.
+The requested CI provider is not implemented by this build.
 
 > 没有默认 remediation。具体恢复方式请看错误的 `context` 字段。
 
@@ -284,15 +296,23 @@ Profile's credentialSource is set to a value this build does not implement (only
 
 ### `PROFILE_FILE_INVALID`
 
-~/.config/one/config.json or credentials.json failed to parse as JSON.
+One of config.json, credentials.json, or profile-bindings.json failed to parse as JSON.
 
 **Remediation**:
 
-- `edit-profile-file` — 手动检查并修复对应文件，或删除后重新 `one configure add <domain>/<backend> --profile <name>`<br />运行：`rm ~/.config/one/config.json ~/.config/one/credentials.json`
+- `edit-profile-file` — 根据 error.context.path 检查并修复对应的机器本地文件；删除 profile-bindings.json 只会清除本机选择，不会删除凭据或修改仓库
+
+### `PROFILE_IN_USE`
+
+The Profile is still selected by one or more environment-aware Workspace or Project bindings.
+
+**Remediation**:
+
+- `unbind-profile` — 先在 Dashboard 中把对应 Workspace / Project Profile 选择改为 Automatic，再删除
 
 ### `PROFILE_NONE_CONFIGURED`
 
-No profile resolved from --profile / workspace binding / machine default. The backend needs an endpoint to talk to.
+No Profile resolved from --profile, environment-aware Project/Workspace bindings, legacy bindings, or the machine default.
 
 **Remediation**:
 
@@ -309,11 +329,11 @@ Requested profile does not exist under the (domain/backend) section.
 
 ### `PROFILE_VERSION_UNSUPPORTED`
 
-config.json or credentials.json schema version does not match this binary.
+A machine-local Profile file schema does not match this binary.
 
 **Remediation**:
 
-- `upgrade-cli` — 升级 one cli 到最新版本，或删除两个文件后重建配置
+- `upgrade-cli` — 升级 one cli，或仅重建 error.context.path 指向的不兼容机器本地文件；无需升级 one.manifest.json
 
 ### `RELEASE_FLOW_MISMATCH`
 
@@ -623,6 +643,12 @@ Container profile is missing required fields for its kind (e.g. acr needs region
 
 - `reconfigure-container` — 重新配置 container profile<br />运行：`one configure add container/<kind> --profile <name> --use`
 
+### `DEPENDENCIES_NOT_INSTALLED`
+
+Node dependencies required for local development are not installed.
+
+> 没有默认 remediation。具体恢复方式请看错误的 `context` 字段。
+
 ### `DOMAIN_INVALID`
 
 Domain name is not one of the recognised domains (container / deploy / dev / ci / env).
@@ -756,6 +782,12 @@ one serve 无法绑定请求的端口（被占用或权限不足）。
 
 - `use-random-port` — 改用随机端口（让内核分配空闲端口）<br />运行：`one serve --port 0`
 - `pick-different-port` — 或显式换一个空闲端口<br />运行：`one serve --port 17900`
+
+### `SERVE_REPOSITORY_READ_ONLY`
+
+Dashboard 只读查看工作区代码和 one.manifest.json；仅机器本地 profile 配置可修改。
+
+> 没有默认 remediation。具体恢复方式请看错误的 `context` 字段。
 
 ### `SERVE_TOKEN_INVALID`
 

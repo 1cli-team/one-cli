@@ -1,6 +1,6 @@
 ---
 title: 服务部署
-description: 10 个 deploy backend 对比、混合后端工作区、多环境树、per-project flag、profile 钉死、dry-run。
+description: 10 个 deploy backend 对比、混合后端工作区、多环境树、per-project 本机 Profile 绑定、dry-run。
 ---
 
 `one deploy` 一次性把工作区每个项目按自己声明的 backend 推上线。一个 Next.js 前端走 Vercel、NestJS API 走 k8s 的工作区，跑一次 `one deploy` 两个都上。
@@ -57,26 +57,11 @@ one deploy --env staging
 
 env 默认解析：`projects[*].domains.deploy.<provider>.env` → `manifest.environments.default` → `prod`。
 
-## Per-project 钉死
+## Per-project 本机 Profile 绑定
 
-要让 `one deploy` 永远对某个项目用某个 profile / 环境，钉进 manifest：
+Manifest 记录 deploy Backend 和代码库所有的配置，但永远不记录本机 Profile 名。要让当前 checkout 在 `prod` 下为 `api` Project 使用 `prod-cluster`，运行 `one serve`，选择**生产环境**，打开 `api` 并选该 Profile。Dashboard 只把名字写入 `~/.config/one/profile-bindings.json`，不会编辑 `one.manifest.json`。
 
-```json
-{
-  "name": "api",
-  "domains": {
-    "deploy": {
-      "kind": "kustomize",
-      "profile": "prod-cluster",
-      "config": {
-        "kustomizationPath": "k8s/overlays/prod"
-      }
-    }
-  }
-}
-```
-
-钉死是**可复现部署**的关键 — 只要 profile 名字在那台机器存在，任何机器跑 `one deploy -p api` 都打到同一个集群。
+这个边界是刻意的：代码库让 Backend 和目标环境可审查，每台机器或 CI runner 再映射自己的凭据。另一份 checkout 即使带相同 Manifest Workspace ID，也因本机存储按规范化 root 键控而拥有独立绑定。CI 也可显式传一次性 `--profile`。
 
 ## 混合 backend 工作区示例
 

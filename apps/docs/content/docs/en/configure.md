@@ -1,9 +1,9 @@
 ---
 title: one configure
-description: Manage machine-level endpoint profiles for Infisical, object storage, Kubernetes, Vercel, Cloudflare, EdgeOne, and Docker registries.
+description: Manage local connections and preferences for deployment, environment variables, and image registries.
 ---
 
-`one configure` manages **machine-level profiles**, not application code. Profiles hold endpoints and credentials used later by `one env`, `one container`, `one deploy`, and `one run`.
+`one configure` manages **local connections and preferences**, not application code. Credentials stay on this machine and are never written to the workspace or Git.
 
 ## Usage
 
@@ -17,9 +17,10 @@ one configure show <pair> --profile <name> [--reveal]
 one configure use <pair> --profile <name>
 one configure remove <pair> --profile <name>
 one configure locale [auto|zh-CN|en-US]
+one configure open
 ```
 
-Bare `one configure` and `one configure add` open the interactive wizard. Scripts, CI, and agents should pass `<pair>`, the profile name, and backend flags explicitly.
+With no connections, bare `one configure` opens the setup wizard. With existing connections it shows a concise overview. `show`, `use`, and `remove` let terminal users select an existing connection; scripts keep explicit `<pair>` and `--profile` inputs.
 
 ## Interactive Mode
 
@@ -30,9 +31,9 @@ one configure
 one configure add
 ```
 
-The wizard first asks which `(domain, backend)` to configure, such as `env/infisical`, `deploy/aws-s3`, or `container/docker`. Then it asks for profile name, endpoint, token, access keys, kubeconfig, or registry fields as needed. Secret fields use password-style input.
+The wizard first asks which service to connect, then asks for a connection name and the required service fields. Stable service IDs remain visible in automation commands. Secret fields use password-style input.
 
-Scripts, CI, and agents should not wait for the wizard; pass the pair, profile name, and backend flags explicitly.
+Scripts and CI should not wait for the wizard; pass the service ID, connection name (`--profile`), and service flags explicitly.
 
 ## Supported pairs
 
@@ -87,8 +88,15 @@ one configure add container/ghcr --profile ghcr \
 When a command needs a profile, it resolves in this order:
 
 1. `--profile <name>`
-2. project / workspace profile pins in `one.manifest.json`
-3. `~/.config/one/config.json#domain/backend.default`
+2. Project + environment binding in `profile-bindings.json`
+3. Workspace + environment binding in `profile-bindings.json`
+4. legacy Project binding in `config.json#workspaces`
+5. legacy Workspace binding in `config.json#workspaces`
+6. `~/.config/one/config.json#domain/backend.default`
+
+The environment-aware bindings are keyed by canonical Workspace root, environment, and `(domain, backend)`. They store only a Profile name. The Dashboard UI offers `dev`, `preview`, and `prod` through `?env=`; the core/API also accepts safe custom IDs supplied by other workflows. Global Settings Profile CRUD is not environment-scoped. An empty environment keeps the legacy chain.
+
+`one.manifest.json` never stores a local Profile name. `one configure use ... --workspace` and `--project` remain compatible legacy bindings; use `one serve` when you need a distinct selection for each environment.
 
 The same profile name can exist under different backends, for example `prod` under both `deploy/aws-s3` and `deploy/kustomize`.
 
@@ -96,12 +104,13 @@ The same profile name can exist under different backends, for example `prod` und
 
 ```text
 ~/.config/one/
-├── config.json         # non-secret fields: endpoint, region, default pointer
-├── credentials.json    # secrets: clientSecret, accessKeySecret, password
-└── cache/              # short-lived token cache
+├── config.json             # non-secret Profile fields, defaults, legacy bindings
+├── credentials.json        # secrets: clientSecret, accessKeySecret, password
+├── profile-bindings.json   # v1: canonical root + environment -> Profile names
+└── cache/                  # short-lived token cache
 ```
 
-Both JSON files are written as `0600`. `show` masks secrets by default; only `show --reveal` prints cleartext.
+All three JSON files are machine-local and written as `0600`; `profile-bindings.json` contains names only. None of them modifies or upgrades `one.manifest.json`. `show` masks secrets by default; only `show --reveal` prints cleartext.
 
 ## Output schemas
 
@@ -123,12 +132,12 @@ Both JSON files are written as `0600`. `show` masks secrets by default; only `sh
 | `PROFILE_NONE_CONFIGURED` | run `one configure add <pair> --profile <name> --use` |
 | `PROFILE_NOT_FOUND` | run `one configure list <pair>` and use an existing name |
 | `PROFILE_BACKEND_INVALID` | use a profile whose backend matches the target project |
-| `PROFILE_FILE_INVALID` | repair or delete `~/.config/one/config.json` / `credentials.json`, then recreate profiles |
-| `PROFILE_VERSION_UNSUPPORTED` | recreate old configs under the current `(domain, backend)` layout |
+| `PROFILE_FILE_INVALID` | repair the file named in the error context (`config.json`, `credentials.json`, or `profile-bindings.json`) |
+| `PROFILE_VERSION_UNSUPPORTED` | upgrade One CLI or recreate only the incompatible machine-local file |
 
 ## Next
 
-- [one serve](/en/docs/serve/) — edit the same profiles in a local web UI
+- [one serve](/en/docs/serve/) — edit Profiles and choose environment-aware local bindings
 - [one env](/en/docs/env-vars/) — use `env/infisical`
 - [one deploy](/en/docs/deploy/) — use deploy profiles
 - [one container](/en/docs/container/) — use container profiles

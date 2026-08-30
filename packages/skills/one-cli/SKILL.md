@@ -11,7 +11,7 @@ metadata:
 
 This skill covers every interaction with [One CLI](https://github.com/1cli-team/one-cli),
 a Go-based scaffolding + governance tool for AI-Native monorepo workspaces.
-Commands are minimal (`create`, `add`, `templates`, `env`,
+Commands are minimal (`create`, `add`, `templates`, `env`, `ci`,
 `container`, `dev`, `deploy`, `run`, `configure`, `serve`, `skills`),
 but each user intent has its own playbook in `references/`.
 
@@ -94,12 +94,12 @@ docs are wrong, fix the manifest/template source and rerun the CLI. If
 the CLI refuses (`AI_GUIDE_EXISTS`), surface that to the user — don't
 paper over.
 
-### 6. Read workspace state from `one.manifest.json`
+### 6. Use bare `one` for the overview; read the manifest for details
 
-The manifest at the workspace root is the source of truth for
-projects, backends, and generated agent-doc routes. Read it directly when
-you need to introspect state — there is no separate read-only status
-command.
+Inside a workspace, bare `one` shows project readiness, dependency state,
+deployment setup, environment source, issues, and the best next command. Use
+`one -o json` for the stable `one-cli/workspace-summary/v1` envelope. The
+manifest remains the detailed source of truth for automation.
 
 ### 7. `--yes` for non-interactive flow
 
@@ -136,6 +136,8 @@ workspaces.
 | `EXISTING_TARGET_NOT_EMPTY` | Target exists and is non-empty. Ask the user to pick a different directory, or to delete the existing one. `create` no longer overwrites. |
 | `AI_GUIDE_EXISTS` | `AGENTS.md` / `CLAUDE.md` is user-managed. Don't fight it. |
 | `PROMPT_CANCELLED` | User pressed Ctrl-C. Treat as graceful exit. |
+| `CI_DISABLE_CONFIRMATION_REQUIRED` | Review the selected projects, then rerun `one ci disable ... --yes`. |
+| `CI_NOT_ENABLED` | Run `one ci enable <project>` before `one ci sync <project>`. |
 | `UNKNOWN_COMMAND` | Misspelled command. Read `references/REFERENCE.md` for the current command surface. |
 | `INFISICAL_*` | See `references/REFERENCE.md` for the full Infisical error matrix. |
 
@@ -144,5 +146,5 @@ For the complete code → recovery mapping see `references/REFERENCE.md`.
 ## References
 
 - One CLI repo: <https://github.com/1cli-team/one-cli>
-- Error code reference: <https://github.com/1cli-team/one-cli/blob/master/packages/cli/internal/errors/codes.go> (Codes registry — source of truth)
+- Error code reference: <https://github.com/1cli-team/one-cli/blob/master/packages/cli/internal/platform/errors/codes.go> (Codes registry — source of truth)
 - Agent Skills format spec: <https://agentskills.io/specification>

@@ -1,7 +1,9 @@
-列出 profile（无 pair 时聚合所有 section）
 
-Usage:
+DESCRIPTION
+List local connections
+
+USAGE
   one configure list [pair] [flags]
 
-Global Flags:
-  -o, --output string   输出格式: json | yaml | text（默认 auto：TTY 时人类格式，pipe 时 JSON）
+COMMON OPTIONS
+  -o, --output <value>     Output format: json | yaml | text (default: terminal-friendly text, JSON when piped)

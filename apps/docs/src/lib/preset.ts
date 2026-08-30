@@ -1,5 +1,5 @@
 // Client-side One CLI preset id encoder.
-// Mirrors packages/cli/internal/preset/spec.go + codes.go (v1).
+// Mirrors packages/cli/internal/modules/preset/spec.go + codes.go (v1).
 // Grammar: 1[.<kind><tcode>[<dcode>[<ccode>]]]+[.e<envCode>]
 //   kind: 'f' (frontend) | 'b' (backend) | 'l' (library)
 //   tcode: 2-char [a-z0-9] template code
