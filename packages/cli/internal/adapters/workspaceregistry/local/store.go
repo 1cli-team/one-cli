@@ -21,7 +21,7 @@ import (
 )
 
 const lockRetryDelay = 10 * time.Millisecond
-const lockTimeout = 2 * time.Second
+const lockTimeout = 5 * time.Second
 
 type renameFile func(string, string) error
 
