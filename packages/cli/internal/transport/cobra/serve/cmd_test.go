@@ -43,7 +43,11 @@ func TestDiscoverServeWorkspaceObservesAncestorManifest(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(persisted.Workspaces) != 1 || persisted.Workspaces[0].Root != root ||
+	canonicalRoot, err := filepath.EvalSymlinks(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(persisted.Workspaces) != 1 || persisted.Workspaces[0].Root != canonicalRoot ||
 		persisted.Workspaces[0].LastSeenBy != "serve" {
 		t.Fatalf("persisted registry = %#v", persisted.Workspaces)
 	}

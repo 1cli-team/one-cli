@@ -214,7 +214,7 @@ func TestWorkspacesProfileBindingUsesResolvedRootAndLeavesManifestsUnchanged(t *
 	if err := json.Unmarshal(recorder.Body.Bytes(), &settings); err != nil {
 		t.Fatal(err)
 	}
-	if settings.Root != selectedRoot || settings.Profile == nil ||
+	if settings.Root != selected.Root || settings.Profile == nil ||
 		settings.Profile.Name != "work" || settings.Profile.Source != "workspace" {
 		t.Fatalf("scoped settings = %#v", settings)
 	}
@@ -344,7 +344,7 @@ func TestWorkspacesProjectProfileBindingUsesResolvedRootAndEnvironment(t *testin
 	if err := json.Unmarshal(recorder.Body.Bytes(), &settings); err != nil {
 		t.Fatal(err)
 	}
-	if settings.Root != selectedRoot || settings.Environment != "preview" ||
+	if settings.Root != selected.Root || settings.Environment != "preview" ||
 		settings.Project.Environment.SelectedProfile != "work" ||
 		settings.Project.Environment.Profile == nil ||
 		settings.Project.Environment.Profile.Source != "workspace-project-environment" {

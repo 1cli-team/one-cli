@@ -237,9 +237,13 @@ func TestBulkBuildResolvesKustomizePlatformPerProjectAndEnvironment(t *testing.T
 	buildOutput := executeContainerCommand(t, newBuildCmd(deps), []string{
 		"--dry-run", "--env", "preview", "--build-version", "v1.2.3",
 	})
+	canonicalRoot, err := filepath.EvalSymlinks(root)
+	if err != nil {
+		t.Fatal(err)
+	}
 	for _, commandFragment := range []string{
-		"docker build --platform linux/amd64 -t web:v1.2.3 " + filepath.Join(root, "apps/web"),
-		"docker build --platform linux/arm64 -t api:v1.2.3 " + filepath.Join(root, "services/api"),
+		"docker build --platform linux/amd64 -t web:v1.2.3 " + filepath.Join(canonicalRoot, "apps/web"),
+		"docker build --platform linux/arm64 -t api:v1.2.3 " + filepath.Join(canonicalRoot, "services/api"),
 	} {
 		if !strings.Contains(buildOutput, commandFragment) {
 			t.Fatalf("bulk build output missing %q:\n%s", commandFragment, buildOutput)
