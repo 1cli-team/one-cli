@@ -76,7 +76,11 @@ func TestRegistryObserveCanonicalizesSymlinkPath(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if first.EntryID != second.EntryID || first.Root != root || second.Root != root {
+	wantRoot, err := filepath.EvalSymlinks(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if first.EntryID != second.EntryID || first.Root != wantRoot || second.Root != wantRoot {
 		t.Fatalf("symlink observations were not canonicalized: first=%#v second=%#v", first, second)
 	}
 }
@@ -103,17 +107,21 @@ func TestRegistryObserveMovePreservesEntryID(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	wantNewRoot, err := filepath.EvalSymlinks(newRoot)
+	if err != nil {
+		t.Fatal(err)
+	}
 	if after.EntryID != before.EntryID {
 		t.Fatalf("move changed entry ID: %q -> %q", before.EntryID, after.EntryID)
 	}
-	if after.Root != newRoot || after.Status != WorkspaceStatusReady {
+	if after.Root != wantNewRoot || after.Status != WorkspaceStatusReady {
 		t.Fatalf("moved observation = %#v", after)
 	}
 	registry, err := store.Load(context.Background())
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(registry.Workspaces) != 1 || registry.Workspaces[0].Root != newRoot {
+	if len(registry.Workspaces) != 1 || registry.Workspaces[0].Root != wantNewRoot {
 		t.Fatalf("move left stale entries: %#v", registry.Workspaces)
 	}
 }
@@ -158,8 +166,8 @@ func TestRegistryCopiedWorkspaceCreatesIdentityConflict(t *testing.T) {
 		entryID string
 		root    string
 	}{
-		{entryID: first.EntryID, root: firstRoot},
-		{entryID: second.EntryID, root: secondRoot},
+		{entryID: first.EntryID, root: first.Root},
+		{entryID: second.EntryID, root: second.Root},
 	} {
 		resolved, resolveErr := service.ResolveRead(context.Background(), test.entryID)
 		if resolveErr != nil {
@@ -280,7 +288,7 @@ func TestRegistryResolveRevalidatesManifestIdentity(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if resolved.Root != root || resolved.Manifest == nil || resolved.Manifest.Workspace.ID != "before-id" {
+	if resolved.Root != registered.Root || resolved.Manifest == nil || resolved.Manifest.Workspace.ID != "before-id" {
 		t.Fatalf("resolved = %#v", resolved)
 	}
 
