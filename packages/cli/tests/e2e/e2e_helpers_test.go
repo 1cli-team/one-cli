@@ -33,6 +33,20 @@ func repoRoot(t *testing.T) string {
 	return filepath.Join(filepath.Dir(file), "..", "..")
 }
 
+func repositoryVersion(t *testing.T) string {
+	t.Helper()
+	path := filepath.Join(repoRoot(t), "..", "..", "VERSION")
+	raw, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("read VERSION: %v", err)
+	}
+	version := strings.TrimSpace(string(raw))
+	if version == "" {
+		t.Fatal("VERSION is empty")
+	}
+	return version
+}
+
 // binaryPath returns the path to bin/one, skipping the test if the
 // binary hasn't been built. Run `task build` first.
 func binaryPath(t *testing.T) string {

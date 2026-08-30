@@ -29,7 +29,7 @@ Verify after installation:
 
 ```bash
 one --version
-# 0.1.0 (or later)
+# 0.1.1 (or later)
 ```
 
 If `PATH` is missing, the script will tell you what to add:
@@ -131,7 +131,7 @@ See [Install skill to agent](/en/tutorials/skills-install/).
 
 | Variable | Default | Meaning |
 |---|---|---|
-| `ONE_VERSION` | resolved from the latest GitHub release | Lock the version, for example `v0.1.0` |
+| `ONE_VERSION` | resolved from the latest GitHub release | Lock the version, for example `v0.1.1` |
 | `ONE_INSTALL_DIR` | `$HOME/.local/bin` | Install directory |
 | `ONE_FORCE` | `0` | Set to `1` to allow downgrade, same-version reinstall, or overwrite a binary whose version cannot be read |
 | `ONE_REPO_URL` | `https://github.com/1cli-team/one-cli` | GitHub repo URL override for debugging |

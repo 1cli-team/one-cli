@@ -24,7 +24,7 @@ func TestSnapshot_E2E_Version(t *testing.T) {
 	// Release builds print the base version. `task install` appends the
 	// current short commit and an optional dirty marker; both are deliberate,
 	// user-visible formats and must remain snapshot-compatible.
-	want := regexp.MustCompile(`^0\.1\.0(?:-local\.[0-9a-f]{7}(?:\.dirty)?)?\n$`)
+	want := regexp.MustCompile(`^` + regexp.QuoteMeta(repositoryVersion(t)) + `(?:-local\.[0-9a-f]{7}(?:\.dirty)?)?\n$`)
 	if !want.MatchString(stdout) {
 		t.Errorf("stdout mismatch\n  want pattern: %s\n  got: %q", want, stdout)
 	}
