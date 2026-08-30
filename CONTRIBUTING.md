@@ -108,28 +108,14 @@ E2E snapshot 测试位于 `packages/cli/tests/e2e/snapshot_e2e_*_test.go`，依�
 
 ## 发布流程
 
-```bash
-# 1. 改 VERSION
-echo "0.4.3" > VERSION
+发布统一从 GitHub Actions 的 **Build and Release** 手动触发：
 
-# 2. 改 CHANGELOG.md（unreleased 段升级为新版本）
+1. 在 `master` 上运行工作流，选择 `patch`（默认）、`minor` 或 `major`。
+2. 工作流从最高稳定 tag 自动计算下一版本，并把结果作为 `RELEASE_VERSION`；若最高 tag 位于 `master` 且尚未完成发布，则优先续跑该版本。
+3. 工作流执行完整 `task pre-push` 和 GoReleaser no-publish 预构建；验证通过后创建计算出的 tag，生成 5 个平台归档及 `checksums.txt`。
+4. 只有 asset 集合完整时，GitHub Release 才会从 draft 转为公开发布。
 
-# 3. 跑 e2e 测试里 hard-coded 的 want 字面量
-sed -i.bak 's/want := "0.4.2/want := "0.4.3/' packages/cli/tests/e2e/snapshot_e2e_test.go
-
-# 4. task pre-push 全绿
-
-# 5. commit
-git add VERSION CHANGELOG.md packages/cli/tests/e2e/snapshot_e2e_test.go
-git commit -m "chore(release): v0.4.3"
-
-# 6. push + tag
-git push origin master
-git tag v0.4.3
-git push origin v0.4.3
-# → cli workflow 触发，自动 cross-compile + 上传 GitHub Release draft assets
-# → 检查 assets / checksums / release notes 后，在 GitHub 手动 Publish
-```
+不需要为了发布修改或提交任何版本文件，也不要手工推 tag。若发布在 tag 或 draft 创建后失败，修复问题后重新运行；工作流会自动识别安全的未完成 tag 并复用 draft。已经完整发布的版本不会被重复发布。
 
 发布 channel：
 
@@ -156,7 +142,7 @@ packages/cli/                    # Go module（module path 含 /packages/cli 后
                                  # 由 task sync-bundled + sync-web 重建
   testdata/                      # Go 测试 fixtures
   tools/                         # 内部生成器 / 校验器
-                                 #   gen-error-codes / verify-versions / verify-cli-references
+                                 #   gen-error-codes / verify-cli-references / verify-help
 packages/templates/              # 模板源 + registry.json（被 go:embed）
 packages/skills/                 # bundled skill 源（被 go:embed）
 apps/docs/                       # 文档站 Next.js + Fumadocs

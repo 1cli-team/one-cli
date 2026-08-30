@@ -40,15 +40,16 @@ env:
   # GitHub-hosted runners are outside China; the default Taskfile proxy
   # (goproxy.cn) is slower/flakier there and has caused CI download failures.
   GOPROXY: https://proxy.golang.org,direct
+  GOTOOLCHAIN: local
 
 jobs:
   lint:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Set up Go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@v7
         with:
           go-version-file: packages/cli/go.mod
           cache: true
@@ -65,19 +66,40 @@ jobs:
           run_install: false
 
       - name: Set up Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
-          node-version: 20
+          node-version: 24
           cache: pnpm
           cache-dependency-path: pnpm-lock.yaml
 
-      - name: Install task
-        run: go install github.com/go-task/task/v3/cmd/task@latest
+      - name: Set up Task
+        uses: go-task/setup-task@v2
+        with:
+          version: 3.53.1
 
       - name: Download Go modules
         run: |
-          go -C packages/kernel mod download
-          go -C packages/cli mod download
+          GOWORK=off go -C packages/kernel mod download
+          GOWORK=off go -C packages/cli mod download
+
+      - name: Verify dependency metadata is clean
+        run: |
+          set -euo pipefail
+          dependency_files=(
+            go.work
+            go.work.sum
+            packages/kernel/go.mod
+            packages/kernel/go.sum
+            packages/cli/go.mod
+            packages/cli/go.sum
+          )
+          changes="$(git status --short -- "${dependency_files[@]}")"
+          if [[ -n "$changes" ]]; then
+            echo "Dependency setup changed dependency metadata." >&2
+            printf '%s\n' "$changes" >&2
+            git diff -- "${dependency_files[@]}"
+            exit 1
+          fi
 
       - name: Run static gate
         # Calls the same static subtask as local `task check`.
@@ -86,10 +108,10 @@ jobs:
   test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Set up Go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@v7
         with:
           go-version-file: packages/cli/go.mod
           cache: true
@@ -105,19 +127,40 @@ jobs:
           run_install: false
 
       - name: Set up Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
-          node-version: 20
+          node-version: 24
           cache: pnpm
           cache-dependency-path: pnpm-lock.yaml
 
-      - name: Install task
-        run: go install github.com/go-task/task/v3/cmd/task@latest
+      - name: Set up Task
+        uses: go-task/setup-task@v2
+        with:
+          version: 3.53.1
 
       - name: Download Go modules
         run: |
-          go -C packages/kernel mod download
-          go -C packages/cli mod download
+          GOWORK=off go -C packages/kernel mod download
+          GOWORK=off go -C packages/cli mod download
+
+      - name: Verify dependency metadata is clean
+        run: |
+          set -euo pipefail
+          dependency_files=(
+            go.work
+            go.work.sum
+            packages/kernel/go.mod
+            packages/kernel/go.sum
+            packages/cli/go.mod
+            packages/cli/go.sum
+          )
+          changes="$(git status --short -- "${dependency_files[@]}")"
+          if [[ -n "$changes" ]]; then
+            echo "Dependency setup changed dependency metadata." >&2
+            printf '%s\n' "$changes" >&2
+            git diff -- "${dependency_files[@]}"
+            exit 1
+          fi
 
       - name: Run test gate
         # Calls the same test subtask as local `task check`.
@@ -129,10 +172,10 @@ jobs:
     if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Set up Go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@v7
         with:
           go-version-file: packages/cli/go.mod
           cache: true
@@ -148,19 +191,40 @@ jobs:
           run_install: false
 
       - name: Set up Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
-          node-version: 20
+          node-version: 24
           cache: pnpm
           cache-dependency-path: pnpm-lock.yaml
 
-      - name: Install task
-        run: go install github.com/go-task/task/v3/cmd/task@latest
+      - name: Set up Task
+        uses: go-task/setup-task@v2
+        with:
+          version: 3.53.1
 
       - name: Download Go modules
         run: |
-          go -C packages/kernel mod download
-          go -C packages/cli mod download
+          GOWORK=off go -C packages/kernel mod download
+          GOWORK=off go -C packages/cli mod download
+
+      - name: Verify dependency metadata is clean
+        run: |
+          set -euo pipefail
+          dependency_files=(
+            go.work
+            go.work.sum
+            packages/kernel/go.mod
+            packages/kernel/go.sum
+            packages/cli/go.mod
+            packages/cli/go.sum
+          )
+          changes="$(git status --short -- "${dependency_files[@]}")"
+          if [[ -n "$changes" ]]; then
+            echo "Dependency setup changed dependency metadata." >&2
+            printf '%s\n' "$changes" >&2
+            git diff -- "${dependency_files[@]}"
+            exit 1
+          fi
 
       - name: Build binary
         run: task build
@@ -174,10 +238,10 @@ jobs:
     if: github.event_name != 'pull_request'
     runs-on: macos-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Set up Go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@v7
         with:
           go-version-file: packages/cli/go.mod
           cache: true
@@ -193,19 +257,40 @@ jobs:
           run_install: false
 
       - name: Set up Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
-          node-version: 20
+          node-version: 24
           cache: pnpm
           cache-dependency-path: pnpm-lock.yaml
 
-      - name: Install task
-        run: go install github.com/go-task/task/v3/cmd/task@latest
+      - name: Set up Task
+        uses: go-task/setup-task@v2
+        with:
+          version: 3.53.1
 
       - name: Download Go modules
         run: |
-          go -C packages/kernel mod download
-          go -C packages/cli mod download
+          GOWORK=off go -C packages/kernel mod download
+          GOWORK=off go -C packages/cli mod download
+
+      - name: Verify dependency metadata is clean
+        run: |
+          set -euo pipefail
+          dependency_files=(
+            go.work
+            go.work.sum
+            packages/kernel/go.mod
+            packages/kernel/go.sum
+            packages/cli/go.mod
+            packages/cli/go.sum
+          )
+          changes="$(git status --short -- "${dependency_files[@]}")"
+          if [[ -n "$changes" ]]; then
+            echo "Dependency setup changed dependency metadata." >&2
+            printf '%s\n' "$changes" >&2
+            git diff -- "${dependency_files[@]}"
+            exit 1
+          fi
 
       - name: Run test gate
         run: task check:test

@@ -10,9 +10,9 @@ import (
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/output"
 )
 
-// version is overridden at build time via -ldflags. The default matches
-// VERSION so `go run` users see the repository's current version.
-var version = "0.1.0"
+// version is overridden at build time via -ldflags. Keep the source fallback
+// deliberately non-release; release versions come from the release input/tag.
+var version = "0.0.0-dev"
 
 func main() {
 	if err := cli.Execute(version, os.Args[1:]); err != nil {
