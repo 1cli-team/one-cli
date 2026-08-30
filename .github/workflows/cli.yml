@@ -160,6 +160,7 @@ jobs:
 
           expected_files=$(printf '%s\n' \
             VERSION \
+            go.work.sum \
             packages/skills/one-cli/SKILL.md \
             apps/docs/content/docs/en/installation.md \
             apps/docs/content/docs/zh/installation.md | sort)
@@ -183,6 +184,7 @@ jobs:
           git switch -c "$BRANCH"
           git add \
             VERSION \
+            go.work.sum \
             packages/skills/one-cli/SKILL.md \
             apps/docs/content/docs/en/installation.md \
             apps/docs/content/docs/zh/installation.md
