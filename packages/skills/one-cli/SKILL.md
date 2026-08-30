@@ -4,7 +4,7 @@ description: Use this skill for any task involving One CLI monorepo workspaces. 
 license: MIT
 metadata:
   author: torchstellar-team
-  version: '0.1.0'
+  version: '0.1.1'
 ---
 
 # One CLI — Unified Skill

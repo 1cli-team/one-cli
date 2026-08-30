@@ -29,7 +29,7 @@ curl -fsSL https://1cli.dev/install.sh | bash
 
 ```bash
 one --version
-# 0.1.0 (or later)
+# 0.1.1 (or later)
 ```
 
 PATH 没配的话脚本会提示，照着做：
@@ -131,7 +131,7 @@ one configure add container/ghcr --profile ghcr        # GHCR username + PAT
 
 | 变量 | 默认 | 说明 |
 |---|---|---|
-| `ONE_VERSION` | （解析 GitHub latest release） | 锁版本，例如 `v0.1.0` |
+| `ONE_VERSION` | （解析 GitHub latest release） | 锁版本，例如 `v0.1.1` |
 | `ONE_INSTALL_DIR` | `$HOME/.local/bin` | 安装目录 |
 | `ONE_FORCE` | `0` | 设为 `1` 允许降级 / 同版本重装 / 覆盖读不出版本号的二进制 |
 | `ONE_REPO_URL` | `https://github.com/1cli-team/one-cli` | GitHub repo URL 覆盖（调试用） |
@@ -142,7 +142,7 @@ one configure add container/ghcr --profile ghcr        # GHCR username + PAT
 例：装一个特定旧版本到自定义目录：
 
 ```bash
-curl -fsSL https://1cli.dev/install.sh | ONE_VERSION=v0.1.0 ONE_INSTALL_DIR=/opt/bin bash
+curl -fsSL https://1cli.dev/install.sh | ONE_VERSION=v0.1.1 ONE_INSTALL_DIR=/opt/bin bash
 ```
 
 ## 卸载
