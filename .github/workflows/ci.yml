@@ -21,7 +21,7 @@
 # Windows is deferred until testdata/bin/ has .bat siblings of the POSIX
 # shell stubs (Phase 3 in the test plan).
 
-name: CI
+name: Code Quality and Tests
 
 on:
   pull_request:

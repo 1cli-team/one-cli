@@ -1,48 +1,47 @@
-# Release workflow for the Go rewrite. Runs on git tags shaped vN.N.N (and
-# their pre-release variants), cross-compiles via goreleaser, and uploads
-# the artifacts to a GitHub Release consumed by install.sh.
-#
-# Tagging convention: `v0.3.0`, `v0.3.0-rc.1`. Tag MUST match the version
-# in VERSION so `one --version` and the release tag report the same thing.
+# Manually prepares and publishes a One CLI release. The workflow computes the
+# next stable version, lands the synchronized version files through the normal
+# protected-master PR path, tags the resulting master commit, and publishes the
+# cross-platform archives consumed by install.sh.
 
-name: CLI
+name: Build and Release
+run-name: Build and Release (${{ inputs.bump_type }})
 
 on:
-  push:
-    tags:
-      - "v*"
-  # Manual trigger lets us test goreleaser end-to-end without cutting a tag.
-  # Empty tag input -> snapshot mode. Tag input -> full release at that tag.
   workflow_dispatch:
     inputs:
-      tag:
-        description: "Override tag (snapshot mode if empty)"
-        required: false
+      bump_type:
+        description: "Semver component to increment"
+        required: true
+        type: choice
+        default: patch
+        options:
+          - patch
+          - minor
+          - major
+
+concurrency:
+  group: build-and-release
+  cancel-in-progress: false
 
 permissions:
-  # goreleaser needs write access to upload release artifacts.
+  actions: write
   contents: write
+  pull-requests: write
 
 env:
+  GH_TOKEN: ${{ github.token }}
   GOPROXY: https://proxy.golang.org,direct
 
 jobs:
   release:
     runs-on: ubuntu-latest
+    timeout-minutes: 120
     steps:
-      - name: Check out
+      - name: Check out master
         uses: actions/checkout@v4
         with:
-          # goreleaser inspects the full git history for changelog data
-          # even though we disabled its auto-changelog — full clone is
-          # still cheap and avoids surprise tag-resolution failures.
+          ref: master
           fetch-depth: 0
-
-      - name: Check out requested tag
-        if: github.event_name == 'workflow_dispatch' && inputs.tag != ''
-        run: |
-          git fetch --force origin "refs/tags/${{ inputs.tag }}:refs/tags/${{ inputs.tag }}"
-          git checkout "tags/${{ inputs.tag }}"
 
       - name: Set up Go
         uses: actions/setup-go@v5
@@ -54,6 +53,224 @@ jobs:
             go.work.sum
             packages/cli/go.sum
             packages/kernel/go.mod
+
+      - name: Install task
+        run: go install github.com/go-task/task/v3/cmd/task@latest
+
+      - name: Download Go modules
+        run: |
+          go -C packages/kernel mod download
+          go -C packages/cli mod download
+
+      - name: Calculate next version
+        id: version
+        env:
+          BUMP_TYPE: ${{ inputs.bump_type }}
+        run: |
+          set -euo pipefail
+          git fetch --force --tags origin
+
+          previous_tag=""
+          while IFS= read -r candidate; do
+            if [[ "$candidate" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+              previous_tag="$candidate"
+              break
+            fi
+          done < <(git tag --list 'v*' --sort=-version:refname)
+
+          if [[ -z "$previous_tag" ]]; then
+            echo "No stable vMAJOR.MINOR.PATCH tag exists." >&2
+            exit 1
+          fi
+
+          previous_version="${previous_tag#v}"
+          IFS=. read -r major minor patch <<< "$previous_version"
+          case "$BUMP_TYPE" in
+            patch) patch=$((patch + 1)) ;;
+            minor) minor=$((minor + 1)); patch=0 ;;
+            major) major=$((major + 1)); minor=0; patch=0 ;;
+            *) echo "Unsupported bump type: $BUMP_TYPE" >&2; exit 1 ;;
+          esac
+
+          next_version="${major}.${minor}.${patch}"
+          next_tag="v${next_version}"
+          current_version="$(tr -d '[:space:]' < VERSION)"
+          needs_pr=true
+
+          if [[ "$current_version" == "$previous_version" ]]; then
+            : # Normal path: prepare the calculated version through a PR.
+          elif [[ "$current_version" == "$next_version" ]]; then
+            # A prior run may have merged the version PR before it stopped.
+            needs_pr=false
+          else
+            echo "VERSION=${current_version}, latest tag=${previous_tag}, expected current or next=${next_version}." >&2
+            echo "Resolve the version drift before releasing." >&2
+            exit 1
+          fi
+
+          if git show-ref --verify --quiet "refs/tags/${next_tag}"; then
+            echo "Tag ${next_tag} already exists." >&2
+            exit 1
+          fi
+          if gh release view "$next_tag" >/dev/null 2>&1; then
+            echo "Release ${next_tag} already exists." >&2
+            exit 1
+          fi
+
+          branch="release/${next_tag}"
+          if [[ "$needs_pr" == "true" ]] && git ls-remote --exit-code --heads origin "$branch" >/dev/null 2>&1; then
+            echo "Remote branch ${branch} already exists; finish or remove that release attempt first." >&2
+            exit 1
+          fi
+
+          echo "previous_tag=${previous_tag}" >> "$GITHUB_OUTPUT"
+          echo "version=${next_version}" >> "$GITHUB_OUTPUT"
+          echo "tag=${next_tag}" >> "$GITHUB_OUTPUT"
+          echo "branch=${branch}" >> "$GITHUB_OUTPUT"
+          echo "needs_pr=${needs_pr}" >> "$GITHUB_OUTPUT"
+          echo "source_sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
+          {
+            echo "### Release plan"
+            echo "- Previous: \`${previous_tag}\`"
+            echo "- Next: \`${next_tag}\`"
+            echo "- Increment: \`${BUMP_TYPE}\`"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Synchronize version files
+        if: steps.version.outputs.needs_pr == 'true'
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          set -euo pipefail
+          printf '%s\n' "$VERSION" > VERSION
+          sed -i -E "0,/^  version: .*/s//  version: '${VERSION}'/" packages/skills/one-cli/SKILL.md
+
+          VERSION="$VERSION" perl -pi -e \
+            's/# \d+\.\d+\.\d+ \(or later\)/# $ENV{VERSION} (or later)/' \
+            apps/docs/content/docs/en/installation.md \
+            apps/docs/content/docs/zh/installation.md
+          VERSION="$VERSION" perl -pi -e \
+            'if (/^\| `ONE_VERSION`/) { s/(^\| `ONE_VERSION`.*?`v)\d+\.\d+\.\d+/${1}$ENV{VERSION}/ }' \
+            apps/docs/content/docs/en/installation.md \
+            apps/docs/content/docs/zh/installation.md
+
+          task --force verify-versions
+          git diff --check
+
+          expected_files=$(printf '%s\n' \
+            VERSION \
+            packages/skills/one-cli/SKILL.md \
+            apps/docs/content/docs/en/installation.md \
+            apps/docs/content/docs/zh/installation.md | sort)
+          actual_files=$(git diff --name-only | sort)
+          if [[ "$actual_files" != "$expected_files" ]]; then
+            echo "Version synchronization changed an unexpected file set." >&2
+            diff -u <(printf '%s\n' "$expected_files") <(printf '%s\n' "$actual_files") || true
+            exit 1
+          fi
+
+      - name: Create release pull request
+        if: steps.version.outputs.needs_pr == 'true'
+        id: pr
+        env:
+          BRANCH: ${{ steps.version.outputs.branch }}
+          TAG: ${{ steps.version.outputs.tag }}
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git switch -c "$BRANCH"
+          git add \
+            VERSION \
+            packages/skills/one-cli/SKILL.md \
+            apps/docs/content/docs/en/installation.md \
+            apps/docs/content/docs/zh/installation.md
+          git commit -m "chore: bump version to ${TAG#v}"
+          git push origin "HEAD:refs/heads/${BRANCH}"
+
+          pr_url=$(gh pr create \
+            --base master \
+            --head "$BRANCH" \
+            --title "chore: bump version to ${TAG#v}" \
+            --body "Automated version synchronization for ${TAG}. This PR will be merged after the required CI checks pass.")
+          pr_number=$(gh pr view "$BRANCH" --json number --jq '.number')
+
+          echo "number=${pr_number}" >> "$GITHUB_OUTPUT"
+          echo "url=${pr_url}" >> "$GITHUB_OUTPUT"
+          echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
+      - name: Run release candidate CI
+        id: ci
+        env:
+          BRANCH: ${{ steps.version.outputs.branch }}
+          NEEDS_PR: ${{ steps.version.outputs.needs_pr }}
+          PR_SHA: ${{ steps.pr.outputs.sha }}
+          SOURCE_SHA: ${{ steps.version.outputs.source_sha }}
+        run: |
+          set -euo pipefail
+          if [[ "$NEEDS_PR" == "true" ]]; then
+            ci_ref="$BRANCH"
+            ci_sha="$PR_SHA"
+          else
+            ci_ref="master"
+            ci_sha="$SOURCE_SHA"
+          fi
+
+          gh workflow run ci.yml --ref "$ci_ref"
+
+          run_id=""
+          for _ in $(seq 1 30); do
+            run_id=$(gh run list \
+              --workflow ci.yml \
+              --branch "$ci_ref" \
+              --event workflow_dispatch \
+              --limit 20 \
+              --json databaseId,headSha \
+              --jq "[.[] | select(.headSha == \"${ci_sha}\") | .databaseId][0] // empty")
+            if [[ -n "$run_id" ]]; then
+              break
+            fi
+            sleep 2
+          done
+
+          if [[ -z "$run_id" ]]; then
+            echo "Could not locate the CI run for ${ci_sha}." >&2
+            exit 1
+          fi
+
+          echo "Waiting for CI run ${run_id} on ${ci_sha}."
+          gh run watch "$run_id" --exit-status
+          echo "run_id=${run_id}" >> "$GITHUB_OUTPUT"
+
+      - name: Merge release pull request
+        id: merge
+        env:
+          NEEDS_PR: ${{ steps.version.outputs.needs_pr }}
+          PR_NUMBER: ${{ steps.pr.outputs.number }}
+          PR_SHA: ${{ steps.pr.outputs.sha }}
+          SOURCE_SHA: ${{ steps.version.outputs.source_sha }}
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          set -euo pipefail
+          if [[ "$NEEDS_PR" == "true" ]]; then
+            gh pr merge "$PR_NUMBER" --squash --delete-branch --match-head-commit "$PR_SHA"
+            merge_sha=$(gh pr view "$PR_NUMBER" --json mergeCommit --jq '.mergeCommit.oid')
+          else
+            merge_sha="$SOURCE_SHA"
+          fi
+
+          git fetch origin master --tags
+          git merge-base --is-ancestor "$merge_sha" origin/master
+          git checkout --detach "$merge_sha"
+
+          merged_version="$(tr -d '[:space:]' < VERSION)"
+          if [[ "$merged_version" != "$VERSION" ]]; then
+            echo "Merged VERSION=${merged_version}, expected ${VERSION}." >&2
+            exit 1
+          fi
+
+          echo "sha=${merge_sha}" >> "$GITHUB_OUTPUT"
 
       - name: Set up pnpm
         uses: pnpm/action-setup@v4
@@ -67,36 +284,39 @@ jobs:
           cache: pnpm
           cache-dependency-path: pnpm-lock.yaml
 
-      - name: Sync bundled assets
-        # packages/cli/internal/resources/bundled/* (registry.json, skills/,
-        # _templates/, _web/) is gitignored and regenerated here. Without
-        # this step goreleaser would build a binary with empty embeds.
+      - name: Create release tag
+        env:
+          TAG: ${{ steps.version.outputs.tag }}
+          RELEASE_SHA: ${{ steps.merge.outputs.sha }}
         run: |
-          go install github.com/go-task/task/v3/cmd/task@latest
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag -a "$TAG" "$RELEASE_SHA" -m "$TAG"
+          git push origin "refs/tags/${TAG}"
+
+      - name: Sync bundled assets
+        run: |
           task sync-bundled
           task sync-web
 
-      # One step decides everything that varies by trigger so the rest of
-      # the workflow stays linear:
-      #   - tag push (real release)         -> full GitHub Release
-      #   - workflow_dispatch with tag      -> full GitHub Release
-      #   - workflow_dispatch without tag   -> local snapshot only
-      - name: Determine release mode
-        id: mode
-        run: |
-          set -euo pipefail
-          if [[ "${{ github.event_name }}" == "push" && "${{ github.ref_type }}" == "tag" ]]; then
-            echo "args=release --clean"      >> "$GITHUB_OUTPUT"
-          elif [[ "${{ github.event_name }}" == "workflow_dispatch" && -n "${{ inputs.tag }}" ]]; then
-            echo "args=release --clean"      >> "$GITHUB_OUTPUT"
-          else
-            echo "args=release --snapshot --clean" >> "$GITHUB_OUTPUT"
-          fi
-
-      - name: Run goreleaser
+      - name: Run GoReleaser
         uses: goreleaser/goreleaser-action@v6
         with:
           version: latest
-          args: ${{ steps.mode.outputs.args }}
+          args: release --clean
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Publish GitHub release
+        env:
+          TAG: ${{ steps.version.outputs.tag }}
+        run: |
+          set -euo pipefail
+          gh release edit "$TAG" --draft=false
+          release_url=$(gh release view "$TAG" --json url --jq '.url')
+          {
+            echo "### Published"
+            echo "- Tag: \`${TAG}\`"
+            echo "- Release: ${release_url}"
+          } >> "$GITHUB_STEP_SUMMARY"

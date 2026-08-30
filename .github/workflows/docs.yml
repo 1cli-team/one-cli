@@ -1,7 +1,7 @@
 # Build the docs site for PR/push confidence. Production deploys are handled
 # by the Vercel project linked to apps/docs and the 1cli.dev domain.
 
-name: Docs
+name: Documentation Build
 
 on:
   pull_request:
