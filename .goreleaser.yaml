@@ -7,19 +7,13 @@
 # Run locally:    goreleaser release --snapshot --clean
 # Run on tag:     goreleaser release --clean    (CI / release pipeline)
 #
-# We keep this in sync with VERSION: the version baked into the binary via
-# -ldflags must match the release tag that distributes it, otherwise
-# `one --version` would lie.
+# The release workflow computes RELEASE_VERSION and creates its local tag.
+# GoReleaser derives .Version from that tag and injects it through
+# ldflags, so no tracked version file needs to change before a release.
 
 version: 2
 
 project_name: one-cli
-
-before:
-  hooks:
-    - go -C packages/kernel mod tidy
-    - go -C packages/cli mod tidy
-    - go work sync
 
 builds:
   - id: one
@@ -58,7 +52,6 @@ archives:
     # cut newer releases.
     name_template: "one-cli_{{ .Os }}_{{ .Arch }}"
     files:
-      - LICENSE*
       - README*
 
 checksum:
@@ -80,6 +73,12 @@ release:
     owner: 1cli-team
     name: one-cli
   draft: true
+  # A failed publish may already have created the tag and part of its draft.
+  # Reuse that draft and replace duplicate assets so the publish operation is
+  # safe to retry instead of silently skipping to the next version.
+  use_existing_draft: true
+  replace_existing_artifacts: true
+  make_latest: true
   prerelease: auto
   header: |
     # one-cli {{ .Tag }}

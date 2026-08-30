@@ -21,10 +21,11 @@ func TestSnapshot_E2E_Version(t *testing.T) {
 	if code != 0 {
 		t.Fatalf("expected exit 0, got %d", code)
 	}
-	// Release builds print the base version. `task install` appends the
+	// Builds with RELEASE_VERSION print that value. Development builds use a
+	// non-release sentinel, while `task install` appends the
 	// current short commit and an optional dirty marker; both are deliberate,
 	// user-visible formats and must remain snapshot-compatible.
-	want := regexp.MustCompile(`^` + regexp.QuoteMeta(repositoryVersion(t)) + `(?:-local\.[0-9a-f]{7}(?:\.dirty)?)?\n$`)
+	want := regexp.MustCompile(`^` + regexp.QuoteMeta(expectedBuildVersion(t)) + `(?:-local\.[0-9a-f]{7}(?:\.dirty)?)?\n$`)
 	if !want.MatchString(stdout) {
 		t.Errorf("stdout mismatch\n  want pattern: %s\n  got: %q", want, stdout)
 	}

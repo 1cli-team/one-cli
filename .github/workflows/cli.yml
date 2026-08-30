@@ -1,16 +1,14 @@
-# Manually prepares and publishes a One CLI release. The workflow computes the
-# next stable version, lands the synchronized version files through the normal
-# protected-master PR path, tags the resulting master commit, and publishes the
-# cross-platform archives consumed by install.sh.
+# Build and publish a One CLI release with an automatic semantic-version bump.
+# No version files or release branches are created on master.
 
 name: Build and Release
-run-name: Build and Release (${{ inputs.bump_type }})
+run-name: Release (${{ inputs.bump_type }})
 
 on:
   workflow_dispatch:
     inputs:
       bump_type:
-        description: "Semver component to increment"
+        description: "Semantic-version component to increment"
         required: true
         type: choice
         default: patch
@@ -24,27 +22,239 @@ concurrency:
   cancel-in-progress: false
 
 permissions:
-  actions: write
   contents: write
-  pull-requests: write
 
 env:
-  GH_TOKEN: ${{ github.token }}
   GOPROXY: https://proxy.golang.org,direct
+  GOTOOLCHAIN: local
 
 jobs:
   release:
     runs-on: ubuntu-latest
     timeout-minutes: 120
     steps:
-      - name: Check out master
-        uses: actions/checkout@v4
+      - name: Check out dispatch commit
+        uses: actions/checkout@v7
         with:
-          ref: master
           fetch-depth: 0
+          persist-credentials: false
+
+      - name: Validate master
+        run: |
+          set -euo pipefail
+          if [[ "$GITHUB_REF" != "refs/heads/master" ]]; then
+            echo "Run this workflow from the master branch." >&2
+            exit 1
+          fi
+
+          git fetch origin master --tags
+          if [[ "$(git rev-parse HEAD)" != "$(git rev-parse origin/master)" ]]; then
+            echo "master advanced after this run was dispatched; start a fresh run." >&2
+            exit 1
+          fi
+
+      - name: Calculate release version
+        id: version
+        env:
+          BUMP_TYPE: ${{ inputs.bump_type }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          stable_tag_re='^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$'
+          latest_tag=""
+          while IFS= read -r candidate; do
+            if [[ "$candidate" =~ $stable_tag_re ]]; then
+              latest_tag="$candidate"
+              break
+            fi
+          done < <(git tag --list 'v*' --sort=-version:refname)
+
+          expected_assets="$(printf '%s\n' \
+            checksums.txt \
+            one-cli_darwin_amd64.tar.gz \
+            one-cli_darwin_arm64.tar.gz \
+            one-cli_linux_amd64.tar.gz \
+            one-cli_linux_arm64.tar.gz \
+            one-cli_windows_amd64.zip | sort)"
+          mode="bump"
+          latest_tag_object=""
+          decision="bump $BUMP_TYPE from no tag"
+
+          if [[ -n "$latest_tag" ]]; then
+            latest_sha="$(git rev-list -n 1 "$latest_tag")"
+            latest_tag_object="$(git rev-parse "$latest_tag")"
+            latest_on_master=false
+            git merge-base --is-ancestor "$latest_sha" origin/master && latest_on_master=true
+
+            releases_json="$(gh api --paginate --slurp "repos/${GITHUB_REPOSITORY}/releases?per_page=100")"
+            latest_release="$(jq -c --arg tag "$latest_tag" \
+              '[.[][] | select(.tag_name == $tag)][0] // empty' <<< "$releases_json")"
+
+            if [[ -z "$latest_release" ]]; then
+              if [[ "$latest_on_master" == "true" ]]; then
+                mode="resume"
+                decision="resume $latest_tag (release missing)"
+              else
+                echo "Highest stable tag $latest_tag is off master and has no release; clean it up first." >&2
+                exit 1
+              fi
+            elif [[ "$(jq -r '.prerelease' <<< "$latest_release")" == "true" ]]; then
+              echo "Stable tag $latest_tag is marked as a prerelease; resolve that state first." >&2
+              exit 1
+            elif [[ "$(jq -r '.draft' <<< "$latest_release")" == "true" ]]; then
+              if [[ "$latest_on_master" == "true" ]]; then
+                mode="resume"
+                decision="resume draft $latest_tag"
+              else
+                decision="bump $BUMP_TYPE from off-master draft $latest_tag"
+              fi
+            else
+              actual_assets="$(jq -r '.assets[].name' <<< "$latest_release" | sort)"
+              if [[ "$actual_assets" != "$expected_assets" ]]; then
+                echo "Published release $latest_tag has an incomplete or unexpected asset set." >&2
+                diff -u <(printf '%s\n' "$expected_assets") <(printf '%s\n' "$actual_assets") || true
+                exit 1
+              fi
+              if [[ "$latest_on_master" == "true" && "$latest_sha" == "$(git rev-parse HEAD)" ]]; then
+                mode="idempotent"
+                decision="current commit already published as $latest_tag"
+              else
+                decision="bump $BUMP_TYPE from $latest_tag"
+              fi
+            fi
+          fi
+
+          if [[ "$mode" == "resume" || "$mode" == "idempotent" ]]; then
+            release_version="${latest_tag#v}"
+          else
+            base_version="${latest_tag#v}"
+            [[ -n "$base_version" ]] || base_version="0.0.0"
+            IFS=. read -r major minor patch <<< "$base_version"
+            case "$BUMP_TYPE" in
+              patch) patch=$((patch + 1)) ;;
+              minor) minor=$((minor + 1)); patch=0 ;;
+              major) major=$((major + 1)); minor=0; patch=0 ;;
+              *) echo "Unsupported bump type: $BUMP_TYPE" >&2; exit 1 ;;
+            esac
+            release_version="${major}.${minor}.${patch}"
+          fi
+
+          echo "version=$release_version" >> "$GITHUB_OUTPUT"
+          echo "base_tag=$latest_tag" >> "$GITHUB_OUTPUT"
+          echo "base_tag_object=$latest_tag_object" >> "$GITHUB_OUTPUT"
+          echo "mode=$mode" >> "$GITHUB_OUTPUT"
+          echo "RELEASE_VERSION=$release_version" >> "$GITHUB_ENV"
+          {
+            echo "### Calculated version"
+            echo "- Version: $release_version"
+            echo "- Mode: $mode"
+            echo "- Decision: $decision"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Resolve release state
+        id: release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          tag="v$RELEASE_VERSION"
+          source_sha="$(git rev-parse HEAD)"
+          tag_exists=false
+          already_published=false
+          expected_assets="$(printf '%s\n' \
+            checksums.txt \
+            one-cli_darwin_amd64.tar.gz \
+            one-cli_darwin_arm64.tar.gz \
+            one-cli_linux_amd64.tar.gz \
+            one-cli_linux_arm64.tar.gz \
+            one-cli_windows_amd64.zip | sort)"
+          releases_json="$(gh api --paginate --slurp "repos/${GITHUB_REPOSITORY}/releases?per_page=100")"
+          target_release="$(jq -c --arg tag "$tag" \
+            '[.[][] | select(.tag_name == $tag)][0] // empty' <<< "$releases_json")"
+
+          if git show-ref --verify --quiet "refs/tags/$tag"; then
+            tag_exists=true
+            source_sha="$(git rev-list -n 1 "$tag")"
+            if ! git merge-base --is-ancestor "$source_sha" origin/master; then
+              echo "Tag $tag does not point to a commit on master." >&2
+              exit 1
+            fi
+
+            if [[ -n "$target_release" ]]; then
+              if [[ "$(jq -r '.prerelease' <<< "$target_release")" == "true" ]]; then
+                echo "Stable tag $tag is marked as a prerelease." >&2
+                exit 1
+              fi
+              if [[ "$(jq -r '.draft' <<< "$target_release")" == "false" ]]; then
+                actual_assets="$(jq -r '.assets[].name' <<< "$target_release" | sort)"
+                if [[ "$actual_assets" != "$expected_assets" ]]; then
+                  echo "Published release $tag has an incomplete or unexpected asset set." >&2
+                  diff -u <(printf '%s\n' "$expected_assets") <(printf '%s\n' "$actual_assets") || true
+                  exit 1
+                fi
+                already_published=true
+              fi
+            fi
+          else
+            if [[ -n "$target_release" ]]; then
+              echo "Release $tag exists without a matching Git tag." >&2
+              exit 1
+            fi
+
+            existing_stable_tags="$(git tag --points-at "$source_sha" | sed -n -E '/^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$/p')"
+            if [[ -n "$existing_stable_tags" ]]; then
+              echo "This commit already has a stable tag: $existing_stable_tags" >&2
+              exit 1
+            fi
+
+            latest_published_tag=""
+            while IFS= read -r candidate; do
+              [[ "$candidate" =~ ^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]] || continue
+              candidate_release="$(jq -c --arg tag "$candidate" \
+                '[.[][] | select(.tag_name == $tag)][0] // empty' <<< "$releases_json")"
+              if [[ -n "$candidate_release" &&
+                "$(jq -r '[.draft, .prerelease] | @tsv' <<< "$candidate_release")" == $'false\tfalse' ]]; then
+                latest_published_tag="$candidate"
+                break
+              fi
+            done < <(git tag --list 'v*' --sort=-version:refname)
+
+            if [[ -n "$latest_published_tag" ]]; then
+              latest_version="${latest_published_tag#v}"
+              highest="$(printf '%s\n%s\n' "$latest_version" "$RELEASE_VERSION" | sort -V | tail -1)"
+              if [[ "$highest" != "$RELEASE_VERSION" || "$latest_version" == "$RELEASE_VERSION" ]]; then
+                echo "version must be newer than the latest published release $latest_published_tag." >&2
+                exit 1
+              fi
+            fi
+          fi
+
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          echo "sha=$source_sha" >> "$GITHUB_OUTPUT"
+          echo "tag_exists=$tag_exists" >> "$GITHUB_OUTPUT"
+          echo "already_published=$already_published" >> "$GITHUB_OUTPUT"
+
+          {
+            echo "### Release state"
+            echo "- Version: $RELEASE_VERSION"
+            echo "- Tag: $tag"
+            echo "- Commit: $source_sha"
+            echo "- Existing tag: $tag_exists"
+            echo "- Already published: $already_published"
+          } >> "$GITHUB_STEP_SUMMARY"
+      - name: Preserve release configuration
+        if: steps.release.outputs.already_published != 'true'
+        run: cp .goreleaser.yaml "$RUNNER_TEMP/one-cli-goreleaser.yaml"
+
+      - name: Check out release commit
+        if: steps.release.outputs.already_published != 'true'
+        env:
+          RELEASE_SHA: ${{ steps.release.outputs.sha }}
+        run: git checkout --detach "$RELEASE_SHA"
 
       - name: Set up Go
-        uses: actions/setup-go@v5
+        if: steps.release.outputs.already_published != 'true'
+        uses: actions/setup-go@v7
         with:
           go-version-file: packages/cli/go.mod
           cache: true
@@ -54,269 +264,272 @@ jobs:
             packages/cli/go.sum
             packages/kernel/go.mod
 
-      - name: Install task
-        run: go install github.com/go-task/task/v3/cmd/task@latest
-
-      - name: Download Go modules
-        run: |
-          go -C packages/kernel mod download
-          go -C packages/cli mod download
-
-      - name: Calculate next version
-        id: version
-        env:
-          BUMP_TYPE: ${{ inputs.bump_type }}
-        run: |
-          set -euo pipefail
-          git fetch --force --tags origin
-
-          previous_tag=""
-          while IFS= read -r candidate; do
-            if [[ "$candidate" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-              previous_tag="$candidate"
-              break
-            fi
-          done < <(git tag --list 'v*' --sort=-version:refname)
-
-          if [[ -z "$previous_tag" ]]; then
-            echo "No stable vMAJOR.MINOR.PATCH tag exists." >&2
-            exit 1
-          fi
-
-          previous_version="${previous_tag#v}"
-          IFS=. read -r major minor patch <<< "$previous_version"
-          case "$BUMP_TYPE" in
-            patch) patch=$((patch + 1)) ;;
-            minor) minor=$((minor + 1)); patch=0 ;;
-            major) major=$((major + 1)); minor=0; patch=0 ;;
-            *) echo "Unsupported bump type: $BUMP_TYPE" >&2; exit 1 ;;
-          esac
-
-          next_version="${major}.${minor}.${patch}"
-          next_tag="v${next_version}"
-          current_version="$(tr -d '[:space:]' < VERSION)"
-          needs_pr=true
-
-          if [[ "$current_version" == "$previous_version" ]]; then
-            : # Normal path: prepare the calculated version through a PR.
-          elif [[ "$current_version" == "$next_version" ]]; then
-            # A prior run may have merged the version PR before it stopped.
-            needs_pr=false
-          else
-            echo "VERSION=${current_version}, latest tag=${previous_tag}, expected current or next=${next_version}." >&2
-            echo "Resolve the version drift before releasing." >&2
-            exit 1
-          fi
-
-          if git show-ref --verify --quiet "refs/tags/${next_tag}"; then
-            echo "Tag ${next_tag} already exists." >&2
-            exit 1
-          fi
-          if gh release view "$next_tag" >/dev/null 2>&1; then
-            echo "Release ${next_tag} already exists." >&2
-            exit 1
-          fi
-
-          branch="release/${next_tag}"
-          if [[ "$needs_pr" == "true" ]] && git ls-remote --exit-code --heads origin "$branch" >/dev/null 2>&1; then
-            echo "Remote branch ${branch} already exists; finish or remove that release attempt first." >&2
-            exit 1
-          fi
-
-          echo "previous_tag=${previous_tag}" >> "$GITHUB_OUTPUT"
-          echo "version=${next_version}" >> "$GITHUB_OUTPUT"
-          echo "tag=${next_tag}" >> "$GITHUB_OUTPUT"
-          echo "branch=${branch}" >> "$GITHUB_OUTPUT"
-          echo "needs_pr=${needs_pr}" >> "$GITHUB_OUTPUT"
-          echo "source_sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
-
-          {
-            echo "### Release plan"
-            echo "- Previous: \`${previous_tag}\`"
-            echo "- Next: \`${next_tag}\`"
-            echo "- Increment: \`${BUMP_TYPE}\`"
-          } >> "$GITHUB_STEP_SUMMARY"
-
-      - name: Synchronize version files
-        if: steps.version.outputs.needs_pr == 'true'
-        env:
-          VERSION: ${{ steps.version.outputs.version }}
-        run: |
-          set -euo pipefail
-          printf '%s\n' "$VERSION" > VERSION
-          sed -i -E "0,/^  version: .*/s//  version: '${VERSION}'/" packages/skills/one-cli/SKILL.md
-
-          VERSION="$VERSION" perl -pi -e \
-            's/# \d+\.\d+\.\d+ \(or later\)/# $ENV{VERSION} (or later)/' \
-            apps/docs/content/docs/en/installation.md \
-            apps/docs/content/docs/zh/installation.md
-          VERSION="$VERSION" perl -pi -e \
-            'if (/^\| `ONE_VERSION`/) { s/(^\| `ONE_VERSION`.*?`v)\d+\.\d+\.\d+/${1}$ENV{VERSION}/ }' \
-            apps/docs/content/docs/en/installation.md \
-            apps/docs/content/docs/zh/installation.md
-
-          task --force verify-versions
-          git diff --check
-
-          expected_files=$(printf '%s\n' \
-            VERSION \
-            packages/skills/one-cli/SKILL.md \
-            apps/docs/content/docs/en/installation.md \
-            apps/docs/content/docs/zh/installation.md | sort)
-          actual_files=$(git diff --name-only | sort)
-          if [[ "$actual_files" != "$expected_files" ]]; then
-            echo "Version synchronization changed an unexpected file set." >&2
-            diff -u <(printf '%s\n' "$expected_files") <(printf '%s\n' "$actual_files") || true
-            exit 1
-          fi
-
-      - name: Create release pull request
-        if: steps.version.outputs.needs_pr == 'true'
-        id: pr
-        env:
-          BRANCH: ${{ steps.version.outputs.branch }}
-          TAG: ${{ steps.version.outputs.tag }}
-        run: |
-          set -euo pipefail
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git switch -c "$BRANCH"
-          git add \
-            VERSION \
-            packages/skills/one-cli/SKILL.md \
-            apps/docs/content/docs/en/installation.md \
-            apps/docs/content/docs/zh/installation.md
-          git commit -m "chore: bump version to ${TAG#v}"
-          git push origin "HEAD:refs/heads/${BRANCH}"
-
-          pr_url=$(gh pr create \
-            --base master \
-            --head "$BRANCH" \
-            --title "chore: bump version to ${TAG#v}" \
-            --body "Automated version synchronization for ${TAG}. This PR will be merged after the required CI checks pass.")
-          pr_number=$(gh pr view "$BRANCH" --json number --jq '.number')
-
-          echo "number=${pr_number}" >> "$GITHUB_OUTPUT"
-          echo "url=${pr_url}" >> "$GITHUB_OUTPUT"
-          echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
-
-      - name: Run release candidate CI
-        id: ci
-        env:
-          BRANCH: ${{ steps.version.outputs.branch }}
-          NEEDS_PR: ${{ steps.version.outputs.needs_pr }}
-          PR_SHA: ${{ steps.pr.outputs.sha }}
-          SOURCE_SHA: ${{ steps.version.outputs.source_sha }}
-        run: |
-          set -euo pipefail
-          if [[ "$NEEDS_PR" == "true" ]]; then
-            ci_ref="$BRANCH"
-            ci_sha="$PR_SHA"
-          else
-            ci_ref="master"
-            ci_sha="$SOURCE_SHA"
-          fi
-
-          gh workflow run ci.yml --ref "$ci_ref"
-
-          run_id=""
-          for _ in $(seq 1 30); do
-            run_id=$(gh run list \
-              --workflow ci.yml \
-              --branch "$ci_ref" \
-              --event workflow_dispatch \
-              --limit 20 \
-              --json databaseId,headSha \
-              --jq "[.[] | select(.headSha == \"${ci_sha}\") | .databaseId][0] // empty")
-            if [[ -n "$run_id" ]]; then
-              break
-            fi
-            sleep 2
-          done
-
-          if [[ -z "$run_id" ]]; then
-            echo "Could not locate the CI run for ${ci_sha}." >&2
-            exit 1
-          fi
-
-          echo "Waiting for CI run ${run_id} on ${ci_sha}."
-          gh run watch "$run_id" --exit-status
-          echo "run_id=${run_id}" >> "$GITHUB_OUTPUT"
-
-      - name: Merge release pull request
-        id: merge
-        env:
-          NEEDS_PR: ${{ steps.version.outputs.needs_pr }}
-          PR_NUMBER: ${{ steps.pr.outputs.number }}
-          PR_SHA: ${{ steps.pr.outputs.sha }}
-          SOURCE_SHA: ${{ steps.version.outputs.source_sha }}
-          VERSION: ${{ steps.version.outputs.version }}
-        run: |
-          set -euo pipefail
-          if [[ "$NEEDS_PR" == "true" ]]; then
-            gh pr merge "$PR_NUMBER" --squash --delete-branch --match-head-commit "$PR_SHA"
-            merge_sha=$(gh pr view "$PR_NUMBER" --json mergeCommit --jq '.mergeCommit.oid')
-          else
-            merge_sha="$SOURCE_SHA"
-          fi
-
-          git fetch origin master --tags
-          git merge-base --is-ancestor "$merge_sha" origin/master
-          git checkout --detach "$merge_sha"
-
-          merged_version="$(tr -d '[:space:]' < VERSION)"
-          if [[ "$merged_version" != "$VERSION" ]]; then
-            echo "Merged VERSION=${merged_version}, expected ${VERSION}." >&2
-            exit 1
-          fi
-
-          echo "sha=${merge_sha}" >> "$GITHUB_OUTPUT"
+      - name: Set up Task
+        if: steps.release.outputs.already_published != 'true'
+        uses: go-task/setup-task@v2
+        with:
+          version: 3.53.1
 
       - name: Set up pnpm
+        if: steps.release.outputs.already_published != 'true'
         uses: pnpm/action-setup@v4
         with:
           run_install: false
 
       - name: Set up Node
-        uses: actions/setup-node@v4
+        if: steps.release.outputs.already_published != 'true'
+        uses: actions/setup-node@v6
         with:
-          node-version: 20
+          node-version: 24
           cache: pnpm
           cache-dependency-path: pnpm-lock.yaml
 
-      - name: Create release tag
-        env:
-          TAG: ${{ steps.version.outputs.tag }}
-          RELEASE_SHA: ${{ steps.merge.outputs.sha }}
+      - name: Download Go modules without mutating the workspace
+        if: steps.release.outputs.already_published != 'true'
+        run: |
+          GOWORK=off go -C packages/kernel mod download
+          GOWORK=off go -C packages/cli mod download
+
+      - name: Verify dependency metadata is clean
+        if: steps.release.outputs.already_published != 'true'
         run: |
           set -euo pipefail
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git tag -a "$TAG" "$RELEASE_SHA" -m "$TAG"
-          git push origin "refs/tags/${TAG}"
+          dependency_files=(
+            go.work
+            go.work.sum
+            packages/kernel/go.mod
+            packages/kernel/go.sum
+            packages/cli/go.mod
+            packages/cli/go.sum
+          )
+          changes="$(git status --short -- "${dependency_files[@]}")"
+          if [[ -n "$changes" ]]; then
+            echo "Dependency setup changed dependency metadata." >&2
+            printf '%s\n' "$changes" >&2
+            git diff -- "${dependency_files[@]}"
+            exit 1
+          fi
 
-      - name: Sync bundled assets
+      - name: Run complete release gate
+        if: steps.release.outputs.already_published != 'true'
+        run: task pre-push
+
+      - name: Verify release tree is clean
+        if: steps.release.outputs.already_published != 'true'
         run: |
-          task sync-bundled
-          task sync-web
+          set -euo pipefail
+          git diff --exit-code
+          if [[ -n "$(git status --porcelain --untracked-files=no)" ]]; then
+            git status --short
+            echo "Release checkout has tracked changes." >&2
+            exit 1
+          fi
+
+      - name: Create local release tag
+        if: steps.release.outputs.already_published != 'true'
+        env:
+          TAG: ${{ steps.release.outputs.tag }}
+          RELEASE_SHA: ${{ steps.release.outputs.sha }}
+          TAG_EXISTS: ${{ steps.release.outputs.tag_exists }}
+        run: |
+          set -euo pipefail
+          if [[ "$TAG_EXISTS" == "true" ]]; then
+            actual_sha="$(git rev-list -n 1 "$TAG")"
+            if [[ "$actual_sha" != "$RELEASE_SHA" ]]; then
+              echo "Tag $TAG points to $actual_sha, expected $RELEASE_SHA." >&2
+              exit 1
+            fi
+          else
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git tag -a "$TAG" "$RELEASE_SHA" -m "$TAG"
+          fi
+
+      - name: Run GoReleaser preflight build
+        if: steps.release.outputs.already_published != 'true'
+        uses: goreleaser/goreleaser-action@v7
+        with:
+          version: v2.18.0
+          args: release --config ${{ runner.temp }}/one-cli-goreleaser.yaml --skip=publish --clean
+        env:
+          GORELEASER_CURRENT_TAG: ${{ steps.release.outputs.tag }}
+
+      - name: Verify packaged CLI version
+        if: steps.release.outputs.already_published != 'true'
+        run: |
+          set -euo pipefail
+          archive="dist/one-cli_linux_amd64.tar.gz"
+          extract_dir="$RUNNER_TEMP/one-cli-version-check"
+          test -f "$archive"
+          mkdir -p "$extract_dir"
+          tar -xzf "$archive" -C "$extract_dir"
+          actual_version="$("$extract_dir/one" --version | tr -d '[:space:]')"
+          if [[ "$actual_version" != "$RELEASE_VERSION" ]]; then
+            echo "Packaged CLI reports $actual_version, expected $RELEASE_VERSION." >&2
+            exit 1
+          fi
+
+      - name: Revalidate release state
+        if: steps.release.outputs.already_published != 'true'
+        env:
+          BASE_TAG: ${{ steps.version.outputs.base_tag }}
+          BASE_TAG_OBJECT: ${{ steps.version.outputs.base_tag_object }}
+          GH_TOKEN: ${{ github.token }}
+          MODE: ${{ steps.version.outputs.mode }}
+          RELEASE_SHA: ${{ steps.release.outputs.sha }}
+          TAG: ${{ steps.release.outputs.tag }}
+        run: |
+          set -euo pipefail
+          remote_latest_tag="$(git ls-remote --refs --tags origin 'refs/tags/v*' |
+            awk '{sub("refs/tags/", "", $2); print $2}' |
+            sed -n -E '/^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$/p' |
+            sort -V | tail -n 1)"
+          if [[ "$remote_latest_tag" != "$BASE_TAG" ]]; then
+            echo "Highest stable tag changed from $BASE_TAG to $remote_latest_tag; restart the release." >&2
+            exit 1
+          fi
+          if [[ -n "$BASE_TAG" ]]; then
+            remote_base_object="$(git ls-remote --refs --tags origin "refs/tags/$BASE_TAG" | awk 'NR == 1 {print $1}')"
+            if [[ "$remote_base_object" != "$BASE_TAG_OBJECT" ]]; then
+              echo "Base tag $BASE_TAG moved during this run; restart the release." >&2
+              exit 1
+            fi
+          fi
+
+          releases_json="$(gh api --paginate --slurp "repos/${GITHUB_REPOSITORY}/releases?per_page=100")"
+          target_release="$(jq -c --arg tag "$TAG" \
+            '[.[][] | select(.tag_name == $tag)][0] // empty' <<< "$releases_json")"
+          case "$MODE" in
+            bump)
+              current_master="$(git ls-remote origin 'refs/heads/master' | awk 'NR == 1 {print $1}')"
+              if [[ "$current_master" != "$RELEASE_SHA" ]]; then
+                echo "master advanced to $current_master after validation; restart the release." >&2
+                exit 1
+              fi
+              if git ls-remote --exit-code --refs --tags origin "refs/tags/$TAG" >/dev/null 2>&1 ||
+                [[ -n "$target_release" ]]; then
+                echo "Tag or release $TAG appeared during this run; restart to validate it." >&2
+                exit 1
+              fi
+              ;;
+            resume)
+              if [[ -n "$target_release" ]]; then
+                if [[ "$(jq -r '.prerelease' <<< "$target_release")" == "true" ||
+                  "$(jq -r '.draft' <<< "$target_release")" != "true" ]]; then
+                  echo "Release $TAG changed while validation was running; restart the release." >&2
+                  exit 1
+                fi
+              fi
+              ;;
+            *)
+              echo "Unexpected release mode: $MODE" >&2
+              exit 1
+              ;;
+          esac
+
+      - name: Push release tag
+        if: steps.release.outputs.already_published != 'true' && steps.release.outputs.tag_exists != 'true'
+        env:
+          BASE_TAG: ${{ steps.version.outputs.base_tag }}
+          BASE_TAG_OBJECT: ${{ steps.version.outputs.base_tag_object }}
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.release.outputs.tag }}
+          RELEASE_SHA: ${{ steps.release.outputs.sha }}
+        run: |
+          set -euo pipefail
+          git fetch origin master --tags
+          current_master="$(git rev-parse origin/master)"
+          if [[ "$current_master" != "$RELEASE_SHA" ]]; then
+            echo "master advanced to $current_master after validation; restart the release." >&2
+            exit 1
+          fi
+
+          remote_latest_tag="$(git ls-remote --refs --tags origin 'refs/tags/v*' |
+            awk '{sub("refs/tags/", "", $2); print $2}' |
+            sed -n -E '/^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$/p' |
+            sort -V | tail -n 1)"
+          if [[ "$remote_latest_tag" != "$BASE_TAG" ]]; then
+            echo "Highest stable tag changed from $BASE_TAG to $remote_latest_tag; restart the release." >&2
+            exit 1
+          fi
+          if [[ -n "$BASE_TAG" ]]; then
+            remote_base_object="$(git ls-remote --refs --tags origin "refs/tags/$BASE_TAG" | awk 'NR == 1 {print $1}')"
+            if [[ "$remote_base_object" != "$BASE_TAG_OBJECT" ]]; then
+              echo "Base tag $BASE_TAG moved during this run; restart the release." >&2
+              exit 1
+            fi
+          fi
+
+          if git ls-remote --exit-code --tags origin "refs/tags/$TAG" >/dev/null 2>&1; then
+            echo "Remote tag $TAG appeared during this run; restart to validate it." >&2
+            exit 1
+          fi
+          gh auth setup-git
+          git push origin "refs/tags/$TAG"
 
       - name: Run GoReleaser
-        uses: goreleaser/goreleaser-action@v6
+        if: steps.release.outputs.already_published != 'true'
+        uses: goreleaser/goreleaser-action@v7
         with:
-          version: latest
-          args: release --clean
+          version: v2.18.0
+          args: release --config ${{ runner.temp }}/one-cli-goreleaser.yaml --clean
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GORELEASER_CURRENT_TAG: ${{ steps.release.outputs.tag }}
 
-      - name: Publish GitHub release
+      - name: Verify draft release assets
+        if: steps.release.outputs.already_published != 'true'
         env:
-          TAG: ${{ steps.version.outputs.tag }}
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.release.outputs.tag }}
         run: |
           set -euo pipefail
-          gh release edit "$TAG" --draft=false
-          release_url=$(gh release view "$TAG" --json url --jq '.url')
+          is_draft="$(gh release view "$TAG" --json isDraft --jq '.isDraft')"
+          if [[ "$is_draft" != "true" ]]; then
+            echo "Release $TAG must remain a draft until its assets are verified." >&2
+            exit 1
+          fi
+
+          expected_assets="$(printf '%s\n' \
+            checksums.txt \
+            one-cli_darwin_amd64.tar.gz \
+            one-cli_darwin_arm64.tar.gz \
+            one-cli_linux_amd64.tar.gz \
+            one-cli_linux_arm64.tar.gz \
+            one-cli_windows_amd64.zip | sort)"
+          actual_assets="$(gh release view "$TAG" --json assets --jq '.assets[].name' | sort)"
+          if [[ "$actual_assets" != "$expected_assets" ]]; then
+            echo "Draft release $TAG has an incomplete or unexpected asset set." >&2
+            diff -u <(printf '%s\n' "$expected_assets") <(printf '%s\n' "$actual_assets") || true
+            exit 1
+          fi
+
+      - name: Publish GitHub release
+        if: steps.release.outputs.already_published != 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.release.outputs.tag }}
+        run: |
+          set -euo pipefail
+          gh release edit "$TAG" --draft=false --latest
+          is_draft="$(gh release view "$TAG" --json isDraft --jq '.isDraft')"
+          if [[ "$is_draft" != "false" ]]; then
+            echo "Release $TAG is still a draft after publishing." >&2
+            exit 1
+          fi
+
+      - name: Summarize release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.release.outputs.tag }}
+          ALREADY_PUBLISHED: ${{ steps.release.outputs.already_published }}
+        run: |
+          set -euo pipefail
+          release_url="$(gh release view "$TAG" --json url --jq '.url')"
           {
             echo "### Published"
-            echo "- Tag: \`${TAG}\`"
-            echo "- Release: ${release_url}"
+            echo "- Version: $RELEASE_VERSION"
+            echo "- Tag: $TAG"
+            echo "- Release: $release_url"
+            echo "- Already complete before this run: $ALREADY_PUBLISHED"
           } >> "$GITHUB_STEP_SUMMARY"

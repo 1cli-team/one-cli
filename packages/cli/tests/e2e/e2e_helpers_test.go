@@ -33,18 +33,12 @@ func repoRoot(t *testing.T) string {
 	return filepath.Join(filepath.Dir(file), "..", "..")
 }
 
-func repositoryVersion(t *testing.T) string {
+func expectedBuildVersion(t *testing.T) string {
 	t.Helper()
-	path := filepath.Join(repoRoot(t), "..", "..", "VERSION")
-	raw, err := os.ReadFile(path)
-	if err != nil {
-		t.Fatalf("read VERSION: %v", err)
+	if version := strings.TrimSpace(os.Getenv("RELEASE_VERSION")); version != "" {
+		return version
 	}
-	version := strings.TrimSpace(string(raw))
-	if version == "" {
-		t.Fatal("VERSION is empty")
-	}
-	return version
+	return "0.0.0-dev"
 }
 
 // binaryPath returns the path to bin/one, skipping the test if the

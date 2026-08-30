@@ -11,14 +11,13 @@ vars:
   BIN_DIR: packages/cli/bin
   BIN: packages/cli/bin/one
   GOPROXY: '{{.GOPROXY | default "https://goproxy.cn,direct"}}'
-  # Read version from the VERSION file. Releases override this via
-  # goreleaser's git-tag injection (-X main.version={{.Version}}).
-  VERSION:
-    sh: cat VERSION 2>/dev/null || echo 0.0.0-dev
-  LDFLAGS: '-s -w -X main.version={{.VERSION}}'
+  # Release builds pass RELEASE_VERSION explicitly. Ordinary local builds use
+  # a clearly non-release value so no tracked file can drift from a Git tag.
+  BUILD_VERSION: '{{.RELEASE_VERSION | default "0.0.0-dev"}}'
+  LDFLAGS: '-s -w -X main.version={{.BUILD_VERSION}}'
   LOCAL_VERSION:
     sh: |
-      base=$(cat VERSION 2>/dev/null || echo 0.0.0)
+      base="${RELEASE_VERSION:-0.0.0-dev}"
       commit=$(git rev-parse --short=7 HEAD 2>/dev/null || echo unknown)
       dirty=""
       if [ -n "$(git status --porcelain 2>/dev/null)" ]; then dirty=".dirty"; fi
@@ -39,6 +38,9 @@ tasks:
     desc: Build the local binary into packages/cli/bin/one
     deps: [sync-bundled, sync-web]
     dir: '{{.CLI_DIR}}'
+    status:
+      - test -x bin/one
+      - test "$(bin/one --version)" = "{{.BUILD_VERSION}}"
     cmds:
       - mkdir -p bin
       - go build -trimpath -ldflags '{{.LDFLAGS}}' -o bin/one ./cmd/one
@@ -64,18 +66,6 @@ tasks:
       - 'packages/cli/tools/gen-error-codes/**/*.go'
     generates:
       - 'apps/docs/content/docs/zh/error-codes.md'
-
-  verify-versions:
-    desc: Refuse drift between VERSION and SKILL.md frontmatter / installation doc samples
-    dir: '{{.CLI_DIR}}'
-    cmds:
-      - go run ./tools/verify-versions
-    sources:
-      - 'VERSION'
-      - 'packages/skills/one-cli/SKILL.md'
-      - 'apps/docs/content/docs/zh/installation.md'
-      - 'apps/docs/content/docs/en/installation.md'
-      - 'packages/cli/tools/verify-versions/**/*.go'
 
   verify-cli-references:
     desc: Refuse `one <subcommand>` references in docs that name unregistered commands
@@ -137,9 +127,8 @@ tasks:
       - 'packages/cli/tools/verify-help/**/*.go'
 
   verify-docs:
-    desc: All documentation drift checks (versions + CLI references + help text + frontmatter presence + preset codes / vectors)
+    desc: All documentation drift checks (CLI references + help text + frontmatter presence + preset codes / vectors)
     cmds:
-      - task: verify-versions
       - task: verify-cli-references
       - task: verify-help
       - task: verify-preset-codes
