@@ -142,7 +142,7 @@ See [Install skill to agent](/en/tutorials/skills-install/).
 Install a specific older version into a custom directory:
 
 ```bash
-curl -fsSL https://1cli.dev/install.sh | ONE_VERSION=v0.1.1 ONE_INSTALL_DIR=/opt/bin bash
+curl -fsSL https://1cli.dev/install.sh | ONE_VERSION=v0.1.0 ONE_INSTALL_DIR=/opt/bin bash
 ```
 
 ## Uninstall
