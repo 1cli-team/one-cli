@@ -1,2 +1,2 @@
-# Keep Go source compatible with gofmt on every platform.
-*.go text eol=lf
+# Keep formatter input stable across Windows, macOS, and Linux.
+* text=auto eol=lf
