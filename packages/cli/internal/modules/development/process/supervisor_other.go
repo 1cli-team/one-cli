@@ -1,11 +1,9 @@
-//go:build !unix
+//go:build !unix && !windows
 
 package processorch
 
-// supervisor_other.go is the build stub for non-Unix platforms. The
-// real supervisor (supervisor_unix.go) relies on POSIX process groups
-// + signal forwarding, neither of which has a clean Windows equivalent.
-// On those platforms `one dev` still works when an external runner is
+// supervisor_other.go is the build stub for platforms that are neither Unix
+// nor Windows. On those platforms `one dev` still works when an external runner is
 // in PATH; the built-in fallback just refuses with a clear message.
 
 import (

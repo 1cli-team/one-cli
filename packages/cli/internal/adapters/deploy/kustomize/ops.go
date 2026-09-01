@@ -14,6 +14,7 @@ import (
 	"strings"
 
 	cliErrors "github.com/torchstellar-team/one-cli/packages/cli/internal/platform/errors"
+	platformprocess "github.com/torchstellar-team/one-cli/packages/cli/internal/platform/process"
 )
 
 // Endpoint is the kustomize-relevant slice of a deploy profile:
@@ -69,7 +70,7 @@ func Apply(ctx context.Context, in ApplyInput) (*ApplyResult, error) {
 	if err := ensureNamespace(ctx, in.Endpoint); err != nil {
 		return nil, err
 	}
-	cmd := exec.CommandContext(ctx, argv[0], argv[1:]...)
+	cmd := platformprocess.CommandContext(ctx, argv[0], argv[1:]...)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	if err := cmd.Run(); err != nil {
@@ -114,7 +115,7 @@ func ensureNamespace(ctx context.Context, ep Endpoint) error {
 		return nil
 	}
 	createArgs := namespaceCreateArgs(ep, ns)
-	createCmd := exec.CommandContext(ctx, "kubectl", createArgs...)
+	createCmd := platformprocess.CommandContext(ctx, "kubectl", createArgs...)
 	var manifest bytes.Buffer
 	var createErr bytes.Buffer
 	createCmd.Stdout = &manifest
@@ -129,7 +130,7 @@ func ensureNamespace(ctx context.Context, ep Endpoint) error {
 	}
 
 	applyArgs := namespaceApplyArgs(ep)
-	applyCmd := exec.CommandContext(ctx, "kubectl", applyArgs...)
+	applyCmd := platformprocess.CommandContext(ctx, "kubectl", applyArgs...)
 	applyCmd.Stdin = &manifest
 	applyCmd.Stdout = os.Stdout
 	var applyErr bytes.Buffer

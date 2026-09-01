@@ -17,12 +17,12 @@ package containercmd
 
 import (
 	"context"
-	"os/exec"
 	"strings"
 	"time"
 
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/core/profile"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/core/workspace"
+	platformprocess "github.com/torchstellar-team/one-cli/packages/cli/internal/platform/process"
 )
 
 type kubeNodePlatformDetector func(kubeconfigPath, kubeconfigContext string) string
@@ -113,7 +113,7 @@ func detectKubeNodePlatform(kubeconfigPath, kubeconfigContext string) string {
 	args = append(args, "get", "nodes", "-o", `jsonpath={range .items[*]}{.status.nodeInfo.architecture}{"\n"}{end}`)
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
-	out, err := exec.CommandContext(ctx, "kubectl", args...).Output()
+	out, err := platformprocess.CommandContext(ctx, "kubectl", args...).Output()
 	if err != nil {
 		return ""
 	}

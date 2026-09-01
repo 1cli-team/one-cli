@@ -4,6 +4,7 @@ import (
 	"context"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 
@@ -343,7 +344,12 @@ database_id = "missing-id"
 		t.Fatalf("write wrangler.toml: %v", err)
 	}
 	failingWrangler := filepath.Join(tmp, "wrangler")
-	if err := os.WriteFile(failingWrangler, []byte("#!/bin/sh\nexit 1\n"), 0o755); err != nil {
+	failingBody := "#!/bin/sh\nexit 1\n"
+	if runtime.GOOS == "windows" {
+		failingWrangler += ".cmd"
+		failingBody = "@echo off\r\nexit /b 1\r\n"
+	}
+	if err := os.WriteFile(failingWrangler, []byte(failingBody), 0o755); err != nil {
 		t.Fatalf("write failing wrangler: %v", err)
 	}
 
@@ -419,6 +425,24 @@ func installFakeWranglerAt(t *testing.T, bin, logPath, urlOnDeploy string) {
 	t.Helper()
 	if err := os.MkdirAll(bin, 0o755); err != nil {
 		t.Fatalf("mkdir fake bin: %v", err)
+	}
+	if runtime.GOOS == "windows" {
+		path := filepath.Join(bin, "wrangler.cmd")
+		body := "@echo off\r\n" +
+			">>\"%WRANGLER_LOG%\" echo argv: %*\r\n" +
+			">>\"%WRANGLER_LOG%\" echo CLOUDFLARE_API_TOKEN=%CLOUDFLARE_API_TOKEN%\r\n" +
+			">>\"%WRANGLER_LOG%\" echo CLOUDFLARE_ACCOUNT_ID=%CLOUDFLARE_ACCOUNT_ID%\r\n" +
+			"if \"%~1\"==\"deploy\" (\r\n" +
+			"  echo Total Upload: 1.23 KiB\r\n" +
+			"  echo Published demo ^(1.2 sec^)\r\n" +
+			"  echo   " + urlOnDeploy + "\r\n" +
+			"  echo Current Deployment ID: abc-123\r\n" +
+			")\r\n"
+		if err := os.WriteFile(path, []byte(body), 0o755); err != nil {
+			t.Fatalf("write fake wrangler: %v", err)
+		}
+		t.Setenv("WRANGLER_LOG", logPath)
+		return
 	}
 	path := filepath.Join(bin, "wrangler")
 	body := `#!/bin/sh

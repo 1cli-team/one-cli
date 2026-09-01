@@ -30,6 +30,8 @@ import (
 	"path/filepath"
 
 	cliErrors "github.com/torchstellar-team/one-cli/packages/cli/internal/platform/errors"
+	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/fsutil"
+	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/userdirs"
 )
 
 // marshalConfig is the body of Config.MarshalJSON. Builds the JSON
@@ -138,7 +140,7 @@ func configRoot() (string, error) {
 	if xdg := os.Getenv("XDG_CONFIG_HOME"); xdg != "" {
 		return filepath.Join(xdg, "one"), nil
 	}
-	home, err := os.UserHomeDir()
+	home, err := userdirs.Home()
 	if err != nil {
 		return "", err
 	}
@@ -392,5 +394,5 @@ func atomicWrite(v any, path string) error {
 	if err := os.Chmod(tmpPath, 0o600); err != nil {
 		return err
 	}
-	return os.Rename(tmpPath, path)
+	return fsutil.ReplaceFile(tmpPath, path)
 }

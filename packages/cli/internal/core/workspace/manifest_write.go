@@ -9,6 +9,8 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+
+	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/fsutil"
 )
 
 // ManifestProjectInput is the upsert payload from `add` and status fixes.
@@ -105,7 +107,7 @@ func WriteManifest(projectRoot string, m *Manifest) error {
 type renameManifestFile func(string, string) error
 
 func atomicWriteManifest(path string, data []byte, defaultMode fs.FileMode) error {
-	return atomicWriteManifestWithRename(path, data, defaultMode, os.Rename)
+	return atomicWriteManifestWithRename(path, data, defaultMode, fsutil.ReplaceFile)
 }
 
 // atomicWriteManifestWithRename keeps publication injectable for focused

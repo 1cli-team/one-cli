@@ -5,10 +5,12 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/core/workspace"
+	platformprocess "github.com/torchstellar-team/one-cli/packages/cli/internal/platform/process"
 )
 
 func TestSnapshot_E2E_DeploySubprojectWebUsesS3DefaultWhenWorkspacePreferredIsK8s(t *testing.T) {
@@ -122,7 +124,7 @@ func TestSnapshot_E2E_DeployK8sDryRunUsesSetupTarget(t *testing.T) {
 		"create namespace prod --dry-run=client -o yaml",
 		"apply -f -",
 		"kubectl apply -k",
-		"kustomize/overlays/prod",
+		filepath.Join("kustomize", "overlays", "prod"),
 		"--kubeconfig " + kubeconfig,
 		"--context us-prod",
 		"--namespace prod",
@@ -253,6 +255,9 @@ func TestSnapshot_E2E_DeployCloudflareUsesProjectLocalWrangler(t *testing.T) {
 		t.Fatalf("read wrangler log: %v", err)
 	}
 	got := string(raw)
+	if runtime.GOOS == "windows" {
+		got = strings.ReplaceAll(got, "\"", "")
+	}
 	for _, want := range []string{
 		"pnpm argv: run build",
 		"argv: deploy",
@@ -271,6 +276,14 @@ func installFakePackageManager(t *testing.T, dir, name, logPath string) {
 		t.Fatalf("mkdir fake package-manager dir: %v", err)
 	}
 	path := filepath.Join(dir, name)
+	if runtime.GOOS == "windows" {
+		path += ".cmd"
+		body := "@echo off\r\n>>\"" + logPath + "\" echo " + name + " argv: %*\r\n"
+		if err := os.WriteFile(path, []byte(body), 0o755); err != nil {
+			t.Fatalf("write fake package manager: %v", err)
+		}
+		return
+	}
 	body := `#!/bin/sh
 echo "` + name + ` argv: $@" >> "` + logPath + `"
 `
@@ -305,6 +318,22 @@ func installProjectLocalWrangler(t *testing.T, projectDir, logPath, urlOnDeploy 
 	if err := os.MkdirAll(bin, 0o755); err != nil {
 		t.Fatalf("mkdir fake wrangler bin: %v", err)
 	}
+	if runtime.GOOS == "windows" {
+		path := filepath.Join(bin, "wrangler.cmd")
+		body := "@echo off\r\n" +
+			">>\"" + logPath + "\" echo argv: %*\r\n" +
+			">>\"" + logPath + "\" echo CLOUDFLARE_API_TOKEN=%CLOUDFLARE_API_TOKEN%\r\n" +
+			">>\"" + logPath + "\" echo CLOUDFLARE_ACCOUNT_ID=%CLOUDFLARE_ACCOUNT_ID%\r\n" +
+			"if \"%~1\"==\"deploy\" (\r\n" +
+			"  echo Total Upload: 1.23 KiB\r\n" +
+			"  echo Uploaded web ^(1.2 sec^)\r\n" +
+			"  echo   " + urlOnDeploy + "\r\n" +
+			")\r\n"
+		if err := os.WriteFile(path, []byte(body), 0o755); err != nil {
+			t.Fatalf("write fake wrangler: %v", err)
+		}
+		return
+	}
 	path := filepath.Join(bin, "wrangler")
 	body := `#!/bin/sh
 {
@@ -333,6 +362,10 @@ func installFakeKubectl(t *testing.T, dir, architecture string) {
 	}
 	path := filepath.Join(bin, "kubectl")
 	body := fmt.Sprintf("#!/bin/sh\nprintf '%s\\n'\n", architecture)
+	if runtime.GOOS == "windows" {
+		path += ".cmd"
+		body = "@echo off\r\necho " + architecture + "\r\n"
+	}
 	if err := os.WriteFile(path, []byte(body), 0o755); err != nil {
 		t.Fatalf("write fake kubectl: %v", err)
 	}
@@ -350,7 +383,7 @@ func installFakeKubectl(t *testing.T, dir, architecture string) {
 	// fail with K8S_PLATFORM_UNDETECTED, and produce a misleading
 	// stack trace pointing at deploy logic rather than test setup.
 	// Skip with full diagnostics instead.
-	out, err := exec.Command("kubectl").Output()
+	out, err := platformprocess.Command("kubectl").Output()
 	if err != nil || strings.TrimSpace(string(out)) != architecture {
 		resolved, _ := exec.LookPath("kubectl")
 		t.Skipf("fake kubectl shadowing failed: exec(kubectl) → out=%q err=%v "+

@@ -15,6 +15,9 @@ import (
 	"os"
 	"path/filepath"
 	"time"
+
+	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/fsutil"
+	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/userdirs"
 )
 
 // Cache is the on-disk shape of the cached check result. Schema v1 keeps
@@ -36,7 +39,7 @@ func cachePath() (string, error) {
 	if xdg := os.Getenv("XDG_CACHE_HOME"); xdg != "" {
 		return filepath.Join(xdg, "one", "update-check.json"), nil
 	}
-	home, err := os.UserHomeDir()
+	home, err := userdirs.Home()
 	if err != nil {
 		return "", err
 	}
@@ -100,5 +103,5 @@ func saveCache(c *Cache) error {
 	if err := tmp.Close(); err != nil {
 		return err
 	}
-	return os.Rename(tmpPath, path)
+	return fsutil.ReplaceFile(tmpPath, path)
 }

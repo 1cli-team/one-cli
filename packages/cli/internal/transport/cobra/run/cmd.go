@@ -12,6 +12,7 @@ import (
 	"os/exec"
 	"os/signal"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"syscall"
 
@@ -22,6 +23,7 @@ import (
 	cliErrors "github.com/torchstellar-team/one-cli/packages/cli/internal/platform/errors"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/i18n"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/output"
+	platformprocess "github.com/torchstellar-team/one-cli/packages/cli/internal/platform/process"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/ports/secrets"
 )
 
@@ -148,7 +150,7 @@ func runRun(ctx context.Context, loaders *secrets.Registry, flags *runFlags, arg
 			})
 	}
 
-	child := exec.Command(binary, args[1:]...)
+	child := platformprocess.Command(binary, args[1:]...)
 	child.Stdin = os.Stdin
 	child.Stdout = os.Stdout
 	child.Stderr = os.Stderr
@@ -286,8 +288,8 @@ func augmentPathForRun(env []string, projectRoot, targetDir string) []string {
 	out := make([]string, 0, len(env)+1)
 	replaced := false
 	for _, kv := range env {
-		if !replaced && strings.HasPrefix(kv, "PATH=") {
-			existing := strings.TrimPrefix(kv, "PATH=")
+		key, existing, found := strings.Cut(kv, "=")
+		if !replaced && found && isPathEnvironmentKey(key) {
 			parts := append([]string{}, binPaths...)
 			if existing != "" {
 				parts = append(parts, existing)
@@ -319,8 +321,9 @@ func lookPathFor(name string, env []string) (string, error) {
 	}
 	var augmented string
 	for _, kv := range env {
-		if strings.HasPrefix(kv, "PATH=") {
-			augmented = strings.TrimPrefix(kv, "PATH=")
+		key, value, found := strings.Cut(kv, "=")
+		if found && isPathEnvironmentKey(key) {
+			augmented = value
 			break
 		}
 	}
@@ -339,4 +342,11 @@ func lookPathFor(name string, env []string) (string, error) {
 		}
 	}()
 	return exec.LookPath(name)
+}
+
+func isPathEnvironmentKey(key string) bool {
+	if runtime.GOOS == "windows" {
+		return strings.EqualFold(key, "PATH")
+	}
+	return key == "PATH"
 }

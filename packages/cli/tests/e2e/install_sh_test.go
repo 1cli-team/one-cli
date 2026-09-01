@@ -16,6 +16,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 )
@@ -30,6 +31,9 @@ func installScriptPath(t *testing.T) string {
 }
 
 func TestInstallSh_BashSyntaxValid(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("install.sh syntax is covered on Unix; Windows uses install.ps1")
+	}
 	bashPath, err := exec.LookPath("bash")
 	if err != nil {
 		t.Skipf("bash not on PATH: %v", err)

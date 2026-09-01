@@ -1,6 +1,9 @@
 package secrets
 
-import "strings"
+import (
+	"runtime"
+	"strings"
+)
 
 // MergeIntoEnviron combines the parent process environment with values loaded
 // from a secrets backend. Default behaviour: shell vars win over the loaded
@@ -18,12 +21,12 @@ func MergeIntoEnviron(parent []string, vars map[string]string, override bool) []
 		if eq <= 0 {
 			continue
 		}
-		idx[kv[:eq]] = i
+		idx[environmentKey(kv[:eq])] = i
 	}
 	out := make([]string, len(parent))
 	copy(out, parent)
 	for k, v := range vars {
-		if i, exists := idx[k]; exists {
+		if i, exists := idx[environmentKey(k)]; exists {
 			if override {
 				out[i] = k + "=" + v
 			}
@@ -32,4 +35,11 @@ func MergeIntoEnviron(parent []string, vars map[string]string, override bool) []
 		out = append(out, k+"="+v)
 	}
 	return out
+}
+
+func environmentKey(key string) string {
+	if runtime.GOOS == "windows" {
+		return strings.ToUpper(key)
+	}
+	return key
 }

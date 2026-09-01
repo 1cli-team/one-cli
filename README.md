@@ -27,7 +27,13 @@ Install on macOS or Linux:
 curl -fsSL https://1cli.dev/install.sh | bash
 ```
 
-Windows users can download a build from [GitHub Releases](https://github.com/1cli-team/one-cli/releases/latest).
+Install on Windows 10/11 x64 from PowerShell:
+
+```powershell
+irm https://1cli.dev/install.ps1 | iex
+```
+
+Both installers verify the release checksum and add `one` to the normal per-user binary location.
 
 Create a workspace and add a project:
 

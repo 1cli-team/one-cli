@@ -28,6 +28,7 @@ import (
 
 	cliErrors "github.com/torchstellar-team/one-cli/packages/cli/internal/platform/errors"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/output"
+	platformprocess "github.com/torchstellar-team/one-cli/packages/cli/internal/platform/process"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/ports/secrets"
 )
 
@@ -215,7 +216,7 @@ func argvDisplay(argv []string) string {
 // while sniffing for the deployment URL. Wrangler prints the deploy
 // URL on its own line, e.g. "Published demo (1.2 sec) https://demo.<acct>.workers.dev".
 func runDeployStep(ctx context.Context, dir string, argv []string, apiToken, accountID string, injected map[string]string) (string, error) {
-	cmd := exec.CommandContext(ctx, argv[0], argv[1:]...)
+	cmd := platformprocess.CommandContext(ctx, argv[0], argv[1:]...)
 	cmd.Dir = dir
 	cmd.Stderr = os.Stderr
 	cmd.Env = wranglerEnv(os.Environ(), injected, apiToken, accountID)

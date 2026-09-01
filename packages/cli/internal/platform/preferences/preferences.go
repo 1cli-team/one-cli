@@ -31,6 +31,9 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+
+	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/fsutil"
+	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/userdirs"
 )
 
 // SchemaVersion is the current preferences.json shape version. Bumped
@@ -76,7 +79,7 @@ func configRoot() (string, error) {
 	if xdg := os.Getenv("XDG_CONFIG_HOME"); xdg != "" {
 		return filepath.Join(xdg, "one"), nil
 	}
-	home, err := os.UserHomeDir()
+	home, err := userdirs.Home()
 	if err != nil {
 		return "", err
 	}
@@ -172,5 +175,5 @@ func SaveAt(p *Preferences, path string) error {
 	if err := os.Chmod(tmpPath, 0o600); err != nil {
 		return err
 	}
-	return os.Rename(tmpPath, path)
+	return fsutil.ReplaceFile(tmpPath, path)
 }

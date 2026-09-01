@@ -15,6 +15,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -172,7 +173,7 @@ func TestContainerProfile_Roundtrip(t *testing.T) {
 		if err != nil {
 			t.Fatalf("stat %s: %v", p, err)
 		}
-		if mode := st.Mode().Perm(); mode != 0o600 {
+		if mode := st.Mode().Perm(); runtime.GOOS != "windows" && mode != 0o600 {
 			t.Errorf("file mode %s: got %o want 0600", p, mode)
 		}
 	}

@@ -29,6 +29,7 @@ import (
 
 	cliErrors "github.com/torchstellar-team/one-cli/packages/cli/internal/platform/errors"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/output"
+	platformprocess "github.com/torchstellar-team/one-cli/packages/cli/internal/platform/process"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/ports/secrets"
 )
 
@@ -178,7 +179,7 @@ func argvDisplay(argv []string) string {
 // while sniffing for the deployment URL. EdgeOne Pages prints the URL
 // on its own line ending in `.pages.tencent.com` or `.eo.dev`.
 func runDeployStep(ctx context.Context, dir string, argv []string, in ApplyInput) (string, error) {
-	cmd := exec.CommandContext(ctx, argv[0], argv[1:]...)
+	cmd := platformprocess.CommandContext(ctx, argv[0], argv[1:]...)
 	cmd.Dir = dir
 	cmd.Stderr = os.Stderr
 	cmd.Env = edgeoneEnv(os.Environ(), in.InjectedEnv)

@@ -3,6 +3,7 @@ package updatecheck
 import (
 	"bytes"
 	"os"
+	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -80,10 +81,19 @@ func TestPrintWarning_ContainsBothLines(t *testing.T) {
 		t.Fatalf("read: %v", err)
 	}
 	got := buf.String()
-	for _, want := range []string{"v0.9.0", "v0.8.0", installCommand, "⚠"} {
+	for _, want := range []string{"v0.9.0", "v0.8.0", installCommand(runtime.GOOS), "⚠"} {
 		if !strings.Contains(got, want) {
 			t.Errorf("warning missing %q\n  got: %s", want, got)
 		}
+	}
+}
+
+func TestInstallCommandMatchesPlatform(t *testing.T) {
+	if got := installCommand("windows"); got != windowsInstallCommand {
+		t.Fatalf("Windows install command = %q", got)
+	}
+	if got := installCommand("linux"); got != unixInstallCommand {
+		t.Fatalf("Unix install command = %q", got)
 	}
 }
 

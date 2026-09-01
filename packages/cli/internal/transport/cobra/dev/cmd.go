@@ -19,6 +19,7 @@ import (
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/helpui"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/i18n"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/output"
+	platformprocess "github.com/torchstellar-team/one-cli/packages/cli/internal/platform/process"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/prompt"
 )
 
@@ -137,7 +138,7 @@ func ensureDependencies(cmd *cobra.Command, root string, manifest *workspace.Man
 		return cliErrors.New(cliErrors.RUN_COMMAND_NOT_FOUND,
 			i18n.Tf("dev.package_manager_missing", install[0]))
 	}
-	child := exec.CommandContext(cmd.Context(), install[0], install[1:]...)
+	child := platformprocess.CommandContext(cmd.Context(), install[0], install[1:]...)
 	child.Dir = root
 	child.Stdin = os.Stdin
 	child.Stdout = os.Stdout

@@ -14,9 +14,9 @@ import (
 	"net/url"
 	"os"
 	"os/exec"
+	"runtime"
 	"strconv"
 	"sync"
-	"syscall"
 	"testing"
 	"time"
 )
@@ -80,20 +80,29 @@ func TestSnapshot_E2E_Serve_StartupEnvelope(t *testing.T) {
 		t.Errorf("probe: want 200, got %d", res.StatusCode)
 	}
 
-	// Shut down. SIGINT triggers the signal-aware ctx in cmd.go's RunE.
-	if err := cmd.Process.Signal(syscall.SIGINT); err != nil {
-		t.Fatalf("sigint: %v", err)
+	// Unix can validate graceful SIGINT shutdown directly. Windows does not
+	// support os.Process.Signal for Ctrl-C, so terminate the test child after
+	// the live-server contract has been verified.
+	expectCleanExit := runtime.GOOS != "windows"
+	var stopErr error
+	if expectCleanExit {
+		stopErr = cmd.Process.Signal(os.Interrupt)
+	} else {
+		stopErr = cmd.Process.Kill()
+	}
+	if stopErr != nil {
+		t.Fatalf("stop server: %v", stopErr)
 	}
 	done := make(chan error, 1)
 	go func() { done <- cmd.Wait() }()
 	select {
 	case err := <-done:
-		if err != nil {
+		if err != nil && expectCleanExit {
 			t.Errorf("clean shutdown: got %v\n  stderr: %s", err, stderr.String())
 		}
 	case <-time.After(5 * time.Second):
 		_ = cmd.Process.Kill()
-		t.Fatalf("server did not exit within 5s after SIGINT")
+		t.Fatalf("server did not exit within 5s after stop request")
 	}
 
 	assertSnapshot(t, "serve.json", envelope)

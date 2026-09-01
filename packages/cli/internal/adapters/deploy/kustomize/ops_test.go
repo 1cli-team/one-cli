@@ -4,6 +4,7 @@ import (
 	"context"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 )
@@ -35,6 +36,9 @@ func TestApplyEnsuresNamespaceBeforeKustomizeApply(t *testing.T) {
 		t.Fatalf("read fake kubectl log: %v", err)
 	}
 	got := string(raw)
+	if runtime.GOOS == "windows" {
+		got = strings.ReplaceAll(got, "\"", "")
+	}
 	wants := []string{
 		"--kubeconfig " + filepath.Join(tmp, "kubeconfig.yaml") + " --context local create namespace demo-123 --dry-run=client -o yaml",
 		"--kubeconfig " + filepath.Join(tmp, "kubeconfig.yaml") + " --context local apply -f -",
@@ -74,6 +78,9 @@ func TestApplyAcceptsStagingOverlay(t *testing.T) {
 		t.Fatalf("read fake kubectl log: %v", err)
 	}
 	got := string(raw)
+	if runtime.GOOS == "windows" {
+		got = strings.ReplaceAll(got, "\"", "")
+	}
 	if !strings.Contains(got, "apply -k "+overlay) {
 		t.Fatalf("kubectl log missing staging overlay apply:\n%s", got)
 	}
@@ -120,6 +127,34 @@ func installApplyFakeKubectl(t *testing.T, dir, logPath string) {
 	bin := filepath.Join(dir, "bin")
 	if err := os.MkdirAll(bin, 0o755); err != nil {
 		t.Fatalf("mkdir fake bin: %v", err)
+	}
+	if runtime.GOOS == "windows" {
+		path := filepath.Join(bin, "kubectl.cmd")
+		body := "@echo off\r\n" +
+			"setlocal\r\n" +
+			">>\"%KUBECTL_LOG%\" echo %*\r\n" +
+			"if \"%~5\"==\"create\" (\r\n" +
+			"  echo apiVersion: v1\r\n" +
+			"  echo kind: Namespace\r\n" +
+			"  echo metadata:\r\n" +
+			"  echo   name: demo-123\r\n" +
+			"  exit /b 0\r\n" +
+			")\r\n" +
+			"if \"%~5\"==\"apply\" (\r\n" +
+			"  echo namespace/demo-123 configured\r\n" +
+			"  exit /b 0\r\n" +
+			")\r\n" +
+			"if \"%~1\"==\"apply\" (\r\n" +
+			"  echo deployment.apps/api configured\r\n" +
+			"  exit /b 0\r\n" +
+			")\r\n" +
+			"exit /b 1\r\n"
+		if err := os.WriteFile(path, []byte(body), 0o755); err != nil {
+			t.Fatalf("write fake kubectl: %v", err)
+		}
+		t.Setenv("KUBECTL_LOG", logPath)
+		t.Setenv("PATH", bin+string(os.PathListSeparator)+os.Getenv("PATH"))
+		return
 	}
 	path := filepath.Join(bin, "kubectl")
 	body := `#!/bin/sh

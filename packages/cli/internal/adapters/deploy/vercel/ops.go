@@ -20,6 +20,7 @@ import (
 
 	cliErrors "github.com/torchstellar-team/one-cli/packages/cli/internal/platform/errors"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/output"
+	platformprocess "github.com/torchstellar-team/one-cli/packages/cli/internal/platform/process"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/ports/secrets"
 )
 
@@ -212,7 +213,7 @@ func argvDisplay(argv []string) string {
 }
 
 func runStep(ctx context.Context, dir string, argv []string, label string, injected map[string]string) error {
-	cmd := exec.CommandContext(ctx, argv[0], argv[1:]...)
+	cmd := platformprocess.CommandContext(ctx, argv[0], argv[1:]...)
 	cmd.Dir = dir
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
@@ -233,7 +234,7 @@ func runStep(ctx context.Context, dir string, argv []string, label string, injec
 // to lift the deployment URL out of the CLI output. `vercel deploy`
 // prints the URL on its own line, e.g. https://my-app-abc123.vercel.app.
 func runDeployStep(ctx context.Context, dir string, argv []string, injected map[string]string) (string, error) {
-	cmd := exec.CommandContext(ctx, argv[0], argv[1:]...)
+	cmd := platformprocess.CommandContext(ctx, argv[0], argv[1:]...)
 	cmd.Dir = dir
 	cmd.Stderr = os.Stderr
 	cmd.Env = vercelEnv(os.Environ(), injected)

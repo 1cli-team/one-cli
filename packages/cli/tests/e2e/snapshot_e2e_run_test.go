@@ -19,8 +19,10 @@ package cli_test
 // would be a real bug, not a fixture-update event.
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 )
@@ -71,8 +73,8 @@ func TestSnapshot_E2E_Run_HappyPath(t *testing.T) {
 	// Use sh -c so we can both observe stdout and read $RUN_TEST_KEY in
 	// one shot. printenv is portable; -- separator pins the contract for
 	// users who type it explicitly.
-	stdout, stderr, code := runBinaryIn(t, subDir, "run", "--",
-		"sh", "-c", "printenv RUN_TEST_KEY")
+	args := append([]string{"run", "--"}, environmentEchoCommand("RUN_TEST_KEY")...)
+	stdout, stderr, code := runBinaryIn(t, subDir, args...)
 	if code != 0 {
 		t.Fatalf("run failed: exit %d\n  stdout: %q\n  stderr: %q", code, stdout, stderr)
 	}
@@ -84,8 +86,8 @@ func TestSnapshot_E2E_Run_HappyPath(t *testing.T) {
 func TestSnapshot_E2E_Run_ExitCodePassthrough(t *testing.T) {
 	_, subDir := addSubprojectWithDotenv(t, "billing", "K=v\n")
 
-	_, _, code := runBinaryIn(t, subDir, "run", "--",
-		"sh", "-c", "exit 42")
+	args := append([]string{"run", "--"}, exitWithCodeCommand(42)...)
+	_, _, code := runBinaryIn(t, subDir, args...)
 	if code != 42 {
 		t.Errorf("expected child exit code 42 to passthrough, got %d", code)
 	}
@@ -147,8 +149,8 @@ func TestSnapshot_E2E_Run_DefaultOverwrite(t *testing.T) {
 	// Default behaviour (v0.8+): injected secrets always overwrite shell vars.
 	t.Setenv("OVERRIDE_KEY", "value-from-shell")
 
-	stdout, stderr, code := runBinaryIn(t, subDir, "run", "--",
-		"sh", "-c", "printenv OVERRIDE_KEY")
+	args := append([]string{"run", "--"}, environmentEchoCommand("OVERRIDE_KEY")...)
+	stdout, stderr, code := runBinaryIn(t, subDir, args...)
 	if code != 0 {
 		t.Fatalf("default run failed: exit %d\n  stderr: %s", code, stderr)
 	}
@@ -158,8 +160,8 @@ func TestSnapshot_E2E_Run_DefaultOverwrite(t *testing.T) {
 
 	// Sanity: -p resolves the same subproject from workspace root, both by
 	// relative path and by manifest name (v0.7+ name-based selection).
-	stdout, stderr, code = runBinaryIn(t, ws, "run", "-p", "services/auth", "--",
-		"sh", "-c", "printenv OVERRIDE_KEY")
+	args = append([]string{"run", "-p", "services/auth", "--"}, environmentEchoCommand("OVERRIDE_KEY")...)
+	stdout, stderr, code = runBinaryIn(t, ws, args...)
 	if code != 0 {
 		t.Fatalf("-p path run failed: exit %d\n  stderr: %s", code, stderr)
 	}
@@ -167,12 +169,26 @@ func TestSnapshot_E2E_Run_DefaultOverwrite(t *testing.T) {
 		t.Errorf("-p path resolution: want dotenv to win, got %q", got)
 	}
 
-	stdout, stderr, code = runBinaryIn(t, ws, "run", "-p", "auth", "--",
-		"sh", "-c", "printenv OVERRIDE_KEY")
+	args = append([]string{"run", "-p", "auth", "--"}, environmentEchoCommand("OVERRIDE_KEY")...)
+	stdout, stderr, code = runBinaryIn(t, ws, args...)
 	if code != 0 {
 		t.Fatalf("-p name run failed: exit %d\n  stderr: %s", code, stderr)
 	}
 	if got := strings.TrimSpace(stdout); got != "value-from-dotenv" {
 		t.Errorf("-p name resolution: want dotenv to win, got %q", got)
 	}
+}
+
+func environmentEchoCommand(name string) []string {
+	if runtime.GOOS == "windows" {
+		return []string{"cmd.exe", "/d", "/s", "/c", "echo %" + name + "%"}
+	}
+	return []string{"sh", "-c", "printenv " + name}
+}
+
+func exitWithCodeCommand(code int) []string {
+	if runtime.GOOS == "windows" {
+		return []string{"cmd.exe", "/d", "/s", "/c", "exit /b " + fmt.Sprint(code)}
+	}
+	return []string{"sh", "-c", "exit " + fmt.Sprint(code)}
 }

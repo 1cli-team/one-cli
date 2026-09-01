@@ -16,9 +16,13 @@ func expandHome(p string) string {
 	if !strings.HasPrefix(p, "~/") && p != "~" {
 		return p
 	}
-	home, err := os.UserHomeDir()
-	if err != nil {
-		return p
+	home := strings.TrimSpace(os.Getenv("HOME"))
+	if home == "" {
+		var err error
+		home, err = os.UserHomeDir()
+		if err != nil {
+			return p
+		}
 	}
 	if p == "~" {
 		return home

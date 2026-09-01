@@ -3,6 +3,7 @@ package profile
 import (
 	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 	"time"
 )
@@ -68,6 +69,9 @@ func TestCache_NearExpiryWithinSkewMisses(t *testing.T) {
 
 // Cache files must be 0600.
 func TestCache_FileMode(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("Windows ACLs are not represented by Unix permission bits")
+	}
 	withIsolatedConfig(t)
 	if err := WriteCache(DomainEnv, "infisical", "work", &CacheEntry{
 		Token:     "x",
