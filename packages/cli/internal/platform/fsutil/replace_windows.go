@@ -4,6 +4,7 @@ package fsutil
 
 import (
 	"errors"
+	"io"
 	"os"
 	"time"
 	"unsafe"
@@ -67,7 +68,7 @@ func callReplaceFile(target, replacement *uint16) error {
 func readFile(path string) ([]byte, error) {
 	deadline := time.Now().Add(replaceRetryWindow)
 	for {
-		data, err := os.ReadFile(path)
+		data, err := readFileShared(path)
 		if err == nil {
 			return data, nil
 		}
@@ -79,6 +80,36 @@ func readFile(path string) ([]byte, error) {
 		}
 		time.Sleep(10 * time.Millisecond)
 	}
+}
+
+func readFileShared(path string) ([]byte, error) {
+	name, err := windows.UTF16PtrFromString(path)
+	if err != nil {
+		return nil, err
+	}
+	handle, err := windows.CreateFile(
+		name,
+		windows.GENERIC_READ,
+		windows.FILE_SHARE_READ|windows.FILE_SHARE_WRITE|windows.FILE_SHARE_DELETE,
+		nil,
+		windows.OPEN_EXISTING,
+		windows.FILE_ATTRIBUTE_NORMAL|windows.FILE_FLAG_SEQUENTIAL_SCAN,
+		0,
+	)
+	if err != nil {
+		return nil, err
+	}
+	file := os.NewFile(uintptr(handle), path)
+	if file == nil {
+		_ = windows.CloseHandle(handle)
+		return nil, errors.New("create os.File from Windows handle")
+	}
+	data, readErr := io.ReadAll(file)
+	closeErr := file.Close()
+	if readErr != nil {
+		return nil, readErr
+	}
+	return data, closeErr
 }
 
 func syncDir(string) error { return nil }

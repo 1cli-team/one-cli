@@ -241,12 +241,31 @@ func TestBulkBuildResolvesKustomizePlatformPerProjectAndEnvironment(t *testing.T
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, commandFragment := range []string{
-		"docker build --platform linux/amd64 -t web:v1.2.3 " + filepath.Join(canonicalRoot, "apps/web"),
-		"docker build --platform linux/arm64 -t api:v1.2.3 " + filepath.Join(canonicalRoot, "services/api"),
+	for _, want := range []struct {
+		prefix      string
+		relativeDir string
+	}{
+		{prefix: "docker build --platform linux/amd64 -t web:v1.2.3 ", relativeDir: "apps/web"},
+		{prefix: "docker build --platform linux/arm64 -t api:v1.2.3 ", relativeDir: "services/api"},
 	} {
-		if !strings.Contains(buildOutput, commandFragment) {
-			t.Fatalf("bulk build output missing %q:\n%s", commandFragment, buildOutput)
+		var buildPath string
+		for _, line := range strings.Split(strings.TrimSpace(buildOutput), "\n") {
+			line = strings.TrimSuffix(line, "\r")
+			if strings.HasPrefix(line, want.prefix) {
+				buildPath = strings.TrimSpace(strings.TrimPrefix(line, want.prefix))
+				break
+			}
+		}
+		if buildPath == "" {
+			t.Fatalf("bulk build output missing prefix %q:\n%s", want.prefix, buildOutput)
+		}
+		canonicalBuildPath, err := filepath.EvalSymlinks(buildPath)
+		if err != nil {
+			t.Fatal(err)
+		}
+		wantPath := filepath.Join(canonicalRoot, filepath.FromSlash(want.relativeDir))
+		if filepath.Clean(canonicalBuildPath) != filepath.Clean(wantPath) {
+			t.Fatalf("bulk build path = %q, want %q", canonicalBuildPath, wantPath)
 		}
 	}
 	wantDetectorCalls := []detectorCall{
