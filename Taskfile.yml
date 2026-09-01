@@ -9,7 +9,9 @@ vars:
   CLI_DIR: packages/cli
   KERNEL_DIR: packages/kernel
   BIN_DIR: packages/cli/bin
-  BIN: packages/cli/bin/one
+  GOEXE:
+    sh: go env GOEXE
+  BIN: 'packages/cli/bin/one{{.GOEXE}}'
   GOPROXY: '{{.GOPROXY | default "https://goproxy.cn,direct"}}'
   # Release builds pass RELEASE_VERSION explicitly. Ordinary local builds use
   # a clearly non-release value so no tracked file can drift from a Git tag.
@@ -39,11 +41,11 @@ tasks:
     deps: [sync-bundled, sync-web]
     dir: '{{.CLI_DIR}}'
     status:
-      - test -x bin/one
-      - test "$(bin/one --version)" = "{{.BUILD_VERSION}}"
+      - test -f 'bin/one{{.GOEXE}}'
+      - test "$(bin/one{{.GOEXE}} --version)" = "{{.BUILD_VERSION}}"
     cmds:
       - mkdir -p bin
-      - go build -trimpath -ldflags '{{.LDFLAGS}}' -o bin/one ./cmd/one
+      - go build -trimpath -ldflags '{{.LDFLAGS}}' -o 'bin/one{{.GOEXE}}' ./cmd/one
     sources:
       - 'go.work'
       - 'go.work.sum'
@@ -133,39 +135,23 @@ tasks:
       - task: verify-help
       - task: verify-preset-codes
       - task: verify-preset-vectors
-      - |
-        # Frontmatter sanity: every page under apps/docs/content/docs/ must
-        # declare title and description. Fumadocs renders these in the sidebar
-        # and as page metadata; missing fields silently degrade navigation.
-        missing=0
-        while IFS= read -r f; do
-          head -10 "$f" | grep -q '^title:' || { echo "$f: missing 'title:' frontmatter" >&2; missing=1; }
-          head -10 "$f" | grep -q '^description:' || { echo "$f: missing 'description:' frontmatter" >&2; missing=1; }
-        done < <(find apps/docs/content/docs -type f \( -name '*.md' -o -name '*.mdx' \))
-        exit $missing
+      - go run ./packages/cli/tools/repo-checks frontmatter
 
   verify-node-workspace:
     desc: Keep application dependency resolution owned by the root pnpm workspace
     cmds:
-      - |
-        duplicate_locks=$(find apps -mindepth 2 -maxdepth 2 -type f -name pnpm-lock.yaml -print)
-        duplicate_managers=$(grep -l '"packageManager"' apps/*/package.json 2>/dev/null || true)
-        if [ -n "$duplicate_locks$duplicate_managers" ]; then
-          echo "Node workspace metadata must be owned by the repository root:" >&2
-          [ -z "$duplicate_locks" ] || echo "$duplicate_locks" >&2
-          [ -z "$duplicate_managers" ] || echo "$duplicate_managers" >&2
-          exit 1
-        fi
+      - go run ./packages/cli/tools/repo-checks node-workspace
 
   install:
     aliases: [install-local]
-    desc: Build the embedded Dashboard and CLI, then install one to ~/.local/bin/one
+    desc: Build the embedded Dashboard and CLI, then install a platform-native launcher
     summary: |
       One-shot developer install: builds the Dashboard, refreshes all bundled
-      assets, compiles the CLI with local version metadata, and creates a symlink at
-      ~/.local/bin/one pointing at the absolute path of packages/cli/bin/one
-      in this checkout. Subsequent `task build` invocations rebuild the
-      binary in place; the symlink keeps working.
+      assets, compiles the CLI with local version metadata, and creates a launcher
+      under ~/.local/bin pointing at the absolute binary in this checkout.
+      macOS/Linux use a one symlink. Windows prefers a one.exe symlink and
+      falls back to a one.cmd forwarding shim when symlinks are unavailable.
+      Both keep working when later builds replace the binary in place.
 
       `task install-local` remains a compatibility alias.
 
@@ -175,9 +161,7 @@ tasks:
         export PATH="$HOME/.local/bin:$PATH"
     deps: [build-local]
     cmds:
-      - mkdir -p $HOME/.local/bin
-      - ln -sf "$(pwd)/{{.BIN}}" $HOME/.local/bin/one
-      - $HOME/.local/bin/one --version
+      - go run ./packages/cli/tools/install-local "{{.BIN}}"
 
   build-local:
     internal: true
@@ -185,7 +169,9 @@ tasks:
     dir: '{{.CLI_DIR}}'
     cmds:
       - mkdir -p bin
-      - GOMAXPROCS={{.LOCAL_GO_PROCS}} go build -p {{.LOCAL_GO_PROCS}} -trimpath -ldflags '{{.LOCAL_LDFLAGS}}' -o bin/one ./cmd/one
+      - cmd: go build -p {{.LOCAL_GO_PROCS}} -trimpath -ldflags '{{.LOCAL_LDFLAGS}}' -o 'bin/one{{.GOEXE}}' ./cmd/one
+        env:
+          GOMAXPROCS: '{{.LOCAL_GO_PROCS}}'
 
   build-all:
     desc: Cross-compile every supported platform under go-dist/
@@ -237,13 +223,7 @@ tasks:
   fmt:check:
     desc: Check Go formatting without rewriting files
     cmds:
-      - |
-        changed=$(gofmt -l {{.KERNEL_DIR}} {{.CLI_DIR}})
-        if [ -n "$changed" ]; then
-          echo "Files need gofmt — run 'task fmt' first:" >&2
-          echo "$changed" >&2
-          exit 1
-        fi
+      - go run ./packages/cli/tools/repo-checks gofmt
 
   test:
     desc: Run Go tests with race detector and Dashboard interaction tests
@@ -370,13 +350,7 @@ tasks:
       excludes its subtree, which would silently drop the go-api template
       from the binary.
     cmds:
-      - cp packages/templates/registry.json packages/cli/internal/resources/bundled/registry.json
-      - rm -rf packages/cli/internal/resources/bundled/skills
-      - cp -R packages/skills packages/cli/internal/resources/bundled/skills
-      - rm -rf packages/cli/internal/resources/bundled/_templates
-      - cp -R packages/templates packages/cli/internal/resources/bundled/_templates
-      - rm -f packages/cli/internal/resources/bundled/_templates/registry.json
-      - find packages/cli/internal/resources/bundled/_templates -name go.mod -delete
+      - go run ./packages/cli/tools/sync-resources bundled
 
   sync-web:
     desc: Rebuild the embedded `one serve` UI from apps/dashboard/ and refresh packages/cli/internal/resources/bundled/_web/
@@ -392,5 +366,4 @@ tasks:
       are near-free unless you've edited apps/dashboard/.
     deps: [build-web]
     cmds:
-      - rm -rf packages/cli/internal/resources/bundled/_web
-      - cp -R apps/dashboard/dist packages/cli/internal/resources/bundled/_web
+      - go run ./packages/cli/tools/sync-resources web

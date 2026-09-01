@@ -6,11 +6,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
 
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/core/workspace"
+	platformprocess "github.com/torchstellar-team/one-cli/packages/cli/internal/platform/process"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/prompt"
 	deployport "github.com/torchstellar-team/one-cli/packages/cli/internal/ports/deploy"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/ports/secrets"
@@ -37,7 +38,7 @@ func (Local) Build(ctx context.Context, input deployport.BuildInput) ([]string, 
 		return []string{line}, nil
 	}
 	return nil, prompt.Spin(fmt.Sprintf("正在构建项目 %s", input.Apply.Project.Name), func() error {
-		cmd := exec.CommandContext(ctx, argv[0], argv[1:]...)
+		cmd := platformprocess.CommandContext(ctx, argv[0], argv[1:]...)
 		cmd.Dir = projectDir
 		cmd.Stdout = input.Apply.Stdout
 		cmd.Stderr = input.Apply.Stderr
@@ -105,8 +106,9 @@ func augmentBuildEnv(parent []string, projectRoot, projectDir string, injected m
 	out := make([]string, 0, len(base)+1)
 	replaced := false
 	for _, value := range base {
-		if !replaced && strings.HasPrefix(value, "PATH=") {
-			existing := strings.TrimPrefix(value, "PATH=")
+		key, existing, found := strings.Cut(value, "=")
+		isPath := key == "PATH" || (runtime.GOOS == "windows" && strings.EqualFold(key, "PATH"))
+		if !replaced && found && isPath {
 			parts := append([]string{}, binPaths...)
 			if existing != "" {
 				parts = append(parts, existing)

@@ -2,6 +2,7 @@ package cloudflare
 
 import (
 	"context"
+	"path/filepath"
 	"testing"
 
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/core/profile"
@@ -117,8 +118,8 @@ func TestProjectDirFor(t *testing.T) {
 			RelativeDir: "apps/web",
 		},
 	}
-	if got := projectDirFor(withoutTarget); got != "/repo/apps/web" {
-		t.Errorf("fallback path = %q, want /repo/apps/web", got)
+	if want, got := filepath.Join("/repo", "apps", "web"), projectDirFor(withoutTarget); got != want {
+		t.Errorf("fallback path = %q, want %q", got, want)
 	}
 }
 

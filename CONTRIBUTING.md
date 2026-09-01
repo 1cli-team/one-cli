@@ -9,7 +9,7 @@ brew install go go-task node    # macOS；Linux 用 apt / dnf 类比
 npm i -g pnpm                   # 或 corepack enable && corepack prepare pnpm@10
 git clone https://github.com/1cli-team/one-cli
 cd one-cli
-task install                    # 打包 Dashboard + CLI，再 symlink 到 ~/.local/bin/one
+task install                    # 打包 Dashboard + CLI，再创建当前平台的本地启动器
 one --version                   # 验证装好
 ```
 
@@ -36,7 +36,7 @@ task build                  # 编译到 packages/cli/bin/one
 task test                   # 全套 Go 测试 + race detector
 task vet                    # go vet
 task fmt                    # gofmt
-task install                # 打包 + symlink（开发用；install-local 仍是兼容别名）
+task install                # 打包 + 本地启动器（开发用；install-local 仍是兼容别名）
 task pre-push               # 推前必跑（含上面所有 + verify-docs）
 ```
 

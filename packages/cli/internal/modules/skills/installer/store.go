@@ -26,6 +26,8 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/fsutil"
+	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/userdirs"
 	"github.com/torchstellar-team/one-cli/packages/cli/pkg/agentskills"
 )
 
@@ -33,7 +35,7 @@ import (
 // Always under the user's home dir; we don't honour XDG_DATA_HOME
 // because this is one-cli-internal state, not user-facing config.
 func StoreDir() (string, error) {
-	home, err := os.UserHomeDir()
+	home, err := userdirs.Home()
 	if err != nil {
 		return "", err
 	}
@@ -138,7 +140,7 @@ func SaveManifest(m *Manifest) error {
 	if err := os.WriteFile(tmp, raw, 0o644); err != nil {
 		return err
 	}
-	return os.Rename(tmp, path)
+	return fsutil.ReplaceFile(tmp, path)
 }
 
 // Append adds an entry, replacing any existing entry with the same

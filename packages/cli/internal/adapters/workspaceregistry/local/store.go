@@ -18,6 +18,8 @@ import (
 
 	"github.com/gofrs/flock"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/core/workspace"
+	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/fsutil"
+	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/userdirs"
 )
 
 const lockRetryDelay = 10 * time.Millisecond
@@ -43,7 +45,7 @@ func Path() (string, error) {
 	if xdg := strings.TrimSpace(os.Getenv("XDG_CONFIG_HOME")); xdg != "" {
 		configRoot = xdg
 	} else {
-		home, err := os.UserHomeDir()
+		home, err := userdirs.Home()
 		if err != nil {
 			return "", fmt.Errorf("resolve home directory: %w", err)
 		}
@@ -68,7 +70,7 @@ func NewAt(path string) *Store {
 		path:       path,
 		lock:       flock.New(path + ".lock"),
 		localLock:  make(chan struct{}, 1),
-		renameFile: os.Rename,
+		renameFile: fsutil.ReplaceFile,
 	}
 	store.localLock <- struct{}{}
 	return store

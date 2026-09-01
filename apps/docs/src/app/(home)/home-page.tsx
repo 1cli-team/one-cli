@@ -24,6 +24,7 @@ import {
 } from "@/i18n";
 import { BrandMark } from "@/components/brand-mark";
 import { HomeHeroCanvas } from "./hero-canvas";
+import { HomeInstallCommand } from "./home-install-command";
 import { HomeCopyButton } from "./home-template-preview";
 import { WorkflowSidebarNav, type WorkflowNavIcon } from "./workflow-nav";
 import {
@@ -32,8 +33,6 @@ import {
   softwareApplicationJsonLd,
   websiteJsonLd,
 } from "@/lib/seo";
-
-const installCommand = "curl -fsSL https://1cli.dev/install.sh | bash";
 
 const homeCopy = {
   zh: {
@@ -70,6 +69,9 @@ const homeCopy = {
       github: "查看 GitHub",
       copy: "复制",
       copied: "已复制",
+      installPlatform: "选择安装平台",
+      unixPlatform: "macOS / Linux",
+      windowsPlatform: "Windows PowerShell",
     },
     workflow: {
       eyebrow: "常用命令",
@@ -432,6 +434,9 @@ const homeCopy = {
       github: "View on GitHub",
       copy: "copy",
       copied: "copied",
+      installPlatform: "Choose an install platform",
+      unixPlatform: "macOS / Linux",
+      windowsPlatform: "Windows PowerShell",
     },
     workflow: {
       eyebrow: "Common commands",
@@ -935,18 +940,13 @@ function Hero({ lang, text }: { lang: Locale; text: HomeText }) {
               {text.hero.github}
             </a>
           </div>
-          <div className="flex w-full max-w-[580px] min-w-0 items-center gap-2 rounded-lg border border-[#292524] bg-[#1c1917] px-3 py-2">
-            <span className="font-mono text-xs text-[#ea580c]">$</span>
-            <code className="min-w-0 flex-1 truncate font-mono text-xs text-stone-100">
-              {installCommand}
-            </code>
-            <HomeCopyButton
-              value={installCommand}
-              label={text.hero.copy}
-              copiedLabel={text.hero.copied}
-              className="shrink-0 border-transparent px-1.5 py-1 font-mono text-[10px] lowercase text-stone-500 hover:text-white"
-            />
-          </div>
+          <HomeInstallCommand
+            platformLabel={text.hero.installPlatform}
+            unixLabel={text.hero.unixPlatform}
+            windowsLabel={text.hero.windowsPlatform}
+            copyLabel={text.hero.copy}
+            copiedLabel={text.hero.copied}
+          />
         </div>
         <HomeHeroCanvas ariaLabel={text.hero.canvasAria} lang={lang} />
       </div>

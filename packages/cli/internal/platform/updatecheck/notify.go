@@ -7,16 +7,24 @@ package updatecheck
 import (
 	"fmt"
 	"os"
+	"runtime"
 
 	"github.com/charmbracelet/lipgloss"
 
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/output"
 )
 
-// installCommand is what the warning tells the user to run. Matches the
-// command in [README.md](README.md) so the notification's recommendation
-// is the same path users have already seen.
-const installCommand = "curl -fsSL https://1cli.dev/install.sh | bash"
+const (
+	unixInstallCommand    = "curl -fsSL https://1cli.dev/install.sh | bash"
+	windowsInstallCommand = "irm https://1cli.dev/install.ps1 | iex"
+)
+
+func installCommand(goos string) string {
+	if goos == "windows" {
+		return windowsInstallCommand
+	}
+	return unixInstallCommand
+}
 
 // Notify reads the cached check result and prints a yellow warning to
 // stderr if a strictly newer version is available. Idempotent and
@@ -53,7 +61,7 @@ func printWarning(w *os.File, latest, current string) {
 	yellow := lipgloss.NewStyle().Foreground(lipgloss.Color("11")).Bold(true)
 	dim := lipgloss.NewStyle().Foreground(lipgloss.Color("8"))
 	headline := yellow.Render(fmt.Sprintf("⚠  one cli 有新版本可用：%s（当前 %s）", latest, current))
-	cmd := dim.Render("   " + installCommand)
+	cmd := dim.Render("   " + installCommand(runtime.GOOS))
 	fmt.Fprintln(w, headline)
 	fmt.Fprintln(w, cmd)
 }

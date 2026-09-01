@@ -41,11 +41,15 @@ func expectedBuildVersion(t *testing.T) string {
 	return "0.0.0-dev"
 }
 
-// binaryPath returns the path to bin/one, skipping the test if the
+// binaryPath returns the path to bin/one (bin/one.exe on Windows), skipping the test if the
 // binary hasn't been built. Run `task build` first.
 func binaryPath(t *testing.T) string {
 	t.Helper()
-	bin := filepath.Join(repoRoot(t), "bin", "one")
+	name := "one"
+	if runtime.GOOS == "windows" {
+		name += ".exe"
+	}
+	bin := filepath.Join(repoRoot(t), "bin", name)
 	if _, err := os.Stat(bin); err != nil {
 		t.Skipf("binary not built; run `task build` first (%v)", err)
 	}
@@ -94,8 +98,9 @@ func prependPath(env []string, dir string) []string {
 	out := append([]string{}, env...)
 	prefix := "PATH="
 	for i, kv := range out {
-		if strings.HasPrefix(kv, prefix) {
-			path := strings.TrimPrefix(kv, prefix)
+		key, path, found := strings.Cut(kv, "=")
+		isPath := key == "PATH" || (runtime.GOOS == "windows" && strings.EqualFold(key, "PATH"))
+		if found && isPath {
 			if path == "" {
 				out[i] = prefix + dir
 			} else {

@@ -17,7 +17,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"os/exec"
 	"strconv"
 	"strings"
 	"time"
@@ -28,6 +27,7 @@ import (
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/core/workspace"
 	cliErrors "github.com/torchstellar-team/one-cli/packages/cli/internal/platform/errors"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/output"
+	platformprocess "github.com/torchstellar-team/one-cli/packages/cli/internal/platform/process"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/prompt"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/ports/deploy"
 )
@@ -244,7 +244,7 @@ func detectKubeNodePlatform(kubeconfigPath, kubeconfigContext string) string {
 	args = append(args, "get", "nodes", "-o", `jsonpath={range .items[*]}{.status.nodeInfo.architecture}{"\n"}{end}`)
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
-	out, err := exec.CommandContext(ctx, "kubectl", args...).Output()
+	out, err := platformprocess.CommandContext(ctx, "kubectl", args...).Output()
 	if err != nil {
 		return ""
 	}

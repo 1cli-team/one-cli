@@ -1,0 +1,194 @@
+// Command install-local creates the development launcher used by task install.
+// Unix uses a symlink named one. Windows prefers a one.exe symlink and falls
+// back to a one.cmd shim when file symlinks are unavailable.
+package main
+
+import (
+	"errors"
+	"fmt"
+	"io/fs"
+	"os"
+	"os/exec"
+	"path/filepath"
+	"runtime"
+	"strings"
+)
+
+type localInstallResult struct {
+	launcherPath    string
+	targetPath      string
+	usedCommandShim bool
+	symlinkErr      error
+}
+
+type localInstaller struct {
+	goos        string
+	homeDir     string
+	makeSymlink func(string, string) error
+}
+
+func main() {
+	if len(os.Args) != 2 {
+		fatalf("usage: install-local <one-binary>")
+	}
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		fatalf("resolve home directory: %v", err)
+	}
+	result, err := (localInstaller{
+		goos:        runtime.GOOS,
+		homeDir:     homeDir,
+		makeSymlink: os.Symlink,
+	}).install(os.Args[1])
+	if err != nil {
+		fatalf("%v", err)
+	}
+	if result.usedCommandShim {
+		fmt.Fprintf(os.Stderr,
+			"one-cli: Windows file symlink unavailable (%v); using a command shim instead.\n",
+			result.symlinkErr,
+		)
+	}
+	fmt.Printf("one-cli: local launcher %s -> %s\n", result.launcherPath, result.targetPath)
+	if err := verifyLauncher(result); err != nil {
+		fatalf("verify local launcher %s: %v", result.launcherPath, err)
+	}
+}
+
+func (installer localInstaller) install(source string) (localInstallResult, error) {
+	if installer.homeDir == "" {
+		return localInstallResult{}, errors.New("home directory is empty")
+	}
+	targetPath, err := filepath.Abs(source)
+	if err != nil {
+		return localInstallResult{}, fmt.Errorf("resolve binary path: %w", err)
+	}
+	info, err := os.Stat(targetPath)
+	if err != nil {
+		return localInstallResult{}, fmt.Errorf("inspect binary %s: %w", targetPath, err)
+	}
+	if !info.Mode().IsRegular() {
+		return localInstallResult{}, fmt.Errorf("binary path is not a regular file: %s", targetPath)
+	}
+
+	binDir := filepath.Join(installer.homeDir, ".local", "bin")
+	if err := os.MkdirAll(binDir, 0o755); err != nil {
+		return localInstallResult{}, fmt.Errorf("create launcher directory %s: %w", binDir, err)
+	}
+	if installer.goos == "windows" {
+		return installer.installWindows(binDir, targetPath)
+	}
+	return installer.installUnix(binDir, targetPath)
+}
+
+func (installer localInstaller) installUnix(binDir, targetPath string) (localInstallResult, error) {
+	launcherPath := filepath.Join(binDir, "one")
+	if err := removePath(launcherPath); err != nil {
+		return localInstallResult{}, err
+	}
+	if err := installer.makeSymlink(targetPath, launcherPath); err != nil {
+		return localInstallResult{}, fmt.Errorf("create symlink %s: %w", launcherPath, err)
+	}
+	return localInstallResult{launcherPath: launcherPath, targetPath: targetPath}, nil
+}
+
+func (installer localInstaller) installWindows(binDir, targetPath string) (localInstallResult, error) {
+	if err := removeLegacyWindowsLauncher(filepath.Join(binDir, "one")); err != nil {
+		return localInstallResult{}, err
+	}
+
+	exeLauncher := filepath.Join(binDir, "one.exe")
+	if err := removePath(exeLauncher); err != nil {
+		return localInstallResult{}, err
+	}
+	if err := installer.makeSymlink(targetPath, exeLauncher); err == nil {
+		return localInstallResult{launcherPath: exeLauncher, targetPath: targetPath}, nil
+	} else {
+		if cleanupErr := removePath(exeLauncher); cleanupErr != nil {
+			return localInstallResult{}, cleanupErr
+		}
+		commandLauncher := filepath.Join(binDir, "one.cmd")
+		if writeErr := writeWindowsShim(commandLauncher, targetPath); writeErr != nil {
+			return localInstallResult{}, writeErr
+		}
+		return localInstallResult{
+			launcherPath:    commandLauncher,
+			targetPath:      targetPath,
+			usedCommandShim: true,
+			symlinkErr:      err,
+		}, nil
+	}
+}
+
+func removeLegacyWindowsLauncher(path string) error {
+	info, err := os.Lstat(path)
+	if errors.Is(err, fs.ErrNotExist) {
+		return nil
+	}
+	if err != nil {
+		return fmt.Errorf("inspect legacy Windows launcher %s: %w", path, err)
+	}
+	if info.Mode()&os.ModeSymlink == 0 {
+		return fmt.Errorf(
+			"refusing to replace legacy Windows launcher %s because it is not a symlink; move or remove it manually",
+			path,
+		)
+	}
+	if err := os.Remove(path); err != nil {
+		return fmt.Errorf("remove legacy Windows launcher %s: %w", path, err)
+	}
+	return nil
+}
+
+func removePath(path string) error {
+	info, err := os.Lstat(path)
+	if errors.Is(err, fs.ErrNotExist) {
+		return nil
+	}
+	if err != nil {
+		return fmt.Errorf("inspect launcher %s: %w", path, err)
+	}
+	if info.IsDir() {
+		return fmt.Errorf("refusing to replace launcher path because it is a directory: %s", path)
+	}
+	if err := os.Remove(path); err != nil {
+		return fmt.Errorf("remove launcher %s: %w", path, err)
+	}
+	return nil
+}
+
+func writeWindowsShim(path, targetPath string) error {
+	if err := removePath(path); err != nil {
+		return err
+	}
+	escapedTarget := strings.ReplaceAll(targetPath, "%", "%%")
+	body := "@echo off\r\n@rem Generated by One CLI task install. Do not edit.\r\n\"" +
+		escapedTarget + "\" %*\r\n"
+	if err := os.WriteFile(path, []byte(body), 0o755); err != nil {
+		return fmt.Errorf("write Windows command shim %s: %w", path, err)
+	}
+	return nil
+}
+
+func verifyLauncher(result localInstallResult) error {
+	var command *exec.Cmd
+	if result.usedCommandShim {
+		commandInterpreter := os.Getenv("ComSpec")
+		if commandInterpreter == "" {
+			commandInterpreter = "cmd.exe"
+		}
+		command = exec.Command(commandInterpreter, "/d", "/s", "/c", "call %ONE_LOCAL_LAUNCHER% --version")
+		command.Env = append(os.Environ(), "ONE_LOCAL_LAUNCHER=\""+result.launcherPath+"\"")
+	} else {
+		command = exec.Command(result.launcherPath, "--version")
+	}
+	command.Stdin = os.Stdin
+	command.Stdout = os.Stdout
+	command.Stderr = os.Stderr
+	return command.Run()
+}
+
+func fatalf(format string, args ...any) {
+	fmt.Fprintf(os.Stderr, format+"\n", args...)
+	os.Exit(1)
+}

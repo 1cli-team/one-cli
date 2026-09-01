@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"sync"
 	"testing"
@@ -29,7 +30,7 @@ func TestWriteManifestAtomicallyPreservesPermissionsAndFormat(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got := info.Mode().Perm(); got != 0o600 {
+	if got := info.Mode().Perm(); runtime.GOOS != "windows" && got != 0o600 {
 		t.Fatalf("manifest permissions = %o, want 600", got)
 	}
 	raw, err := os.ReadFile(path)
@@ -71,7 +72,7 @@ func TestAtomicManifestRenameFailurePreservesPublishedFile(t *testing.T) {
 		if statErr != nil {
 			t.Fatal(statErr)
 		}
-		if got := info.Mode().Perm(); got != 0o640 {
+		if got := info.Mode().Perm(); runtime.GOOS != "windows" && got != 0o640 {
 			t.Fatalf("temp permissions = %o, want existing mode 640", got)
 		}
 		return publishErr

@@ -15,11 +15,9 @@
 # `vite build` against apps/dashboard/.
 #
 # Runners:
-#   - ubuntu-latest for PR checks
+#   - ubuntu-latest for the main PR checks
+#   - windows-latest for native Windows build and test coverage
 #   - macos-latest for master/manual compatibility checks
-#
-# Windows is deferred until testdata/bin/ has .bat siblings of the POSIX
-# shell stubs (Phase 3 in the test plan).
 
 name: Code Quality and Tests
 
@@ -165,6 +163,51 @@ jobs:
       - name: Run test gate
         # Calls the same test subtask as local `task check`.
         run: task check:test
+
+  test-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Set up Go
+        uses: actions/setup-go@v7
+        with:
+          go-version-file: packages/cli/go.mod
+          cache: true
+          cache-dependency-path: |
+            go.work
+            go.work.sum
+            packages/cli/go.sum
+            packages/kernel/go.mod
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          run_install: false
+
+      - name: Set up Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Set up Task
+        uses: go-task/setup-task@v2
+        with:
+          version: 3.53.1
+
+      - name: Download Go modules
+        shell: pwsh
+        run: |
+          $env:GOWORK = "off"
+          go -C packages/kernel mod download
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          go -C packages/cli mod download
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Run native Windows PR gate
+        run: task check
 
   test-race:
     # Race tests are useful but slow on GitHub-hosted runners. Keep them off

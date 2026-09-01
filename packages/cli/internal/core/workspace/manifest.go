@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 
 	cliErrors "github.com/torchstellar-team/one-cli/packages/cli/internal/platform/errors"
+	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/fsutil"
 )
 
 // ManifestFilename is the on-disk location of the workspace manifest at the
@@ -130,7 +131,8 @@ type ProjectDomains struct {
 // Empty Command (or missing block) means "this project is not part of
 // `one dev`" — the supervisor will skip it.
 type ProjectDevOverride struct {
-	// Command is the full shell line executed via `sh -c <cmd>`.
+	// Command is the full shell line executed by the platform shell
+	// (sh on Unix, cmd.exe on Windows).
 	Command string `json:"command,omitempty"`
 }
 
@@ -234,7 +236,7 @@ func IsOneProjectRoot(projectRoot string) bool {
 // is accepted; older manifests must be migrated by hand (see CHANGELOG).
 func ReadManifest(projectRoot string) (*Manifest, error) {
 	path := ManifestPath(projectRoot)
-	raw, err := os.ReadFile(path)
+	raw, err := fsutil.ReadFile(path)
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {
 			return emptyManifest(), nil

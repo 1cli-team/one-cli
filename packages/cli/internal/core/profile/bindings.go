@@ -31,6 +31,7 @@ import (
 
 	"github.com/gofrs/flock"
 	cliErrors "github.com/torchstellar-team/one-cli/packages/cli/internal/platform/errors"
+	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/fsutil"
 )
 
 const (
@@ -545,15 +546,10 @@ func atomicWriteSynced(value any, path string) error {
 		return err
 	}
 	closed = true
-	if err := os.Rename(tmpPath, path); err != nil {
+	if err := fsutil.ReplaceFile(tmpPath, path); err != nil {
 		return err
 	}
-	directory, err := os.Open(dir)
-	if err != nil {
-		return err
-	}
-	defer directory.Close()
-	return directory.Sync()
+	return fsutil.SyncDir(dir)
 }
 
 func canonicalBindingRoot(root string) (string, error) {

@@ -4,6 +4,7 @@ import (
 	"context"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 )
@@ -209,6 +210,9 @@ func TestApplyRealExecCapturesDeploymentURL(t *testing.T) {
 		t.Fatalf("read log: %v", err)
 	}
 	got := string(raw)
+	if runtime.GOOS == "windows" {
+		got = strings.ReplaceAll(got, "\"", "")
+	}
 	for _, want := range []string{
 		"pull --yes --environment=production --scope=acme --token=tok-real",
 		"build --prod --scope=acme --token=tok-real",
@@ -345,6 +349,18 @@ func installFakeVercel(t *testing.T, dir, logPath, urlOnDeploy string) {
 	bin := filepath.Join(dir, "bin")
 	if err := os.MkdirAll(bin, 0o755); err != nil {
 		t.Fatalf("mkdir fake bin: %v", err)
+	}
+	if runtime.GOOS == "windows" {
+		path := filepath.Join(bin, "vercel.cmd")
+		body := "@echo off\r\n" +
+			">>\"%VERCEL_LOG%\" echo %*\r\n" +
+			"if \"%~1\"==\"deploy\" echo " + urlOnDeploy + "\r\n"
+		if err := os.WriteFile(path, []byte(body), 0o755); err != nil {
+			t.Fatalf("write fake vercel: %v", err)
+		}
+		t.Setenv("VERCEL_LOG", logPath)
+		t.Setenv("PATH", bin+string(os.PathListSeparator)+os.Getenv("PATH"))
+		return
 	}
 	path := filepath.Join(bin, "vercel")
 	body := `#!/bin/sh

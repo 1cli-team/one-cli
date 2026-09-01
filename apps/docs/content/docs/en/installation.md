@@ -1,6 +1,6 @@
 ---
 title: Installation
-description: Install the one binary on your machine, including macOS / Linux one-line install, Windows manual download, upgrades, downgrades, and uninstall.
+description: Install the one binary on macOS, Linux, or Windows, including one-line installers, upgrades, downgrades, and uninstall.
 ---
 
 Install the `one` binary onto your `PATH`. It should take only a few seconds.
@@ -44,9 +44,21 @@ echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.bashrc
 
 Open a new shell.
 
-## Windows / Manual Download
+## Windows PowerShell Install
 
-Download the matching archive from [GitHub Releases](https://github.com/1cli-team/one-cli/releases/latest) (`darwin/linux/windows x amd64/arm64`), unzip it, and put `one` on `PATH`.
+Windows 10/11 x64 users can install from PowerShell:
+
+```powershell
+irm https://1cli.dev/install.ps1 | iex
+```
+
+The script downloads `one-cli_windows_amd64.zip`, verifies it against `checksums.txt`, installs `one.exe` under `%LOCALAPPDATA%\Programs\one\bin`, and adds that directory to your user PATH. Open a new terminal after the first install.
+
+**Audit the script**: open `https://1cli.dev/install.ps1` in a browser. It is plain text.
+
+## Manual Download
+
+Download the matching archive from [GitHub Releases](https://github.com/1cli-team/one-cli/releases/latest), unpack it, and put `one` (or `one.exe`) on PATH. Windows currently publishes an x64 archive; macOS and Linux publish x64 and arm64 archives.
 
 Example for Linux amd64:
 
@@ -58,11 +70,11 @@ mv one ~/.local/bin/
 one --version
 ```
 
-On Windows, download `one-cli_windows_amd64.zip`, unzip it, and put `one.exe` in a directory on `PATH`.
+On Windows, the archive is `one-cli_windows_amd64.zip`.
 
 ## Upgrade And Downgrade
 
-`install.sh` checks the installed `one --version` before deciding what to do:
+`install.sh` and `install.ps1` check the installed `one --version` before deciding what to do:
 
 | Current state | Behavior |
 |---|---|
@@ -75,7 +87,7 @@ For normal upgrades, rerun the install command. Use `ONE_FORCE` only for downgra
 
 ## After Install: Run `one skills install`
 
-`install.sh` only puts the `one` binary on `PATH`. To let Claude Code / Cursor / Codex and similar agents discover One CLI skills, run this once:
+The installers only put the `one` binary on PATH. To let Claude Code / Cursor / Codex and similar agents discover One CLI skills, run this once:
 
 ```bash
 one skills install
@@ -127,17 +139,18 @@ See [Install skill to agent](/en/tutorials/skills-install/).
 
 ## Environment Variables
 
-`install.sh` accepts:
+Both installers accept the variables below. PowerShell reads them from `$env:NAME`; its default install directory is `%LOCALAPPDATA%\Programs\one\bin`.
 
 | Variable | Default | Meaning |
 |---|---|---|
 | `ONE_VERSION` | resolved from the latest GitHub release | Lock the version, for example `v0.1.1` |
-| `ONE_INSTALL_DIR` | `$HOME/.local/bin` | Install directory |
+| `ONE_INSTALL_DIR` | `$HOME/.local/bin`; Windows: `%LOCALAPPDATA%\Programs\one\bin` | Install directory |
 | `ONE_FORCE` | `0` | Set to `1` to allow downgrade, same-version reinstall, or overwrite a binary whose version cannot be read |
 | `ONE_REPO_URL` | `https://github.com/1cli-team/one-cli` | GitHub repo URL override for debugging |
 | `ONE_RELEASE_BASE_URL` | `$ONE_REPO_URL/releases/download` | Release asset download base override |
 | `ONE_LATEST_URL` | `$ONE_REPO_URL/releases/latest` | Latest release resolver override |
 | `ONE_SKIP_VERIFY` | `0` | Set to `1` to skip SHA256 verification; debugging only |
+| `ONE_NO_PATH_UPDATE` | `0` | Set to `1` to install without changing the user PATH |
 
 Install a specific older version into a custom directory:
 
@@ -146,6 +159,14 @@ curl -fsSL https://1cli.dev/install.sh | ONE_VERSION=v0.1.0 ONE_INSTALL_DIR=/opt
 ```
 
 ## Uninstall
+
+PowerShell:
+
+```powershell
+Remove-Item "$env:LOCALAPPDATA\Programs\one\bin\one.exe"
+```
+
+macOS / Linux:
 
 ```bash
 rm ~/.local/bin/one
@@ -161,11 +182,15 @@ If you are changing One CLI itself, read [CONTRIBUTING.md](https://github.com/1c
 git clone https://github.com/1cli-team/one-cli
 cd one-cli
 brew install go go-task     # macOS; adapt for Linux
-task install                 # package Dashboard + CLI, then symlink to ~/.local/bin/one
+task install                 # package Dashboard + CLI, then create a native launcher
 hash -r
 which one
 one --version
 ```
+
+Windows creates `~/.local/bin/one.exe`; when file symlinks are unavailable,
+it falls back to a `one.cmd` forwarding shim. The extensionless `one` symlink
+created by older versions is migrated safely.
 
 For the full contributor flow, see [CONTRIBUTING.md](https://github.com/1cli-team/one-cli/blob/master/CONTRIBUTING.md). For command-surface reference, see [Command overview](/en/docs/cli-overview/).
 

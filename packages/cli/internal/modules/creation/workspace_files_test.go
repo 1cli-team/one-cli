@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 
@@ -44,16 +45,18 @@ func TestGenerateWorkspaceFiles(t *testing.T) {
 		}
 	}
 
-	// husky hooks must be executable so the user's shell will run them.
-	for _, rel := range []string{".husky/pre-commit", ".husky/commit-msg"} {
-		path := filepath.Join(target, rel)
-		info, err := os.Stat(path)
-		if err != nil {
-			t.Fatalf("stat %s: %v", rel, err)
-		}
-		mode := info.Mode().Perm()
-		if mode&0o111 == 0 {
-			t.Errorf("%s is not executable; mode=%v", rel, mode)
+	// Windows uses ACLs and does not expose Unix executable bits.
+	if runtime.GOOS != "windows" {
+		for _, rel := range []string{".husky/pre-commit", ".husky/commit-msg"} {
+			path := filepath.Join(target, rel)
+			info, err := os.Stat(path)
+			if err != nil {
+				t.Fatalf("stat %s: %v", rel, err)
+			}
+			mode := info.Mode().Perm()
+			if mode&0o111 == 0 {
+				t.Errorf("%s is not executable; mode=%v", rel, mode)
+			}
 		}
 	}
 

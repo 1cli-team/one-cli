@@ -23,7 +23,7 @@ func RunExternal(workdir string, args []string, missingHint string) error {
 		}
 		return cliErrors.New(cliErrors.RUN_COMMAND_NOT_FOUND, msg)
 	}
-	cmd := exec.Command(args[0], args[1:]...)
+	cmd := Command(args[0], args[1:]...)
 	cmd.Stdin = os.Stdin
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr

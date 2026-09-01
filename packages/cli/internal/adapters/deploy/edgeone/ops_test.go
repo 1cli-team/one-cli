@@ -4,6 +4,7 @@ import (
 	"context"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 )
@@ -186,6 +187,9 @@ func TestApplyRealExecCapturesDeploymentURL(t *testing.T) {
 		t.Fatalf("read log: %v", err)
 	}
 	got := string(raw)
+	if runtime.GOOS == "windows" {
+		got = strings.ReplaceAll(got, "\"", "")
+	}
 	if !strings.Contains(got, "--token token-real") {
 		t.Errorf("log missing token flag\n--- log:\n%s", got)
 	}
@@ -255,6 +259,21 @@ func installFakeEdgeOne(t *testing.T, dir, logPath, urlOnDeploy string) {
 	bin := filepath.Join(dir, "bin")
 	if err := os.MkdirAll(bin, 0o755); err != nil {
 		t.Fatalf("mkdir fake bin: %v", err)
+	}
+	if runtime.GOOS == "windows" {
+		path := filepath.Join(bin, "edgeone.cmd")
+		body := "@echo off\r\n" +
+			">>\"%EDGEONE_LOG%\" echo argv: %*\r\n" +
+			"if \"%~1\"==\"pages\" if \"%~2\"==\"deploy\" (\r\n" +
+			"  echo Uploading assets to EdgeOne Pages...\r\n" +
+			"  echo Deployment ready at: " + urlOnDeploy + "\r\n" +
+			")\r\n"
+		if err := os.WriteFile(path, []byte(body), 0o755); err != nil {
+			t.Fatalf("write fake edgeone: %v", err)
+		}
+		t.Setenv("EDGEONE_LOG", logPath)
+		t.Setenv("PATH", bin+string(os.PathListSeparator)+os.Getenv("PATH"))
+		return
 	}
 	path := filepath.Join(bin, "edgeone")
 	body := `#!/bin/sh

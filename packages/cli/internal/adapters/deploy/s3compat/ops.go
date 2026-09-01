@@ -10,7 +10,6 @@ import (
 	"fmt"
 	"mime"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 
@@ -23,6 +22,7 @@ import (
 
 	cliErrors "github.com/torchstellar-team/one-cli/packages/cli/internal/platform/errors"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/output"
+	platformprocess "github.com/torchstellar-team/one-cli/packages/cli/internal/platform/process"
 )
 
 // defaultBuildOutput is the conventional Vite/CRA/Astro output dir.
@@ -336,7 +336,7 @@ func runBuild(ctx context.Context, subDir, toolchain string) error {
 	if err != nil {
 		return err
 	}
-	cmd := exec.CommandContext(ctx, argv[0], argv[1:]...)
+	cmd := platformprocess.CommandContext(ctx, argv[0], argv[1:]...)
 	cmd.Dir = subDir
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
@@ -434,7 +434,7 @@ func uploadOne(ctx context.Context, client objectClient, bucket string, f upload
 	if err != nil {
 		return err
 	}
-	contentType := mime.TypeByExtension(filepath.Ext(f.relPath))
+	contentType := contentTypeForPath(f.relPath)
 	if contentType == "" {
 		contentType = "application/octet-stream"
 	}
@@ -447,6 +447,20 @@ func uploadOne(ctx context.Context, client objectClient, bucket string, f upload
 	}
 	_, err = client.PutObject(ctx, in)
 	return err
+}
+
+func contentTypeForPath(path string) string {
+	switch strings.ToLower(filepath.Ext(path)) {
+	case ".js", ".mjs":
+		return "text/javascript; charset=utf-8"
+	case ".css":
+		return "text/css; charset=utf-8"
+	case ".html", ".htm":
+		return "text/html; charset=utf-8"
+	case ".json":
+		return "application/json"
+	}
+	return mime.TypeByExtension(filepath.Ext(path))
 }
 
 func endpointDisplay(ep *Endpoint) string {

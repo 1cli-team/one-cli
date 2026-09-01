@@ -1,6 +1,6 @@
 ---
 title: 安装
-description: 把 one cli 装到本机 — macOS / Linux 一行装，Windows 手动下载，含升降级与卸载。
+description: 把 one cli 装到 macOS、Linux 或 Windows，含一行安装、升降级与卸载。
 ---
 
 把 `one` 二进制装到 PATH 上，5 秒钟的事。
@@ -44,9 +44,21 @@ echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.bashrc
 
 新开 shell 即可。
 
-## Windows / 不想跑脚本
+## Windows PowerShell 一行装
 
-从 [GitHub Releases](https://github.com/1cli-team/one-cli/releases/latest) 下载对应平台归档（`darwin/linux/windows × amd64/arm64`），解压把 `one` 放到 PATH。
+Windows 10/11 x64 在 PowerShell 里运行：
+
+```powershell
+irm https://1cli.dev/install.ps1 | iex
+```
+
+脚本会下载 `one-cli_windows_amd64.zip`、对照 `checksums.txt` 校验 SHA256、把 `one.exe` 安装到 `%LOCALAPPDATA%\Programs\one\bin`，并把目录加入用户 PATH。第一次安装后新开一个终端即可。
+
+**审计脚本**：浏览器打开 `https://1cli.dev/install.ps1`，纯文本可读。
+
+## 手动下载
+
+从 [GitHub Releases](https://github.com/1cli-team/one-cli/releases/latest) 下载对应平台归档，解压后把 `one`（Windows 为 `one.exe`）放到 PATH。Windows 当前发布 x64；macOS / Linux 发布 x64 和 arm64。
 
 例（Linux amd64）：
 
@@ -58,11 +70,11 @@ mv one ~/.local/bin/
 one --version
 ```
 
-Windows 类似——下载 `one-cli_windows_amd64.zip`，解压把 `one.exe` 放到 PATH 上的目录。
+Windows 归档名是 `one-cli_windows_amd64.zip`。
 
 ## 升级与降级
 
-`install.sh` 会先读已装 `one --version` 再决定怎么处理：
+`install.sh` 和 `install.ps1` 都会先读已装 `one --version` 再决定怎么处理：
 
 | 现状 | 行为 |
 |---|---|
@@ -75,7 +87,7 @@ Windows 类似——下载 `one-cli_windows_amd64.zip`，解压把 `one.exe` 放
 
 ## 装完之后：跑一次 `one skills install`
 
-`install.sh` 只把 `one` 二进制装到 PATH。要让 Claude Code / Cursor / Codex 等 agent 识别 One CLI skills，**还需要手工跑一次**：
+安装器只把 `one` 二进制装到 PATH。要让 Claude Code / Cursor / Codex 等 agent 识别 One CLI skills，**还需要手工跑一次**：
 
 ```bash
 one skills install
@@ -127,17 +139,18 @@ one configure add container/ghcr --profile ghcr        # GHCR username + PAT
 
 ## 环境变量参考
 
-`install.sh` 接受这些环境变量：
+两个安装器都接受下列环境变量；PowerShell 从 `$env:变量名` 读取，默认安装目录是 `%LOCALAPPDATA%\Programs\one\bin`。
 
 | 变量 | 默认 | 说明 |
 |---|---|---|
 | `ONE_VERSION` | （解析 GitHub latest release） | 锁版本，例如 `v0.1.1` |
-| `ONE_INSTALL_DIR` | `$HOME/.local/bin` | 安装目录 |
+| `ONE_INSTALL_DIR` | `$HOME/.local/bin`；Windows：`%LOCALAPPDATA%\Programs\one\bin` | 安装目录 |
 | `ONE_FORCE` | `0` | 设为 `1` 允许降级 / 同版本重装 / 覆盖读不出版本号的二进制 |
 | `ONE_REPO_URL` | `https://github.com/1cli-team/one-cli` | GitHub repo URL 覆盖（调试用） |
 | `ONE_RELEASE_BASE_URL` | `$ONE_REPO_URL/releases/download` | release assets 下载源覆盖 |
 | `ONE_LATEST_URL` | `$ONE_REPO_URL/releases/latest` | latest release 解析地址覆盖 |
 | `ONE_SKIP_VERIFY` | `0` | 设为 `1` 跳过 SHA256 校验（仅调试） |
+| `ONE_NO_PATH_UPDATE` | `0` | 设为 `1` 安装但不修改用户 PATH |
 
 例：装一个特定旧版本到自定义目录：
 
@@ -146,6 +159,14 @@ curl -fsSL https://1cli.dev/install.sh | ONE_VERSION=v0.1.0 ONE_INSTALL_DIR=/opt
 ```
 
 ## 卸载
+
+PowerShell：
+
+```powershell
+Remove-Item "$env:LOCALAPPDATA\Programs\one\bin\one.exe"
+```
+
+macOS / Linux：
 
 ```bash
 rm ~/.local/bin/one
@@ -161,11 +182,14 @@ rm ~/.local/bin/one
 git clone https://github.com/1cli-team/one-cli
 cd one-cli
 brew install go go-task     # macOS；Linux 类比
-task install                 # 打包 Dashboard + CLI，再 symlink 到 ~/.local/bin/one
+task install                 # 打包 Dashboard + CLI，再创建当前平台的本地启动器
 hash -r
 which one
 one --version
 ```
+
+Windows 会创建 `~/.local/bin/one.exe`；如果系统不允许创建文件符号链接，
+则自动退回 `one.cmd` 转发器。旧版生成的无扩展名 `one` 符号链接会被安全迁移。
 
 开发期完整流程见 [CONTRIBUTING.md](https://github.com/1cli-team/one-cli/blob/master/CONTRIBUTING.md)；命令面速查见 [命令总览](/zh/docs/cli-overview/)。
 

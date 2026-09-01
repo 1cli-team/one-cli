@@ -144,7 +144,7 @@ func TestSnapshot_E2E_Container_PerSubprojectOverrideAfterAdd(t *testing.T) {
 	if !strings.Contains(stdout, "docker build -t ghcr.io/u/api:v0.1.0") {
 		t.Errorf("dry-run output should include docker build for api, got: %s", stdout)
 	}
-	if !strings.Contains(stdout, "services/api") {
+	if !strings.Contains(stdout, filepath.Join("services", "api")) {
 		t.Errorf("dry-run output should target services/api, got: %s", stdout)
 	}
 }

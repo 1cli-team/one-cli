@@ -202,10 +202,10 @@ func TestRegistryLegacyIdentityCanBeListedButNotResolved(t *testing.T) {
 	}
 }
 
-func TestRegistryMissingRootRemainsVisibleAndResolveRejectsIt(t *testing.T) {
+func TestRegistryListPrunesMissingRootWithoutDeletingWorkspaceFiles(t *testing.T) {
 	base := t.TempDir()
 	root := filepath.Join(base, "workspace")
-	missingRoot := filepath.Join(base, "workspace-offline")
+	relocatedRoot := filepath.Join(base, "workspace-relocated")
 	if err := os.Mkdir(root, 0o755); err != nil {
 		t.Fatal(err)
 	}
@@ -220,7 +220,7 @@ func TestRegistryMissingRootRemainsVisibleAndResolveRejectsIt(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := os.Rename(root, missingRoot); err != nil {
+	if err := os.Rename(root, relocatedRoot); err != nil {
 		t.Fatal(err)
 	}
 
@@ -228,12 +228,47 @@ func TestRegistryMissingRootRemainsVisibleAndResolveRejectsIt(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(listed.Workspaces) != 1 || listed.Workspaces[0].Status != WorkspaceStatusMissing {
-		t.Fatalf("missing list = %#v", listed.Workspaces)
+	if len(listed.Workspaces) != 0 {
+		t.Fatalf("missing registry entry remained visible: %#v", listed.Workspaces)
+	}
+	if !workspacecore.HasManifest(relocatedRoot) {
+		t.Fatal("registry pruning changed or deleted the relocated Workspace")
+	}
+	registry, err := service.repository.Load(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(registry.Workspaces) != 0 {
+		t.Fatalf("missing registry entry remained on disk: %#v", registry.Workspaces)
 	}
 	_, err = service.Resolve(context.Background(), registered.EntryID)
-	if !errors.Is(err, ErrRegistryUnavailable) {
-		t.Fatalf("missing Resolve error = %v, want unavailable", err)
+	if !errors.Is(err, ErrRegistryEntryNotFound) {
+		t.Fatalf("pruned Resolve error = %v, want not found", err)
+	}
+}
+
+func TestRegistryRootPruningRequiresAvailableVolume(t *testing.T) {
+	missingRoot := filepath.Join(t.TempDir(), "gone")
+	if !registryRootDefinitelyMissingWithStat(missingRoot, func(path string) error {
+		if path == missingRoot {
+			return os.ErrNotExist
+		}
+		return nil
+	}) {
+		t.Fatal("missing root on an available volume was not prunable")
+	}
+	if registryRootDefinitelyMissingWithStat(missingRoot, func(string) error {
+		return os.ErrNotExist
+	}) {
+		t.Fatal("missing root on an unavailable volume was prunable")
+	}
+	if registryRootDefinitelyMissingWithStat(missingRoot, func(path string) error {
+		if path == missingRoot {
+			return os.ErrPermission
+		}
+		return nil
+	}) {
+		t.Fatal("permission-denied root was prunable")
 	}
 }
 

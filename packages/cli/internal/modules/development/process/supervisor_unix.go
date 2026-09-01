@@ -21,22 +21,10 @@ import (
 	"os"
 	"os/exec"
 	"os/signal"
-	"strings"
 	"sync"
 	"syscall"
 	"time"
-
-	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/output"
 )
-
-// isStdoutTTY returns true when stdout is a real terminal AND the
-// active output mode is human-friendly (not JSON/YAML). Used to gate
-// ANSI coloring in the supervisor's prefixed output.
-func isStdoutTTY() bool { return output.IsTTY() }
-
-// defaultGracePeriod is the SIGTERM → SIGKILL window when callers
-// don't override it.
-const defaultGracePeriod = 5 * time.Second
 
 // runBuiltin runs every entry as a child process in parallel. Blocks
 // until all children exit AND all output streams have drained. See
@@ -45,20 +33,11 @@ func runBuiltin(ctx context.Context, projectRoot string, entries []ProcEntry, op
 	if len(entries) == 0 {
 		return nil
 	}
-	if opts.Out == nil {
-		opts.Out = os.Stdout
-	}
-	if opts.GracePeriod <= 0 {
-		opts.GracePeriod = defaultGracePeriod
-	}
+	normalizeBuiltinOpts(&opts)
 
-	// Single mutex on the output writer — guarantees prefixed lines from
-	// concurrent children don't tear.
 	var writeMu sync.Mutex
 	writeLine := func(prefix, line string) {
-		writeMu.Lock()
-		defer writeMu.Unlock()
-		fmt.Fprintf(opts.Out, "%s | %s\n", prefix, line)
+		writePrefixedLine(&writeMu, opts.Out, prefix, line)
 	}
 
 	width := maxNameLen(entries)
@@ -202,48 +181,6 @@ func runBuiltin(ctx context.Context, projectRoot string, entries []ProcEntry, op
 	}
 
 	return firstErr
-}
-
-// prefixLineWriter collects arbitrary Write chunks into log lines, prefixes
-// each complete line, and flushes the final unterminated line after Wait.
-// It avoids bufio.Scanner's token limit and lets exec.Cmd own pipe draining.
-type prefixLineWriter struct {
-	prefix    string
-	writeLine func(string, string)
-	pending   []byte
-}
-
-func newPrefixLineWriter(prefix string, writeLine func(string, string)) *prefixLineWriter {
-	return &prefixLineWriter{prefix: prefix, writeLine: writeLine}
-}
-
-func (w *prefixLineWriter) Write(p []byte) (int, error) {
-	start := 0
-	for i, b := range p {
-		if b != '\n' {
-			continue
-		}
-		w.pending = append(w.pending, p[start:i]...)
-		w.emit()
-		start = i + 1
-	}
-	if start < len(p) {
-		w.pending = append(w.pending, p[start:]...)
-	}
-	return len(p), nil
-}
-
-func (w *prefixLineWriter) Flush() {
-	if len(w.pending) == 0 {
-		return
-	}
-	w.emit()
-}
-
-func (w *prefixLineWriter) emit() {
-	line := strings.TrimSuffix(string(w.pending), "\r")
-	w.writeLine(w.prefix, line)
-	w.pending = w.pending[:0]
 }
 
 // signalError is returned by runBuiltin when shutdown was triggered by
