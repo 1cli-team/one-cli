@@ -31,6 +31,17 @@ func TestCheckFrontmatter(t *testing.T) {
 	}
 }
 
+func TestCheckGoFormatAcceptsCRLF(t *testing.T) {
+	root := t.TempDir()
+	formattedCRLF := "package sample\r\n\r\nfunc Value() int {\r\n\treturn 1\r\n}\r\n"
+	writeTestFile(t, root, "packages/kernel/sample.go", formattedCRLF)
+	writeTestFile(t, root, "packages/cli/sample.go", formattedCRLF)
+
+	if err := checkGoFormat(root); err != nil {
+		t.Fatalf("gofmt-compatible CRLF source should pass: %v", err)
+	}
+}
+
 func writeTestFile(t *testing.T, root, relative, body string) {
 	t.Helper()
 	path := filepath.Join(root, filepath.FromSlash(relative))

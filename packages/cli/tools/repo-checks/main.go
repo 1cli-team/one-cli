@@ -153,11 +153,12 @@ func checkGoFormat(root string) error {
 			if err != nil {
 				return err
 			}
-			formatted, err := format.Source(raw)
+			normalized := bytes.ReplaceAll(raw, []byte("\r\n"), []byte("\n"))
+			formatted, err := format.Source(normalized)
 			if err != nil {
 				return fmt.Errorf("format %s: %w", relativePath(root, path), err)
 			}
-			if !bytes.Equal(raw, formatted) {
+			if !bytes.Equal(normalized, formatted) {
 				changed = append(changed, path)
 			}
 			return nil
