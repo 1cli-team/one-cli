@@ -213,7 +213,9 @@ func (s *RegistryService) Observe(
 }
 
 // List returns every registered Workspace with a live status computed from
-// disk. It never silently removes stale paths.
+// disk. Entries whose roots are confirmed missing on an available volume are
+// pruned from the machine-local registry. Pruning only updates workspaces.json;
+// it never deletes or mutates anything under an entry Root.
 func (s *RegistryService) List(
 	ctx context.Context,
 	currentRoot string,
@@ -221,6 +223,18 @@ func (s *RegistryService) List(
 	registry, err := s.repository.Load(ctx)
 	if err != nil {
 		return WorkspaceRegistryResponse{}, err
+	}
+	if registryHasDefinitelyMissingRoot(registry) {
+		var updated workspacecore.Registry
+		err = s.repository.Update(ctx, func(latest *workspacecore.Registry) error {
+			pruneDefinitelyMissingRoots(latest)
+			updated = cloneWorkspaceRegistry(*latest)
+			return nil
+		})
+		if err != nil {
+			return WorkspaceRegistryResponse{}, err
+		}
+		registry = updated
 	}
 	canonicalCurrent := ""
 	if strings.TrimSpace(currentRoot) != "" {
@@ -231,6 +245,62 @@ func (s *RegistryService) List(
 	}
 	response, _ := inspectRegistry(registry, canonicalCurrent)
 	return response, nil
+}
+
+func registryHasDefinitelyMissingRoot(registry workspacecore.Registry) bool {
+	for _, entry := range registry.Workspaces {
+		if registryRootDefinitelyMissing(entry.Root) {
+			return true
+		}
+	}
+	return false
+}
+
+func pruneDefinitelyMissingRoots(registry *workspacecore.Registry) bool {
+	retained := make([]workspacecore.RegistryEntry, 0, len(registry.Workspaces))
+	for _, entry := range registry.Workspaces {
+		if registryRootDefinitelyMissing(entry.Root) {
+			continue
+		}
+		retained = append(retained, entry)
+	}
+	if len(retained) == len(registry.Workspaces) {
+		return false
+	}
+	registry.Workspaces = retained
+	return true
+}
+
+func cloneWorkspaceRegistry(registry workspacecore.Registry) workspacecore.Registry {
+	cloned := registry
+	cloned.Workspaces = append([]workspacecore.RegistryEntry(nil), registry.Workspaces...)
+	if cloned.Workspaces == nil {
+		cloned.Workspaces = []workspacecore.RegistryEntry{}
+	}
+	return cloned
+}
+
+func registryRootDefinitelyMissing(root string) bool {
+	return registryRootDefinitelyMissingWithStat(root, func(path string) error {
+		_, err := os.Stat(path)
+		return err
+	})
+}
+
+func registryRootDefinitelyMissingWithStat(root string, stat func(string) error) bool {
+	root = strings.TrimSpace(root)
+	if root == "" || !filepath.IsAbs(root) || stat == nil {
+		return false
+	}
+	if err := stat(root); !errors.Is(err, os.ErrNotExist) {
+		return false
+	}
+
+	volumeRoot := string(filepath.Separator)
+	if volume := filepath.VolumeName(root); volume != "" {
+		volumeRoot = volume + string(filepath.Separator)
+	}
+	return stat(volumeRoot) == nil
 }
 
 // Resolve turns only an opaque registered entry ID into a trusted root and
