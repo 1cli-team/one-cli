@@ -40,3 +40,22 @@ export function configPathValue(
 	}
 	return value;
 }
+
+export function setConfigPathValue(
+	config: Record<string, ProfileValue>,
+	path: string,
+	nextValue: string,
+): Record<string, ProfileValue> {
+	const result = structuredClone(config);
+	const segments = path.split("/").filter(Boolean);
+	let current: Record<string, ProfileValue> = result;
+	for (const segment of segments.slice(0, -1)) {
+		const existing = current[segment];
+		if (!existing || typeof existing !== "object" || Array.isArray(existing)) {
+			current[segment] = {};
+		}
+		current = current[segment] as Record<string, ProfileValue>;
+	}
+	current[segments.at(-1) ?? path] = nextValue;
+	return result;
+}

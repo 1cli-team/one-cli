@@ -22,6 +22,7 @@ type ProjectSettings struct {
 	Schema      string                 `json:"schema"`
 	Root        string                 `json:"root"`
 	Environment string                 `json:"environment"`
+	Revision    string                 `json:"revision"`
 	Project     ProjectSettingsProject `json:"project"`
 }
 
@@ -89,7 +90,7 @@ func (s *Service) projectSettings(
 	ctx context.Context,
 	root, projectName, environment string,
 ) (ProjectSettings, error) {
-	manifest, err := workspacecore.ReadManifest(root)
+	manifest, revision, err := workspacecore.ReadManifestSnapshot(root)
 	if err != nil {
 		return ProjectSettings{}, err
 	}
@@ -191,6 +192,7 @@ func (s *Service) projectSettings(
 		Schema:      ProjectSettingsSchema,
 		Root:        root,
 		Environment: environment,
+		Revision:    revision,
 		Project: ProjectSettingsProject{
 			Name:                  project.Name,
 			RelativeDir:           project.RelativeDir,

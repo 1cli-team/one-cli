@@ -6,12 +6,19 @@ import { useBackendCatalog } from "@/api/catalog";
 import { getSection, sectionKey } from "@/api/configure";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Field, FieldLabel } from "@/components/ui/field";
-import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
+import {
+	Select,
+	SelectContent,
+	SelectItem,
+	SelectTrigger,
+	SelectValue,
+} from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EnvironmentLink } from "@/features/environment-context/EnvironmentLink";
 import type { BackendDomain, ProfileBinding } from "@/types/api";
 
 type ProfileBindingScope = "project" | "workspace";
+const AUTOMATIC_PROFILE_VALUE = "__automatic_profile__";
 
 function errorMessage(error: unknown): string {
 	if (error && typeof error === "object" && "message" in error) {
@@ -54,6 +61,13 @@ export const ProfileBindingField: React.FC<{
 	const names = Array.from(
 		new Set([...Object.keys(section.data?.section.profiles ?? {}), ...(value ? [value] : [])]),
 	).sort();
+	const automaticLabel =
+		binding && binding.source !== directSource
+			? t(`${copyRoot}.inherited`, {
+					name: binding.name,
+					source: binding.source,
+				})
+			: t(`${copyRoot}.automatic`);
 
 	if (!backend || profileConfigurable === false) {
 		return (
@@ -93,28 +107,27 @@ export const ProfileBindingField: React.FC<{
 		<Field className="gap-3 rounded-lg border border-border p-4">
 			<div>
 				<FieldLabel htmlFor={id}>{t(`${copyRoot}.label`)}</FieldLabel>
-				<p className="mt-1 text-[10px] text-muted-foreground">{t(`${copyRoot}.description`)}</p>
+				<p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+					{t(`${copyRoot}.description`)}
+				</p>
 			</div>
-			<NativeSelect
-				id={id}
-				value={value}
-				onChange={(event) => onChange(event.target.value)}
+			<Select
+				value={value || AUTOMATIC_PROFILE_VALUE}
+				onValueChange={(next) => onChange(next === AUTOMATIC_PROFILE_VALUE ? "" : next)}
 				disabled={disabled || section.isLoading || Boolean(section.error)}
 			>
-				<NativeSelectOption value="">
-					{binding && binding.source !== directSource
-						? t(`${copyRoot}.inherited`, {
-								name: binding.name,
-								source: binding.source,
-							})
-						: t(`${copyRoot}.automatic`)}
-				</NativeSelectOption>
-				{names.map((name) => (
-					<NativeSelectOption key={name} value={name}>
-						{name}
-					</NativeSelectOption>
-				))}
-			</NativeSelect>
+				<SelectTrigger id={id}>
+					<SelectValue>{value || automaticLabel}</SelectValue>
+				</SelectTrigger>
+				<SelectContent>
+					<SelectItem value={AUTOMATIC_PROFILE_VALUE}>{automaticLabel}</SelectItem>
+					{names.map((name) => (
+						<SelectItem key={name} value={name}>
+							{name}
+						</SelectItem>
+					))}
+				</SelectContent>
+			</Select>
 			{section.error ? (
 				<Alert variant="destructive" className="mt-2 rounded-lg py-2.5 text-[11px]">
 					<AlertCircle className="mt-0.5 h-3 w-3 shrink-0" />
@@ -123,7 +136,7 @@ export const ProfileBindingField: React.FC<{
 					</AlertDescription>
 				</Alert>
 			) : null}
-			<div className="mt-2 flex items-center justify-between text-[10px] text-muted-foreground">
+			<div className="mt-2 flex items-center justify-between text-[11px] text-muted-foreground">
 				<span>{binding ? `${binding.name} · ${binding.source}` : t(`${copyRoot}.none`)}</span>
 				<EnvironmentLink
 					to={`/settings/${domain}/${backend}`}

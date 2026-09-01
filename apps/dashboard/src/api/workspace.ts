@@ -1,6 +1,6 @@
-// api/workspace.ts exposes only read projections of one.manifest.json and
-// machine-local Profile binding mutations. Dashboard writes must never carry
-// manifest-owned backend or project fields.
+// api/workspace.ts exposes Manifest projections, env Backend workflows, and
+// machine-local Profile binding mutations. Reviewed Project publication lives
+// in api/manifest.ts; remote secret operations live in api/secrets.ts.
 
 import { workspaceBasePath } from "@/api/workspaces";
 import http from "@/lib/http";
@@ -47,6 +47,34 @@ export async function updateWorkspaceProfileBinding(
 	return http.put<WorkspaceProfileSettings>(workspaceProfileBindingKey(entryId, environment), {
 		profile,
 	});
+}
+
+export function workspaceEnvironmentBackendKey(entryId?: string, environment?: string): string {
+	return withEnvironment(`${workspaceBasePath(entryId)}/environment/backend`, environment);
+}
+
+export async function switchWorkspaceEnvironmentBackend(
+	backend: string,
+	revision: string,
+	entryId?: string,
+	environment?: string,
+): Promise<WorkspaceProfileSettings> {
+	return http.put<WorkspaceProfileSettings>(workspaceEnvironmentBackendKey(entryId, environment), {
+		backend,
+		revision,
+	});
+}
+
+export async function initializeWorkspaceEnvironmentBackend(
+	entryId: string | undefined,
+	environment: string,
+	project?: string,
+): Promise<WorkspaceProfileSettings> {
+	const search = new URLSearchParams({ env: environment });
+	if (project) search.set("project", project);
+	return http.post<WorkspaceProfileSettings>(
+		`${workspaceBasePath(entryId)}/environment/backend/initialize?${search.toString()}`,
+	);
 }
 
 function projectBasePath(project: string, entryId?: string): string {

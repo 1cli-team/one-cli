@@ -231,6 +231,7 @@ export interface WorkspaceProfileSettings {
 	schema: "one-cli/workspace-profile/v1";
 	root: string;
 	environment?: string;
+	revision: string;
 	domain: "env";
 	backend?: string;
 	configurable: boolean;
@@ -285,5 +286,85 @@ export interface ProjectSettingsResponse {
 	schema: "one-cli/workspace-project/v1";
 	root: string;
 	environment?: string;
+	revision: string;
 	project: ProjectSettings;
+}
+
+// ───────────────────────── manifest draft publication ──────────────────
+
+export interface ProjectGeneralPatch {
+	buildVersion: string;
+	devCommand: string;
+}
+
+export interface ProjectEnvironmentPatch {
+	path: string;
+	inherits: boolean;
+	disabled: boolean;
+}
+
+export interface ProjectContainerPatch {
+	enabled: boolean;
+	backend: string;
+	image: string;
+	namespace: string;
+}
+
+export interface ProjectDeployPatch {
+	backend: string;
+	config: Record<string, ProfileValue>;
+}
+
+export interface WorkspaceEnvironmentPatch {
+	backend: string;
+}
+
+export interface WorkspaceManifestPatch {
+	environment?: WorkspaceEnvironmentPatch;
+}
+
+export interface ProjectManifestPatch {
+	project: string;
+	general?: ProjectGeneralPatch;
+	environment?: ProjectEnvironmentPatch;
+	container?: ProjectContainerPatch;
+	deploy?: ProjectDeployPatch;
+}
+
+export interface ApplyManifestRequest {
+	revision: string;
+	changes: ProjectManifestPatch[];
+}
+
+export interface ApplyManifestResponse {
+	schema: "one-cli/workspace-manifest-apply/v1";
+	revision: string;
+	applied: number;
+}
+
+// ─────────────────────────── Infisical secrets ─────────────────────────
+
+export interface SecretListResponse {
+	schema: "one-cli/env-list/v1";
+	env: string;
+	path: string;
+	keys: string[];
+	total: number;
+}
+
+export interface SecretValueResponse {
+	schema: "one-cli/env-get/v1";
+	env: string;
+	path: string;
+	key: string;
+	value: string;
+}
+
+export interface SecretMutationResponse {
+	schema: "one-cli/env-set/v1" | "one-cli/env-delete/v1";
+	env: string;
+	path: string;
+	key: string;
+	action?: "created" | "updated" | "unchanged";
+	status?: "deleted";
 }

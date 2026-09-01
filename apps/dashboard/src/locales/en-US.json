@@ -17,6 +17,18 @@
 		"profile": "Credential profiles",
 		"sectionsRoot": "Sections"
 	},
+	"manifestDraft": {
+		"saveButton": "Save changes · {{count}}",
+		"workspaceScope": "Workspace",
+		"title": "Write these changes to the manifest?",
+		"description": "This updates one.manifest.json in the Workspace. Review the exact changes before continuing.",
+		"confirm": "Save to manifest",
+		"saving": "Saving…",
+		"discard": "Discard draft",
+		"saved": "Manifest changes saved",
+		"saveFailed": "Could not save manifest changes",
+		"conflict": "one.manifest.json changed after this draft was opened. Discard the draft, review the latest configuration, and try again."
+	},
 	"environmentSwitcher": {
 		"label": "Environment",
 		"dev": "Development",
@@ -121,7 +133,8 @@
 	"settings": {
 		"title": "Settings",
 		"description": "Manage the machine-level credential profiles available to your Workspaces and Projects.",
-		"loadFailedTitle": "Failed to load Settings"
+		"loadFailedTitle": "Failed to load Settings",
+		"manageBackend": "Manage Profiles"
 	},
 	"sections": {
 		"groupLabel": {
@@ -289,8 +302,14 @@
 		"description": "Review and configure every project declared in the manifest from one place.",
 		"search": "Search project, path, or backend",
 		"kindFilter": "Filter by project kind",
+		"statusFilter": "Filter by resolution status",
 		"kinds": {
 			"all": "All kinds"
+		},
+		"statuses": {
+			"all": "All statuses",
+			"attention": "Needs attention",
+			"healthy": "Healthy only"
 		},
 		"empty": {
 			"title": "No matching projects",
@@ -302,7 +321,8 @@
 			"container": "Container",
 			"deploy": "Deploy",
 			"status": "Status",
-			"notApplicable": "Not applicable",
+			"notApplicable": "—",
+			"notApplicableTitle": "This configuration does not apply to the project",
 			"notConfigured": "Not configured",
 			"profileMissing": "Credentials required",
 			"setupRequired": "Setup required",
@@ -313,6 +333,7 @@
 		}
 	},
 	"projectInspector": {
+		"close": "Close",
 		"tabs": {
 			"label": "Project configuration sections",
 			"overview": "Overview",
@@ -325,11 +346,21 @@
 		"backend": "Backend",
 		"inheritedBackend": "Inherited {{domain}} backend",
 		"manifestReadOnly": "Manifest · read-only",
-		"profileOnly": "Profile binding only",
+		"manifestDraft": "Manifest draft",
+		"profileOnly": "Local Profile",
+		"manifestLane": {
+			"title": "Shared configuration",
+			"description": "Backend and project fields are added to Pending manifest changes above."
+		},
+		"profileLane": {
+			"title": "Machine credentials",
+			"description": "The Profile selection stays on this machine and is saved separately below."
+		},
 		"saved": "Project Profile binding saved",
 		"saveFailed": "Could not save the project Profile binding",
-		"saveHint": "Only the machine-local Profile binding for this environment is changed.",
-		"save": "Save Profile",
+		"saveHint": "The local Profile changed and has not been saved.",
+		"profileUnchanged": "There are no local Profile changes to save.",
+		"save": "Save local binding",
 		"saving": "Saving…",
 		"values": {
 			"enabled": "Enabled",
@@ -340,7 +371,7 @@
 		"discardAndContinue": "Discard and continue",
 		"general": {
 			"title": "Project overview",
-			"description": "Project metadata comes from one.manifest.json and is read-only in the Dashboard.",
+			"description": "Edit runtime project settings here. Changes remain a draft until you save them from the top bar.",
 			"template": "Template",
 			"toolchain": "Toolchain",
 			"path": "Project path",
@@ -351,7 +382,7 @@
 		},
 		"environment": {
 			"title": "Environment configuration",
-			"description": "Environment manifest values are read-only. You can only choose the machine-local Profile for the selected environment.",
+			"description": "Manifest fields are staged for review; the Profile selection is saved separately to this machine.",
 			"path": "Environment file path",
 			"inherits": "Inherit workspace environment",
 			"inheritsHint": "Project variables override workspace variables with the same name.",
@@ -361,7 +392,7 @@
 		},
 		"container": {
 			"title": "Container configuration",
-			"description": "Container manifest values are read-only. You can only choose the machine-local Profile for the selected environment.",
+			"description": "Container settings are staged for the manifest; registry credentials remain machine-local.",
 			"enabled": "Enable container builds",
 			"enabledHint": "Allow one container to build an image for this project.",
 			"image": "Image address",
@@ -369,7 +400,7 @@
 		},
 		"deploy": {
 			"title": "Deployment configuration",
-			"description": "Deployment manifest values are read-only. You can only choose the machine-local Profile for the selected environment.",
+			"description": "Deployment settings are staged for the manifest; deployment credentials remain machine-local.",
 			"notSupported": "This project's Template does not support a deployment target.",
 			"environmentDefault": "Use default environment",
 			"compatibleTargets": "Compatible targets"
@@ -385,6 +416,41 @@
 			"none": "No profile currently resolves",
 			"manage": "Manage in Settings"
 		}
+	},
+	"secrets": {
+		"title": "Infisical secrets",
+		"description": "Manage values stored remotely for the selected environment and scope.",
+		"unavailableTitle": "Remote secrets are not enabled",
+		"unavailableDescription": "The current environment Backend is not Infisical. Switch it to manage remote secrets here.",
+		"configureBackend": "Configure environment Backend",
+		"scope": "Secret scope",
+		"workspaceScope": "Workspace shared",
+		"directOnly": "Only values defined directly in this folder are editable; inherited values stay untouched.",
+		"add": "Add secret",
+		"key": "Key",
+		"value": "Value",
+		"actions": "Actions",
+		"empty": "No secrets are defined directly in this scope yet.",
+		"emptyValue": "Empty value",
+		"retry": "Retry",
+		"reveal": "Reveal value",
+		"hide": "Hide value",
+		"copy": "Copy value",
+		"edit": "Edit secret",
+		"delete": "Delete secret",
+		"createTitle": "Add an Infisical secret",
+		"editTitle": "Update Infisical secret",
+		"editorDescription": "The value is sent directly to Infisical and is never written to the manifest.",
+		"save": "Save secret",
+		"created": "Secret created",
+		"updated": "Secret updated",
+		"deleted": "Secret deleted",
+		"saveFailed": "Could not save the secret",
+		"revealFailed": "Could not reveal the secret",
+		"deleteFailed": "Could not delete the secret",
+		"deleteTitle": "Delete {{key}}?",
+		"deleteDescription": "This removes the value from the selected Infisical environment and folder. This action cannot be undone here.",
+		"deleteConfirmation": "Type {{key}} to confirm"
 	},
 	"project": {
 		"fields": {
@@ -408,22 +474,33 @@
 			"title": "Workspace environment",
 			"scope": "Workspace scope",
 			"readOnly": "Read-only",
-			"description": "The Backend comes from the manifest and is read-only here. Choose the machine-level Profile for the selected environment.",
+			"description": "The Backend is written to the workspace manifest; the Profile stays on this machine. Each change is labelled separately.",
 			"localBinding": "Machine-local Profile binding",
+			"manifestLegend": "Shared manifest",
+			"localLegend": "This machine",
 			"backend": "Backend",
-			"backendReadOnly": "Manifest · read-only",
-			"backendSource": "Configured outside the Dashboard in one.manifest.json.",
+			"backendDescription": "Controls where one env reads variables. A switch is staged for review before publication.",
+			"backendManifest": "Manifest setting",
+			"backendPending": "Pending review",
+			"backendSource": "Backend changes are reviewed before they are written to one.manifest.json. Existing secret data is not migrated.",
+			"backendPendingHint": "This is now in Pending changes above. When saved, One CLI initializes the Backend; then confirm the machine Profile on the right.",
 			"backendMissing": "Not configured",
 			"loading": "Loading workspace Profile binding…",
 			"loadFailed": "Could not load the workspace Profile binding.",
-			"missingBackendCli": "No environment Backend is configured. Configure it with One CLI before selecting a Profile.",
-			"save": "Save",
+			"missingBackendCli": "Choose an environment Backend before selecting a Profile.",
+			"save": "Save local binding",
 			"saving": "Saving…",
 			"saved": "Workspace Profile saved",
 			"saveFailed": "Could not save the workspace Profile",
 			"profile": {
+				"title": "Credential Profile",
 				"label": "Profile",
 				"description": "Choose a machine-local credential Profile for this workspace and environment.",
+				"localBadge": "This machine",
+				"waitTitle": "Apply the Backend change first",
+				"waitDescription": "After the target Backend is active, its Profile requirements are loaded again. This prevents saving a Profile against the wrong Backend.",
+				"unsaved": "The local binding has not been saved",
+				"savedLocally": "The current binding is saved on this machine",
 				"notRequired": "This backend does not require a credential profile.",
 				"loading": "Loading credential profiles…",
 				"loadFailed": "Could not load credential profiles.",
@@ -432,6 +509,34 @@
 				"none": "No Profile currently resolves",
 				"manage": "Manage in Settings"
 			}
+		},
+		"navigation": {
+			"label": "Workspace page navigation",
+			"overview": "Attention",
+			"projects": "Projects",
+			"secrets": "Secrets",
+			"settings": "Workspace settings",
+			"attention": "{{count}} items to resolve",
+			"ready": "No blocking items",
+			"projectCount": "{{count}} projects",
+			"infisical": "Infisical enabled",
+			"notEnabled": "Remote secrets not enabled",
+			"backendProfile": "Backend and Profile"
+		},
+		"actionCenter": {
+			"eyebrow": "Next actions",
+			"pending": "items to resolve",
+			"clear": "blocking items",
+			"description": "Resolve these items in order before running the corresponding One CLI commands.",
+			"clearDescription": "The workspace's core configuration is ready to use.",
+			"title": "Resolve first",
+			"hint": "Each item opens the exact configuration that needs attention.",
+			"viewProjects": "View all projects",
+			"workspaceLabel": "Workspace configuration",
+			"configureWorkspace": "Configure workspace",
+			"resolve": "Resolve now",
+			"allGood": "Nothing needs attention",
+			"allGoodDescription": "Continue managing secrets or inspect detailed project settings."
 		},
 		"metrics": {
 			"projects": "Projects",

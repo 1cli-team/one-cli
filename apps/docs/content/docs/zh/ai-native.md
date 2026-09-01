@@ -125,7 +125,7 @@ One CLI 可以管理 env、container、deploy 等机器级配置，但 agent 不
 推荐边界：
 
 - `one.manifest.json` 记录可审查的 Workspace/Project/Backend 配置；本机 Profile 名永远不进 Manifest
-- `one configure` 管理机器 Profile；`one serve` 在 `127.0.0.1` 打开 Profile 值与环境感知本机绑定界面，代码库配置在其中保持只读
+- `one configure` 管理机器 Profile；`one serve` 在 `127.0.0.1` 打开 Profile 值、环境感知本机绑定与经审阅且带 revision 校验的 Backend/Project 配置草稿界面，源码和非白名单 Manifest 字段保持只读
 - `.env*`、私钥、云厂商 token 不进 Git，也不写进 agent 可复用文档
 - agent 可以读取结构化状态、执行缺失依赖安装和项目生成，但涉及发布、删除、覆盖凭据时应回到团队策略或人工确认
 

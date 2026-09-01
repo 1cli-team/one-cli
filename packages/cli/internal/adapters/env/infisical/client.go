@@ -217,6 +217,25 @@ func (c *Client) UpdateSecret(env, secretPath, key, value string) (*models.Secre
 	return &out, nil
 }
 
+// DeleteSecret removes one key from an exact Infisical folder. A missing key
+// is mapped to ENV_KEY_NOT_FOUND so Dashboard and CLI transports can present
+// the same stable error contract as Get.
+func (c *Client) DeleteSecret(env, secretPath, key string) (*models.Secret, error) {
+	out, err := c.sdk.Secrets().Delete(infisical.DeleteSecretOptions{
+		ProjectID:   c.cfg.ProjectID,
+		Environment: env,
+		SecretPath:  secretPath,
+		SecretKey:   key,
+	})
+	if err != nil {
+		if isNotFound(err) {
+			return nil, cliErrors.New(cliErrors.ENV_KEY_NOT_FOUND, "密钥不存在: "+key)
+		}
+		return nil, mapAPIError(err)
+	}
+	return &out, nil
+}
+
 // VerifyProjectExists is what `env init` calls after a successful
 // auth to confirm the projectId is reachable. We use a List on env=dev,
 // path="/" — which always exists if the project does — and translate

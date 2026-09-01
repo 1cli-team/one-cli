@@ -16,19 +16,23 @@ import (
 	"github.com/spf13/cobra"
 
 	configureapp "github.com/torchstellar-team/one-cli/packages/cli/internal/application/configure"
+	manifestapp "github.com/torchstellar-team/one-cli/packages/cli/internal/application/manifest"
 	workspaceapp "github.com/torchstellar-team/one-cli/packages/cli/internal/application/workspace"
 	catalog "github.com/torchstellar-team/one-cli/packages/cli/internal/core/backend"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/core/workspace"
+	environmentmodule "github.com/torchstellar-team/one-cli/packages/cli/internal/modules/environment"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/i18n"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/output"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/transport/http"
 )
 
 type Dependencies struct {
-	Catalog    *catalog.Catalog
-	Profiles   *configureapp.ProfileService
-	Workspaces *workspaceapp.Service
-	Registry   *workspaceapp.RegistryService
+	Catalog      *catalog.Catalog
+	Profiles     *configureapp.ProfileService
+	Manifest     *manifestapp.Service
+	Environments *environmentmodule.Service
+	Workspaces   *workspaceapp.Service
+	Registry     *workspaceapp.RegistryService
 }
 
 func Commands(deps Dependencies) []*cobra.Command {
@@ -44,7 +48,7 @@ func newServeCmd(deps Dependencies) *cobra.Command {
 	cmd := &cobra.Command{
 		Use: "serve",
 		Long: `启动一个本地 HTTP 服务，在浏览器里查看本机 Workspace、配置其中的
-Project，并管理 profile（env / deploy / container 各 backend）。Profile
+Project、审阅后保存 Manifest 配置、管理 Infisical 密钥，并管理 profile（env / deploy / container 各 backend）。Profile
 含 API key、kubeconfig path、registry token 等敏感字段，AI 不应读写；
 本命令是给你（人类）的入口。
 
@@ -76,13 +80,15 @@ Project，并管理 profile（env / deploy / container 各 backend）。Profile
 			}
 
 			return serve.Run(ctx, serve.Opts{
-				Host:             host,
-				Port:             port,
-				WorkspaceRoot:    workspaceRoot,
-				Catalog:          deps.Catalog,
-				ProfileService:   deps.Profiles,
-				WorkspaceService: deps.Workspaces,
-				RegistryService:  deps.Registry,
+				Host:               host,
+				Port:               port,
+				WorkspaceRoot:      workspaceRoot,
+				Catalog:            deps.Catalog,
+				ProfileService:     deps.Profiles,
+				ManifestService:    deps.Manifest,
+				EnvironmentService: deps.Environments,
+				WorkspaceService:   deps.Workspaces,
+				RegistryService:    deps.Registry,
 			}, func(res serve.Result) {
 				output.Emit(res)
 				maybeOpenBrowser(cmd.ErrOrStderr(), res, open)

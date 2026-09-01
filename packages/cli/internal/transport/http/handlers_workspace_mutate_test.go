@@ -3,6 +3,7 @@ package serve
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"io"
 	"io/fs"
 	"net/http"
@@ -158,6 +159,7 @@ type workspaceProfileSettingsWire struct {
 	Schema          string `json:"schema"`
 	Root            string `json:"root"`
 	Environment     string `json:"environment"`
+	Revision        string `json:"revision"`
 	Domain          string `json:"domain"`
 	Backend         string `json:"backend"`
 	Configurable    bool   `json:"configurable"`
@@ -218,7 +220,8 @@ func TestWorkspaceEnvironmentProfileBindingIsEnvironmentAwareAndRepositoryReadOn
 		t.Fatal(err)
 	}
 	if settings.Environment != "preview" || settings.SelectedProfile != "work" ||
-		settings.Profile == nil || settings.Profile.Source != "workspace-environment" {
+		settings.Revision == "" || settings.Profile == nil ||
+		settings.Profile.Source != "workspace-environment" {
 		t.Fatalf("settings = %#v", settings)
 	}
 	if strings.Contains(recorder.Body.String(), "must-not-leak") ||
@@ -532,6 +535,70 @@ func TestLegacyRepositoryMutationRoutesAlwaysReturnStableReadOnlyConflict(t *tes
 			}
 			assertRepositoryUnchanged(t, root, before)
 		}
+	}
+}
+
+func TestManifestDraftRouteRequiresCurrentRevisionAndWritesAllowlistedFields(t *testing.T) {
+	root := seedWorkspace(t)
+	handler := newWorkspaceMux(t, root)
+
+	read := workspaceRequest(t, handler, http.MethodGet, "/api/workspace/projects/web?env=dev", nil)
+	if read.Code != http.StatusOK {
+		t.Fatalf("GET status = %d; body = %s", read.Code, read.Body.String())
+	}
+	var settings struct {
+		Revision string `json:"revision"`
+	}
+	if err := json.Unmarshal(read.Body.Bytes(), &settings); err != nil {
+		t.Fatal(err)
+	}
+	if settings.Revision == "" {
+		t.Fatal("project settings omitted manifest revision")
+	}
+
+	switched := workspaceRequest(t, handler, http.MethodPut,
+		"/api/workspace/environment/backend?env=dev",
+		strings.NewReader(fmt.Sprintf(`{"revision":%q,"backend":"dotenv"}`, settings.Revision)))
+	if switched.Code != http.StatusOK {
+		t.Fatalf("backend PUT status = %d; body = %s", switched.Code, switched.Body.String())
+	}
+	var switchedSettings workspaceProfileSettingsWire
+	if err := json.Unmarshal(switched.Body.Bytes(), &switchedSettings); err != nil {
+		t.Fatal(err)
+	}
+	if switchedSettings.Backend != "dotenv" || switchedSettings.Revision == settings.Revision {
+		t.Fatalf("switched settings = %#v", switchedSettings)
+	}
+
+	body := fmt.Sprintf(`{
+		"revision": %q,
+		"changes": [{
+			"project": "web",
+			"general": {"buildVersion": "v2.0.0", "devCommand": "pnpm dev --host"},
+			"environment": {"path": "/frontend", "inherits": false, "disabled": false}
+		}]
+	}`, switchedSettings.Revision)
+	written := workspaceRequest(t, handler, http.MethodPut, "/api/workspace/manifest", strings.NewReader(body))
+	if written.Code != http.StatusOK {
+		t.Fatalf("PUT status = %d; body = %s", written.Code, written.Body.String())
+	}
+	manifest, err := workspacecore.ReadManifest(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if manifest.Projects[0].BuildVersion != "2.0.0" ||
+		manifest.Projects[0].Domains.Dev.Command != "pnpm dev --host" ||
+		manifest.Projects[0].Domains.Env.Path != "/frontend" {
+		t.Fatalf("manifest = %#v", manifest.Projects[0])
+	}
+	if manifest.Domains == nil || manifest.Domains.Env == nil ||
+		manifest.Domains.Env.Kind != "dotenv" {
+		t.Fatalf("workspace env backend = %#v", manifest.Domains)
+	}
+
+	stale := workspaceRequest(t, handler, http.MethodPut, "/api/workspace/manifest", strings.NewReader(body))
+	if stale.Code != http.StatusConflict || !strings.Contains(stale.Body.String(), "SERVE_MANIFEST_CONFLICT") {
+		t.Fatalf("stale PUT status = %d; body = %s", stale.Code, stale.Body.String())
 	}
 }
 

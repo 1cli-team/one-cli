@@ -7,6 +7,7 @@ package serve
 import (
 	"encoding/json"
 	"errors"
+	"io"
 	"net/http"
 
 	configureapp "github.com/torchstellar-team/one-cli/packages/cli/internal/application/configure"
@@ -231,7 +232,16 @@ func decodeJSON(r *http.Request, target any) error {
 	defer r.Body.Close()
 	decoder := json.NewDecoder(r.Body)
 	decoder.DisallowUnknownFields()
-	return decoder.Decode(target)
+	if err := decoder.Decode(target); err != nil {
+		return err
+	}
+	if err := decoder.Decode(&struct{}{}); !errors.Is(err, io.EOF) {
+		if err == nil {
+			return errors.New("request body must contain exactly one JSON object")
+		}
+		return err
+	}
+	return nil
 }
 
 func revealRequested(r *http.Request) bool { return r.URL.Query().Get("reveal") == "1" }
@@ -286,7 +296,25 @@ func statusForCode(code string) int {
 		return http.StatusConflict
 	case string(cliErrors.PROFILE_IN_USE):
 		return http.StatusConflict
-	case string(cliErrors.PROFILE_BACKEND_INVALID), string(cliErrors.SERVE_PAYLOAD_INVALID):
+	case string(cliErrors.ENV_KEY_NOT_FOUND):
+		return http.StatusNotFound
+	case string(cliErrors.INFISICAL_FOLDER_NOT_FOUND), string(cliErrors.INFISICAL_PROJECT_NOT_FOUND):
+		return http.StatusNotFound
+	case string(cliErrors.ENV_SET_OVERWRITE_REQUIRED):
+		return http.StatusConflict
+	case string(cliErrors.ENV_BACKEND_UNCHANGED):
+		return http.StatusConflict
+	case string(cliErrors.INFISICAL_NOT_CONFIGURED), string(cliErrors.INFISICAL_AUTH_MISSING),
+		string(cliErrors.PROFILE_NONE_CONFIGURED):
+		return http.StatusConflict
+	case string(cliErrors.INFISICAL_AUTH_FAILED):
+		return http.StatusUnauthorized
+	case string(cliErrors.INFISICAL_NETWORK_ERROR), string(cliErrors.INFISICAL_API_ERROR):
+		return http.StatusBadGateway
+	case string(cliErrors.PROFILE_BACKEND_INVALID), string(cliErrors.SERVE_PAYLOAD_INVALID),
+		string(cliErrors.ENV_BACKEND_INVALID),
+		string(cliErrors.ENV_INVALID_ENV_NAME), string(cliErrors.ENV_INVALID_KEY),
+		string(cliErrors.ENV_UNKNOWN_ENVIRONMENT), string(cliErrors.ENV_SET_KEY_REQUIRED):
 		return http.StatusBadRequest
 	default:
 		return http.StatusInternalServerError

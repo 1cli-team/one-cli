@@ -17,6 +17,7 @@ import (
 	ciapp "github.com/torchstellar-team/one-cli/packages/cli/internal/application/ci"
 	configureapp "github.com/torchstellar-team/one-cli/packages/cli/internal/application/configure"
 	deploymentapp "github.com/torchstellar-team/one-cli/packages/cli/internal/application/deployment"
+	manifestapp "github.com/torchstellar-team/one-cli/packages/cli/internal/application/manifest"
 	workspaceapp "github.com/torchstellar-team/one-cli/packages/cli/internal/application/workspace"
 	catalog "github.com/torchstellar-team/one-cli/packages/cli/internal/core/backend"
 	containermodule "github.com/torchstellar-team/one-cli/packages/cli/internal/modules/container"
@@ -36,6 +37,7 @@ type dependencies struct {
 	containers   *containermodule.Service
 	creation     *creationmodule.Service
 	environments *environmentmodule.Service
+	manifest     *manifestapp.Service
 	loaders      *secrets.Registry
 	ci           *ciapp.Service
 	workspaces   *workspaceapp.Service
@@ -49,6 +51,7 @@ func composeDependencies() dependencies {
 	profiles := mustProfileService(backendCatalog)
 	containers := mustContainerService(backendCatalog)
 	environments := mustEnvironmentService(backendCatalog, profiles)
+	manifest := mustManifestService(backendCatalog)
 	registry := mustWorkspaceRegistryService()
 	creation := mustCreationService(environments, registry)
 
@@ -58,11 +61,20 @@ func composeDependencies() dependencies {
 		containers:   containers,
 		creation:     creation,
 		environments: environments,
+		manifest:     manifest,
 		loaders:      secrets.MustRegistry(infisical.Loader(), dotenv.Loader()),
 		ci:           mustCIService(pkgci.MustRegistry(githubactions.Provider{})),
 		workspaces:   mustWorkspaceService(backendCatalog, profiles),
 		registry:     registry,
 	}
+}
+
+func mustManifestService(backendCatalog *catalog.Catalog) *manifestapp.Service {
+	service, err := manifestapp.NewService(backendCatalog)
+	if err != nil {
+		panic(err)
+	}
+	return service
 }
 
 func mustWorkspaceRegistryService() *workspaceapp.RegistryService {

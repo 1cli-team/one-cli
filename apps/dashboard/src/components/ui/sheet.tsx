@@ -27,7 +27,7 @@ function SheetOverlay({
 		<SheetPrimitive.Overlay
 			data-slot="sheet-overlay"
 			className={cn(
-				"fixed inset-0 z-50 bg-slate-950/35 backdrop-blur-[1px] data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:animate-in data-[state=open]:fade-in-0",
+				"fixed inset-0 z-50 bg-slate-950/45 backdrop-blur-[1px] data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:animate-in data-[state=open]:fade-in-0",
 				className,
 			)}
 			{...props}
@@ -40,6 +40,7 @@ function SheetContent({
 	children,
 	side = "right",
 	showCloseButton = true,
+	closeLabel = "Close",
 	showOverlay = true,
 	overlayClassName,
 	onOpenAutoFocus,
@@ -48,6 +49,7 @@ function SheetContent({
 }: React.ComponentProps<typeof SheetPrimitive.Content> & {
 	side?: "top" | "right" | "bottom" | "left";
 	showCloseButton?: boolean;
+	closeLabel?: string;
 	showOverlay?: boolean;
 	overlayClassName?: string;
 }) {
@@ -75,7 +77,7 @@ function SheetContent({
 					}
 				}}
 				className={cn(
-					"fixed z-50 flex flex-col gap-4 bg-card shadow-lg outline-none transition ease-in-out data-[state=closed]:animate-out data-[state=closed]:duration-300 data-[state=open]:animate-in data-[state=open]:duration-500",
+					"fixed z-50 flex flex-col gap-4 bg-popover text-popover-foreground shadow-lg outline-none transition ease-in-out data-[state=closed]:animate-out data-[state=closed]:duration-300 data-[state=open]:animate-in data-[state=open]:duration-500",
 					side === "right" &&
 						"inset-y-0 right-0 h-full w-[560px] max-w-[calc(100vw-2rem)] border-l border-border shadow-[-20px_0_60px_-28px_rgb(15_23_42_/_0.45)] data-[state=closed]:slide-out-to-right data-[state=open]:slide-in-from-right",
 					side === "left" &&
@@ -92,7 +94,7 @@ function SheetContent({
 				{showCloseButton && (
 					<SheetPrimitive.Close className="absolute top-5 right-5 grid size-8 place-items-center rounded-md text-muted-foreground opacity-70 ring-offset-background transition-colors hover:bg-accent hover:text-foreground hover:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none data-[state=open]:bg-secondary">
 						<XIcon className="size-4" />
-						<span className="sr-only">Close</span>
+						<span className="sr-only">{closeLabel}</span>
 					</SheetPrimitive.Close>
 				)}
 			</SheetPrimitive.Content>

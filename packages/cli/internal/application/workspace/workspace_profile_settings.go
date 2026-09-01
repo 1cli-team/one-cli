@@ -20,6 +20,7 @@ type WorkspaceProfileSettings struct {
 	Schema          string             `json:"schema"`
 	Root            string             `json:"root"`
 	Environment     string             `json:"environment"`
+	Revision        string             `json:"revision"`
 	Domain          string             `json:"domain"`
 	Backend         string             `json:"backend,omitempty"`
 	Configurable    bool               `json:"configurable"`
@@ -42,7 +43,7 @@ func (s *Service) WorkspaceEnvironmentProfile(
 func (s *Service) workspaceEnvironmentProfile(
 	root, environment string,
 ) (WorkspaceProfileSettings, error) {
-	manifest, err := workspacecore.ReadManifest(root)
+	manifest, revision, err := workspacecore.ReadManifestSnapshot(root)
 	if err != nil {
 		return WorkspaceProfileSettings{}, err
 	}
@@ -56,6 +57,7 @@ func (s *Service) workspaceEnvironmentProfile(
 		Schema:      WorkspaceProfileSettingsSchema,
 		Root:        root,
 		Environment: environment,
+		Revision:    revision,
 		Domain:      string(profile.DomainEnv),
 		Backend:     backend,
 	}

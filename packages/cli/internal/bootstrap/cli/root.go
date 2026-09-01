@@ -68,7 +68,7 @@ func newRootCommand() *cobra.Command {
 		runcmd.Commands(deps.loaders),
 		servecmd.Commands(servecmd.Dependencies{
 			Catalog: deps.catalog, Profiles: deps.profiles, Workspaces: deps.workspaces,
-			Registry: deps.registry,
+			Registry: deps.registry, Manifest: deps.manifest, Environments: deps.environments,
 		}),
 		skillscmd.Commands(),
 		templatescmd.Commands(),

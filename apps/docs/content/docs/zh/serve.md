@@ -3,7 +3,7 @@ title: one serve
 description: 本地 Web UI 管理 Workspace、Project 与机器级 Profile。
 ---
 
-`one serve` 启动一个仅监听 `127.0.0.1` 的本地 Dashboard，并自动打开浏览器。Dashboard 会列出这台机器上已识别的 Workspace，让你切换 Workspace、只读查看其中所有 Project 及配置，以及管理 `one configure` 使用的机器级 Profile。
+`one serve` 启动一个仅监听 `127.0.0.1` 的本地 Dashboard，并自动打开浏览器。Dashboard 会列出这台机器上已识别的 Workspace，让你切换 Workspace、以草稿方式修改并审阅 Workspace 环境变量 Backend 与 Project 配置、管理 Infisical 密钥，以及管理 `one configure` 使用的机器级 Profile。
 
 为什么仍不让 AI 直接编辑 Profile 文件：里面是 API key、kubeconfig path、registry token，泄漏代价高于 AI 能省下的几次输入。`one serve` 是把这些字段从命令行 / agent 上下文里物理隔离出来的入口。
 
@@ -13,7 +13,7 @@ description: 本地 Web UI 管理 Workspace、Project 与机器级 Profile。
 one serve [options]
 ```
 
-启动后阻塞在前台，按 Ctrl-C 退出。所有 Dashboard 请求都把代码库和 `one.manifest.json` 当作只读数据。Profile 编辑与 `one configure` 共用 `~/.config/one/{config,credentials}.json`；Workspace/Project 选择只把 Profile 名写入 `~/.config/one/profile-bindings.json`。
+启动后阻塞在前台，按 Ctrl-C 退出。Workspace 环境变量 Backend 与 Project 配置修改先保留为浏览器草稿；右上角保存按钮展示精确差异，用户确认后，Project 修改通过 revision 校验的原子 Manifest patch 发布，Backend 修改通过 revision 校验的 env switch 流程发布。选择 Infisical 会初始化并持久化 Workspace 的 Infisical 项目绑定，但不会在 provider 之间迁移已有密钥值。源码仍保持只读。Profile 编辑与 `one configure` 共用 `~/.config/one/{config,credentials}.json`；Workspace/Project 选择只把 Profile 名写入 `~/.config/one/profile-bindings.json`。
 
 ## 参数
 
@@ -26,7 +26,7 @@ one serve [options]
 
 ## 交互模式
 
-`one serve` 没有终端交互式向导。Workspace、Project、Backend 和代码库配置字段全部只读。浏览器表单只能新增/修改机器 Profile，以及选择当前环境下 Workspace 或 Project 使用哪个 Profile。
+`one serve` 没有终端交互式向导。浏览器可以把 Workspace 环境变量 Backend，以及白名单内的 Project 运行、环境、容器和部署配置加入草稿，再统一确认写入 Manifest。Profile 绑定仍是独立的机器本地保存。Workspace 使用 `env/infisical` 时，还可以列出 key，并逐条新增、显示、修改或删除远端值。
 
 本地人工配置直接运行 `one serve`；脚本、CI、agent 通常只需要 `--open=false` 拿 URL，不能绕过浏览器表单直接读取明文凭据。
 
@@ -92,9 +92,10 @@ URL 自带的 `?token=` 是本次启动一次性生成的 32 字节 session toke
 | Host header 校验 | DNS rebinding（攻击者域名 resolve 到 127.0.0.1） | `Host` 必须是绑定的 `127.0.0.1:<port>` 或 `localhost:<port>`，否则返 `421 Misdirected Request` |
 | Origin 校验（仅 mutating） | 跨源表单 / 脚本 POST | POST/PUT/DELETE 的 `Origin` 必须等于服务 self-origin，否则 `403 Forbidden` |
 | Session token | 残留 tab 复用、CSRF | `/api/*` 必须带正确 token（cookie 或 `?token=` 查询参数），否则 `401 Unauthorized` |
-| 代码库只读边界 | 浏览器或旧客户端写源码/配置 | 旧 Manifest mutation 路径直接返回 `409 SERVE_REPOSITORY_READ_ONLY` |
+| 类型化代码库发布器 | 过期草稿或越权字段覆盖配置 | Project patch 与 env Backend 切换使用各自的白名单接口；revision 不匹配返回 `SERVE_MANIFEST_CONFLICT` |
+| 旧路由边界 | 旧客户端调用历史 settings PUT | 旧 mutation 路径返回 `409 SERVE_REPOSITORY_READ_ONLY` |
 
-凭据**默认掩码**：`GET /api/configure*` 返回 `clientSecret: "********"` / `accessKeySecret: "********"` / `password: "********"`。UI 的 "显示原文" 按钮调 `?reveal=1` 取真值。Workspace/Project 投影只返回解析到的 Profile 名和 source，不返回 Profile 字段或凭据。
+凭据**默认掩码**：`GET /api/configure*` 返回 `clientSecret: "********"` / `accessKeySecret: "********"` / `password: "********"`。UI 的 "显示原文" 按钮调 `?reveal=1` 取真值。Infisical 列表只返回 key；原文按单条请求并带 `Cache-Control: no-store`，也不会进入 SWR 缓存。Workspace/Project 投影只返回解析到的 Profile 名和 source，不返回 Profile 字段或凭据。
 
 不在范围：
 
@@ -156,15 +157,22 @@ UI 用什么，你就能用什么。所有路由都需要带 token（cookie 或 
 | `GET` | `/api/workspaces/{entryId}/overview` | 所选 Workspace 与 Project 概览 | `one-cli/workspace-overview/v1` |
 | `GET` | `/api/workspaces/{entryId}/profile-bindings/env?env={environment}` | Workspace env Profile 的有效名/source | `one-cli/workspace-profile/v1` |
 | `PUT` | `/api/workspaces/{entryId}/profile-bindings/env?env={environment}` | 选择/取消 Workspace env Profile；body `{profile}` | `one-cli/workspace-profile/v1` |
-| `GET` | `/api/workspaces/{entryId}/projects/{name}?env={environment}` | 只读 Project/配置投影与有效 Profile 名 | `one-cli/workspace-project/v1` |
+| `PUT` | `/api/workspaces/{entryId}/environment/backend?env={environment}` | 带 revision 校验的 env Backend 切换；body `{revision, backend}` | `one-cli/workspace-profile/v1` |
+| `POST` | `/api/workspaces/{entryId}/environment/backend/initialize?env={environment}&project={name?}` | 修复缺失的 Infisical 项目绑定 | `one-cli/workspace-profile/v1` |
+| `GET` | `/api/workspaces/{entryId}/projects/{name}?env={environment}` | Project/配置投影、Manifest revision 与有效 Profile 名 | `one-cli/workspace-project/v1` |
 | `PUT` | `/api/workspaces/{entryId}/projects/{name}/profile-bindings/{domain}?env={environment}` | 选择/取消 Project Profile；body `{profile}` | `one-cli/workspace-project/v1` |
+| `PUT` | `/api/workspaces/{entryId}/manifest` | 应用已审阅的类型化 Project patch；body `{revision, changes}` | `one-cli/workspace-manifest-apply/v1` |
+| `GET/POST` | `/api/workspaces/{entryId}/secrets?env={environment}&project={name?}` | 列出直接定义的 key / 新增一条 Infisical 值 | `one-cli/env-list/v1` / `one-cli/env-set/v1` |
+| `GET/PUT/DELETE` | `/api/workspaces/{entryId}/secrets/{key}?env={environment}&project={name?}` | 显示、修改或删除单条 Infisical 值 | `one-cli/env-get/v1`、`one-cli/env-set/v1` 或 `one-cli/env-delete/v1` |
 | `GET/PUT` | `/api/workspace/profile-bindings/env?env={environment}` | 启动 Workspace 的 Workspace 绑定别名 | 与复数路由相同 |
+| `PUT` | `/api/workspace/environment/backend?env={environment}` | 启动 Workspace 的 Backend 切换别名 | `one-cli/workspace-profile/v1` |
+| `POST` | `/api/workspace/environment/backend/initialize?env={environment}&project={name?}` | 启动 Workspace 的绑定修复别名 | `one-cli/workspace-profile/v1` |
 | `GET` | `/api/workspace/projects/{name}?env={environment}` | 启动 Workspace 的 Project 投影别名 | `one-cli/workspace-project/v1` |
 | `PUT` | `/api/workspace/projects/{name}/profile-bindings/{domain}?env={environment}` | 启动 Workspace 的 Project 绑定别名；body `{profile}` | `one-cli/workspace-project/v1` |
 
-复数 Workspace API 只接受不透明的 `entryId`。服务端从注册表解析路径，并在每次读取或本机绑定 mutation 前重新校验 Manifest；客户端提交的任意 `root` 不会参与路径选择。`{domain}` 只能是 `env`、`deploy` 或 `container`；Backend 由服务端从只读 Manifest 推导，浏览器不能提交。空 Profile 字符串会删除该层直接绑定，恢复 fallback 解析。
+复数 Workspace API 只接受不透明的 `entryId`。服务端从注册表解析路径，并在每次读取或 mutation 前重新校验 Manifest；客户端提交的任意 `root` 不会参与路径选择。Manifest 发布接收类型化 patch，而不是整份替换文档。密钥 folder 由服务端根据 Workspace/Project 推导，浏览器不能提交任意 path。空 Profile 字符串会删除该层直接绑定，恢复 fallback 解析。
 
-旧的 Project/Environment/Deploy/Container settings PUT 路径（包括 `/api/workspace/...` 和 `/api/workspaces/{entryId}/...`）仍为旧客户端保留，但始终返回 `409 SERVE_REPOSITORY_READ_ONLY`。Dashboard 没有任何写源码或 `one.manifest.json` 的路由。复制 Workspace 导致两个有效路径共用一个 Manifest ID 时，两条记录都会保留并标记冲突：允许只读检查，本机绑定修改在冲突解决前返回 `409 Conflict`。
+旧的 Project/Environment/Deploy/Container settings PUT 路径（包括 `/api/workspace/...` 和 `/api/workspaces/{entryId}/...`）仍为旧客户端保留，但始终返回 `409 SERVE_REPOSITORY_READ_ONLY`；代码库写入使用带 revision 校验的 `/manifest` 与 `/environment/backend` 路由。复制 Workspace 导致两个有效路径共用一个 Manifest ID 时，两条记录都会保留并标记冲突：允许只读检查，所有 mutation 在冲突解决前返回 `409 Conflict`。
 
 合法 `(domain, backend)` 包括：`env/infisical`、`env/dotenv`、`deploy/aws-s3`、`deploy/aliyun-oss`、`deploy/tencent-cos`、`deploy/minio`、`deploy/rustfs`、`deploy/r2`、`deploy/kustomize`、`deploy/vercel`、`deploy/cloudflare`、`deploy/edgeone`、`container/docker`。其它组合返回 404。
 
@@ -182,7 +190,8 @@ curl -s "http://127.0.0.1:<port>/api/configure?token=<token>" | jq '.config | ke
 | `SERVE_BIND_FORBIDDEN` | 仅允许绑定 loopback；改回 `127.0.0.1`（远程访问走 SSH 隧道） |
 | `SERVE_TOKEN_INVALID` | 重启 `one serve` 拿新 URL；旧 token 过期或 process 已重启 |
 | `SERVE_PAYLOAD_INVALID` | POST/PUT 请求体不是合法 JSON 或缺必填字段（如 `name` 或 `profile`） |
-| `SERVE_REPOSITORY_READ_ONLY` | 在源码/代码审查中修改代码库配置；Dashboard 只写机器 Profile 和绑定 |
+| `SERVE_MANIFEST_CONFLICT` | 重新加载 Workspace，检查当前 Manifest 后再创建草稿 |
+| `SERVE_REPOSITORY_READ_ONLY` | 使用类型化 `/manifest` 草稿流程；当前调用的旧路由不可写 |
 | `PROFILE_FILE_INVALID` | 修复错误指向的本机 Profile 文件（`config.json`、`credentials.json` 或 `profile-bindings.json`） |
 | `PROFILE_IN_USE` | 先把所有引用该 Profile 的 Workspace/Project 环境绑定改为 **Automatic**，再删除 |
 | `PROFILE_BACKEND_INVALID` | URL 里的 `(domain, backend)` 不是合法 pair |

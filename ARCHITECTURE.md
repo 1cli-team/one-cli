@@ -257,9 +257,20 @@ Dashboard Workspace reads and machine-local Profile selections enter through
 `application/workspace.Service`. The service owns Overview construction,
 Backend validation, Project lookup, Template/deployment compatibility, and
 Profile-binding policy, but has no manifest-publication capability.
-`one.manifest.json` is a read-only fact source for every `one serve` request:
-the Project projection exposes its values plus resolved Profile names/sources,
-never Profile values or credentials. Environment-aware Workspace and Project
+`one.manifest.json` is a read-only fact source for that projection service:
+the Project projection exposes its values, a SHA-256 revision, and resolved
+Profile names/sources, never Profile values or credentials. Confirmed
+Dashboard publication enters through the separate `application/manifest.Service`.
+It accepts only typed, allowlisted Project patches, compares the submitted
+revision with the current file, validates Backend/config compatibility, and
+publishes the complete candidate through the existing atomic Manifest writer.
+Workspace environment Backend changes instead enter through the revision-checked
+HTTP switch endpoint and `modules/environment.Service`, so selecting Infisical
+initializes and persists its remote project binding before the request succeeds.
+Changing the Workspace environment Backend does not migrate secret values
+between providers.
+Stale drafts fail with `SERVE_MANIFEST_CONFLICT`; browser clients never submit
+a replacement Manifest document. Environment-aware Workspace and Project
 selections are stored in XDG-aware
 `~/.config/one/profile-bindings.json` v1. The store is keyed by canonical
 Workspace root and safe environment id, and its Workspace/Project maps contain
@@ -290,8 +301,9 @@ idempotent; two live roots with one manifest identity remain separate and are
 reported as a conflict instead of being silently re-keyed. Missing paths stay
 visible until an explicit Forget operation. Plural `/api/workspaces/*` routes
 resolve that opaque id server-side and revalidate the manifest before every
-read or local Profile-binding mutation; clients never submit an arbitrary
-filesystem root. Existing singular `/api/workspace/*` routes remain pinned to
+read, local Profile-binding mutation, Manifest publication, or secret mutation;
+clients never submit an arbitrary filesystem root. Existing singular
+`/api/workspace/*` routes remain pinned to
 the launch Workspace for wire compatibility.
 
 CI is an application workflow with a public provider compatibility seam:
@@ -400,12 +412,21 @@ The Dashboard loads `GET /api/catalog` once through an immutable SWR cache and
 derives credential and project configuration fields from that response. Adding
 a backend no longer requires duplicating backend lists and form switches across
 the UI. `features/project-settings` owns the desktop project matrix, lazy
-project-detail read, right-side inspector, explicit-save forms, and project
-Profile binding controls. Manifest-owned Project fields are rendered read-only;
-the only writable Project control submits a Profile name for the current
-environment to the machine-local binding store. Backend identity is always
-derived server-side from the manifest, so the browser cannot change Backend or
-repository configuration.
+project-detail read, right-side inspector, Manifest draft inputs, and Project
+Profile binding controls. `features/manifest-draft` keeps per-Workspace typed
+patches and human-readable differences in memory; the top bar is the only
+publish affordance and requires a confirmation review. Profile binding saves
+remain independent machine-local writes. Backend choices and backend-specific
+Project fields come from the Catalog, while the server repeats all allowlist
+and compatibility validation before publication.
+`features/secrets` manages only `env/infisical` values at the server-derived
+Workspace or Project folder. Lists contain key names without values; a value is
+retrieved individually into component-local state and every response uses
+`Cache-Control: no-store`. The error-state retry action may call the explicit
+Backend initialization endpoint to repair a missing Infisical project binding
+created by an older Dashboard or a hand-edited Manifest; secret reads and
+writes never auto-bind Infisical, register a Manifest key, or participate in a
+Manifest draft transaction.
 The router preserves `?env=dev|preview|prod` across Workspace and Project links.
 The global Settings page hides the selector because Profile definitions/CRUD
 are machine-global rather than environment-scoped; preserved query state still
@@ -451,4 +472,6 @@ Internal migration must preserve:
 
 New HTTP endpoints may be added. Existing read and Profile-management payloads
 remain compatible; historical Dashboard routes that wrote a repository are a
-deliberate safety exception and now return an explicit read-only error.
+deliberate safety exception and still return an explicit read-only error. The
+supported repository writes are the typed, revision-checked Project Manifest
+draft endpoint and the revision-checked environment Backend switch endpoint.

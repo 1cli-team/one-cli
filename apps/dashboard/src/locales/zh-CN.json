@@ -17,6 +17,18 @@
 		"profile": "凭据 profile",
 		"sectionsRoot": "配置分区"
 	},
+	"manifestDraft": {
+		"saveButton": "保存更改 · {{count}}",
+		"workspaceScope": "Workspace",
+		"title": "要把这些修改写入 Manifest 吗？",
+		"description": "这会修改工作区里的 one.manifest.json。继续前请确认下面的具体差异。",
+		"confirm": "保存到 Manifest",
+		"saving": "保存中…",
+		"discard": "放弃草稿",
+		"saved": "Manifest 修改已保存",
+		"saveFailed": "无法保存 Manifest 修改",
+		"conflict": "草稿打开后 one.manifest.json 已发生变化。请放弃草稿、检查最新配置后再修改。"
+	},
 	"environmentSwitcher": {
 		"label": "环境",
 		"dev": "开发",
@@ -121,7 +133,8 @@
 	"settings": {
 		"title": "设置",
 		"description": "管理可供 Workspace 和 Project 使用的机器级凭据 Profile。",
-		"loadFailedTitle": "加载设置失败"
+		"loadFailedTitle": "加载设置失败",
+		"manageBackend": "管理 Profile"
 	},
 	"sections": {
 		"groupLabel": {
@@ -289,8 +302,14 @@
 		"description": "从一处查看并配置 manifest 中的全部项目。",
 		"search": "搜索项目、路径或 backend",
 		"kindFilter": "按项目类型筛选",
+		"statusFilter": "按处理状态筛选",
 		"kinds": {
 			"all": "全部类型"
+		},
+		"statuses": {
+			"all": "全部状态",
+			"attention": "仅待处理",
+			"healthy": "仅正常"
 		},
 		"empty": {
 			"title": "没有匹配的项目",
@@ -302,7 +321,8 @@
 			"container": "Container",
 			"deploy": "Deploy",
 			"status": "状态",
-			"notApplicable": "不适用",
+			"notApplicable": "—",
+			"notApplicableTitle": "这个项目不适用该配置",
 			"notConfigured": "未配置",
 			"profileMissing": "凭据待补充",
 			"setupRequired": "需要配置",
@@ -313,6 +333,7 @@
 		}
 	},
 	"projectInspector": {
+		"close": "关闭项目配置",
 		"tabs": {
 			"label": "项目配置分区",
 			"overview": "概览",
@@ -325,11 +346,21 @@
 		"backend": "Backend",
 		"inheritedBackend": "继承的 {{domain}} backend",
 		"manifestReadOnly": "Manifest · 只读",
-		"profileOnly": "仅 Profile 绑定",
+		"manifestDraft": "Manifest 草稿",
+		"profileOnly": "本机 Profile",
+		"manifestLane": {
+			"title": "共享配置",
+			"description": "Backend 和项目字段会加入顶部的 Manifest 待提交改动。"
+		},
+		"profileLane": {
+			"title": "本机凭据",
+			"description": "Profile 选择只保存在当前机器，需要用下方按钮单独保存。"
+		},
 		"saved": "项目 Profile 绑定已保存",
 		"saveFailed": "保存项目 Profile 绑定失败",
-		"saveHint": "只修改当前环境对应的机器本地 Profile 绑定。",
-		"save": "保存 Profile",
+		"saveHint": "本机 Profile 已修改，尚未保存。",
+		"profileUnchanged": "本机 Profile 没有待保存的修改。",
+		"save": "保存本机绑定",
 		"saving": "保存中…",
 		"values": {
 			"enabled": "已启用",
@@ -340,7 +371,7 @@
 		"discardAndContinue": "放弃并继续",
 		"general": {
 			"title": "项目概览",
-			"description": "项目元数据来自 one.manifest.json，在 Dashboard 中全部只读。",
+			"description": "在这里修改项目运行配置；点击右上角保存前，所有变化只保留为草稿。",
 			"template": "Template",
 			"toolchain": "Toolchain",
 			"path": "项目路径",
@@ -351,7 +382,7 @@
 		},
 		"environment": {
 			"title": "环境配置",
-			"description": "环境 Manifest 配置只读；这里只能为当前环境选择机器本地 Profile。",
+			"description": "Manifest 字段会先进入草稿；Profile 选择仍单独保存到本机。",
 			"path": "环境文件路径",
 			"inherits": "继承工作区环境",
 			"inheritsHint": "项目变量会覆盖同名工作区变量。",
@@ -361,7 +392,7 @@
 		},
 		"container": {
 			"title": "容器配置",
-			"description": "容器 Manifest 配置只读；这里只能为当前环境选择机器本地 Profile。",
+			"description": "容器设置先进入 Manifest 草稿；镜像仓库凭据仍只保存在本机。",
 			"enabled": "启用容器构建",
 			"enabledHint": "允许 one container 为这个项目构建镜像。",
 			"image": "镜像地址",
@@ -369,7 +400,7 @@
 		},
 		"deploy": {
 			"title": "部署配置",
-			"description": "部署 Manifest 配置只读；这里只能为当前环境选择机器本地 Profile。",
+			"description": "部署设置先进入 Manifest 草稿；部署凭据仍只保存在本机。",
 			"notSupported": "这个项目的 Template 不支持部署目标。",
 			"environmentDefault": "使用默认环境",
 			"compatibleTargets": "兼容目标"
@@ -385,6 +416,41 @@
 			"none": "尚未解析到 Profile",
 			"manage": "前往设置管理"
 		}
+	},
+	"secrets": {
+		"title": "Infisical 密钥",
+		"description": "管理当前环境和作用域中保存于远端的密钥值。",
+		"unavailableTitle": "远端密钥尚未启用",
+		"unavailableDescription": "当前环境 Backend 不是 Infisical；切换后可在这里管理远端密钥。",
+		"configureBackend": "配置环境 Backend",
+		"scope": "密钥作用域",
+		"workspaceScope": "Workspace 共享",
+		"directOnly": "这里只能修改当前 folder 直接定义的值，不会改动继承的上层密钥。",
+		"add": "新增密钥",
+		"key": "Key",
+		"value": "值",
+		"actions": "操作",
+		"empty": "当前作用域还没有直接定义的密钥。",
+		"emptyValue": "空值",
+		"retry": "重试",
+		"reveal": "显示原文",
+		"hide": "隐藏原文",
+		"copy": "复制值",
+		"edit": "修改密钥",
+		"delete": "删除密钥",
+		"createTitle": "新增 Infisical 密钥",
+		"editTitle": "修改 Infisical 密钥",
+		"editorDescription": "密钥值会直接发送到 Infisical，不会写入 Manifest。",
+		"save": "保存密钥",
+		"created": "密钥已创建",
+		"updated": "密钥已更新",
+		"deleted": "密钥已删除",
+		"saveFailed": "无法保存密钥",
+		"revealFailed": "无法读取密钥原文",
+		"deleteFailed": "无法删除密钥",
+		"deleteTitle": "删除 {{key}}？",
+		"deleteDescription": "这会从当前 Infisical 环境和 folder 中移除该值，无法在这里撤销。",
+		"deleteConfirmation": "输入 {{key}} 确认删除"
 	},
 	"project": {
 		"fields": {
@@ -408,22 +474,33 @@
 			"title": "工作区环境变量",
 			"scope": "Workspace 级",
 			"readOnly": "只读",
-			"description": "Backend 来自 manifest，在这里仅供查看；你只需为当前环境选择机器级 Profile。",
+			"description": "Backend 写入工作区 Manifest；Profile 只保存在当前机器。两类修改会分别提示。",
 			"localBinding": "机器本地 Profile 绑定",
+			"manifestLegend": "共享 Manifest",
+			"localLegend": "本机配置",
 			"backend": "Backend",
-			"backendReadOnly": "来自 manifest · 只读",
-			"backendSource": "请在 Dashboard 外通过 one.manifest.json 配置。",
+			"backendDescription": "决定 one env 从哪里读取环境变量。切换后会进入待提交改动。",
+			"backendManifest": "Manifest 配置",
+			"backendPending": "等待审阅",
+			"backendSource": "Backend 修改会先进入草稿，审阅后写入 one.manifest.json；已有密钥数据不会自动迁移。",
+			"backendPendingHint": "已加入顶部的待提交改动。保存时 One CLI 会完成 Backend 初始化；完成后再在右侧确认本机 Profile。",
 			"backendMissing": "未配置",
 			"loading": "正在加载 Workspace Profile 绑定…",
 			"loadFailed": "无法加载 Workspace Profile 绑定。",
-			"missingBackendCli": "尚未配置环境变量 Backend，请先使用 One CLI 配置，再选择 Profile。",
-			"save": "保存",
+			"missingBackendCli": "请先选择环境变量 Backend，再选择 Profile。",
+			"save": "保存本机绑定",
 			"saving": "保存中…",
 			"saved": "Workspace Profile 已保存",
 			"saveFailed": "无法保存 Workspace Profile",
 			"profile": {
+				"title": "凭据 Profile",
 				"label": "Profile",
 				"description": "为这个 Workspace 和当前环境选择一个机器本地的凭据 Profile。",
+				"localBadge": "仅本机",
+				"waitTitle": "先应用 Backend 修改",
+				"waitDescription": "目标 Backend 生效后，系统会重新读取它需要的 Profile；这里不会提前保存到错误的 Backend。",
+				"unsaved": "本机绑定尚未保存",
+				"savedLocally": "当前绑定已保存在本机",
 				"notRequired": "这个 Backend 不需要凭据 Profile。",
 				"loading": "正在加载凭据 Profile…",
 				"loadFailed": "无法加载凭据 Profile。",
@@ -432,6 +509,34 @@
 				"none": "当前未解析到 Profile",
 				"manage": "前往设置管理"
 			}
+		},
+		"navigation": {
+			"label": "工作区页面导航",
+			"overview": "待处理",
+			"projects": "项目",
+			"secrets": "密钥",
+			"settings": "工作区设置",
+			"attention": "{{count}} 项需要处理",
+			"ready": "当前没有阻塞项",
+			"projectCount": "{{count}} 个项目",
+			"infisical": "Infisical 已启用",
+			"notEnabled": "尚未启用远端密钥",
+			"backendProfile": "Backend 与 Profile"
+		},
+		"actionCenter": {
+			"eyebrow": "下一步",
+			"pending": "项需要处理",
+			"clear": "项阻塞",
+			"description": "按顺序处理下面的问题，完成后再运行对应的 One CLI 命令。",
+			"clearDescription": "工作区的核心配置已经可以使用。",
+			"title": "优先处理",
+			"hint": "每一项都直接进入对应的配置位置。",
+			"viewProjects": "查看全部项目",
+			"workspaceLabel": "工作区配置",
+			"configureWorkspace": "配置工作区",
+			"resolve": "立即处理",
+			"allGood": "当前没有待处理项",
+			"allGoodDescription": "可以继续管理密钥，或检查各项目的详细配置。"
 		},
 		"metrics": {
 			"projects": "项目",

@@ -60,7 +60,7 @@ func TestResolveInfisicalUsesEnvironmentProjectProfileBinding(t *testing.T) {
 	}
 }
 
-func TestEnsureInfisicalBoundPassesContextualProfileToInit(t *testing.T) {
+func TestEnsureInfisicalReadyPassesContextualProfileToInit(t *testing.T) {
 	configRoot := t.TempDir()
 	t.Setenv("XDG_CONFIG_HOME", configRoot)
 	t.Setenv("HOME", configRoot)
@@ -105,9 +105,8 @@ func TestEnsureInfisicalBoundPassesContextualProfileToInit(t *testing.T) {
 		initRoot, initInput = projectRoot, input
 		return &infisical.InitResult{}, nil
 	}
-	activeWorkspace := executionWorkspaceAt(t, root, root)
-	if err := service.ensureInfisicalBound(
-		context.Background(), activeWorkspace, "", "preview", "web",
+	if err := service.EnsureInfisicalReady(
+		context.Background(), execution.NewScope(context.Background(), root), "preview", "web",
 	); err != nil {
 		t.Fatal(err)
 	}
