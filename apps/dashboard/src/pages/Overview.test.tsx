@@ -12,7 +12,6 @@ import {
 	projectSettingsKey,
 	workspaceProfileBindingKey,
 } from "@/api/workspace";
-import { EnvironmentSelector } from "@/features/environment-context/EnvironmentSelector";
 import { environmentFromSearch } from "@/features/environment-context/environment";
 import {
 	manifestDraftKey,
@@ -215,7 +214,6 @@ const OverviewHarness: React.FC<{
 
 	return (
 		<>
-			<EnvironmentSelector />
 			<output data-testid="environment-search">{search}</output>
 			<Overview
 				data={current.data ?? data}
@@ -260,8 +258,7 @@ function expectSelectText(trigger: HTMLElement, value: string) {
 	expect(trigger.textContent).toContain(value);
 }
 
-async function openProjectSettings(user: ReturnType<typeof userEvent.setup>) {
-	await user.click(screen.getByRole("tab", { name: /^Projects/ }));
+async function openProjectSettings() {
 	return screen.findByRole("region", { name: "Project settings" });
 }
 
@@ -269,9 +266,30 @@ async function openProjectSettingsTab(
 	user: ReturnType<typeof userEvent.setup>,
 	tabName: "Environment" | "Deploy",
 ) {
-	const settings = await openProjectSettings(user);
+	const settings = await openProjectSettings();
 	await user.click(within(settings).getByRole("tab", { name: tabName }));
 	return settings;
+}
+
+async function openWorkspaceSettingsDialog(user: ReturnType<typeof userEvent.setup>) {
+	const inspector = await openProjectSettings();
+	await user.click(within(inspector).getByRole("button", { name: "Workspace settings" }));
+	return screen.findByRole("dialog", { name: "Workspace settings" });
+}
+
+async function openWorkspaceEnvironmentSettings(user: ReturnType<typeof userEvent.setup>) {
+	const dialog = await openWorkspaceSettingsDialog(user);
+	return within(dialog).findByRole("region", { name: "Workspace environment" });
+}
+
+async function selectEnvironment(
+	user: ReturnType<typeof userEvent.setup>,
+	currentName: string,
+	nextName: string,
+) {
+	const selector = screen.getByRole("combobox", { name: `Environment: ${currentName}` });
+	await user.click(selector);
+	await user.click(await screen.findByRole("option", { name: nextName }));
 }
 
 function sectionResponse(domain: BackendDomain, backend: string, profiles: string[]) {
@@ -365,16 +383,10 @@ describe("workspace overview Profile-only configuration", () => {
 	});
 	afterAll(() => server.close());
 
-	it("uses three Workspace tabs and shows projects in a left-hand list", async () => {
-		const user = userEvent.setup();
+	it("shows projects in a persistent left-hand list with project settings tabs", async () => {
 		renderOverview();
 
-		expect(screen.getByRole("tab", { name: "Workspace environment" })).toBeDefined();
-		expect(screen.getByRole("tab", { name: /^Projects/ })).toBeDefined();
-		expect(screen.getByRole("tab", { name: "Infisical secrets" })).toBeDefined();
-		expect(screen.getByRole("region", { name: "Workspace environment" })).toBeDefined();
-
-		const settings = await openProjectSettings(user);
+		const settings = await openProjectSettings();
 		expect(within(settings).getByRole("button", { name: "web apps/web" })).toBeDefined();
 		expect(within(settings).getByRole("button", { name: "api services/api" })).toBeDefined();
 		expect(within(settings).getByRole("button", { name: "shared packages/shared" })).toBeDefined();
@@ -382,6 +394,9 @@ describe("workspace overview Profile-only configuration", () => {
 			within(settings).getByRole("button", { name: "web apps/web" }).getAttribute("aria-current"),
 		).toBe("page");
 		expect(await within(settings).findByText("Manifest draft")).toBeDefined();
+		expect(within(settings).getByRole("tab", { name: "Overview" })).toBeDefined();
+		expect(within(settings).getByRole("tab", { name: "Environment" })).toBeDefined();
+		expect(within(settings).getByRole("tab", { name: "Deploy" })).toBeDefined();
 		expect(within(settings).queryByRole("tab", { name: "Container" })).toBeNull();
 	});
 
@@ -398,16 +413,17 @@ describe("workspace overview Profile-only configuration", () => {
 				"Profiles stay in machine-local configuration; credentials never enter the manifest.",
 			),
 		).toBeNull();
-		await user.click(screen.getByRole("tab", { name: "Infisical secrets" }));
-		expect(screen.getByRole("tabpanel", { name: "Infisical secrets" })).toBeDefined();
+		const dialog = await openWorkspaceSettingsDialog(user);
+		await user.click(within(dialog).getByRole("tab", { name: "Infisical secrets" }));
+		expect(within(dialog).getByRole("tabpanel", { name: "Infisical secrets" })).toBeDefined();
 	});
 
-	it("starts with the Workspace tabs without the summary header or command card", () => {
+	it("starts with the project inspector without the summary header or command card", async () => {
 		renderOverview();
 		expect(screen.queryByRole("heading", { level: 1, name: "demo" })).toBeNull();
 		expect(screen.queryByText("/workspace/demo")).toBeNull();
 		expect(screen.queryByText("one dev")).toBeNull();
-		expect(screen.getByRole("tab", { name: "Workspace environment" })).toBeDefined();
+		expect(await screen.findByRole("region", { name: "Project settings" })).toBeDefined();
 	});
 
 	it("uses environment-specific SWR keys for every workspace projection", () => {
@@ -495,12 +511,11 @@ describe("workspace overview Profile-only configuration", () => {
 		const user = userEvent.setup();
 		renderOverview(configurableOverview, "demo-entry", false, true);
 
-		const region = await screen.findByRole("region", { name: "Workspace environment" });
+		const region = await openWorkspaceEnvironmentSettings(user);
 		const backendSettings = within(region).getByTestId("workspace-backend-settings");
 		expect(within(backendSettings).getByRole("combobox", { name: "Backend" })).toBeDefined();
 		const profile = await within(backendSettings).findByRole("combobox", { name: "Profile" });
 		await chooseSelect(user, profile, "personal");
-		await user.click(within(region).getByRole("button", { name: "Save local binding" }));
 
 		await waitFor(() => expect(requestBody).toEqual({ profile: "personal" }));
 		expect(receivedEnvironment).toBe("dev");
@@ -546,7 +561,7 @@ describe("workspace overview Profile-only configuration", () => {
 		const user = userEvent.setup();
 		renderOverview(configurableOverview, "demo-entry");
 
-		const region = await screen.findByRole("region", { name: "Workspace environment" });
+		const region = await openWorkspaceEnvironmentSettings(user);
 		await chooseSelect(user, within(region).getByRole("combobox", { name: "Backend" }), "Dotenv");
 
 		expect(useManifestDraftStore.getState().drafts[manifestDraftKey("demo-entry")]).toMatchObject({
@@ -599,16 +614,16 @@ describe("workspace overview Profile-only configuration", () => {
 		const user = userEvent.setup();
 		renderOverview(configurableOverview);
 
-		const region = await screen.findByRole("region", { name: "Workspace environment" });
+		const region = await openWorkspaceEnvironmentSettings(user);
 		const profile = await within(region).findByRole("combobox", { name: "Profile" });
 		await waitFor(() => expectSelectText(profile, "personal"));
 		await chooseSelect(user, profile, "Resolve automatically (machine default)");
-		await user.click(within(region).getByRole("button", { name: "Save local binding" }));
 		await waitFor(() => expect(requestBody).toEqual({ profile: "" }));
 	});
 
-	it("guards an unsaved Workspace Profile selection before changing environment", async () => {
+	it("auto-saves a Workspace Profile before changing environment", async () => {
 		const requestedEnvironments: string[] = [];
+		let requestBody: unknown;
 		const configurableOverview: OverviewPayload = {
 			...overview,
 			workspace: {
@@ -637,33 +652,42 @@ describe("workspace overview Profile-only configuration", () => {
 					sectionResponse("env", "infisical", ["work", "personal", "preview-base"]),
 				),
 			),
+			http.put("http://localhost/api/workspace/profile-bindings/env", async ({ request }) => {
+				requestBody = await request.json();
+				return HttpResponse.json({
+					schema: "one-cli/workspace-profile/v1",
+					root: "/workspace/demo",
+					environment: "dev",
+					domain: "env",
+					backend: "infisical",
+					configurable: true,
+					selectedProfile: "personal",
+					profile: { name: "personal", source: "workspace-environment" },
+				});
+			}),
 		);
 		const user = userEvent.setup();
 		renderOverview(configurableOverview);
-		const region = await screen.findByRole("region", { name: "Workspace environment" });
+		const region = await openWorkspaceEnvironmentSettings(user);
 		const profile = await within(region).findByRole("combobox", { name: "Profile" });
 		await chooseSelect(user, profile, "personal");
-
-		await user.click(screen.getByRole("radio", { name: "Preview" }));
-		let discardDialog = await screen.findByRole("alertdialog");
-		expect(screen.getByTestId("environment-search").textContent).toBe("?env=dev");
+		await waitFor(() => expect(requestBody).toEqual({ profile: "personal" }));
 		expectSelectText(profile, "personal");
 
-		await user.click(within(discardDialog).getByRole("button", { name: "Cancel" }));
-		await waitFor(() => expect(screen.queryByRole("alertdialog")).toBeNull());
-		expect(screen.getByTestId("environment-search").textContent).toBe("?env=dev");
-		expectSelectText(within(region).getByRole("combobox", { name: "Profile" }), "personal");
-
-		await user.click(screen.getByRole("radio", { name: "Preview" }));
-		discardDialog = await screen.findByRole("alertdialog");
-		await user.click(within(discardDialog).getByRole("button", { name: "Discard and continue" }));
+		const dialog = screen.getByRole("dialog", { name: "Workspace settings" });
+		await user.click(within(dialog).getByRole("button", { name: "Close" }));
+		await selectEnvironment(user, "Development", "Preview");
 
 		await waitFor(() =>
 			expect(screen.getByTestId("environment-search").textContent).toBe("?env=preview"),
 		);
+		const previewRegion = await openWorkspaceEnvironmentSettings(user);
 		await waitFor(() => expect(requestedEnvironments).toContain("preview"));
 		await waitFor(() =>
-			expectSelectText(screen.getByRole("combobox", { name: "Profile" }), "preview-base"),
+			expectSelectText(
+				within(previewRegion).getByRole("combobox", { name: "Profile" }),
+				"preview-base",
+			),
 		);
 	});
 
@@ -692,24 +716,23 @@ describe("workspace overview Profile-only configuration", () => {
 				HttpResponse.json(sectionResponse("env", "infisical", ["work"])),
 			),
 		);
+		const user = userEvent.setup();
 		renderOverview(configurableOverview, "demo-entry", true);
 
-		const region = await screen.findByRole("region", { name: "Workspace environment" });
+		const region = await openWorkspaceEnvironmentSettings(user);
 		expect(
 			(within(region).getByRole("combobox", { name: "Profile" }) as HTMLButtonElement).disabled,
 		).toBe(true);
 		expect(
-			(
-				within(region).getByRole("button", {
-					name: "Save local binding",
-				}) as HTMLButtonElement
-			).disabled,
+			(within(region).getByRole("combobox", { name: "Backend" }) as HTMLButtonElement).disabled,
 		).toBe(true);
+		expect(within(region).queryByRole("button", { name: "Save local binding" })).toBeNull();
 	});
 
 	it("explains when the workspace backend does not use Profiles", async () => {
+		const user = userEvent.setup();
 		renderOverview();
-		const region = await screen.findByRole("region", { name: "Workspace environment" });
+		const region = await openWorkspaceEnvironmentSettings(user);
 		expect(
 			within(region).getByText("This backend does not require a credential profile."),
 		).toBeDefined();
@@ -726,7 +749,7 @@ describe("workspace overview Profile-only configuration", () => {
 		);
 		const user = userEvent.setup();
 		renderOverview();
-		const inspector = await openProjectSettings(user);
+		const inspector = await openProjectSettings();
 
 		expect(await within(inspector).findByText("Manifest draft")).toBeDefined();
 		expect((within(inspector).getByLabelText("Build version") as HTMLInputElement).value).toBe(
@@ -875,7 +898,7 @@ describe("workspace overview Profile-only configuration", () => {
 		);
 		const user = userEvent.setup();
 		renderOverview();
-		const inspector = await openProjectSettings(user);
+		const inspector = await openProjectSettings();
 		await user.click(within(inspector).getByRole("button", { name: "api services/api" }));
 		await user.click(within(inspector).getByRole("tab", { name: "Deploy" }));
 
@@ -1054,7 +1077,7 @@ describe("workspace overview Profile-only configuration", () => {
 		const profile = await within(inspector).findByLabelText("Project profile");
 		await chooseSelect(user, profile, "preview-team");
 
-		await user.click(screen.getByRole("radio", { name: "Preview" }));
+		await selectEnvironment(user, "Development", "Preview");
 		let discardDialog = await screen.findByRole("alertdialog");
 		expect(screen.getByTestId("environment-search").textContent).toBe("?env=dev");
 		expectSelectText(within(inspector).getByLabelText("Project profile"), "preview-team");
@@ -1063,7 +1086,7 @@ describe("workspace overview Profile-only configuration", () => {
 		await waitFor(() => expect(screen.queryByRole("alertdialog")).toBeNull());
 		expect(screen.getByTestId("environment-search").textContent).toBe("?env=dev");
 
-		await user.click(screen.getByRole("radio", { name: "Preview" }));
+		await selectEnvironment(user, "Development", "Preview");
 		discardDialog = await screen.findByRole("alertdialog");
 		await user.click(within(discardDialog).getByRole("button", { name: "Discard and continue" }));
 

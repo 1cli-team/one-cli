@@ -31,11 +31,7 @@ import {
  * the URL and deliberately does not call a write API or change the Workspace
  * manifest's default environment.
  */
-export function EnvironmentSelector({
-	variant = "default",
-}: {
-	variant?: "default" | "icon";
-}) {
+export function EnvironmentSelector({ variant = "default" }: { variant?: "default" | "icon" }) {
 	const { t } = useTranslation();
 	const [searchParams, setSearchParams] = useSearchParams();
 	const [pendingEnvironment, setPendingEnvironment] = useState<DashboardEnvironment | null>(null);

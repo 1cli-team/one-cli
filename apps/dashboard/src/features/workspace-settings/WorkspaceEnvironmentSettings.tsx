@@ -113,24 +113,14 @@ export const WorkspaceEnvironmentSettings: React.FC<WorkspaceEnvironmentSettings
 	}
 
 	async function selectProfile(nextProfile: string) {
-		if (
-			readOnly ||
-			saving ||
-			binding.isLoading ||
-			!configurable ||
-			nextProfile === directProfile
-		)
+		if (readOnly || saving || binding.isLoading || !configurable || nextProfile === directProfile)
 			return;
 		setDraftProfile(nextProfile);
 		setWorkspaceDirty(true);
 		setSaving(true);
 		setSaveError("");
 		try {
-			const next = await updateWorkspaceProfileBinding(
-				nextProfile,
-				workspaceEntryId,
-				environment,
-			);
+			const next = await updateWorkspaceProfileBinding(nextProfile, workspaceEntryId, environment);
 			await binding.mutate(next, { revalidate: false });
 			setDraftProfile(null);
 			clearEnvironmentDirty(dirtyOwner);

@@ -58,9 +58,7 @@ export const SettingsDialog: React.FC = () => {
 						)}
 						<div>
 							<DialogTitle>{t("settings.title")}</DialogTitle>
-							<DialogDescription className="mt-1">
-								{t("settings.description")}
-							</DialogDescription>
+							<DialogDescription className="mt-1">{t("settings.description")}</DialogDescription>
 						</div>
 					</div>
 				</DialogHeader>

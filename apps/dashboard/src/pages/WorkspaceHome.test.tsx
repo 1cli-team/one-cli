@@ -100,7 +100,7 @@ describe("WorkspaceHome", () => {
 		releaseRequest();
 	});
 
-	it("shows every registered Workspace, its status, metadata, totals, and current marker", async () => {
+	it("shows every registered Workspace with project totals and detection timestamps", async () => {
 		server.use(
 			http.get("http://localhost/api/workspaces", () =>
 				HttpResponse.json({
@@ -114,33 +114,19 @@ describe("WorkspaceHome", () => {
 		renderHome("/?env=preview");
 
 		expect(await screen.findByRole("heading", { name: "Workspaces" })).toBeDefined();
-		expect(screen.getByText("5 registered Workspaces")).toBeDefined();
-		expect(screen.getByText("8 Projects")).toBeDefined();
 
 		const alpha = screen.getByRole("link", { name: /Alpha/ });
 		expect(alpha.getAttribute("href")).toBe("/workspace/alpha-entry?env=preview");
-		expect(within(alpha).getByText("/workspaces/alpha")).toBeDefined();
-		expect(within(alpha).getByText("3 projects")).toBeDefined();
-		expect(within(alpha).getByText("This one serve session")).toBeDefined();
-		expect(within(alpha).getByText("Last detected")).toBeDefined();
+		expect(within(alpha).getByText("Projects")).toBeDefined();
+		expect(within(alpha).getByText("3")).toBeDefined();
+		expect(within(alpha).getByText(/^Last detected ·/)).toBeDefined();
 		expect(alpha.querySelector('time[datetime="2026-08-30T09:00:00Z"]')).not.toBeNull();
 
-		const expectedStatuses = [
-			["Missing", "Path missing"],
-			["Invalid", "Invalid manifest"],
-			["Identity missing", "Workspace ID missing"],
-			["Identity conflict", "Workspace ID conflict"],
-		] as const;
-		for (const [name, status] of expectedStatuses) {
-			const card = screen.getByRole("link", { name: new RegExp(name) });
-			expect(within(card).getByText(status)).toBeDefined();
+		for (const name of ["Missing", "Invalid", "Identity missing", "Identity conflict"]) {
+			expect(screen.getByRole("link", { name: new RegExp(name) })).toBeDefined();
 		}
-		expect(
-			within(screen.getByRole("link", { name: /Missing/ })).getByText("Unavailable"),
-		).toBeDefined();
-		expect(
-			within(screen.getByRole("link", { name: /Invalid/ })).getByText("Unavailable"),
-		).toBeDefined();
+		expect(within(screen.getByRole("link", { name: /Missing/ })).getByText("-")).toBeDefined();
+		expect(within(screen.getByRole("link", { name: /Invalid/ })).getByText("-")).toBeDefined();
 	});
 
 	it("explains when the Workspace registry cannot be loaded", async () => {

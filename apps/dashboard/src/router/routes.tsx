@@ -89,11 +89,7 @@ const WorkspaceRoute: React.FC = () => {
 const WorkspaceLoading: React.FC = () => {
 	const { t } = useTranslation();
 	return (
-		<div
-			className="w-full space-y-3"
-			role="status"
-			aria-label={t("workspaces.loading")}
-		>
+		<div className="w-full space-y-3" role="status" aria-label={t("workspaces.loading")}>
 			<Skeleton className="h-11 w-full rounded-[6px]" />
 			<Skeleton className="h-64 w-full rounded-[6px] opacity-75" />
 		</div>

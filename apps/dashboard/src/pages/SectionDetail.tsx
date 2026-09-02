@@ -153,7 +153,15 @@ export const SectionDetailContent: React.FC<{
 			<div className="flex flex-wrap items-end justify-between gap-3 border-b border-border pb-4">
 				<div className="min-w-0">
 					<div className="flex items-center gap-2">
-						<h1 className={embedded ? "text-lg font-semibold tracking-tight" : "text-[28px] font-medium tracking-tight"}>{title}</h1>
+						<h1
+							className={
+								embedded
+									? "text-lg font-semibold tracking-tight"
+									: "text-[28px] font-medium tracking-tight"
+							}
+						>
+							{title}
+						</h1>
 						<Badge variant="outline" className="font-mono text-[10px]">
 							{backend.id}
 						</Badge>

@@ -94,18 +94,16 @@ function summariesFor(
 	flatten("", initial, before);
 	flatten("", next, after);
 	const keys = new Set([...Object.keys(before), ...Object.keys(after)]);
-	return [...keys]
-		.sort()
-		.map((key) => ({
-			id: `${project}:${section}:${key}`,
-			project,
-			section,
-			path: key,
-			labelKey: labels[key] ?? `manifest.fields.${section}.${key.replaceAll("/", ".")}`,
-			before: before[key],
-			after: after[key],
-			changed: before[key] !== after[key],
-		}));
+	return [...keys].sort().map((key) => ({
+		id: `${project}:${section}:${key}`,
+		project,
+		section,
+		path: key,
+		labelKey: labels[key] ?? `manifest.fields.${section}.${key.replaceAll("/", ".")}`,
+		before: before[key],
+		after: after[key],
+		changed: before[key] !== after[key],
+	}));
 }
 
 export const useManifestDraftStore = createStore<ManifestDraftState>(

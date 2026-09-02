@@ -52,9 +52,7 @@ export const WorkspaceSettingsDialog: React.FC<{
 			<DialogContent className="flex h-[min(780px,calc(100dvh-2rem))] max-w-[min(1120px,calc(100vw-2rem))] flex-col gap-0 overflow-hidden p-0 sm:max-w-[min(1120px,calc(100vw-2rem))]">
 				<DialogHeader className="shrink-0 border-b border-border px-4 py-3 pr-12">
 					<DialogTitle>{t("overview.navigation.settings")}</DialogTitle>
-					<DialogDescription>
-						{t("overview.workspaceEnv.description")}
-					</DialogDescription>
+					<DialogDescription>{t("overview.workspaceEnv.description")}</DialogDescription>
 				</DialogHeader>
 				<Tabs
 					value={activeTab}

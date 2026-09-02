@@ -48,7 +48,7 @@ export const SwitchField: React.FC<{
 	<Field
 		orientation="horizontal"
 		className={cn(
-				"flex cursor-pointer items-start gap-3 rounded-lg border border-border bg-background p-3 transition-colors hover:border-primary/25 hover:bg-primary/[0.025]",
+			"flex cursor-pointer items-start gap-3 rounded-lg border border-border bg-background p-3 transition-colors hover:border-primary/25 hover:bg-primary/[0.025]",
 			disabled && "cursor-not-allowed opacity-50",
 		)}
 	>
@@ -60,8 +60,8 @@ export const SwitchField: React.FC<{
 			className="mt-0.5"
 		/>
 		<FieldLabel htmlFor={id} className="min-w-0 cursor-inherit font-normal">
-				<span className="block text-sm font-medium">{label}</span>
-				<span className="mt-1 block text-xs leading-relaxed text-muted-foreground">
+			<span className="block text-sm font-medium">{label}</span>
+			<span className="mt-1 block text-xs leading-relaxed text-muted-foreground">
 				{description}
 			</span>
 		</FieldLabel>
@@ -75,9 +75,7 @@ export const ReadOnlyDatum: React.FC<{
 	className?: string;
 }> = ({ label, value, mono, className }) => (
 	<div>
-		<p className="text-[11px] font-medium text-muted-foreground">
-			{label}
-		</p>
+		<p className="text-[11px] font-medium text-muted-foreground">{label}</p>
 		<div className={cn("mt-1.5 truncate text-sm font-medium", mono && "font-mono", className)}>
 			{value || "-"}
 		</div>

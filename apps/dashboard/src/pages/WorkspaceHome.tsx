@@ -1,9 +1,4 @@
-import {
-	AlertTriangle,
-	FolderGit2,
-	FolderPlus,
-	Trash2,
-} from "lucide-react";
+import { AlertTriangle, FolderGit2, FolderPlus, Trash2 } from "lucide-react";
 import type React from "react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -173,7 +168,9 @@ export const WorkspaceHome: React.FC = () => {
 						<EmptyMedia variant="icon">
 							<FolderPlus className="h-5 w-5 text-primary" />
 						</EmptyMedia>
-						<EmptyTitle><h2>{t("workspaces.home.emptyTitle")}</h2></EmptyTitle>
+						<EmptyTitle>
+							<h2>{t("workspaces.home.emptyTitle")}</h2>
+						</EmptyTitle>
 						<EmptyDescription className="max-w-lg leading-6">
 							{t("workspaces.home.emptyDescription")}
 						</EmptyDescription>
@@ -200,10 +197,14 @@ export const WorkspaceHome: React.FC = () => {
 				<AlertDialogContent>
 					<AlertDialogHeader>
 						<AlertDialogTitle>
-							{workspaceToForget ? t("workspaces.forget.action", { name: workspaceToForget.name }) : ""}
+							{workspaceToForget
+								? t("workspaces.forget.action", { name: workspaceToForget.name })
+								: ""}
 						</AlertDialogTitle>
 						<AlertDialogDescription>
-							{workspaceToForget ? t("workspaces.forget.confirm", { name: workspaceToForget.name }) : ""}
+							{workspaceToForget
+								? t("workspaces.forget.confirm", { name: workspaceToForget.name })
+								: ""}
 						</AlertDialogDescription>
 					</AlertDialogHeader>
 					<AlertDialogFooter>
@@ -217,7 +218,9 @@ export const WorkspaceHome: React.FC = () => {
 							}}
 						>
 							{forgetting ? <Spinner /> : <Trash2 />}
-							{workspaceToForget ? t("workspaces.forget.action", { name: workspaceToForget.name }) : ""}
+							{workspaceToForget
+								? t("workspaces.forget.action", { name: workspaceToForget.name })
+								: ""}
 						</AlertDialogAction>
 					</AlertDialogFooter>
 				</AlertDialogContent>

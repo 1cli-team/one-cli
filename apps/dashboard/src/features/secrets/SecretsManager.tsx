@@ -295,9 +295,7 @@ export const SecretsManager: React.FC<{
 				{showError && listError ? (
 					<Empty className="min-h-36">
 						<EmptyHeader>
-							<EmptyDescription>
-								{recoveryError || listError.message}
-							</EmptyDescription>
+							<EmptyDescription>{recoveryError || listError.message}</EmptyDescription>
 						</EmptyHeader>
 						<Button
 							variant="outline"

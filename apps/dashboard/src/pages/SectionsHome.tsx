@@ -42,10 +42,14 @@ export const SectionsHome: React.FC<{
 
 	return (
 		<div className={cn(embedded ? "space-y-4" : "space-y-7")}>
-			{embedded ? null : <header className="pb-1">
-				<h1 className="text-3xl font-semibold tracking-tight">{t("settings.title")}</h1>
-				<p className="mt-2 max-w-2xl text-sm text-muted-foreground">{t("settings.description")}</p>
-			</header>}
+			{embedded ? null : (
+				<header className="pb-1">
+					<h1 className="text-3xl font-semibold tracking-tight">{t("settings.title")}</h1>
+					<p className="mt-2 max-w-2xl text-sm text-muted-foreground">
+						{t("settings.description")}
+					</p>
+				</header>
+			)}
 
 			{BACKEND_DOMAINS.map((domain) => {
 				const backends = (catalog.byDomain.get(domain) ?? []).filter(
@@ -54,7 +58,10 @@ export const SectionsHome: React.FC<{
 				if (backends.length === 0) return null;
 				const groupLabel = t(`sections.groupLabel.${domain}`, { defaultValue: domain });
 				return (
-					<section key={domain} className="overflow-hidden rounded-xl border border-border bg-card shadow-sm">
+					<section
+						key={domain}
+						className="overflow-hidden rounded-xl border border-border bg-card shadow-sm"
+					>
 						<div className="flex items-center justify-between border-b border-border bg-muted/45 px-4 py-3">
 							<h2 className="font-mono text-[10px] font-semibold tracking-[0.12em] uppercase text-muted-foreground">
 								{groupLabel}

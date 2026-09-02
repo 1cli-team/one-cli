@@ -138,10 +138,7 @@ export const ContainerForm: React.FC<ProjectSettingsFormProps> = ({
 			<h4 className="text-sm font-semibold tracking-tight">
 				{t("projectInspector.container.title")}
 			</h4>
-			<div
-				data-testid="image-settings-grid"
-				className="@container/backend-config space-y-3"
-			>
+			<div data-testid="image-settings-grid" className="@container/backend-config space-y-3">
 				<SwitchField
 					id="project-container-enabled"
 					label={t("projectInspector.container.enabled")}

@@ -37,11 +37,8 @@ describe("EnvironmentSelector", () => {
 	it("defaults to dev without writing the URL on mount", () => {
 		renderSelector("/workspace/demo?panel=summary");
 
-		const options = screen.getAllByRole("radio");
-		expect(options).toHaveLength(3);
-		expect(options[0].getAttribute("aria-checked")).toBe("true");
-		expect(options[1].getAttribute("aria-checked")).toBe("false");
-		expect(options[2].getAttribute("aria-checked")).toBe("false");
+		const selector = screen.getByRole("combobox", { name: "Environment: Development" });
+		expect(selector.textContent).toContain("Development");
 		expect(screen.getByTestId("search").textContent).toBe("?panel=summary");
 	});
 
@@ -49,10 +46,10 @@ describe("EnvironmentSelector", () => {
 		const user = userEvent.setup();
 		renderSelector("/workspace/demo?view=compact&panel=deploy&env=preview");
 
-		const options = screen.getAllByRole("radio");
-		expect(options[1].getAttribute("aria-checked")).toBe("true");
-
-		await user.click(options[2]);
+		const selector = screen.getByRole("combobox", { name: "Environment: Preview" });
+		expect(selector.textContent).toContain("Preview");
+		await user.click(selector);
+		await user.click(await screen.findByRole("option", { name: "Production" }));
 
 		const search = new URLSearchParams(
 			screen.getByTestId("search").textContent?.replace(/^\?/, ""),
@@ -85,7 +82,8 @@ describe("EnvironmentSelector", () => {
 
 		const user = userEvent.setup();
 		renderSelector("/workspace/demo?env=dev");
-		await user.click(screen.getByRole("radio", { name: "Production" }));
+		await user.click(screen.getByRole("combobox", { name: "Environment: Development" }));
+		await user.click(await screen.findByRole("option", { name: "Production" }));
 
 		expect(await screen.findByRole("alertdialog")).toBeDefined();
 		expect(screen.getByTestId("search").textContent).toBe("?env=dev");

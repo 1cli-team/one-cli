@@ -66,7 +66,9 @@ export const TopBar: React.FC<TopBarProps> = () => {
 				<EnvironmentLink to="/" className="flex shrink-0 items-center gap-2">
 					<img src={logoSrc} alt="One CLI" className="size-8" />
 					<div className="hidden sm:block">
-						<p className="font-heading text-base font-semibold leading-none tracking-tight">One CLI</p>
+						<p className="font-heading text-base font-semibold leading-none tracking-tight">
+							One CLI
+						</p>
 						<p className="mt-1 font-mono text-[9px] font-medium tracking-[0.12em] text-muted-foreground uppercase">
 							{t("sidebar.brand")}
 						</p>

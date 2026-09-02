@@ -280,7 +280,9 @@ const InspectorBody: React.FC<{
 	const [activeTab, setActiveTab] = useState(initialTab);
 	const key = projectSettingsKey(project.name, workspaceEntryId, environment);
 	const result = useSWR(key, () => getProjectSettings(project.name, workspaceEntryId, environment));
-	const sectionTitle = t(`projectInspector.${activeTab === "overview" ? "general" : activeTab}.title`);
+	const sectionTitle = t(
+		`projectInspector.${activeTab === "overview" ? "general" : activeTab}.title`,
+	);
 	const isManifestDraftSection = activeTab !== "deploy";
 
 	return (
