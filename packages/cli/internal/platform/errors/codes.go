@@ -154,8 +154,9 @@ const (
 	INFISICAL_FOLDER_NOT_FOUND         Code = "INFISICAL_FOLDER_NOT_FOUND"
 
 	// Run.
-	RUN_DOTENV_MISSING    Code = "RUN_DOTENV_MISSING"
 	RUN_COMMAND_NOT_FOUND Code = "RUN_COMMAND_NOT_FOUND"
+	RUN_DOTENV_MISSING    Code = "RUN_DOTENV_MISSING"
+	RUN_USAGE_INVALID     Code = "RUN_USAGE_INVALID"
 
 	// Serve — local HTTP UI for editing profiles.
 	SERVE_PORT_BUSY            Code = "SERVE_PORT_BUSY"
@@ -288,8 +289,9 @@ var Codes = map[Code]Definition{
 	INFISICAL_API_ERROR:                {Summary: "Infisical API returned an unexpected error. See error.context for details."},
 	INFISICAL_FOLDER_NOT_FOUND:         {Summary: "The requested Infisical folder does not exist in the requested environment.", Remediation: []output.Remediation{{Action: "check-env-name", Hint: "确认 --env 名是否拼对（dev / staging / prod 等）"}, {Action: "create-folder", Hint: "在该 folder 下写入第一个环境变量值时会自动创建", Command: "one env set --env <env> -p <name|path> KEY value"}, {Action: "verify-path", Hint: "或在 Infisical UI 里确认 folder 是否存在"}}},
 
-	RUN_DOTENV_MISSING:    {Summary: "one run could not find a .env file for the resolved subproject.", Remediation: []output.Remediation{{Action: "pull-secrets", Hint: "先把 Infisical 环境变量拉到项目 .env", Command: "one env pull"}, {Action: "specify-subproject", Hint: "或显式指定项目（按 manifest 里的 name 或相对路径）", Command: "one run -p <name|path> -- <cmd>"}}},
 	RUN_COMMAND_NOT_FOUND: {Summary: "one run could not locate the requested executable on PATH.", Remediation: []output.Remediation{{Action: "check-spelling", Hint: "确认命令名拼写正确"}, {Action: "use-package-runner", Hint: "对于 npm script，使用包管理器调用", Command: "one run -- npm run <script>"}}},
+	RUN_DOTENV_MISSING:    {Summary: "one run could not find a .env file for the resolved subproject.", Remediation: []output.Remediation{{Action: "pull-secrets", Hint: "先把 Infisical 环境变量拉到项目 .env", Command: "one env pull"}, {Action: "specify-subproject", Hint: "或显式指定项目（按 manifest 里的 name 或相对路径）", Command: "one run -p <name|path> -- <cmd>"}}},
+	RUN_USAGE_INVALID:     {Summary: "one run arguments do not match `one run [project] -- <cmd> [args...]`.", Remediation: []output.Remediation{{Action: "use-run-separator", Hint: "用 -- 分隔 One CLI 参数和子进程命令", Command: "one run [project] -- <cmd> [args...]"}}},
 
 	SERVE_PORT_BUSY:            {Summary: "one serve 无法绑定请求的端口（被占用或权限不足）。", Remediation: []output.Remediation{{Action: "use-random-port", Hint: "改用随机端口（让内核分配空闲端口）", Command: "one serve --port 0"}, {Action: "pick-different-port", Hint: "或显式换一个空闲端口", Command: "one serve --port 17900"}}},
 	SERVE_BIND_FORBIDDEN:       {Summary: "one serve 拒绝绑定到非 loopback 地址（profile 文件含敏感凭据，仅 127.0.0.1 / localhost 才安全）。", Remediation: []output.Remediation{{Action: "use-loopback", Hint: "改用 127.0.0.1（默认）", Command: "one serve --host 127.0.0.1"}}},
