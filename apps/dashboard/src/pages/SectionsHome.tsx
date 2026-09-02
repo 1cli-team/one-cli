@@ -6,7 +6,8 @@ import type React from "react";
 import { useTranslation } from "react-i18next";
 import { BACKEND_DOMAINS, humanizeBackendName, useBackendCatalog } from "@/api/catalog";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Card, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EnvironmentLink } from "@/features/environment-context/EnvironmentLink";
 
@@ -38,9 +39,9 @@ export const SectionsHome: React.FC = () => {
 
 	return (
 		<div className="space-y-8">
-			<header className="space-y-1">
+			<header className="rounded-xl border border-border bg-slate-950 px-6 py-5 text-white dark:bg-slate-950">
 				<h1 className="text-xl font-semibold tracking-tight">{t("settings.title")}</h1>
-				<p className="max-w-2xl text-sm text-muted-foreground">{t("settings.description")}</p>
+				<p className="mt-1 max-w-2xl text-sm text-slate-300">{t("settings.description")}</p>
 			</header>
 
 			{BACKEND_DOMAINS.map((domain) => {
@@ -68,8 +69,8 @@ export const SectionsHome: React.FC = () => {
 										to={`/settings/${backend.domain}/${backend.name}`}
 										className="group rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
 									>
-										<Card className="h-full transition-colors hover:border-primary/50">
-											<CardHeader className="py-4">
+										<Card className="h-full overflow-hidden transition-[border-color,box-shadow] hover:border-primary/50 hover:shadow-md">
+											<CardHeader className="pb-3 pt-4">
 												<div className="flex items-start justify-between gap-2">
 													<div className="min-w-0">
 														<CardTitle className="flex items-center gap-2">
@@ -77,9 +78,22 @@ export const SectionsHome: React.FC = () => {
 															<span className="truncate">{title}</span>
 														</CardTitle>
 													</div>
-													<ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
+													<Badge variant="outline" className="font-mono text-[11px]">
+														{backend.name}
+													</Badge>
 												</div>
 											</CardHeader>
+											<CardContent className="pb-4">
+												<p className="min-h-10 text-xs leading-5 text-muted-foreground">
+													{t(`sections.${backend.domain}.${backend.name}.description`, {
+														defaultValue: backend.id,
+													})}
+												</p>
+												<span className="mt-3 inline-flex items-center gap-1.5 text-xs font-medium text-primary">
+													{t("settings.manageBackend")}
+													<ChevronRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
+												</span>
+											</CardContent>
 										</Card>
 									</EnvironmentLink>
 								);

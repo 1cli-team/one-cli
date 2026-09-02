@@ -768,6 +768,14 @@ one serve 拒绝绑定到非 loopback 地址（profile 文件含敏感凭据，�
 
 - `use-loopback` — 改用 127.0.0.1（默认）<br />运行：`one serve --host 127.0.0.1`
 
+### `SERVE_MANIFEST_CONFLICT`
+
+one.manifest.json changed after the Dashboard draft was opened; the stale draft was not written.
+
+**Remediation**:
+
+- `reload-manifest` — 重新加载 Workspace 配置，确认磁盘上的新修改后再应用草稿
+
 ### `SERVE_PAYLOAD_INVALID`
 
 POST/PUT 请求体不是合法 JSON 或缺少必要字段。
@@ -785,7 +793,7 @@ one serve 无法绑定请求的端口（被占用或权限不足）。
 
 ### `SERVE_REPOSITORY_READ_ONLY`
 
-Dashboard 只读查看工作区代码和 one.manifest.json；仅机器本地 profile 配置可修改。
+Dashboard only writes explicitly allowlisted Project fields and env Backend switches through their revision-checked endpoints; this legacy route is not writable.
 
 > 没有默认 remediation。具体恢复方式请看错误的 `context` 字段。
 

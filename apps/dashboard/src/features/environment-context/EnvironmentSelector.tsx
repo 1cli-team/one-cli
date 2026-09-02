@@ -50,7 +50,7 @@ export function EnvironmentSelector() {
 	return (
 		<>
 			<div className="flex h-8 items-center rounded-md border border-border bg-card/80 p-0.5 shadow-sm">
-				<span className="px-2 font-mono text-[9px] font-semibold tracking-[0.16em] text-muted-foreground uppercase">
+				<span className="px-2 font-mono text-[11px] font-semibold tracking-[0.08em] text-muted-foreground uppercase">
 					{t("environmentSwitcher.label", { defaultValue: "Environment" })}
 				</span>
 				<ToggleGroup
@@ -69,7 +69,7 @@ export function EnvironmentSelector() {
 							aria-label={t(`environmentSwitcher.${environment}`, {
 								defaultValue: environment,
 							})}
-							className="h-6 min-w-0 rounded px-2.5 text-[11px] font-medium text-muted-foreground shadow-none data-[state=on]:bg-primary data-[state=on]:text-primary-foreground data-[state=on]:shadow-sm"
+							className="h-6 min-w-0 rounded px-2.5 text-xs font-medium text-muted-foreground shadow-none data-[state=on]:bg-primary data-[state=on]:text-primary-foreground data-[state=on]:shadow-sm"
 						>
 							{t(`environmentSwitcher.${environment}`, {
 								defaultValue: environment,

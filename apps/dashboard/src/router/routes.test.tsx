@@ -190,6 +190,10 @@ describe("multi-workspace routing", () => {
 		expect(await content.findByRole("heading", { name: "Workspaces" })).toBeDefined();
 		expect(content.getByRole("link", { name: /Alpha/ })).toBeDefined();
 		expect(content.getByRole("link", { name: /Beta/ })).toBeDefined();
+		const rail = within(screen.getByRole("complementary"));
+		const railPath = rail.getByText(alpha.root);
+		expect(railPath.className).toContain("break-all");
+		expect(railPath.className).not.toContain("truncate");
 		expect(screen.getByTestId("location").textContent).toBe("/");
 		expect(screen.getByTestId("location-search").textContent).toBe("?env=prod");
 		expect(alphaOverviewRequests).toBe(0);

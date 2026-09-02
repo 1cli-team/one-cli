@@ -3,7 +3,7 @@ title: one serve
 description: Local Dashboard for Workspaces, Projects, and machine-level Profiles.
 ---
 
-`one serve` starts a local Dashboard bound only to `127.0.0.1` and opens a browser. The Dashboard lists Workspaces observed on this machine, lets you switch between them, inspects every Project and its configuration, and manages the machine-level Profiles used by `one configure`.
+`one serve` starts a local Dashboard bound only to `127.0.0.1` and opens a browser. The Dashboard lists Workspaces observed on this machine, lets you switch between them, stages and reviews Workspace environment Backend and Project configuration changes, manages Infisical secrets, and manages the machine-level Profiles used by `one configure`.
 
 Why not let AI edit the Profile files directly: they contain API keys, kubeconfig paths, and registry tokens. The risk of leaking them is higher than the value of saving a few manual inputs. `one serve` physically keeps those fields out of command-line and agent context.
 
@@ -13,7 +13,7 @@ Why not let AI edit the Profile files directly: they contain API keys, kubeconfi
 one serve [options]
 ```
 
-The process blocks in the foreground. Press Ctrl-C to stop. The repository and `one.manifest.json` are read-only to every Dashboard request. Profile mutations share `~/.config/one/{config,credentials}.json` with `one configure`; Workspace/Project selections write only Profile names to `~/.config/one/profile-bindings.json`.
+The process blocks in the foreground. Press Ctrl-C to stop. Workspace environment Backend and Project configuration changes remain in a browser draft until the top-bar save action displays an exact diff and the user confirms. Project changes use an atomic, revision-checked Manifest patch; Backend changes use the revision-checked env switch workflow. Selecting Infisical initializes and persists the Workspace's Infisical project binding, but does not migrate existing secret values between providers. Source files remain read-only. Profile mutations share `~/.config/one/{config,credentials}.json` with `one configure`; Workspace/Project selections write only Profile names to `~/.config/one/profile-bindings.json`.
 
 ## Arguments
 
@@ -26,7 +26,7 @@ The process blocks in the foreground. Press Ctrl-C to stop. The repository and `
 
 ## Interactive Mode
 
-`one serve` has no terminal wizard. Workspace, Project, Backend, and repository configuration fields are view-only. Browser forms may create/update machine Profiles and select which Profile a Workspace or Project uses in the current environment.
+`one serve` has no terminal wizard. Browser forms can stage the Workspace environment Backend plus allowlisted Project runtime, environment, container, and deployment settings. A single confirmation publishes the collected Manifest draft. Profile bindings remain separate machine-local saves. When the Workspace uses `env/infisical`, the Dashboard can list key names and create, reveal, update, or delete one remote value at a time.
 
 For local human setup, run `one serve`. Scripts, CI, and agents usually use `--open=false` only to receive the URL; they should not bypass the browser UI to read cleartext credentials.
 
@@ -92,9 +92,10 @@ The `?token=` in the URL is a one-time 32-byte session token generated for this 
 | Host header check | DNS rebinding, where an attacker domain resolves to `127.0.0.1` | `Host` must match the bound `127.0.0.1:<port>` or `localhost:<port>`, otherwise `421 Misdirected Request` |
 | Origin check for mutations | Cross-origin POST / script requests | POST/PUT/DELETE `Origin` must equal the service origin, otherwise `403 Forbidden` |
 | Session token | Stale tab reuse and CSRF | `/api/*` must include the correct token through cookie or `?token=`, otherwise `401 Unauthorized` |
-| Repository read-only boundary | Browser or stale-client writes to source/configuration | Former Manifest mutation paths return `409` with `SERVE_REPOSITORY_READ_ONLY` before applying a write |
+| Typed repository publishers | Stale or over-broad repository writes | Project patches and env Backend switches use separate allowlisted endpoints; the exact base revision must match or `SERVE_MANIFEST_CONFLICT` is returned |
+| Legacy route boundary | Stale clients attempt former settings PUT routes | Former mutation paths return `409 SERVE_REPOSITORY_READ_ONLY` |
 
-Credentials are **masked by default**. `GET /api/configure*` returns values such as `clientSecret: "********"`, `accessKeySecret: "********"`, and `password: "********"`. The UI's reveal button calls `?reveal=1` to fetch cleartext. Workspace/Project projections expose only a resolved Profile name and source, never Profile fields or credentials.
+Credentials are **masked by default**. `GET /api/configure*` returns values such as `clientSecret: "********"`, `accessKeySecret: "********"`, and `password: "********"`. The UI's reveal button calls `?reveal=1` to fetch cleartext. Infisical lists contain key names only; a single value is retrieved on demand with `Cache-Control: no-store` and kept out of SWR caches. Workspace/Project projections expose only a resolved Profile name and source, never Profile fields or credentials.
 
 Out of scope:
 
@@ -155,15 +156,22 @@ The web UI uses these same routes. All routes require token plus Host match; mut
 | `GET` | `/api/workspaces/{entryId}/overview` | Selected Workspace and Project overview | `one-cli/workspace-overview/v1` |
 | `GET` | `/api/workspaces/{entryId}/profile-bindings/env?env={environment}` | Effective Workspace env Profile name/source | `one-cli/workspace-profile/v1` |
 | `PUT` | `/api/workspaces/{entryId}/profile-bindings/env?env={environment}` | Select/unselect Workspace env Profile; body `{profile}` | `one-cli/workspace-profile/v1` |
-| `GET` | `/api/workspaces/{entryId}/projects/{name}?env={environment}` | Read-only Project/config projection and effective Profile names | `one-cli/workspace-project/v1` |
+| `PUT` | `/api/workspaces/{entryId}/environment/backend?env={environment}` | Revision-checked env Backend switch; body `{revision, backend}` | `one-cli/workspace-profile/v1` |
+| `POST` | `/api/workspaces/{entryId}/environment/backend/initialize?env={environment}&project={name?}` | Repair a missing Infisical project binding | `one-cli/workspace-profile/v1` |
+| `GET` | `/api/workspaces/{entryId}/projects/{name}?env={environment}` | Project/config projection, Manifest revision, and effective Profile names | `one-cli/workspace-project/v1` |
 | `PUT` | `/api/workspaces/{entryId}/projects/{name}/profile-bindings/{domain}?env={environment}` | Select/unselect Project Profile; body `{profile}` | `one-cli/workspace-project/v1` |
+| `PUT` | `/api/workspaces/{entryId}/manifest` | Apply reviewed typed Project patches; body `{revision, changes}` | `one-cli/workspace-manifest-apply/v1` |
+| `GET/POST` | `/api/workspaces/{entryId}/secrets?env={environment}&project={name?}` | List direct key names / create one Infisical value | `one-cli/env-list/v1` / `one-cli/env-set/v1` |
+| `GET/PUT/DELETE` | `/api/workspaces/{entryId}/secrets/{key}?env={environment}&project={name?}` | Reveal, update, or delete one Infisical value | `one-cli/env-get/v1`, `one-cli/env-set/v1`, or `one-cli/env-delete/v1` |
 | `GET/PUT` | `/api/workspace/profile-bindings/env?env={environment}` | Launch-Workspace alias of the Workspace binding routes | Same as plural route |
+| `PUT` | `/api/workspace/environment/backend?env={environment}` | Launch-Workspace alias of the Backend switch route | `one-cli/workspace-profile/v1` |
+| `POST` | `/api/workspace/environment/backend/initialize?env={environment}&project={name?}` | Launch-Workspace alias of the binding repair route | `one-cli/workspace-profile/v1` |
 | `GET` | `/api/workspace/projects/{name}?env={environment}` | Launch-Workspace Project projection alias | `one-cli/workspace-project/v1` |
 | `PUT` | `/api/workspace/projects/{name}/profile-bindings/{domain}?env={environment}` | Launch-Workspace Project binding alias; body `{profile}` | `one-cli/workspace-project/v1` |
 
-Plural Workspace routes accept only the opaque `entryId`. The server resolves its root from the registry and revalidates the Manifest before every read or local binding mutation; a client-supplied `root` never selects a filesystem path. `{domain}` is `env`, `deploy`, or `container`; the server derives the Backend from the read-only Manifest instead of accepting it from the browser. Sending an empty Profile string removes that direct binding and restores fallback resolution.
+Plural Workspace routes accept only the opaque `entryId`. The server resolves its root from the registry and revalidates the Manifest before every read or mutation; a client-supplied `root` never selects a filesystem path. Manifest publication is a typed patch, not a replacement document. Secret folder paths are derived from the selected Workspace/Project; the browser cannot submit an arbitrary path. Sending an empty Profile string removes that direct binding and restores fallback resolution.
 
-Former Project/Environment/Deploy/Container settings PUT paths under both `/api/workspace/...` and `/api/workspaces/{entryId}/...` remain registered for stale clients, but always return `409 SERVE_REPOSITORY_READ_ONLY`. There is no Dashboard route that writes source files or `one.manifest.json`. If copied Workspaces leave two live roots with one Manifest ID, both remain listed as conflicts: inspection is allowed and binding mutations return `409 Conflict` until the registry conflict is resolved.
+Former Project/Environment/Deploy/Container settings PUT paths under both `/api/workspace/...` and `/api/workspaces/{entryId}/...` remain registered for stale clients, but always return `409 SERVE_REPOSITORY_READ_ONLY`; repository writes use the revision-checked `/manifest` and `/environment/backend` routes. If copied Workspaces leave two live roots with one Manifest ID, both remain listed as conflicts: inspection is allowed and mutations return `409 Conflict` until the registry conflict is resolved.
 
 Legal `(domain, backend)` values include `env/infisical`, `env/dotenv`, `deploy/aws-s3`, `deploy/aliyun-oss`, `deploy/tencent-cos`, `deploy/minio`, `deploy/rustfs`, `deploy/r2`, `deploy/kustomize`, `deploy/vercel`, `deploy/cloudflare`, `deploy/edgeone`, and `container/docker`. Other combinations return 404.
 
@@ -181,7 +189,8 @@ curl -s "http://127.0.0.1:<port>/api/configure?token=<token>" | jq '.config | ke
 | `SERVE_BIND_FORBIDDEN` | Bind only to loopback; use SSH tunneling for remote access |
 | `SERVE_TOKEN_INVALID` | Restart `one serve` and use the new URL |
 | `SERVE_PAYLOAD_INVALID` | POST/PUT body is invalid JSON or missing a required field such as `name` or `profile` |
-| `SERVE_REPOSITORY_READ_ONLY` | Edit repository configuration in source/code review; Dashboard only writes machine Profiles and bindings |
+| `SERVE_MANIFEST_CONFLICT` | Reload the Workspace and review the current Manifest before recreating the draft |
+| `SERVE_REPOSITORY_READ_ONLY` | Use the typed `/manifest` draft flow; the requested legacy route is not writable |
 | `PROFILE_FILE_INVALID` | Repair the named local Profile file (`config.json`, `credentials.json`, or `profile-bindings.json`) |
 | `PROFILE_IN_USE` | Choose **Automatic** for every Workspace/Project environment binding that references the Profile, then delete it |
 | `PROFILE_BACKEND_INVALID` | URL `(domain, backend)` is not a legal pair |

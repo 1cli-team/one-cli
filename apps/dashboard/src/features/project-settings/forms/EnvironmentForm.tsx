@@ -4,13 +4,19 @@ import { useTranslation } from "react-i18next";
 import { useSWRConfig } from "swr";
 import { updateProjectProfileBinding } from "@/api/workspace";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+	manifestDraftKey,
+	useManifestDraftStore,
+} from "@/features/manifest-draft/manifest-draft-store";
 import { ProfileBindingField } from "@/features/profile-binding/ProfileBindingField";
 import {
 	BackendBanner,
+	CheckField,
 	FormLayout,
+	ProjectField,
 	type ProjectSettingsFormProps,
-	ReadOnlyDatum,
 } from "@/features/project-settings/forms/FormLayout";
 import {
 	projectBindingValue,
@@ -18,9 +24,11 @@ import {
 	showSaveError,
 } from "@/features/project-settings/forms/helpers";
 import { useToast } from "@/hooks/useToast";
+import type { ProjectEnvironmentPatch } from "@/types/api";
 
 export const EnvironmentForm: React.FC<ProjectSettingsFormProps> = ({
 	project,
+	revision,
 	environment,
 	workspaceEntryId,
 	readOnly,
@@ -38,6 +46,32 @@ export const EnvironmentForm: React.FC<ProjectSettingsFormProps> = ({
 	);
 	const [profile, setProfile] = useState(initialProfile);
 	const [saving, setSaving] = useState(false);
+	const staged = useManifestDraftStore(
+		(state) => state.drafts[manifestDraftKey(workspaceEntryId)]?.changes[project.name]?.environment,
+	);
+	const stageSection = useManifestDraftStore((state) => state.stageSection);
+	const initialManifest: ProjectEnvironmentPatch = {
+		path: settings.path ?? "",
+		inherits: settings.inherits,
+		disabled: settings.disabled,
+	};
+	const manifest = staged ?? initialManifest;
+
+	function updateManifest(next: ProjectEnvironmentPatch) {
+		stageSection({
+			entryId: workspaceEntryId,
+			revision,
+			project: project.name,
+			section: "environment",
+			initial: initialManifest,
+			next,
+			labels: {
+				path: "projectInspector.environment.path",
+				inherits: "projectInspector.environment.inherits",
+				disabled: "projectInspector.environment.disabled",
+			},
+		});
+	}
 
 	async function save() {
 		if (!settings.backend || profile === initialProfile || readOnly) return;
@@ -69,24 +103,34 @@ export const EnvironmentForm: React.FC<ProjectSettingsFormProps> = ({
 			disabled={readOnly || !settings.backend || profile === initialProfile}
 		>
 			<BackendBanner domain="env" backend={settings.backend} />
-			<div className="grid grid-cols-3 gap-x-4 gap-y-3 rounded-lg border border-border bg-muted/25 p-4">
-				<ReadOnlyDatum label={t("projectInspector.environment.path")} value={settings.path} mono />
-				<ReadOnlyDatum
-					label={t("projectInspector.environment.inherits")}
-					value={t(
-						settings.inherits
-							? "projectInspector.values.enabled"
-							: "projectInspector.values.disabled",
-					)}
-				/>
-				<ReadOnlyDatum
-					label={t("projectInspector.environment.disabled")}
-					value={t(
-						settings.disabled
-							? "projectInspector.values.enabled"
-							: "projectInspector.values.disabled",
-					)}
-				/>
+			<div className="space-y-3 rounded-lg border border-warning-border/70 bg-warning-surface/35 p-4">
+				<ProjectField label={t("projectInspector.environment.path")} htmlFor="project-env-path">
+					<Input
+						id="project-env-path"
+						className="font-mono"
+						value={manifest.path}
+						onChange={(event) => updateManifest({ ...manifest, path: event.target.value })}
+						disabled={readOnly}
+					/>
+				</ProjectField>
+				<div className="grid grid-cols-2 gap-3">
+					<CheckField
+						id="project-env-inherits"
+						label={t("projectInspector.environment.inherits")}
+						description={t("projectInspector.environment.inheritsHint")}
+						checked={manifest.inherits}
+						onChange={(inherits) => updateManifest({ ...manifest, inherits })}
+						disabled={readOnly}
+					/>
+					<CheckField
+						id="project-env-disabled"
+						label={t("projectInspector.environment.disabled")}
+						description={t("projectInspector.environment.disabledHint")}
+						checked={manifest.disabled}
+						onChange={(disabled) => updateManifest({ ...manifest, disabled })}
+						disabled={readOnly}
+					/>
+				</div>
 			</div>
 
 			{(settings.keys?.length ?? 0) > 0 ? (

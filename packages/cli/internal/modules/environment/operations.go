@@ -19,6 +19,10 @@ type GetInput struct {
 	Project     string
 	Profile     string
 	Key         string
+	// RepositoryReadOnly prevents the lazy Infisical auto-bind path from
+	// writing projectId into one.manifest.json. The Dashboard sets this for
+	// every remote secret operation.
+	RepositoryReadOnly bool
 }
 
 func (s *Service) Get(ctx context.Context, input GetInput) (*GetResult, error) {
@@ -46,10 +50,12 @@ func (s *Service) Get(ctx context.Context, input GetInput) (*GetResult, error) {
 		}, nil
 	case workspace.EnvBackendInfisical:
 		projectName := profileProjectName(resolution.Workspace, input.Project)
-		if err := s.ensureInfisicalBound(
-			ctx, resolution.Workspace, input.Profile, environment, projectName,
-		); err != nil {
-			return nil, err
+		if !input.RepositoryReadOnly {
+			if err := s.ensureInfisicalBound(
+				ctx, resolution.Workspace, input.Profile, environment, projectName,
+			); err != nil {
+				return nil, err
+			}
 		}
 		config, credentials, err := s.resolveInfisical(
 			resolution.Workspace,
@@ -79,10 +85,11 @@ func (s *Service) Get(ctx context.Context, input GetInput) (*GetResult, error) {
 }
 
 type ListInput struct {
-	Scope       execution.Scope
-	Environment string
-	Project     string
-	Profile     string
+	Scope              execution.Scope
+	Environment        string
+	Project            string
+	Profile            string
+	RepositoryReadOnly bool
 }
 
 func (s *Service) List(ctx context.Context, input ListInput) (*ListResult, error) {
@@ -109,10 +116,12 @@ func (s *Service) List(ctx context.Context, input ListInput) (*ListResult, error
 		}, nil
 	case workspace.EnvBackendInfisical:
 		projectName := profileProjectName(resolution.Workspace, input.Project)
-		if err := s.ensureInfisicalBound(
-			ctx, resolution.Workspace, input.Profile, environment, projectName,
-		); err != nil {
-			return nil, err
+		if !input.RepositoryReadOnly {
+			if err := s.ensureInfisicalBound(
+				ctx, resolution.Workspace, input.Profile, environment, projectName,
+			); err != nil {
+				return nil, err
+			}
 		}
 		config, credentials, err := s.resolveInfisical(
 			resolution.Workspace,
@@ -192,11 +201,12 @@ func (p SetPlan) WithProject(project string) SetPlan {
 }
 
 type SetInput struct {
-	Plan      SetPlan
-	Profile   string
-	Key       string
-	Value     string
-	Overwrite bool
+	Plan               SetPlan
+	Profile            string
+	Key                string
+	Value              string
+	Overwrite          bool
+	RepositoryReadOnly bool
 }
 
 func (s *Service) Set(ctx context.Context, input SetInput) (*SetResult, error) {
@@ -211,6 +221,10 @@ func (s *Service) Set(ctx context.Context, input SetInput) (*SetResult, error) {
 	environment := resolution.Scope.Environment()
 	createdEnvironment := false
 	if environment != "" && !contains(resolution.Declared, environment) {
+		if input.RepositoryReadOnly {
+			return nil, cliErrors.New(cliErrors.ENV_UNKNOWN_ENVIRONMENT,
+				"Dashboard 只能管理 manifest 中已经声明的环境。")
+		}
 		_, err := workspace.EnsureEnvironment(root, environment)
 		if err != nil {
 			return nil, err
@@ -222,6 +236,9 @@ func (s *Service) Set(ctx context.Context, input SetInput) (*SetResult, error) {
 	}
 	project, targetSelector := resolveSetTarget(resolution.Workspace, input.Plan.project)
 	recordKey := func() error {
+		if input.RepositoryReadOnly {
+			return nil
+		}
 		if project != nil {
 			return workspace.RecordProjectEnvKey(root, project.Name, input.Key)
 		}
@@ -251,10 +268,12 @@ func (s *Service) Set(ctx context.Context, input SetInput) (*SetResult, error) {
 		if project != nil {
 			projectName = project.Name
 		}
-		if err := s.ensureInfisicalBound(
-			ctx, resolution.Workspace, input.Profile, environment, projectName,
-		); err != nil {
-			return nil, err
+		if !input.RepositoryReadOnly {
+			if err := s.ensureInfisicalBound(
+				ctx, resolution.Workspace, input.Profile, environment, projectName,
+			); err != nil {
+				return nil, err
+			}
 		}
 		config, credentials, err := s.resolveInfisical(
 			resolution.Workspace, input.Profile, environment, projectName,
@@ -282,6 +301,50 @@ func (s *Service) Set(ctx context.Context, input SetInput) (*SetResult, error) {
 		}, nil
 	}
 	return nil, unsupportedVerb(resolution.Scope.Backend().Name, "set")
+}
+
+type DeleteInput struct {
+	Scope              execution.Scope
+	Environment        string
+	Project            string
+	Profile            string
+	Key                string
+	RepositoryReadOnly bool
+}
+
+func (s *Service) Delete(ctx context.Context, input DeleteInput) (*infisical.DeleteResult, error) {
+	resolution, err := s.resolve(resolveInput{
+		Scope: input.Scope, Requested: input.Environment,
+		Capability: catalog.CapabilityEnvDelete, Verb: "delete",
+	})
+	if err != nil {
+		return nil, err
+	}
+	if resolution.Scope.Backend().Name != workspace.EnvBackendInfisical {
+		return nil, unsupportedVerb(resolution.Scope.Backend().Name, "delete")
+	}
+	projectName := profileProjectName(resolution.Workspace, input.Project)
+	if !input.RepositoryReadOnly {
+		if err := s.ensureInfisicalBound(
+			ctx, resolution.Workspace, input.Profile, resolution.Scope.Environment(), projectName,
+		); err != nil {
+			return nil, err
+		}
+	}
+	config, credentials, err := s.resolveInfisical(
+		resolution.Workspace, input.Profile, resolution.Scope.Environment(), projectName,
+	)
+	if err != nil {
+		return nil, err
+	}
+	path, err := s.resolveInfisicalFolderPath(resolution.Workspace, config, input.Project)
+	if err != nil {
+		return nil, err
+	}
+	return infisical.Delete(ctx, resolution.Workspace.Root(), infisical.DeleteInput{
+		Env: resolution.Scope.Environment(), Path: path, Key: input.Key,
+		Cfg: config, Creds: credentials,
+	})
 }
 
 type PullInput struct {

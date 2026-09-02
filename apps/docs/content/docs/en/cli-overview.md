@@ -125,7 +125,7 @@ When adding tokens, prefer `one configure open` so you do not hand tokens to an 
 one serve [--host 127.0.0.1] [--port 0] [--open=false]
 ```
 
-Starts a loopback-only HTTP server for humans to edit `env / deploy / container` Profiles and select environment-aware local bindings. Workspace code, Project settings, Backend choices, and `one.manifest.json` are view-only. This path handles API keys, kubeconfig paths, and registry tokens, so it is intentionally not an AI-agent credential-editing interface.
+Starts a loopback-only HTTP server for humans to edit `env / deploy / container` Profiles, select environment-aware local bindings, and review typed Workspace Backend or Project configuration drafts before publishing them with revision checks. Workspace source code and non-allowlisted Manifest fields remain read-only. This path handles API keys, kubeconfig paths, and registry tokens, so it is intentionally not an AI-agent credential-editing interface.
 
 Read [Serve](/en/docs/serve/).
 

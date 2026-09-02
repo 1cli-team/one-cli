@@ -1,4 +1,4 @@
-import { Code2, Save } from "lucide-react";
+import { Code2, FilePenLine, HardDrive, Save } from "lucide-react";
 import type React from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
@@ -10,6 +10,7 @@ import type { BackendDomain, ProjectSettings, ProjectSettingsResponse } from "@/
 
 export interface ProjectSettingsFormProps {
 	project: ProjectSettings;
+	revision: string;
 	environment: string;
 	workspaceEntryId?: string;
 	readOnly?: boolean;
@@ -17,7 +18,7 @@ export interface ProjectSettingsFormProps {
 	onDirtyChange(dirty: boolean): void;
 }
 
-export const ReadOnlyLayout: React.FC<
+export const ManifestDraftLayout: React.FC<
 	React.PropsWithChildren<{ title: string; description: string }>
 > = ({ title, description, children }) => {
 	const { t } = useTranslation();
@@ -27,7 +28,7 @@ export const ReadOnlyLayout: React.FC<
 				<div className="flex items-center gap-2">
 					<h3 className="text-sm font-semibold">{title}</h3>
 					<span className="rounded-full border border-border bg-muted/45 px-2 py-0.5 text-[9px] font-semibold tracking-wider text-muted-foreground uppercase">
-						{t("projectInspector.manifestReadOnly")}
+						{t("projectInspector.manifestDraft")}
 					</span>
 				</div>
 				<p className="mt-1 text-xs leading-relaxed text-muted-foreground">{description}</p>
@@ -56,17 +57,40 @@ export const FormLayout: React.FC<
 			className="space-y-5"
 		>
 			<div>
-				<div className="flex items-center gap-2">
+				<div className="flex items-center justify-between gap-3">
 					<h3 className="text-sm font-semibold">{title}</h3>
-					<span className="rounded-full border border-primary/20 bg-primary/8 px-2 py-0.5 text-[9px] font-semibold tracking-wider text-primary uppercase">
+					<span className="inline-flex items-center gap-1.5 rounded-full border border-primary/20 bg-primary/8 px-2.5 py-1 text-xs font-medium text-primary">
+						<HardDrive className="h-3 w-3" />
 						{t("projectInspector.profileOnly")}
 					</span>
 				</div>
 				<p className="mt-1 text-xs leading-relaxed text-muted-foreground">{description}</p>
 			</div>
+			<div className="grid grid-cols-2 overflow-hidden rounded-lg border border-border bg-muted/15">
+				<div className="flex gap-2.5 border-r border-border p-3">
+					<FilePenLine className="mt-0.5 h-4 w-4 shrink-0 text-warning-foreground" />
+					<div>
+						<p className="text-xs font-semibold">{t("projectInspector.manifestLane.title")}</p>
+						<p className="mt-0.5 text-[11px] leading-relaxed text-muted-foreground">
+							{t("projectInspector.manifestLane.description")}
+						</p>
+					</div>
+				</div>
+				<div className="flex gap-2.5 p-3">
+					<HardDrive className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+					<div>
+						<p className="text-xs font-semibold">{t("projectInspector.profileLane.title")}</p>
+						<p className="mt-0.5 text-[11px] leading-relaxed text-muted-foreground">
+							{t("projectInspector.profileLane.description")}
+						</p>
+					</div>
+				</div>
+			</div>
 			<div className="space-y-4">{children}</div>
 			<div className="sticky bottom-0 -mx-6 mt-6 flex items-center justify-between border-t border-border bg-card/95 px-6 py-4 backdrop-blur">
-				<p className="text-[11px] text-muted-foreground">{t("projectInspector.saveHint")}</p>
+				<p className="text-xs text-muted-foreground">
+					{disabled ? t("projectInspector.profileUnchanged") : t("projectInspector.saveHint")}
+				</p>
 				<Button type="submit" size="sm" disabled={saving || disabled}>
 					{saving ? <Spinner /> : <Save />}
 					{saving ? t("projectInspector.saving") : t("projectInspector.save")}

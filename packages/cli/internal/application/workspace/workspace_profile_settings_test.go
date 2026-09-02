@@ -47,7 +47,7 @@ func TestWorkspaceEnvironmentProfileBindsPerEnvironmentWithoutRepositoryWrites(t
 		t.Fatal(err)
 	}
 	if settings.Schema != WorkspaceProfileSettingsSchema || settings.Environment != "preview" ||
-		settings.SelectedProfile != "work" || settings.Profile == nil ||
+		settings.Revision == "" || settings.SelectedProfile != "work" || settings.Profile == nil ||
 		settings.Profile.Source != "workspace-environment" {
 		t.Fatalf("settings = %#v", settings)
 	}

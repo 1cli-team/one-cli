@@ -2,6 +2,7 @@ package workspace
 
 import (
 	"bytes"
+	"crypto/sha256"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -235,19 +236,31 @@ func IsOneProjectRoot(projectRoot string) bool {
 // (no error) when the file does not exist. Only the current ManifestVersion
 // is accepted; older manifests must be migrated by hand (see CHANGELOG).
 func ReadManifest(projectRoot string) (*Manifest, error) {
+	manifest, _, err := ReadManifestSnapshot(projectRoot)
+	return manifest, err
+}
+
+// ReadManifestSnapshot loads the manifest together with a revision derived
+// from its exact on-disk bytes. Dashboard edits send this revision back when
+// they publish a draft so a stale browser tab cannot overwrite changes made
+// by another CLI process or editor in the meantime.
+//
+// A missing manifest keeps the historical ReadManifest behaviour: it returns
+// an empty v1 manifest and an empty revision.
+func ReadManifestSnapshot(projectRoot string) (*Manifest, string, error) {
 	path := ManifestPath(projectRoot)
 	raw, err := fsutil.ReadFile(path)
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {
-			return emptyManifest(), nil
+			return emptyManifest(), "", nil
 		}
-		return nil, cliErrors.New(cliErrors.MANIFEST_INVALID, "one.manifest.json 解析失败。")
+		return nil, "", cliErrors.New(cliErrors.MANIFEST_INVALID, "one.manifest.json 解析失败。")
 	}
 	var m Manifest
 	dec := json.NewDecoder(bytes.NewReader(raw))
 	dec.DisallowUnknownFields()
 	if err := dec.Decode(&m); err != nil {
-		return nil, cliErrors.New(cliErrors.MANIFEST_INVALID, "one.manifest.json 解析失败。")
+		return nil, "", cliErrors.New(cliErrors.MANIFEST_INVALID, "one.manifest.json 解析失败。")
 	}
 	if m.Version != ManifestVersion {
 		msg := fmt.Sprintf("one.manifest.json 版本 %d 不支持，当前 CLI 仅认 v%d。", m.Version, ManifestVersion)
@@ -272,7 +285,7 @@ func ReadManifest(projectRoot string) (*Manifest, error) {
 				"顶层 packageManager、workspace.roots、environments（旧的 dead map）、所有 profile 字段。" +
 				"(5) 顶层 \"version\" 字段改为 1。"
 		}
-		return nil, cliErrors.New(cliErrors.MANIFEST_INVALID, msg)
+		return nil, "", cliErrors.New(cliErrors.MANIFEST_INVALID, msg)
 	}
 	for i := range m.Projects {
 		m.Projects[i].RelativeDir = ToPosixPath(m.Projects[i].RelativeDir)
@@ -280,7 +293,8 @@ func ReadManifest(projectRoot string) (*Manifest, error) {
 			m.Projects[i].Toolchain = "node"
 		}
 	}
-	return &m, nil
+	sum := sha256.Sum256(raw)
+	return &m, fmt.Sprintf("sha256:%x", sum[:]), nil
 }
 
 func emptyManifest() *Manifest {

@@ -23,7 +23,13 @@ import {
 	EmptyTitle,
 } from "@/components/ui/empty";
 import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/input-group";
-import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
+import {
+	Select,
+	SelectContent,
+	SelectItem,
+	SelectTrigger,
+	SelectValue,
+} from "@/components/ui/select";
 import {
 	Table,
 	TableBody,
@@ -83,6 +89,11 @@ function projectSearchText(project: OverviewProject): string {
 		.toLowerCase();
 }
 
+function inspectorTabForIssue(issue: OverviewIssue): ProjectInspectorTab {
+	if (issue.domain === "env") return "environment";
+	return issue.domain;
+}
+
 interface DomainCellProps {
 	project: OverviewProject;
 	domain: OverviewIssueDomain;
@@ -105,7 +116,12 @@ const DomainCell: React.FC<DomainCellProps> = ({ project, domain, backend, readO
 
 	if (!applicable) {
 		return (
-			<span className="text-xs text-muted-foreground/55">{t("projects.matrix.notApplicable")}</span>
+			<span
+				className="pl-3 text-sm text-muted-foreground/55"
+				title={t("projects.matrix.notApplicableTitle")}
+			>
+				{t("projects.matrix.notApplicable")}
+			</span>
 		);
 	}
 
@@ -141,7 +157,7 @@ const DomainCell: React.FC<DomainCellProps> = ({ project, domain, backend, readO
 				>
 					{backend || t("projects.matrix.notConfigured")}
 				</span>
-				<span className="block truncate text-[10px] text-muted-foreground">
+				<span className="block truncate text-[11px] text-muted-foreground">
 					{issue?.reason === "profile"
 						? t("projects.matrix.profileMissing")
 						: issue
@@ -162,14 +178,23 @@ export const ProjectMatrix: React.FC<ProjectMatrixProps> = ({
 	const { t } = useTranslation();
 	const [query, setQuery] = useState("");
 	const [kind, setKind] = useState<"all" | OverviewProjectKind>("all");
+	const [status, setStatus] = useState<"all" | "attention" | "healthy">("all");
 	const filtered = useMemo(() => {
 		const normalized = query.trim().toLowerCase();
-		return projects.filter(
-			(project) =>
-				(kind === "all" || project.kind === kind) &&
-				(!normalized || projectSearchText(project).includes(normalized)),
-		);
-	}, [kind, projects, query]);
+		return projects
+			.filter((project) => {
+				const hasIssues = (project.issues?.length ?? 0) > 0;
+				return (
+					(kind === "all" || project.kind === kind) &&
+					(status === "all" || (status === "attention" ? hasIssues : !hasIssues)) &&
+					(!normalized || projectSearchText(project).includes(normalized))
+				);
+			})
+			.sort(
+				(left, right) =>
+					Number((right.issues?.length ?? 0) > 0) - Number((left.issues?.length ?? 0) > 0),
+			);
+	}, [kind, projects, query, status]);
 
 	return (
 		<Card
@@ -177,7 +202,7 @@ export const ProjectMatrix: React.FC<ProjectMatrixProps> = ({
 			aria-labelledby="project-matrix-title"
 			className="overflow-hidden rounded-xl"
 		>
-			<div className="flex h-16 items-center justify-between gap-4 border-b border-border px-5">
+			<div className="flex min-h-16 items-center justify-between gap-4 border-b border-border px-5 py-3">
 				<div>
 					<div className="flex items-center gap-2">
 						<h2 id="project-matrix-title" className="text-sm font-semibold">
@@ -190,6 +215,18 @@ export const ProjectMatrix: React.FC<ProjectMatrixProps> = ({
 					<p className="mt-0.5 text-xs text-muted-foreground">{t("projects.description")}</p>
 				</div>
 				<div className="flex items-center gap-2">
+					<div className="w-36 shrink-0">
+						<Select value={status} onValueChange={(value) => setStatus(value as typeof status)}>
+							<SelectTrigger size="sm" aria-label={t("projects.statusFilter")} className="text-xs">
+								<SelectValue />
+							</SelectTrigger>
+							<SelectContent>
+								<SelectItem value="all">{t("projects.statuses.all")}</SelectItem>
+								<SelectItem value="attention">{t("projects.statuses.attention")}</SelectItem>
+								<SelectItem value="healthy">{t("projects.statuses.healthy")}</SelectItem>
+							</SelectContent>
+						</Select>
+					</div>
 					<InputGroup className="h-8 w-56">
 						<InputGroupAddon>
 							<Search className="h-3.5 w-3.5" />
@@ -203,18 +240,17 @@ export const ProjectMatrix: React.FC<ProjectMatrixProps> = ({
 						/>
 					</InputGroup>
 					<div className="w-32 shrink-0">
-						<NativeSelect
-							size="sm"
-							value={kind}
-							onChange={(event) => setKind(event.target.value as typeof kind)}
-							aria-label={t("projects.kindFilter")}
-							className="text-xs"
-						>
-							<NativeSelectOption value="all">{t("projects.kinds.all")}</NativeSelectOption>
-							<NativeSelectOption value="app">{t("overview.kinds.app")}</NativeSelectOption>
-							<NativeSelectOption value="service">{t("overview.kinds.service")}</NativeSelectOption>
-							<NativeSelectOption value="package">{t("overview.kinds.package")}</NativeSelectOption>
-						</NativeSelect>
+						<Select value={kind} onValueChange={(value) => setKind(value as typeof kind)}>
+							<SelectTrigger size="sm" aria-label={t("projects.kindFilter")} className="text-xs">
+								<SelectValue />
+							</SelectTrigger>
+							<SelectContent>
+								<SelectItem value="all">{t("projects.kinds.all")}</SelectItem>
+								<SelectItem value="app">{t("overview.kinds.app")}</SelectItem>
+								<SelectItem value="service">{t("overview.kinds.service")}</SelectItem>
+								<SelectItem value="package">{t("overview.kinds.package")}</SelectItem>
+							</SelectContent>
+						</Select>
 					</div>
 				</div>
 			</div>
@@ -263,7 +299,7 @@ export const ProjectMatrix: React.FC<ProjectMatrixProps> = ({
 												<span className="block truncate text-sm font-semibold group-hover:text-primary">
 													{project.name}
 												</span>
-												<span className="mt-0.5 block truncate font-mono text-[10px] text-muted-foreground">
+												<span className="mt-0.5 block truncate font-mono text-[11px] text-muted-foreground">
 													{project.relativeDir}
 												</span>
 											</span>
@@ -298,10 +334,20 @@ export const ProjectMatrix: React.FC<ProjectMatrixProps> = ({
 									</TableCell>
 									<TableCell className="py-2 pr-5 text-right">
 										{issueCount > 0 ? (
-											<Badge variant="destructive" className="gap-1.5">
+											<Button
+												type="button"
+												variant="outline"
+												size="sm"
+												disabled={readOnly}
+												className="border-error-border bg-error-surface text-error-foreground hover:bg-error-surface/70 hover:text-error-foreground"
+												onClick={() => {
+													const issue = project.issues?.[0];
+													if (issue) onInspect(project, inspectorTabForIssue(issue));
+												}}
+											>
 												<AlertCircle className="h-3.5 w-3.5" />
 												{t("projects.matrix.issueCount", { count: issueCount })}
-											</Badge>
+											</Button>
 										) : (
 											<Badge
 												variant="outline"

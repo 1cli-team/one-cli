@@ -125,7 +125,7 @@ one configure open
 one serve [--host 127.0.0.1] [--port 0] [--open=false]
 ```
 
-启动仅绑定 loopback 的本地 HTTP 服务，用浏览器手工编辑 `env / deploy / container` Profile，并选择环境感知的本机绑定。Workspace 代码、Project 设置、Backend 和 `one.manifest.json` 都只读。这个入口会处理 API key、kubeconfig path、registry token 等敏感字段，设计上是给人类使用，不给 AI agent 直接读写凭据。
+启动仅绑定 loopback 的本地 HTTP 服务，用浏览器手工编辑 `env / deploy / container` Profile、选择环境感知的本机绑定，并在发布前审阅类型化的 Workspace Backend 或 Project 配置草稿及 revision 校验。Workspace 源码与非白名单 Manifest 字段保持只读。这个入口会处理 API key、kubeconfig path、registry token 等敏感字段，设计上是给人类使用，不给 AI agent 直接读写凭据。
 
 详见 [`one serve`](/zh/docs/serve/)。
 

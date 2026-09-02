@@ -128,15 +128,15 @@ For a guided browser-based setup:
 one configure open
 ```
 
-The page only binds to your local machine by default, so it is a better place for sensitive values than a chat window or a shared document. Workspace code, Project fields, Backend choices, and `one.manifest.json` are view-only in the Dashboard. Its writable surface is limited to machine Profiles and the Profile name selected for a Workspace or Project in an environment.
+The page only binds to your local machine by default, so it is a better place for sensitive values than a chat window or a shared document. Workspace environment Backend and Project configuration edits remain browser drafts until the top-bar save action shows an exact diff. Project changes use atomic revision-checked Manifest patches; Backend changes use the revision-checked env switch workflow, including Infisical project binding initialization. Source files and non-allowlisted Manifest fields remain read-only. Backend changes do not migrate secret values between providers. Infisical workspaces also expose scoped secret CRUD: lists omit values, and cleartext is fetched one key at a time with no-store responses.
 
-Profile definitions and credentials live in `~/.config/one/config.json` and `credentials.json`. They are machine-global, so Profile CRUD in Settings is not environment-scoped. The Dashboard UI offers Development, Preview, and Production binding contexts; those selections live separately in `~/.config/one/profile-bindings.json`, keyed by canonical Workspace root and environment. The core/API can also store safe custom environment IDs for non-UI workflows. These files never upgrade or modify the repository manifest.
+Profile definitions and credentials live in `~/.config/one/config.json` and `credentials.json`. They are machine-global, so Profile CRUD in Settings is not environment-scoped. The Dashboard UI offers Development, Preview, and Production binding contexts; those selections live separately in `~/.config/one/profile-bindings.json`, keyed by canonical Workspace root and environment. These local files never modify the repository manifest; only the explicit reviewed Project draft and environment Backend switch endpoints can do that.
 
 ## Project Map
 
 Every One CLI project has a `one.manifest.json` file at the root. Most users do not need to edit it by hand.
 
-Think of it as the project map. It records which parts exist, where they live, and which starter created them. One CLI reads it when you add, run, deploy, or inspect parts of the project. `one serve` never writes it; repository changes stay in the normal code-review workflow.
+Think of it as the project map. It records which parts exist, where they live, and which starter created them. One CLI reads it when you add, run, deploy, or inspect parts of the project. `one serve` writes it only after an explicit reviewed, revision-checked Dashboard action; other repository changes stay in the normal code-review workflow.
 
 ## Repository Layout
 

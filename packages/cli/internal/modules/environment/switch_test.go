@@ -2,6 +2,7 @@ package environment
 
 import (
 	"context"
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"testing"
@@ -155,5 +156,103 @@ func TestSwitchInfisicalSyncResolvesProfileForEveryProjectEnvironmentTuple(t *te
 	}
 	if workspace.EnvBackend(updated) != workspace.EnvBackendInfisical {
 		t.Fatalf("env backend = %q", workspace.EnvBackend(updated))
+	}
+}
+
+func TestSwitchInfisicalWithoutSyncInitializesAndPreservesBinding(t *testing.T) {
+	configRoot := t.TempDir()
+	t.Setenv("XDG_CONFIG_HOME", configRoot)
+	t.Setenv("HOME", configRoot)
+	root := t.TempDir()
+	manifest := &workspace.Manifest{
+		Version:   workspace.ManifestVersion,
+		Workspace: &workspace.ManifestWorkspace{ID: "workspace-id", Name: "demo"},
+		Environments: &workspace.Environments{
+			Names: []string{"dev", "preview"}, Default: "dev",
+		},
+		Domains: &workspace.WorkspaceDomains{
+			Env: &workspace.BackendRef{Kind: workspace.EnvBackendDotenv},
+		},
+	}
+	if err := workspace.WriteManifest(root, manifest); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := profile.Upsert(
+		profile.DomainEnv,
+		workspace.EnvBackendInfisical,
+		"preview-work",
+		profile.Profile{
+			Backend: workspace.EnvBackendInfisical,
+			Infisical: &profile.InfisicalProfile{
+				SiteURL: "https://infisical.test",
+				Credentials: &profile.InfisicalCredentials{
+					ClientID: "client", ClientSecret: "secret",
+				},
+			},
+		},
+		false,
+	); err != nil {
+		t.Fatal(err)
+	}
+	if err := profile.BindEnvironmentProfile(
+		"workspace-id", "demo", root, "", "preview",
+		profile.DomainEnv, workspace.EnvBackendInfisical, "preview-work",
+	); err != nil {
+		t.Fatal(err)
+	}
+
+	service := newTestService(t)
+	var initializedWith string
+	service.initInfisical = func(
+		_ context.Context, projectRoot string, input infisical.InitInput,
+	) (*infisical.InitResult, error) {
+		initializedWith = input.ProfileName
+		config, err := json.Marshal(map[string]any{
+			"projectId":    "infisical-project-id",
+			"defaultEnv":   "dev",
+			"environments": []string{"dev", "preview"},
+		})
+		if err != nil {
+			return nil, err
+		}
+		if err := workspace.InitWorkspaceEnv(projectRoot, workspace.EnvInit{
+			Kind: workspace.EnvBackendInfisical, ConfigJSON: config,
+		}); err != nil {
+			return nil, err
+		}
+		return &infisical.InitResult{ProjectID: "infisical-project-id"}, nil
+	}
+
+	plan, err := service.PlanSwitch(
+		execution.NewScope(context.Background(), root), workspace.EnvBackendInfisical,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	result, err := service.Switch(context.Background(), plan, SwitchOptions{
+		Environment: "preview",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if initializedWith != "preview-work" {
+		t.Fatalf("Init profile = %q; want preview Workspace profile", initializedWith)
+	}
+	if !result.SkippedSync || result.Synced != 0 {
+		t.Fatalf("switch result = %#v", result)
+	}
+	updated, err := workspace.ReadManifest(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if workspace.EnvBackend(updated) != workspace.EnvBackendInfisical {
+		t.Fatalf("env backend = %q", workspace.EnvBackend(updated))
+	}
+	var config map[string]any
+	if err := json.Unmarshal(updated.Domains.Env.Config, &config); err != nil {
+		t.Fatal(err)
+	}
+	if config["projectId"] != "infisical-project-id" {
+		t.Fatalf("Infisical binding was overwritten: %#v", config)
 	}
 }

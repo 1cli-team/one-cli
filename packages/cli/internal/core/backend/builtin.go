@@ -68,7 +68,7 @@ func envInfisicalSpec() BackendSpec {
 	fields[0].Placeholder = "https://infisical.company.com"
 	return spec(
 		BackendID{Domain: DomainEnv, Name: EnvInfisical},
-		[]Capability{CapabilityEnvGet, CapabilityEnvSet, CapabilityEnvList, CapabilityEnvPull, CapabilityEnvInject, CapabilityScaffold},
+		[]Capability{CapabilityEnvGet, CapabilityEnvSet, CapabilityEnvDelete, CapabilityEnvList, CapabilityEnvPull, CapabilityEnvInject, CapabilityScaffold},
 		ProfileSpec{Configurable: true, Type: ProfileTypeInfisical, Fields: fields},
 		Requirement{Kind: RequirementProfile, Name: "env/infisical"},
 	)

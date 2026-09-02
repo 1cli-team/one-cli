@@ -202,6 +202,54 @@ type ListResult struct {
 	Total  int      `json:"total"`
 }
 
+type DeleteInput struct {
+	Env  string
+	Path string
+	Key  string
+
+	Cfg   *WorkspaceConfig
+	Creds *Credentials
+}
+
+type DeleteResult struct {
+	Schema string `json:"schema"`
+	Env    string `json:"env"`
+	Path   string `json:"path"`
+	Key    string `json:"key"`
+	Status string `json:"status"`
+}
+
+// Delete removes one key from the exact requested folder. It never removes a
+// folder and never walks inherited paths, which prevents a project-scoped UI
+// action from deleting a workspace-shared value.
+func Delete(ctx context.Context, projectRoot string, in DeleteInput) (*DeleteResult, error) {
+	cfg, creds, err := resolveCfgAndCreds(projectRoot, in.Cfg, in.Creds)
+	if err != nil {
+		return nil, err
+	}
+	if strings.TrimSpace(in.Key) == "" {
+		return nil, cliErrors.New(cliErrors.ENV_SET_KEY_REQUIRED, "必须提供密钥名。")
+	}
+	if err := AssertValidKey(in.Key); err != nil {
+		return nil, err
+	}
+	env, err := SanitizeEnvName(envOrDefault(in.Env, cfg.DefaultEnvOrFallback()))
+	if err != nil {
+		return nil, err
+	}
+	client, err := NewClient(ctx, cfg, creds)
+	if err != nil {
+		return nil, err
+	}
+	path := NormalizePath(in.Path)
+	if _, err := client.DeleteSecret(env, path, in.Key); err != nil {
+		return nil, err
+	}
+	return &DeleteResult{
+		Schema: "one-cli/env-delete/v1", Env: env, Path: path, Key: in.Key, Status: "deleted",
+	}, nil
+}
+
 // RenderTTY prints the keys, one per line (no values).
 func (r *ListResult) RenderTTY(w io.Writer) {
 	if r == nil {

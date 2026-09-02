@@ -110,8 +110,9 @@ export const ProjectInspector: React.FC<ProjectInspectorProps> = ({
 				}}
 			>
 				<SheetContent
-					className="top-[68px] h-[calc(100%-68px)]"
+					className="top-[68px] h-[calc(100%-68px)] w-[620px]"
 					overlayClassName="top-[68px]"
+					closeLabel={t("projectInspector.close")}
 					onInteractOutside={(event) => event.preventDefault()}
 				>
 					{target ? (
@@ -206,7 +207,9 @@ const InspectorBody: React.FC<{
 						<SheetTitle>{project.name}</SheetTitle>
 						<Badge variant="outline">{t(`overview.kinds.${project.kind}`)}</Badge>
 					</div>
-					<SheetDescription className="font-mono">{project.relativeDir}</SheetDescription>
+					<SheetDescription className="font-mono text-xs">
+						{project.relativeDir} · {environment}
+					</SheetDescription>
 				</SheetHeader>
 				<TabsList
 					variant="line"
@@ -217,7 +220,7 @@ const InspectorBody: React.FC<{
 						<TabsTrigger
 							key={id}
 							value={id}
-							className="relative h-10 flex-none rounded-none border-0 bg-transparent px-0 text-xs text-muted-foreground shadow-none after:absolute after:inset-x-0 after:bottom-0 after:h-0.5 after:bg-transparent hover:text-foreground data-[state=active]:bg-transparent data-[state=active]:text-primary data-[state=active]:shadow-none data-[state=active]:after:bg-primary"
+							className="relative h-10 flex-none rounded-none border-0 bg-transparent px-0 text-sm text-muted-foreground shadow-none after:absolute after:inset-x-0 after:bottom-0 after:h-0.5 after:bg-transparent hover:text-foreground data-[state=active]:bg-transparent data-[state=active]:text-primary data-[state=active]:shadow-none data-[state=active]:after:bg-primary"
 						>
 							<Icon className="h-3.5 w-3.5" />
 							{t(`projectInspector.tabs.${id}`)}
@@ -289,6 +292,7 @@ const ProjectSettingsPanel: React.FC<{
 		return (
 			<GeneralForm
 				project={project}
+				revision={data.revision}
 				environment={environment}
 				workspaceEntryId={workspaceEntryId}
 				readOnly={readOnly}
@@ -301,6 +305,7 @@ const ProjectSettingsPanel: React.FC<{
 		return (
 			<EnvironmentForm
 				project={project}
+				revision={data.revision}
 				environment={environment}
 				workspaceEntryId={workspaceEntryId}
 				readOnly={readOnly}
@@ -313,6 +318,7 @@ const ProjectSettingsPanel: React.FC<{
 		return (
 			<ContainerForm
 				project={project}
+				revision={data.revision}
 				environment={environment}
 				workspaceEntryId={workspaceEntryId}
 				readOnly={readOnly}
@@ -324,6 +330,7 @@ const ProjectSettingsPanel: React.FC<{
 	return (
 		<DeployForm
 			project={project}
+			revision={data.revision}
 			environment={environment}
 			workspaceEntryId={workspaceEntryId}
 			readOnly={readOnly}

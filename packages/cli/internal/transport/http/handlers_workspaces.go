@@ -27,8 +27,24 @@ func registerWorkspacesRoutes(mux *http.ServeMux, opts MuxOpts) {
 
 	mux.HandleFunc("PUT /workspaces/{entryId}/profile-bindings/env",
 		handleResolvedWorkspace(opts, handlePutWorkspaceEnvironmentProfile))
+	mux.HandleFunc("PUT /workspaces/{entryId}/environment/backend",
+		handleResolvedWorkspace(opts, handlePutWorkspaceEnvironmentBackend))
+	mux.HandleFunc("POST /workspaces/{entryId}/environment/backend/initialize",
+		handleResolvedWorkspace(opts, handleInitializeWorkspaceEnvironmentBackend))
 	mux.HandleFunc("PUT /workspaces/{entryId}/projects/{name}/profile-bindings/{domain}",
 		handleResolvedWorkspace(opts, handlePutProjectProfileBinding))
+	mux.HandleFunc("PUT /workspaces/{entryId}/manifest",
+		handleResolvedWorkspace(opts, handlePutWorkspaceManifest))
+	mux.HandleFunc("GET /workspaces/{entryId}/secrets",
+		handleResolvedWorkspace(opts, handleListSecrets))
+	mux.HandleFunc("POST /workspaces/{entryId}/secrets",
+		handleResolvedWorkspace(opts, handleCreateSecret))
+	mux.HandleFunc("GET /workspaces/{entryId}/secrets/{key}",
+		handleResolvedWorkspace(opts, handleGetSecret))
+	mux.HandleFunc("PUT /workspaces/{entryId}/secrets/{key}",
+		handleResolvedWorkspace(opts, handleUpdateSecret))
+	mux.HandleFunc("DELETE /workspaces/{entryId}/secrets/{key}",
+		handleResolvedWorkspace(opts, handleDeleteSecret))
 
 	for _, pattern := range []string{
 		"PUT /workspaces/{entryId}/projects/{name}",

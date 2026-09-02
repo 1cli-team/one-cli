@@ -69,6 +69,10 @@ type SwitchOptions struct {
 	Sync      bool
 	Overwrite bool
 	DryRun    bool
+	// Environment selects the machine-local Profile context used to initialize
+	// an Infisical binding when the caller is not migrating dotenv tuples. CLI
+	// migrations leave this empty and keep using the first tuple's context.
+	Environment string
 }
 
 func (s *Service) Switch(
@@ -95,13 +99,22 @@ func (s *Service) Switch(
 		result.SkippedSync = !options.Sync
 		return result, nil
 	}
+	// Selecting Infisical is not just a manifest kind change: the workspace
+	// must have a remote project binding before any env operation can work.
+	// Initialize that binding even when the caller deliberately skips data
+	// migration (the Dashboard switch flow does exactly that).
+	bindEnvironment := strings.TrimSpace(options.Environment)
+	bindProject := ""
+	if bindEnvironment == "" && len(plan.tuples) > 0 {
+		bindEnvironment = plan.tuples[0].environment
+		bindProject = plan.tuples[0].project
+	}
+	if err := s.ensureInfisicalBound(
+		ctx, plan.Workspace, "", bindEnvironment, bindProject,
+	); err != nil {
+		return nil, err
+	}
 	if options.Sync && len(plan.tuples) > 0 {
-		first := plan.tuples[0]
-		if err := s.ensureInfisicalBound(
-			ctx, plan.Workspace, "", first.environment, first.project,
-		); err != nil {
-			return nil, err
-		}
 		for _, tuple := range plan.tuples {
 			config, credentials, err := s.resolveInfisical(
 				plan.Workspace, "", tuple.environment, tuple.project,
@@ -133,7 +146,14 @@ func (s *Service) Switch(
 		}
 	}
 	result.SkippedSync = !options.Sync
-	if err := writeEnvBackend(plan.Workspace.Manifest(), plan.Workspace.Root(), plan.To); err != nil {
+	// Infisical Init writes projectId into one.manifest.json. Reload before the
+	// final kind write so the stale manifest captured by PlanSwitch cannot
+	// silently erase that freshly-created binding.
+	manifest, err := workspace.ReadManifest(plan.Workspace.Root())
+	if err != nil {
+		return nil, err
+	}
+	if err := writeEnvBackend(manifest, plan.Workspace.Root(), plan.To); err != nil {
 		return nil, err
 	}
 	return result, nil

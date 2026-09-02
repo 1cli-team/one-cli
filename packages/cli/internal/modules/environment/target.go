@@ -85,6 +85,55 @@ func (s *Service) ensureInfisicalBound(
 	return err
 }
 
+func requireInfisicalBackend(resolution resolution) error {
+	if resolution.Scope.Backend().Name != workspace.EnvBackendInfisical {
+		return cliErrors.New(
+			cliErrors.ENV_BACKEND_INVALID,
+			"当前工作区没有选择 Infisical backend。",
+		)
+	}
+	return nil
+}
+
+func (s *Service) RequireInfisicalBackend(
+	scope execution.Scope,
+	environment string,
+) error {
+	resolution, err := s.resolve(resolveInput{
+		Scope: scope, Requested: environment, AllowUnknown: true,
+	})
+	if err != nil {
+		return err
+	}
+	return requireInfisicalBackend(resolution)
+}
+
+// EnsureInfisicalReady completes a missing project binding for a Workspace
+// whose selected env backend is already Infisical. It is the explicit repair
+// boundary used by the Dashboard; ordinary secret reads remain read-only.
+func (s *Service) EnsureInfisicalReady(
+	ctx context.Context,
+	scope execution.Scope,
+	environment, project string,
+) error {
+	resolution, err := s.resolve(resolveInput{
+		Scope: scope, Requested: environment, AllowUnknown: true,
+	})
+	if err != nil {
+		return err
+	}
+	if err := requireInfisicalBackend(resolution); err != nil {
+		return err
+	}
+	return s.ensureInfisicalBound(
+		ctx,
+		resolution.Workspace,
+		"",
+		resolution.Scope.Environment(),
+		profileProjectName(resolution.Workspace, project),
+	)
+}
+
 func (s *Service) resolveInfisicalFolderPath(
 	activeWorkspace execution.Workspace,
 	config *infisical.WorkspaceConfig,

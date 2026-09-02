@@ -80,6 +80,7 @@ type Capability string
 const (
 	CapabilityEnvGet         Capability = "env/get"
 	CapabilityEnvSet         Capability = "env/set"
+	CapabilityEnvDelete      Capability = "env/delete"
 	CapabilityEnvList        Capability = "env/list"
 	CapabilityEnvPull        Capability = "env/pull"
 	CapabilityEnvInject      Capability = "env/inject"

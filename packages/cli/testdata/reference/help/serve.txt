@@ -7,7 +7,7 @@ USAGE
 
 TIPS
 启动一个本地 HTTP 服务，在浏览器里查看本机 Workspace、配置其中的
-Project，并管理 profile（env / deploy / container 各 backend）。Profile
+Project、审阅后保存 Manifest 配置、管理 Infisical 密钥，并管理 profile（env / deploy / container 各 backend）。Profile
 含 API key、kubeconfig path、registry token 等敏感字段，AI 不应读写；
 本命令是给你（人类）的入口。
 

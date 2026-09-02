@@ -28,8 +28,10 @@ import (
 	"time"
 
 	configureapp "github.com/torchstellar-team/one-cli/packages/cli/internal/application/configure"
+	manifestapp "github.com/torchstellar-team/one-cli/packages/cli/internal/application/manifest"
 	workspaceapp "github.com/torchstellar-team/one-cli/packages/cli/internal/application/workspace"
 	catalog "github.com/torchstellar-team/one-cli/packages/cli/internal/core/backend"
+	environmentmodule "github.com/torchstellar-team/one-cli/packages/cli/internal/modules/environment"
 	cliErrors "github.com/torchstellar-team/one-cli/packages/cli/internal/platform/errors"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/output"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/resources/bundled"
@@ -53,6 +55,12 @@ type MuxOpts struct {
 	// ProfileService is the profile use-case boundary shared with Cobra. Nil is
 	// filled with the local v1 repository for compatibility with existing tests.
 	ProfileService *configureapp.ProfileService
+	// ManifestService is the explicit repository-publication boundary. It only
+	// accepts typed, revision-checked project setting patches.
+	ManifestService *manifestapp.Service
+	// EnvironmentService powers Infisical secret operations through the same
+	// workspace/profile/path resolution used by the CLI.
+	EnvironmentService *environmentmodule.Service
 	// WorkspaceService owns read-only manifest projections and machine-local
 	// Profile bindings. It has no repository-publication capability. Nil is
 	// filled from Catalog for compatibility with direct BuildMux tests.
@@ -90,12 +98,27 @@ func BuildMux(opts MuxOpts) http.Handler {
 		}
 		opts.WorkspaceService = service
 	}
+	if opts.ManifestService == nil {
+		service, err := manifestapp.NewService(opts.Catalog)
+		if err != nil {
+			panic(err)
+		}
+		opts.ManifestService = service
+	}
+	if opts.EnvironmentService == nil {
+		service, err := environmentmodule.NewService(opts.Catalog, opts.ProfileService)
+		if err != nil {
+			panic(err)
+		}
+		opts.EnvironmentService = service
+	}
 	api := http.NewServeMux()
 	registerConfigureRoutes(api, opts)
 	registerCatalogRoutes(api, opts)
 	registerPreferencesRoutes(api, opts)
 	registerWorkspaceRoutes(api, opts)
 	registerWorkspaceMutateRoutes(api, opts)
+	registerSecretRoutes(api, opts)
 	registerWorkspacesRoutes(api, opts)
 
 	root := http.NewServeMux()

@@ -28,8 +28,10 @@ import (
 	"time"
 
 	configureapp "github.com/torchstellar-team/one-cli/packages/cli/internal/application/configure"
+	manifestapp "github.com/torchstellar-team/one-cli/packages/cli/internal/application/manifest"
 	workspaceapp "github.com/torchstellar-team/one-cli/packages/cli/internal/application/workspace"
 	catalog "github.com/torchstellar-team/one-cli/packages/cli/internal/core/backend"
+	environmentmodule "github.com/torchstellar-team/one-cli/packages/cli/internal/modules/environment"
 	cliErrors "github.com/torchstellar-team/one-cli/packages/cli/internal/platform/errors"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/i18n"
 )
@@ -49,15 +51,17 @@ const (
 // Empty string means "no workspace detected"; the Dashboard can still select
 // a previously observed Workspace from RegistryService.
 type Opts struct {
-	Host             string
-	Port             int
-	Token            string
-	UIDisabled       bool
-	WorkspaceRoot    string
-	Catalog          *catalog.Catalog
-	ProfileService   *configureapp.ProfileService
-	WorkspaceService *workspaceapp.Service
-	RegistryService  *workspaceapp.RegistryService
+	Host               string
+	Port               int
+	Token              string
+	UIDisabled         bool
+	WorkspaceRoot      string
+	Catalog            *catalog.Catalog
+	ProfileService     *configureapp.ProfileService
+	ManifestService    *manifestapp.Service
+	EnvironmentService *environmentmodule.Service
+	WorkspaceService   *workspaceapp.Service
+	RegistryService    *workspaceapp.RegistryService
 }
 
 // Result is the envelope payload Run hands back to its caller before
@@ -136,15 +140,17 @@ func Run(ctx context.Context, opts Opts, ready func(Result)) error {
 	}
 
 	mux := BuildMux(MuxOpts{
-		Token:            opts.Token,
-		UIDisabled:       opts.UIDisabled,
-		ExpectedHosts:    expectedHosts(opts.Host, port),
-		SelfOrigin:       selfOrigin,
-		WorkspaceRoot:    opts.WorkspaceRoot,
-		Catalog:          opts.Catalog,
-		ProfileService:   opts.ProfileService,
-		WorkspaceService: opts.WorkspaceService,
-		RegistryService:  opts.RegistryService,
+		Token:              opts.Token,
+		UIDisabled:         opts.UIDisabled,
+		ExpectedHosts:      expectedHosts(opts.Host, port),
+		SelfOrigin:         selfOrigin,
+		WorkspaceRoot:      opts.WorkspaceRoot,
+		Catalog:            opts.Catalog,
+		ProfileService:     opts.ProfileService,
+		ManifestService:    opts.ManifestService,
+		EnvironmentService: opts.EnvironmentService,
+		WorkspaceService:   opts.WorkspaceService,
+		RegistryService:    opts.RegistryService,
 	})
 	server := &http.Server{
 		Handler:           mux,
