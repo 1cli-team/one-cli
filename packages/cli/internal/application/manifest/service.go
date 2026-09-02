@@ -166,7 +166,7 @@ func (s *Service) PreviewManifestDraft(
 
 	hasWorkspaceChange := input.Workspace != nil && input.Workspace.Environment != nil
 	if strings.TrimSpace(input.Revision) == "" || (!hasWorkspaceChange && len(input.Changes) == 0) {
-		return PreviewManifestResult{}, fmt.Errorf("%w: revision and at least one change are required", ErrInvalidInput)
+		return PreviewManifestResult{}, fmt.Errorf("%w: revision and at least one change (workspace or project) are required", ErrInvalidInput)
 	}
 	manifest, currentRevision, err := workspacecore.ReadManifestSnapshot(root)
 	if err != nil {
