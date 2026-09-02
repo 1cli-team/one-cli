@@ -13,7 +13,7 @@ export default mergeConfig(
 			execArgv: nodeMajor >= 25 ? ["--no-experimental-webstorage"] : [],
 			environment: "jsdom",
 			environmentOptions: {
-				jsdom: { url: "http://localhost/?token=test-token" },
+				jsdom: { url: "http://localhost/" },
 			},
 			setupFiles: ["./src/test/setup.ts"],
 		},

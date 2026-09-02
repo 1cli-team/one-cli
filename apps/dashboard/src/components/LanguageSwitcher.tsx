@@ -28,6 +28,10 @@ const OPTIONS: Option[] = [
 	{ mode: "en-US", labelKey: "sidebar.languageEn" },
 ];
 
+const MENU_WIDTH = 160;
+const TRIGGER_WIDTH = 28;
+const CENTERED_END_OFFSET = -(MENU_WIDTH - TRIGGER_WIDTH) / 2;
+
 export function LanguageSwitcher() {
 	const { mode, setMode } = useLocaleStore();
 	const { t } = useTranslation();
@@ -44,7 +48,13 @@ export function LanguageSwitcher() {
 					<Languages className="h-4 w-4" />
 				</Button>
 			</DropdownMenuTrigger>
-			<DropdownMenuContent align="end" sideOffset={6}>
+			<DropdownMenuContent
+				side="top"
+				align="end"
+				alignOffset={CENTERED_END_OFFSET}
+				sideOffset={8}
+				className="w-40"
+			>
 				<DropdownMenuRadioGroup
 					value={mode}
 					onValueChange={(value) => setMode(value as LocaleMode)}

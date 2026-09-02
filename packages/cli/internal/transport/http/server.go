@@ -1,22 +1,18 @@
 // Package serve implements `one serve` — a local HTTP server that exposes
 // observed Workspaces, safe Project settings, and machine-level Profiles
 // through a web UI. The server binds
-// to 127.0.0.1 by default and gates /api/* with three independent defenses:
+// to 127.0.0.1 by default and gates requests with two independent defenses:
 // Host header validation (defeats DNS rebinding), Origin validation on
-// mutations (defeats cross-origin form submits), and a per-session token
-// (defeats CSRF and the "left a tab open after `one serve` exited" reuse
-// vector).
+// mutations (defeats cross-origin form submits).
 //
 // Profile credentials are masked by default in GET responses. The `?reveal=1`
-// query param plus a valid token returns the unmasked value, so the UI can
-// implement a "show password" affordance without leaking the secret to
-// anyone scrolling through the response in DevTools.
+// query param returns the unmasked value, so the UI can implement a "show
+// password" affordance without leaking the secret to anyone scrolling through
+// the response in DevTools.
 package serve
 
 import (
 	"context"
-	"crypto/rand"
-	"encoding/base64"
 	"errors"
 	"fmt"
 	"io"
@@ -37,14 +33,14 @@ import (
 )
 
 const (
-	schemaServeV1   = "one-cli/serve/v1"
+	schemaServeV2   = "one-cli/serve/v2"
 	shutdownTimeout = 5 * time.Second
 )
 
 // Opts is the input to Run. Zero values get sensible defaults: Host falls
-// back to 127.0.0.1, Port=0 asks the kernel for a free one, Token is
-// auto-generated. UIDisabled is a development flag (PR-1 era) that keeps
-// only /api/* mounted; PR-2 removes the cobra-side --no-ui that exposes it.
+// back to 127.0.0.1 and Port=0 asks the kernel for a free one. UIDisabled is a
+// development flag (PR-1 era) that keeps only /api/* mounted; PR-2 removes the
+// cobra-side --no-ui that exposes it.
 //
 // WorkspaceRoot is the absolute path to the One workspace the user ran
 // `one serve` from (resolved by walking up from cwd for one.manifest.json).
@@ -53,7 +49,6 @@ const (
 type Opts struct {
 	Host               string
 	Port               int
-	Token              string
 	UIDisabled         bool
 	WorkspaceRoot      string
 	Catalog            *catalog.Catalog
@@ -73,7 +68,6 @@ type Result struct {
 	URL    string `json:"url"`
 	Host   string `json:"host"`
 	Port   int    `json:"port"`
-	Token  string `json:"token"`
 }
 
 // RenderTTY prints a friendly banner on stdout when output mode is auto/text.
@@ -102,14 +96,6 @@ func Run(ctx context.Context, opts Opts, ready func(Result)) error {
 			fmt.Sprintf("拒绝绑定到非 loopback 地址 %q；profile 含敏感凭据，仅 127.0.0.1 / localhost 安全。", opts.Host)).
 			WithContext(map[string]any{"host": opts.Host})
 	}
-	if opts.Token == "" {
-		tok, err := generateToken()
-		if err != nil {
-			return err
-		}
-		opts.Token = tok
-	}
-
 	addr := net.JoinHostPort(opts.Host, strconv.Itoa(opts.Port))
 	ln, err := net.Listen("tcp", addr)
 	if err != nil {
@@ -129,18 +115,16 @@ func Run(ctx context.Context, opts Opts, ready func(Result)) error {
 	port := tcpAddr.Port
 
 	selfOrigin := fmt.Sprintf("http://%s", net.JoinHostPort(opts.Host, strconv.Itoa(port)))
-	url := fmt.Sprintf("%s/?token=%s", selfOrigin, opts.Token)
+	url := selfOrigin + "/"
 	res := Result{
-		Schema: schemaServeV1,
+		Schema: schemaServeV2,
 		Status: "listening",
 		URL:    url,
 		Host:   opts.Host,
 		Port:   port,
-		Token:  opts.Token,
 	}
 
 	mux := BuildMux(MuxOpts{
-		Token:              opts.Token,
 		UIDisabled:         opts.UIDisabled,
 		ExpectedHosts:      expectedHosts(opts.Host, port),
 		SelfOrigin:         selfOrigin,
@@ -183,17 +167,6 @@ func Run(ctx context.Context, opts Opts, ready func(Result)) error {
 	}
 }
 
-// generateToken returns a 32-byte URL-safe random token used to gate /api/*.
-// crypto/rand failure is fatal (would mean a broken host RNG) so we surface
-// it rather than fall back.
-func generateToken() (string, error) {
-	var buf [32]byte
-	if _, err := rand.Read(buf[:]); err != nil {
-		return "", err
-	}
-	return base64.RawURLEncoding.EncodeToString(buf[:]), nil
-}
-
 // expectedHosts is the allowlist for Host header validation. Always includes
 // the actual bind address; for 127.0.0.1 also accepts "localhost:<port>"
 // (browsers send whichever name the user typed in the address bar). Both
@@ -213,9 +186,8 @@ func expectedHosts(host string, port int) map[string]struct{} {
 }
 
 // isLoopback rejects anything that isn't an IPv4/IPv6 loopback or literal
-// "localhost". Binding to 0.0.0.0 with a token would still expose
-// credentials on LAN if a coworker hits the URL with token; we deliberately
-// don't allow it without an explicit out-of-scope override.
+// "localhost". Binding to 0.0.0.0 would expose credentials on the LAN, so we
+// deliberately don't allow it without an explicit out-of-scope override.
 func isLoopback(host string) bool {
 	if host == "localhost" {
 		return true

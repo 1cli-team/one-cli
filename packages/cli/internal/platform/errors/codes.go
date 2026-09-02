@@ -161,7 +161,6 @@ const (
 	SERVE_PORT_BUSY            Code = "SERVE_PORT_BUSY"
 	SERVE_BIND_FORBIDDEN       Code = "SERVE_BIND_FORBIDDEN"
 	SERVE_MANIFEST_CONFLICT    Code = "SERVE_MANIFEST_CONFLICT"
-	SERVE_TOKEN_INVALID        Code = "SERVE_TOKEN_INVALID"
 	SERVE_PAYLOAD_INVALID      Code = "SERVE_PAYLOAD_INVALID"
 	SERVE_REPOSITORY_READ_ONLY Code = "SERVE_REPOSITORY_READ_ONLY"
 )
@@ -294,7 +293,6 @@ var Codes = map[Code]Definition{
 
 	SERVE_PORT_BUSY:            {Summary: "one serve 无法绑定请求的端口（被占用或权限不足）。", Remediation: []output.Remediation{{Action: "use-random-port", Hint: "改用随机端口（让内核分配空闲端口）", Command: "one serve --port 0"}, {Action: "pick-different-port", Hint: "或显式换一个空闲端口", Command: "one serve --port 17900"}}},
 	SERVE_BIND_FORBIDDEN:       {Summary: "one serve 拒绝绑定到非 loopback 地址（profile 文件含敏感凭据，仅 127.0.0.1 / localhost 才安全）。", Remediation: []output.Remediation{{Action: "use-loopback", Hint: "改用 127.0.0.1（默认）", Command: "one serve --host 127.0.0.1"}}},
-	SERVE_TOKEN_INVALID:        {Summary: "请求未携带有效的 session token。Token 在启动 `one serve` 时打印的 URL 中（?token=...），并在首次访问后写入 cookie。"},
 	SERVE_PAYLOAD_INVALID:      {Summary: "POST/PUT 请求体不是合法 JSON 或缺少必要字段。"},
 	SERVE_MANIFEST_CONFLICT:    {Summary: "one.manifest.json changed after the Dashboard draft was opened; the stale draft was not written.", Remediation: []output.Remediation{{Action: "reload-manifest", Hint: "重新加载 Workspace 配置，确认磁盘上的新修改后再应用草稿"}}},
 	SERVE_REPOSITORY_READ_ONLY: {Summary: "Dashboard only writes explicitly allowlisted Project fields and env Backend switches through their revision-checked endpoints; this legacy route is not writable."},

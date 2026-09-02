@@ -6,7 +6,6 @@ import type React from "react";
 import { MemoryRouter, useLocation } from "react-router-dom";
 import { SWRConfig } from "swr";
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
-import { AppSidebar } from "@/components/AppSidebar";
 import i18n from "@/lib/i18n";
 import { AppRoutes } from "@/router/routes";
 import type {
@@ -97,12 +96,9 @@ function renderDashboard(path = "/") {
 	return render(
 		<SWRConfig value={{ provider: () => new Map(), dedupingInterval: 10_000 }}>
 			<MemoryRouter initialEntries={[path]}>
-				<div className="flex">
-					<AppSidebar />
-					<main data-testid="route-content">
-						<AppRoutes />
-					</main>
-				</div>
+				<main data-testid="route-content">
+					<AppRoutes />
+				</main>
 				<LocationProbe />
 			</MemoryRouter>
 		</SWRConfig>,
@@ -113,6 +109,54 @@ function registerCatalogHandler() {
 	server.use(
 		http.get("http://localhost/api/catalog", () =>
 			HttpResponse.json({ schema: "one-cli/catalog/v1", backends: [] }),
+		),
+		http.get(
+			"http://localhost/api/workspaces/:entryId/profile-bindings/env",
+			({ params, request }) => {
+				const entry = params.entryId === beta.entryId ? beta : alpha;
+				return HttpResponse.json({
+					schema: "one-cli/workspace-profile/v1",
+					root: entry.root,
+					environment: new URL(request.url).searchParams.get("env") ?? "dev",
+					domain: "env",
+					backend: "dotenv",
+					configurable: false,
+					selectedProfile: "",
+				});
+			},
+		),
+		http.get(
+			"http://localhost/api/workspaces/:entryId/projects/:projectName",
+			({ params, request }) => {
+				const entry = params.entryId === beta.entryId ? beta : alpha;
+				const projectName = String(params.projectName);
+				return HttpResponse.json({
+					schema: "one-cli/workspace-project/v1",
+					root: entry.root,
+					environment: new URL(request.url).searchParams.get("env") ?? "dev",
+					revision: "sha256:route-test",
+					project: {
+						name: projectName,
+						relativeDir: "apps/web",
+						kind: "app",
+						templateId: "react-spa",
+						toolchain: "node",
+						packageManager: "pnpm",
+						buildVersion: "1.0.0",
+						devCommand: "pnpm dev",
+						availableEnvironments: ["dev", "preview", "prod"],
+						environment: {
+							backend: "dotenv",
+							path: ".env",
+							inherits: true,
+							disabled: false,
+							keys: [],
+						},
+						container: { enabled: false },
+						deploy: { compatibleTargets: [] },
+					},
+				});
+			},
 		),
 	);
 }
@@ -190,17 +234,14 @@ describe("multi-workspace routing", () => {
 		expect(await content.findByRole("heading", { name: "Workspaces" })).toBeDefined();
 		expect(content.getByRole("link", { name: /Alpha/ })).toBeDefined();
 		expect(content.getByRole("link", { name: /Beta/ })).toBeDefined();
-		const rail = within(screen.getByRole("complementary"));
-		const railPath = rail.getByText(alpha.root);
-		expect(railPath.className).toContain("break-all");
-		expect(railPath.className).not.toContain("truncate");
 		expect(screen.getByTestId("location").textContent).toBe("/");
 		expect(screen.getByTestId("location-search").textContent).toBe("?env=prod");
 		expect(alphaOverviewRequests).toBe(0);
 
 		await user.click(content.getByRole("link", { name: /Alpha/ }));
 
-		expect(await content.findByRole("heading", { name: "Alpha" })).toBeDefined();
+		expect(await content.findByRole("region", { name: "Project settings" })).toBeDefined();
+		expect(content.getByRole("button", { name: "alpha-web apps/web" })).toBeDefined();
 		await waitFor(() =>
 			expect(screen.getByTestId("location").textContent).toBe("/workspace/alpha-entry"),
 		);
@@ -236,7 +277,9 @@ describe("multi-workspace routing", () => {
 				HttpResponse.json({
 					schema: "one-cli/workspaces/v1",
 					currentEntryId: alpha.entryId,
-					workspaces: [alpha, beta, broken],
+					workspaces: [alpha, beta, broken].filter(
+						(workspace) => workspace.entryId !== deletedEntry,
+					),
 				} satisfies WorkspacesResponse),
 			),
 			http.get("http://localhost/api/workspaces/alpha-entry/overview", () =>
@@ -254,22 +297,24 @@ describe("multi-workspace routing", () => {
 		const user = userEvent.setup();
 
 		renderDashboard("/workspace/alpha-entry");
-		expect(await screen.findByRole("heading", { name: "Alpha" })).toBeDefined();
+		expect(await screen.findByRole("region", { name: "Project settings" })).toBeDefined();
 
-		await user.click(screen.getByRole("link", { name: /Beta/ }));
-		expect(await screen.findByRole("heading", { name: "Beta" })).toBeDefined();
+		await user.click(screen.getByRole("link", { name: "Home" }));
+		await user.click(await screen.findByRole("link", { name: /Beta/ }));
 		await waitFor(() =>
 			expect(screen.getByTestId("location").textContent).toBe("/workspace/beta-entry"),
 		);
+		expect(await screen.findByRole("button", { name: "beta-web apps/web" })).toBeDefined();
 
-		await user.click(screen.getByRole("button", { name: "Forget Broken" }));
+		await user.click(screen.getByRole("link", { name: "Home" }));
+		await user.click(await screen.findByRole("button", { name: "Remove Broken" }));
 		const confirmation = await screen.findByRole("alertdialog");
 		expect(
 			within(confirmation).getByText(
-				'Forget Workspace "Broken"? This only removes the local registry entry; no project files or Profiles will be deleted.',
+				'Remove Workspace "Broken"? This only removes the local registry entry; no project files or Profiles will be deleted.',
 			),
 		).toBeDefined();
-		await user.click(within(confirmation).getByRole("button", { name: "Forget Workspace" }));
+		await user.click(within(confirmation).getByRole("button", { name: "Remove Broken" }));
 		await waitFor(() => expect(deletedEntry).toBe("broken-entry"));
 		expect(screen.queryByRole("link", { name: /Broken/ })).toBeNull();
 	});
@@ -289,18 +334,18 @@ describe("multi-workspace routing", () => {
 			),
 		);
 		registerCatalogHandler();
+		const user = userEvent.setup();
 
 		renderDashboard("/workspace/alpha-entry");
 
 		expect(
 			await screen.findByText("Read-only: this Workspace ID is used by another path"),
 		).toBeDefined();
+		const inspector = screen.getByRole("region", { name: "Project settings" });
+		await user.click(within(inspector).getByRole("button", { name: "Workspace settings" }));
+		const dialog = await screen.findByRole("dialog", { name: "Workspace settings" });
 		expect(
-			(
-				screen.getByRole("button", {
-					name: "alpha-web apps/web",
-				}) as HTMLButtonElement
-			).disabled,
+			(within(dialog).getByRole("combobox", { name: "Backend" }) as HTMLButtonElement).disabled,
 		).toBe(true);
 	});
 

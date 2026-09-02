@@ -4,32 +4,12 @@
 //   - No `{ success, code, message, data }` envelope unwrap. The Go server
 //     returns the payload directly (or an `one-cli/error/v1` envelope on
 //     failures).
-//   - Token comes from `?token=` in the page URL the CLI prints, not from
-//     localStorage. We pin it once at module load and add it to every
-//     request as a query param. Cookie-based auth is handled by the Go
-//     middleware as a fallback (set on first GET /), but staying explicit
-//     keeps the dev workflow (Vite proxy on a different origin) honest.
 //   - Errors reject with HttpError carrying the full envelope so React UI
 //     can surface remediation steps.
 
 import axios, { type AxiosInstance, type AxiosRequestConfig, AxiosError } from "axios";
 import i18n from "@/lib/i18n";
 import type { ErrorEnvelope, HttpError } from "@/types/api";
-
-// Capture the token once at module load. The cobra layer prints the URL
-// as `http://127.0.0.1:<port>/?token=<32-byte-base64>` so any first navigation
-// has it in window.location.search.
-function readToken(): string {
-	if (typeof window === "undefined") return "";
-	const params = new URLSearchParams(window.location.search);
-	return params.get("token") ?? "";
-}
-
-const sessionToken = readToken();
-
-export function hasToken(): boolean {
-	return sessionToken.length > 0;
-}
 
 class HttpClient {
 	private instance: AxiosInstance;
@@ -41,17 +21,6 @@ class HttpClient {
 			headers: {
 				"Content-Type": "application/json",
 			},
-			// withCredentials sends the token cookie the Go landing page
-			// drops on first /. Belt-and-suspenders alongside the query
-			// param.
-			withCredentials: true,
-		});
-
-		this.instance.interceptors.request.use((config) => {
-			if (sessionToken) {
-				config.params = { ...config.params, token: sessionToken };
-			}
-			return config;
 		});
 	}
 

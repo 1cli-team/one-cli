@@ -77,15 +77,15 @@ function SheetContent({
 					}
 				}}
 				className={cn(
-					"fixed z-50 flex flex-col gap-4 bg-popover text-popover-foreground shadow-lg outline-none transition ease-in-out data-[state=closed]:animate-out data-[state=closed]:duration-300 data-[state=open]:animate-in data-[state=open]:duration-500",
+					"fixed z-50 flex flex-col gap-4 overflow-hidden bg-popover text-popover-foreground shadow-lg outline-none transition ease-in-out data-[state=closed]:animate-out data-[state=closed]:duration-300 data-[state=open]:animate-in data-[state=open]:duration-500",
 					side === "right" &&
-						"inset-y-0 right-0 h-full w-[560px] max-w-[calc(100vw-2rem)] border-l border-border shadow-[-20px_0_60px_-28px_rgb(15_23_42_/_0.45)] data-[state=closed]:slide-out-to-right data-[state=open]:slide-in-from-right",
+						"inset-y-0 right-0 h-full w-[620px] max-w-[calc(100vw-2rem)] rounded-l-2xl border-l border-border shadow-[-20px_0_60px_-28px_rgb(15_23_42_/_0.45)] data-[state=closed]:slide-out-to-right data-[state=open]:slide-in-from-right",
 					side === "left" &&
-						"inset-y-0 left-0 h-full w-[560px] max-w-[calc(100vw-2rem)] border-r border-border data-[state=closed]:slide-out-to-left data-[state=open]:slide-in-from-left",
+						"inset-y-0 left-0 h-full w-[560px] max-w-[calc(100vw-2rem)] rounded-r-2xl border-r border-border data-[state=closed]:slide-out-to-left data-[state=open]:slide-in-from-left",
 					side === "top" &&
-						"inset-x-0 top-0 h-auto border-b border-border data-[state=closed]:slide-out-to-top data-[state=open]:slide-in-from-top",
+						"inset-x-0 top-0 h-auto rounded-b-2xl border-b border-border data-[state=closed]:slide-out-to-top data-[state=open]:slide-in-from-top",
 					side === "bottom" &&
-						"inset-x-0 bottom-0 h-auto border-t border-border data-[state=closed]:slide-out-to-bottom data-[state=open]:slide-in-from-bottom",
+						"inset-x-0 bottom-0 h-auto rounded-t-2xl border-t border-border data-[state=closed]:slide-out-to-bottom data-[state=open]:slide-in-from-bottom",
 					className,
 				)}
 				{...props}

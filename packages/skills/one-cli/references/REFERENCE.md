@@ -18,7 +18,8 @@ colours). YAML is always opt-in — auto-detection never picks YAML.
 - Success envelopes use `{"schema":"one-cli/<command>/<version>", ...}`.
   v0.5+: `create / container-info / container-build` bumped to `v2`
   with backend-named fields (`secrets_backend`, `container_backend`,
-  `deploy_backend`); other commands still on `v1`.
+  `deploy_backend`). `serve` uses `v2` after removing the local session-token
+  field; other commands remain on `v1`.
 - Errors are emitted to stderr as `one-cli/error/v1`; always read
   `error.code`, then `error.context`, then `error.remediation[]`.
 - Exit code `0` means success or graceful cancel; exit code `1` means read the

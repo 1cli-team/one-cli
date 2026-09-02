@@ -797,12 +797,6 @@ Dashboard only writes explicitly allowlisted Project fields and env Backend swit
 
 > 没有默认 remediation。具体恢复方式请看错误的 `context` 字段。
 
-### `SERVE_TOKEN_INVALID`
-
-请求未携带有效的 session token。Token 在启动 `one serve` 时打印的 URL 中（?token=...），并在首次访问后写入 cookie。
-
-> 没有默认 remediation。具体恢复方式请看错误的 `context` 字段。
-
 ### `SUBPROJECT_NOT_FOUND`
 
 -p / --project named a project that does not exist in manifest.projects.

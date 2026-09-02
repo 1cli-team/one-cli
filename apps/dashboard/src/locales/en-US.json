@@ -1,6 +1,6 @@
 {
 	"sidebar": {
-		"brand": "one serve",
+		"brand": "local control",
 		"home": "Home",
 		"settings": "Settings",
 		"themeToDark": "Switch to dark mode",
@@ -11,19 +11,27 @@
 		"languageEn": "English"
 	},
 	"topbar": {
-		"home": "Workspace",
-		"workspaces": "Workspaces",
+		"home": "Workbench",
+		"workspaces": "Home",
 		"settings": "Settings",
 		"profile": "Credential profiles",
-		"sectionsRoot": "Sections"
+		"sectionsRoot": "Sections",
+		"devData": {
+			"fixtureLiveProfiles": "Fixture Workspace · Live local Profiles"
+		}
 	},
 	"manifestDraft": {
 		"saveButton": "Save changes · {{count}}",
 		"workspaceScope": "Workspace",
+		"changeCount": "{{count}} changed",
 		"title": "Write these changes to the manifest?",
 		"description": "This updates one.manifest.json in the Workspace. Review the exact changes before continuing.",
+		"currentManifest": "Current manifest",
+		"updatedManifest": "After changes",
 		"confirm": "Save to manifest",
 		"saving": "Saving…",
+		"previewing": "Generating the complete manifest diff…",
+		"previewFailed": "Could not generate the manifest diff",
 		"discard": "Discard draft",
 		"saved": "Manifest changes saved",
 		"saveFailed": "Could not save manifest changes",
@@ -54,10 +62,13 @@
 			"idUnavailable": "Not available",
 			"projects": "Projects",
 			"projectCountUnavailable": "Unavailable",
+			"projectCountShort": "{{count}} projects",
 			"lastDetected": "Last detected",
 			"emptyTitle": "No Workspaces yet",
 			"emptyDescription": "Run one create to create a Workspace, or run one serve inside an existing Workspace to register it.",
-			"listLabel": "Registered Workspaces"
+			"listLabel": "Registered Workspaces",
+			"registeredOnMachine": "Registered on this machine",
+			"registrationHint": "New Workspaces appear here after you run one serve."
 		},
 		"rail": {
 			"title": "Workspaces",
@@ -94,12 +105,12 @@
 			}
 		},
 		"forget": {
-			"short": "Forget Workspace",
-			"action": "Forget {{name}}",
-			"confirm": "Forget Workspace \"{{name}}\"? This only removes the local registry entry; no project files or Profiles will be deleted.",
-			"done": "Forgot {{name}}",
-			"failed": "Could not forget Workspace",
-			"pageHint": "Use the trash action beside this Workspace in the left rail to forget only its local registry entry."
+			"short": "Remove Workspace",
+			"action": "Remove {{name}}",
+			"confirm": "Remove Workspace \"{{name}}\"? This only removes the local registry entry; no project files or Profiles will be deleted.",
+			"done": "Removed {{name}}",
+			"failed": "Could not remove Workspace",
+			"pageHint": "Use the trash action beside this Workspace in the left rail to remove only its local registry entry."
 		},
 		"registryError": {
 			"title": "Workspace registry unavailable",
@@ -120,7 +131,7 @@
 		}
 	},
 	"notFound": {
-		"message": "404 — Page not found"
+		"message": "404 - Page not found"
 	},
 	"errorBoundary": {
 		"title": "The application hit an error",
@@ -233,7 +244,7 @@
 		"profileName": "Profile name",
 		"profileNamePlaceholder": "e.g. work / prod / acr-prod",
 		"setDefaultAfterSave": "Set default after save",
-		"setDefaultAfterSaveAuto": "Set default after save (this section has no default yet — will set automatically)",
+		"setDefaultAfterSaveAuto": "Set default after save (this section has no default yet, so it will be set automatically)",
 		"cancel": "Cancel",
 		"save": "Save",
 		"fields": {
@@ -272,9 +283,9 @@
 			"site": "site: {{site}}",
 			"notSet": "(not set)",
 			"endpointDefault": "(SDK default)",
-			"regionDefault": "—",
+			"regionDefault": "-",
 			"endpointRegion": "endpoint: {{endpoint}} · region: {{region}}",
-			"contextDefault": "—",
+			"contextDefault": "-",
 			"kubeconfigDefault": "(default)",
 			"contextFile": "context: {{context}} · file: {{file}}",
 			"team": "team: {{team}}",
@@ -295,12 +306,14 @@
 		"setDefaultAfterSaveHint": "Set as default"
 	},
 	"http": {
-		"networkError": "Network request failed — check your connection."
+		"networkError": "Network request failed. Check your connection."
 	},
 	"projects": {
 		"title": "Project configuration",
 		"description": "Review and configure every project declared in the manifest from one place.",
 		"search": "Search project, path, or backend",
+		"showFilters": "Show filters",
+		"hideFilters": "Hide filters",
 		"kindFilter": "Filter by project kind",
 		"statusFilter": "Filter by resolution status",
 		"kinds": {
@@ -318,10 +331,9 @@
 		"matrix": {
 			"project": "Project",
 			"environment": "Environment",
-			"container": "Container",
 			"deploy": "Deploy",
 			"status": "Status",
-			"notApplicable": "—",
+			"notApplicable": "-",
 			"notApplicableTitle": "This configuration does not apply to the project",
 			"notConfigured": "Not configured",
 			"profileMissing": "Credentials required",
@@ -334,34 +346,24 @@
 	},
 	"projectInspector": {
 		"close": "Close",
+		"workspaceTitle": "Project settings",
+		"projectsTitle": "Projects",
+		"projectsDescription": "Select a project to configure",
+		"projectListLabel": "Workspace projects",
+		"empty": "This workspace has no projects.",
 		"tabs": {
 			"label": "Project configuration sections",
 			"overview": "Overview",
 			"environment": "Environment",
-			"container": "Container",
 			"deploy": "Deploy"
 		},
 		"loadFailed": "Unable to load project configuration",
 		"retry": "Retry",
 		"backend": "Backend",
-		"inheritedBackend": "Inherited {{domain}} backend",
 		"manifestReadOnly": "Manifest · read-only",
 		"manifestDraft": "Manifest draft",
-		"profileOnly": "Local Profile",
-		"manifestLane": {
-			"title": "Shared configuration",
-			"description": "Backend and project fields are added to Pending manifest changes above."
-		},
-		"profileLane": {
-			"title": "Machine credentials",
-			"description": "The Profile selection stays on this machine and is saved separately below."
-		},
 		"saved": "Project Profile binding saved",
 		"saveFailed": "Could not save the project Profile binding",
-		"saveHint": "The local Profile changed and has not been saved.",
-		"profileUnchanged": "There are no local Profile changes to save.",
-		"save": "Save local binding",
-		"saving": "Saving…",
 		"values": {
 			"enabled": "Enabled",
 			"disabled": "Disabled"
@@ -382,7 +384,7 @@
 		},
 		"environment": {
 			"title": "Environment configuration",
-			"description": "Manifest fields are staged for review; the Profile selection is saved separately to this machine.",
+			"description": "Project path, inheritance, and disable settings are staged as Manifest overrides. The environment Backend and Profile are managed at Workspace level; Infisical values can be managed below.",
 			"path": "Environment file path",
 			"inherits": "Inherit workspace environment",
 			"inheritsHint": "Project variables override workspace variables with the same name.",
@@ -391,19 +393,15 @@
 			"keys": "Declared variable names"
 		},
 		"container": {
-			"title": "Container configuration",
-			"description": "Container settings are staged for the manifest; registry credentials remain machine-local.",
-			"enabled": "Enable container builds",
-			"enabledHint": "Allow one container to build an image for this project.",
+			"title": "Image configuration",
+			"enabled": "Build an image for deployment",
+			"enabledHint": "Build and push this project's image with one container before deployment.",
 			"image": "Image address",
 			"namespace": "Image namespace"
 		},
 		"deploy": {
 			"title": "Deployment configuration",
-			"description": "Deployment settings are staged for the manifest; deployment credentials remain machine-local.",
-			"notSupported": "This project's Template does not support a deployment target.",
-			"environmentDefault": "Use default environment",
-			"compatibleTargets": "Compatible targets"
+			"notSupported": "This project's Template does not support a deployment target."
 		},
 		"profile": {
 			"label": "Project profile",
@@ -474,7 +472,7 @@
 			"title": "Workspace environment",
 			"scope": "Workspace scope",
 			"readOnly": "Read-only",
-			"description": "The Backend is written to the workspace manifest; the Profile stays on this machine. Each change is labelled separately.",
+			"description": "The Backend is written to the workspace manifest; Profile selections are saved automatically to this machine.",
 			"localBinding": "Machine-local Profile binding",
 			"manifestLegend": "Shared manifest",
 			"localLegend": "This machine",
@@ -483,13 +481,11 @@
 			"backendManifest": "Manifest setting",
 			"backendPending": "Pending review",
 			"backendSource": "Backend changes are reviewed before they are written to one.manifest.json. Existing secret data is not migrated.",
-			"backendPendingHint": "This is now in Pending changes above. When saved, One CLI initializes the Backend; then confirm the machine Profile on the right.",
+			"backendPendingHint": "This is now in Pending changes above. When saved, One CLI initializes the Backend; then you can select its machine Profile.",
 			"backendMissing": "Not configured",
 			"loading": "Loading workspace Profile binding…",
 			"loadFailed": "Could not load the workspace Profile binding.",
 			"missingBackendCli": "Choose an environment Backend before selecting a Profile.",
-			"save": "Save local binding",
-			"saving": "Saving…",
 			"saved": "Workspace Profile saved",
 			"saveFailed": "Could not save the workspace Profile",
 			"profile": {
@@ -499,8 +495,6 @@
 				"localBadge": "This machine",
 				"waitTitle": "Apply the Backend change first",
 				"waitDescription": "After the target Backend is active, its Profile requirements are loaded again. This prevents saving a Profile against the wrong Backend.",
-				"unsaved": "The local binding has not been saved",
-				"savedLocally": "The current binding is saved on this machine",
 				"notRequired": "This backend does not require a credential profile.",
 				"loading": "Loading credential profiles…",
 				"loadFailed": "Could not load credential profiles.",
@@ -509,6 +503,12 @@
 				"none": "No Profile currently resolves",
 				"manage": "Manage in Settings"
 			}
+		},
+		"tabs": {
+			"label": "Workspace sections",
+			"environment": "Workspace environment",
+			"projects": "Projects",
+			"secrets": "Infisical secrets"
 		},
 		"navigation": {
 			"label": "Workspace page navigation",
@@ -538,6 +538,10 @@
 			"allGood": "Nothing needs attention",
 			"allGoodDescription": "Continue managing secrets or inspect detailed project settings."
 		},
+		"command": {
+			"ready": "ready",
+			"review": "review setup"
+		},
 		"metrics": {
 			"projects": "Projects",
 			"healthy": "Healthy",
@@ -555,11 +559,11 @@
 				"env": "env",
 				"profile": "profile"
 			},
-			"missingProfile": "{{section}} is missing a usable credential profile{{profile}} — fill in the API key / token",
+			"missingProfile": "{{section}} is missing a usable credential profile{{profile}}. Fill in the API key / token.",
 			"missing": {
-				"container": "No container backend configured — `one container build` will fail",
-				"deploy": "No deploy backend configured — `one deploy` will fail",
-				"env": "Workspace has no env backend selected — set one before using `one env`"
+				"container": "No container backend is configured. `one container build` will fail.",
+				"deploy": "No deploy backend is configured. `one deploy` will fail.",
+				"env": "Workspace has no env backend selected. Set one before using `one env`."
 			}
 		},
 		"fix": {

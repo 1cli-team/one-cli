@@ -342,6 +342,17 @@ export interface ApplyManifestResponse {
 	applied: number;
 }
 
+export interface PreviewManifestRequest extends ApplyManifestRequest {
+	workspace?: WorkspaceManifestPatch;
+}
+
+export interface PreviewManifestResponse {
+	schema: "one-cli/workspace-manifest-preview/v1";
+	revision: string;
+	before: string;
+	after: string;
+}
+
 // ─────────────────────────── Infisical secrets ─────────────────────────
 
 export interface SecretListResponse {

@@ -17,7 +17,6 @@ import (
 func newPrefsMux(t *testing.T) http.Handler {
 	t.Helper()
 	return BuildMux(MuxOpts{
-		Token:         testToken,
 		ExpectedHosts: map[string]struct{}{"127.0.0.1": {}, "localhost": {}},
 		SelfOrigin:    "http://127.0.0.1",
 	})
@@ -27,7 +26,7 @@ func TestPreferencesGET_DefaultsToAuto(t *testing.T) {
 	withIsolatedConfig(t)
 	mux := newPrefsMux(t)
 
-	req := httptest.NewRequest(http.MethodGet, "/api/preferences?token="+testToken, nil)
+	req := httptest.NewRequest(http.MethodGet, "/api/preferences", nil)
 	req.Host = "127.0.0.1"
 	rec := httptest.NewRecorder()
 	mux.ServeHTTP(rec, req)
@@ -52,7 +51,7 @@ func TestPreferencesPUT_PersistsToDisk(t *testing.T) {
 	mux := newPrefsMux(t)
 
 	body := bytes.NewBufferString(`{"locale":"zh-CN"}`)
-	req := httptest.NewRequest(http.MethodPut, "/api/preferences?token="+testToken, body)
+	req := httptest.NewRequest(http.MethodPut, "/api/preferences", body)
 	req.Host = "127.0.0.1"
 	req.Header.Set("Origin", "http://127.0.0.1")
 	req.Header.Set("Content-Type", "application/json")
@@ -88,7 +87,7 @@ func TestPreferencesPUT_RejectsBadLocale(t *testing.T) {
 
 	for _, bad := range []string{`{"locale":"klingon"}`, `{"locale":""}`, `{"locale":"zh_CN"}`} {
 		t.Run(bad, func(t *testing.T) {
-			req := httptest.NewRequest(http.MethodPut, "/api/preferences?token="+testToken,
+			req := httptest.NewRequest(http.MethodPut, "/api/preferences",
 				strings.NewReader(bad))
 			req.Host = "127.0.0.1"
 			req.Header.Set("Origin", "http://127.0.0.1")
@@ -107,7 +106,7 @@ func TestPreferencesPUT_RejectsUnknownField(t *testing.T) {
 	withIsolatedConfig(t)
 	mux := newPrefsMux(t)
 
-	req := httptest.NewRequest(http.MethodPut, "/api/preferences?token="+testToken,
+	req := httptest.NewRequest(http.MethodPut, "/api/preferences",
 		strings.NewReader(`{"locale":"zh-CN","colour":"red"}`))
 	req.Host = "127.0.0.1"
 	req.Header.Set("Origin", "http://127.0.0.1")
@@ -117,19 +116,5 @@ func TestPreferencesPUT_RejectsUnknownField(t *testing.T) {
 
 	if rec.Code != http.StatusBadRequest {
 		t.Errorf("status: want 400 on unknown field, got %d", rec.Code)
-	}
-}
-
-func TestPreferences_RequiresToken(t *testing.T) {
-	withIsolatedConfig(t)
-	mux := newPrefsMux(t)
-
-	req := httptest.NewRequest(http.MethodGet, "/api/preferences", nil) // no ?token=
-	req.Host = "127.0.0.1"
-	rec := httptest.NewRecorder()
-	mux.ServeHTTP(rec, req)
-
-	if rec.Code != http.StatusUnauthorized {
-		t.Errorf("unauth status: want 401, got %d", rec.Code)
 	}
 }

@@ -8,9 +8,12 @@ type DraftValue = string | boolean | number | null | undefined;
 export interface ManifestDraftSummary {
 	id: string;
 	project: string;
+	section: ManifestDraftSection;
+	path: string;
 	labelKey: string;
 	before: DraftValue;
 	after: DraftValue;
+	changed: boolean;
 }
 
 export interface WorkspaceManifestDraft {
@@ -91,16 +94,16 @@ function summariesFor(
 	flatten("", initial, before);
 	flatten("", next, after);
 	const keys = new Set([...Object.keys(before), ...Object.keys(after)]);
-	return [...keys]
-		.filter((key) => before[key] !== after[key])
-		.sort()
-		.map((key) => ({
-			id: `${project}:${section}:${key}`,
-			project,
-			labelKey: labels[key] ?? `manifest.fields.${section}.${key.replaceAll("/", ".")}`,
-			before: before[key],
-			after: after[key],
-		}));
+	return [...keys].sort().map((key) => ({
+		id: `${project}:${section}:${key}`,
+		project,
+		section,
+		path: key,
+		labelKey: labels[key] ?? `manifest.fields.${section}.${key.replaceAll("/", ".")}`,
+		before: before[key],
+		after: after[key],
+		changed: before[key] !== after[key],
+	}));
 }
 
 export const useManifestDraftStore = createStore<ManifestDraftState>(

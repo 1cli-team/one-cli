@@ -7,6 +7,7 @@ export const catalogKey = "/catalog";
 export const BACKEND_DOMAINS: readonly BackendDomain[] = ["env", "deploy", "container"];
 
 const EMPTY_BACKENDS: readonly BackendSpec[] = [];
+const CONTAINER_ARTIFACT_CAPABILITIES = new Set(["container/build", "container/push"]);
 
 export async function getCatalog(): Promise<CatalogResponse> {
 	return http.get<CatalogResponse>(catalogKey);
@@ -21,6 +22,17 @@ export function humanizeBackendName(name: string): string {
 			return part.charAt(0).toUpperCase() + part.slice(1);
 		})
 		.join(" ");
+}
+
+export function backendRequiresContainerArtifact(backend?: BackendSpec): boolean {
+	return Boolean(
+		backend?.requirements?.some(
+			(requirement) =>
+				requirement.kind === "capability" &&
+				!requirement.optional &&
+				CONTAINER_ARTIFACT_CAPABILITIES.has(requirement.name),
+		),
+	);
 }
 
 export function useBackendCatalog() {

@@ -70,7 +70,6 @@ func newRegistryMux(
 	t.Helper()
 	withIsolatedConfig(t)
 	return BuildMux(MuxOpts{
-		Token:           testToken,
 		UIDisabled:      true,
 		ExpectedHosts:   map[string]struct{}{registryTestHost: {}},
 		SelfOrigin:      "http://" + registryTestHost,
@@ -86,11 +85,7 @@ func registryRequest(
 	body io.Reader,
 ) *httptest.ResponseRecorder {
 	t.Helper()
-	separator := "?"
-	if strings.Contains(path, "?") {
-		separator = "&"
-	}
-	req := httptest.NewRequest(method, path+separator+"token="+testToken, body)
+	req := httptest.NewRequest(method, path, body)
 	req.Host = registryTestHost
 	if method != http.MethodGet && method != http.MethodHead && method != http.MethodOptions {
 		req.Header.Set("Origin", "http://"+registryTestHost)

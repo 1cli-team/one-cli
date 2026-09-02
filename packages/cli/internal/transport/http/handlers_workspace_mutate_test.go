@@ -54,7 +54,6 @@ func newWorkspaceMux(t *testing.T, root string) http.Handler {
 	t.Helper()
 	withIsolatedConfig(t)
 	return BuildMux(MuxOpts{
-		Token:         testToken,
 		UIDisabled:    true,
 		ExpectedHosts: map[string]struct{}{workspaceTestHost: {}},
 		SelfOrigin:    "http://" + workspaceTestHost,
@@ -69,11 +68,7 @@ func workspaceRequest(
 	body io.Reader,
 ) *httptest.ResponseRecorder {
 	t.Helper()
-	separator := "?"
-	if strings.Contains(path, "?") {
-		separator = "&"
-	}
-	request := httptest.NewRequest(method, path+separator+"token="+testToken, body)
+	request := httptest.NewRequest(method, path, body)
 	request.Host = workspaceTestHost
 	if method != http.MethodGet && method != http.MethodHead && method != http.MethodOptions {
 		request.Header.Set("Origin", "http://"+workspaceTestHost)
@@ -613,7 +608,7 @@ func TestProfileBindingNoWorkspaceAndCrossOriginRemainClosed(t *testing.T) {
 	root := seedWorkspace(t)
 	handler = newWorkspaceMux(t, root)
 	request := httptest.NewRequest(http.MethodPut,
-		"/api/workspace/profile-bindings/env?env=preview&token="+testToken,
+		"/api/workspace/profile-bindings/env?env=preview",
 		strings.NewReader(`{"profile":"work"}`))
 	request.Host = workspaceTestHost
 	request.Header.Set("Origin", "https://attacker.example.com")

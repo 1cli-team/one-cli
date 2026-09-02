@@ -23,7 +23,7 @@ import type { WorkspaceRegistryEntry } from "@/types/api";
 const NotFoundRoute: React.FC = () => {
 	const { t } = useTranslation();
 	return (
-		<Empty className="min-h-[420px] border border-dashed border-border">
+		<Empty className="min-h-80 border border-dashed border-border">
 			<EmptyHeader>
 				<EmptyDescription>{t("notFound.message")}</EmptyDescription>
 			</EmptyHeader>
@@ -89,9 +89,9 @@ const WorkspaceRoute: React.FC = () => {
 const WorkspaceLoading: React.FC = () => {
 	const { t } = useTranslation();
 	return (
-		<div className="space-y-4" role="status" aria-label={t("workspaces.loading")}>
-			<Skeleton className="h-28 w-full rounded-xl" />
-			<Skeleton className="h-72 w-full rounded-xl opacity-75" />
+		<div className="w-full space-y-3" role="status" aria-label={t("workspaces.loading")}>
+			<Skeleton className="h-11 w-full rounded-[6px]" />
+			<Skeleton className="h-64 w-full rounded-[6px] opacity-75" />
 		</div>
 	);
 };
@@ -99,8 +99,8 @@ const WorkspaceLoading: React.FC = () => {
 const WorkspaceRegistryError: React.FC<{ onRetry(): void }> = ({ onRetry }) => {
 	const { t } = useTranslation();
 	return (
-		<Card className="border-error-border">
-			<CardContent className="grid min-h-[420px] place-items-center p-8 text-center">
+		<Card className="w-full rounded-[6px] border-error-border">
+			<CardContent className="grid min-h-80 place-items-center p-6 text-center">
 				<div className="max-w-md">
 					<AlertTriangle className="mx-auto h-8 w-8 text-error-foreground" />
 					<h1 className="mt-4 text-lg font-semibold">{t("workspaces.registryError.title")}</h1>
@@ -125,10 +125,10 @@ const WorkspaceRegistryError: React.FC<{ onRetry(): void }> = ({ onRetry }) => {
 const WorkspaceStatusPage: React.FC<{ workspace: WorkspaceRegistryEntry }> = ({ workspace }) => {
 	const { t } = useTranslation();
 	return (
-		<Card>
-			<CardContent className="grid min-h-[420px] place-items-center p-8 text-center">
+		<Card className="w-full rounded-[6px]">
+			<CardContent className="grid min-h-80 place-items-center p-6 text-center">
 				<div className="max-w-lg">
-					<div className="mx-auto grid h-12 w-12 place-items-center rounded-xl border border-warning-border bg-warning-surface text-warning-foreground">
+					<div className="mx-auto grid h-12 w-12 place-items-center border border-warning-border bg-warning-surface text-warning-foreground">
 						<FolderX className="h-5 w-5" />
 					</div>
 					<p className="mt-4 text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
@@ -157,8 +157,8 @@ const WorkspaceLoadError: React.FC<{
 }> = ({ workspace, onRetry }) => {
 	const { t } = useTranslation();
 	return (
-		<Card className="border-error-border">
-			<CardContent className="grid min-h-[420px] place-items-center p-8 text-center">
+		<Card className="w-full rounded-[6px] border-error-border">
+			<CardContent className="grid min-h-80 place-items-center p-6 text-center">
 				<div className="max-w-md">
 					<AlertTriangle className="mx-auto h-8 w-8 text-error-foreground" />
 					<h1 className="mt-4 text-lg font-semibold">
@@ -180,8 +180,8 @@ const WorkspaceLoadError: React.FC<{
 const UnknownWorkspace: React.FC = () => {
 	const { t } = useTranslation();
 	return (
-		<Card>
-			<CardContent className="grid min-h-[420px] place-items-center p-8 text-center">
+		<Card className="w-full rounded-[6px]">
+			<CardContent className="grid min-h-80 place-items-center p-6 text-center">
 				<div>
 					<FolderX className="mx-auto h-8 w-8 text-muted-foreground" />
 					<h1 className="mt-4 text-lg font-semibold">{t("workspaces.unknown.title")}</h1>

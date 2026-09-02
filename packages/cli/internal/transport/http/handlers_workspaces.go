@@ -35,6 +35,8 @@ func registerWorkspacesRoutes(mux *http.ServeMux, opts MuxOpts) {
 		handleResolvedWorkspace(opts, handlePutProjectProfileBinding))
 	mux.HandleFunc("PUT /workspaces/{entryId}/manifest",
 		handleResolvedWorkspace(opts, handlePutWorkspaceManifest))
+	mux.HandleFunc("POST /workspaces/{entryId}/manifest/preview",
+		handleResolvedWorkspace(opts, handlePreviewWorkspaceManifest))
 	mux.HandleFunc("GET /workspaces/{entryId}/secrets",
 		handleResolvedWorkspace(opts, handleListSecrets))
 	mux.HandleFunc("POST /workspaces/{entryId}/secrets",

@@ -163,3 +163,90 @@ func TestApplyManifestDraftRejectsUnknownFieldsAndUnsafeValues(t *testing.T) {
 		})
 	}
 }
+
+func TestPreviewManifestDraftReturnsCanonicalBeforeAfterWithoutWriting(t *testing.T) {
+	root, service, revision := seedManifest(t)
+	path := filepath.Join(root, workspacecore.ManifestFilename)
+	beforeOnDisk, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	result, err := service.PreviewManifestDraft(context.Background(), root, PreviewManifestInput{
+		Revision: revision,
+		Changes: []ProjectManifestPatch{{
+			Project: "web",
+			General: &ProjectGeneralPatch{BuildVersion: "v9.9.9", DevCommand: "pnpm preview"},
+		}},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result.Schema != ManifestPreviewSchema || result.Revision != revision {
+		t.Fatalf("result = %#v", result)
+	}
+
+	beforeManifest, _, err := workspacecore.ReadManifestSnapshot(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	beforeCanonical, err := workspacecore.MarshalManifest(beforeManifest)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result.Before != string(beforeCanonical) {
+		t.Fatalf("before preview is not canonical:\nwant:\n%s\n\ngot:\n%s", string(beforeCanonical), result.Before)
+	}
+
+	var afterManifest workspacecore.Manifest
+	if err := json.Unmarshal([]byte(result.After), &afterManifest); err != nil {
+		t.Fatalf("preview after is not valid json: %v", err)
+	}
+	afterCanonical, err := workspacecore.MarshalManifest(&afterManifest)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result.After != string(afterCanonical) {
+		t.Fatalf("after preview is not canonical:\nwant:\n%s\n\ngot:\n%s", string(afterCanonical), result.After)
+	}
+	if len(afterManifest.Projects) != 1 || afterManifest.Projects[0].BuildVersion != "9.9.9" {
+		t.Fatalf("preview after did not include requested patch: %#v", afterManifest.Projects)
+	}
+	if afterManifest.Projects[0].Domains == nil || afterManifest.Projects[0].Domains.Dev == nil || afterManifest.Projects[0].Domains.Dev.Command != "pnpm preview" {
+		t.Fatalf("preview after dev command mismatch: %#v", afterManifest.Projects[0].Domains)
+	}
+
+	afterOnDisk, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(afterOnDisk) != string(beforeOnDisk) {
+		t.Fatal("preview draft changed the manifest on disk")
+	}
+}
+
+func TestPreviewManifestDraftRejectsStaleRevisionWithoutWriting(t *testing.T) {
+	root, service, revision := seedManifest(t)
+	path := filepath.Join(root, workspacecore.ManifestFilename)
+	before, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = service.PreviewManifestDraft(context.Background(), root, PreviewManifestInput{
+		Revision: revision + "-stale",
+		Changes: []ProjectManifestPatch{{
+			Project: "web",
+			General: &ProjectGeneralPatch{BuildVersion: "9.9.9"},
+		}},
+	})
+	if !errors.Is(err, ErrManifestConflict) {
+		t.Fatalf("error = %v", err)
+	}
+	after, readErr := os.ReadFile(path)
+	if readErr != nil {
+		t.Fatal(readErr)
+	}
+	if string(after) != string(before) {
+		t.Fatal("stale preview changed the manifest")
+	}
+}

@@ -22,7 +22,6 @@ func newOverviewServer(t *testing.T, root string) (*httptest.Server, string) {
 	t.Helper()
 	withIsolatedConfig(t)
 	mux := BuildMux(MuxOpts{
-		Token:         testToken,
 		UIDisabled:    true,
 		WorkspaceRoot: root,
 	})
@@ -30,7 +29,6 @@ func newOverviewServer(t *testing.T, root string) (*httptest.Server, string) {
 	t.Cleanup(srv.Close)
 	addr := strings.TrimPrefix(srv.URL, "http://")
 	srv.Config.Handler = BuildMux(MuxOpts{
-		Token:         testToken,
 		UIDisabled:    true,
 		ExpectedHosts: map[string]struct{}{addr: {}},
 		SelfOrigin:    srv.URL,
@@ -41,7 +39,7 @@ func newOverviewServer(t *testing.T, root string) (*httptest.Server, string) {
 
 func TestOverview_NoWorkspace_ReturnsPresentFalse(t *testing.T) {
 	srv, _ := newOverviewServer(t, "")
-	res, raw := authedRequest(t, srv, http.MethodGet, "/api/workspace/overview", nil)
+	res, raw := apiRequest(t, srv, http.MethodGet, "/api/workspace/overview", nil)
 	if res.StatusCode != 200 {
 		t.Fatalf("status = %d; body = %s", res.StatusCode, raw)
 	}
@@ -82,7 +80,7 @@ func TestOverview_PopulatedWorkspace(t *testing.T) {
 	}
 
 	srv, _ := newOverviewServer(t, tmp)
-	res, raw := authedRequest(t, srv, http.MethodGet, "/api/workspace/overview", nil)
+	res, raw := apiRequest(t, srv, http.MethodGet, "/api/workspace/overview", nil)
 	if res.StatusCode != 200 {
 		t.Fatalf("status = %d; body = %s", res.StatusCode, raw)
 	}
@@ -109,7 +107,7 @@ func TestOverview_BadManifest_500WithErrorEnvelope(t *testing.T) {
 		t.Fatalf("write: %v", err)
 	}
 	srv, _ := newOverviewServer(t, tmp)
-	res, raw := authedRequest(t, srv, http.MethodGet, "/api/workspace/overview", nil)
+	res, raw := apiRequest(t, srv, http.MethodGet, "/api/workspace/overview", nil)
 	if res.StatusCode != 500 {
 		t.Fatalf("status = %d; body = %s", res.StatusCode, raw)
 	}

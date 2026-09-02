@@ -8,8 +8,10 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"net/url"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 
 	"github.com/pkg/browser"
@@ -53,14 +55,12 @@ Project、审阅后保存 Manifest 配置、管理 Infisical 密钥，并管理 
 本命令是给你（人类）的入口。
 
 默认行为：绑定 127.0.0.1 + 内核分配空闲端口 + 自动用系统默认浏览器
-打开 URL（带一次性 session token）。打印 URL 后阻塞，按 Ctrl-C 退出。
+打开 URL。打印 URL 后阻塞，按 Ctrl-C 退出。
 
 安全模型：
   - 仅绑定 127.0.0.1（loopback）
   - Host header 校验，挡 DNS rebinding
-  - 全部 mutating 请求做 Origin 校验
-  - 每次启动生成一次性 session token；URL 自带 ?token=...，
-    首次访问后写入 cookie`,
+  - 全部 mutating 请求做 Origin 校验`,
 		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			parent := cmd.Context()
@@ -74,7 +74,7 @@ Project、审阅后保存 Manifest 配置、管理 Infisical 密钥，并管理 
 			// one.manifest.json anywhere up the tree. That's fine here —
 			// `one serve` is happy to run outside a workspace: it still
 			// loads the persisted registry and machine-level Profiles.
-			workspaceRoot, registryWarn := discoverServeWorkspace(ctx, "", deps.Registry)
+			target, registryWarn := discoverServeWorkspaceTarget(ctx, "", deps.Registry)
 			if registryWarn != nil {
 				fmt.Fprintln(cmd.ErrOrStderr(), i18n.Tf("serve.registry_warning", registryWarn))
 			}
@@ -82,7 +82,7 @@ Project、审阅后保存 Manifest 配置、管理 Infisical 密钥，并管理 
 			return serve.Run(ctx, serve.Opts{
 				Host:               host,
 				Port:               port,
-				WorkspaceRoot:      workspaceRoot,
+				WorkspaceRoot:      target.Root,
 				Catalog:            deps.Catalog,
 				ProfileService:     deps.Profiles,
 				ManifestService:    deps.Manifest,
@@ -91,6 +91,9 @@ Project、审阅后保存 Manifest 配置、管理 Infisical 密钥，并管理 
 				RegistryService:    deps.Registry,
 			}, func(res serve.Result) {
 				output.Emit(res)
+				if cmd.Name() == "serve" {
+					res.URL = workspaceDashboardURL(res.URL, target.EntryID)
+				}
 				maybeOpenBrowser(cmd.ErrOrStderr(), res, open)
 			})
 		},
@@ -105,6 +108,32 @@ Project、审阅后保存 Manifest 配置、管理 Infisical 密钥，并管理 
 	return cmd
 }
 
+type serveWorkspaceTarget struct {
+	Root    string
+	EntryID string
+}
+
+func discoverServeWorkspaceTarget(
+	ctx context.Context,
+	start string,
+	registry *workspaceapp.RegistryService,
+) (serveWorkspaceTarget, error) {
+	root, err := workspace.WalkUpToManifest(start)
+	if err != nil {
+		return serveWorkspaceTarget{}, nil
+	}
+	target := serveWorkspaceTarget{Root: root}
+	if registry == nil {
+		return target, nil
+	}
+	registered, err := registry.Observe(ctx, root, "serve")
+	if err != nil {
+		return target, err
+	}
+	target.EntryID = registered.EntryID
+	return target, nil
+}
+
 // discoverServeWorkspace keeps optional Workspace discovery and registration
 // in one testable boundary. Running outside a Workspace is valid: the server
 // still exposes machine-level profiles and the previously observed registry.
@@ -113,15 +142,15 @@ func discoverServeWorkspace(
 	start string,
 	registry *workspaceapp.RegistryService,
 ) (string, error) {
-	root, err := workspace.WalkUpToManifest(start)
-	if err != nil {
-		return "", nil
+	target, err := discoverServeWorkspaceTarget(ctx, start, registry)
+	return target.Root, err
+}
+
+func workspaceDashboardURL(baseURL, entryID string) string {
+	if strings.TrimSpace(baseURL) == "" || strings.TrimSpace(entryID) == "" {
+		return baseURL
 	}
-	if registry == nil {
-		return root, nil
-	}
-	_, err = registry.Observe(ctx, root, "serve")
-	return root, err
+	return strings.TrimRight(baseURL, "/") + "/workspace/" + url.PathEscape(entryID)
 }
 
 // NewOpenCmd exposes the same local settings server under the user-facing

@@ -37,7 +37,9 @@ import (
 const (
 	bindingsSchemaVersion  = 1
 	bindingsLockRetryDelay = 10 * time.Millisecond
-	bindingsLockTimeout    = 2 * time.Second
+	// Keep the default bounded, but leave enough room for queued cross-process
+	// writes on slower Windows filesystems. An earlier caller deadline still wins.
+	bindingsLockTimeout = 10 * time.Second
 )
 
 var (

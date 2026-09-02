@@ -2,16 +2,19 @@ import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import { SWRConfig } from "swr";
-import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
-import { applyManifestDraft } from "@/api/manifest";
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { applyManifestDraft, previewManifestDraft } from "@/api/manifest";
 import { switchWorkspaceEnvironmentBackend } from "@/api/workspace";
 import { workspacesKey } from "@/api/workspaces";
-import { TopBar } from "@/components/TopBar";
+import { ManifestSaveControl, TopBar } from "@/components/TopBar";
 import { useManifestDraftStore } from "@/features/manifest-draft/manifest-draft-store";
 import i18n from "@/lib/i18n";
 import type { WorkspacesResponse } from "@/types/api";
 
-vi.mock("@/api/manifest", () => ({ applyManifestDraft: vi.fn() }));
+vi.mock("@/api/manifest", () => ({
+	applyManifestDraft: vi.fn(),
+	previewManifestDraft: vi.fn(),
+}));
 vi.mock("@/api/workspace", () => ({ switchWorkspaceEnvironmentBackend: vi.fn() }));
 
 const emptyRegistry: WorkspacesResponse = {
@@ -35,28 +38,56 @@ function renderTopBar(path: string) {
 	);
 }
 
-describe("TopBar environment scope", () => {
+function renderManifestSaveControl(path: string) {
+	return render(
+		<SWRConfig value={{ provider: () => new Map(), revalidateOnMount: false }}>
+			<MemoryRouter initialEntries={[path]}>
+				<ManifestSaveControl entryId="demo-entry" />
+			</MemoryRouter>
+		</SWRConfig>,
+	);
+}
+
+describe("TopBar and manifest review", () => {
 	beforeAll(async () => {
 		await i18n.changeLanguage("en-US");
+	});
+	beforeEach(() => {
+		vi.mocked(previewManifestDraft).mockResolvedValue({
+			schema: "one-cli/workspace-manifest-preview/v1",
+			revision: "sha256:base",
+			before: JSON.stringify(
+				{
+					domains: { env: "infisical" },
+					projects: [{ name: "web", general: { buildVersion: "1.0.0" } }],
+				},
+				null,
+				2,
+			),
+			after: JSON.stringify(
+				{
+					domains: { env: "dotenv" },
+					projects: [{ name: "web", general: { buildVersion: "2.0.0" } }],
+				},
+				null,
+				2,
+			),
+		});
 	});
 	afterEach(() => {
 		useManifestDraftStore.getState().clearWorkspace("demo-entry");
 		vi.clearAllMocks();
 	});
 
-	it("shows the environment selector only inside a concrete Workspace", () => {
-		renderTopBar("/workspace/demo-entry?env=preview");
-		expect(screen.getAllByRole("radio")).toHaveLength(3);
-	});
-
 	it.each([
+		"/",
 		"/settings?env=preview",
 		"/settings/env/infisical?env=preview",
 		"/profile?env=preview",
 		"/section/env/infisical?env=preview",
-	])("does not imply that machine-global Profile settings vary by env at %s", (path) => {
+	])("keeps the global TopBar free of workspace environment controls at %s", (path) => {
 		renderTopBar(path);
-		expect(screen.queryByRole("radio")).toBeNull();
+		expect(screen.queryByRole("combobox", { name: /^Environment:/ })).toBeNull();
 	});
 
 	it("reviews and publishes a revision-checked manifest draft", async () => {
@@ -75,13 +106,25 @@ describe("TopBar environment scope", () => {
 			labels: { buildVersion: "projectInspector.general.buildVersion" },
 		});
 		const user = userEvent.setup();
-		renderTopBar("/workspace/demo-entry?env=dev");
+		renderManifestSaveControl("/workspace/demo-entry?env=dev");
 
 		await user.click(screen.getByRole("button", { name: "Save changes · 1" }));
 		const dialog = await screen.findByRole("alertdialog");
-		expect(within(dialog).getByText("web")).toBeDefined();
-		expect(within(dialog).getByText("1.0.0")).toBeDefined();
-		expect(within(dialog).getByText("2.0.0")).toBeDefined();
+		expect(await within(dialog).findByText(/"buildVersion": "1\.0\.0"/)).toBeDefined();
+		expect(within(dialog).getByText(/"buildVersion": "2\.0\.0"/)).toBeDefined();
+		expect(previewManifestDraft).toHaveBeenCalledWith(
+			{
+				revision: "sha256:base",
+				workspace: undefined,
+				changes: [
+					{
+						project: "web",
+						general: { buildVersion: "2.0.0", devCommand: "pnpm dev" },
+					},
+				],
+			},
+			"demo-entry",
+		);
 
 		await user.click(within(dialog).getByRole("button", { name: "Save to manifest" }));
 		await waitFor(() =>
@@ -121,13 +164,20 @@ describe("TopBar environment scope", () => {
 			labels: { backend: "overview.workspaceEnv.backend" },
 		});
 		const user = userEvent.setup();
-		renderTopBar("/workspace/demo-entry?env=dev");
+		renderManifestSaveControl("/workspace/demo-entry?env=dev");
 
 		await user.click(screen.getByRole("button", { name: "Save changes · 1" }));
 		const dialog = await screen.findByRole("alertdialog");
-		expect(within(dialog).getByText("Workspace")).toBeDefined();
-		expect(within(dialog).getByText("infisical")).toBeDefined();
-		expect(within(dialog).getByText("dotenv")).toBeDefined();
+		expect(await within(dialog).findByText(/"env": "infisical"/)).toBeDefined();
+		expect(within(dialog).getByText(/"env": "dotenv"/)).toBeDefined();
+		expect(previewManifestDraft).toHaveBeenCalledWith(
+			{
+				revision: "sha256:base",
+				workspace: { environment: { backend: "dotenv" } },
+				changes: [],
+			},
+			"demo-entry",
+		);
 
 		await user.click(within(dialog).getByRole("button", { name: "Save to manifest" }));
 		await waitFor(() =>
@@ -176,14 +226,13 @@ describe("TopBar environment scope", () => {
 			labels: { buildVersion: "projectInspector.general.buildVersion" },
 		});
 		const user = userEvent.setup();
-		renderTopBar("/workspace/demo-entry?env=dev");
+		renderManifestSaveControl("/workspace/demo-entry?env=dev");
 
 		await user.click(screen.getByRole("button", { name: "Save changes · 2" }));
-		await user.click(
-			within(await screen.findByRole("alertdialog")).getByRole("button", {
-				name: "Save to manifest",
-			}),
-		);
+		const dialog = await screen.findByRole("alertdialog");
+		const saveButton = within(dialog).getByRole("button", { name: "Save to manifest" });
+		await waitFor(() => expect((saveButton as HTMLButtonElement).disabled).toBe(false));
+		await user.click(saveButton);
 		expect(await screen.findByText("Project publication failed.")).toBeDefined();
 		expect(applyManifestDraft).toHaveBeenCalledWith(
 			{

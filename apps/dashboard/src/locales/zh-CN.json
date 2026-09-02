@@ -1,6 +1,6 @@
 {
 	"sidebar": {
-		"brand": "one serve",
+		"brand": "local control",
 		"home": "首页",
 		"settings": "设置",
 		"themeToDark": "切深色",
@@ -11,19 +11,27 @@
 		"languageEn": "English"
 	},
 	"topbar": {
-		"home": "Workspace",
-		"workspaces": "Workspaces",
+		"home": "工作台",
+		"workspaces": "主页",
 		"settings": "设置",
 		"profile": "凭据 profile",
-		"sectionsRoot": "配置分区"
+		"sectionsRoot": "配置分区",
+		"devData": {
+			"fixtureLiveProfiles": "Fixture Workspace · 本机真实 Profile"
+		}
 	},
 	"manifestDraft": {
 		"saveButton": "保存更改 · {{count}}",
 		"workspaceScope": "Workspace",
+		"changeCount": "{{count}} 项修改",
 		"title": "要把这些修改写入 Manifest 吗？",
 		"description": "这会修改工作区里的 one.manifest.json。继续前请确认下面的具体差异。",
+		"currentManifest": "当前 Manifest",
+		"updatedManifest": "修改后",
 		"confirm": "保存到 Manifest",
 		"saving": "保存中…",
+		"previewing": "正在生成完整 Manifest 差异…",
+		"previewFailed": "无法生成 Manifest 差异",
 		"discard": "放弃草稿",
 		"saved": "Manifest 修改已保存",
 		"saveFailed": "无法保存 Manifest 修改",
@@ -54,10 +62,13 @@
 			"idUnavailable": "不可用",
 			"projects": "项目",
 			"projectCountUnavailable": "不可用",
+			"projectCountShort": "{{count}} 个项目",
 			"lastDetected": "最近识别",
 			"emptyTitle": "尚未登记工作区",
 			"emptyDescription": "运行 one create 创建工作区，或在已有工作区中运行 one serve 进行登记。",
-			"listLabel": "已登记的工作区"
+			"listLabel": "已登记的工作区",
+			"registeredOnMachine": "已登记到本机",
+			"registrationHint": "运行 one serve 后，新的 Workspace 会显示在这里。"
 		},
 		"rail": {
 			"title": "Workspaces",
@@ -94,11 +105,11 @@
 			}
 		},
 		"forget": {
-			"short": "忘记 Workspace",
-			"action": "忘记 {{name}}",
-			"confirm": "要忘记 Workspace「{{name}}」吗？这里只会移除本机注册记录，不会删除项目文件或 Profile。",
-			"done": "已忘记 {{name}}",
-			"failed": "无法忘记 Workspace",
+			"short": "移除 Workspace",
+			"action": "移除 {{name}}",
+			"confirm": "要移除 Workspace「{{name}}」吗？这里只会移除本机注册记录，不会删除项目文件或 Profile。",
+			"done": "已移除 {{name}}",
+			"failed": "无法移除 Workspace",
 			"pageHint": "可点击左侧该 Workspace 旁的垃圾桶，只移除它的本机注册记录。"
 		},
 		"registryError": {
@@ -120,7 +131,7 @@
 		}
 	},
 	"notFound": {
-		"message": "404 — 页面未找到"
+		"message": "404 - 页面未找到"
 	},
 	"errorBoundary": {
 		"title": "应用程序遇到了一个错误",
@@ -272,9 +283,9 @@
 			"site": "site: {{site}}",
 			"notSet": "(未填)",
 			"endpointDefault": "(SDK 默认)",
-			"regionDefault": "—",
+			"regionDefault": "-",
 			"endpointRegion": "endpoint: {{endpoint}} · region: {{region}}",
-			"contextDefault": "—",
+			"contextDefault": "-",
 			"kubeconfigDefault": "(默认)",
 			"contextFile": "context: {{context}} · file: {{file}}",
 			"team": "team: {{team}}",
@@ -301,6 +312,8 @@
 		"title": "项目配置矩阵",
 		"description": "从一处查看并配置 manifest 中的全部项目。",
 		"search": "搜索项目、路径或 backend",
+		"showFilters": "显示筛选",
+		"hideFilters": "收起筛选",
 		"kindFilter": "按项目类型筛选",
 		"statusFilter": "按处理状态筛选",
 		"kinds": {
@@ -318,10 +331,9 @@
 		"matrix": {
 			"project": "项目",
 			"environment": "Environment",
-			"container": "Container",
 			"deploy": "Deploy",
 			"status": "状态",
-			"notApplicable": "—",
+			"notApplicable": "-",
 			"notApplicableTitle": "这个项目不适用该配置",
 			"notConfigured": "未配置",
 			"profileMissing": "凭据待补充",
@@ -334,34 +346,24 @@
 	},
 	"projectInspector": {
 		"close": "关闭项目配置",
+		"workspaceTitle": "项目设置",
+		"projectsTitle": "项目",
+		"projectsDescription": "选择项目后在右侧配置",
+		"projectListLabel": "工作区项目",
+		"empty": "这个工作区还没有项目。",
 		"tabs": {
 			"label": "项目配置分区",
 			"overview": "概览",
 			"environment": "环境",
-			"container": "容器",
 			"deploy": "部署"
 		},
 		"loadFailed": "无法加载项目配置",
 		"retry": "重试",
 		"backend": "Backend",
-		"inheritedBackend": "继承的 {{domain}} backend",
 		"manifestReadOnly": "Manifest · 只读",
 		"manifestDraft": "Manifest 草稿",
-		"profileOnly": "本机 Profile",
-		"manifestLane": {
-			"title": "共享配置",
-			"description": "Backend 和项目字段会加入顶部的 Manifest 待提交改动。"
-		},
-		"profileLane": {
-			"title": "本机凭据",
-			"description": "Profile 选择只保存在当前机器，需要用下方按钮单独保存。"
-		},
 		"saved": "项目 Profile 绑定已保存",
 		"saveFailed": "保存项目 Profile 绑定失败",
-		"saveHint": "本机 Profile 已修改，尚未保存。",
-		"profileUnchanged": "本机 Profile 没有待保存的修改。",
-		"save": "保存本机绑定",
-		"saving": "保存中…",
 		"values": {
 			"enabled": "已启用",
 			"disabled": "已禁用"
@@ -382,7 +384,7 @@
 		},
 		"environment": {
 			"title": "环境配置",
-			"description": "Manifest 字段会先进入草稿；Profile 选择仍单独保存到本机。",
+			"description": "项目路径、继承和禁用设置会作为 Manifest 覆盖项进入草稿；环境 Backend 和 Profile 统一在 Workspace 级管理，Infisical 密钥可在下方直接配置。",
 			"path": "环境文件路径",
 			"inherits": "继承工作区环境",
 			"inheritsHint": "项目变量会覆盖同名工作区变量。",
@@ -391,19 +393,15 @@
 			"keys": "已声明变量名"
 		},
 		"container": {
-			"title": "容器配置",
-			"description": "容器设置先进入 Manifest 草稿；镜像仓库凭据仍只保存在本机。",
-			"enabled": "启用容器构建",
-			"enabledHint": "允许 one container 为这个项目构建镜像。",
+			"title": "镜像配置",
+			"enabled": "为部署构建镜像",
+			"enabledHint": "部署前使用 one container 构建并推送这个项目的镜像。",
 			"image": "镜像地址",
 			"namespace": "镜像命名空间"
 		},
 		"deploy": {
 			"title": "部署配置",
-			"description": "部署设置先进入 Manifest 草稿；部署凭据仍只保存在本机。",
-			"notSupported": "这个项目的 Template 不支持部署目标。",
-			"environmentDefault": "使用默认环境",
-			"compatibleTargets": "兼容目标"
+			"notSupported": "这个项目的 Template 不支持部署目标。"
 		},
 		"profile": {
 			"label": "项目 Profile",
@@ -474,7 +472,7 @@
 			"title": "工作区环境变量",
 			"scope": "Workspace 级",
 			"readOnly": "只读",
-			"description": "Backend 写入工作区 Manifest；Profile 只保存在当前机器。两类修改会分别提示。",
+			"description": "Backend 写入工作区 Manifest；Profile 选择后会自动保存到当前机器。",
 			"localBinding": "机器本地 Profile 绑定",
 			"manifestLegend": "共享 Manifest",
 			"localLegend": "本机配置",
@@ -483,13 +481,11 @@
 			"backendManifest": "Manifest 配置",
 			"backendPending": "等待审阅",
 			"backendSource": "Backend 修改会先进入草稿，审阅后写入 one.manifest.json；已有密钥数据不会自动迁移。",
-			"backendPendingHint": "已加入顶部的待提交改动。保存时 One CLI 会完成 Backend 初始化；完成后再在右侧确认本机 Profile。",
+			"backendPendingHint": "已加入顶部的待提交改动。保存时 One CLI 会完成 Backend 初始化；完成后即可选择对应的本机 Profile。",
 			"backendMissing": "未配置",
 			"loading": "正在加载 Workspace Profile 绑定…",
 			"loadFailed": "无法加载 Workspace Profile 绑定。",
 			"missingBackendCli": "请先选择环境变量 Backend，再选择 Profile。",
-			"save": "保存本机绑定",
-			"saving": "保存中…",
 			"saved": "Workspace Profile 已保存",
 			"saveFailed": "无法保存 Workspace Profile",
 			"profile": {
@@ -499,8 +495,6 @@
 				"localBadge": "仅本机",
 				"waitTitle": "先应用 Backend 修改",
 				"waitDescription": "目标 Backend 生效后，系统会重新读取它需要的 Profile；这里不会提前保存到错误的 Backend。",
-				"unsaved": "本机绑定尚未保存",
-				"savedLocally": "当前绑定已保存在本机",
 				"notRequired": "这个 Backend 不需要凭据 Profile。",
 				"loading": "正在加载凭据 Profile…",
 				"loadFailed": "无法加载凭据 Profile。",
@@ -509,6 +503,12 @@
 				"none": "当前未解析到 Profile",
 				"manage": "前往设置管理"
 			}
+		},
+		"tabs": {
+			"label": "工作区分区",
+			"environment": "工作区环境变量",
+			"projects": "项目",
+			"secrets": "Infisical 密钥"
 		},
 		"navigation": {
 			"label": "工作区页面导航",
@@ -538,6 +538,10 @@
 			"allGood": "当前没有待处理项",
 			"allGoodDescription": "可以继续管理密钥，或检查各项目的详细配置。"
 		},
+		"command": {
+			"ready": "可以运行",
+			"review": "检查配置"
+		},
 		"metrics": {
 			"projects": "项目",
 			"healthy": "正常",
@@ -555,11 +559,11 @@
 				"env": "env",
 				"profile": "profile"
 			},
-			"missingProfile": "{{section}} 缺少可用凭据 profile{{profile}} — 请补齐 API key / token",
+			"missingProfile": "{{section}} 缺少可用凭据 profile{{profile}}，请补齐 API key / token。",
 			"missing": {
-				"container": "未配置 container — 跑 `one container build` 会报错",
-				"deploy": "未配置 deploy backend — 跑 `one deploy` 会报错",
-				"env": "workspace 未选择 env backend — 跑 `one env` 相关命令前先配置"
+				"container": "未配置 container，运行 `one container build` 会报错。",
+				"deploy": "未配置 deploy backend，运行 `one deploy` 会报错。",
+				"env": "workspace 未选择 env backend，请先配置再运行 `one env` 相关命令。"
 			}
 		},
 		"fix": {

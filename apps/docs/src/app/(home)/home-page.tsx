@@ -223,8 +223,8 @@ const homeCopy = {
           ),
           body: "one serve 启动只绑定 127.0.0.1 的本地配置页，用来编辑 one configure 管理的配置档。它适合让人手动录入密钥，避免把明文暴露给 agent 对话。",
           bullets: [
-            ["仅本机访问", "默认随机端口，只允许本机浏览器访问，不会直接暴露到局域网。"],
-            ["一次性 token", "启动时打印带 token 的 URL，进程退出后旧链接失效。"],
+            ["仅本机访问", "默认随机端口，只监听 loopback，不会直接暴露到局域网。"],
+            ["校验 Host", "拒绝未知 Host header，封住通向 loopback 的 DNS rebinding 路径。"],
             ["远程机器", "在远端跑 one serve，再用 ssh -L 做端口转发访问。"],
           ],
           href: ["serve"],
@@ -232,8 +232,8 @@ const homeCopy = {
           sample: "one serve",
           output: [
             "打开本机浏览器里的配置页",
-            "URL 自带一次性访问 token",
-            "按 Ctrl-C 退出，旧链接失效",
+            "使用无需登录 token 的普通 loopback URL",
+            "按 Ctrl-C 停止本地进程",
           ],
         },
         {
@@ -588,8 +588,8 @@ const homeCopy = {
           ),
           body: "one serve starts a loopback-only local config page for the same profiles managed by one configure. It is meant for human secret entry, so cleartext credentials do not need to pass through an agent chat.",
           bullets: [
-            ["LOCAL ONLY", "Uses a random local port by default and only accepts your own browser, not LAN access."],
-            ["ONE TOKEN", "The printed URL includes a session token; old URLs stop working after the process exits."],
+            ["LOCAL ONLY", "Uses a random local port by default and never listens for LAN access."],
+            ["HOST CHECKED", "Rejects unknown Host headers to close the DNS-rebinding path into loopback."],
             ["REMOTE HOSTS", "Run one serve on the remote machine, then use ssh -L port forwarding from your laptop."],
           ],
           href: ["serve"],
@@ -597,8 +597,8 @@ const homeCopy = {
           sample: "one serve",
           output: [
             "opens the local config page in your browser",
-            "URL includes a one-time access token",
-            "Ctrl-C stops the process and expires old links",
+            "uses a plain loopback URL without a login token",
+            "Ctrl-C stops the local process",
           ],
         },
         {

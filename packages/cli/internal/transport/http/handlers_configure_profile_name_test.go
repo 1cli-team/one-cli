@@ -52,7 +52,7 @@ func TestConfigureProfileCRUDRejectsUnsafeNamesWithBadRequest(t *testing.T) {
 			} else {
 				body = strings.NewReader("")
 			}
-			res, raw := authedRequest(t, srv, test.method, test.path, body)
+			res, raw := apiRequest(t, srv, test.method, test.path, body)
 			if res.StatusCode != http.StatusBadRequest {
 				t.Fatalf("status = %d, want 400; response: %s", res.StatusCode, raw)
 			}

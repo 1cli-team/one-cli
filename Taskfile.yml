@@ -142,9 +142,18 @@ tasks:
     cmds:
       - go run ./packages/cli/tools/repo-checks node-workspace
 
+  hooks:install:
+    desc: Enable the repository-managed Git hooks for this checkout
+    summary: |
+      Configures this checkout to load hooks from .githooks/. The pre-commit
+      hook runs `task check`, which is the same PR gate used by GitHub Actions.
+    cmds:
+      - git config --local core.hooksPath .githooks
+      - echo "Git pre-commit hook enabled (task check)"
+
   install:
     aliases: [install-local]
-    desc: Build the embedded Dashboard and CLI, then install a platform-native launcher
+    desc: Build the CLI, install its launcher, and enable repository Git hooks
     summary: |
       One-shot developer install: builds the Dashboard, refreshes all bundled
       assets, compiles the CLI with local version metadata, and creates a launcher
@@ -161,6 +170,7 @@ tasks:
         export PATH="$HOME/.local/bin:$PATH"
     deps: [build-local]
     cmds:
+      - task: hooks:install
       - go run ./packages/cli/tools/install-local "{{.BIN}}"
 
   build-local:
@@ -296,6 +306,33 @@ tasks:
     desc: Remove packages/cli/bin/ and go-dist/
     cmds:
       - rm -rf {{.BIN_DIR}} go-dist
+
+  dev:
+    desc: Run the Go Dashboard API and Vite UI together
+    summary: |
+      Starts the current Go source on http://127.0.0.1:5174 and the Vite
+      Dashboard on http://localhost:5173. Open that Vite URL directly.
+
+      Workspace and Project data comes from the checked-in Dashboard fixture.
+      Profile CRUD still reads and writes this machine's real One config;
+      Profile bindings are real and scoped to the fixture Workspace root.
+
+      Both processes stop together when you press Ctrl-C.
+    deps: [sync-bundled, sync-web]
+    cmds:
+      - task --parallel --failfast --output prefixed dev:serve dev:dashboard
+
+  dev:serve:
+    dir: '{{.CLI_DIR}}/testdata/dashboard-dev-workspace'
+    cmds:
+      - go run ../../cmd/one serve --port 5174 --open=false -o text
+
+  dev:dashboard:
+    env:
+      VITE_DEV_API_TARGET: http://127.0.0.1:5174
+      VITE_DEV_DATA_MODE: fixture-live-profiles
+    cmds:
+      - pnpm --filter one-serve-web dev
 
   build-web:
     desc: Build the embedded `one serve` web UI (apps/dashboard/ → apps/dashboard/dist/)

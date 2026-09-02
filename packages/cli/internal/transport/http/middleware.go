@@ -1,6 +1,6 @@
 package serve
 
-// middleware.go gates /api/* with three independent defenses, each cheap and
+// middleware.go gates requests with two independent defenses, each cheap and
 // each addressing a different attacker model:
 //
 //   - Host header check (DNS rebinding): a malicious page can resolve its
@@ -13,19 +13,11 @@ package serve
 //     response. Requiring `Origin: <our-self>` blocks the standard CSRF
 //     vector. We skip GET to avoid breaking direct browser navigation /
 //     bookmarks.
-//
-//   - Session token (residual reuse): once `one serve` exits, an old tab
-//     might still have a stale URL; without the token, it can no longer
-//     hit /api. We accept the token via cookie (set on first GET /) or via
-//     the `?token=` query param the URL is printed with.
-
 import (
-	"crypto/subtle"
 	"encoding/json"
 	"io/fs"
 	"net/http"
 	"strings"
-	"time"
 
 	configureapp "github.com/torchstellar-team/one-cli/packages/cli/internal/application/configure"
 	manifestapp "github.com/torchstellar-team/one-cli/packages/cli/internal/application/manifest"
@@ -40,7 +32,6 @@ import (
 // MuxOpts is the static configuration for one running server. Tests
 // construct it directly; production goes through Run.
 type MuxOpts struct {
-	Token         string
 	UIDisabled    bool
 	ExpectedHosts map[string]struct{}
 	SelfOrigin    string
@@ -71,8 +62,6 @@ type MuxOpts struct {
 	// fail closed instead of accepting a client-supplied filesystem path.
 	RegistryService *workspaceapp.RegistryService
 }
-
-const tokenCookie = "one_serve_token"
 
 // BuildMux returns the http.Handler that serves /api/* (always) plus the
 // SPA fallback (when UIDisabled is false). Exposed as a test seam so
@@ -125,21 +114,18 @@ func BuildMux(opts MuxOpts) http.Handler {
 	root.Handle("/api/", http.StripPrefix("/api", api))
 
 	if !opts.UIDisabled {
-		root.Handle("/", spaHandler(opts))
+		root.Handle("/", spaHandler())
 	} else {
-		// Even with --no-ui we still want GET / to set the token cookie
-		// on first hit, so subsequent /api requests can authenticate via
-		// cookie alone (no need to repeat ?token= in every fetch).
-		root.Handle("/", devLandingHandler(opts))
+		root.Handle("/", devLandingHandler())
 	}
 
-	return chain(root, hostCheck(opts), originCheck(opts), tokenCheck(opts))
+	return chain(root, hostCheck(opts), originCheck(opts))
 }
 
 // chain composes middlewares in the order they're listed: the first one in
 // the slice becomes the outermost wrapper, so its check runs first. That
 // matches the conceptual order "check before doing work" — host first,
-// then origin, then token, then handler.
+// then origin, then handler.
 func chain(h http.Handler, mws ...func(http.Handler) http.Handler) http.Handler {
 	for i := len(mws) - 1; i >= 0; i-- {
 		h = mws[i](h)
@@ -165,16 +151,14 @@ func hostCheck(opts MuxOpts) func(http.Handler) http.Handler {
 	}
 }
 
-// originCheck enforces the Origin header on mutations. GET / HEAD are
-// skipped: they're idempotent and the URL itself carries the token, so
-// loosening this would only block the user's own browser navigation.
+// originCheck enforces the Origin header on mutations. GET / HEAD are skipped
+// because they are idempotent and cross-origin response reads remain subject
+// to the browser's same-origin policy.
 //
-// Empty Origin is allowed for non-browser clients (curl, the test
-// harness). The token check below still gates them, and a same-origin
-// fetch from the bundled UI always sends Origin per spec, so the only
-// way to reach this branch from a malicious cross-origin context is the
-// CORS-preflight-skipped methods (GET/HEAD/POST simple) — and we already
-// reject those without a token below.
+// Empty Origin is allowed for non-browser clients (curl and the test harness).
+// Browser mutations send Origin and must match SelfOrigin. Cross-origin reads
+// remain subject to the browser's same-origin policy, while Host validation
+// closes the DNS-rebinding path that could otherwise bypass it.
 func originCheck(opts MuxOpts) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -198,59 +182,11 @@ func originCheck(opts MuxOpts) func(http.Handler) http.Handler {
 	}
 }
 
-// tokenCheck gates /api/* on the session token. Two presentation paths:
-//
-//	(a) Cookie: set on first GET / (so a normal browser session never has
-//	    to repeat ?token= in subsequent fetches).
-//	(b) Query param: ?token=... — the form the printed URL uses, plus
-//	    test-harness fetches that don't carry cookies.
-//
-// Non-/api/* paths always pass through (the SPA's index.html / hashed
-// assets are public; nothing sensitive lives at those paths).
-//
-// constant-time compare prevents timing leaks on the token byte length;
-// 32 random bytes already mean brute-force is infeasible, but cheap
-// hardening is worth keeping.
-func tokenCheck(opts MuxOpts) func(http.Handler) http.Handler {
-	want := []byte(opts.Token)
-	return func(next http.Handler) http.Handler {
-		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			if !needsToken(r.URL.Path) {
-				next.ServeHTTP(w, r)
-				return
-			}
-			got := tokenFromRequest(r)
-			if got == "" || subtle.ConstantTimeCompare([]byte(got), want) != 1 {
-				writeError(w, http.StatusUnauthorized, cliErrors.SERVE_TOKEN_INVALID,
-					"missing or invalid session token; restart `one serve` to get a fresh URL.",
-					nil)
-				return
-			}
-			next.ServeHTTP(w, r)
-		})
-	}
-}
-
-func needsToken(path string) bool {
-	return len(path) >= 4 && path[:4] == "/api"
-}
-
-func tokenFromRequest(r *http.Request) string {
-	if c, err := r.Cookie(tokenCookie); err == nil && c.Value != "" {
-		return c.Value
-	}
-	return r.URL.Query().Get("token")
-}
-
 // spaHandler serves the embedded React UI (bundled.WebDistFS) with try-file-
 // then-index.html fallback so the SPA's client-side routes (/section/...)
 // work on direct navigation. Hashed assets under /assets/* go through
 // http.FileServerFS for correct MIME + Last-Modified handling.
-//
-// On GET / with a valid `?token=`, drops the session cookie so subsequent
-// fetches don't have to repeat the query param. Same trick the dev landing
-// page uses; it just happens to also serve index.html in the same handler.
-func spaHandler(opts MuxOpts) http.Handler {
+func spaHandler() http.Handler {
 	distFS, err := fs.Sub(bundled.WebDistFS, bundled.WebDistRoot)
 	if err != nil {
 		// Programmer error: the binary was built without the bundled
@@ -277,8 +213,6 @@ func spaHandler(opts MuxOpts) http.Handler {
 			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 			return
 		}
-		setTokenCookieIfMatching(w, r, opts.Token)
-
 		path := strings.TrimPrefix(r.URL.Path, "/")
 		if path == "" || path == "index.html" {
 			writeIndex(w)
@@ -298,41 +232,18 @@ func spaHandler(opts MuxOpts) http.Handler {
 	})
 }
 
-// devLandingHandler is the --no-ui counterpart: serves a tiny stub on GET /
-// that drops the token cookie so the dev workflow (Vite dev server proxy
-// on a different origin) still benefits from cookie-based auth on direct
-// curl probes. Used only when --no-ui is set.
-func devLandingHandler(opts MuxOpts) http.Handler {
+// devLandingHandler is the --no-ui counterpart: it serves a tiny stub on GET
+// /. Used only when --no-ui is set.
+func devLandingHandler() http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodGet && r.Method != http.MethodHead {
 			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 			return
 		}
-		setTokenCookieIfMatching(w, r, opts.Token)
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		w.WriteHeader(http.StatusOK)
 		_, _ = w.Write([]byte(devLandingHTML))
 	})
-}
-
-// setTokenCookieIfMatching drops the session cookie when the incoming
-// request carries a valid token via query string. Always sources from
-// the URL query param (not tokenFromRequest) so a stale cookie left by a
-// previous `one serve` run gets overwritten by the freshly-printed URL.
-// Cookies for 127.0.0.1 are port-agnostic with a 24h expiry; if we read
-// via tokenFromRequest the old cookie would shadow the new ?token= and
-// the cookie would never refresh — every subsequent /api/* call would 401.
-func setTokenCookieIfMatching(w http.ResponseWriter, r *http.Request, want string) {
-	if got := r.URL.Query().Get("token"); got == want {
-		http.SetCookie(w, &http.Cookie{
-			Name:     tokenCookie,
-			Value:    want,
-			Path:     "/",
-			HttpOnly: true,
-			SameSite: http.SameSiteStrictMode,
-			Expires:  time.Now().Add(24 * time.Hour),
-		})
-	}
 }
 
 const devLandingHTML = `<!doctype html>
@@ -353,7 +264,6 @@ const devLandingHTML = `<!doctype html>
   <p>本地开发场景：在 <code>web/</code> 目录跑 <code>pnpm dev</code>，
      Vite 会把 <code>/api/*</code> 反向代理到本服务。</p>
   <pre><code>curl http://HOST:PORT/api/configure</code></pre>
-  <p>token 已写入 cookie，后续请求无需再带 <code>?token=</code>。</p>
 </body>
 </html>
 `

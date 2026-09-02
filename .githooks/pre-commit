@@ -1,0 +1,27 @@
+#!/bin/sh
+set -eu
+
+repo_root=$(git rev-parse --show-toplevel)
+cd "$repo_root"
+
+unstaged=$(git diff --name-only --ignore-submodules --)
+untracked=$(git ls-files --others --exclude-standard)
+if [ -n "$unstaged" ] || [ -n "$untracked" ]; then
+	printf '%s\n' "pre-commit: the working tree must match the staged snapshot before running task check." >&2
+	if [ -n "$unstaged" ]; then
+		printf '%s\n%s\n' "Unstaged files:" "$unstaged" >&2
+	fi
+	if [ -n "$untracked" ]; then
+		printf '%s\n%s\n' "Untracked files:" "$untracked" >&2
+	fi
+	printf '%s\n' "Stage the intended files (or stash unrelated work), then commit again." >&2
+	exit 1
+fi
+
+if ! command -v task >/dev/null 2>&1; then
+	printf '%s\n' "pre-commit: go-task is required; install it or run 'git commit --no-verify' to bypass intentionally." >&2
+	exit 1
+fi
+
+printf '%s\n' "pre-commit: running the PR gate (task check)"
+exec task check

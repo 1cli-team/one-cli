@@ -29,6 +29,7 @@ func registerWorkspaceMutateRoutes(mux *http.ServeMux, opts MuxOpts) {
 		handlePutProjectProfileBinding(opts),
 	)
 	mux.HandleFunc("PUT /workspace/manifest", handlePutWorkspaceManifest(opts))
+	mux.HandleFunc("POST /workspace/manifest/preview", handlePreviewWorkspaceManifest(opts))
 
 	// Keep the former repository-mutation paths stable for older Dashboard
 	// clients, but reject them before reading a body or resolving a workspace.
@@ -143,6 +144,26 @@ func handlePutWorkspaceManifest(opts MuxOpts) http.HandlerFunc {
 			return
 		}
 		result, err := opts.ManifestService.ApplyManifestDraft(r.Context(), opts.WorkspaceRoot, body)
+		if err != nil {
+			writeWorkspaceMutationErr(w, err)
+			return
+		}
+		writeJSON(w, http.StatusOK, result)
+	}
+}
+
+func handlePreviewWorkspaceManifest(opts MuxOpts) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if opts.WorkspaceRoot == "" {
+			writeNoWorkspace(w)
+			return
+		}
+		var body manifestapp.PreviewManifestInput
+		if err := decodeJSON(r, &body); err != nil {
+			writeBadPayload(w, err.Error())
+			return
+		}
+		result, err := opts.ManifestService.PreviewManifestDraft(r.Context(), opts.WorkspaceRoot, body)
 		if err != nil {
 			writeWorkspaceMutationErr(w, err)
 			return

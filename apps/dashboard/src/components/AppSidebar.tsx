@@ -10,10 +10,10 @@ import { cn } from "@/lib/utils";
 
 const navItemClass = ({ isActive }: { isActive: boolean }) =>
 	cn(
-		"relative flex h-9 items-center gap-2.5 rounded-md px-3 text-sm transition-colors",
+		"relative flex h-10 items-center gap-2.5 px-3 text-xs transition-colors",
 		isActive
-			? "bg-primary/9 font-medium text-primary before:absolute before:-left-2 before:h-5 before:w-0.5 before:rounded-full before:bg-primary"
-			: "text-muted-foreground hover:bg-accent/70 hover:text-foreground",
+			? "bg-sidebar-active font-semibold text-sidebar-foreground before:absolute before:inset-y-0 before:left-0 before:w-0.5 before:bg-primary"
+			: "text-sidebar-muted hover:bg-sidebar-active/60 hover:text-sidebar-foreground",
 	);
 
 export const AppSidebar: React.FC = () => {
@@ -23,18 +23,18 @@ export const AppSidebar: React.FC = () => {
 
 	return (
 		<TooltipProvider delayDuration={300}>
-			<aside className="flex h-screen w-56 shrink-0 flex-col border-r border-border bg-card/75">
-				<div className="flex h-[68px] items-center gap-2.5 border-b border-border/70 px-5">
-					<img src={logoSrc} alt="One CLI" className="h-8 w-8" />
+			<aside className="flex h-screen w-48 shrink-0 flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground">
+				<div className="flex h-12 items-center gap-2 border-b border-sidebar-border px-3">
+					<img src={logoSrc} alt="One CLI" className="h-7 w-7" />
 					<div>
-						<p className="text-sm font-semibold tracking-tight">One CLI</p>
-						<p className="text-[10px] font-medium tracking-[0.18em] text-muted-foreground uppercase">
+						<p className="font-heading text-sm font-semibold tracking-tight">One CLI</p>
+						<p className="font-mono text-[8px] font-semibold tracking-[0.2em] text-sidebar-muted uppercase">
 							{t("sidebar.brand")}
 						</p>
 					</div>
 				</div>
 
-				<nav className="px-3 py-4">
+				<nav className="px-2 py-2">
 					<EnvironmentNavLink to="/" end className={navItemClass}>
 						<House className="h-4 w-4" />
 						<span>{t("sidebar.home")}</span>
@@ -43,7 +43,7 @@ export const AppSidebar: React.FC = () => {
 
 				<WorkspaceRail />
 
-				<div className="flex items-center gap-1 border-t border-border px-3 py-3">
+				<div className="flex h-12 items-center gap-1 border-t border-sidebar-border px-2">
 					<EnvironmentNavLink
 						to="/settings"
 						className={({ isActive }) => `${navItemClass({ isActive })} flex-1`}
@@ -57,7 +57,7 @@ export const AppSidebar: React.FC = () => {
 								onClick={toggle}
 								variant="ghost"
 								size="icon"
-								className="h-9 w-9 shrink-0"
+								className="h-9 w-9 shrink-0 text-sidebar-muted hover:bg-sidebar-active hover:text-sidebar-foreground"
 								aria-label={mode === "light" ? t("sidebar.themeToDark") : t("sidebar.themeToLight")}
 							>
 								{mode === "light" ? (

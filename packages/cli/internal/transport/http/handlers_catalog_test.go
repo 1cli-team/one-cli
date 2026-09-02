@@ -12,13 +12,12 @@ import (
 func catalogRequest(t *testing.T, backendCatalog *catalog.Catalog) (*httptest.ResponseRecorder, []byte) {
 	t.Helper()
 	mux := BuildMux(MuxOpts{
-		Token:         testToken,
 		ExpectedHosts: map[string]struct{}{"127.0.0.1": {}},
 		SelfOrigin:    "http://127.0.0.1",
 		UIDisabled:    true,
 		Catalog:       backendCatalog,
 	})
-	req := httptest.NewRequest(http.MethodGet, "/api/catalog?token="+testToken, nil)
+	req := httptest.NewRequest(http.MethodGet, "/api/catalog", nil)
 	req.Host = "127.0.0.1"
 	rec := httptest.NewRecorder()
 	mux.ServeHTTP(rec, req)

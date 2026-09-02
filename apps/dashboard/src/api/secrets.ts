@@ -1,6 +1,11 @@
 import { workspaceBasePath } from "@/api/workspaces";
 import http from "@/lib/http";
-import type { SecretListResponse, SecretMutationResponse, SecretValueResponse } from "@/types/api";
+import type {
+	HttpError,
+	SecretListResponse,
+	SecretMutationResponse,
+	SecretValueResponse,
+} from "@/types/api";
 
 function secretSearch(environment: string, project?: string): string {
 	const search = new URLSearchParams({ env: environment });
@@ -17,7 +22,19 @@ export async function listSecrets(
 	environment: string,
 	project?: string,
 ) {
-	return http.get<SecretListResponse>(secretsKey(entryId, environment, project));
+	try {
+		return await http.get<SecretListResponse>(secretsKey(entryId, environment, project));
+	} catch (error) {
+		const failure = error as HttpError;
+		if (failure.code !== "INFISICAL_FOLDER_NOT_FOUND") throw error;
+		return {
+			schema: "one-cli/env-list/v1",
+			env: environment,
+			path: typeof failure.context.folder === "string" ? failure.context.folder : "",
+			keys: [],
+			total: 0,
+		} satisfies SecretListResponse;
+	}
 }
 
 function secretPath(

@@ -78,7 +78,7 @@ export const ProfileEditorDialog: React.FC<ProfileEditorDialogProps> = ({
 
 	return (
 		<Dialog open={target !== null} onOpenChange={onOpenChange}>
-			<DialogContent>
+			<DialogContent className="gap-0 p-0 sm:max-w-[540px]">
 				{snapshot ? (
 					<ProfileForm
 						key={`${snapshot.backend.id}-${snapshot.mode}-${snapshot.name}`}
@@ -142,7 +142,7 @@ const ProfileForm: React.FC<ProfileFormProps> = ({
 
 	return (
 		<>
-			<DialogHeader>
+			<DialogHeader className="border-b border-border px-5 py-5">
 				<DialogTitle>
 					{mode === "add" ? t("form.addTitle") : t("form.editTitle", { name: initialName })}
 				</DialogTitle>
@@ -150,35 +150,37 @@ const ProfileForm: React.FC<ProfileFormProps> = ({
 					{mode === "add" ? t("form.addDescription") : t("form.editDescription")}
 				</DialogDescription>
 			</DialogHeader>
-			<form onSubmit={handleSubmit} className="space-y-3">
-				<FieldRow>
-					<FieldLabel htmlFor="profile-name">{t("form.profileName")}</FieldLabel>
-					<Input
-						id="profile-name"
-						value={name}
-						onChange={(event) => setName(event.target.value)}
-						placeholder={t("form.profileNamePlaceholder")}
-						disabled={mode === "edit"}
-						required
-					/>
-				</FieldRow>
-
-				<BackendFields backend={backend} profile={profile} setProfile={setProfile} />
-
-				<FieldRow>
-					<div className="flex items-center gap-2">
-						<Checkbox
-							id="profile-set-default"
-							checked={use}
-							onCheckedChange={(checked) => setUse(checked === true)}
+			<form onSubmit={handleSubmit}>
+				<div className="space-y-4 px-5 py-5">
+					<FieldRow>
+						<FieldLabel htmlFor="profile-name">{t("form.profileName")}</FieldLabel>
+						<Input
+							id="profile-name"
+							value={name}
+							onChange={(event) => setName(event.target.value)}
+							placeholder={t("form.profileNamePlaceholder")}
+							disabled={mode === "edit"}
+							required
 						/>
-						<FieldLabel htmlFor="profile-set-default" className="text-sm font-normal">
-							{hasDefault ? t("form.setDefaultAfterSave") : t("form.setDefaultAfterSaveAuto")}
-						</FieldLabel>
-					</div>
-				</FieldRow>
+					</FieldRow>
 
-				<DialogFooter className="pt-2">
+					<BackendFields backend={backend} profile={profile} setProfile={setProfile} />
+
+					<FieldRow>
+						<div className="flex items-center gap-2 border border-border bg-muted/25 px-3 py-3">
+							<Checkbox
+								id="profile-set-default"
+								checked={use}
+								onCheckedChange={(checked) => setUse(checked === true)}
+							/>
+							<FieldLabel htmlFor="profile-set-default" className="text-sm font-normal">
+								{hasDefault ? t("form.setDefaultAfterSave") : t("form.setDefaultAfterSaveAuto")}
+							</FieldLabel>
+						</div>
+					</FieldRow>
+				</div>
+
+				<DialogFooter className="border-t border-border px-5 py-4">
 					<Button type="button" variant="outline" onClick={onCancel}>
 						{t("form.cancel")}
 					</Button>
