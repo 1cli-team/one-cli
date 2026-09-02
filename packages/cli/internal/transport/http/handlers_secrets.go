@@ -30,6 +30,9 @@ func handleListSecrets(opts MuxOpts) http.HandlerFunc {
 		if !requireSecretWorkspace(w, opts) {
 			return
 		}
+		if !requireInfisicalSecretBackend(w, r, opts) {
+			return
+		}
 		setNoStore(w)
 		result, err := opts.EnvironmentService.List(r.Context(), environmentmodule.ListInput{
 			Scope:       execution.NewScope(r.Context(), opts.WorkspaceRoot),
@@ -47,6 +50,9 @@ func handleListSecrets(opts MuxOpts) http.HandlerFunc {
 func handleGetSecret(opts MuxOpts) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if !requireSecretWorkspace(w, opts) {
+			return
+		}
+		if !requireInfisicalSecretBackend(w, r, opts) {
 			return
 		}
 		setNoStore(w)
@@ -68,6 +74,9 @@ func handleCreateSecret(opts MuxOpts) http.HandlerFunc {
 		if !requireSecretWorkspace(w, opts) {
 			return
 		}
+		if !requireInfisicalSecretBackend(w, r, opts) {
+			return
+		}
 		setNoStore(w)
 		var body createSecretRequest
 		if err := decodeJSON(r, &body); err != nil {
@@ -85,6 +94,9 @@ func handleCreateSecret(opts MuxOpts) http.HandlerFunc {
 func handleUpdateSecret(opts MuxOpts) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if !requireSecretWorkspace(w, opts) {
+			return
+		}
+		if !requireInfisicalSecretBackend(w, r, opts) {
 			return
 		}
 		setNoStore(w)
@@ -150,6 +162,21 @@ func handleDeleteSecret(opts MuxOpts) http.HandlerFunc {
 func requireSecretWorkspace(w http.ResponseWriter, opts MuxOpts) bool {
 	if opts.WorkspaceRoot == "" {
 		writeNoWorkspace(w)
+		return false
+	}
+	return true
+}
+
+func requireInfisicalSecretBackend(
+	w http.ResponseWriter,
+	r *http.Request,
+	opts MuxOpts,
+) bool {
+	if err := opts.EnvironmentService.RequireInfisicalBackend(
+		execution.NewScope(r.Context(), opts.WorkspaceRoot),
+		r.URL.Query().Get("env"),
+	); err != nil {
+		writeProfileError(w, err)
 		return false
 	}
 	return true
