@@ -299,22 +299,22 @@ describe("multi-workspace routing", () => {
 		renderDashboard("/workspace/alpha-entry");
 		expect(await screen.findByRole("region", { name: "Project settings" })).toBeDefined();
 
-		await user.click(screen.getByRole("link", { name: "Workspaces" }));
+		await user.click(screen.getByRole("link", { name: "Home" }));
 		await user.click(await screen.findByRole("link", { name: /Beta/ }));
 		await waitFor(() =>
 			expect(screen.getByTestId("location").textContent).toBe("/workspace/beta-entry"),
 		);
 		expect(await screen.findByRole("button", { name: "beta-web apps/web" })).toBeDefined();
 
-		await user.click(screen.getByRole("link", { name: "Workspaces" }));
-		await user.click(await screen.findByRole("button", { name: "Forget Broken" }));
+		await user.click(screen.getByRole("link", { name: "Home" }));
+		await user.click(await screen.findByRole("button", { name: "Remove Broken" }));
 		const confirmation = await screen.findByRole("alertdialog");
 		expect(
 			within(confirmation).getByText(
-				'Forget Workspace "Broken"? This only removes the local registry entry; no project files or Profiles will be deleted.',
+				'Remove Workspace "Broken"? This only removes the local registry entry; no project files or Profiles will be deleted.',
 			),
 		).toBeDefined();
-		await user.click(within(confirmation).getByRole("button", { name: "Forget Workspace" }));
+		await user.click(within(confirmation).getByRole("button", { name: "Remove Broken" }));
 		await waitFor(() => expect(deletedEntry).toBe("broken-entry"));
 		expect(screen.queryByRole("link", { name: /Broken/ })).toBeNull();
 	});
