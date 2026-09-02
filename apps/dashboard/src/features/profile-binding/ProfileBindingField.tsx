@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EnvironmentLink } from "@/features/environment-context/EnvironmentLink";
+import { cn } from "@/lib/utils";
 import type { BackendDomain, ProfileBinding } from "@/types/api";
 
 type ProfileBindingScope = "project" | "workspace";
@@ -38,6 +39,8 @@ export const ProfileBindingField: React.FC<{
 	value: string;
 	onChange(value: string): void;
 	disabled?: boolean;
+	variant?: "card" | "embedded";
+	showDescription?: boolean;
 }> = ({
 	id,
 	scope,
@@ -49,6 +52,8 @@ export const ProfileBindingField: React.FC<{
 	value,
 	onChange,
 	disabled,
+	variant = "card",
+	showDescription = false,
 }) => {
 	const { t } = useTranslation();
 	const catalog = useBackendCatalog();
@@ -71,7 +76,7 @@ export const ProfileBindingField: React.FC<{
 
 	if (!backend || profileConfigurable === false) {
 		return (
-			<Alert className="rounded-lg bg-muted/25 py-3 text-xs text-muted-foreground">
+			<Alert className="rounded-[5px] border-border/70 bg-muted/35 py-2.5 text-xs text-muted-foreground">
 				<Info className="mt-0.5 h-3.5 w-3.5 shrink-0" />
 				<AlertDescription className="text-xs leading-relaxed">
 					{t(`${copyRoot}.notRequired`)}
@@ -83,7 +88,7 @@ export const ProfileBindingField: React.FC<{
 	if (profileConfigurable === undefined && catalog.isLoading) {
 		return (
 			<div
-				className="space-y-2 rounded-lg border border-border p-4"
+				className="space-y-2 rounded-[5px] border border-border/70 bg-card p-3"
 				aria-label={t(`${copyRoot}.loading`)}
 			>
 				<Skeleton className="h-3 w-24" />
@@ -94,7 +99,7 @@ export const ProfileBindingField: React.FC<{
 
 	if (profileConfigurable === undefined && catalog.error) {
 		return (
-			<Alert variant="destructive" className="rounded-lg py-3 text-xs">
+			<Alert variant="destructive" className="py-3 text-xs">
 				<AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
 				<AlertDescription className="text-xs leading-relaxed">
 					{t(`${copyRoot}.loadFailed`)} {errorMessage(catalog.error)}
@@ -104,12 +109,21 @@ export const ProfileBindingField: React.FC<{
 	}
 
 	return (
-		<Field className="gap-3 rounded-lg border border-border p-4">
+		<Field
+			className={cn(
+				"gap-2.5 rounded-[5px] border border-border/70 bg-card p-3",
+				variant === "embedded" &&
+					"min-w-0 gap-1.5 rounded-none border-0 bg-transparent p-0 shadow-none",
+				variant === "embedded" && showDescription && "gap-3",
+			)}
+		>
 			<div>
 				<FieldLabel htmlFor={id}>{t(`${copyRoot}.label`)}</FieldLabel>
-				<p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-					{t(`${copyRoot}.description`)}
-				</p>
+				{variant === "card" || showDescription ? (
+					<p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+						{t(`${copyRoot}.description`)}
+					</p>
+				) : null}
 			</div>
 			<Select
 				value={value || AUTOMATIC_PROFILE_VALUE}
@@ -129,14 +143,19 @@ export const ProfileBindingField: React.FC<{
 				</SelectContent>
 			</Select>
 			{section.error ? (
-				<Alert variant="destructive" className="mt-2 rounded-lg py-2.5 text-[11px]">
+				<Alert variant="destructive" className="mt-2 py-2.5 text-[11px]">
 					<AlertCircle className="mt-0.5 h-3 w-3 shrink-0" />
 					<AlertDescription className="text-[11px] leading-relaxed">
 						{t(`${copyRoot}.loadFailed`)} {errorMessage(section.error)}
 					</AlertDescription>
 				</Alert>
 			) : null}
-			<div className="mt-2 flex items-center justify-between text-[11px] text-muted-foreground">
+			<div
+				className={cn(
+					"mt-2 flex items-center justify-between gap-2 text-[11px] text-muted-foreground",
+					variant === "embedded" && "mt-1",
+				)}
+			>
 				<span>{binding ? `${binding.name} · ${binding.source}` : t(`${copyRoot}.none`)}</span>
 				<EnvironmentLink
 					to={`/settings/${domain}/${backend}`}

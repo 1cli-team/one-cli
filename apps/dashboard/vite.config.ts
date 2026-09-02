@@ -7,9 +7,10 @@ import { defineConfig } from "vite";
 const projectDir = path.dirname(fileURLToPath(import.meta.url));
 
 // VITE_DEV_API_TARGET lets contributors point `pnpm dev` at a local
-// `one serve --no-ui --port <N>` instance. Default 5174 mirrors what the
-// docs page suggests; nothing else in the repo cares about this port.
+// `one serve --port <N>` instance. `task dev` uses the default 5174 target;
+// nothing else in the repo cares about this port.
 const devApiTarget = process.env.VITE_DEV_API_TARGET ?? "http://127.0.0.1:5174";
+const devApiOrigin = new URL(devApiTarget).origin;
 
 export default defineConfig({
 	plugins: [tailwindcss(), react()],
@@ -27,7 +28,10 @@ export default defineConfig({
 		proxy: {
 			"/api": {
 				target: devApiTarget,
-				changeOrigin: false,
+				// The Go server validates both Host and mutating-request Origin.
+				// Rewrite both at this loopback-only development boundary.
+				changeOrigin: true,
+				headers: { Origin: devApiOrigin },
 			},
 		},
 	},

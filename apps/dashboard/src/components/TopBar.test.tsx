@@ -19,7 +19,7 @@ const emptyRegistry: WorkspacesResponse = {
 	workspaces: [],
 };
 
-function renderTopBar(path: string) {
+function renderTopBar(path: string, devDataMode?: string) {
 	return render(
 		<SWRConfig
 			value={{
@@ -29,7 +29,7 @@ function renderTopBar(path: string) {
 			}}
 		>
 			<MemoryRouter initialEntries={[path]}>
-				<TopBar />
+				<TopBar devDataMode={devDataMode} />
 			</MemoryRouter>
 		</SWRConfig>,
 	);
@@ -201,5 +201,21 @@ describe("TopBar environment scope", () => {
 		expect(remaining.revision).toBe("sha256:after-switch");
 		expect(remaining.workspace).toBeUndefined();
 		expect(Object.keys(remaining.changes)).toEqual(["web"]);
+	});
+});
+
+describe("TopBar development data boundary", () => {
+	beforeAll(async () => {
+		await i18n.changeLanguage("en-US");
+	});
+
+	it("labels fixture Workspace data and live local Profiles together", () => {
+		renderTopBar("/", "fixture-live-profiles");
+		expect(screen.getByRole("status").textContent).toBe("Fixture Workspace · Live local Profiles");
+	});
+
+	it("does not show the development data label in production mode", () => {
+		renderTopBar("/");
+		expect(screen.queryByRole("status")).toBeNull();
 	});
 });

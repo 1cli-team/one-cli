@@ -119,10 +119,8 @@ describe("WorkspaceHome", () => {
 
 		const alpha = screen.getByRole("link", { name: /Alpha/ });
 		expect(alpha.getAttribute("href")).toBe("/workspace/alpha-entry?env=preview");
-		expect(within(alpha).getByText("alpha-a1b2c3")).toBeDefined();
 		expect(within(alpha).getByText("/workspaces/alpha")).toBeDefined();
-		expect(within(alpha).getByText("Ready")).toBeDefined();
-		expect(within(alpha).getByText("3")).toBeDefined();
+		expect(within(alpha).getByText("3 projects")).toBeDefined();
 		expect(within(alpha).getByText("This one serve session")).toBeDefined();
 		expect(within(alpha).getByText("Last detected")).toBeDefined();
 		expect(alpha.querySelector('time[datetime="2026-08-30T09:00:00Z"]')).not.toBeNull();
@@ -142,10 +140,6 @@ describe("WorkspaceHome", () => {
 		).toBeDefined();
 		expect(
 			within(screen.getByRole("link", { name: /Invalid/ })).getByText("Unavailable"),
-		).toBeDefined();
-
-		expect(
-			within(screen.getByRole("link", { name: /Identity missing/ })).getByText("Not available"),
 		).toBeDefined();
 	});
 

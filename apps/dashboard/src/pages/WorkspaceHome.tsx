@@ -1,12 +1,26 @@
-import { AlertTriangle, ArrowUpRight, FolderGit2, FolderPlus } from "lucide-react";
+import {
+	AlertTriangle,
+	FolderGit2,
+	FolderPlus,
+	Trash2,
+} from "lucide-react";
 import type React from "react";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import useSWR from "swr";
-import { getWorkspaces, workspacesKey } from "@/api/workspaces";
+import { forgetWorkspace, getWorkspaces, workspacesKey } from "@/api/workspaces";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Badge } from "@/components/ui/badge";
+import {
+	AlertDialog,
+	AlertDialogAction,
+	AlertDialogCancel,
+	AlertDialogContent,
+	AlertDialogDescription,
+	AlertDialogFooter,
+	AlertDialogHeader,
+	AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
 	Empty,
 	EmptyDescription,
@@ -14,19 +28,11 @@ import {
 	EmptyMedia,
 	EmptyTitle,
 } from "@/components/ui/empty";
-import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Spinner } from "@/components/ui/spinner";
 import { EnvironmentLink } from "@/features/environment-context/EnvironmentLink";
-import { cn } from "@/lib/utils";
-import type { WorkspaceRegistryEntry, WorkspaceRegistryStatus } from "@/types/api";
-
-const STATUS_BADGE_CLASS: Record<WorkspaceRegistryStatus, string> = {
-	ready: "border-success-border bg-success-surface text-success-foreground",
-	missing: "border-border bg-muted text-muted-foreground",
-	invalid: "border-error-border bg-error-surface text-error-foreground",
-	"identity-missing": "border-warning-border bg-warning-surface text-warning-foreground",
-	"identity-conflict": "border-warning-border bg-warning-surface text-warning-foreground",
-};
+import { useToast } from "@/hooks/useToast";
+import type { WorkspaceRegistryEntry } from "@/types/api";
 
 function formatLastSeen(value: string, locale: string): string {
 	const date = new Date(value);
@@ -39,132 +45,103 @@ function formatLastSeen(value: string, locale: string): string {
 
 const WorkspaceCard: React.FC<{
 	workspace: WorkspaceRegistryEntry;
-	current: boolean;
-}> = ({ workspace, current }) => {
+	onForget(): void;
+}> = ({ workspace, onForget }) => {
 	const { t, i18n } = useTranslation();
 	const locale = i18n.resolvedLanguage ?? i18n.language;
-	const projectCountUnavailable =
+	const countUnavailable =
 		(workspace.status === "missing" || workspace.status === "invalid") &&
 		workspace.projectCount === 0;
 
 	return (
-		<EnvironmentLink
-			to={`/workspace/${encodeURIComponent(workspace.entryId)}`}
-			className="group rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-		>
-			<Card
-				className={cn(
-					"relative h-full overflow-hidden transition-[border-color,box-shadow] group-hover:border-primary/40 group-hover:shadow-md",
-					current && "border-primary/30",
-				)}
+		<article className="group relative min-h-52 overflow-hidden rounded-xl border border-border bg-card shadow-sm transition-[border-color,box-shadow] duration-200 hover:border-primary/30 hover:shadow-md">
+			<EnvironmentLink
+				to={`/workspace/${encodeURIComponent(workspace.entryId)}`}
+				className="flex h-full min-h-52 flex-col p-5 pr-14 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
 			>
-				{current ? (
-					<span className="absolute inset-y-0 left-0 w-1 bg-primary" aria-hidden="true" />
-				) : null}
-				<CardHeader className="gap-3 pb-3">
-					<div className="flex items-start justify-between gap-4">
-						<div className="min-w-0 space-y-1.5">
-							<div className="flex flex-wrap items-center gap-2">
-								<CardTitle className="truncate">{workspace.name}</CardTitle>
-								{current ? (
-									<Badge className="uppercase tracking-[0.08em]">
-										{t("workspaces.home.currentSession", {
-											defaultValue: "This one serve session",
-										})}
-									</Badge>
-								) : null}
-							</div>
-							<p
-								className="truncate font-mono text-[11px] text-muted-foreground"
-								title={workspace.root}
-							>
-								{workspace.root}
-							</p>
-						</div>
-						<div className="flex shrink-0 items-center gap-2">
-							<Badge variant="outline" className={STATUS_BADGE_CLASS[workspace.status]}>
-								{t(`workspaces.status.${workspace.status}`, { defaultValue: workspace.status })}
-							</Badge>
-							<ArrowUpRight className="h-4 w-4 text-muted-foreground transition-colors group-hover:text-primary" />
-						</div>
+				<div className="flex items-start gap-3.5">
+					<span className="grid size-10 shrink-0 place-items-center rounded-lg border border-primary/15 bg-primary/8 text-primary">
+						<FolderGit2 className="size-[18px]" />
+					</span>
+					<div className="min-w-0 flex-1">
+						<h2 className="truncate text-base font-semibold tracking-tight">{workspace.name}</h2>
 					</div>
-				</CardHeader>
-				<CardContent>
-					<dl className="grid grid-cols-[minmax(0,1fr)_5rem_minmax(9rem,auto)] gap-4 border-t border-border/70 pt-3">
-						<div className="min-w-0">
-							<dt className="text-[10px] font-medium tracking-[0.12em] text-muted-foreground uppercase">
-								{t("workspaces.home.workspaceId", { defaultValue: "Workspace ID" })}
-							</dt>
-							<dd className="mt-1 truncate font-mono text-xs" title={workspace.id}>
-								{workspace.id ??
-									t("workspaces.home.idUnavailable", { defaultValue: "Not available" })}
-							</dd>
-						</div>
-						<div>
-							<dt className="text-[10px] font-medium tracking-[0.12em] text-muted-foreground uppercase">
-								{t("workspaces.home.projects", { defaultValue: "Projects" })}
-							</dt>
-							<dd className="mt-1 font-mono text-xs font-semibold">
-								{projectCountUnavailable
-									? t("workspaces.home.projectCountUnavailable", {
-											defaultValue: "Unavailable",
-										})
-									: workspace.projectCount}
-							</dd>
-						</div>
-						<div>
-							<dt className="text-[10px] font-medium tracking-[0.12em] text-muted-foreground uppercase">
-								{t("workspaces.home.lastDetected", { defaultValue: "Last detected" })}
-							</dt>
-							<dd className="mt-1 text-xs">
-								<time dateTime={workspace.lastSeenAt}>
-									{formatLastSeen(workspace.lastSeenAt, locale)}
-								</time>
-							</dd>
-						</div>
-					</dl>
-				</CardContent>
-			</Card>
-		</EnvironmentLink>
+				</div>
+
+				<div className="mt-6">
+					<div>
+						<p className="font-mono text-[10px] font-semibold tracking-[0.1em] text-muted-foreground uppercase">
+							{t("workspaces.home.projects")}
+						</p>
+						<p className="mt-1.5 font-heading text-4xl font-semibold leading-none tracking-tight">
+							{countUnavailable ? "-" : workspace.projectCount}
+						</p>
+					</div>
+				</div>
+
+				<div className="mt-auto flex items-center justify-between gap-3 border-t border-border/70 pt-4 text-[11px] text-muted-foreground">
+					<time dateTime={workspace.lastSeenAt} className="truncate">
+						{t("workspaces.home.lastDetected")} · {formatLastSeen(workspace.lastSeenAt, locale)}
+					</time>
+				</div>
+			</EnvironmentLink>
+			<Button
+				type="button"
+				variant="ghost"
+				size="icon-sm"
+				className="absolute top-4 right-4 text-muted-foreground opacity-65 hover:bg-error-surface hover:text-error-foreground group-hover:opacity-100"
+				aria-label={t("workspaces.forget.action", { name: workspace.name })}
+				onClick={onForget}
+			>
+				<Trash2 />
+			</Button>
+		</article>
 	);
 };
 
 export const WorkspaceHome: React.FC = () => {
 	const { t } = useTranslation();
+	const toast = useToast();
 	const registry = useSWR(workspacesKey, getWorkspaces);
+	const [workspaceToForget, setWorkspaceToForget] = useState<WorkspaceRegistryEntry | null>(null);
+	const [forgetting, setForgetting] = useState(false);
+
+	async function confirmForget() {
+		if (!workspaceToForget || forgetting) return;
+		setForgetting(true);
+		try {
+			await forgetWorkspace(workspaceToForget.entryId);
+			toast.success(t("workspaces.forget.done", { name: workspaceToForget.name }));
+			setWorkspaceToForget(null);
+			await registry.mutate();
+		} catch (error) {
+			toast.error(t("workspaces.forget.failed"), {
+				description: (error as { message?: string }).message,
+			});
+		} finally {
+			setForgetting(false);
+		}
+	}
 
 	if (registry.isLoading) {
 		return (
-			<div role="status" className="space-y-4">
-				<span className="sr-only">
-					{t("workspaces.home.loading", { defaultValue: "Loading Workspaces…" })}
-				</span>
-				<Skeleton className="h-20 w-full rounded-lg" />
-				<div className="grid gap-4 xl:grid-cols-2">
-					<Skeleton className="h-40 w-full rounded-lg" />
-					<Skeleton className="h-40 w-full rounded-lg opacity-70" />
-				</div>
+			<div role="status" className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+				<span className="sr-only">{t("workspaces.home.loading")}</span>
+				<Skeleton className="h-52 w-full rounded-xl" />
+				<Skeleton className="h-52 w-full rounded-xl opacity-80" />
+				<Skeleton className="h-52 w-full rounded-xl opacity-60" />
 			</div>
 		);
 	}
 	if (registry.error) {
 		const message = (registry.error as { message?: string }).message;
 		return (
-			<Alert variant="destructive">
+			<Alert variant="destructive" className="w-full rounded-xl">
 				<AlertTriangle className="h-4 w-4" />
 				<div>
-					<AlertTitle>
-						{t("workspaces.home.loadFailedTitle", {
-							defaultValue: "Could not load Workspaces",
-						})}
-					</AlertTitle>
+					<AlertTitle>{t("workspaces.home.loadFailedTitle")}</AlertTitle>
 					<AlertDescription className="mt-1">
-						<p>
-							{message ??
-								t("workspaces.home.loadFailedDescription", {
-									defaultValue: "The local Workspace registry could not be read.",
-								})}
-						</p>
+						<p>{message ?? t("workspaces.home.loadFailedDescription")}</p>
 						<Button
 							type="button"
 							variant="outline"
@@ -172,7 +149,7 @@ export const WorkspaceHome: React.FC = () => {
 							className="mt-3"
 							onClick={() => void registry.mutate()}
 						>
-							{t("workspaces.home.retry", { defaultValue: "Retry" })}
+							{t("workspaces.home.retry")}
 						</Button>
 					</AlertDescription>
 				</div>
@@ -181,74 +158,70 @@ export const WorkspaceHome: React.FC = () => {
 	}
 
 	const workspaces = registry.data?.workspaces ?? [];
-	const projectCount = workspaces.reduce((total, workspace) => total + workspace.projectCount, 0);
 
 	return (
-		<div className="space-y-7">
-			<header className="flex items-end justify-between gap-8 border-b border-border/70 pb-5">
-				<div className="space-y-1">
-					<div className="flex items-center gap-2">
-						<FolderGit2 className="h-5 w-5 text-primary" />
-						<h1 className="text-xl font-semibold tracking-tight">
-							{t("workspaces.home.title", { defaultValue: "Workspaces" })}
-						</h1>
-					</div>
-					<p className="max-w-2xl text-sm text-muted-foreground">
-						{t("workspaces.home.description", {
-							defaultValue: "Open any Workspace registered on this machine.",
-						})}
-					</p>
-				</div>
-				<div className="flex shrink-0 items-center gap-4 rounded-md border border-border bg-muted/35 px-4 py-2 text-xs">
-					<span className="font-medium">
-						{t("workspaces.home.registryCount", {
-							count: workspaces.length,
-							defaultValue: "{{count}} registered Workspaces",
-						})}
-					</span>
-					<Separator orientation="vertical" className="h-4" />
-					<span className="font-medium">
-						{t("workspaces.home.projectCount", {
-							count: projectCount,
-							defaultValue: "{{count}} Projects",
-						})}
-					</span>
-				</div>
+		<div className="w-full space-y-6 pb-8">
+			<header className="pb-1">
+				<h1 className="font-heading text-3xl font-semibold tracking-tight">
+					{t("workspaces.home.title")}
+				</h1>
 			</header>
 
 			{workspaces.length === 0 ? (
-				<Empty className="min-h-64 border border-dashed border-border bg-muted/20 px-8 py-14">
+				<Empty className="min-h-64 rounded-xl border border-dashed border-border bg-card px-6 py-10 shadow-sm">
 					<EmptyHeader>
 						<EmptyMedia variant="icon">
 							<FolderPlus className="h-5 w-5 text-primary" />
 						</EmptyMedia>
-						<EmptyTitle>
-							<h2>{t("workspaces.home.emptyTitle", { defaultValue: "No Workspaces yet" })}</h2>
-						</EmptyTitle>
+						<EmptyTitle><h2>{t("workspaces.home.emptyTitle")}</h2></EmptyTitle>
 						<EmptyDescription className="max-w-lg leading-6">
-							{t("workspaces.home.emptyDescription", {
-								defaultValue:
-									"Run one create, or run one serve inside a Workspace, to register it here.",
-							})}
+							{t("workspaces.home.emptyDescription")}
 						</EmptyDescription>
 					</EmptyHeader>
 				</Empty>
 			) : (
-				<section
-					aria-label={t("workspaces.home.listLabel", {
-						defaultValue: "Registered Workspaces",
-					})}
-					className="grid gap-4 xl:grid-cols-2"
-				>
-					{workspaces.map((workspace) => (
-						<WorkspaceCard
-							key={workspace.entryId}
-							workspace={workspace}
-							current={workspace.entryId === registry.data?.currentEntryId}
-						/>
-					))}
+				<section aria-label={t("workspaces.home.listLabel")}>
+					<div className="grid grid-cols-[repeat(auto-fill,minmax(320px,1fr))] gap-4">
+						{workspaces.map((workspace) => (
+							<WorkspaceCard
+								key={workspace.entryId}
+								workspace={workspace}
+								onForget={() => setWorkspaceToForget(workspace)}
+							/>
+						))}
+					</div>
 				</section>
 			)}
+
+			<AlertDialog
+				open={Boolean(workspaceToForget)}
+				onOpenChange={(open) => !open && !forgetting && setWorkspaceToForget(null)}
+			>
+				<AlertDialogContent>
+					<AlertDialogHeader>
+						<AlertDialogTitle>
+							{workspaceToForget ? t("workspaces.forget.action", { name: workspaceToForget.name }) : ""}
+						</AlertDialogTitle>
+						<AlertDialogDescription>
+							{workspaceToForget ? t("workspaces.forget.confirm", { name: workspaceToForget.name }) : ""}
+						</AlertDialogDescription>
+					</AlertDialogHeader>
+					<AlertDialogFooter>
+						<AlertDialogCancel disabled={forgetting}>{t("form.cancel")}</AlertDialogCancel>
+						<AlertDialogAction
+							variant="destructive"
+							disabled={forgetting}
+							onClick={(event) => {
+								event.preventDefault();
+								void confirmForget();
+							}}
+						>
+							{forgetting ? <Spinner /> : <Trash2 />}
+							{workspaceToForget ? t("workspaces.forget.action", { name: workspaceToForget.name }) : ""}
+						</AlertDialogAction>
+					</AlertDialogFooter>
+				</AlertDialogContent>
+			</AlertDialog>
 		</div>
 	);
 };

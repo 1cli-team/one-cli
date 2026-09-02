@@ -1,0 +1,118 @@
+{
+  "version": 1,
+  "workspace": {
+    "id": "one-dashboard-dev",
+    "name": "Dashboard Development"
+  },
+  "environments": {
+    "names": ["dev", "preview", "prod"],
+    "default": "dev"
+  },
+  "domains": {
+    "env": {
+      "kind": "infisical"
+    },
+    "container": {
+      "kind": "docker"
+    }
+  },
+  "projects": [
+    {
+      "name": "web",
+      "relativeDir": "apps/web",
+      "templateId": "react-spa",
+      "toolchain": "node",
+      "buildVersion": "1.4.0",
+      "packageManager": "pnpm",
+      "domains": {
+        "env": {
+          "path": ".env",
+          "inherits": true,
+          "keys": ["API_URL", "PUBLIC_APP_NAME"]
+        },
+        "container": {
+          "image": "dashboard-dev/web",
+          "namespace": "dashboard-dev"
+        },
+        "deploy": {
+          "kind": "vercel",
+          "config": {
+            "projectId": "dashboard-dev-web",
+            "env": "preview"
+          }
+        },
+        "dev": {
+          "command": "pnpm dev"
+        }
+      }
+    },
+    {
+      "name": "api",
+      "relativeDir": "services/api",
+      "templateId": "go-api",
+      "toolchain": "go",
+      "buildVersion": "2.1.0",
+      "domains": {
+        "env": {
+          "path": ".env",
+          "inherits": true,
+          "keys": ["DATABASE_URL", "PORT"]
+        },
+        "container": {
+          "image": "dashboard-dev/api",
+          "namespace": "dashboard-dev"
+        },
+        "deploy": {
+          "kind": "kustomize",
+          "config": {
+            "env": "dev"
+          }
+        },
+        "dev": {
+          "command": "go run ./cmd/server"
+        }
+      }
+    },
+    {
+      "name": "docs",
+      "relativeDir": "apps/docs",
+      "templateId": "starlight-docs",
+      "toolchain": "node",
+      "buildVersion": "0.8.0",
+      "packageManager": "pnpm",
+      "domains": {
+        "env": {
+          "inherits": true,
+          "keys": ["PUBLIC_DOCS_URL"]
+        },
+        "deploy": {
+          "kind": "aws-s3",
+          "config": {
+            "bucket": "one-dashboard-dev-docs",
+            "env": "preview"
+          }
+        },
+        "dev": {
+          "command": "pnpm dev"
+        }
+      }
+    },
+    {
+      "name": "shared",
+      "relativeDir": "packages/shared",
+      "templateId": "ts-library",
+      "toolchain": "node",
+      "buildVersion": "0.5.0",
+      "packageManager": "pnpm",
+      "domains": {
+        "env": {
+          "inherits": true,
+          "keys": ["LOG_LEVEL"]
+        },
+        "dev": {
+          "command": "pnpm build --watch"
+        }
+      }
+    }
+  ]
+}

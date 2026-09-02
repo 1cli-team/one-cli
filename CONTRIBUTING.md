@@ -30,6 +30,7 @@ one --version                   # 验证装好
 ```bash
 task --list                 # 看可用任务（这是真源）
 pnpm install               # 从根目录安装所有 Node workspace 依赖
+task dev                    # 同时启动 Go Dashboard API + Vite UI
 task check                  # 与 PR CI 完全一致的 monorepo 验证入口
 pnpm check                  # 根目录快捷入口，等价于 task check
 task build                  # 编译到 packages/cli/bin/one
@@ -78,6 +79,9 @@ PR CI 会并行执行 `task check:static` 与 `task check:test`，两者合起�
 ### 改 dashboard（`apps/dashboard/`，`one serve` 的 UI）
 
 - React + Vite，pnpm 管理
+- 前后端联调：在仓库根目录运行 `task dev`，打开 `http://localhost:5173/`
+- `task dev` 的 Workspace/Project 数据来自仓库内固定 fixture；Profile 增删改查仍会
+  操作本机真实的 One 配置，Profile binding 也会真实写入但只关联 fixture Workspace
 - 本地开发：先在仓库根目录运行 `pnpm install`，再运行 `pnpm --filter one-serve-web dev`
 - 静态检查：`task check:dashboard`；架构护栏和交互测试包含在 `task check:test`
 - 改完后 `task vet` / `test` / `build` 会自动跑 `sync-web`（pnpm install + vite build）

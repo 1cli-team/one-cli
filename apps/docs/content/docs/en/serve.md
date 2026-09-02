@@ -28,7 +28,7 @@ The process blocks in the foreground. Press Ctrl-C to stop. Workspace environmen
 
 `one serve` has no terminal wizard. Browser forms can stage the Workspace environment Backend plus allowlisted Project runtime, environment, container, and deployment settings. A single confirmation publishes the collected Manifest draft. Profile bindings remain separate machine-local saves. When the Workspace uses `env/infisical`, the Dashboard can list key names and create, reveal, update, or delete one remote value at a time.
 
-For local human setup, run `one serve`. Scripts, CI, and agents usually use `--open=false` only to receive the URL; they should not bypass the browser UI to read cleartext credentials.
+For local human setup, run `one serve`. Scripts, CI, and agents can use `--open=false` to receive the plain loopback URL and call the API directly. Because the API can read and mutate sensitive configuration, do not run it on a shared machine with untrusted local processes.
 
 ## Workspace Discovery And Persistence
 
@@ -72,26 +72,24 @@ After binding, stdout emits one startup envelope and then blocks:
 
 ```json
 {
-  "schema": "one-cli/serve/v1",
+  "schema": "one-cli/serve/v2",
   "status": "listening",
-  "url": "http://127.0.0.1:54321/?token=8bRxr7N-GN1Q...",
+  "url": "http://127.0.0.1:54321/",
   "host": "127.0.0.1",
-  "port": 54321,
-  "token": "8bRxr7N-GN1Q..."
+  "port": 54321
 }
 ```
 
-The `?token=` in the URL is a one-time 32-byte session token generated for this process. The same token is written as an `HttpOnly; SameSite=Strict` cookie on the first `GET /`. When the process exits, the token is invalid; restart creates a new URL.
+The startup URL contains no login information and the API does not use a session token. The service disappears when the process exits. If another `one serve` process later reuses the same port, the old URL points to that new local process.
 
 ## Security Model
 
-`one serve` owns profile files, and profile files own credentials. `/api/*` has three independent defenses:
+`one serve` owns profile files, and profile files own credentials, so this local service is a sensitive interface. It trusts the machine boundary and performs no session-level authentication; any local process that can reach the loopback port can call the API. These defenses remain in place:
 
 | Layer | Threat blocked | Behavior |
 |---|---|---|
 | Host header check | DNS rebinding, where an attacker domain resolves to `127.0.0.1` | `Host` must match the bound `127.0.0.1:<port>` or `localhost:<port>`, otherwise `421 Misdirected Request` |
 | Origin check for mutations | Cross-origin POST / script requests | POST/PUT/DELETE `Origin` must equal the service origin, otherwise `403 Forbidden` |
-| Session token | Stale tab reuse and CSRF | `/api/*` must include the correct token through cookie or `?token=`, otherwise `401 Unauthorized` |
 | Typed repository publishers | Stale or over-broad repository writes | Project patches and env Backend switches use separate allowlisted endpoints; the exact base revision must match or `SERVE_MANIFEST_CONFLICT` is returned |
 | Legacy route boundary | Stale clients attempt former settings PUT routes | Former mutation paths return `409 SERVE_REPOSITORY_READ_ONLY` |
 
@@ -109,7 +107,7 @@ Out of scope:
 
 ```bash
 one serve
-# profile UI started: http://127.0.0.1:54321/?token=...
+# profile UI started: http://127.0.0.1:54321/
 # Browser opens automatically; Ctrl-C exits
 ```
 
@@ -142,7 +140,7 @@ Do not try `--host 0.0.0.0`; it is rejected with `SERVE_BIND_FORBIDDEN`.
 
 ## REST API
 
-The web UI uses these same routes. All routes require token plus Host match; mutating routes also require Origin match.
+The web UI uses these same routes. All routes require a matching Host header; mutating routes also require a matching Origin header. No token is required.
 
 | Method | Path | Meaning | Response schema |
 |---|---|---|---|
@@ -178,7 +176,7 @@ Legal `(domain, backend)` values include `env/infisical`, `env/dotenv`, `deploy/
 Probe example:
 
 ```bash
-curl -s "http://127.0.0.1:<port>/api/configure?token=<token>" | jq '.config | keys'
+curl -s "http://127.0.0.1:<port>/api/configure" | jq '.config | keys'
 ```
 
 ## Common Errors
@@ -187,7 +185,6 @@ curl -s "http://127.0.0.1:<port>/api/configure?token=<token>" | jq '.config | ke
 |---|---|
 | `SERVE_PORT_BUSY` | Choose another port, or use `--port 0` |
 | `SERVE_BIND_FORBIDDEN` | Bind only to loopback; use SSH tunneling for remote access |
-| `SERVE_TOKEN_INVALID` | Restart `one serve` and use the new URL |
 | `SERVE_PAYLOAD_INVALID` | POST/PUT body is invalid JSON or missing a required field such as `name` or `profile` |
 | `SERVE_MANIFEST_CONFLICT` | Reload the Workspace and review the current Manifest before recreating the draft |
 | `SERVE_REPOSITORY_READ_ONLY` | Use the typed `/manifest` draft flow; the requested legacy route is not writable |

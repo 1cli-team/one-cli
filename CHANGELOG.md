@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Removed (BREAKING — `one serve` session token)
+
+`one serve` 不再生成或校验 session token。启动 URL、Dashboard 请求和
+`one-cli/serve/v2` 启动信封都不再包含 `token`；本地 API 可在 loopback 上直接访问。
+Host header 校验、mutating 请求的 Origin 校验以及非 loopback 绑定拒绝保持不变。
+
 ### Removed (BREAKING — 删除 6 个 `ONE_*` 环境变量)
 
 降低用户心智负担：删掉 6 个与 `--flag` / manifest 字段重复的 `ONE_*` 环境变量。原先的「flag / env / manifest 三条解析链并存」收敛回单一路径。

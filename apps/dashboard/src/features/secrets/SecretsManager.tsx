@@ -62,6 +62,7 @@ import {
 	TableRow,
 } from "@/components/ui/table";
 import { useToast } from "@/hooks/useToast";
+import { cn } from "@/lib/utils";
 import type { HttpError, OverviewProject } from "@/types/api";
 
 interface SecretEditorState {
@@ -75,12 +76,22 @@ const WORKSPACE_SECRET_SCOPE = "__workspace_secret_scope__";
 export const SecretsManager: React.FC<{
 	workspaceEntryId?: string;
 	environment: string;
-	projects: OverviewProject[];
+	projects?: OverviewProject[];
+	fixedProject?: string;
+	variant?: "standalone" | "embedded";
 	readOnly?: boolean;
-}> = ({ workspaceEntryId, environment, projects, readOnly }) => {
+}> = ({
+	workspaceEntryId,
+	environment,
+	projects = [],
+	fixedProject,
+	variant = "standalone",
+	readOnly,
+}) => {
 	const { t } = useTranslation();
 	const toast = useToast();
-	const [project, setProject] = useState("");
+	const [selectedProject, setSelectedProject] = useState("");
+	const project = fixedProject ?? selectedProject;
 	const [revealed, setRevealed] = useState<Record<string, string>>({});
 	const [loadingKey, setLoadingKey] = useState("");
 	const [editor, setEditor] = useState<SecretEditorState | null>(null);
@@ -90,9 +101,15 @@ export const SecretsManager: React.FC<{
 	const [retrying, setRetrying] = useState(false);
 	const [recoveryError, setRecoveryError] = useState("");
 	const key = secretsKey(workspaceEntryId, environment, project || undefined);
-	const result = useSWR(key, () =>
-		listSecrets(workspaceEntryId, environment, project || undefined),
+	const result = useSWR(
+		key,
+		() => listSecrets(workspaceEntryId, environment, project || undefined),
+		{ revalidateIfStale: false },
 	);
+	const listError = result.error as HttpError | undefined;
+	const showLoading = result.isLoading && !result.data;
+	const showError = !showLoading && !result.data && Boolean(listError);
+	const showEmpty = !showLoading && !showError && result.data?.keys.length === 0;
 
 	useEffect(() => {
 		setRevealed({});
@@ -223,37 +240,45 @@ export const SecretsManager: React.FC<{
 	}
 
 	return (
-		<Card className="overflow-hidden rounded-xl">
-			<CardHeader className="border-b border-border bg-muted/15 px-5 py-4">
-				<div className="flex items-center justify-between gap-4">
+		<Card
+			className={cn(
+				"overflow-hidden rounded-xl border-border shadow-sm",
+				variant === "embedded" && "rounded-lg",
+			)}
+		>
+			<CardHeader className="border-b border-border px-4 py-3.5">
+				<div className="flex flex-col items-start justify-between gap-3 sm:flex-row sm:items-center">
 					<div className="flex items-center gap-3">
-						<div className="grid h-9 w-9 place-items-center rounded-lg bg-primary/10 text-primary">
+						<div className="grid size-9 place-items-center rounded-lg bg-primary/8 text-primary">
 							<KeyRound className="h-4 w-4" />
 						</div>
 						<div>
-							<CardTitle className="text-sm">{t("secrets.title")}</CardTitle>
-							<p className="mt-0.5 text-xs text-muted-foreground">{t("secrets.description")}</p>
+							<CardTitle className="text-base">{t("secrets.title")}</CardTitle>
 						</div>
 					</div>
-					<div className="flex items-center gap-2">
-						<Select
-							value={project || WORKSPACE_SECRET_SCOPE}
-							onValueChange={(scope) => setProject(scope === WORKSPACE_SECRET_SCOPE ? "" : scope)}
-						>
-							<SelectTrigger aria-label={t("secrets.scope")} className="w-52">
-								<SelectValue />
-							</SelectTrigger>
-							<SelectContent>
-								<SelectItem value={WORKSPACE_SECRET_SCOPE}>
-									{t("secrets.workspaceScope")}
-								</SelectItem>
-								{projects.map((item) => (
-									<SelectItem key={item.name} value={item.name}>
-										{item.name}
+					<div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
+						{fixedProject === undefined ? (
+							<Select
+								value={selectedProject || WORKSPACE_SECRET_SCOPE}
+								onValueChange={(scope) =>
+									setSelectedProject(scope === WORKSPACE_SECRET_SCOPE ? "" : scope)
+								}
+							>
+								<SelectTrigger aria-label={t("secrets.scope")} className="w-full sm:w-52">
+									<SelectValue />
+								</SelectTrigger>
+								<SelectContent>
+									<SelectItem value={WORKSPACE_SECRET_SCOPE}>
+										{t("secrets.workspaceScope")}
 									</SelectItem>
-								))}
-							</SelectContent>
-						</Select>
+									{projects.map((item) => (
+										<SelectItem key={item.name} value={item.name}>
+											{item.name}
+										</SelectItem>
+									))}
+								</SelectContent>
+							</Select>
+						) : null}
 						<Button
 							size="sm"
 							onClick={() => setEditor({ mode: "create", key: "", value: "" })}
@@ -266,21 +291,12 @@ export const SecretsManager: React.FC<{
 				</div>
 			</CardHeader>
 			<CardContent className="p-0">
-				<div className="flex items-center justify-between border-b border-border px-5 py-2.5 text-xs text-muted-foreground">
-					<span className="inline-flex items-center gap-1.5">
-						<ShieldCheck className="h-3.5 w-3.5 text-success-foreground" />
-						{t("secrets.directOnly")}
-					</span>
-					<span className="font-mono">
-						{result.data?.path ?? "…"} · {environment}
-					</span>
-				</div>
-				{result.isLoading ? <SecretListLoading /> : null}
-				{result.error ? (
-					<Empty className="min-h-48">
+				{showLoading ? <SecretListLoading /> : null}
+				{showError && listError ? (
+					<Empty className="min-h-36">
 						<EmptyHeader>
 							<EmptyDescription>
-								{recoveryError || (result.error as HttpError).message}
+								{recoveryError || listError.message}
 							</EmptyDescription>
 						</EmptyHeader>
 						<Button
@@ -294,8 +310,8 @@ export const SecretsManager: React.FC<{
 						</Button>
 					</Empty>
 				) : null}
-				{result.data && result.data.keys.length === 0 ? (
-					<Empty className="min-h-48">
+				{showEmpty ? (
+					<Empty className="min-h-36">
 						<EmptyHeader>
 							<EmptyDescription>{t("secrets.empty")}</EmptyDescription>
 						</EmptyHeader>
@@ -309,12 +325,12 @@ export const SecretsManager: React.FC<{
 						</Button>
 					</Empty>
 				) : null}
-				{result.data && result.data.keys.length > 0 ? (
-					<Table>
+				{!showLoading && !showError && result.data && result.data.keys.length > 0 ? (
+					<Table className="table-fixed">
 						<TableHeader>
 							<TableRow>
 								<TableHead>{t("secrets.key")}</TableHead>
-								<TableHead>{t("secrets.value")}</TableHead>
+								<TableHead className="w-[60%]">{t("secrets.value")}</TableHead>
 								<TableHead className="w-44 text-right">{t("secrets.actions")}</TableHead>
 							</TableRow>
 						</TableHeader>
@@ -325,7 +341,7 @@ export const SecretsManager: React.FC<{
 								return (
 									<TableRow key={secretKey}>
 										<TableCell className="font-mono text-xs font-semibold">{secretKey}</TableCell>
-										<TableCell className="max-w-md">
+										<TableCell className="min-w-0">
 											<code className="block truncate rounded bg-muted/60 px-2 py-1 text-[11px]">
 												{value === undefined ? "••••••••••••" : value || t("secrets.emptyValue")}
 											</code>
@@ -498,10 +514,10 @@ const SecretEditor: React.FC<{
 };
 
 const SecretListLoading: React.FC = () => (
-	<div className="space-y-2 p-5" role="status">
-		<Skeleton className="h-10 w-full" />
-		<Skeleton className="h-10 w-full opacity-70" />
-		<Skeleton className="h-10 w-full opacity-40" />
+	<div className="space-y-1.5 p-3" role="status">
+		<Skeleton className="h-8 w-full" />
+		<Skeleton className="h-8 w-full opacity-70" />
+		<Skeleton className="h-8 w-full opacity-40" />
 	</div>
 );
 

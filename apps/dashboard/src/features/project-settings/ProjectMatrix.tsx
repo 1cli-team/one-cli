@@ -1,6 +1,5 @@
 import {
 	AlertCircle,
-	Box,
 	Boxes,
 	CheckCircle2,
 	CloudUpload,
@@ -8,6 +7,7 @@ import {
 	KeyRound,
 	Library,
 	Search,
+	SlidersHorizontal,
 } from "lucide-react";
 import type React from "react";
 import { useMemo, useState } from "react";
@@ -46,7 +46,9 @@ import type {
 	OverviewProjectKind,
 } from "@/types/api";
 
-export type ProjectInspectorTab = "overview" | "environment" | "container" | "deploy";
+export type ProjectInspectorTab = "overview" | "environment" | "deploy";
+
+type MatrixDomain = Exclude<OverviewIssueDomain, "container">;
 
 interface ProjectMatrixProps {
 	projects: OverviewProject[];
@@ -68,11 +70,10 @@ function issueFor(
 	return project.issues?.find((issue) => issue.domain === domain);
 }
 
-function domainIsApplicable(project: OverviewProject, domain: OverviewIssueDomain): boolean {
+function domainIsApplicable(project: OverviewProject, domain: MatrixDomain): boolean {
 	if (domain === "env") return true;
 	if (project.kind === "package") return false;
-	if (domain === "deploy") return (project.compatibleDeployTargets?.length ?? 0) > 0;
-	return Boolean(project.domains?.container || issueFor(project, "container"));
+	return (project.compatibleDeployTargets?.length ?? 0) > 0;
 }
 
 function projectSearchText(project: OverviewProject): string {
@@ -91,20 +92,19 @@ function projectSearchText(project: OverviewProject): string {
 
 function inspectorTabForIssue(issue: OverviewIssue): ProjectInspectorTab {
 	if (issue.domain === "env") return "environment";
-	return issue.domain;
+	return "deploy";
 }
 
 interface DomainCellProps {
 	project: OverviewProject;
-	domain: OverviewIssueDomain;
+	domain: MatrixDomain;
 	backend?: string;
 	readOnly?: boolean;
 	onClick(): void;
 }
 
-const DOMAIN_ICON: Record<OverviewIssueDomain, React.ComponentType<{ className?: string }>> = {
+const DOMAIN_ICON: Record<MatrixDomain, React.ComponentType<{ className?: string }>> = {
 	env: KeyRound,
-	container: Box,
 	deploy: CloudUpload,
 };
 
@@ -136,14 +136,14 @@ const DomainCell: React.FC<DomainCellProps> = ({ project, domain, backend, readO
 				domain,
 			})}
 			className={cn(
-				"group h-auto w-full justify-start gap-2 rounded-md px-2 py-1.5 text-left transition-colors disabled:cursor-default",
+				"group h-auto w-full justify-start gap-2 rounded-none px-2 py-1.5 text-left transition-colors disabled:cursor-default",
 				issue ? "hover:bg-error-surface/65" : "hover:bg-accent/70",
 				readOnly && "hover:bg-transparent",
 			)}
 		>
 			<span
 				className={cn(
-					"grid h-7 w-7 shrink-0 place-items-center rounded-md border",
+					"grid h-7 w-7 shrink-0 place-items-center border",
 					issue
 						? "border-error-border/60 bg-error-surface text-error-foreground"
 						: "border-border bg-background text-muted-foreground group-hover:text-primary",
@@ -179,6 +179,7 @@ export const ProjectMatrix: React.FC<ProjectMatrixProps> = ({
 	const [query, setQuery] = useState("");
 	const [kind, setKind] = useState<"all" | OverviewProjectKind>("all");
 	const [status, setStatus] = useState<"all" | "attention" | "healthy">("all");
+	const [filtersOpen, setFiltersOpen] = useState(false);
 	const filtered = useMemo(() => {
 		const normalized = query.trim().toLowerCase();
 		return projects
@@ -197,11 +198,7 @@ export const ProjectMatrix: React.FC<ProjectMatrixProps> = ({
 	}, [kind, projects, query, status]);
 
 	return (
-		<Card
-			role="region"
-			aria-labelledby="project-matrix-title"
-			className="overflow-hidden rounded-xl"
-		>
+		<Card role="region" aria-labelledby="project-matrix-title" className="overflow-hidden">
 			<div className="flex min-h-16 items-center justify-between gap-4 border-b border-border px-5 py-3">
 				<div>
 					<div className="flex items-center gap-2">
@@ -214,7 +211,20 @@ export const ProjectMatrix: React.FC<ProjectMatrixProps> = ({
 					</div>
 					<p className="mt-0.5 text-xs text-muted-foreground">{t("projects.description")}</p>
 				</div>
-				<div className="flex items-center gap-2">
+				<Button
+					type="button"
+					variant="ghost"
+					size="sm"
+					onClick={() => setFiltersOpen((open) => !open)}
+					aria-expanded={filtersOpen}
+				>
+					<SlidersHorizontal className="size-3.5" />
+					{filtersOpen ? t("projects.hideFilters") : t("projects.showFilters")}
+				</Button>
+			</div>
+
+			{filtersOpen ? (
+				<div className="flex items-center justify-end gap-2 border-b border-border bg-muted/20 px-5 py-2.5">
 					<div className="w-36 shrink-0">
 						<Select value={status} onValueChange={(value) => setStatus(value as typeof status)}>
 							<SelectTrigger size="sm" aria-label={t("projects.statusFilter")} className="text-xs">
@@ -253,7 +263,7 @@ export const ProjectMatrix: React.FC<ProjectMatrixProps> = ({
 						</Select>
 					</div>
 				</div>
-			</div>
+			) : null}
 
 			{filtered.length === 0 ? (
 				<Empty className="min-h-52 rounded-none border-0">
@@ -267,13 +277,12 @@ export const ProjectMatrix: React.FC<ProjectMatrixProps> = ({
 				</Empty>
 			) : (
 				<Table className="table-fixed">
-					<TableHeader className="bg-muted/35">
+					<TableHeader className="bg-muted/55">
 						<TableRow className="hover:bg-transparent">
-							<TableHead className="w-[30%] pl-5">{t("projects.matrix.project")}</TableHead>
-							<TableHead className="w-[18%]">{t("projects.matrix.environment")}</TableHead>
-							<TableHead className="w-[18%]">{t("projects.matrix.container")}</TableHead>
-							<TableHead className="w-[18%]">{t("projects.matrix.deploy")}</TableHead>
-							<TableHead className="w-[16%] pr-5 text-right">
+							<TableHead className="w-[34%] pl-5">{t("projects.matrix.project")}</TableHead>
+							<TableHead className="w-[22%]">{t("projects.matrix.environment")}</TableHead>
+							<TableHead className="w-[24%]">{t("projects.matrix.deploy")}</TableHead>
+							<TableHead className="w-[20%] pr-5 text-right">
 								{t("projects.matrix.status")}
 							</TableHead>
 						</TableRow>
@@ -283,16 +292,16 @@ export const ProjectMatrix: React.FC<ProjectMatrixProps> = ({
 							const Icon = KIND_ICON[project.kind];
 							const issueCount = project.issues?.length ?? 0;
 							return (
-								<TableRow key={project.name} className="h-[76px]">
+								<TableRow key={project.name} className="h-[68px]">
 									<TableCell className="py-2 pl-5">
 										<Button
 											type="button"
 											variant="ghost"
 											onClick={() => onInspect(project, "overview")}
 											disabled={readOnly}
-											className="group h-auto w-full justify-start gap-3 rounded-md p-0 text-left hover:bg-transparent disabled:cursor-default"
+											className="group h-auto w-full justify-start gap-3 rounded-none p-0 text-left hover:bg-transparent disabled:cursor-default"
 										>
-											<span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg border border-primary/15 bg-primary/8 text-primary transition-colors group-hover:bg-primary/14">
+											<span className="grid h-9 w-9 shrink-0 place-items-center border border-primary/15 bg-primary/8 text-primary transition-colors group-hover:bg-primary/14">
 												<Icon className="h-4 w-4" />
 											</span>
 											<span className="min-w-0">
@@ -312,15 +321,6 @@ export const ProjectMatrix: React.FC<ProjectMatrixProps> = ({
 											backend={project.domains?.env ?? workspaceEnvironment}
 											readOnly={readOnly}
 											onClick={() => onInspect(project, "environment")}
-										/>
-									</TableCell>
-									<TableCell className="p-2">
-										<DomainCell
-											project={project}
-											domain="container"
-											backend={project.domains?.container}
-											readOnly={readOnly}
-											onClick={() => onInspect(project, "container")}
 										/>
 									</TableCell>
 									<TableCell className="p-2">

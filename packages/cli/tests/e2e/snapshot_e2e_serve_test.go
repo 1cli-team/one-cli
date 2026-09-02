@@ -1,7 +1,7 @@
 package cli_test
 
-// E2E coverage of `one serve`. Locks the JSON envelope shape, validates the
-// session token gates /api/*, and confirms graceful SIGINT shutdown.
+// E2E coverage of `one serve`. Locks the JSON envelope shape, probes the
+// loopback API without authentication, and confirms graceful SIGINT shutdown.
 //
 // `serve` is the only top-level command that blocks indefinitely — every
 // other snapshot test exec's the binary and reads stdout. We adapt by
@@ -15,7 +15,6 @@ import (
 	"os"
 	"os/exec"
 	"runtime"
-	"strconv"
 	"sync"
 	"testing"
 	"time"
@@ -45,7 +44,7 @@ func TestSnapshot_E2E_Serve_StartupEnvelope(t *testing.T) {
 	// Wait up to 5s for the envelope to land on stdout. The server prints
 	// it immediately after binding.
 	envelope := waitForEnvelope(t, &stdout, 5*time.Second, stderr.String)
-	if envelope["schema"] != "one-cli/serve/v1" {
+	if envelope["schema"] != "one-cli/serve/v2" {
 		t.Errorf("schema: got %v", envelope["schema"])
 	}
 	if envelope["status"] != "listening" {
@@ -62,15 +61,20 @@ func TestSnapshot_E2E_Serve_StartupEnvelope(t *testing.T) {
 	if rawURL == "" {
 		t.Fatalf("url empty: %v", envelope)
 	}
-	rawToken, _ := envelope["token"].(string)
-	if rawToken == "" {
-		t.Fatalf("token empty")
+	parsedURL, err := url.Parse(rawURL)
+	if err != nil {
+		t.Fatalf("parse URL: %v", err)
+	}
+	if parsedURL.RawQuery != "" {
+		t.Fatalf("URL must not contain credentials: %s", rawURL)
+	}
+	if _, exists := envelope["token"]; exists {
+		t.Fatalf("startup envelope still exposes token: %v", envelope)
 	}
 
-	// Probe /api/configure with the token. Empty config should yield a 200
-	// with the schema-shaped payload.
-	port := int(rawPort)
-	probe := "http://127.0.0.1:" + strconv.Itoa(port) + "/api/configure?token=" + url.QueryEscape(rawToken)
+	// Probe /api/configure directly. Empty config should yield a 200 with the
+	// schema-shaped payload.
+	probe := rawURL + "api/configure"
 	res, err := http.Get(probe)
 	if err != nil {
 		t.Fatalf("probe: %v", err)

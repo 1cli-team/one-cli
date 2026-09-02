@@ -1,4 +1,4 @@
-import { FolderGit2, Trash2 } from "lucide-react";
+import { Trash2 } from "lucide-react";
 import type React from "react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -44,16 +44,14 @@ const WorkspaceRailItem: React.FC<{
 	return (
 		<div
 			className={cn(
-				"group relative rounded-md border border-transparent transition-colors",
-				active ? "border-primary/15 bg-primary/9" : "hover:bg-accent/60",
+				"group relative transition-colors",
+				active ? "bg-sidebar-active" : "hover:bg-sidebar-active/60",
 			)}
 		>
-			{active ? (
-				<span className="absolute inset-y-2 -left-1.5 w-0.5 rounded-full bg-primary" aria-hidden />
-			) : null}
+			{active ? <span className="absolute inset-y-0 left-0 w-0.5 bg-primary" aria-hidden /> : null}
 			<EnvironmentLink
 				to={`/workspace/${encodeURIComponent(workspace.entryId)}`}
-				className="block min-w-0 px-2 py-2.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
+				className="block min-w-0 px-2.5 py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
 				aria-current={active ? "page" : undefined}
 				title={`${workspace.name}\n${workspace.root}`}
 			>
@@ -64,19 +62,19 @@ const WorkspaceRailItem: React.FC<{
 						title={t(`workspaces.status.${workspace.status}`)}
 					/>
 					<span
-						className={cn("min-w-0 flex-1 truncate text-xs font-medium", active && "text-primary")}
+						className={cn(
+							"min-w-0 flex-1 truncate text-[11px] font-semibold text-sidebar-foreground",
+							active && "text-sidebar-foreground",
+						)}
 					>
 						{workspace.name}
 					</span>
 					<span
-						className="shrink-0 rounded bg-muted px-1.5 py-0.5 font-mono text-[9px] text-muted-foreground transition-opacity group-hover:opacity-0 group-focus-within:opacity-0"
+						className="shrink-0 font-mono text-[8px] text-sidebar-muted transition-opacity group-hover:opacity-0 group-focus-within:opacity-0"
 						title={`${workspace.projectCount} ${t("overview.metrics.projects")}`}
 					>
 						{workspace.projectCount}
 					</span>
-				</span>
-				<span className="mt-1 block break-all pl-4 font-mono text-[9px] leading-[1.45] text-muted-foreground">
-					{workspace.root}
 				</span>
 			</EnvironmentLink>
 			<Tooltip>
@@ -85,7 +83,7 @@ const WorkspaceRailItem: React.FC<{
 						type="button"
 						variant="ghost"
 						size="icon"
-						className="absolute right-1 top-1.5 h-6 w-6 text-muted-foreground opacity-0 group-hover:opacity-100 focus-visible:opacity-100"
+						className="absolute right-1 top-1.5 h-6 w-6 text-sidebar-muted opacity-0 group-hover:opacity-100 focus-visible:opacity-100"
 						onClick={onForget}
 						disabled={forgetting}
 						aria-label={t("workspaces.forget.action", { name: workspace.name })}
@@ -146,21 +144,20 @@ export const WorkspaceRail: React.FC = () => {
 
 	return (
 		<>
-			<section className="flex min-h-0 flex-1 flex-col border-t border-border/70 px-3 py-4">
-				<div className="mb-2 flex items-center justify-between px-2">
+			<section className="flex min-h-0 flex-1 flex-col px-2 py-1">
+				<div className="mb-1 flex items-center justify-between px-2 pt-1">
 					<div className="flex items-center gap-1.5">
-						<FolderGit2 className="h-3.5 w-3.5 text-primary" />
-						<h2 className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+						<h2 className="font-mono text-[8px] font-semibold uppercase tracking-[0.18em] text-sidebar-muted">
 							{t("workspaces.rail.title")}
 						</h2>
 					</div>
 					{workspaces.length > 0 ? (
-						<span className="font-mono text-[9px] text-muted-foreground">{workspaces.length}</span>
+						<span className="font-mono text-[8px] text-sidebar-muted">{workspaces.length}</span>
 					) : null}
 				</div>
 
 				<ScrollArea className="min-h-0 flex-1">
-					<div className="space-y-1.5 px-0.5 py-0.5">
+					<div className="space-y-px py-0.5">
 						{registry.isLoading ? <WorkspaceRailLoading /> : null}
 						{registry.error ? (
 							<p className="px-2 py-3 text-[10px] leading-relaxed text-error-foreground">

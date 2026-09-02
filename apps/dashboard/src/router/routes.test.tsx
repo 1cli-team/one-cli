@@ -114,6 +114,21 @@ function registerCatalogHandler() {
 		http.get("http://localhost/api/catalog", () =>
 			HttpResponse.json({ schema: "one-cli/catalog/v1", backends: [] }),
 		),
+		http.get(
+			"http://localhost/api/workspaces/:entryId/profile-bindings/env",
+			({ params, request }) => {
+				const entry = params.entryId === beta.entryId ? beta : alpha;
+				return HttpResponse.json({
+					schema: "one-cli/workspace-profile/v1",
+					root: entry.root,
+					environment: new URL(request.url).searchParams.get("env") ?? "dev",
+					domain: "env",
+					backend: "dotenv",
+					configurable: false,
+					selectedProfile: "",
+				});
+			},
+		),
 	);
 }
 
@@ -191,16 +206,17 @@ describe("multi-workspace routing", () => {
 		expect(content.getByRole("link", { name: /Alpha/ })).toBeDefined();
 		expect(content.getByRole("link", { name: /Beta/ })).toBeDefined();
 		const rail = within(screen.getByRole("complementary"));
-		const railPath = rail.getByText(alpha.root);
-		expect(railPath.className).toContain("break-all");
-		expect(railPath.className).not.toContain("truncate");
+		const railLink = rail.getByRole("link", { name: /Alpha/ });
+		expect(railLink.getAttribute("title")).toContain(alpha.root);
+		expect(within(railLink).getByText("1")).toBeDefined();
+		expect(railLink.textContent).toContain("Projects");
 		expect(screen.getByTestId("location").textContent).toBe("/");
 		expect(screen.getByTestId("location-search").textContent).toBe("?env=prod");
 		expect(alphaOverviewRequests).toBe(0);
 
 		await user.click(content.getByRole("link", { name: /Alpha/ }));
 
-		expect(await content.findByRole("heading", { name: "Alpha" })).toBeDefined();
+		expect(await content.findByRole("tab", { name: "Workspace environment" })).toBeDefined();
 		await waitFor(() =>
 			expect(screen.getByTestId("location").textContent).toBe("/workspace/alpha-entry"),
 		);
@@ -254,13 +270,13 @@ describe("multi-workspace routing", () => {
 		const user = userEvent.setup();
 
 		renderDashboard("/workspace/alpha-entry");
-		expect(await screen.findByRole("heading", { name: "Alpha" })).toBeDefined();
+		expect(await screen.findByRole("tab", { name: "Workspace environment" })).toBeDefined();
 
 		await user.click(screen.getByRole("link", { name: /Beta/ }));
-		expect(await screen.findByRole("heading", { name: "Beta" })).toBeDefined();
 		await waitFor(() =>
 			expect(screen.getByTestId("location").textContent).toBe("/workspace/beta-entry"),
 		);
+		expect(screen.getByRole("link", { name: /Beta/ }).getAttribute("aria-current")).toBe("page");
 
 		await user.click(screen.getByRole("button", { name: "Forget Broken" }));
 		const confirmation = await screen.findByRole("alertdialog");
@@ -295,13 +311,9 @@ describe("multi-workspace routing", () => {
 		expect(
 			await screen.findByText("Read-only: this Workspace ID is used by another path"),
 		).toBeDefined();
-		expect(
-			(
-				screen.getByRole("button", {
-					name: "alpha-web apps/web",
-				}) as HTMLButtonElement
-			).disabled,
-		).toBe(true);
+		expect((screen.getByRole("combobox", { name: "Backend" }) as HTMLButtonElement).disabled).toBe(
+			true,
+		);
 	});
 
 	it("opens machine profile management at the Settings route", async () => {

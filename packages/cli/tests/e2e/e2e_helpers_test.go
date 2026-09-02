@@ -192,9 +192,8 @@ var volatileKeys = map[string]bool{
 	"message":           true, // error envelopes' message embeds tempdir paths and is i18n-mutable; contract is `code`+`schema`
 	"files":             true, // add-spec: list of absolute paths to generated spec files
 	"written_to":        true, // env init: absolute path to one.manifest.json
-	"url":               true, // serve: per-run URL with random port + token
+	"url":               true, // serve: per-run URL with random port
 	"port":              true, // serve: kernel-assigned port when --port 0
-	"token":             true, // serve: 32-byte random per-run session token
 }
 
 // canonicalize returns a deep copy of m with all volatileKeys scrubbed

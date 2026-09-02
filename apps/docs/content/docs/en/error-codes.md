@@ -465,10 +465,6 @@ Requested serve port is busy. Choose another or use `--port 0`.
 
 The Dashboard rejected a repository or `one.manifest.json` mutation with HTTP 409. Make that configuration change through source control/code review; only machine Profiles and environment-aware Profile bindings are writable in `one serve`.
 
-### `SERVE_TOKEN_INVALID`
-
-Missing or expired local serve token. Restart and use the printed URL.
-
 ### `SUBPROJECT_NOT_FOUND`
 
 `-p / --project` references a project not in `manifest.projects`.

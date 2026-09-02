@@ -6,6 +6,7 @@
 @theme inline {
 	--font-sans: var(--font-family-sans);
 	--font-mono: var(--font-family-mono);
+	--font-heading: var(--font-family-heading);
 
 	--text-xs: var(--font-size-xs);
 	--text-sm: var(--font-size-sm);
@@ -73,6 +74,11 @@
 	--color-error-surface: var(--error-surface);
 	--color-error-border: var(--error-border);
 	--color-error-foreground: var(--error-foreground);
+	--color-sidebar: var(--sidebar);
+	--color-sidebar-foreground: var(--sidebar-foreground);
+	--color-sidebar-muted: var(--sidebar-muted);
+	--color-sidebar-border: var(--sidebar-border);
+	--color-sidebar-active: var(--sidebar-active);
 }
 
 @layer base {
@@ -85,7 +91,14 @@
 	}
 
 	body {
-		@apply min-h-screen bg-background font-sans text-foreground antialiased;
+		@apply min-h-dvh bg-background font-sans text-foreground antialiased;
+		font-variant-numeric: tabular-nums;
+	}
+
+	h1,
+	h2,
+	h3 {
+		font-family: var(--font-family-heading);
 	}
 }
 

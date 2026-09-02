@@ -129,7 +129,7 @@ There are ~150 codes; you rarely handle all of them in a script. The most common
 | Backends | `BACKEND_NOT_ENABLED`, `PROFILE_NOT_FOUND`, `DOMAIN_INVALID`, `BACKEND_ID_UNKNOWN` | Direct user to `one configure list <pair>` |
 | Infisical | `INFISICAL_NOT_CONFIGURED`, `INFISICAL_AUTH_MISSING`, `INFISICAL_AUTH_FAILED`, `ENV_PULL_CONFLICT` | Re-auth or rerun with `--force` |
 | Container / deploy | `IMAGE_TAG_NOT_FOUND`, `REGISTRY_CREDENTIAL_MISSING`, `BUILD_VERSION_UNRESOLVED`, `VERCEL_DEPLOY_FAILED` | Build/push before deploy; fix profile |
-| Serve | `SERVE_PORT_BUSY`, `SERVE_BIND_FORBIDDEN`, `SERVE_TOKEN_INVALID` | Change flag, restart |
+| Serve | `SERVE_PORT_BUSY`, `SERVE_BIND_FORBIDDEN` | Change the host or port flag, then restart |
 
 Full table with all 155+ codes and what each `context` contains: [error codes reference](/en/docs/error-codes/).
 

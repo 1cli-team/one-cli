@@ -28,7 +28,7 @@ one serve [options]
 
 `one serve` 没有终端交互式向导。浏览器可以把 Workspace 环境变量 Backend，以及白名单内的 Project 运行、环境、容器和部署配置加入草稿，再统一确认写入 Manifest。Profile 绑定仍是独立的机器本地保存。Workspace 使用 `env/infisical` 时，还可以列出 key，并逐条新增、显示、修改或删除远端值。
 
-本地人工配置直接运行 `one serve`；脚本、CI、agent 通常只需要 `--open=false` 拿 URL，不能绕过浏览器表单直接读取明文凭据。
+本地人工配置直接运行 `one serve`；脚本、CI、agent 可以用 `--open=false` 获取普通的 loopback URL 并直接调用 API。由于 API 能读取和修改敏感配置，不要在存在不可信本地进程的共享机器上运行它。
 
 ## Workspace 识别与持久化
 
@@ -72,26 +72,24 @@ Dashboard UI 环境选择器只提供开发（`?env=dev`）、预览（`?env=pre
 
 ```json
 {
-  "schema": "one-cli/serve/v1",
+  "schema": "one-cli/serve/v2",
   "status": "listening",
-  "url": "http://127.0.0.1:54321/?token=8bRxr7N-GN1Q...",
+  "url": "http://127.0.0.1:54321/",
   "host": "127.0.0.1",
-  "port": 54321,
-  "token": "8bRxr7N-GN1Q..."
+  "port": 54321
 }
 ```
 
-URL 自带的 `?token=` 是本次启动一次性生成的 32 字节 session token；同样的 token 也作为 `HttpOnly; SameSite=Strict` cookie 在首次 GET `/` 时写入浏览器。Process 退出后此 token 立即失效——下次启动重新生成，旧 URL 不可复用。
+启动 URL 不包含登录信息，API 也不使用 session token。进程退出后服务随即停止；如果以后有另一个 `one serve` 复用了相同端口，原 URL 会指向新的本地进程。
 
 ## 安全模型
 
-`one serve` 持有 profile 文件，profile 文件持有凭据 → 这个本地服务就是凭据外泄目标。`/api/*` 三层独立防御依次生效，每一层挡住一种威胁：
+`one serve` 持有 profile 文件，profile 文件持有凭据，因此这个本地服务属于敏感接口。它只信任本机边界，不做 session 级身份认证；任何能访问该 loopback 端口的本地进程都可以调用 API。以下防御仍然生效：
 
 | 防御层 | 挡住的威胁 | 行为 |
 |---|---|---|
 | Host header 校验 | DNS rebinding（攻击者域名 resolve 到 127.0.0.1） | `Host` 必须是绑定的 `127.0.0.1:<port>` 或 `localhost:<port>`，否则返 `421 Misdirected Request` |
 | Origin 校验（仅 mutating） | 跨源表单 / 脚本 POST | POST/PUT/DELETE 的 `Origin` 必须等于服务 self-origin，否则 `403 Forbidden` |
-| Session token | 残留 tab 复用、CSRF | `/api/*` 必须带正确 token（cookie 或 `?token=` 查询参数），否则 `401 Unauthorized` |
 | 类型化代码库发布器 | 过期草稿或越权字段覆盖配置 | Project patch 与 env Backend 切换使用各自的白名单接口；revision 不匹配返回 `SERVE_MANIFEST_CONFLICT` |
 | 旧路由边界 | 旧客户端调用历史 settings PUT | 旧 mutation 路径返回 `409 SERVE_REPOSITORY_READ_ONLY` |
 
@@ -109,7 +107,7 @@ URL 自带的 `?token=` 是本次启动一次性生成的 32 字节 session toke
 
 ```bash
 one serve
-# ✓ profile UI 已启动: http://127.0.0.1:54321/?token=...
+# ✓ profile UI 已启动: http://127.0.0.1:54321/
 # 系统默认浏览器自动打开，Ctrl-C 退出
 ```
 
@@ -143,7 +141,7 @@ ssh -L 17900:127.0.0.1:17900 remote-host
 
 ## REST API
 
-UI 用什么，你就能用什么。所有路由都需要带 token（cookie 或 `?token=`）+ Host 头匹配 + (mutating 需要) Origin 头匹配。
+UI 用什么，你就能用什么。所有路由都需要 Host 头匹配；mutating 路由还需要 Origin 头匹配，不需要 token。
 
 | 方法 | 路径 | 说明 | 响应 schema |
 |---|---|---|---|
@@ -176,10 +174,10 @@ UI 用什么，你就能用什么。所有路由都需要带 token（cookie 或 
 
 合法 `(domain, backend)` 包括：`env/infisical`、`env/dotenv`、`deploy/aws-s3`、`deploy/aliyun-oss`、`deploy/tencent-cos`、`deploy/minio`、`deploy/rustfs`、`deploy/r2`、`deploy/kustomize`、`deploy/vercel`、`deploy/cloudflare`、`deploy/edgeone`、`container/docker`。其它组合返回 404。
 
-curl 探活示例（替换 `<port>` `<token>` 为 stdout 的 envelope 里那两个值）：
+curl 探活示例（替换 `<port>` 为 stdout 信封里的端口）：
 
 ```bash
-curl -s "http://127.0.0.1:<port>/api/configure?token=<token>" | jq '.config | keys'
+curl -s "http://127.0.0.1:<port>/api/configure" | jq '.config | keys'
 ```
 
 ## 错误恢复
@@ -188,7 +186,6 @@ curl -s "http://127.0.0.1:<port>/api/configure?token=<token>" | jq '.config | ke
 |---|---|
 | `SERVE_PORT_BUSY` | 换端口，或 `--port 0` 让内核挑空闲端口 |
 | `SERVE_BIND_FORBIDDEN` | 仅允许绑定 loopback；改回 `127.0.0.1`（远程访问走 SSH 隧道） |
-| `SERVE_TOKEN_INVALID` | 重启 `one serve` 拿新 URL；旧 token 过期或 process 已重启 |
 | `SERVE_PAYLOAD_INVALID` | POST/PUT 请求体不是合法 JSON 或缺必填字段（如 `name` 或 `profile`） |
 | `SERVE_MANIFEST_CONFLICT` | 重新加载 Workspace，检查当前 Manifest 后再创建草稿 |
 | `SERVE_REPOSITORY_READ_ONLY` | 使用类型化 `/manifest` 草稿流程；当前调用的旧路由不可写 |

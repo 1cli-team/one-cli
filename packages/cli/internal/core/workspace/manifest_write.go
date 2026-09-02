@@ -77,13 +77,9 @@ func UpsertManifestProject(projectRoot string, input ManifestProjectInput) error
 	return WriteManifest(projectRoot, m)
 }
 
-// WriteManifest persists the manifest to disk with 2-space indentation and
-// a trailing newline (fs-extra parity). Publication is atomic: bytes are
-// written to a sibling temporary file, synced, closed, and then renamed over
-// the destination. Existing file permissions are preserved. Callers that want
-// to mutate top-level configuration should use the UpdateManifest* helpers
-// below.
-func WriteManifest(projectRoot string, m *Manifest) error {
+// MarshalManifest renders the exact bytes WriteManifest publishes: canonical
+// ordering, 2-space indentation, and a trailing newline.
+func MarshalManifest(m *Manifest) ([]byte, error) {
 	out := *m
 	out.Version = ManifestVersion
 	out.Projects = sortByRelativeDir(out.Projects)
@@ -98,9 +94,22 @@ func WriteManifest(projectRoot string, m *Manifest) error {
 
 	b, err := json.MarshalIndent(out, "", "  ")
 	if err != nil {
+		return nil, err
+	}
+	return append(b, '\n'), nil
+}
+
+// WriteManifest persists the manifest to disk with 2-space indentation and
+// a trailing newline (fs-extra parity). Publication is atomic: bytes are
+// written to a sibling temporary file, synced, closed, and then renamed over
+// the destination. Existing file permissions are preserved. Callers that want
+// to mutate top-level configuration should use the UpdateManifest* helpers
+// below.
+func WriteManifest(projectRoot string, m *Manifest) error {
+	b, err := MarshalManifest(m)
+	if err != nil {
 		return err
 	}
-	b = append(b, '\n')
 	return atomicWriteManifest(ManifestPath(projectRoot), b, 0o644)
 }
 

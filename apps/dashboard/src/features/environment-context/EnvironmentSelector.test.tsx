@@ -35,19 +35,19 @@ describe("EnvironmentSelector", () => {
 	});
 
 	it("defaults to dev without writing the URL on mount", () => {
-		renderSelector("/workspace/demo?token=session");
+		renderSelector("/workspace/demo?panel=summary");
 
 		const options = screen.getAllByRole("radio");
 		expect(options).toHaveLength(3);
 		expect(options[0].getAttribute("aria-checked")).toBe("true");
 		expect(options[1].getAttribute("aria-checked")).toBe("false");
 		expect(options[2].getAttribute("aria-checked")).toBe("false");
-		expect(screen.getByTestId("search").textContent).toBe("?token=session");
+		expect(screen.getByTestId("search").textContent).toBe("?panel=summary");
 	});
 
 	it("uses the env query and preserves every other query parameter", async () => {
 		const user = userEvent.setup();
-		renderSelector("/workspace/demo?token=session&panel=deploy&env=preview");
+		renderSelector("/workspace/demo?view=compact&panel=deploy&env=preview");
 
 		const options = screen.getAllByRole("radio");
 		expect(options[1].getAttribute("aria-checked")).toBe("true");
@@ -58,7 +58,7 @@ describe("EnvironmentSelector", () => {
 			screen.getByTestId("search").textContent?.replace(/^\?/, ""),
 		);
 		expect(search.get("env")).toBe("prod");
-		expect(search.get("token")).toBe("session");
+		expect(search.get("view")).toBe("compact");
 		expect(search.get("panel")).toBe("deploy");
 	});
 

@@ -18,10 +18,8 @@ import {
 } from "@/features/manifest-draft/manifest-draft-store";
 import { ProfileBindingField } from "@/features/profile-binding/ProfileBindingField";
 import {
-	BackendBanner,
-	CheckField,
-	FormLayout,
 	ProjectField,
+	SwitchField,
 	type ProjectSettingsFormProps,
 } from "@/features/project-settings/forms/FormLayout";
 import {
@@ -46,13 +44,6 @@ export const ContainerForm: React.FC<ProjectSettingsFormProps> = ({
 	const { mutate } = useSWRConfig();
 	const catalog = useBackendCatalog();
 	const settings = project.container;
-	const initialProfile = projectBindingValue(
-		settings.selectedProfile,
-		settings.profile,
-		environment,
-	);
-	const [profile, setProfile] = useState(initialProfile);
-	const [saving, setSaving] = useState(false);
 	const staged = useManifestDraftStore(
 		(state) => state.drafts[manifestDraftKey(workspaceEntryId)]?.changes[project.name]?.container,
 	);
@@ -64,6 +55,16 @@ export const ContainerForm: React.FC<ProjectSettingsFormProps> = ({
 		namespace: settings.namespace ?? "",
 	};
 	const manifest = staged ?? initialManifest;
+	const profileBackendChanged =
+		manifest.enabled !== initialManifest.enabled || manifest.backend !== initialManifest.backend;
+	const initialProfile = projectBindingValue(
+		settings.selectedProfile,
+		settings.profile,
+		environment,
+	);
+	const profileBaseline = profileBackendChanged ? "" : initialProfile;
+	const [profile, setProfile] = useState(profileBaseline);
+	const [saving, setSaving] = useState(false);
 	const backends = catalog.byDomain.get("container") ?? [];
 
 	function updateManifest(next: ProjectContainerPatch) {
@@ -83,14 +84,40 @@ export const ContainerForm: React.FC<ProjectSettingsFormProps> = ({
 		});
 	}
 
-	async function save() {
-		if (!settings.enabled || !settings.backend || profile === initialProfile || readOnly) return;
+	function selectEnabled(enabled: boolean) {
+		updateManifest({ ...manifest, enabled });
+		const bindingChanged =
+			enabled !== initialManifest.enabled || manifest.backend !== initialManifest.backend;
+		setProfile(bindingChanged ? "" : initialProfile);
+		onDirtyChange(false);
+	}
+
+	function selectBackend(backend: string) {
+		updateManifest({ ...manifest, backend });
+		const bindingChanged =
+			manifest.enabled !== initialManifest.enabled || backend !== initialManifest.backend;
+		setProfile(bindingChanged ? "" : initialProfile);
+		onDirtyChange(false);
+	}
+
+	async function saveProfile(nextProfile: string) {
+		if (
+			!manifest.enabled ||
+			!manifest.backend ||
+			profileBackendChanged ||
+			nextProfile === initialProfile ||
+			readOnly ||
+			saving
+		)
+			return;
+		setProfile(nextProfile);
+		onDirtyChange(true);
 		setSaving(true);
 		try {
 			const next = await updateProjectProfileBinding(
 				project.name,
 				"container",
-				profile,
+				nextProfile,
 				workspaceEntryId,
 				environment,
 			);
@@ -98,35 +125,36 @@ export const ContainerForm: React.FC<ProjectSettingsFormProps> = ({
 			refreshOverview(mutate, workspaceEntryId, environment);
 			toast.success(t("projectInspector.saved"));
 		} catch (error) {
+			setProfile(initialProfile);
 			showSaveError(toast, t("projectInspector.saveFailed"), error);
 		} finally {
 			setSaving(false);
+			onDirtyChange(false);
 		}
 	}
 
 	return (
-		<FormLayout
-			title={t("projectInspector.container.title")}
-			description={t("projectInspector.container.description")}
-			onSave={save}
-			saving={saving}
-			disabled={readOnly || !settings.enabled || !settings.backend || profile === initialProfile}
-		>
-			<BackendBanner domain="container" backend={settings.backend} />
-			<div className="space-y-3 rounded-lg border border-warning-border/70 bg-warning-surface/35 p-4">
-				<CheckField
+		<section aria-label={t("projectInspector.container.title")} className="space-y-3">
+			<h4 className="text-sm font-semibold tracking-tight">
+				{t("projectInspector.container.title")}
+			</h4>
+			<div
+				data-testid="image-settings-grid"
+				className="@container/backend-config space-y-3"
+			>
+				<SwitchField
 					id="project-container-enabled"
 					label={t("projectInspector.container.enabled")}
 					description={t("projectInspector.container.enabledHint")}
 					checked={manifest.enabled}
-					onChange={(enabled) => updateManifest({ ...manifest, enabled })}
+					onChange={selectEnabled}
 					disabled={readOnly}
 				/>
-				<div className="grid grid-cols-2 gap-3">
+				<div className="grid gap-3 sm:grid-cols-2">
 					<ProjectField label={t("projectInspector.backend")} htmlFor="project-container-backend">
 						<Select
 							value={manifest.backend}
-							onValueChange={(backend) => updateManifest({ ...manifest, backend })}
+							onValueChange={selectBackend}
 							disabled={readOnly || !manifest.enabled}
 						>
 							<SelectTrigger id="project-container-backend">
@@ -141,6 +169,18 @@ export const ContainerForm: React.FC<ProjectSettingsFormProps> = ({
 							</SelectContent>
 						</Select>
 					</ProjectField>
+					<ProfileBindingField
+						id="project-profile-container"
+						scope="project"
+						directSource={environment ? "workspace-project-environment" : "workspace-project"}
+						domain="container"
+						backend={manifest.enabled ? manifest.backend : undefined}
+						binding={profileBackendChanged ? undefined : settings.profile}
+						value={profile}
+						onChange={(value) => void saveProfile(value)}
+						disabled={readOnly || saving || !manifest.enabled || profileBackendChanged}
+						variant="embedded"
+					/>
 					<ProjectField
 						label={t("projectInspector.container.namespace")}
 						htmlFor="project-container-namespace"
@@ -166,21 +206,6 @@ export const ContainerForm: React.FC<ProjectSettingsFormProps> = ({
 					/>
 				</ProjectField>
 			</div>
-
-			<ProfileBindingField
-				id="project-profile-container"
-				scope="project"
-				directSource={environment ? "workspace-project-environment" : "workspace-project"}
-				domain="container"
-				backend={settings.enabled ? settings.backend : undefined}
-				binding={settings.profile}
-				value={profile}
-				onChange={(value) => {
-					setProfile(value);
-					onDirtyChange(value !== initialProfile);
-				}}
-				disabled={readOnly || saving || !settings.enabled}
-			/>
-		</FormLayout>
+		</section>
 	);
 };

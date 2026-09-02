@@ -5,6 +5,7 @@ import {
 	manifestDraftKey,
 	useManifestDraftStore,
 } from "@/features/manifest-draft/manifest-draft-store";
+import { SecretsManager } from "@/features/secrets/SecretsManager";
 import {
 	ProjectField,
 	type ProjectSettingsFormProps,
@@ -16,6 +17,7 @@ import type { ProjectGeneralPatch } from "@/types/api";
 export const GeneralForm: React.FC<ProjectSettingsFormProps> = ({
 	project,
 	revision,
+	environment,
 	workspaceEntryId,
 	readOnly,
 }) => {
@@ -46,11 +48,8 @@ export const GeneralForm: React.FC<ProjectSettingsFormProps> = ({
 	}
 
 	return (
-		<ManifestDraftLayout
-			title={t("projectInspector.general.title")}
-			description={t("projectInspector.general.description")}
-		>
-			<div className="grid grid-cols-2 gap-x-5 gap-y-4 rounded-lg border border-border bg-muted/25 p-4">
+		<ManifestDraftLayout>
+			<div className="grid gap-4 rounded-lg border border-border bg-muted/25 p-4 sm:grid-cols-4">
 				<ReadOnlyDatum label={t("projectInspector.general.template")} value={project.templateId} />
 				<ReadOnlyDatum label={t("projectInspector.general.toolchain")} value={project.toolchain} />
 				<ReadOnlyDatum
@@ -63,7 +62,7 @@ export const GeneralForm: React.FC<ProjectSettingsFormProps> = ({
 					mono
 				/>
 			</div>
-			<div className="grid grid-cols-2 gap-4 rounded-lg border border-warning-border/70 bg-warning-surface/35 p-4">
+			<div className="grid gap-4 rounded-lg border border-border bg-card p-4 sm:grid-cols-2">
 				<ProjectField
 					label={t("projectInspector.general.buildVersion")}
 					htmlFor="project-build-version"
@@ -88,6 +87,15 @@ export const GeneralForm: React.FC<ProjectSettingsFormProps> = ({
 					/>
 				</ProjectField>
 			</div>
+			{project.environment.backend === "infisical" ? (
+				<SecretsManager
+					workspaceEntryId={workspaceEntryId}
+					environment={environment}
+					fixedProject={project.name}
+					variant="embedded"
+					readOnly={readOnly}
+				/>
+			) : null}
 		</ManifestDraftLayout>
 	);
 };

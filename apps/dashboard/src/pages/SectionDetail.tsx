@@ -60,8 +60,16 @@ function backendDescription(
 
 export const SectionDetail: React.FC = () => {
 	const params = useParams<{ domain: string; backend: string }>();
+	return <SectionDetailContent domain={params.domain ?? ""} backendName={params.backend ?? ""} />;
+};
+
+export const SectionDetailContent: React.FC<{
+	domain: string;
+	backendName: string;
+	embedded?: boolean;
+}> = ({ domain, backendName, embedded = false }) => {
 	const catalog = useBackendCatalog();
-	const pair = `${params.domain ?? ""}/${params.backend ?? ""}` as SectionKey;
+	const pair = `${domain}/${backendName}` as SectionKey;
 	const backend = catalog.byID.get(pair);
 	const toast = useToast();
 	const { t } = useTranslation();
@@ -97,8 +105,8 @@ export const SectionDetail: React.FC = () => {
 				<AlertTitle>{t("detail.unknownSectionTitle")}</AlertTitle>
 				<AlertDescription>
 					{t("detail.unknownSectionBody", {
-						domain: params.domain,
-						backend: params.backend,
+						domain,
+						backend: backendName,
 					})}
 				</AlertDescription>
 			</Alert>
@@ -141,11 +149,16 @@ export const SectionDetail: React.FC = () => {
 	const description = backendDescription(t, backend);
 
 	return (
-		<div className="space-y-5">
-			<div className="flex flex-wrap items-center justify-between gap-3">
+		<div className={embedded ? "space-y-3" : "space-y-5"}>
+			<div className="flex flex-wrap items-end justify-between gap-3 border-b border-border pb-4">
 				<div className="min-w-0">
-					<h1 className="text-xl font-semibold tracking-tight">{title}</h1>
-					<p className="text-sm text-muted-foreground">{description}</p>
+					<div className="flex items-center gap-2">
+						<h1 className={embedded ? "text-lg font-semibold tracking-tight" : "text-[28px] font-medium tracking-tight"}>{title}</h1>
+						<Badge variant="outline" className="font-mono text-[10px]">
+							{backend.id}
+						</Badge>
+					</div>
+					<p className="mt-1 text-xs text-muted-foreground">{description}</p>
 				</div>
 				<div className="flex items-center gap-2">
 					<Button
@@ -258,7 +271,7 @@ export const SectionDetail: React.FC = () => {
 														<div className="flex min-w-0 items-center gap-2">
 															<span className="truncate font-medium">{name}</span>
 															{name === defaultName ? (
-																<Badge>
+																<Badge className="border-success-border bg-success-surface text-success-foreground">
 																	<Star className="h-3 w-3" /> {t("detail.default")}
 																</Badge>
 															) : null}
@@ -291,7 +304,8 @@ export const SectionDetail: React.FC = () => {
 															</Button>
 															<Button
 																size="sm"
-																variant="destructive"
+																variant="ghost"
+																className="text-error-foreground hover:bg-error-surface hover:text-error-foreground"
 																onClick={() => setProfileToRemove(name)}
 															>
 																<Trash2 className="h-4 w-4" /> {t("detail.remove")}

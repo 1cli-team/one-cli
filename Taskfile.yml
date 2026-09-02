@@ -297,6 +297,33 @@ tasks:
     cmds:
       - rm -rf {{.BIN_DIR}} go-dist
 
+  dev:
+    desc: Run the Go Dashboard API and Vite UI together
+    summary: |
+      Starts the current Go source on http://127.0.0.1:5174 and the Vite
+      Dashboard on http://localhost:5173. Open that Vite URL directly.
+
+      Workspace and Project data comes from the checked-in Dashboard fixture.
+      Profile CRUD still reads and writes this machine's real One config;
+      Profile bindings are real and scoped to the fixture Workspace root.
+
+      Both processes stop together when you press Ctrl-C.
+    deps: [sync-bundled, sync-web]
+    cmds:
+      - task --parallel --failfast --output prefixed dev:serve dev:dashboard
+
+  dev:serve:
+    dir: '{{.CLI_DIR}}/testdata/dashboard-dev-workspace'
+    cmds:
+      - go run ../../cmd/one serve --port 5174 --open=false -o text
+
+  dev:dashboard:
+    env:
+      VITE_DEV_API_TARGET: http://127.0.0.1:5174
+      VITE_DEV_DATA_MODE: fixture-live-profiles
+    cmds:
+      - pnpm --filter one-serve-web dev
+
   build-web:
     desc: Build the embedded `one serve` web UI (apps/dashboard/ → apps/dashboard/dist/)
     summary: |

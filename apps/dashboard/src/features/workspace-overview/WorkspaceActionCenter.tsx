@@ -1,4 +1,4 @@
-import { AlertCircle, ArrowRight, CheckCircle2, FolderCog, ListChecks } from "lucide-react";
+import { AlertCircle, ArrowRight, CheckCircle2, FolderCog } from "lucide-react";
 import type React from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
@@ -23,7 +23,7 @@ function issueKey(issue: OverviewIssue): string {
 
 function issueTab(issue: OverviewIssue): ProjectInspectorTab {
 	if (issue.domain === "env") return "environment";
-	return issue.domain;
+	return "deploy";
 }
 
 function profileIssueSettingsPath(issue: OverviewIssue): string {
@@ -52,133 +52,111 @@ export const WorkspaceActionCenter: React.FC<WorkspaceActionCenterProps> = ({
 	const total = workspaceIssues.length + projectActions.length;
 
 	return (
-		<Card
-			role="region"
-			aria-labelledby="workspace-action-center-title"
-			className="overflow-hidden rounded-xl border-slate-300/80 shadow-sm dark:border-slate-700"
-		>
-			<div className="grid grid-cols-[minmax(260px,0.72fr)_minmax(0,1.6fr)]">
-				<div className="relative border-r border-border bg-slate-950 px-6 py-6 text-white dark:bg-slate-950">
-					<div className="absolute inset-y-0 left-0 w-1 bg-primary" aria-hidden="true" />
-					<div className="flex items-center gap-2 text-orange-300">
-						<ListChecks className="h-4 w-4" />
-						<span className="text-xs font-semibold uppercase tracking-[0.14em]">
-							{t("overview.actionCenter.eyebrow")}
-						</span>
-					</div>
-					<div className="mt-7 flex items-end gap-3">
-						<span className="text-5xl font-semibold leading-none tabular-nums">{total}</span>
-						<span className="pb-1 text-sm text-slate-300">
-							{total > 0 ? t("overview.actionCenter.pending") : t("overview.actionCenter.clear")}
-						</span>
-					</div>
-					<p className="mt-4 max-w-xs text-sm leading-6 text-slate-300">
+		<Card role="region" aria-labelledby="workspace-action-center-title" className="overflow-hidden">
+			<div className="flex min-h-16 items-center justify-between border-b border-border px-4 py-3">
+				<div>
+					<h2 id="workspace-action-center-title" className="text-sm font-semibold">
+						{total > 0 ? t("overview.actionCenter.title") : t("overview.actionCenter.allGood")}
+					</h2>
+					<p className="mt-0.5 text-[10px] text-muted-foreground">
 						{total > 0
-							? t("overview.actionCenter.description")
-							: t("overview.actionCenter.clearDescription")}
+							? t("overview.actionCenter.hint")
+							: t("overview.actionCenter.allGoodDescription")}
 					</p>
 				</div>
-
-				<div className="min-w-0 bg-card">
-					{total === 0 ? (
-						<div className="flex min-h-56 items-center justify-center px-8 py-10 text-center">
-							<div>
-								<div className="mx-auto grid h-11 w-11 place-items-center rounded-full border border-success-border bg-success-surface text-success-foreground">
-									<CheckCircle2 className="h-5 w-5" />
-								</div>
-								<h2 id="workspace-action-center-title" className="mt-3 text-base font-semibold">
-									{t("overview.actionCenter.allGood")}
-								</h2>
-								<p className="mt-1 text-sm text-muted-foreground">
-									{t("overview.actionCenter.allGoodDescription")}
-								</p>
-							</div>
-						</div>
-					) : (
-						<>
-							<div className="flex items-center justify-between border-b border-border px-5 py-3.5">
-								<div>
-									<h2 id="workspace-action-center-title" className="text-sm font-semibold">
-										{t("overview.actionCenter.title")}
-									</h2>
-									<p className="mt-0.5 text-xs text-muted-foreground">
-										{t("overview.actionCenter.hint")}
-									</p>
-								</div>
-								<a
-									href="#workspace-projects"
-									onClick={(event) => jumpToSection(event, "#workspace-projects")}
-									className="text-xs font-medium text-primary hover:underline"
-								>
-									{t("overview.actionCenter.viewProjects")}
-								</a>
-							</div>
-							<div className="divide-y divide-border">
-								{workspaceIssues.map((issue) => (
-									<div
-										key={`workspace:${issueKey(issue)}`}
-										className="flex min-h-16 items-center gap-3 px-5 py-3"
-									>
-										<span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg border border-warning-border bg-warning-surface text-warning-foreground">
-											<FolderCog className="h-4 w-4" />
-										</span>
-										<div className="min-w-0 flex-1">
-											<p className="text-xs font-semibold text-muted-foreground">
-												{t("overview.actionCenter.workspaceLabel")}
-											</p>
-											<p className="mt-0.5 text-sm leading-5">{issueMessage(issue)}</p>
-										</div>
-										<Button asChild size="sm" variant="outline">
-											{issue.reason === "profile" ? (
-												<EnvironmentLink to={profileIssueSettingsPath(issue)}>
-													{t("overview.fix.profileCta")}
-													<ArrowRight />
-												</EnvironmentLink>
-											) : (
-												<a
-													href="#workspace-settings"
-													onClick={(event) => jumpToSection(event, "#workspace-settings")}
-												>
-													{t("overview.actionCenter.configureWorkspace")}
-													<ArrowRight />
-												</a>
-											)}
-										</Button>
-									</div>
-								))}
-
-								{projectActions.map(({ project, issue }) => (
-									<div
-										key={`${project.name}:${issueKey(issue)}`}
-										className="flex min-h-16 items-center gap-3 px-5 py-3"
-									>
-										<span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg border border-error-border bg-error-surface text-error-foreground">
-											<AlertCircle className="h-4 w-4" />
-										</span>
-										<div className="min-w-0 flex-1">
-											<p className="truncate text-xs font-semibold text-muted-foreground">
-												{project.name}
-												<span className="ml-2 font-mono font-normal">{project.relativeDir}</span>
-											</p>
-											<p className="mt-0.5 text-sm leading-5">{issueMessage(issue)}</p>
-										</div>
-										<Button
-											type="button"
-											size="sm"
-											variant="outline"
-											disabled={readOnly}
-											onClick={() => onInspect(project, issueTab(issue))}
-										>
-											{t("overview.actionCenter.resolve")}
-											<ArrowRight />
-										</Button>
-									</div>
-								))}
-							</div>
-						</>
-					)}
-				</div>
+				<span className="grid size-9 place-items-center bg-warning-surface font-mono text-sm font-semibold text-warning-foreground">
+					{String(total).padStart(2, "0")}
+				</span>
 			</div>
+
+			{total === 0 ? (
+				<div className="flex min-h-52 items-center justify-center px-6 py-8 text-center">
+					<div>
+						<div className="mx-auto grid h-10 w-10 place-items-center border border-success-border bg-success-surface text-success-foreground">
+							<CheckCircle2 className="h-5 w-5" />
+						</div>
+						<p className="mt-3 text-xs leading-5 text-muted-foreground">
+							{t("overview.actionCenter.clearDescription")}
+						</p>
+					</div>
+				</div>
+			) : (
+				<>
+					<div className="divide-y divide-border">
+						{workspaceIssues.map((issue) => (
+							<div
+								key={`workspace:${issueKey(issue)}`}
+								className="flex min-h-16 items-center gap-2.5 px-3 py-2.5"
+							>
+								<span className="grid h-7 w-7 shrink-0 place-items-center border border-warning-border bg-warning-surface text-warning-foreground">
+									<FolderCog className="h-4 w-4" />
+								</span>
+								<div className="min-w-0 flex-1">
+									<p className="text-[10px] font-semibold text-muted-foreground">
+										{t("overview.actionCenter.workspaceLabel")}
+									</p>
+									<p className="mt-0.5 line-clamp-2 text-xs leading-4">{issueMessage(issue)}</p>
+								</div>
+								<Button asChild size="icon-sm" variant="ghost" className="text-primary">
+									{issue.reason === "profile" ? (
+										<EnvironmentLink to={profileIssueSettingsPath(issue)}>
+											<span className="sr-only">{t("overview.fix.profileCta")}</span>
+											<ArrowRight />
+										</EnvironmentLink>
+									) : (
+										<a
+											href="#workspace-settings"
+											onClick={(event) => jumpToSection(event, "#workspace-settings")}
+										>
+											<span className="sr-only">
+												{t("overview.actionCenter.configureWorkspace")}
+											</span>
+											<ArrowRight />
+										</a>
+									)}
+								</Button>
+							</div>
+						))}
+
+						{projectActions.map(({ project, issue }) => (
+							<div
+								key={`${project.name}:${issueKey(issue)}`}
+								className="flex min-h-16 items-center gap-2.5 px-3 py-2.5"
+							>
+								<span className="grid h-7 w-7 shrink-0 place-items-center border border-error-border bg-error-surface text-error-foreground">
+									<AlertCircle className="h-4 w-4" />
+								</span>
+								<div className="min-w-0 flex-1">
+									<p className="truncate text-[10px] font-semibold text-muted-foreground">
+										{project.name}
+										<span className="ml-2 font-mono font-normal">{project.relativeDir}</span>
+									</p>
+									<p className="mt-0.5 line-clamp-2 text-xs leading-4">{issueMessage(issue)}</p>
+								</div>
+								<Button
+									type="button"
+									size="icon-sm"
+									variant="ghost"
+									className="text-primary"
+									disabled={readOnly}
+									onClick={() => onInspect(project, issueTab(issue))}
+								>
+									<span className="sr-only">{t("overview.actionCenter.resolve")}</span>
+									<ArrowRight />
+								</Button>
+							</div>
+						))}
+					</div>
+					<a
+						href="#workspace-projects"
+						onClick={(event) => jumpToSection(event, "#workspace-projects")}
+						className="flex h-9 items-center justify-between border-t border-border bg-muted/25 px-3 font-mono text-[9px] uppercase tracking-wide text-primary hover:bg-muted/45"
+					>
+						{t("overview.actionCenter.viewProjects")}
+						<ArrowRight className="size-3.5" />
+					</a>
+				</>
+			)}
 		</Card>
 	);
 };

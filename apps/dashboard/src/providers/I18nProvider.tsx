@@ -16,7 +16,6 @@ import { type ReactNode, useEffect, useRef } from "react";
 import i18n from "@/lib/i18n";
 import { useLocaleStore } from "@/lib/stores/locale";
 import { getPreferences, putLocale } from "@/api/preferences";
-import { hasToken } from "@/lib/http";
 
 interface I18nProviderProps {
 	children: ReactNode;
@@ -33,7 +32,6 @@ export function I18nProvider({ children }: I18nProviderProps) {
 	useEffect(() => {
 		if (bootstrappedRef.current) return;
 		bootstrappedRef.current = true;
-		if (!hasToken()) return; // no API access; just stick with local default
 		const hasLocalOverride =
 			typeof localStorage !== "undefined" && localStorage.getItem(STORAGE_KEY) != null;
 		if (hasLocalOverride) return;
@@ -65,10 +63,9 @@ export function I18nProvider({ children }: I18nProviderProps) {
 	// Persist the *stored* mode (what the user picked) to /api/preferences
 	// so the CLI sees the same thing. Skipped on initial mount because the
 	// bootstrap above might have just adopted the same value — avoids a
-	// pointless round-trip. Skipped also when token is missing.
+	// pointless round-trip.
 	const lastSentRef = useRef<string | null>(null);
 	useEffect(() => {
-		if (!hasToken()) return;
 		if (lastSentRef.current === mode) return;
 		lastSentRef.current = mode;
 		void putLocale(mode).catch(() => {
