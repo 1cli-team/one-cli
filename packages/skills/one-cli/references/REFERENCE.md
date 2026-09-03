@@ -398,15 +398,18 @@ Injects project env vars and executes a command.
 Usage:
 
 ```bash
-one run [-p <name|path>] [--env-provider dotenv|infisical] \
+one run [project] [-p <name|path>] [--env-provider dotenv|infisical] \
   [--env <name>] -- <cmd> [args...]
 ```
 
-`-p / --project` selects a project by manifest name (`-p web`) or relative
-path (`-p apps/web`); without it, the cwd is used (must be inside a
-project). `--env-provider` can force `dotenv` or `infisical`; when omitted,
-the workspace's selected env backend is used. The child process always runs
-from the resolved project directory.
+The optional positional `project` selects a project by manifest name
+(`one run web -- npm start`) or relative path
+(`one run apps/web -- npm start`). `-p / --project` remains an equivalent,
+explicit form. Without either selector, the cwd is used and must be inside a
+project. The `--` separator is required; everything after it is passed to the
+child process unchanged. `--env-provider` can force `dotenv` or `infisical`;
+when omitted, the workspace's selected env backend is used. The child process
+always runs from the resolved project directory.
 
 ## `one configure`
 
@@ -614,6 +617,7 @@ Install flags:
 | `UNKNOWN_COMMAND` | root | use the current command catalog above |
 | `INFISICAL_AUTH_MISSING` | env/remote run | configure env profile or credentials |
 | `ENV_FILE_NOT_FOUND` | `one run --env-provider dotenv` | create project `.env` or use `--env-provider infisical` |
+| `RUN_USAGE_INVALID` | `one run` | use `one run [project] -- <cmd> [args...]`; if both positional `project` and `-p/--project` are provided, they must refer to the same project |
 
 Always prefer `error.context` and `error.remediation[]` over hard-coded
 recovery text.

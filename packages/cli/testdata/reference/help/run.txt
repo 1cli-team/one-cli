@@ -3,15 +3,20 @@ DESCRIPTION
 Load environment variables and run a command
 
 USAGE
-  one run [-p <name|path>] [--env-provider dotenv|infisical] [--env <name>] -- <cmd> [args...]
+  one run [project] [-p <name|path>] [--env-provider dotenv|infisical] [--env <name>] -- <cmd> [args...]
 
 TIPS
 把项目环境变量注入到任意命令，类似 infisical run。
 
 项目解析：
-  - 不传 -p：从当前目录推导（必须 cd 到某个项目目录里）
+  - 不传 project / -p：从当前目录推导（必须 cd 到某个项目目录里）
+  - 传位置参数：按 manifest.projects[].name 或相对路径选择（如 web、apps/web）
   - 传 -p <name>：按 manifest.projects[].name 选（如 -p web）
   - 传 -p <relativeDir>：按相对路径选（如 -p apps/web）
+  - 位置参数和 -p 是等价写法；同时使用时必须指向同一个项目
+
+命令分隔：
+  必须使用 -- 分隔 One CLI 参数和要执行的命令。
 
 密钥来源（--env-provider，默认取 workspace 在 one create 时选择的 provider）：
   - dotenv    ：读 <project>/.env 文件
@@ -27,8 +32,9 @@ TIPS
 
 示例：
   one run -- npm run dev                          # 用 workspace 默认 provider
+  one run web -- npm start                        # 用位置参数选择项目
+  one run apps/web -- npm start                   # 位置参数也接受相对路径
   one run -p web -- npm start                     # 按 manifest 里的 name 选
-  one run -p apps/web -- npm start                # 按相对路径选
   one run --env-provider dotenv -- npm test       # 强制走 dotenv（离线场景）
   one run --env staging -- npm run e2e            # 用 staging 环境的密钥
 

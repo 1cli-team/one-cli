@@ -56,14 +56,19 @@ type runFlags struct {
 func newRunCmd(loaders *secrets.Registry) *cobra.Command {
 	flags := &runFlags{}
 	cmd := &cobra.Command{
-		Use:                   "run [-p <name|path>] [--env-provider dotenv|infisical] [--env <name>] -- <cmd> [args...]",
+		Use:                   "run [project] [-p <name|path>] [--env-provider dotenv|infisical] [--env <name>] -- <cmd> [args...]",
 		DisableFlagsInUseLine: true,
 		Long: `把项目环境变量注入到任意命令，类似 infisical run。
 
 项目解析：
-  - 不传 -p：从当前目录推导（必须 cd 到某个项目目录里）
+  - 不传 project / -p：从当前目录推导（必须 cd 到某个项目目录里）
+  - 传位置参数：按 manifest.projects[].name 或相对路径选择（如 web、apps/web）
   - 传 -p <name>：按 manifest.projects[].name 选（如 -p web）
   - 传 -p <relativeDir>：按相对路径选（如 -p apps/web）
+  - 位置参数和 -p 是等价写法；同时使用时必须指向同一个项目
+
+命令分隔：
+  必须使用 -- 分隔 One CLI 参数和要执行的命令。
 
 密钥来源（--env-provider，默认取 workspace 在 one create 时选择的 provider）：
   - dotenv    ：读 <project>/.env 文件
@@ -79,32 +84,81 @@ func newRunCmd(loaders *secrets.Registry) *cobra.Command {
 
 示例：
   one run -- npm run dev                          # 用 workspace 默认 provider
+  one run web -- npm start                        # 用位置参数选择项目
+  one run apps/web -- npm start                   # 位置参数也接受相对路径
   one run -p web -- npm start                     # 按 manifest 里的 name 选
-  one run -p apps/web -- npm start                # 按相对路径选
   one run --env-provider dotenv -- npm test       # 强制走 dotenv（离线场景）
   one run --env staging -- npm run e2e            # 用 staging 环境的密钥`,
 		Args:               cobra.ArbitraryArgs,
 		DisableFlagParsing: false,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if len(args) == 0 {
+			commandArgs, err := parseRunArgs(cmd, flags, args)
+			if err != nil {
+				return err
+			}
+			if len(commandArgs) == 0 {
 				// 用户没传命令视为请求帮助：走 stdout（方便 `one run | less`），
 				// 父命令空参那条路径在 cobra 里默认走 stderr，这里显式纠偏。
 				cmd.SetOut(os.Stdout)
 				return cmd.Help()
 			}
-			return runRun(cmd.Context(), loaders, flags, args)
+			return runRun(cmd.Context(), loaders, flags, commandArgs)
 		},
 	}
 	cmd.Flags().StringVarP(&flags.project, "project", "p", "", "项目名（manifest.projects[].name）或相对路径；默认从 cwd 推导")
 	cmd.Flags().StringVar(&flags.envName, "env", "", "环境名（默认取 manifest.environments.default）")
 	cmd.Flags().StringVar(&flags.envProvider, "env-provider", "", "env provider: dotenv | infisical（默认取 workspace manifest 中已选的值）")
-	// SetInterspersed(false) lets users skip the `--` separator: any token
-	// after the first positional is treated as a positional, including
-	// things that look like flags. Both `one run -- npm start --foo` and
-	// `one run npm start --foo` work; `--foo` reaches npm verbatim.
-	cmd.Flags().SetInterspersed(false)
 	i18n.MarkShort(cmd, "run.short")
 	return cmd
+}
+
+func parseRunArgs(cmd *cobra.Command, flags *runFlags, args []string) ([]string, error) {
+	dashIndex := cmd.ArgsLenAtDash()
+	if dashIndex < 0 {
+		if len(args) == 0 {
+			return nil, nil
+		}
+		return nil, cliErrors.New(cliErrors.RUN_USAGE_INVALID,
+			i18n.T("run.separator_required")).
+			WithContext(map[string]any{"reason": "separator-required"})
+	}
+	if dashIndex > 1 {
+		return nil, cliErrors.New(cliErrors.RUN_USAGE_INVALID,
+			i18n.T("run.project_args_invalid")).
+			WithContext(map[string]any{
+				"reason":        "too-many-projects",
+				"project_args":  args[:dashIndex],
+				"project_count": dashIndex,
+			})
+	}
+	if dashIndex == 1 {
+		positional := args[0]
+		if flags.project != "" {
+			normalize := func(v string) string {
+				v = strings.TrimSpace(v)
+				v = strings.TrimSuffix(strings.TrimPrefix(v, "./"), "/")
+				return workspace.ToPosixPath(v)
+			}
+			if normalize(positional) != normalize(flags.project) {
+				return nil, cliErrors.New(cliErrors.RUN_USAGE_INVALID,
+					i18n.T("run.selector_conflict")).
+					WithContext(map[string]any{
+						"reason":             "selector-conflict",
+						"positional_project": positional,
+						"flag_project":       flags.project,
+					})
+			}
+		}
+		flags.project = positional
+	}
+
+	commandArgs := args[dashIndex:]
+	if len(commandArgs) == 0 {
+		return nil, cliErrors.New(cliErrors.RUN_USAGE_INVALID,
+			i18n.T("run.command_required")).
+			WithContext(map[string]any{"reason": "command-required"})
+	}
+	return commandArgs, nil
 }
 
 func runRun(ctx context.Context, loaders *secrets.Registry, flags *runFlags, args []string) error {
