@@ -133,14 +133,21 @@ func parseRunArgs(cmd *cobra.Command, flags *runFlags, args []string) ([]string,
 	}
 	if dashIndex == 1 {
 		positional := args[0]
-		if flags.project != "" && positional != flags.project {
-			return nil, cliErrors.New(cliErrors.RUN_USAGE_INVALID,
-				i18n.T("run.selector_conflict")).
-				WithContext(map[string]any{
-					"reason":             "selector-conflict",
-					"positional_project": positional,
-					"flag_project":       flags.project,
-				})
+		if flags.project != "" {
+			normalize := func(v string) string {
+				v = strings.TrimSpace(v)
+				v = strings.TrimSuffix(strings.TrimPrefix(v, "./"), "/")
+				return workspace.ToPosixPath(v)
+			}
+			if normalize(positional) != normalize(flags.project) {
+				return nil, cliErrors.New(cliErrors.RUN_USAGE_INVALID,
+					i18n.T("run.selector_conflict")).
+					WithContext(map[string]any{
+						"reason":             "selector-conflict",
+						"positional_project": positional,
+						"flag_project":       flags.project,
+					})
+			}
 		}
 		flags.project = positional
 	}
