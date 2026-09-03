@@ -617,7 +617,7 @@ Install flags:
 | `UNKNOWN_COMMAND` | root | use the current command catalog above |
 | `INFISICAL_AUTH_MISSING` | env/remote run | configure env profile or credentials |
 | `ENV_FILE_NOT_FOUND` | `one run --env-provider dotenv` | create project `.env` or use `--env-provider infisical` |
-| `RUN_USAGE_INVALID` | `one run` | use `one run [project] -- <cmd> [args...]`; only one project selector may appear before `--` |
+| `RUN_USAGE_INVALID` | `one run` | use `one run [project] -- <cmd> [args...]`; if both positional `project` and `-p/--project` are provided, they must refer to the same project |
 
 Always prefer `error.context` and `error.remediation[]` over hard-coded
 recovery text.
