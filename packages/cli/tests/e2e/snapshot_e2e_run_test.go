@@ -83,6 +83,20 @@ func TestSnapshot_E2E_Run_HappyPath(t *testing.T) {
 	}
 }
 
+func TestSnapshot_E2E_Run_PositionalProjectSelector(t *testing.T) {
+	ws, _ := addSubprojectWithDotenv(t, "auth",
+		"RUN_TEST_KEY=hello-from-dotenv\n")
+
+	args := append([]string{"run", "auth", "--"}, environmentEchoCommand("RUN_TEST_KEY")...)
+	stdout, stderr, code := runBinaryIn(t, ws, args...)
+	if code != 0 {
+		t.Fatalf("positional project run failed: exit %d\n  stdout: %q\n  stderr: %q", code, stdout, stderr)
+	}
+	if got := strings.TrimSpace(stdout); got != "hello-from-dotenv" {
+		t.Errorf("stdout: want %q, got %q", "hello-from-dotenv", got)
+	}
+}
+
 func TestSnapshot_E2E_Run_ExitCodePassthrough(t *testing.T) {
 	_, subDir := addSubprojectWithDotenv(t, "billing", "K=v\n")
 
@@ -114,6 +128,45 @@ func TestSnapshot_E2E_Run_MissingDotenv_RunsLeniently(t *testing.T) {
 	}
 	if !strings.Contains(stdout, "hi") {
 		t.Errorf("stdout: want %q, got %q", "hi", stdout)
+	}
+}
+
+func TestSnapshot_E2E_Run_MissingSeparator_ReturnsStructuredError(t *testing.T) {
+	ws, _ := addSubprojectWithDotenv(t, "auth", "K=v\n")
+
+	_, stderr, code := runBinaryIn(t, ws, "run", "-o", "json", "auth", "echo", "hi")
+	if code == 0 {
+		t.Fatal("expected missing -- separator to fail")
+	}
+	got := mustParseJSON(t, firstJSONLine(stderr))
+	errMap := got["error"].(map[string]any)
+	if errMap["code"] != "RUN_USAGE_INVALID" {
+		t.Fatalf("expected RUN_USAGE_INVALID, got %v", got)
+	}
+	ctx := errMap["context"].(map[string]any)
+	if ctx["reason"] != "separator-required" {
+		t.Fatalf("expected separator-required context, got %v", ctx)
+	}
+}
+
+func TestSnapshot_E2E_Run_SelectorConflict_ReturnsStructuredError(t *testing.T) {
+	ws, _ := addSubprojectWithDotenv(t, "auth", "K=v\n")
+
+	_, stderr, code := runBinaryIn(t, ws, "run", "-o", "json", "auth", "-p", "billing", "--", "echo", "hi")
+	if code == 0 {
+		t.Fatal("expected conflicting project selectors to fail")
+	}
+	got := mustParseJSON(t, firstJSONLine(stderr))
+	errMap := got["error"].(map[string]any)
+	if errMap["code"] != "RUN_USAGE_INVALID" {
+		t.Fatalf("expected RUN_USAGE_INVALID, got %v", got)
+	}
+	ctx := errMap["context"].(map[string]any)
+	if ctx["reason"] != "selector-conflict" {
+		t.Fatalf("expected selector-conflict context, got %v", ctx)
+	}
+	if ctx["positional_project"] != "auth" || ctx["flag_project"] != "billing" {
+		t.Fatalf("expected conflicting selectors in context, got %v", ctx)
 	}
 }
 
