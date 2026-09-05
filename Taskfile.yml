@@ -83,7 +83,6 @@ tasks:
       - 'packages/cli/internal/**/*.go'
       - 'packages/cli/tools/verify-cli-references/**/*.go'
       - 'README.md'
-      - 'CLAUDE.md'
       - 'CONTRIBUTING.md'
       - 'apps/docs/content/docs/**/*.md'
       - 'apps/docs/content/docs/**/*.mdx'
