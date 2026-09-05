@@ -3,7 +3,7 @@ title: one add
 description: Add a templated project to an existing workspace.
 ---
 
-`one add` selects a technology stack, writes a locally developable project into the workspace, registers it in the manifest, and refreshes agent docs. CI and deployment remain unconfigured by default.
+`one add` selects a technology stack, writes a locally developable project into the workspace, and registers it in the manifest. CI and deployment remain unconfigured by default.
 
 There are two entry points:
 
@@ -53,26 +53,11 @@ one add nestjs-api --name api --yes
   "target_path": "/abs/path/my-app/services/user-api",
   "template_id": "nestjs-api",
   "toolchain": "node",
-  "package_manager": "pnpm",
-  "ai_guides": {
-    "status": "completed",
-    "providers": ["codex", "claude-code"],
-    "generated_files": [
-      "AGENTS.md",
-      "CLAUDE.md",
-      ".one/agents/conventions.md",
-      ".one/agents/projects/services-user-api.md",
-      ".one/agents/ops/dev.md",
-      ".one/agents/ops/secrets.md",
-      ".one/agents/ops/container.md",
-      ".one/agents/ops/deploy.md"
-    ],
-    "file_count": 8
-  }
+  "package_manager": "pnpm"
 }
 ```
 
-`warnings[]` means a compatibility or post-sync step produced a non-blocking warning; the project was still added. `ai_guides.status` tells you whether root `AGENTS.md`, `CLAUDE.md`, and `.one/agents/**` refreshed successfully. `ai_guides.generated_files` contains workspace-relative paths.
+`warnings[]` means a compatibility or post-sync step produced a non-blocking warning; the project was still added.
 
 ## Examples
 
@@ -120,9 +105,8 @@ one add nestjs-api --name user-api --yes -o json | jq
 - Writes the project's local development command
 - Leaves continuous integration unconfigured
 - Leaves deployment and image configuration absent until first deploy
-- Refreshes `AGENTS.md`, `CLAUDE.md`, and `.one/agents/**`
 
-If a non-critical step fails, such as agent-doc refresh, the project still exists and the related status is marked `failed` or `skipped`.
+Non-blocking sync issues are reported in `warnings[]`; the project is still added.
 
 ## Common Errors
 
@@ -135,7 +119,6 @@ If a non-critical step fails, such as agent-doc refresh, the project still exist
 | `TARGET_EXISTS` | Project directory already exists; choose a different `--name` |
 | `NOT_ONE_PROJECT` | cwd is not a workspace; run `one create <dir>` or `cd` into an existing workspace |
 | `REGISTRY_FETCH_FAILED` | Network or registry issue; inspect the registry URL in context |
-| `AI_GUIDE_EXISTS` | Root `AGENTS.md` / `CLAUDE.md` is user-managed and cannot be overwritten |
 
 Full table: [Error codes](/en/docs/error-codes/).
 

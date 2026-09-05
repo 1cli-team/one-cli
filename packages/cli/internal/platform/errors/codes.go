@@ -112,16 +112,6 @@ const (
 	EDGEONE_PROFILE_INVALID Code = "EDGEONE_PROFILE_INVALID"
 	EDGEONE_DEPLOY_FAILED   Code = "EDGEONE_DEPLOY_FAILED"
 
-	// Agent docs / skills.
-	AI_CONFIG_INVALID     Code = "AI_CONFIG_INVALID"
-	AI_CONFIG_MISSING     Code = "AI_CONFIG_MISSING"
-	AI_GUIDES_FAILED      Code = "AI_GUIDES_FAILED"
-	AI_GUIDE_EXISTS       Code = "AI_GUIDE_EXISTS"
-	AI_NO_SUBPROJECTS     Code = "AI_NO_SUBPROJECTS"
-	AI_PROVIDER_INVALID   Code = "AI_PROVIDER_INVALID"
-	SKILLS_NOT_BUNDLED    Code = "SKILLS_NOT_BUNDLED"
-	SKILLS_INSTALL_FAILED Code = "SKILLS_INSTALL_FAILED"
-
 	// Env vars — input validation (provider-agnostic).
 	ENV_INVALID_ENV_NAME       Code = "ENV_INVALID_ENV_NAME"
 	ENV_INVALID_KEY            Code = "ENV_INVALID_KEY"
@@ -255,15 +245,6 @@ var Codes = map[Code]Definition{
 	EDGEONE_CLI_MISSING:     {Summary: "deploy/edgeone 找不到 edgeone CLI。", Remediation: []output.Remediation{{Action: "install-edgeone", Hint: "全局安装腾讯云 EdgeOne CLI", Command: "npm i -g edgeone"}, {Action: "install-edgeone-via-pnpm", Hint: "或使用 pnpm 全局安装", Command: "pnpm add -g edgeone"}}},
 	EDGEONE_PROFILE_INVALID: {Summary: "deploy/edgeone profile 缺少 EdgeOne API token。", Remediation: []output.Remediation{{Action: "configure-edgeone", Hint: "创建 EdgeOne Pages API token 后写入 profile", Command: "one configure add deploy/edgeone --profile <name> --use --token $EDGEONE_API_TOKEN"}}},
 	EDGEONE_DEPLOY_FAILED:   {Summary: "edgeone CLI 退出码非 0；查看上游日志获取详情。", Remediation: []output.Remediation{{Action: "verify-token", Hint: "确认 EdgeOne API token 仍然有效，且对目标 EdgeOne Pages 项目有部署权限"}, {Action: "verify-project", Hint: "首次部署需要先在 EdgeOne 控制台创建 Pages 项目；project name 写在 manifest.projects[i].domains.deploy.config.projectName"}}},
-
-	AI_CONFIG_INVALID:     {Summary: "one.manifest.json#ai is malformed."},
-	AI_CONFIG_MISSING:     {Summary: "Reserved for legacy AI provider gates; current workspaces always render for every supported provider so this code is no longer surfaced."},
-	AI_GUIDES_FAILED:      {Summary: "Agent docs refresh failed; see surfaced error message."},
-	AI_GUIDE_EXISTS:       {Summary: "Existing AGENTS.md / CLAUDE.md is not managed by One CLI."},
-	AI_NO_SUBPROJECTS:     {Summary: "Workspace has no recognizable projects yet."},
-	AI_PROVIDER_INVALID:   {Summary: "Unknown AI provider; only codex / claude-code are supported."},
-	SKILLS_NOT_BUNDLED:    {Summary: "Bundled skill directory is missing inside the package."},
-	SKILLS_INSTALL_FAILED: {Summary: "Could not copy bundled skill to the target agent skills directory (check permissions)."},
 
 	ENV_INVALID_ENV_NAME:       {Summary: "Environment name fails ^[a-zA-Z0-9][a-zA-Z0-9-_]*$ (e.g. dev, staging, prod)."},
 	ENV_INVALID_KEY:            {Summary: "Variable name fails POSIX env-var pattern (uppercase + underscore + digits, must not start with digit)."},

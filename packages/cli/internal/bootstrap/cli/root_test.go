@@ -163,9 +163,8 @@ func TestIsKnownSubcommand(t *testing.T) {
 		// Per-domain commands (post capability-interface refactor).
 		"env", "container", "dev", "deploy", "ci",
 		// configure owns the credential CRUD surface (renamed from
-		// `profile` to align with industry standard CLIs); skills owns
-		// bundled-skill installation.
-		"configure", "skills",
+		// `profile` to align with industry standard CLIs).
+		"configure",
 	} {
 		if !isKnownSubcommand(name) {
 			t.Errorf("isKnownSubcommand(%q) = false, want true", name)
@@ -173,10 +172,10 @@ func TestIsKnownSubcommand(t *testing.T) {
 	}
 	// Removed commands: per-domain ones replaced by `one env|container|dev|deploy`,
 	// `one plugins` removed entirely with the plugin concept, `one setup`
-	// dissolved into `one configure` + `one skills`, and `one profile`
+	// replaced by `one configure`, and `one profile`
 	// renamed to `one configure`.
 	for _, name := range []string{
-		"doctor", "status", "unknown", "secrets", "skill", "prd", "design",
+		"doctor", "status", "unknown", "secrets", "skill", "skills", "prd", "design",
 		"docker", "infisical", "dotenv", "procs", "compose", "k8s",
 		"plugins", "setup", "profile",
 		"",

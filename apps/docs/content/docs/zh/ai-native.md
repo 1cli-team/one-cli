@@ -17,7 +17,7 @@ One CLI 不只生成项目文件，也会在 monorepo 里留下可持续执行�
 
 1. **自动化接口**：agent 和 CI 读取结构化输出，不抓终端文本
 2. **错误恢复**：agent 按稳定错误码、上下文和恢复建议处理失败
-3. **工程契约**：agent 从仓库里的 `AGENTS.md` 和 `.one/agents/` 读取长期规则（`CLAUDE.md` 指向 `AGENTS.md`）
+3. **项目上下文**：agent 读取 manifest、项目 README 和团队自行维护的说明
 4. **权限边界**：本机凭据、环境和部署配置有明确归属，不交给 agent 猜
 
 ## 规则一：命令输出必须可解析
@@ -95,28 +95,11 @@ agent 的处理顺序应该是：
 
 完整码表见 [错误码大全](/zh/docs/error-codes/)。
 
-## 规则三：工程契约要留在仓库里
+## 规则三：项目说明由团队维护
 
-One CLI 创建工作区和添加模板时，会维护仓库级 agent harness：
+One CLI 不会创建或更新 `AGENTS.md`、`CLAUDE.md` 或 `.one/` 目录。已有文件保持原样，包括旧版本生成的文件。
 
-- `AGENTS.md`：canonical 的瘦路由入口，给 Codex 等 agent 读取
-- `CLAUDE.md`：生成的一行指针，让 Claude Code 跟随 `./AGENTS.md`
-- `.one/agents/conventions.md`：工作区约定和 One CLI 操作规则
-- `.one/agents/projects/<dir>.md`：每个 manifest 项目一份技术栈指南，文件名来自 `relativeDir`，斜杠会拍平成连字符
-- `.one/agents/ops/*.md`：当 manifest 启用相关 domain 时生成 `one dev`、`one env`、`one container`、`one deploy` 操作指南
-
-这些文件不是一次性提示词，而是 `one.manifest.json` 的投影：manifest 是事实源，`AGENTS.md` 保持小而稳定，细节文件按需打开。One CLI 不会再把 agent stub 复制进子项目目录。
-
-示例约定：
-
-```text
-- Do not put business logic in Controllers.
-- DTOs must use class-validator decorators.
-- Use HttpException subclasses; do not throw bare Error.
-- Use pino logging; request traceId is injected automatically.
-```
-
-受管区块由 CLI 刷新，区块外可以写团队自己的约定。如果受管区块不对，应该修模板或重新运行对应 One CLI 流程，而不是手动改生成块。
+agent 可以读取 `one.manifest.json`、项目 README 和命令帮助来理解工作区。团队如需专门的 agent 说明，可自行维护。
 
 ## 规则四：配置和凭据有边界
 
@@ -157,9 +140,9 @@ one templates -o json
 one add api-fastify --name api --yes -o json
 ```
 
-添加一个真实模板后，可以检查工作区级路由和集中式细节指南：
+添加一个真实模板后，可以检查 manifest 中的项目记录：
 
 ```bash
 one add nestjs-api --name api --yes -o json
-ls AGENTS.md CLAUDE.md .one/agents/conventions.md .one/agents/projects/services-api.md
+cat one.manifest.json
 ```

@@ -102,13 +102,7 @@ Full command docs live at [1cli.dev](https://1cli.dev).
 
 One CLI is designed to make AI-assisted project work less fragile.
 
-After installing the bundled skills:
-
-```bash
-one skills install
-```
-
-you can ask an assistant for project-level changes in natural language, for example:
+You can ask an assistant for project-level changes in natural language, for example:
 
 > Create a product workspace with a web app and an API.
 
@@ -116,7 +110,7 @@ you can ask an assistant for project-level changes in natural language, for exam
 
 > Add a mobile app next to the existing backend.
 
-The assistant can use One CLI commands instead of inventing a folder structure from scratch.
+The assistant can read `one.manifest.json` and project README files, then use One CLI commands with `-o json` to make project changes.
 
 ## Local Settings
 
@@ -146,7 +140,6 @@ If you want to work on One CLI itself, the repository is organized like this:
 |---|---|
 | `packages/cli` | The One CLI app |
 | `packages/templates` | Starters used by `one add` |
-| `packages/skills` | Guidance installed for AI assistants |
 | `apps/docs` | Documentation website |
 | `apps/dashboard` | Local Workspace, Project, and Profile Dashboard opened by `one serve` |
 | `assets` | Brand assets, including the logo |

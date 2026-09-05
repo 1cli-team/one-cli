@@ -27,7 +27,6 @@ const sectionsByLocale: Record<Locale, SidebarSection[]> = {
         { label: "一键创建工作区", href: "/tutorials/templates/" },
         { label: "手动创建工作区", href: "/tutorials/first-workspace/" },
         { label: "一键部署", href: "/tutorials/deploy/" },
-        { label: "安装 one cli skill", href: "/tutorials/skills-install/" },
       ],
     },
     {
@@ -56,7 +55,6 @@ const sectionsByLocale: Record<Locale, SidebarSection[]> = {
         { label: "One-click workspace", href: "/tutorials/templates/" },
         { label: "Manual workspace", href: "/tutorials/first-workspace/" },
         { label: "One-click deploy", href: "/tutorials/deploy/" },
-        { label: "Install one cli skill", href: "/tutorials/skills-install/" },
       ],
     },
     {

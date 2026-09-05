@@ -7,12 +7,30 @@ package cli_test
 //   commit 61505b7 — dropped `--overwrite/--ignore`; non-empty target now errors
 
 import (
+	"io/fs"
 	"os"
 	"path/filepath"
 	"testing"
 
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/core/workspace"
 )
+
+func assertNoAgentDocs(t *testing.T, root string) {
+	t.Helper()
+	err := filepath.WalkDir(root, func(path string, entry fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if entry.Name() == "AGENTS.md" || entry.Name() == "CLAUDE.md" ||
+			entry.Name() == ".one" {
+			t.Errorf("unexpected generated agent file or metadata directory: %s", path)
+		}
+		return nil
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+}
 
 // expectedScaffoldPaths is the set of files/dirs `one create` must produce
 // at the workspace root. Asserting this directly (rather than only via the
@@ -26,9 +44,6 @@ var expectedScaffoldPaths = []string{
 	"pnpm-workspace.yaml",
 	"one.manifest.json",
 	"commitlint.config.js",
-	"AGENTS.md",
-	"CLAUDE.md",
-	filepath.Join(".one", "agents", "conventions.md"),
 }
 
 func TestSnapshot_E2E_Create_Default(t *testing.T) {
@@ -51,13 +66,7 @@ func TestSnapshot_E2E_Create_Default(t *testing.T) {
 			t.Errorf("expected scaffold path missing: %s", full)
 		}
 	}
-	claudeRaw, err := os.ReadFile(filepath.Join(target, "CLAUDE.md"))
-	if err != nil {
-		t.Fatalf("read CLAUDE.md: %v", err)
-	}
-	if string(claudeRaw) != "Follow ./AGENTS.md\n" {
-		t.Errorf("CLAUDE.md should be a pointer to AGENTS.md, got:\n%s", claudeRaw)
-	}
+	assertNoAgentDocs(t, target)
 
 	// Manifest sanity. Schema is the current ManifestVersion.
 	mf := readManifest(t, target)

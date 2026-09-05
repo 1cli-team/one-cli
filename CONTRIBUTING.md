@@ -16,7 +16,7 @@ one --version                   # 验证装好
 工具链：**Go 1.25+**、**Node 20+**、**pnpm 10+**。`go-task`（不是 GNU make）是任务总线，跨平台一致。
 
 > **fresh-clone 提示**：`packages/cli/internal/resources/bundled/` 整个目录是 gitignore 的——
-> registry / skills / templates / dashboard dist 都由 `task sync-bundled` +
+> registry / templates / dashboard dist 都由 `task sync-bundled` +
 > `task sync-web` 按需重建，作为 `task vet` / `test` / `build` 的依赖自动跑。
 > 第一次 `task install` 会触发 `pnpm install + vite build`，~30s；之后
 > task fingerprint 命中，几乎零成本。如果你直接跑 `go build` 而不走 Taskfile，
@@ -43,7 +43,7 @@ task pre-push               # 推前必跑（含上面所有 + verify-docs）
 ```
 
 `build` / `test` / `vet` 都隐式依赖 `sync-bundled` + `sync-web`，所以你不用
-手动跑这两个——除非要让 gopls 立刻看到 `packages/skills/` 或 `apps/dashboard/`
+手动跑这两个——除非要让 gopls 立刻看到 `packages/templates/` 或 `apps/dashboard/`
 的改动。
 
 ## 提交流程
@@ -68,17 +68,10 @@ PR CI 会并行执行 `task check:static` 与 `task check:test`，两者合起�
 - 公开 API（`packages/cli/pkg/`）改动要考虑 semver；详见 [CLAUDE.md 的 Public API stability](./CLAUDE.md)
 - 加新错误码：在 `packages/cli/internal/platform/errors/codes.go` 注册 `Code` 常量 + `Codes` map 条目；测试会强制对应；改完跑 `task gen-error-codes` 刷新文档
 
-### 改 skills（`packages/skills/<name>/`）
-
-- 遵循 [agentskills.io](https://agentskills.io/specification) 规范
-- `task vet` / `test` / `build` 会自动重跑 `sync-bundled`；想让 gopls 立刻
-  看到改动，手动 `task sync-bundled`
-- 详细规则见 [CLAUDE.md](./CLAUDE.md)
-
 ### 改 templates（`packages/templates/<id>/`）
 
 - 模板会被 `go:embed` 进二进制（`task sync-bundled` 是同步入口，自动跑）
-- 加新模板：在 `packages/templates/registry.json` 登记 + 加 `packages/templates/<id>/` 目录 + 写 `ai/common.md` 工程契约
+- 加新模板：在 `packages/templates/registry.json` 登记 + 加 `packages/templates/<id>/` 目录
 
 ### 改 dashboard（`apps/dashboard/`，`one serve` 的 UI）
 
@@ -152,7 +145,6 @@ packages/cli/                    # Go module（module path 含 /packages/cli 后
   tools/                         # 内部生成器 / 校验器
                                  #   gen-error-codes / verify-cli-references / verify-help
 packages/templates/              # 模板源 + registry.json（被 go:embed）
-packages/skills/                 # bundled skill 源（被 go:embed）
 apps/docs/                       # 文档站 Next.js + Fumadocs
 apps/dashboard/                  # `one serve` 用的 React + Vite UI（被 go:embed）
 .github/workflows/               # ci / cli / docs

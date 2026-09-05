@@ -27,14 +27,14 @@ One CLI 面向的是另一个问题：文件已经存在之后怎么办。团队
 
 ## One CLI 优化 workspace 生命周期
 
-One CLI 保留初始化生成流程，但在外面加了一层 workspace。manifest、template registry、JSON output 和 bundled skill 都是为了让未来操作有可靠起点。
+One CLI 保留初始化生成流程，但在外面加了一层 workspace。manifest、template registry、JSON output 和团队维护的项目说明 都是为了让未来操作有可靠起点。
 
 差异会体现在日常任务里：
 
 - `one add` 可以在不丢失 workspace 上下文的情况下追加项目。
 - `one templates -o json` 给 agent 一个可解析的模板清单。
 - 稳定 error code 让自动化不需要解析文本也能恢复。
-- bundled skill 告诉 agent 如何按工具链安装依赖。
+- 团队维护的项目说明记录工具链对应的开发约定。
 - manifest 告诉工具当前 workspace 里到底有什么。
 
 这让 One CLI 不只是一次性生成器，更像 workspace contract manager。

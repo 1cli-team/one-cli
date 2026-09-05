@@ -66,6 +66,6 @@ Pick the path that matches your goal:
 
 - **Going to production?** -> [Create a production-ready workspace](/en/tutorials/first-workspace/)
 - **Need Infisical secrets?** -> [Environment variables guide](/en/tutorials/env-vars/)
-- **Want Claude to run One CLI for you?** -> [Install skill to agent](/en/tutorials/skills-install/)
+- **Want Claude to run One CLI for you?** -> [AI project guidance](/en/docs/ai-native/)
 - **Need exact command details?** -> [CLI commands](/en/docs/cli-overview/)
 - **Do not want it?** Delete the `my-app/` folder.

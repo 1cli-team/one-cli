@@ -105,7 +105,6 @@ This pattern is robust against:
 
 ## 5. The same pattern for an agent
 
-The bundled `one-cli` skill (see [Install skill to agent](/en/tutorials/skills-install/)) instructs agents to follow exactly this dispatch. From the skill:
 
 > When you call `one`, always pass `-o json`. Read `error.code`. Never parse `error.message` — it changes with the user's locale.
 
@@ -116,7 +115,7 @@ In practice, an agent doing "add a NestJS API called user-api" will:
 3. If `error.code == "TARGET_EXISTS"`, try `user-api-2` or ask the user.
 4. If `error.code == "NOT_ONE_PROJECT"`, run `one create` first or ask the user.
 
-The skill ships these recovery patterns as playbooks — agents don't have to reinvent them.
+Agents can use these recovery patterns directly from command output.
 
 ## 6. Key error code groups
 
@@ -156,4 +155,3 @@ Pinning `-o json` in CI means your pipeline behavior depends on stable code name
 ## Next
 
 - Browse every error code → [Error codes reference](/en/docs/error-codes/)
-- Install the skill so an agent does this dispatch for you → [Install skill to agent](/en/tutorials/skills-install/)

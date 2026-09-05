@@ -11,13 +11,20 @@ func TestSyncBundledCopiesCanonicalAssetsAndStripsNestedModules(t *testing.T) {
 	writeTestFile(t, root, "packages/templates/registry.json", "{}")
 	writeTestFile(t, root, "packages/templates/go-api/go.mod", "module example")
 	writeTestFile(t, root, "packages/templates/go-api/main.go", "package main")
-	writeTestFile(t, root, "packages/skills/one-cli/SKILL.md", "---\nname: one-cli\n---")
+	retiredAssets := []string{
+		"AGENTS.md", "CLAUDE.md", "SKILL.md", "CLAUDE.md.hbs",
+		".one/agents/conventions.md", ".agents/skills/example/references/guide.md",
+		"nested/AGENTS.md.hbs",
+	}
+	for _, rel := range retiredAssets {
+		writeTestFile(t, root, "packages/templates/go-api/"+rel, "retired agent guidance")
+	}
 
 	if err := syncBundled(root); err != nil {
 		t.Fatalf("syncBundled: %v", err)
 	}
 	bundled := filepath.Join(root, "packages", "cli", "internal", "resources", "bundled")
-	for _, rel := range []string{"registry.json", "skills/one-cli/SKILL.md", "_templates/go-api/main.go"} {
+	for _, rel := range []string{"registry.json", "_templates/go-api/main.go"} {
 		if _, err := os.Stat(filepath.Join(bundled, filepath.FromSlash(rel))); err != nil {
 			t.Errorf("expected %s: %v", rel, err)
 		}
@@ -25,6 +32,11 @@ func TestSyncBundledCopiesCanonicalAssetsAndStripsNestedModules(t *testing.T) {
 	for _, rel := range []string{"_templates/registry.json", "_templates/go-api/go.mod"} {
 		if _, err := os.Stat(filepath.Join(bundled, filepath.FromSlash(rel))); !os.IsNotExist(err) {
 			t.Errorf("expected %s to be stripped, stat err=%v", rel, err)
+		}
+	}
+	for _, rel := range retiredAssets {
+		if _, err := os.Stat(filepath.Join(bundled, "_templates", "go-api", filepath.FromSlash(rel))); !os.IsNotExist(err) {
+			t.Errorf("retired agent asset was bundled: %s (err=%v)", rel, err)
 		}
 	}
 }

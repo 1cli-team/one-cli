@@ -58,7 +58,6 @@ func findRepoRoot() (string, error) {
 
 func syncBundled(root string) error {
 	templates := filepath.Join(root, "packages", "templates")
-	skills := filepath.Join(root, "packages", "skills")
 	bundled := filepath.Join(root, "packages", "cli", "internal", "resources", "bundled")
 	if err := os.MkdirAll(bundled, 0o755); err != nil {
 		return err
@@ -66,11 +65,13 @@ func syncBundled(root string) error {
 	if err := copyFile(filepath.Join(templates, "registry.json"), filepath.Join(bundled, "registry.json")); err != nil {
 		return err
 	}
-	if err := replaceDir(root, skills, filepath.Join(bundled, "skills"), nil); err != nil {
-		return err
-	}
 	return replaceDir(root, templates, filepath.Join(bundled, "_templates"), func(rel string, entry fs.DirEntry) bool {
 		if rel == "registry.json" {
+			return false
+		}
+		// Retired agent assets must not be distributed inside the binary.
+		switch strings.TrimSuffix(entry.Name(), ".hbs") {
+		case ".one", ".agents", "AGENTS.md", "CLAUDE.md", "SKILL.md":
 			return false
 		}
 		return entry.Name() != "go.mod"

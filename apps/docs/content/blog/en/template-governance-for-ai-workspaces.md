@@ -28,7 +28,7 @@ These details help humans, but they are especially important for coding agents.
 
 ## The agent should not invent conventions
 
-When an agent opens a generated workspace, it should not need to invent the workflow. It should read the manifest, follow the bundled skill, and use the documented commands.
+When an agent opens a generated workspace, it should not need to invent the workflow. It should read the manifest, follow the team-maintained project guidance, and use the documented commands.
 
 That means template governance has to be boring and explicit. A generated Next.js app, Go API, or documentation site should carry enough metadata for the CLI and the agent to reason about it later.
 

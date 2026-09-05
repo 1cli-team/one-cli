@@ -12,7 +12,6 @@
 // What we scan:
 //   - Top-level: README.md, CLAUDE.md, CONTRIBUTING.md
 //   - apps/docs/content/docs/**/*.{md,mdx}
-//   - packages/skills/one-cli/SKILL.md and references/**/*.md
 //   - packages/templates/<id>/README.md and README.md.hbs
 //
 // Where we look (intentional):
@@ -127,7 +126,6 @@ func docFiles() ([]string, error) {
 	}
 	roots := []walkSpec{
 		{repoRel("apps", "docs", "content", "docs"), []string{".md", ".mdx"}},
-		{repoRel("packages", "skills"), []string{".md"}},
 	}
 	for _, w := range roots {
 		if err := filepath.WalkDir(w.root, func(path string, d fs.DirEntry, err error) error {

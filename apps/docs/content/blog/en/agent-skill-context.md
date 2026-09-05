@@ -1,10 +1,12 @@
 ---
-title: "What the one-cli Skill Should Tell Coding Agents"
-description: "One CLI exposes one bundled skill that records command contracts, preset vocabulary, and dependency bootstrap rules."
+title: "Historical Design: One CLI Agent Skills"
+description: "Historical notes on the agent skills design, retired when One CLI removed skill distribution and generated instructions."
 date: "2026-05-12"
 author: "One CLI Team"
 tags: ["skill", "codex", "dependencies"]
 ---
+
+> Historical design note: One CLI no longer bundles or installs agent skills. Use [workspace AI guidance](/en/docs/ai-native/) and the [command reference](/en/docs/cli-overview/) for the current workflow.
 
 ## A skill is not marketing copy
 

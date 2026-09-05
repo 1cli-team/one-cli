@@ -1,10 +1,12 @@
 ---
-title: "给 agent 的 one-cli skill 应该记录什么"
-description: "One CLI 只暴露一个 bundled skill，里面记录命令契约、preset 词汇和依赖补齐规则。"
+title: "历史设计：One CLI Agent Skills"
+description: "记录已退役的 agent skills 设计；One CLI 已移除 skill 分发与项目说明自动生成。"
 date: "2026-05-12"
 author: "One CLI Team"
 tags: ["skill", "codex", "dependencies"]
 ---
+
+> 历史设计记录：One CLI 已移除 skills 的内置分发和安装功能。当前用法请参考 [AI 项目说明](/zh/docs/ai-native/)和[命令参考](/zh/docs/cli-overview/)。
 
 ## skill 不是营销文档
 

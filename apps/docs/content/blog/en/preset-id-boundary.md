@@ -36,6 +36,6 @@ This split keeps presets responsible for which templates were selected, while CL
 
 ## Keep the surface small
 
-The One CLI product surface should stay small. Commands such as `create`, `add`, `templates`, `configure`, `serve`, and `skills` cover the main workflows. A preset is one input to `create`; it does not need to become a new center of gravity.
+The One CLI product surface should stay small. Commands such as `create`, `add`, `templates`, `configure`, and `serve` cover the main workflows. A preset is one input to `create`; it does not need to become a new center of gravity.
 
 A good preset design helps users type less, helps agents guess less, and keeps generated output replayable. It does not need to explain every business scenario, and it should not replace a clear template catalog or manifest.

@@ -2,7 +2,6 @@ package creation
 
 import (
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/core/workspace"
-	agentdocs "github.com/torchstellar-team/one-cli/packages/cli/internal/modules/ai"
 )
 
 // These are the verbatim file contents the scaffolder writes.
@@ -45,21 +44,6 @@ echo "pre-commit hook: add checks for this repository."
 const huskyCommitMsgContent = `#!/usr/bin/env sh
 npx --no -- commitlint --edit "$1"
 `
-
-// buildRootAgentsMd renders the canonical workspace AGENTS.md skeleton.
-func buildRootAgentsMd(projectName string) string {
-	return agentdocs.RootAgentsContent(projectName)
-}
-
-// buildClaudeMdPointer renders the Claude Code pointer to the canonical
-// AGENTS.md entry.
-func buildClaudeMdPointer() string {
-	return agentdocs.ClaudePointerContent()
-}
-
-func buildAgentsConventionsMd() string {
-	return agentdocs.ConventionsContent()
-}
 
 // changesetConfig is the .changeset/config.json scaffolders write at
 // create time. Encoded as orderedJSON so json.MarshalIndent preserves

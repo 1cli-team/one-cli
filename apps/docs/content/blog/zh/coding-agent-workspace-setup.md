@@ -16,7 +16,7 @@ manifest 会告诉 agent：当前目录是不是 One workspace、根目录使用
 
 常见错误是到处运行同一个 install 命令。对单技术栈小项目可能没问题，但在混合 workspace 里很容易出错。
 
-One CLI 给 agent 的规则是按工具链区分依赖安装：
+依赖安装应该按项目使用的工具链区分：
 
 - JS、TS、Node 项目从 workspace root 使用声明的包管理器安装。
 - Go 项目在对应 Go project 目录里运行 module 命令。

@@ -111,7 +111,7 @@ one configure locale --set zh-CN
 one configure locale --set en-US
 ```
 
-This affects only the human-readable text (`error.message`, prompts, table headers). Error **codes** (`error.code`) and JSON output stay identical across locales — that's why the bundled skill instructs agents to dispatch on `error.code`, not `error.message`.
+This affects only the human-readable text (`error.message`, prompts, table headers). Error **codes** (`error.code`) and JSON output stay identical across locales — agents should dispatch on `error.code`, not `error.message`.
 
 ## Common errors
 

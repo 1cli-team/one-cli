@@ -3,7 +3,7 @@ title: one add
 description: 往工作区里加一个模板化项目。
 ---
 
-`one add` 选择技术栈，生成一个可本地开发的项目并登记到 manifest，同时刷新 Agent 文档。CI 和部署默认都保持未配置。
+`one add` 选择技术栈，生成一个可本地开发的项目并登记到 manifest。CI 和部署默认都保持未配置。
 
 有两条入口：
 
@@ -49,27 +49,11 @@ one add nestjs-api --name api --yes
   "target_path": "/abs/path/my-app/services/user-api",
   "template_id": "nestjs-api",
   "toolchain": "node",
-  "package_manager": "pnpm",
-  "ai_guides": {
-    "status": "completed",
-    "providers": ["codex", "claude-code"],
-    "generated_files": [
-      "AGENTS.md",
-      "CLAUDE.md",
-      ".one/agents/conventions.md",
-      ".one/agents/projects/services-user-api.md",
-      ".one/agents/ops/dev.md",
-      ".one/agents/ops/secrets.md",
-      ".one/agents/ops/container.md",
-      ".one/agents/ops/deploy.md"
-    ],
-    "file_count": 8
-  }
+  "package_manager": "pnpm"
 }
 ```
 
-`warnings[]` 存在时表示模板兼容性或后置同步有非阻断提示；项目仍然加成功。`ai_guides.status` 表示根目录 `AGENTS.md`、`CLAUDE.md` 和 `.one/agents/**` 是否刷新成功。`ai_guides.generated_files` 是工作区相对路径。
-
+`warnings[]` 存在时表示模板兼容性或后置同步有非阻断提示；项目仍然加成功。
 ## 示例
 
 ### 交互（人类）
@@ -116,9 +100,8 @@ one add nestjs-api --name user-api --yes -o json | jq
 - 写入项目的本地开发命令
 - 持续集成保持未配置
 - 部署和镜像配置保持为空，首次部署时再生成
-- 刷 `AGENTS.md`、`CLAUDE.md` 和 `.one/agents/**`
 
-如果有失败的 step（比如 agent 文档刷新失败），项目仍然加成功，只是相关字段会标 `failed` / `skipped`。
+非阻断同步问题通过 `warnings[]` 返回，项目仍然加成功。
 
 ## 错误恢复
 
@@ -131,7 +114,6 @@ one add nestjs-api --name user-api --yes -o json | jq
 | `TARGET_EXISTS` | 项目目录已存在；换 `--name` |
 | `NOT_ONE_PROJECT` | cwd 不是工作区；先 `one create <dir>`，或 `cd` 到已有工作区 |
 | `REGISTRY_FETCH_FAILED` | 网络问题；查 context 里的 registry url |
-| `AI_GUIDE_EXISTS` | 工作区根已有用户自管的 `AGENTS.md` / `CLAUDE.md`，刷不动 |
 
 完整码表：[错误码大全](/zh/docs/error-codes/)。
 

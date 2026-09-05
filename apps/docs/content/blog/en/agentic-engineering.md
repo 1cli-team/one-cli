@@ -52,7 +52,7 @@ The practical pieces are:
 - [`one add`](/en/docs/add/) adds templated projects and registers them in the manifest.
 - [`one run`](/en/docs/run/) resolves a project and runs a command from the right directory.
 - JSON output and stable error codes make command results easier for agents to parse.
-- [`one skills install`](/en/docs/skills/) installs One CLI's operating guidance into supported coding agents.
+- [Workspace AI guidance](/en/docs/ai-native/) explains how coding agents use the manifest and team-maintained instructions.
 
 That combination supports agentic engineering by making the workspace less implicit. The agent still has to reason about the task, read the code, and propose or apply changes. One CLI gives it a cleaner starting point.
 

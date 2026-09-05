@@ -238,43 +238,6 @@ One machine-local Profile file schema does not match this binary. Upgrade CLI or
 Release-flow backend expected a toolchain or repo state that the workspace does not have.
 
 
-## Agent Docs / Skills
-
-`AGENTS.md`, `CLAUDE.md`, `.one/agents/**`, and One CLI skill installation.
-
-### `AI_CONFIG_INVALID`
-
-`one.manifest.json#ai` is malformed.
-
-### `AI_CONFIG_MISSING`
-
-Legacy provider gate; the current CLI renders all supported providers and should not normally surface this.
-
-### `AI_GUIDES_FAILED`
-
-Agent docs refresh failed. Read the surfaced error.
-
-### `AI_GUIDE_EXISTS`
-
-Existing `AGENTS.md` / `CLAUDE.md` is user-managed and will not be overwritten.
-
-### `AI_NO_SUBPROJECTS`
-
-Workspace has no recognizable projects yet.
-
-### `AI_PROVIDER_INVALID`
-
-Unknown AI provider; supported generated guides are Codex and Claude Code.
-
-### `SKILLS_INSTALL_FAILED`
-
-One CLI skills could not be copied. Check permissions and rerun `one skills install`.
-
-### `SKILLS_NOT_BUNDLED`
-
-One CLI skill directory is missing from the package.
-
-
 ## Env Input Validation
 
 Provider-agnostic `one env` input validation and migration conflicts.

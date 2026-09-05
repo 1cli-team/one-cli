@@ -29,7 +29,7 @@ The manifest makes those semantics explicit:
 
 Telling an agent that a repository is a full-stack project is not enough. The agent needs to know which templates created it, which package manager it uses, where Go modules live, which files are generated, and which files are user-maintained business code.
 
-That is why One CLI pairs the manifest with the bundled `one-cli` skill. The manifest describes the current workspace. The skill describes how an agent should operate on it. Together, they move the workflow from guessing to checking facts first.
+That is why One CLI pairs the manifest with team-maintained project guidance. The manifest describes the current workspace. The guidance describes how an agent should operate on it. Together, they move the workflow from guessing to checking facts first.
 
 ## A steadier workflow
 

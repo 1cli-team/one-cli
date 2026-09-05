@@ -20,7 +20,7 @@ type ModuleId =
   | "env"
   | "deploy"
   | "manifest"
-  | "ai-context";
+  | "cli-interface";
 
 type ModuleSpotlightCopy = {
   title: string;
@@ -84,11 +84,11 @@ type Three = typeof THREE;
 
 const moduleConfigs: ModuleConfig[] = [
   {
-    id: "ai-context",
-    labels: { zh: "AI上下文", en: "AI Context" },
+    id: "cli-interface",
+    labels: { zh: "CLI接口", en: "CLI Interface" },
     spotlight: {
-      zh: { title: "AI 上下文", subtitle: "Agent 规则和项目地图" },
-      en: { title: "AI Context", subtitle: "Agent rules and project map" },
+      zh: { title: "CLI 接口", subtitle: "结构化输出与命令帮助" },
+      en: { title: "CLI Interface", subtitle: "JSON output and command help" },
     },
     x: -1.18,
     y: 0.9,
@@ -246,8 +246,8 @@ export function HomeHeroCanvas({ ariaLabel, lang = "zh" }: HomeHeroCanvasProps) 
       aria-label={
         ariaLabel ??
         (lang === "zh"
-          ? "One CLI 生成工作区模块的动画，展示前端、后端、文档、共享库、部署和 AI 上下文模块"
-          : "One CLI workspace assembly animation showing frontend, backend, docs, library, deploy, and AI context modules")
+          ? "One CLI 生成工作区模块的动画，展示前端、后端、文档、共享库、部署和 CLI 接口模块"
+          : "One CLI workspace assembly animation showing frontend, backend, docs, library, deploy, and CLI interface modules")
       }
       className="relative h-[420px] min-w-0 overflow-hidden md:h-[560px] lg:h-[610px]"
       role="img"

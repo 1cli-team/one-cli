@@ -49,40 +49,8 @@ func TestSnapshot_E2E_Add_DefersDeploymentDefaults(t *testing.T) {
 			t.Errorf("expected template file missing: %s", full)
 		}
 	}
-	if fileExists(t, filepath.Join(svcDir, "CLAUDE.md")) {
-		t.Error("subproject CLAUDE.md should not be rendered; project guide belongs under .one/agents/projects/")
-	}
-	for _, rel := range []string{
-		"AGENTS.md",
-		"CLAUDE.md",
-		".one/agents/conventions.md",
-		".one/agents/projects/services-user-api.md",
-		".one/agents/ops/dev.md",
-		".one/agents/ops/secrets.md",
-	} {
-		if !fileExists(t, filepath.Join(ws, filepath.FromSlash(rel))) {
-			t.Errorf("expected agent harness file missing: %s", rel)
-		}
-	}
-	claudeRaw, err := os.ReadFile(filepath.Join(ws, "CLAUDE.md"))
-	if err != nil {
-		t.Fatalf("read root CLAUDE.md: %v", err)
-	}
-	if string(claudeRaw) != "Follow ./AGENTS.md\n" {
-		t.Errorf("root CLAUDE.md should be a pointer to AGENTS.md, got:\n%s", claudeRaw)
-	}
-	agentsRaw, err := os.ReadFile(filepath.Join(ws, "AGENTS.md"))
-	if err != nil {
-		t.Fatalf("read root AGENTS.md: %v", err)
-	}
-	for _, want := range []string{
-		"<!-- one agents:index:start -->",
-		".one/agents/projects/services-user-api.md",
-	} {
-		if !strings.Contains(string(agentsRaw), want) {
-			t.Errorf("AGENTS.md missing %q:\n%s", want, agentsRaw)
-		}
-	}
+	assertNoAgentDocs(t, ws)
+	assertNoAgentDocs(t, svcDir)
 	goModRaw, err := os.ReadFile(filepath.Join(svcDir, "go.mod"))
 	if err != nil {
 		t.Fatalf("read rendered go.mod: %v", err)
@@ -306,12 +274,8 @@ func TestSnapshot_E2E_Add_GoLibTemplate(t *testing.T) {
 			t.Errorf("expected go-lib artifact missing: %s", full)
 		}
 	}
-	if fileExists(t, filepath.Join(libDir, "CLAUDE.md")) {
-		t.Error("subproject CLAUDE.md should not be rendered for go-lib")
-	}
-	if !fileExists(t, filepath.Join(ws, ".one", "agents", "projects", "packages-mathx.md")) {
-		t.Error("central go-lib project guide missing under .one/agents/projects/")
-	}
+	assertNoAgentDocs(t, ws)
+	assertNoAgentDocs(t, libDir)
 
 	// Dev-only go.mod must NOT leak into the rendered output.
 	if raw, err := os.ReadFile(filepath.Join(libDir, "go.mod")); err == nil {
@@ -346,4 +310,38 @@ func TestSnapshot_E2E_Add_GoLibTemplate(t *testing.T) {
 	if dev, exists := domains["dev"]; exists {
 		t.Fatalf("go-lib must not declare a runnable dev command, got %v", dev)
 	}
+}
+
+func TestAddPreservesExistingAgentDocs(t *testing.T) {
+	tmp := t.TempDir()
+	isolateHome(t, tmp)
+	ws := bootstrapWorkspace(t, tmp, "ws")
+	files := map[string]string{
+		"AGENTS.md":                  "<!-- one agents:index:start -->\nUser-owned rules\n<!-- one agents:index:end -->\n",
+		"CLAUDE.md":                  "My Claude instructions\n",
+		".one/agents/conventions.md": "My existing conventions\n",
+	}
+	for rel, content := range files {
+		path := filepath.Join(ws, filepath.FromSlash(rel))
+		if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	stdout, stderr, code := runBinaryIn(t, ws, "add", "go-api", "--name", "api", "--yes", "-o", "json")
+	if code != 0 {
+		t.Fatalf("add failed: exit=%d stderr=%s", code, stderr)
+	}
+	if _, ok := mustParseJSON(t, stdout)["ai_guides"]; ok {
+		t.Fatal("add still reports automatic agent guide generation")
+	}
+	for rel, want := range files {
+		got, err := os.ReadFile(filepath.Join(ws, filepath.FromSlash(rel)))
+		if err != nil || string(got) != want {
+			t.Errorf("existing %s changed: got=%q err=%v", rel, got, err)
+		}
+	}
+	assertNoAgentDocs(t, filepath.Join(ws, "services", "api"))
 }

@@ -85,24 +85,7 @@ Windows 归档名是 `one-cli_windows_amd64.zip`。
 
 也就是说升级根本不需要任何 flag，重跑安装命令就行。降级 / 修复才用 `ONE_FORCE`。
 
-## 装完之后：跑一次 `one skills install`
-
-安装器只把 `one` 二进制装到 PATH。要让 Claude Code / Cursor / Codex 等 agent 识别 One CLI skills，**还需要手工跑一次**：
-
-```bash
-one skills install
-```
-
-它会自动检测本机已装的所有受支持 agent，让你勾选装到哪些（默认只勾 Claude Code；↑/↓ 移动光标；空格勾选 / 取消；回车开始安装）。
-
-非交互场景：
-
-```bash
-one skills install --yes        # 装到所有检测到的 agent（CI 用）
-one skills install --agent claude-code  # 只装到指定 agent
-```
-
-升级 binary 后再跑一次 `one skills install` 可以把最新的 skill 内容刷进去，幂等。当前内置入口包括 `one-cli`（新建、追加、依赖、参考）和 `one-migrate`（迁移已有项目）。
+## 配置 Provider 凭据
 
 Provider 凭据用顶层 `one configure add <domain>/<backend> --profile <name>` 配（一次配全工作区都能用）。当前支持这些 pair：
 
@@ -134,8 +117,6 @@ one configure add deploy/aws-s3 --profile web-prod     # AWS S3 endpoint + ak/sk
 one configure add deploy/kustomize --profile prod-k8s  # kubeconfig context
 one configure add container/ghcr --profile ghcr        # GHCR username + PAT
 ```
-
-详见 [安装 Skill 到 Agent](/zh/tutorials/skills-install/)。
 
 ## 环境变量参考
 
@@ -172,7 +153,7 @@ macOS / Linux：
 rm ~/.local/bin/one
 ```
 
-如果之前跑过 `one skills install` 想把 skills 也清掉：手工删除对应 agent 的 `~/.<agent>/skills/one-cli` / `~/.<agent>/skills/one-migrate` 软链；或整个 `~/.one/skills-store/` 目录。也可以手工 `rm -rf ~/.config/one` 把所有 profile 凭据 + 缓存一并清掉。
+如需清理本地 profile 凭据和缓存，可删除 `~/.config/one`。
 
 ## 本地编译版（贡献开发用）
 

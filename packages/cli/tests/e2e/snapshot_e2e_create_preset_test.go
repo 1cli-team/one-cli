@@ -40,6 +40,7 @@ func TestSnapshot_E2E_Create_Preset_Fullstack(t *testing.T) {
 
 	got := mustParseJSON(t, stdout)
 	assertSnapshot(t, "create-preset-fullstack.json", got)
+	assertNoAgentDocs(t, target)
 
 	for _, p := range presetFullstackPaths {
 		full := filepath.Join(target, p)

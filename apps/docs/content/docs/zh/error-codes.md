@@ -341,58 +341,6 @@ The release-flow backend's expected toolchain or repo state does not match the w
 
 > 没有默认 remediation。具体恢复方式请看错误的 `context` 字段。
 
-## Agent 文档 / Skills
-
-`AGENTS.md` / `CLAUDE.md` / `.one/agents/**` 生成与 bundled skill 安装。
-
-### `AI_CONFIG_INVALID`
-
-one.manifest.json#ai is malformed.
-
-> 没有默认 remediation。具体恢复方式请看错误的 `context` 字段。
-
-### `AI_CONFIG_MISSING`
-
-Reserved for legacy AI provider gates; current workspaces always render for every supported provider so this code is no longer surfaced.
-
-> 没有默认 remediation。具体恢复方式请看错误的 `context` 字段。
-
-### `AI_GUIDES_FAILED`
-
-Agent docs refresh failed; see surfaced error message.
-
-> 没有默认 remediation。具体恢复方式请看错误的 `context` 字段。
-
-### `AI_GUIDE_EXISTS`
-
-Existing AGENTS.md / CLAUDE.md is not managed by One CLI.
-
-> 没有默认 remediation。具体恢复方式请看错误的 `context` 字段。
-
-### `AI_NO_SUBPROJECTS`
-
-Workspace has no recognizable projects yet.
-
-> 没有默认 remediation。具体恢复方式请看错误的 `context` 字段。
-
-### `AI_PROVIDER_INVALID`
-
-Unknown AI provider; only codex / claude-code are supported.
-
-> 没有默认 remediation。具体恢复方式请看错误的 `context` 字段。
-
-### `SKILLS_INSTALL_FAILED`
-
-Could not copy bundled skill to the target agent skills directory (check permissions).
-
-> 没有默认 remediation。具体恢复方式请看错误的 `context` 字段。
-
-### `SKILLS_NOT_BUNDLED`
-
-Bundled skill directory is missing inside the package.
-
-> 没有默认 remediation。具体恢复方式请看错误的 `context` 字段。
-
 ## Env — 输入校验
 
 `one env` 命令的入参校验、覆写冲突等（与 Infisical 后端无关）。
@@ -758,7 +706,15 @@ one run could not find a .env file for the resolved subproject.
 **Remediation**:
 
 - `pull-secrets` — 先把 Infisical 环境变量拉到项目 .env<br />运行：`one env pull`
-- `specify-subproject` — 或显式指定项目（按 manifest 里的 name 或相对路径）<br />运行：`one run -p <name|path> -- <cmd>`
+- `specify-subproject` — 或显式指定项目（按 manifest 里的 name 或相对路径）<br />运行：`one run <name|path> -- <cmd>`
+
+### `RUN_USAGE_INVALID`
+
+one run arguments do not match `one run [project] -- <cmd> [args...]`.
+
+**Remediation**:
+
+- `use-run-separator` — 用 -- 分隔 One CLI 参数和子进程命令<br />运行：`one run [project] -- <cmd> [args...]`
 
 ### `SERVE_BIND_FORBIDDEN`
 

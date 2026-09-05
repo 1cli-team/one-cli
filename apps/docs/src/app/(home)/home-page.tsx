@@ -64,7 +64,7 @@ const homeCopy = {
       ),
       body: "让 AI 从标准工程底座开始开发：网站、后台、文档、环境配置和上线流程，一次准备好。",
       canvasAria:
-        "One CLI 工作区模块画布，展示应用、API、文档、Packages、Manifest、Env、Deploy 和 AI 上下文模块",
+        "One CLI 工作区模块画布，展示应用、API、文档、Packages、Manifest、Env、Deploy 和 CLI 接口模块",
       install: "开始使用",
       github: "查看 GitHub",
       copy: "复制",
@@ -83,7 +83,7 @@ const homeCopy = {
         "保存环境与上线账号",
         "查看模板清单",
         "打开本地配置页",
-        "把 CLI 规则交给 AI",
+        "查阅完整命令",
       ],
       createEyebrow: "one create",
       createTitle: (
@@ -145,7 +145,7 @@ const homeCopy = {
           bullets: [
             ["交互添加", "直接输入 one add，会让你选择模板、项目名和可选部署方式。"],
             ["自动化模式", "CI 或 AI 才需要写 one add nextjs-app --name web --yes。"],
-            ["同步默认值", "会按模板补齐运行、部署和 AI 说明文件。"],
+            ["同步默认值", "按模板生成项目代码，并登记本地开发命令。"],
           ],
           href: ["add"],
           cta: "查看 one add",
@@ -237,29 +237,29 @@ const homeCopy = {
           ],
         },
         {
-          command: "one skills",
-          navBody: "把 CLI 规则交给 AI",
-          eyebrow: "one skills",
+          command: "one help",
+          navBody: "查阅完整命令",
+          eyebrow: "one help",
           title: (
             <>
               让 AI 助手，
               <br />
-              知道项目怎么做。
+              找到正确的命令。
             </>
           ),
-          body: "one skills install 会把 One CLI 自带的工作流安装或刷新到本机 AI 编程工具里。AI 先读项目说明，再按场景新建、追加、迁移或补依赖。直接运行会让你选择目标；--yes 才会安装到所有检测到的工具。",
+          body: "使用 one help --all 查看完整命令目录，再通过子命令的 --help 获取参数说明。AI 可以结合 README 和 one.manifest.json 里的项目事实选择操作。",
           bullets: [
-            ["创建或迁移", "按你的描述新建项目，或把已有项目纳入 One CLI 管理。"],
-            ["可交互选择", "直接运行会让你选择 AI 工具；--yes 会安装到检测到的所有工具。"],
-            ["自动补依赖", "按项目类型处理依赖：JS/TS 看包管理器，Go 看各子项目。"],
+            ["完整目录", "列出当前版本支持的全部命令。"],
+            ["参数说明", "使用子命令的 --help 确认参数和用法。"],
+            ["结构化结果", "执行时使用 -o json，根据 error.code 处理失败。"],
           ],
-          href: ["ai-native"],
-          cta: "查看 AI 指南",
-          sample: "one skills install",
+          href: ["cli-overview"],
+          cta: "查看命令参考",
+          sample: "one help --all",
           output: [
-            "检测本机 AI 编程工具",
-            "选择要安装到哪些工具",
-            "同步命令、模板和依赖规则",
+            "查看当前版本支持的命令",
+            "确认子命令参数",
+            "结合项目说明选择操作",
           ],
         },
       ],
@@ -267,13 +267,13 @@ const homeCopy = {
     why: {
       eyebrow: "AGENT-READY WORKSPACE",
       title: "让 agent 先读事实，再动项目。",
-      body: "One CLI 不是另一个聊天入口。它把 skills、manifest、AI 指南和结构化错误组织成一套工程契约，让 Codex、Claude Code、Cursor 这类 AI 编程工具能先确认项目事实，再选择命令、修改代码和处理失败。",
+      body: "One CLI 不是另一个聊天入口。它把 manifest、项目配置和结构化错误组织成一套工程契约，让 Codex、Claude Code、Cursor 这类 AI 编程工具能先确认项目事实，再选择命令、修改代码和处理失败。",
       cards: [
         {
           icon: Sparkles,
-          title: "Skills 说明怎么操作",
-          body: "`one skills install` 把 One CLI 的工作流安装到本机 AI 编程工具。agent 可以按说明创建 workspace、追加模板、迁移项目或补齐依赖，而不是每次从 prompt 里猜流程。",
-          chip: "one skills install",
+          title: "命令帮助说明怎么操作",
+          body: "agent 通过 `one help --all` 和子命令的 `--help` 确认当前版本支持的命令、参数和用法，再执行工作区操作。",
+          chip: "one help --all",
         },
         {
           icon: ClipboardCheck,
@@ -283,8 +283,8 @@ const homeCopy = {
         },
         {
           icon: Wrench,
-          title: "AI 指南跟着模板更新",
-          body: "成功执行 `one add` 后，One CLI 会生成或更新 `AGENTS.md` / `CLAUDE.md` 的受管理内容块，把模板的工程规则写进 workspace；已有自定义内容不会被强行覆盖。",
+          title: "项目说明由团队维护",
+          body: "One CLI 负责模板和 manifest。AGENTS.md、CLAUDE.md 等说明由团队自行维护，创建工作区和添加项目时都不会自动生成或修改。",
           chip: "AGENTS.md / CLAUDE.md",
         },
         {
@@ -321,7 +321,7 @@ const homeCopy = {
     startWays: {
       eyebrow: "开始方式",
       title: "三种开始方式。",
-      body: "想最快开始，直接运行 one create；想先挑组合，去模板页；想让 AI 接手，就先安装官方规则。",
+      body: "想最快开始，直接运行 one create；想先挑组合，去模板页；想让 AI 接手，可以把生成的 CLI 命令交给它执行。",
       direct: {
         label: "方式一",
         title: "直接运行 one create",
@@ -343,35 +343,12 @@ const homeCopy = {
       ai: {
         label: "方式三",
         title: "交给 AI 执行",
-        body: "先运行 one skills install，把 One CLI 的规则装进 Codex、Claude Code、Cursor 等本地 AI 编程工具。",
-        bullets: ["直接描述要做什么", "AI 按 One CLI 规则创建或迁移项目", "按项目类型补依赖"],
+        body: "把目标和 One CLI 命令交给 Codex、Claude Code、Cursor 等 AI 编程工具；已有工作区先阅读 README 和 one.manifest.json。",
+        bullets: ["直接描述要做什么", "AI 使用 One CLI 创建工作区或追加模板", "按项目类型补依赖"],
         cta: "查看 AI 指南",
         promptLabel: "给 agent 的一句话",
         prompt: "请使用 One CLI，帮我创建一个名为 media-stack 的移动端项目，并安装依赖。",
       },
-    },
-    skill: {
-      eyebrow: "官方 AI 说明",
-      title: "安装 CLI，也把项目规则交给 agent。",
-      body: "`one skills install` 会把 One CLI 自带的工作流装到 Codex、Claude Code、Cursor 等本地 AI 编程工具。agent 先读 `one.manifest.json`，再按场景新建、追加、迁移项目，并按 JS / Go 的规则补依赖。",
-      promptLabel: "给 agent 的一句话",
-      bullets: [
-        "创建新项目：按你的描述生成项目结构",
-        "迁移到 One CLI：把现有项目纳入 One CLI 管理",
-        "自动补依赖：按项目类型安装需要的依赖",
-      ],
-      prompt: "请使用 One CLI，帮我创建一个名为 media-stack 的移动端项目，并安装依赖。",
-      result: (
-        <>
-          ✓ 已选择移动端模板
-          <br />
-          ✓ 已创建 media-stack 项目
-          <br />
-          ✓ 已生成项目结构
-          <br />
-          ✓ 已安装依赖
-        </>
-      ),
     },
     final: {
       title: "停止手工拼工程底座。",
@@ -390,7 +367,6 @@ const homeCopy = {
         tutorialsHome: "教程总览",
         firstWorkspace: "第一个工作区",
         envVars: "配置环境变量",
-        skillsInstall: "安装 Skill 到 Agent",
         templateBuilder: "模板页面",
         templateGuide: "怎么选模板",
         commandOverview: "命令总览",
@@ -429,7 +405,7 @@ const homeCopy = {
       ),
       body: "Give AI a real product foundation: website, backend, docs, environment config, and deployment flow, ready from day one.",
       canvasAria:
-        "One CLI workspace module canvas showing apps, API, docs, packages, manifest, env, deploy, and AI context modules",
+        "One CLI workspace module canvas showing apps, API, docs, packages, manifest, env, deploy, and CLI interface modules",
       install: "Start building",
       github: "View on GitHub",
       copy: "copy",
@@ -448,7 +424,7 @@ const homeCopy = {
         "save env and launch accounts",
         "inspect the template list",
         "open the local config UI",
-        "give CLI rules to AI",
+        "find the right command",
       ],
       createEyebrow: "ONE CREATE",
       createTitle: (
@@ -510,7 +486,7 @@ const homeCopy = {
           bullets: [
             ["PROMPTED ADD", "Run one add to choose the template, project name, and optional deploy backend."],
             ["AUTOMATION", "CI and AI use one add nextjs-app --name web --yes."],
-            ["SYNC DEFAULTS", "Templates can add the expected run, deploy, and AI guide files."],
+            ["SYNC DEFAULTS", "Templates generate project code and register local development commands."],
           ],
           href: ["add"],
           cta: "Explore one add",
@@ -602,29 +578,29 @@ const homeCopy = {
           ],
         },
         {
-          command: "one skills",
-          navBody: "give CLI rules to AI",
-          eyebrow: "ONE SKILLS",
+          command: "one help",
+          navBody: "find the right command",
+          eyebrow: "ONE HELP",
           title: (
             <>
-              Help AI understand
+              Help AI find
               <br />
-              how this project works.
+              the right command.
             </>
           ),
-          body: "one skills install installs or refreshes One CLI's bundled workflows for local AI coding tools. Agents read the project facts first, then create, add, migrate, or bootstrap dependencies by context. Bare install lets you choose tools; --yes installs to every detected tool.",
+          body: "Use one help --all for the complete command catalogue, then a subcommand's --help for its options. Agents can combine this with README files and one.manifest.json to choose project operations.",
           bullets: [
-            ["CREATE OR MIGRATE", "Create a new project from your description, or bring an existing one under One CLI management."],
-            ["CHOOSABLE", "Bare install opens a picker; --yes installs to every detected tool."],
-            ["BOOTSTRAP DEPS", "Handle dependencies by project type: JS/TS uses the package manager; Go uses each subproject."],
+            ["FULL CATALOGUE", "List every command supported by the installed version."],
+            ["OPTIONS", "Check a subcommand's --help for arguments and usage."],
+            ["JSON RESULTS", "Use -o json and handle failures through error.code."],
           ],
-          href: ["ai-native"],
-          cta: "Explore AI guide",
-          sample: "one skills install",
+          href: ["cli-overview"],
+          cta: "Explore command reference",
+          sample: "one help --all",
           output: [
-            "detects local AI coding tools",
-            "lets you choose where to install",
-            "syncs command, template, and dependency rules",
+            "find commands supported by this version",
+            "check subcommand options",
+            "choose operations using project guidance",
           ],
         },
       ],
@@ -632,13 +608,13 @@ const homeCopy = {
     why: {
       eyebrow: "AGENT-READY WORKSPACE",
       title: "Let agents read facts before touching the project.",
-      body: "One CLI is not another chat surface. It organizes skills, manifests, AI guides, and structured errors into one engineering contract so Codex, Claude Code, and Cursor can confirm project facts before choosing commands, editing code, or recovering from failures.",
+      body: "One CLI is not another chat surface. It organizes manifests, project configuration, and structured errors into one engineering contract so Codex, Claude Code, and Cursor can confirm project facts before choosing commands, editing code, or recovering from failures.",
       cards: [
         {
           icon: Sparkles,
-          title: "Skills explain the workflow",
-          body: "`one skills install` installs One CLI workflows into local AI coding tools. Agents can create workspaces, add templates, migrate projects, or bootstrap dependencies from instructions instead of guessing from a prompt.",
-          chip: "one skills install",
+          title: "Command help explains usage",
+          body: "Agents use `one help --all` and subcommand `--help` to check the commands, options, and usage supported by the installed version before acting.",
+          chip: "one help --all",
         },
         {
           icon: ClipboardCheck,
@@ -648,8 +624,8 @@ const homeCopy = {
         },
         {
           icon: Wrench,
-          title: "AI guides follow templates",
-          body: "After a successful `one add`, One CLI creates or updates managed `AGENTS.md` / `CLAUDE.md` blocks with template-specific engineering rules. Existing custom content is not overwritten blindly.",
+          title: "Teams own project instructions",
+          body: "One CLI manages templates and the manifest. Teams own AGENTS.md and CLAUDE.md; creating workspaces and adding projects never generates or modifies these files.",
           chip: "AGENTS.md / CLAUDE.md",
         },
         {
@@ -686,7 +662,7 @@ const homeCopy = {
     startWays: {
       eyebrow: "Start here",
       title: "Three ways to start.",
-      body: "Run one create for the fastest path, open templates to choose a stack first, or install the official AI rules and hand the task to an agent.",
+      body: "Run one create for the fastest path, open templates to choose a stack first, or hand the generated CLI command to an agent.",
       direct: {
         label: "Option one",
         title: "Run one create",
@@ -708,35 +684,12 @@ const homeCopy = {
       ai: {
         label: "Option three",
         title: "Hand it to AI",
-        body: "Run one skills install first to install One CLI rules into local AI coding tools such as Codex, Claude Code, and Cursor.",
-        bullets: ["Describe what you want to build", "AI creates or migrates projects using One CLI rules", "Dependencies are handled by project type"],
+        body: "Give your goal and One CLI commands to an AI coding tool. In an existing workspace, have it read README files and one.manifest.json first.",
+        bullets: ["Describe what you want to build", "AI uses One CLI to create workspaces or add templates", "Dependencies are handled by project type"],
         cta: "Explore AI guide",
         promptLabel: "one-line agent prompt",
         prompt: "Please use One CLI to create a mobile project named media-stack and install dependencies.",
       },
-    },
-    skill: {
-      eyebrow: "Bundled AI instructions",
-      title: "Install the CLI and hand agents the project rules.",
-      body: "`one skills install` installs One CLI's bundled workflows into local AI coding tools like Codex, Claude Code, and Cursor. Agents read `one.manifest.json`, then create, add, migrate, and bootstrap JS / Go dependencies by context.",
-      promptLabel: "one-line agent prompt",
-      bullets: [
-        "Create new projects from your description",
-        "Migrate existing projects to One CLI",
-        "Install dependencies by project type",
-      ],
-      prompt: "Please use One CLI to create a mobile project named media-stack and install dependencies.",
-      result: (
-        <>
-          ✓ selected the mobile template
-          <br />
-          ✓ created media-stack
-          <br />
-          ✓ generated the project structure
-          <br />
-          ✓ installed dependencies
-        </>
-      ),
     },
     final: {
       title: "Stop hand-assembling the project foundation.",
@@ -755,7 +708,6 @@ const homeCopy = {
         tutorialsHome: "Tutorials home",
         firstWorkspace: "First workspace",
         envVars: "Configure env vars",
-        skillsInstall: "Install skill to agent",
         templateBuilder: "Templates page",
         templateGuide: "Choose templates",
         commandOverview: "Command overview",
@@ -776,7 +728,7 @@ const commandNames = [
   "one configure",
   "one templates",
   "one serve",
-  "one skills",
+  "one help",
 ] as const;
 
 const commandIcons = [Code2, Layers3, Wrench, FileJson2, Route, Sparkles] as const;
@@ -1396,7 +1348,6 @@ function Footer({ lang, text }: { lang: Locale; text: HomeText }) {
               [text.footer.links.tutorialsHome, localizedTutorialsPath(lang)],
               [text.footer.links.firstWorkspace, localizedTutorialsPath(lang, ["first-workspace"])],
               [text.footer.links.envVars, localizedTutorialsPath(lang, ["env-vars"])],
-              [text.footer.links.skillsInstall, localizedTutorialsPath(lang, ["skills-install"])],
             ]}
           />
           <FooterLinks

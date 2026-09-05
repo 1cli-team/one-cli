@@ -28,7 +28,7 @@ One CLI 模板的目标，是让第一个项目和后续操作保持一致。这
 
 ## agent 不应该发明约定
 
-当 agent 打开一个生成 workspace 时，它不应该临时发明工作流。它应该读取 manifest，遵循 bundled skill，使用文档化命令。
+当 agent 打开一个生成 workspace 时，它不应该临时发明工作流。它应该读取 manifest，遵循团队维护的项目说明，使用文档化命令。
 
 这意味着模板治理必须足够明确。生成的 Next.js app、Go API 或文档站，都应该带着让 CLI 和 agent 后续理解它的元数据。
 

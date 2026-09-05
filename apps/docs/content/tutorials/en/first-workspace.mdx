@@ -57,8 +57,6 @@ You'll see something like:
 ```
 .git/
 .github/
-AGENTS.md
-CLAUDE.md
 apps/
 one.manifest.json
 packages/
@@ -91,11 +89,7 @@ Every new workspace gets two baseline capabilities without prompting:
 
 CI is not configured by `one create` or `one add`, and no workflow file is generated automatically.
 
-## 5. Auto-installed bundled skill
-
-`one create` also runs the equivalent of `one skills install` for any AI agent it detects on your machine (Claude Code, Cursor, Codex). Skip this step in CI with `--no-skills`. To install it later, see [Install skill to agent](/en/tutorials/skills-install/).
-
-## 6. The first commit
+## 5. The first commit
 
 ```bash
 git status
@@ -119,4 +113,3 @@ Full table: [error codes](/en/docs/error-codes/).
 ## Next
 
 - Set your first env var → [Configure env vars](/en/tutorials/env-vars/)
-- Have your agent drive One CLI → [Install skill to agent](/en/tutorials/skills-install/)

@@ -66,6 +66,6 @@ pnpm -C apps/web dev
 
 - **想真上生产？** → [创建生产可用的工作区](/zh/tutorials/first-workspace/)（端到端 30 分钟）
 - **想接 Infisical secrets？** → [环境变量指南](/zh/tutorials/env-vars/)
-- **想让 Claude 帮你跑 one？** → [安装 Skill 到 Agent](/zh/tutorials/skills-install/)
+- **想让 Claude 帮你跑 one？** → [AI 项目说明](/zh/docs/ai-native/)
 - **想查每个命令细节？** → [CLI 命令](/zh/docs/cli-overview/)
 - **不想用？** 删掉 `my-app/` 文件夹就是。

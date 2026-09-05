@@ -40,6 +40,7 @@ func CommonVariables(projectName, packageManager string) Variables {
 // dev-only module-isolation files for Go templates.
 var excludedTemplateEntries = map[string]struct{}{
 	".git":         {},
+	".one":         {},
 	"node_modules": {},
 	"AGENTS.md":    {},
 	"CLAUDE.md":    {},
@@ -95,6 +96,10 @@ func renderEmbeddedTree(srcRoot string, dstRoot string, vars Variables, isRoot b
 			continue
 		}
 		renderedName := replacePathVariables(name, vars)
+		// Do not recreate retired workspace metadata through template variables.
+		if entry.IsDir() && renderedName == ".one" {
+			continue
+		}
 		srcPath := filepath.ToSlash(filepath.Join(srcRoot, name))
 		if entry.IsDir() {
 			dstPath := filepath.Join(dstRoot, renderedName)
@@ -108,6 +113,10 @@ func renderEmbeddedTree(srcRoot string, dstRoot string, vars Variables, isRoot b
 		dstName := renderedName
 		if isHbs {
 			dstName = strings.TrimSuffix(renderedName, ".hbs")
+		}
+		// Agent instructions belong to the user, including templated filenames.
+		if dstName == "AGENTS.md" || dstName == "CLAUDE.md" {
+			continue
 		}
 		dstPath := filepath.Join(dstRoot, dstName)
 		if err := os.MkdirAll(filepath.Dir(dstPath), 0o755); err != nil {

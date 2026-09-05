@@ -1,16 +1,15 @@
 // Package bundled exposes the assets the CLI ships with: the template
-// registry, the bundled Claude Code skills, the templates themselves,
+// registry, the templates themselves,
 // and the built `one serve` web UI.
 //
 // The files in this directory are physical copies of canonical sources
-// elsewhere in the monorepo (packages/templates/, packages/skills/,
+// elsewhere in the monorepo (packages/templates/,
 // apps/dashboard/dist/). Go's embed directive cannot traverse upward
 // with "../" and rejects symlinks ("cannot embed irregular file"), so
 // the copies have to live inside this package directory.
 //
 // The whole tree is gitignored. Two tasks regenerate it:
-//   - `task sync-bundled` — cheap cp from packages/templates/ +
-//     packages/skills/ to registry.json / skills/ / _templates/.
+//   - `task sync-bundled` — copy packages/templates/ to registry.json / _templates/.
 //   - `task sync-web`     — pnpm install + vite build of
 //     apps/dashboard/ → _web/.
 //
@@ -34,18 +33,6 @@ import (
 //
 //go:embed registry.json
 var RegistryBytes []byte
-
-// SkillsFS is the bundled Claude Code skills tree. internal/modules/skills walks
-// this filesystem to materialise ~/.claude/skills/ during `one create`.
-// The "all:skills" prefix tells go:embed to include hidden files too —
-// some skill manifests rely on dot-prefixed config layouts.
-//
-//go:embed all:skills
-var SkillsFS embed.FS
-
-// SkillsRoot is the path inside SkillsFS where skill subdirs live. Use this
-// when calling fs.Sub etc. so callers don't hard-code the prefix.
-const SkillsRoot = "skills"
 
 // TemplatesFS is the bundled templates tree consumed by `one add` when the
 // registry entry uses the local: prefix. internal/core/template walks this fs

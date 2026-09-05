@@ -36,6 +36,6 @@ one add nextjs-app --name admin --yes
 
 ## 保持小表面
 
-One CLI 的产品表面应该保持小：`create`、`add`、`templates`、`configure`、`serve`、`skills` 这些命令已经覆盖主要路径。preset 是 `create` 的输入之一，不需要成为新的中心概念。
+One CLI 的产品表面应该保持小：`create`、`add`、`templates`、`configure`、`serve` 这些命令已经覆盖主要路径。preset 是 `create` 的输入之一，不需要成为新的中心概念。
 
 好的 preset 设计应该让用户少输入、让 agent 少猜测、让生成结果可回放。它不需要解释每一个业务场景，也不应该替代清晰的模板目录和 manifest。

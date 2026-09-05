@@ -13,15 +13,14 @@ import (
 )
 
 type createResult struct {
-	Schema         string        `json:"schema"`
-	ProjectName    string        `json:"project_name"`
-	CreatedPath    string        `json:"created_path"`
-	CreatedInPlace bool          `json:"created_in_place"`
-	PackageManager string        `json:"package_manager"`
-	SecretsBackend string        `json:"secrets_backend,omitempty"`
-	CIEnabled      bool          `json:"ci_enabled"`
-	DevEnabled     bool          `json:"dev_enabled"`
-	Skills         skillsPayload `json:"skills"`
+	Schema         string `json:"schema"`
+	ProjectName    string `json:"project_name"`
+	CreatedPath    string `json:"created_path"`
+	CreatedInPlace bool   `json:"created_in_place"`
+	PackageManager string `json:"package_manager"`
+	SecretsBackend string `json:"secrets_backend,omitempty"`
+	CIEnabled      bool   `json:"ci_enabled"`
+	DevEnabled     bool   `json:"dev_enabled"`
 }
 
 // RenderTTY prints a friendly create-success summary.
@@ -47,22 +46,6 @@ func (r *createResult) RenderTTY(w io.Writer) {
 	fmt.Fprintln(w, i18n.T("common.next_steps"))
 	fmt.Fprintf(w, "  cd %s\n", r.CreatedPath)
 	fmt.Fprintln(w, "  one add")
-	fmt.Fprintln(w)
-	fmt.Fprintln(w, i18n.T("common.optional"))
-	fmt.Fprintln(w, "  one skills install")
-}
-
-type skillsPayload struct {
-	Status      string       `json:"status"`
-	InstalledTo []string     `json:"installed_to,omitempty"`
-	SkillCount  int          `json:"skill_count,omitempty"`
-	Reason      string       `json:"reason,omitempty"`
-	Error       *skillsError `json:"error,omitempty"`
-}
-
-type skillsError struct {
-	Code    string `json:"code"`
-	Message string `json:"message"`
 }
 
 func relativeOrAbs(cwd, targetDir string, useCurrentDir bool) string {
