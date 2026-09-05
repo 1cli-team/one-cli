@@ -24,7 +24,6 @@ One CLI is a single binary. It creates workspaces, adds projects, manages enviro
 | `one run` | Run a command with project `.env` injected | `one run -- npm test` |
 | `one configure` | Configure machine-level endpoint profiles | `one configure` |
 | `one serve` | Launch the local Workspace, Project, and Profile Dashboard | `one serve` |
-| `one skills` | Install or refresh the bundled `one-cli` skill | `one skills install` |
 
 ## Create Workspaces
 
@@ -32,7 +31,7 @@ One CLI is a single binary. It creates workspaces, adds projects, manages enviro
 one create [dir] [--name <name>] [--env-provider dotenv|infisical] [--yes]
 ```
 
-`[dir]` is the target directory. The workspace name defaults to `basename(dir)`. Create produces an empty workspace with local dotenv and `one dev`; it does not configure CI, ask for projects or deployment, or install Coding Agent Skills.
+`[dir]` is the target directory. The workspace name defaults to `basename(dir)`. Create produces an empty workspace with local dotenv and `one dev`; it does not configure CI or ask for projects or deployment.
 
 Read [Create](/en/docs/create/).
 
@@ -110,7 +109,6 @@ When adding tokens, prefer `one configure open` so you do not hand tokens to an 
 | `one create` | Yes; no-arg mode asks for target directory and optional workspace name |
 | `one add` | Yes; no-arg mode picks project kind, technology stack, and project name |
 | `one configure` | Yes; bare `one configure` or `one configure add` opens the local-connection wizard |
-| `one skills install` | Yes; no-arg mode multi-selects target agents |
 | `one env set` | Yes; hidden value input, scope selection, and overwrite confirmation; scripts pass the value |
 | `one container build` | Partial; TTY mode can choose a build version, CI uses `--build-version` |
 | `one deploy` | First deployment asks for project, target category/service, and local connection; scripts pass `--provider` and `--profile` |
@@ -179,22 +177,6 @@ one run [-p <name|path>] [--env-provider dotenv|infisical] [--env <env>] -- <com
 ```
 
 Runs the child process in the resolved project directory after injecting secrets. By default it uses the workspace manifest's env provider; pass `--env-provider` to force dotenv or Infisical.
-
-## Agent Skills
-
-```bash
-one skills install # choose target AI agents interactively
-one skills install --yes
-one skills install --agent claude-code # install skills for a specific AI agent
-```
-
-Installs or refreshes the bundled `one-cli` skill into detected coding agents.
-
-| Skill | Purpose |
-|---|---|
-| `one-cli` | Create workspaces, add template projects, install missing dependencies, and look up commands / JSON / error codes |
-
-Read [Install skill to agent](/en/tutorials/skills-install/).
 
 ## Output Modes
 

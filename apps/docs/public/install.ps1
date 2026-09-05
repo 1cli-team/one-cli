@@ -234,7 +234,7 @@ function Install-One {
     Add-OneToUserPath $installDir
     $reported = (& $target --version | Select-Object -First 1)
     Write-Host "one-cli: installed $target ($reported)."
-    Write-Host "Open a new terminal if another shell cannot find 'one', then run: one skills install"
+    Write-Host "Open a new terminal if another shell cannot find 'one', then run: one --help"
 }
 
 Install-One

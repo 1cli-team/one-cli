@@ -6,9 +6,5 @@
   "package_manager": "pnpm",
   "project_name": "my-app",
   "schema": "one-cli/create/v2",
-  "secrets_backend": "dotenv",
-  "skills": {
-    "reason": "manual-install",
-    "status": "skipped"
-  }
+  "secrets_backend": "dotenv"
 }

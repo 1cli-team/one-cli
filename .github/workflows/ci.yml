@@ -4,7 +4,7 @@
 # Two PR jobs call the same subtasks used by the local `task check` entrypoint:
 #  - lint: `task check:static` covers documentation drift, Go vet/gofmt, and
 #    Dashboard lint/format. The whole bundled
-#    tree (registry/skills/_templates/_web) is gitignored and regenerated
+#    tree (registry/_templates/_web) is gitignored and regenerated
 #    via `task sync-bundled` + `task sync-web`, both of which run as deps
 #    of `task vet` — so vet implicitly bootstraps the bundle here.
 #  - test: `task check:test` builds bin/one then runs Go + Dashboard tests.

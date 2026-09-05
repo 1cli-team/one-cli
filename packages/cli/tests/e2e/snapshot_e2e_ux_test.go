@@ -21,7 +21,7 @@ func TestSnapshot_E2E_CreateDailyText(t *testing.T) {
 	if code != 0 {
 		t.Fatalf("create text flow failed: exit=%d stderr=%q", code, stderr)
 	}
-	want := fmt.Sprintf("✓ 工作区已创建：demo\n  位置：%s\n  包管理器：pnpm\n  环境变量来源：本地 .env 文件\n  本地开发：one dev\n\n下一步：\n  cd %s\n  one add\n\n可选：\n  one skills install\n", target, target)
+	want := fmt.Sprintf("✓ 工作区已创建：demo\n  位置：%s\n  包管理器：pnpm\n  环境变量来源：本地 .env 文件\n  本地开发：one dev\n\n下一步：\n  cd %s\n  one add\n", target, target)
 	if stdout != want {
 		t.Fatalf("unexpected create success text:\n--- want\n%s--- got\n%s", want, stdout)
 	}
@@ -55,7 +55,7 @@ func TestSnapshot_E2E_HelpDailyAndCompleteCatalogues(t *testing.T) {
 			t.Errorf("daily help missing %q:\n%s", command, daily)
 		}
 	}
-	for _, command := range []string{"ci", "templates", "container", "run", "serve", "skills"} {
+	for _, command := range []string{"ci", "templates", "container", "run", "serve"} {
 		if strings.Contains(daily, "\n  "+command) {
 			t.Errorf("daily help should not advertise advanced command %q:\n%s", command, daily)
 		}
@@ -65,10 +65,34 @@ func TestSnapshot_E2E_HelpDailyAndCompleteCatalogues(t *testing.T) {
 	if code != 0 || stderr != "" {
 		t.Fatalf("one help --all failed: exit=%d stderr=%q", code, stderr)
 	}
-	for _, command := range []string{"create", "add", "dev", "deploy", "env", "configure", "ci", "templates", "container", "run", "serve", "skills"} {
+	for _, command := range []string{"create", "add", "dev", "deploy", "env", "configure", "ci", "templates", "container", "run", "serve"} {
 		if !strings.Contains(all, "  "+command) {
 			t.Errorf("complete help missing %q:\n%s", command, all)
 		}
+	}
+	if strings.Contains(all, "\n  skills") {
+		t.Errorf("complete help advertises the removed skills command:\n%s", all)
+	}
+}
+
+func TestRemovedSkillsCommand(t *testing.T) {
+	tmp := t.TempDir()
+	isolateHome(t, tmp)
+	_, stderr, code := runBinaryIn(t, tmp, "skills", "install", "--yes", "-o", "json")
+	if code != 1 {
+		t.Fatalf("removed command should fail: exit=%d stderr=%q", code, stderr)
+	}
+	envelope := mustParseJSON(t, firstJSONLine(stderr))
+	err, ok := envelope["error"].(map[string]any)
+	if !ok || err["code"] != "UNKNOWN_COMMAND" {
+		t.Fatalf("expected UNKNOWN_COMMAND, got %s", pretty(envelope))
+	}
+	entries, readErr := os.ReadDir(tmp)
+	if readErr != nil {
+		t.Fatal(readErr)
+	}
+	if len(entries) != 0 {
+		t.Fatalf("removed command created files in the isolated home: %v", entries)
 	}
 }
 

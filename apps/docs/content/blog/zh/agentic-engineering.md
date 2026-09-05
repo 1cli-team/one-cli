@@ -52,7 +52,7 @@ Manifest-driven CLI workflow 会把项目 setup 里的关键决策写成持久�
 - [`one add`](/zh/docs/add/) 添加模板化 project，并把它登记进 manifest。
 - [`one run`](/zh/docs/run/) 解析 project，并从正确目录执行命令。
 - JSON 输出和稳定 error code 让 agent 更容易解析命令结果。
-- [`one skills install`](/zh/docs/skills/) 把 One CLI 的操作规则安装到支持的 coding agents。
+- [AI 项目说明](/zh/docs/ai-native/)说明 coding agents 如何使用 manifest 和团队自管说明。
 
 这些能力支撑 Agentic Engineering 的方式很朴素：让 workspace 少一点隐式约定。agent 仍然需要理解任务、阅读代码、提出或执行修改；One CLI 提供的是一个更稳定的起点。
 

@@ -360,8 +360,6 @@
   "serve.flag.host": "本地设置页面使用的回环地址",
   "serve.flag.port": "本地端口（0 表示自动选择可用端口）",
   "serve.flag.open": "使用默认浏览器打开设置页面",
-  "skills.short": "安装 One CLI 的 Coding Agent Skills",
-  "skills.install.short": "安装或刷新 One CLI 自带的 Coding Agent Skills",
   "templates.short": "查看可用技术栈",
   "templates.list.short": "查看可用技术栈",
   "configure.locale.short": "查看或设置显示语言（auto / zh-CN / en-US）"

@@ -31,7 +31,7 @@ This is why `one create`, `one add`, `one templates`, and JSON output are part o
 
 A human can read a README, compare it with the file tree, and infer missing details. A coding agent can do that too, but the result is slower and less reliable. If the agent needs to decide whether to run `pnpm install` at the root or `go mod download` inside a service, guessing from folders is not good enough.
 
-One CLI's bundled skill gives agents operating rules. The manifest gives them current state. Together they make agent work more deterministic:
+One CLI's team-maintained project guidance gives agents operating rules. The manifest gives them current state. Together they make agent work more deterministic:
 
 ```bash
 one templates -o json

@@ -24,7 +24,6 @@ description: one 顶层命令、常用子命令、输出模式和 agent 自动�
 | `one run` | 注入项目 `.env` 后执行任意命令 | `one run -- npm test` |
 | `one configure` | 配置机器级 endpoint profile | `one configure` |
 | `one serve` | 启动本地 Workspace、Project 与 Profile Dashboard | `one serve` |
-| `one skills` | 安装 / 刷新 bundled `one-cli` skill | `one skills install` |
 
 ## 创建 workspace
 
@@ -32,7 +31,7 @@ description: one 顶层命令、常用子命令、输出模式和 agent 自动�
 one create [dir] [--name <name>] [--env-provider dotenv|infisical] [--yes]
 ```
 
-`[dir]` 是目标目录，工作区名称默认取 `basename(dir)`。create 只创建空工作区，默认使用本地 dotenv 和 `one dev`；不配置 CI、不问项目、不问部署，也不安装 Coding Agent Skills。
+`[dir]` 是目标目录，工作区名称默认取 `basename(dir)`。create 只创建空工作区，默认使用本地 dotenv 和 `one dev`；不配置 CI、不问项目、不问部署。
 
 详见 [`one create`](/zh/docs/create/)。
 
@@ -110,7 +109,6 @@ one configure open
 | `one create` | 有；无参时询问目标目录和可选工作区名称 |
 | `one add` | 有；无参时选择项目类型、技术栈和项目名 |
 | `one configure` | 有；无参或 `one configure add` 进入本机连接向导 |
-| `one skills install` | 有；无参时多选要安装到哪些 agent |
 | `one env set` | 有；隐藏输入值、选择作用域、确认覆盖；脚本显式传值 |
 | `one container build` | 半交互；TTY 下缺少构建版本时可选择版本，CI 用 `--build-version` |
 | `one deploy` | 首次部署询问项目、目标类别/服务和本机连接；脚本传 `--provider` / `--profile` |
@@ -179,22 +177,6 @@ one run [-p <name|path>] [--env-provider dotenv|infisical] [--env <env>] -- <com
 ```
 
 子进程总是在解析出的项目目录里执行。默认从 workspace manifest 读取 env provider，也可以用 `--env-provider` 强制走 dotenv 或 Infisical。
-
-## Agent skills
-
-```bash
-one skills install # 通过交互选择要给哪些ai安装skills
-one skills install --yes
-one skills install --agent claude-code # 给指定 ai安装 skills
-```
-
-安装 / 刷新 bundled `one-cli` skill 到本机检测到的 coding agent。当前 bundled skill：
-
-| skill | 用途 |
-|---|---|
-| `one-cli` | 新建 workspace、追加模板项目、补依赖、查命令 / JSON / 错误码 |
-
-详见 [安装 Skill 到 Agent](/zh/tutorials/skills-install/)。
 
 ## 输出模式
 

@@ -27,14 +27,14 @@ If later automation has to inspect folders and guess which commands are valid, t
 
 ## One CLI optimizes the workspace lifecycle
 
-One CLI keeps the initial generation flow, but adds a workspace layer around it. The manifest, template registry, JSON output, and bundled skill all exist so future operations have a reliable starting point.
+One CLI keeps the initial generation flow, but adds a workspace layer around it. The manifest, template registry, JSON output, and team-maintained project guidance all exist so future operations have a reliable starting point.
 
 The difference shows up in everyday tasks:
 
 - `one add` can add another project without losing workspace context.
 - `one templates -o json` gives agents a parseable template catalog.
 - Stable error codes let automation recover without parsing text.
-- The bundled skill tells agents how to install dependencies by toolchain.
+- Team-maintained project guidance records toolchain-specific development conventions.
 - The manifest tells tools what the workspace contains.
 
 This makes One CLI less like a one-time generator and more like a workspace contract manager.

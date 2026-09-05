@@ -167,7 +167,6 @@ func pretty(v any) string {
 var volatileKeys = map[string]bool{
 	"created_path":      true, // create: absolute path under tempdir
 	"cwd":               true, // error envelopes: absolute current directory
-	"installed_to":      true, // setup/create: list of absolute skill paths under $HOME
 	"package_json_path": true, // error envelopes: absolute path to package.json
 	"profile_path":      true, // profile-add (legacy v3): absolute path to ~/.config/one/profiles.json
 	"config_path":       true, // profile-add (v4): absolute path to ~/.config/one/config.json
@@ -272,8 +271,7 @@ func assertSnapshot(t *testing.T, name string, got map[string]any) {
 }
 
 // isolateHome redirects HOME to the given dir for the duration of the
-// test. The CLI plants skills under $HOME/.<agent>/skills; without
-// this the test would mutate the developer's actual agent dirs.
+// test so profile writes cannot mutate the developer's actual config.
 //
 // Also clears XDG_CONFIG_HOME because profile.ConfigPath() honours
 // it ahead of HOME (Linux convention). On Linux CI XDG_CONFIG_HOME is

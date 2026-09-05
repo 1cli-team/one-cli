@@ -33,23 +33,23 @@ function makePrompt(input: {
   stackEn: string;
 }): LocalizedText {
   const zh = [
-    `请使用 one-cli skill 帮我搭建${input.titleZh}。`,
+    `请使用 One CLI 帮我搭建${input.titleZh}。`,
     "",
     "【一键脚手架】",
     `  one create ${input.workspaceName} --preset ${input.presetId} --yes -o json`,
     `这会按 preset 一次性创建 workspace（${input.stackZh}）。`,
-    "请按照 SKILL.md 的标准流程执行，并校验 one.manifest.json。",
+    "请读取命令的 JSON 输出，并校验 one.manifest.json。",
     "",
     "脚手架就绪后告诉我，我会根据需要补充业务逻辑。",
   ].join("\n");
 
   const en = [
-    `Use the one-cli skill to scaffold ${input.titleEn}.`,
+    `Use the One CLI to scaffold ${input.titleEn}.`,
     "",
     "[Scaffold in one shot]",
     `  one create ${input.workspaceName} --preset ${input.presetId} --yes -o json`,
     `This applies the preset (${input.stackEn}).`,
-    "Follow the SKILL.md workflow and verify one.manifest.json.",
+    "Read the JSON command output, verify one.manifest.json.",
     "",
     "Let me know when the scaffold is ready and I'll layer business logic on top.",
   ].join("\n");

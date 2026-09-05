@@ -24,8 +24,8 @@ export async function generateMetadata(props: {
       lang === "zh" ? "模板示例 | One CLI" : "Template Examples | One CLI",
     description:
       lang === "zh"
-        ? "精选的 One CLI 模板示例：移动端、桌面端、Web、C 端、后台、文档站。一键复制 prompt，让 Claude 通过 one-cli skill 帮你搭起来。"
-        : "Hand-picked One CLI examples: mobile, desktop, web, consumer, admin, docs. Copy the prompt and let Claude scaffold it via the one-cli skill.",
+        ? "精选的 One CLI 模板示例：移动端、桌面端、Web、C 端、后台、文档站。一键复制 prompt，让 Claude 通过 One CLI 帮你搭起来。"
+        : "Hand-picked One CLI examples: mobile, desktop, web, consumer, admin, docs. Copy the prompt and let Claude scaffold it via the One CLI.",
     path: localizedTemplatePath(lang),
     locale: lang,
     alternates: alternateTemplateLanguages(),

@@ -360,8 +360,6 @@
   "serve.flag.host": "Loopback host for the local settings page",
   "serve.flag.port": "Local port (0 chooses an available port)",
   "serve.flag.open": "Open the settings page in the default browser",
-  "skills.short": "Install One CLI Coding Agent Skills",
-  "skills.install.short": "Install or refresh the bundled Coding Agent Skills",
   "templates.short": "List available technology stacks",
   "templates.list.short": "List available technology stacks",
   "configure.locale.short": "Show or set the display language (auto / zh-CN / en-US)"

@@ -62,7 +62,6 @@ const sectionsByLocale: Record<Locale, SidebarSection[]> = {
         { label: "one dev", href: "/docs/dev/", mono: true },
         { label: "one deploy", href: "/docs/deploy/", mono: true },
         { label: "one run", href: "/docs/run/", mono: true },
-        { label: "Skills", href: "/docs/skills/" },
         { label: "one serve", href: "/docs/serve/", mono: true },
         { label: "错误码", href: "/docs/error-codes/" },
       ],
@@ -109,7 +108,6 @@ const sectionsByLocale: Record<Locale, SidebarSection[]> = {
         { label: "one dev", href: "/docs/dev/", mono: true },
         { label: "one deploy", href: "/docs/deploy/", mono: true },
         { label: "one run", href: "/docs/run/", mono: true },
-        { label: "Skills", href: "/docs/skills/" },
         { label: "one serve", href: "/docs/serve/", mono: true },
         {
           label: "error codes",

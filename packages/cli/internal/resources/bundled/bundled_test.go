@@ -8,10 +8,10 @@ package bundled_test
 //   - RegistryBytes parses as JSON with the expected top-level shape
 //   - Each embedded FS counts files and matches the canonical on-disk
 //     source under the repo root
-//   - Spot files known to ship are present (registry.json structure, the
-//     bundled `one-cli` skill, at least one template)
+//   - Spot files known to ship are present (registry.json structure and
+//     at least one template)
 //
-// If you add a new template / skill and `task test` suddenly fails here,
+// If you add a new template and `task test` suddenly fails here,
 // run `task sync-bundled` first.
 
 import (
@@ -79,22 +79,9 @@ func TestRegistryBytes_MatchesOnDisk(t *testing.T) {
 	}
 }
 
-func TestSkillsFS_MatchesOnDisk(t *testing.T) {
-	embedded := mustWalk(t, bundled.SkillsFS, bundled.SkillsRoot)
-	disk := mustWalkOS(t, filepath.Join(repoRoot(t), "packages", "skills"))
-	assertSameFiles(t, "skills", embedded, disk)
-
-	// The bundled one-cli skill is what `one setup` installs; missing
-	// it means setup ships nothing.
-	wantSkillFile := "one-cli/SKILL.md"
-	if !contains(embedded, wantSkillFile) {
-		t.Errorf("SkillsFS missing %q", wantSkillFile)
-	}
-}
-
 // WebDistFS is special: its content is a build artefact (Vite bundle), not
 // a copy of source files. Vite chunk hashes vary per machine, so we don't
-// byte-compare against a fresh build like the templates / skills tests do.
+// byte-compare against a fresh build like the template tests do.
 // Instead we assert the embed structure looks like a real Vite dist:
 // index.html present and at least one hashed JS asset under assets/.
 func TestWebDistFS_HasViteDist(t *testing.T) {
@@ -116,6 +103,11 @@ func TestWebDistFS_HasViteDist(t *testing.T) {
 
 func TestTemplatesFS_MatchesOnDisk(t *testing.T) {
 	embedded := mustWalk(t, bundled.TemplatesFS, bundled.TemplatesRoot)
+	for _, name := range embedded {
+		if isAgentAsset(name) {
+			t.Errorf("retired agent asset embedded in binary: %s", name)
+		}
+	}
 	// task sync-bundled strips go.mod from the bundled copy (a quirk of
 	// keeping each Go template module-isolated during repo dev). Apply
 	// the same filter to the on-disk side before comparing.
@@ -124,7 +116,7 @@ func TestTemplatesFS_MatchesOnDisk(t *testing.T) {
 		// during dev) and skips the registry.json sibling (bundled separately
 		// at internal/resources/bundled/registry.json).
 		base := filepath.Base(rel)
-		return base == "go.mod" || rel == "registry.json"
+		return base == "go.mod" || rel == "registry.json" || isAgentAsset(rel)
 	})
 	assertSameFiles(t, "templates", embedded, disk)
 
@@ -132,6 +124,16 @@ func TestTemplatesFS_MatchesOnDisk(t *testing.T) {
 	if !hasPrefix(embedded, "go-api/") {
 		t.Error("TemplatesFS missing go-api template")
 	}
+}
+
+func isAgentAsset(path string) bool {
+	for _, part := range strings.Split(filepath.ToSlash(path), "/") {
+		switch strings.TrimSuffix(part, ".hbs") {
+		case ".one", ".agents", "AGENTS.md", "CLAUDE.md", "SKILL.md":
+			return true
+		}
+	}
+	return false
 }
 
 // mustWalk returns the sorted list of file paths inside fsys rooted at
@@ -154,12 +156,6 @@ func mustWalk(t *testing.T, fsys fs.FS, root string) []string {
 		t.Fatalf("walk fs %s: %v", root, err)
 	}
 	return out
-}
-
-// mustWalkOS walks the on-disk directory and returns relative file paths.
-func mustWalkOS(t *testing.T, root string) []string {
-	t.Helper()
-	return mustWalkOSFiltered(t, root, nil)
 }
 
 func mustWalkOSFiltered(t *testing.T, root string, skip func(rel string) bool) []string {

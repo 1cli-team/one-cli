@@ -5,7 +5,7 @@
 // The id format is a bit-packed string: a leading single-char version,
 // followed by dot-separated segments. Each segment carries a single-char
 // kind prefix + a fixed-width payload whose length is decided by the
-// kind. See SKILL.md / docs/concepts/preset.md for the on-disk grammar.
+// kind. See the preset documentation for the on-disk grammar.
 //
 // Stability promise: once a code is assigned in this file (or in
 // registry.json's `code` field for templates), it is FROZEN forever and

@@ -3,7 +3,7 @@ title: one create
 description: 起一个新的 one 工作区根骨架。
 ---
 
-`one create` 只创建空工作区：不问项目、不问部署、不安装 Coding Agent Skills，也不修改本机 AI 工具配置。需要项目时使用 `one add`。
+`one create` 只创建空工作区：不问项目、不问部署，也不修改本机 AI 工具配置。需要项目时使用 `one add`。
 
 ## 用法
 
@@ -86,18 +86,13 @@ one configure add env/infisical --profile work \
   "package_manager": "pnpm",
   "secrets_backend": "dotenv",
   "ci_enabled": false,
-  "dev_enabled": true,
-  "skills": {
-    "status": "skipped",
-    "reason": "manual-install"
-  }
+  "dev_enabled": true
 }
 ```
 
 `secrets_backend` 是 env 域 backend 名（`dotenv` / `infisical`）；`ci_enabled`
 为兼容 wire format 继续保留，默认是 `false`，`dev_enabled` 是 `true`。部署配置会在首次部署时写入。
 
-`skills.status` 为 `"skipped"`；如有需要，单独运行 `one skills install`。
 
 ## 示例
 

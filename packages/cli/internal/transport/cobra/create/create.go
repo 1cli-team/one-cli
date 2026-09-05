@@ -43,7 +43,7 @@ func runCreate(deps Dependencies, cmd *cobra.Command, rawDir string, flags *crea
 	// the post-form code path runs (existence + emptiness + nesting),
 	// surfaced inside the huh prompt so the user sees the conflict
 	// before they finish filling in the form. Without this, you fill in
-	// dir + name + skill picks and only THEN learn the directory was
+	// dir + name picks and only THEN learn the directory was
 	// already a workspace — bad UX.
 	validateDir := func(v string) error {
 		v = strings.TrimSpace(v)
@@ -155,10 +155,6 @@ func runCreate(deps Dependencies, cmd *cobra.Command, rawDir string, flags *crea
 		prompt.Step(i18n.Tf("create.registry_warning", result.RegistryWarn))
 	}
 
-	// Skills are an explicit opt-in (`one skills install`). Keep the stable
-	// envelope field so existing automation can distinguish the new policy.
-	skillsResult := skillsPayload{Status: "skipped", Reason: "manual-install"}
-
 	// v2 envelope: replaces the v1 `enabled_backends []string` with
 	// per-domain semantic fields. `secrets_backend` names the env
 	// backend ("dotenv" / "infisical"); `ci_enabled` / `dev_enabled` are
@@ -186,7 +182,6 @@ func runCreate(deps Dependencies, cmd *cobra.Command, rawDir string, flags *crea
 		SecretsBackend: secretsBackend,
 		CIEnabled:      ciEnabled,
 		DevEnabled:     devEnabled,
-		Skills:         skillsResult,
 	}
 	output.Emit(&payload)
 

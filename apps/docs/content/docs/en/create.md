@@ -3,7 +3,7 @@ title: one create
 description: Create a new One workspace root skeleton.
 ---
 
-`one create` creates an empty workspace. It does not ask for projects or deployment, install Coding Agent Skills, or modify local AI-tool settings. Add projects later with `one add`.
+`one create` creates an empty workspace. It does not ask for projects or deployment or modify local AI-tool settings. Add projects later with `one add`.
 
 ## Usage
 
@@ -88,11 +88,7 @@ one configure add env/infisical --profile work \
   "package_manager": "pnpm",
   "secrets_backend": "dotenv",
   "ci_enabled": false,
-  "dev_enabled": true,
-  "skills": {
-    "status": "skipped",
-    "reason": "manual-install"
-  }
+  "dev_enabled": true
 }
 ```
 
@@ -100,7 +96,6 @@ one configure add env/infisical --profile work \
 `ci_enabled` remains in the response for wire compatibility and is `false` by
 default; `dev_enabled` is `true`. Deployment configuration is added later.
 
-`skills.status` is `"skipped"`; run `one skills install` separately if wanted.
 
 ## Examples
 

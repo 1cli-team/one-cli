@@ -36,9 +36,5 @@
     }
   ],
   "schema": "one-cli/create/v3",
-  "secrets_backend": "dotenv",
-  "skills": {
-    "reason": "manual-install",
-    "status": "skipped"
-  }
+  "secrets_backend": "dotenv"
 }

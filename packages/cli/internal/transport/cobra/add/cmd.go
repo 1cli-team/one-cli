@@ -20,7 +20,6 @@ import (
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/application/execution"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/core/template"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/core/workspace"
-	"github.com/torchstellar-team/one-cli/packages/cli/internal/modules/ai"
 	creationmodule "github.com/torchstellar-team/one-cli/packages/cli/internal/modules/creation"
 	cliErrors "github.com/torchstellar-team/one-cli/packages/cli/internal/platform/errors"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/helpui"
@@ -179,7 +178,6 @@ func runAdd(cmd *cobra.Command, service *creationmodule.Service, positional stri
 		TemplateID:       project.TemplateID,
 		Toolchain:        project.Toolchain,
 		PackageManager:   project.PackageManager,
-		AiGuides:         result.Guides,
 		Warnings:         project.Warnings,
 		DeployConfigured: project.DeployBackend != "",
 	})
@@ -222,13 +220,12 @@ func promptDeploymentTarget(
 }
 
 type addResult struct {
-	Schema         string           `json:"schema"`
-	SubprojectName string           `json:"subproject_name"`
-	TargetPath     string           `json:"target_path"`
-	TemplateID     string           `json:"template_id"`
-	Toolchain      string           `json:"toolchain"`
-	PackageManager string           `json:"package_manager,omitempty"`
-	AiGuides       ai.RefreshResult `json:"ai_guides"`
+	Schema         string `json:"schema"`
+	SubprojectName string `json:"subproject_name"`
+	TargetPath     string `json:"target_path"`
+	TemplateID     string `json:"template_id"`
+	Toolchain      string `json:"toolchain"`
+	PackageManager string `json:"package_manager,omitempty"`
 	// Warnings (v0.5+) carries one entry per template `compat` mismatch.
 	// Empty slice / nil is omitted from the JSON envelope so clean adds
 	// match the pre-v0.5 wire shape.

@@ -6,7 +6,7 @@ Canonical site: https://www.1cli.dev/
 
 ## What it is
 
-One CLI creates and manages AI-ready workspaces with a manifest, reusable templates, local configuration, environment-variable flows, container and deploy helpers, JSON command output, and a bundled agent skill.
+One CLI creates and manages AI-ready workspaces with a manifest, reusable templates, local configuration, environment-variable flows, container and deploy helpers, and JSON command output.
 
 Use it when a coding agent or engineer needs a predictable workspace contract instead of ad hoc project bootstrapping.
 
@@ -18,7 +18,6 @@ Use it when a coding agent or engineer needs a predictable workspace contract in
 - Manifest reference: https://www.1cli.dev/en/docs/manifest/
 - Templates: https://www.1cli.dev/en/docs/templates/
 - Template examples: https://www.1cli.dev/en/templates/
-- Agent skills: https://www.1cli.dev/en/docs/skills/
 - Error codes: https://www.1cli.dev/en/docs/error-codes/
 
 ## Key concepts
@@ -32,7 +31,6 @@ Use it when a coding agent or engineer needs a predictable workspace contract in
 - `one deploy`: deploy configured projects.
 - `one container`: build and push container images.
 - `one serve`: open the local configuration UI.
-- `one skills install`: install the bundled One CLI agent skill.
 
 ## AI and agent usage
 
@@ -41,14 +39,12 @@ The site explains how agents should work from `one.manifest.json`, prefer JSON o
 Recommended entry points for AI summarizers:
 
 - https://www.1cli.dev/en/docs/ai-native/
-- https://www.1cli.dev/en/docs/skills/
 - https://www.1cli.dev/en/blog/ai-native-monorepo-cli/
 - https://www.1cli.dev/en/blog/coding-agent-workspace-setup/
 - https://www.1cli.dev/en/blog/json-cli-contracts-for-agents/
 - https://www.1cli.dev/en/blog/monorepo-scaffold-manifest/
 - https://www.1cli.dev/en/blog/template-governance-for-ai-workspaces/
 - https://www.1cli.dev/en/blog/one-cli-vs-general-scaffolding/
-- https://www.1cli.dev/en/blog/agent-skill-context/
 - https://www.1cli.dev/en/blog/manifest-as-contract/
 - https://www.1cli.dev/en/blog/preset-id-boundary/
 

@@ -137,7 +137,6 @@ Most of the time you should not touch it. The few manual cases:
 Fields One CLI owns:
 
 - `workspace.roots`: fixed to `apps/services/packages`
-- `ai.providers`: all supported providers are enabled by default; current output includes `AGENTS.md` and `CLAUDE.md`
 - Top-level `ci` / `dev`: always enabled; these fields are ignored. Project-level `projects[].domains.dev.command` is still read by `one dev`
 
 ## What Drift Means

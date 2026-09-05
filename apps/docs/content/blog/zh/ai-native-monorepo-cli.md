@@ -31,7 +31,7 @@ One CLI 把 workspace manifest 当作共同契约。生成的项目、模板来�
 
 人可以读 README，再对照文件树推断缺失信息。agent 也可以这样做，但更慢，也更不稳定。如果 agent 要判断是在根目录运行 `pnpm install`，还是进某个服务里运行 `go mod download`，只靠目录名猜是不够的。
 
-One CLI 的 bundled skill 给 agent 操作规则，manifest 给 agent 当前状态。两者配合后，agent 工作会更确定：
+One CLI 团队维护的项目说明给 agent 操作规则，manifest 给 agent 当前状态。两者配合后，agent 工作会更确定：
 
 ```bash
 one templates -o json

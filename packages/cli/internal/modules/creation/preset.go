@@ -5,7 +5,6 @@ import (
 	"fmt"
 
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/core/template"
-	"github.com/torchstellar-team/one-cli/packages/cli/internal/modules/ai"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/modules/preset"
 )
 
@@ -24,9 +23,6 @@ type PresetResult struct {
 	// Apply returns mid-way through a multi-project preset, this list
 	// contains the projects that *did* land before the failure.
 	Projects []ProjectResult
-	// Guides is the result of the final ai.Refresh call. Empty when no
-	// projects landed (Refresh is skipped).
-	Guides ai.RefreshResult
 	// UnknownSegments mirrors Spec.UnknownSegments so the envelope can
 	// echo "this CLI ignored these future-version segments".
 	UnknownSegments []string
@@ -47,8 +43,7 @@ var applyOrder = []preset.Kind{preset.KindBackend, preset.KindFrontend, preset.K
 
 // ApplyPreset renders every project segment in resolved into projectRoot,
 // upserts the manifest, and runs local/deployment infra sync per project. CI
-// is not generated implicitly. ai.Refresh
-// runs exactly once at the end (skipped if zero projects landed).
+// is not generated implicitly.
 //
 // Apply assumes:
 //   - resolved came from Resolve() against the current registry, so
@@ -108,12 +103,6 @@ func ApplyPreset(ctx context.Context, projectRoot string, resolved preset.Resolv
 			}
 			out.Projects = append(out.Projects, res)
 		}
-	}
-
-	if len(out.Projects) > 0 {
-		// AI-guides refresh: aggregates each landed project's ai/
-		// guides into AGENTS.md / CLAUDE.md. Runs once per Apply.
-		out.Guides = ai.Refresh(projectRoot, false)
 	}
 
 	return out, nil

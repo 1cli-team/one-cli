@@ -12,7 +12,6 @@ import (
 
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/core/template"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/core/workspace"
-	"github.com/torchstellar-team/one-cli/packages/cli/internal/modules/ai"
 	environmentmodule "github.com/torchstellar-team/one-cli/packages/cli/internal/modules/environment"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/modules/preset"
 	cliErrors "github.com/torchstellar-team/one-cli/packages/cli/internal/platform/errors"
@@ -181,7 +180,6 @@ func (s *Service) CreateWorkspace(ctx context.Context, input WorkspaceInput) (Wo
 
 type AddProjectResult struct {
 	Project ProjectResult
-	Guides  ai.RefreshResult
 }
 
 func (s *Service) AddProject(
@@ -195,7 +193,6 @@ func (s *Service) AddProject(
 	}
 	return AddProjectResult{
 		Project: project,
-		Guides:  ai.Refresh(projectRoot, false),
 	}, nil
 }
 

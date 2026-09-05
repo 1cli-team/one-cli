@@ -85,24 +85,7 @@ On Windows, the archive is `one-cli_windows_amd64.zip`.
 
 For normal upgrades, rerun the install command. Use `ONE_FORCE` only for downgrade or repair.
 
-## After Install: Run `one skills install`
-
-The installers only put the `one` binary on PATH. To let Claude Code / Cursor / Codex and similar agents discover One CLI skills, run this once:
-
-```bash
-one skills install
-```
-
-It detects supported agents on your machine and lets you choose where to install the skills. Only Claude Code is pre-selected by default; use Up/Down to move, Space to check or uncheck, and Enter to start installing.
-
-Non-interactive usage:
-
-```bash
-one skills install --yes              # install to every detected agent
-one skills install --agent claude-code # install to a single target
-```
-
-After upgrading the binary, rerun `one skills install` to refresh the skill content. It is idempotent. Current skills include `one-cli` for create/add/dependencies/reference workflows and `one-migrate` for migrating existing projects.
+## Configure Provider Credentials
 
 Provider credentials are configured once with `one configure add <domain>/<backend> --profile <name>` and can be reused across workspaces. Current configurable pairs are:
 
@@ -134,8 +117,6 @@ one configure add deploy/aws-s3 --profile web-prod     # AWS S3 endpoint + AK/SK
 one configure add deploy/kustomize --profile prod-k8s  # kubeconfig context
 one configure add container/ghcr --profile ghcr        # GHCR username + PAT
 ```
-
-See [Install skill to agent](/en/tutorials/skills-install/).
 
 ## Environment Variables
 
@@ -172,7 +153,7 @@ macOS / Linux:
 rm ~/.local/bin/one
 ```
 
-If you also want to remove skills installed by `one skills install`, delete the corresponding `~/.<agent>/skills/one-cli` / `~/.<agent>/skills/one-migrate` symlinks, or delete the whole `~/.one/skills-store/` directory. To remove local profile credentials and cache, delete `~/.config/one`.
+To remove local profile credentials and cache, delete `~/.config/one`.
 
 ## Local Repo Build For Contributors
 

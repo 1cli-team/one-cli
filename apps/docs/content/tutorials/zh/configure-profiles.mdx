@@ -111,7 +111,7 @@ one configure locale --set zh-CN
 one configure locale --set en-US
 ```
 
-**只影响人类看到的文本**（`error.message`、提示语、表格表头）。错误**码**（`error.code`）和 JSON 输出跨 locale 完全一样 — 这也是为什么 bundled skill 要求 agent 按 `error.code` 分流，不去解析 `error.message`。
+**只影响人类看到的文本**（`error.message`、提示语、表格表头）。错误**码**（`error.code`）和 JSON 输出跨 locale 完全一样 — 因此 agent 应按 `error.code` 分流，不去解析 `error.message`。
 
 ## 常见错误
 

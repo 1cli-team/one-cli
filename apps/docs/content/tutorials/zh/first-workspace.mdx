@@ -57,8 +57,6 @@ ls -la
 ```
 .git/
 .github/
-AGENTS.md
-CLAUDE.md
 apps/
 one.manifest.json
 packages/
@@ -91,11 +89,7 @@ manifest 关键字段：
 
 `one create` 和 `one add` 都不会默认配置 CI，也不会自动生成 workflow 文件。
 
-## 5. 自动装的 bundled skill
-
-`one create` 会自动检测本机已装的 AI agent（Claude Code / Cursor / Codex），并把 bundled skill 装上 — 等价跑了一遍 `one skills install`。CI 里跳过用 `--no-skills`。后续手动装见 [安装 Skill 到 Agent](/zh/tutorials/skills-install/)。
-
-## 6. 第一次提交
+## 5. 第一次提交
 
 ```bash
 git status
@@ -119,4 +113,3 @@ git commit -m "chore: scaffold workspace"
 ## 下一步
 
 - 设第一个环境变量 → [配置环境变量](/zh/tutorials/env-vars/)
-- 让 agent 直接操作 → [安装 Skill 到 Agent](/zh/tutorials/skills-install/)

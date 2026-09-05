@@ -72,11 +72,6 @@ var groups = []group{
 		},
 	},
 	{
-		title:  "Agent 文档 / Skills",
-		intro:  "`AGENTS.md` / `CLAUDE.md` / `.one/agents/**` 生成与 bundled skill 安装。",
-		prefix: []string{"AI_", "SKILLS_"},
-	},
-	{
 		title:  "Env — 输入校验",
 		intro:  "`one env` 命令的入参校验、覆写冲突等（与 Infisical 后端无关）。",
 		prefix: []string{"ENV_"},

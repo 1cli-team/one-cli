@@ -1,63 +1,11 @@
 package cli_test
 
-// E2E coverage of `one configure <verb> <domain>/<backend>` (verb-first
-// tree, v0.7+) and `one skills install` (v0.6 replacement for the v0.5
-// `one setup` command tree). Pin `--agent claude-code` on skills tests
-// so the result doesn't depend on which agents happen to be installed
-// on the host — that detection is the responsibility of internal/modules/skills/installer,
-// not this command-level contract.
-//
-// Layout:
-//   - Skills_Idempotent: `skills install --agent claude-code --yes`
-//     twice produces identical envelopes (the contract carried over
-//     from `one setup skills`, just under the new verb).
-//   - Configure_Env_Infisical / Configure_Deploy_S3 /
-//     Configure_Deploy_Kustomize / Configure_Container_Docker:
-//     `add` writes a profile entry to ~/.config/one/config.json
-//     (+ credentials.json for backends with secrets) and emits
-//     one-cli/configure-add/v1.
-//   - Configure_Idempotent: same name twice updates instead of errors
-//     (Upsert semantics).
+// E2E coverage of configure profile creation and updates.
 
 import (
-	"path/filepath"
-	"reflect"
 	"strings"
 	"testing"
 )
-
-func TestSnapshot_E2E_Skills_Idempotent(t *testing.T) {
-	tmp := t.TempDir()
-	isolateHome(t, tmp)
-
-	stdout1, stderr, code := runBinary(t, "skills", "install", "--agent", "claude-code", "--yes", "-o", "json")
-	if code != 0 {
-		t.Fatalf("first skills install: exit %d\n  stderr: %s", code, stderr)
-	}
-	got1 := mustParseJSON(t, stdout1)
-	if got1["schema"] != "one-cli/skills-install/v1" {
-		t.Errorf("schema: want one-cli/skills-install/v1, got %v", got1["schema"])
-	}
-	if got1["status"] != "completed" {
-		t.Errorf("status: want completed, got %v", got1["status"])
-	}
-	assertSnapshot(t, "skills-install-claude-code.json", got1)
-
-	link := filepath.Join(tmp, ".claude", "skills", "one-cli")
-	if !fileExists(t, link) {
-		t.Errorf("expected skill link at %s", link)
-	}
-
-	stdout2, stderr, code := runBinary(t, "skills", "install", "--agent", "claude-code", "--yes", "-o", "json")
-	if code != 0 {
-		t.Fatalf("second skills install: exit %d\n  stderr: %s", code, stderr)
-	}
-	got2 := mustParseJSON(t, stdout2)
-	if !reflect.DeepEqual(canonicalize(got1), canonicalize(got2)) {
-		t.Errorf("skills install not idempotent: envelope changed between runs\n  run1: %s\n  run2: %s",
-			pretty(canonicalize(got1)), pretty(canonicalize(got2)))
-	}
-}
 
 func TestSnapshot_E2E_Configure_Env_Infisical(t *testing.T) {
 	tmp := t.TempDir()

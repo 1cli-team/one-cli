@@ -136,7 +136,6 @@ description: 工作区台账文件 — 谁在写、什么时候改、漂移会�
 
 > 这些字段由 One CLI 维护，不需要手改：
 > - `workspace.roots`：永远是 `apps/services/packages`，写死代码
-> - `ai.providers`：所有 provider 默认全启用（当前 codex + claude-code，自动同时生成 AGENTS.md + CLAUDE.md）
 > - 顶层 `ci` / `dev`：永远启用，不再 opt-in；删掉这两个字段或加上都不会被读。项目级 `projects[].domains.dev.command` 仍然会被 `one dev` 读取
 
 ## 漂移会怎样

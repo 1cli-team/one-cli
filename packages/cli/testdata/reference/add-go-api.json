@@ -1,20 +1,4 @@
 {
-  "ai_guides": {
-    "file_count": 6,
-    "generated_files": [
-      "AGENTS.md",
-      "CLAUDE.md",
-      ".one/agents/conventions.md",
-      ".one/agents/projects/services-user-api.md",
-      ".one/agents/ops/dev.md",
-      ".one/agents/ops/secrets.md"
-    ],
-    "providers": [
-      "codex",
-      "claude-code"
-    ],
-    "status": "completed"
-  },
   "schema": "one-cli/add/v1",
   "subproject_name": "user-api",
   "target_path": "\u003cvolatile\u003e",

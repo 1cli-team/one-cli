@@ -16,7 +16,7 @@ The manifest tells the agent whether it is inside a One workspace, which package
 
 The common mistake is to run one install command everywhere. That works for small single-stack projects and fails in mixed workspaces.
 
-One CLI's agent guidance separates dependency setup by toolchain:
+Dependency setup should follow the project toolchain:
 
 - JS, TS, and Node projects install from the workspace root with the declared package manager.
 - Go projects run module commands from the Go project directory.

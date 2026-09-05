@@ -114,17 +114,15 @@ packages/cli/internal/
   adapters/
     ci/ container/ deploy/ env/ shared/ toolchain/
   modules/
-    ai/                AI-assisted project inspection
     container/         compiled Docker/OCI workflow and manifest publication
     creation/          Template-to-Workspace/Project materialisation
     development/       local development process orchestration
     environment/       dotenv/Infisical workflows and workspace setup
     preset/            pure preset encoding, parsing, and resolution
-    skills/            skill discovery and installation
   platform/
     errors/ helpui/ i18n/ output/ preferences/ process/ prompt/ updatecheck/
   resources/
-    bundled/           embedded templates, skills, registry, and Dashboard
+    bundled/           embedded templates, registry, and Dashboard
   transport/
     cobra/             one directory per command family
     http/              local Dashboard API
@@ -239,7 +237,7 @@ Creation is one Template-driven compiled workflow:
   configuration;
 - workspace target revalidation, skeleton generation, Backend selection,
   environment preparation, Template rendering, manifest publication, project
-  artifact generation, AI-guide refresh, and best-effort Git initialization
+  artifact generation and best-effort Git initialization
   stay behind that boundary;
 - its private `syncProject` step owns container artifacts, the persisted dev
   command, deploy configuration, and environment safety rules in dependency

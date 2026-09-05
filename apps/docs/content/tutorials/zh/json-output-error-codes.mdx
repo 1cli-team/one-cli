@@ -105,7 +105,6 @@ fi
 
 ## 5. agent 的同款模式
 
-bundled `one-cli` skill（见[安装 Skill 到 Agent](/zh/tutorials/skills-install/)）要求 agent 严格按这套分流：
 
 > 跑 `one` 时永远加 `-o json`。读 `error.code`。**永远不要**解析 `error.message` — 它随用户 locale 变。
 
@@ -116,7 +115,7 @@ bundled `one-cli` skill（见[安装 Skill 到 Agent](/zh/tutorials/skills-insta
 3. `error.code == "TARGET_EXISTS"` → 试 `user-api-2`，或问用户
 4. `error.code == "NOT_ONE_PROJECT"` → 先 `one create` 或问用户
 
-这些恢复模式 skill 本身就带，agent 不用重发明。
+agent 可以直接根据命令的结构化输出使用这些恢复模式。
 
 ## 6. 关键错误码组
 
@@ -156,4 +155,3 @@ CI 里钉死 `-o json` 等于把流水线行为绑定到稳定的码名上，不
 ## 下一步
 
 - 浏览所有错误码 → [错误码参考](/zh/docs/error-codes/)
-- 装 skill 让 agent 自动按这套分流 → [安装 Skill 到 Agent](/zh/tutorials/skills-install/)

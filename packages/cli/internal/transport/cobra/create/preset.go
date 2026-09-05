@@ -171,7 +171,6 @@ func runCreateWithPreset(deps Dependencies, cmd *cobra.Command, cwd, rawDir stri
 	if creationResult.RegistryWarn != nil {
 		prompt.Step(i18n.Tf("create.registry_warning", creationResult.RegistryWarn))
 	}
-	skillsResult := skillsPayload{Status: "skipped", Reason: "manual-install"}
 
 	// Step 6: emit the v3 envelope.
 	payload := createPresetResult{
@@ -190,7 +189,6 @@ func runCreateWithPreset(deps Dependencies, cmd *cobra.Command, cwd, rawDir stri
 			Backend:        effectiveEnv,
 			InfisicalBound: creationResult.InfisicalBound,
 		},
-		Skills:       skillsResult,
 		PartialState: creationResult.PartialState,
 	}
 	if len(creationResult.Preset.UnknownSegments) > 0 {
@@ -242,7 +240,6 @@ type createPresetResult struct {
 	Projects        []presetProjectPayload `json:"projects"`
 	DeploySummary   map[string]int         `json:"deploy_summary"`
 	EnvSummary      envSummary             `json:"env_summary"`
-	Skills          skillsPayload          `json:"skills"`
 	PartialState    string                 `json:"partial_state"`
 	UnknownSegments []string               `json:"preset_unknown_segments,omitempty"`
 }

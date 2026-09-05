@@ -73,7 +73,7 @@ tasks:
     desc: Refuse `one <subcommand>` references in docs that name unregistered commands
     # The tool imports internal/bootstrap/cli → internal/resources/bundled, so it can't compile
     # without the //go:embed sources being present. sync-bundled covers
-    # registry/skills/_templates; sync-web covers _web. Both run before
+    # registry/_templates; sync-web covers _web. Both run before
     # `go run` here so a fresh checkout works without prior task invocations.
     deps: [sync-bundled, sync-web]
     dir: '{{.CLI_DIR}}'
@@ -83,11 +83,9 @@ tasks:
       - 'packages/cli/internal/**/*.go'
       - 'packages/cli/tools/verify-cli-references/**/*.go'
       - 'README.md'
-      - 'CLAUDE.md'
       - 'CONTRIBUTING.md'
       - 'apps/docs/content/docs/**/*.md'
       - 'apps/docs/content/docs/**/*.mdx'
-      - 'packages/skills/**/*.md'
       - 'packages/templates/*/README.md'
       - 'packages/templates/*/README.md.hbs'
 
@@ -118,7 +116,7 @@ tasks:
     desc: Refuse drift in cobra help text (rootHelp completeness + Example flag existence)
     # The tool imports internal/bootstrap/cli → internal/resources/bundled, so it can't compile
     # without the //go:embed sources being present. sync-bundled covers
-    # registry/skills/_templates; sync-web covers _web. Mirrors the deps
+    # registry/_templates; sync-web covers _web. Mirrors the deps
     # on verify-cli-references and verify-preset-codes.
     deps: [sync-bundled, sync-web]
     dir: '{{.CLI_DIR}}'
@@ -364,14 +362,14 @@ tasks:
       - 'apps/dashboard/dist/index.html'
 
   sync-bundled:
-    desc: Regenerate registry/skills/_templates under packages/cli/internal/resources/bundled (go:embed sources)
+    desc: Regenerate registry/_templates under packages/cli/internal/resources/bundled (go:embed sources)
     run: once
     summary: |
       Go's embed cannot traverse `..` or follow symlinks, so we keep physical
       copies of canonical assets under packages/cli/internal/resources/bundled. The
       whole bundled tree is gitignored and regenerated on demand.
 
-      This task handles the cheap copies: registry.json, skills/, _templates/.
+      This task handles the cheap copies: registry.json, _templates/.
       It runs implicitly as a dep of `vet` / `test` / `build`. The dashboard
       build (sync-web) is separate but identically wired — both have to run
       before any Go command will compile the bundled package.
@@ -380,7 +378,8 @@ tasks:
       clone needs `task sync-bundled && task sync-web` once before the Go
       toolchain stops complaining about missing embed paths.
 
-      Dev-only go.mod files inside packages/templates/<id>/ are stripped
+      Agent instruction files and .one/.agents directories are excluded from
+      the bundled templates. Dev-only go.mod files inside packages/templates/<id>/ are stripped
       from the bundled copy — their presence isolates each Go-based template
       from the parent module during repository development, but go:embed
       treats any directory containing go.mod as a separate module and

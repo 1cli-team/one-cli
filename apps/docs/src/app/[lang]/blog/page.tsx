@@ -29,7 +29,7 @@ const copy: Record<
     eyebrow: "One CLI Blog",
     title: "工程笔记和产品设计记录",
     description:
-      "记录 One CLI 的 manifest、preset、agent skill 和模板治理设计，方便后续决策有上下文可追溯。",
+      "记录 One CLI 的 manifest、preset、AI 项目说明和模板治理设计，方便后续决策有上下文可追溯。",
     read: "阅读全文",
     empty: "还没有博客文章。",
   },
@@ -37,7 +37,7 @@ const copy: Record<
     eyebrow: "One CLI Blog",
     title: "Engineering notes and product design records",
     description:
-      "Notes on One CLI manifests, presets, agent skills, and template governance so decisions stay traceable.",
+      "Notes on One CLI manifests, presets, AI project guidance, and template governance so decisions stay traceable.",
     read: "Read article",
     empty: "No blog posts yet.",
   },
