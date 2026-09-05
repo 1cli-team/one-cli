@@ -10,7 +10,7 @@
 // when commands are added, removed, or renamed.
 //
 // What we scan:
-//   - Top-level: README.md, CLAUDE.md, CONTRIBUTING.md
+//   - Top-level: README.md, CONTRIBUTING.md
 //   - apps/docs/content/docs/**/*.{md,mdx}
 //   - packages/templates/<id>/README.md and README.md.hbs
 //
