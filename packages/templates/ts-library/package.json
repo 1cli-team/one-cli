@@ -37,13 +37,16 @@
     "publish:public": "pnpm publish --access public"
   },
   "devDependencies": {
-    "@types/node": "^25.2.2",
-    "@vitest/coverage-v8": "^4.0.18",
-    "oxfmt": "^0.41.0",
-    "oxlint": "^1.56.0",
-    "tsdown": "^0.20.3",
-    "typescript": "^5.9.3",
-    "vitest": "^4.0.18"
+    "@types/node": "^24.13.4",
+    "@vitest/coverage-v8": "^5.0.0",
+    "oxfmt": "^0.67.0",
+    "oxlint": "^1.82.0",
+    "tsdown": "^0.23.0",
+    "typescript": "^7.0.2",
+    "vitest": "^5.0.0"
   },
-  "packageManager": "pnpm@10.14.0"
+  "engines": {
+    "node": "^24.15.0 || >=26.0.0"
+  },
+  "packageManager": "pnpm@12.3.4"
 }

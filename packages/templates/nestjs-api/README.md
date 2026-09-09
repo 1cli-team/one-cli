@@ -224,8 +224,8 @@ nest-template/
 
 | 类别     | 技术              | 说明                              |
 | -------- | ----------------- | --------------------------------- |
-| 框架     | NestJS 11         | Node.js 企业级框架                |
-| 语言     | TypeScript 5.8    | 类型安全                          |
+| 框架     | NestJS 12         | Node.js 企业级框架                |
+| 语言     | TypeScript 6.0    | 类型安全                          |
 | 数据库   | PostgreSQL 15     | 关系型数据库                      |
 | ORM      | Drizzle ORM       | 类型安全的 SQL 查询构建器         |
 | 认证     | JWT               | 无状态令牌认证                    |
@@ -441,3 +441,11 @@ docker compose up -d
 # 仅启动应用
 docker compose up -d app
 ```
+
+### TypeScript 兼容性
+
+模板使用 TypeScript 6.0、Nest 12、CLI 12 和 Schematics 12。
+TypeScript 配置采用 NodeNext 模块解析和相对路径映射；构建输出仍为 `dist/main.js`。
+运行 `pnpm typecheck` 检查应用、测试和 Drizzle 脚本的类型。
+测试脚本启用 Jest 的 VM Modules 支持，用于加载 Nest 12 的 ESM 包。
+当前 ts-jest 依赖 TypeScript 6 提供的 JavaScript 编译器 API，因此本模板保留在 TypeScript 6。

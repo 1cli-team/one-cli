@@ -2,7 +2,6 @@
   "name": "astro-site-template",
   "version": "0.1.0",
   "type": "module",
-  "packageManager": "pnpm@10.14.0",
   "scripts": {
     "dev": "astro dev",
     "build": "pnpm astro check && astro build",
@@ -16,16 +15,16 @@
     "check:fix": "pnpm run lint:fix && pnpm run format:fix"
   },
   "dependencies": {
-    "@astrojs/check": "^0.9.8",
-    "@tailwindcss/vite": "^4.2.2",
-    "astro": "^6.0.8",
-    "tailwindcss": "^4.1.18",
-    "typescript": "^5.9.3"
+    "@astrojs/check": "^0.9.10",
+    "@tailwindcss/vite": "^4.3.3",
+    "astro": "^7.3.2",
+    "tailwindcss": "^4.3.3",
+    "typescript": "^6.0.3"
   },
   "devDependencies": {
     "git-cz": "^4.9.0",
-    "oxfmt": "^0.41.0",
-    "oxlint": "^1.56.0"
+    "oxfmt": "^0.67.0",
+    "oxlint": "^1.82.0"
   },
   "lint-staged": {
     "*.{js,jsx,ts,tsx,mjs,cjs}": [
@@ -35,5 +34,9 @@
     "*.{json,md,css,scss,html,yml,yaml}": [
       "oxfmt --write --no-error-on-unmatched-pattern"
     ]
-  }
+  },
+  "engines": {
+    "node": "^24.15.0 || >=26.0.0"
+  },
+  "packageManager": "pnpm@12.3.4"
 }

@@ -19,12 +19,12 @@ import "./controller";
 @provide()
 export default class ElectronApp {
   constructor(
-    @inject(MainWindow)       private readonly mainWindow: MainWindow,
-    @inject(ProtocolService)  private readonly protocol: ProtocolService,
-    @inject(Router)           private readonly router: Router,
-    @inject(ElectronUpdater)  private readonly updater: ElectronUpdater,
+    @inject(MainWindow) private readonly mainWindow: MainWindow,
+    @inject(ProtocolService) private readonly protocol: ProtocolService,
+    @inject(Router) private readonly router: Router,
+    @inject(ElectronUpdater) private readonly updater: ElectronUpdater,
     @inject(ElectronDevtools) private readonly devTools: ElectronDevtools,
-    @inject(ElectronLogger)   private readonly logger: ElectronLogger,
+    @inject(ElectronLogger) private readonly logger: ElectronLogger,
   ) {}
 
   async init(): Promise<void> {

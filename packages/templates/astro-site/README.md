@@ -4,8 +4,8 @@
 
 ## 技术栈
 
-- Astro 6
-- TypeScript 5
+- Astro 7
+- TypeScript 6
 - Tailwind CSS v4
 - `@astrojs/check`
 - oxlint + oxfmt
@@ -75,3 +75,8 @@ export function getDemoPost() {
 ## 说明
 
 这是模板仓库，不内置项目级 Changesets、commitlint、Biome 配置或发布工作流。相关治理由 `one-cli` 在工作区根目录统一生成和维护。
+
+## TypeScript 版本
+
+此模板使用 TypeScript 6。`astro check` 依赖 TypeScript 的 JavaScript 编译器接口，
+当前检查工具尚不支持 TypeScript 7，因此不要单独升级到 TS7。

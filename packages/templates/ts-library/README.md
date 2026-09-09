@@ -34,3 +34,7 @@ pnpm test:coverage
 pnpm prepublishOnly
 pnpm publish:public
 ```
+
+## TypeScript 版本
+
+此模板使用 TypeScript 7，类型声明由 tsdown 的原生 TypeScript 生成器构建。

@@ -3,7 +3,6 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "packageManager": "pnpm@10.14.0",
   "scripts": {
     "dev": "astro dev",
     "start": "astro dev",
@@ -18,14 +17,18 @@
     "check:fix": "pnpm run lint:fix && pnpm run format:fix"
   },
   "dependencies": {
-    "@astrojs/check": "^0.9.8",
-    "@astrojs/starlight": "^0.38.2",
-    "astro": "^6.0.8",
-    "sharp": "^0.34.5",
-    "typescript": "^5.9.3"
+    "@astrojs/check": "^0.9.10",
+    "@astrojs/starlight": "^0.42.0",
+    "astro": "^7.3.2",
+    "sharp": "^0.35.4",
+    "typescript": "^6.0.3"
   },
   "devDependencies": {
-    "oxfmt": "^0.41.0",
-    "oxlint": "^1.56.0"
-  }
+    "oxfmt": "^0.67.0",
+    "oxlint": "^1.82.0"
+  },
+  "engines": {
+    "node": "^24.15.0 || >=26.0.0"
+  },
+  "packageManager": "pnpm@12.3.4"
 }

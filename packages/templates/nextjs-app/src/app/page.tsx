@@ -26,18 +26,14 @@
  *   DON'T hardcode hex / rgb in Tailwind classes.
  */
 
-import { ArrowRight, BookOpen, Github } from "lucide-react";
+import { ArrowRight, BookOpen, Code2 } from "lucide-react";
 
 export default function HomePage() {
 	return (
 		<main className="min-h-screen bg-background text-foreground">
 			<section className="mx-auto flex max-w-2xl flex-col items-center gap-8 px-6 py-24 text-center sm:py-32">
 				<div className="rounded-2xl bg-[#0a0a0a] px-6 py-4 shadow-lg shadow-black/10">
-					<img
-						src="/onecli-logo-inverted.svg"
-						alt="One CLI"
-						className="h-8 w-auto"
-					/>
+					<img src="/onecli-logo-inverted.svg" alt="One CLI" className="h-8 w-auto" />
 				</div>
 
 				<div className="space-y-3">
@@ -77,7 +73,7 @@ export default function HomePage() {
 						rel="noreferrer noopener"
 						className="inline-flex items-center gap-2 rounded-full border border-border px-5 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-muted"
 					>
-						<Github className="size-4" />
+						<Code2 className="size-4" />
 						GitHub
 					</a>
 				</div>

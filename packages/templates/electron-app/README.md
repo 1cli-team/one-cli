@@ -1,10 +1,15 @@
 # electron-template
 
+环境要求：Node.js 24.15+（24 LTS）或 26+，pnpm 12.3.4。
+
+Electron 44、Inversify 8、React 19、Vite 8 和 Tailwind CSS 4。
+主进程、UI 和 preload 统一使用 TypeScript 7.0.2。
+
 主进程内置： typeorm+sqlite3、electron-log、electron-store
 
 主进程框架：inversify
 
-主进程打包： esbuild
+主进程打包： tsdown 0.23
 
 打包构建： electron-builder
 
@@ -19,6 +24,7 @@
 ---
 
 运行项目
+
 ```shell
 # install
 pnpm i
@@ -42,22 +48,22 @@ pnpm run release
 │  inversify.config.ts  服务绑定
 │  main.d.ts            主进程类型定义
 │  preload.ts           与渲染进程交互
-│  types.ts             所有服务的类型定义	
-│  
+│  types.ts             所有服务的类型定义
+│
 ├─controller
 │      HomeController.ts  controller 定义，主要是与渲染进程交互逻辑
-│      
+│
 ├─entity
 │      User.ts  实体类
-│      
+│
 ├─helper
 │      decorator.ts     ipc 交互的装饰器方法
 │      utils.ts         工具文件
 │      variables.ts     主进程常量定义
-│      
+│
 ├─repository
 │      userRepositoryImpl.ts  实体类资源库
-│      
+│
 └─services
         DatabaseServiceImpl.ts    数据库服务
         IpcHandlerServiceImpl.ts  ipc 通讯服务
@@ -79,27 +85,25 @@ pnpm run release
 │  main.tsx
 │  renderer.d.ts
 │  vite-env.d.ts
-│  
+│
 ├─assets
 │      .gitkeep
-│      
+│
 ├─components
 │      .gitkeep
-│      
+│
 ├─hooks
 │      electron.ts
-│      
+│
 ├─nodes
 │  └─HomePage
 │          index.scss
 │          index.tsx
-│          
+│
 ├─store
 │      index.ts
-│      
+│
 └─utils
         http.ts
         index.ts
 ```
-
-

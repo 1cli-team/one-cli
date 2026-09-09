@@ -6,7 +6,7 @@
 
 - Next.js 16
 - React 19
-- TypeScript 5
+- TypeScript 7
 - shadcn/ui + Radix UI
 - Tailwind CSS v4
 - next-themes

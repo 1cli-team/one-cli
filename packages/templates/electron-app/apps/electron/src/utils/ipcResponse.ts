@@ -7,7 +7,11 @@ export interface IpcResponse {
 }
 
 export function success(data: unknown): IpcResponse {
-  return { code: 0, message: "success", data: (data ?? null) as Record<string, any> | null };
+  return {
+    code: 0,
+    message: "success",
+    data: (data ?? null) as Record<string, any> | null,
+  };
 }
 
 export function error(message = "fail"): IpcResponse {

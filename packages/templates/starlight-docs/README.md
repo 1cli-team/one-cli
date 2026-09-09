@@ -28,3 +28,8 @@ pnpm dev
 - `src/content/docs/reference/`：参考文档（自动生成侧边栏）
 - `astro.config.mjs`：站点标题、侧边栏和社交链接配置
 - `src/styles/custom.css`：Starlight 主题变量与全局外观定制
+
+## TypeScript 版本
+
+此模板使用 TypeScript 6。`astro check` 依赖 TypeScript 的 JavaScript 编译器接口，
+当前检查工具尚不支持 TypeScript 7，因此不要单独升级到 TS7。

@@ -6,6 +6,7 @@ describe("HealthService", () => {
 
   beforeEach(() => {
     mockDrizzle = {
+      isConfigured: jest.fn().mockReturnValue(true),
       isHealthy: jest.fn().mockResolvedValue(true),
     };
     service = new HealthService(mockDrizzle);
