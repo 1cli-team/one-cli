@@ -26,7 +26,7 @@ const start = async (): Promise<void> => {
   await app.whenReady();
 
   // 4. 加载所有 @provide 装饰的类到容器
-  await container.load(buildProviderModule());
+  await container.loadAsync(buildProviderModule());
 
   // 5. 取编排器并启动
   const application = container.get(ElectronApp);

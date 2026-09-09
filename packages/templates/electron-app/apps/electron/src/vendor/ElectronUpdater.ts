@@ -20,7 +20,9 @@ export default class ElectronUpdater {
     private readonly mainWindow: MainWindow,
   ) {}
 
-  async init(options: { autoUpgrade?: boolean; allowBeta?: boolean } = {}): Promise<void> {
+  async init(
+    options: { autoUpgrade?: boolean; allowBeta?: boolean } = {},
+  ): Promise<void> {
     autoUpdater.disableWebInstaller = true;
     autoUpdater.logger = this.logger.logger;
     autoUpdater.allowPrerelease = options.allowBeta ?? false;

@@ -5,4 +5,4 @@
 // the template; the user's actual go.mod is rendered from go.mod.hbs.
 module template-go-lib
 
-go 1.23
+go 1.27.0

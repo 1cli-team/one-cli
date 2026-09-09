@@ -5,7 +5,7 @@
 ## 技术栈
 
 - React 19
-- TypeScript 5
+- TypeScript 7
 - Vite 8
 - shadcn/ui + Radix UI
 - Tailwind CSS v4

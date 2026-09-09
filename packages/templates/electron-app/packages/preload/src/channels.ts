@@ -70,5 +70,5 @@ export interface InvokeMap {
 
 export type InvokeChannel = keyof InvokeMap;
 
-type EventNamespace = typeof EVENT[keyof typeof EVENT];
+type EventNamespace = (typeof EVENT)[keyof typeof EVENT];
 export type EventChannel = EventNamespace[keyof EventNamespace];

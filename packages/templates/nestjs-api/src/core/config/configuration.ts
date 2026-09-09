@@ -26,7 +26,9 @@ export const jwtConfig = registerAs("jwt", () => {
   let secret = process.env.JWT_SECRET;
   if (!secret) {
     if (process.env.NODE_ENV === "production") {
-      throw new Error("JWT_SECRET environment variable is required in production");
+      throw new Error(
+        "JWT_SECRET environment variable is required in production",
+      );
     }
     secret = randomBytes(32).toString("hex");
     configLogger.warn(

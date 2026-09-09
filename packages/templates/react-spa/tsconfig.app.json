@@ -17,14 +17,13 @@
 		"jsx": "react-jsx",
 
 		/* Path mapping */
-		"baseUrl": ".",
 		"paths": {
-			"@/*": ["src/*"],
-			"@components/*": ["src/components/*"],
-			"@lib/*": ["src/lib/*"],
-			"@pages/*": ["src/pages/*"],
-			"@hooks/*": ["src/hooks/*"],
-			"@types/*": ["src/types/*"]
+			"@/*": ["./src/*"],
+			"@components/*": ["./src/components/*"],
+			"@lib/*": ["./src/lib/*"],
+			"@pages/*": ["./src/pages/*"],
+			"@hooks/*": ["./src/hooks/*"],
+			"@types/*": ["./src/types/*"]
 		},
 
 		/* Linting */
@@ -35,5 +34,5 @@
 		"noFallthroughCasesInSwitch": true,
 		"noUncheckedSideEffectImports": true
 	},
-	"include": ["src"]
+	"include": ["./src"]
 }

@@ -27,7 +27,7 @@
  *   DON'T hardcode hex / rgb in Tailwind classes.
  */
 
-import { ArrowRight, BookOpen, Github } from "lucide-react";
+import { ArrowRight, BookOpen, Code2 } from "lucide-react";
 import type React from "react";
 
 export const Home: React.FC = () => (
@@ -73,7 +73,7 @@ export const Home: React.FC = () => (
 				rel="noreferrer noopener"
 				className="inline-flex items-center gap-2 rounded-full border border-border px-5 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-muted"
 			>
-				<Github className="size-4" />
+				<Code2 className="size-4" />
 				GitHub
 			</a>
 		</div>

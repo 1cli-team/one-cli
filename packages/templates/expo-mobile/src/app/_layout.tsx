@@ -13,7 +13,7 @@ import "../../global.css";
 import { useColorScheme } from "nativewind";
 import { configSelector, useConfigStore } from "@/store/config";
 import { useShallow } from "zustand/react/shallow";
-import { DarkTheme, DefaultTheme, ThemeProvider } from "@react-navigation/native";
+import { DarkTheme, DefaultTheme, ThemeProvider } from "expo-router/react-navigation";
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();
@@ -56,6 +56,6 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   backgroundImage: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
   },
 });
