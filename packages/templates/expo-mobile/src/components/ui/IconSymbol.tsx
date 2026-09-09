@@ -13,9 +13,9 @@ const MAPPING = {
   "paperplane.fill": "send",
   "chevron.left.forwardslash.chevron.right": "code",
   "chevron.right": "chevron-right",
-} as Partial<
+} satisfies Partial<
   Record<
-    import("expo-symbols").SymbolViewProps["name"],
+    Extract<import("expo-symbols").SymbolViewProps["name"], string>,
     React.ComponentProps<typeof MaterialIcons>["name"]
   >
 >;

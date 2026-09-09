@@ -5,8 +5,15 @@ export default defineConfig({
   format: "esm",
   outDir: "build/main",
   platform: "node",
-  target: "node20",
-  external: ["electron", "electron-updater", "electron-devtools-installer"],
+  target: "node24",
+  fixedExtension: false,
+  deps: {
+    neverBundle: [
+      "electron",
+      "electron-updater",
+      "electron-devtools-installer",
+    ],
+  },
   dts: false,
   clean: true,
   sourcemap: true,

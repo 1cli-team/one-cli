@@ -10,6 +10,15 @@ const pnpmWorkspaceContent = `packages:
   - "apps/*"
   - "services/*"
   - "packages/*"
+
+# Native build steps used by the bundled templates.
+allowBuilds:
+  '@parcel/watcher': true
+  '@scarf/scarf': false
+  '@swc/core': true
+  electron: true
+  esbuild: true
+  unrs-resolver: true
 `
 
 const gitignoreContent = `# dependencies
@@ -64,7 +73,7 @@ var changesetConfig = orderedJSON{
 // package.json.
 const (
 	packageManagerName = "pnpm"
-	packageManagerSpec = "pnpm@10.14.0"
+	packageManagerSpec = "pnpm@12.3.4"
 )
 
 // buildPackageJSON returns the workspace root package.json. Workspace-scope
@@ -76,6 +85,7 @@ func buildPackageJSON(name string) orderedJSON {
 		{Key: "private", Value: true},
 		{Key: "version", Value: "0.0.0"},
 		{Key: "packageManager", Value: packageManagerSpec},
+		{Key: "engines", Value: orderedJSON{{Key: "node", Value: "^24.15.0 || >=26.0.0"}}},
 		{Key: "scripts", Value: orderedJSON{
 			{Key: "prepare", Value: "husky"},
 			{Key: "changeset", Value: "changeset"},

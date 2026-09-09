@@ -27,13 +27,17 @@
  *   DON'T hardcode hex / rgb in Tailwind classes.
  */
 
-import { ArrowRight, BookOpen, Github } from "lucide-react";
+import { ArrowRight, BookOpen, CodeXml } from "lucide-react";
 import type { FC } from "react";
 
 const HomePage: FC = () => (
   <section className="mx-auto flex max-w-2xl flex-col items-center gap-8 py-16 text-center">
     <div className="rounded-2xl bg-[#0a0a0a] px-6 py-4 shadow-lg shadow-black/10">
-      <img src="/onecli-logo-inverted.svg" alt="One CLI" className="h-8 w-auto" />
+      <img
+        src="/onecli-logo-inverted.svg"
+        alt="One CLI"
+        className="h-8 w-auto"
+      />
     </div>
 
     <div className="space-y-3">
@@ -44,7 +48,8 @@ const HomePage: FC = () => (
         Welcome to One CLI
       </h1>
       <p className="text-muted-foreground text-base sm:text-lg">
-        一个由 One CLI 生成的 Electron 桌面端脚手架，已预置 shadcn/ui、Tailwind v4、IPC 桥与状态管理。
+        一个由 One CLI 生成的 Electron 桌面端脚手架，已预置 shadcn/ui、Tailwind
+        v4、IPC 桥与状态管理。
       </p>
     </div>
 
@@ -73,7 +78,7 @@ const HomePage: FC = () => (
         rel="noreferrer noopener"
         className="border-border text-foreground hover:bg-muted inline-flex items-center gap-2 rounded-full border px-5 py-2.5 text-sm font-medium transition-colors"
       >
-        <Github className="size-4" />
+        <CodeXml className="size-4" />
         GitHub
       </a>
     </div>

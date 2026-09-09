@@ -1,3 +1,15 @@
 packages:
-  - 'apps/*'
-  - 'packages/*'
+  - "apps/*"
+  - "packages/*"
+
+minimumReleaseAgeExclude:
+  - "@types/node@24.13.4"
+  - electron@44.3.0
+  - "@types/react-dom@19.3.0"
+  - "@types/react@19.3.0"
+  - react-dom@19.3.0
+  - react@19.3.0
+  - scheduler@0.28.0
+
+allowBuilds:
+  electron: true
