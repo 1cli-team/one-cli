@@ -1130,9 +1130,13 @@ function uniqueMaterials(materials: Material[]) {
 function setMaterialOpacity(material: Material, opacity: number) {
   const maxOpacity = typeof material.userData.maxOpacity === "number" ? material.userData.maxOpacity : 1;
   const visibleOpacity = clamp01(opacity * maxOpacity);
-  const nextTransparent = Boolean(material.userData.keepTransparent) || visibleOpacity < 0.999 || maxOpacity < 0.999;
+  const keepTransparent = Boolean(material.userData.keepTransparent) || maxOpacity < 0.999;
+  const nextTransparent = keepTransparent
+    ? true
+    : material.transparent
+      ? visibleOpacity < 0.999
+      : visibleOpacity < 0.97;
   const nextDepthWrite = !nextTransparent;
-
   if (Math.abs(material.opacity - visibleOpacity) > 0.001) {
     material.opacity = visibleOpacity;
   }

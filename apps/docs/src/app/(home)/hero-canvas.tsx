@@ -43,6 +43,7 @@ export function HomeHeroCanvas({ ariaLabel, lang = "zh" }: HomeHeroCanvasProps) 
         setReady(true);
       } catch (error) {
         console.warn("One CLI hero animation could not initialize WebGL.", error);
+        if (!disposed) setReady(true);
       }
     };
     void initialize();
