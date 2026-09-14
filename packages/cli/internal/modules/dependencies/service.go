@@ -110,25 +110,35 @@ func runCommand(ctx context.Context, command runtimeport.Command, out, errOut io
 }
 
 func (s Service) prepareGo(ctx context.Context, in Input, p workspace.ManifestProject) error {
-	dir := filepath.Join(in.Root, filepath.FromSlash(p.RelativeDir))
+	root, err := filepath.EvalSymlinks(in.Root)
+	if err != nil {
+		return preparationError(p.Name, in.Root, "resolve Go workspace directory", err, "")
+	}
+	dir := filepath.Join(root, filepath.FromSlash(p.RelativeDir))
+	// Go's workspace loader compares module directory strings. Keep the
+	// child cwd, its Unix PWD hint, and GOWORK on the same root spelling.
+	// Preserve module-relative paths, which may themselves contain symlinks.
+	env := append(os.Environ(), "PWD="+dir)
 	var work bytes.Buffer
-	if err := s.run(ctx, in, dir, []string{"go", "env", "GOWORK"}, os.Environ(), &work, in.Log); err != nil {
+	if err := s.run(ctx, in, dir, []string{"go", "env", "GOWORK"}, env, &work, in.Log); err != nil {
 		return preparationError(p.Name, dir, "resolve Go workspace", err, work.String())
 	}
 	active := strings.TrimSpace(work.String())
 	lockRoot := dir
 	if active != "" && active != "off" {
-		want := filepath.Join(in.Root, "go.work")
+		want := filepath.Join(root, "go.work")
 		if filepath.Clean(active) != filepath.Clean(want) {
-			// Go may return the physical path while the workspace root uses
-			// a symlink (for example /var and /private/var on macOS).
+			// An explicit GOWORK may use a symlink to this workspace file.
 			activeInfo, activeErr := os.Stat(active)
 			wantInfo, wantErr := os.Stat(want)
 			if activeErr != nil || wantErr != nil || !os.SameFile(activeInfo, wantInfo) {
 				return fmt.Errorf("%s uses external GOWORK=%s; use %s or GOWORK=off explicitly", p.Name, active, want)
 			}
 		}
-		lockRoot = in.Root
+		// Resolve the root, not the go.work file itself: relative use paths
+		// belong to this workspace even when go.work is a symlink.
+		env = append(env, "GOWORK="+want)
+		lockRoot = root
 	}
 	unlock, err := fsutil.WorkspaceLock(ctx, lockRoot, "go-dependencies")
 	if err != nil {
@@ -141,7 +151,7 @@ func (s Service) prepareGo(ctx context.Context, in Input, p workspace.ManifestPr
 	// versions of local members; only use it for a standalone module.
 	commands := [][]string{}
 	if active == "" || active == "off" {
-		if err := s.downloadModule(ctx, in, p, dir); err != nil {
+		if err := s.downloadModule(ctx, in, p, dir, env); err != nil {
 			return err
 		}
 	}
@@ -150,7 +160,7 @@ func (s Service) prepareGo(ctx context.Context, in Input, p workspace.ManifestPr
 		var detail bytes.Buffer
 		out := io.Discard
 
-		if err := s.run(ctx, in, dir, args, os.Environ(), out, io.MultiWriter(in.Log, &detail)); err != nil {
+		if err := s.run(ctx, in, dir, args, env, out, io.MultiWriter(in.Log, &detail)); err != nil {
 			failure := preparationError(p.Name, dir, strings.Join(args, " "), err, detail.String())
 			if args[1] == "list" {
 				return failure.WithRemediation(output.Remediation{Action: "repair-go-module", Hint: "Inspect the Go error. If module declarations need repair, run tidy explicitly.", Command: "one run " + p.Name + " -- go mod tidy"})
@@ -164,7 +174,7 @@ func (s Service) prepareGo(ctx context.Context, in Input, p workspace.ManifestPr
 // Go may rewrite go/toolchain directives during mod download. Use an alternate
 // module file and publish only checksums after verifying the declarations stayed
 // unchanged; never silently repair or upgrade the user's go.mod.
-func (s Service) downloadModule(ctx context.Context, in Input, p workspace.ManifestProject, dir string) error {
+func (s Service) downloadModule(ctx context.Context, in Input, p workspace.ManifestProject, dir string, env []string) error {
 	files := fsutil.NewFilePlan(dir)
 	module, err := files.Read("go.mod")
 	if err != nil {
@@ -200,7 +210,7 @@ func (s Service) downloadModule(ctx context.Context, in Input, p workspace.Manif
 	}
 	args := []string{"go", "mod", "download", "-modfile=" + name, "all"}
 	var detail bytes.Buffer
-	if err := s.run(ctx, in, dir, args, os.Environ(), io.Discard, io.MultiWriter(in.Log, &detail)); err != nil {
+	if err := s.run(ctx, in, dir, args, env, io.Discard, io.MultiWriter(in.Log, &detail)); err != nil {
 		return preparationError(p.Name, dir, "go mod download all", err, detail.String())
 	}
 	after, err := os.ReadFile(name)

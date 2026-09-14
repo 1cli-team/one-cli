@@ -32,7 +32,7 @@ one --version                   # 验证装好
 task --list                 # 看可用任务（这是真源）
 pnpm install               # 从根目录安装所有 Node workspace 依赖
 task dev                    # 同时启动 Go Dashboard API + Vite UI
-task check                  # 与 PR CI 完全一致的 monorepo 验证入口
+task check                  # 在当前操作系统运行 monorepo 验证入口
 pnpm check                  # 根目录快捷入口，等价于 task check
 task hooks:install          # 为当前 checkout 启用提交前 PR gate
 task build                  # 编译到 packages/cli/bin/one
@@ -59,8 +59,12 @@ task pre-push               # 推前必跑（含上面所有 + verify-docs）
 4. **必跑** `task pre-push` 全绿（在 PR gate 之外额外运行 Go race detector）
 5. 推送 + 开 PR
 
-PR CI 会并行执行 `task check:static` 与 `task check:test`，两者合起来与本地
-`task check` 完全一致；`task pre-push` 会在此基础上额外运行 Go race detector。
+PR CI 在 Linux 上并行执行 `task check:static` 与 `task check:test`，同时在
+Windows 上执行 `task check`、macOS 上执行 `task check:test`。master 的保护规则
+要求 `lint`、`test`、`test-windows`、`test-macos` 四项检查全部通过才能合并。
+本地 `task check` 和 `task pre-push` 只验证当前操作系统，不能代替其他平台的
+CI；`task pre-push` 额外运行 Go race detector，远端 race 检查保留在 master
+和手动触发的工作流中。
 
 ## 改不同部分的注意事项
 
