@@ -1,5 +1,5 @@
-# PR-time test gate. Keeps the merge path fast while preserving slower
-# compatibility checks on master/manual runs.
+# PR-time test gate with native Linux, Windows, and macOS coverage.
+# Race checks remain on master/manual runs.
 #
 # Two PR jobs call the same subtasks used by the local `task check` entrypoint:
 #  - lint: `task check:static` covers documentation drift, Go vet/gofmt, and
@@ -9,7 +9,9 @@
 #    of `task vet` — so vet implicitly bootstraps the bundle here.
 #  - test: `task check:test` builds bin/one then runs Go + Dashboard tests.
 #    Build is required because tests/e2e snapshot tests skip when
-#    bin/one is missing. Race + macOS checks run on master/manual triggers only.
+#    bin/one is missing.
+# Native Windows and macOS jobs also run on every PR. The master ruleset
+# requires lint, test, test-windows, and test-macos before merging.
 #
 # Both jobs need Node + pnpm because sync-web runs `pnpm install` +
 # `vite build` against apps/dashboard/.
@@ -17,7 +19,7 @@
 # Runners:
 #   - ubuntu-latest for the main PR checks
 #   - windows-latest for native Windows build and test coverage
-#   - macos-latest for master/manual compatibility checks
+#   - macos-latest for native macOS build and test coverage
 
 name: Code Quality and Tests
 
@@ -276,9 +278,7 @@ jobs:
         run: task test
 
   test-macos:
-    # macOS runners are slower to start and are scarce on PRs. Keep the
-    # cross-platform signal for master/manual runs without making every PR wait.
-    if: github.event_name != 'pull_request'
+    # Run before merging so macOS path and process regressions block PRs.
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v7
