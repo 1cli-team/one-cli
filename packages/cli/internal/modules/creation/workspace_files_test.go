@@ -8,7 +8,6 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
-	"runtime"
 	"strings"
 	"testing"
 
@@ -20,79 +19,20 @@ func TestGenerateWorkspaceFiles(t *testing.T) {
 	target := filepath.Join(tmp, "demo")
 
 	err := generateWorkspaceFiles(target, workspaceFilesOptions{
-		ProjectName:    "demo",
-		PackageManager: "pnpm",
+		ProjectName: "demo",
 	})
 	if err != nil {
 		t.Fatalf("generateWorkspaceFiles() = %v", err)
 	}
 
-	// Files we expect to exist after a full create with infra enabled.
-	wantFiles := []string{
-		"package.json",
-		"one.manifest.json",
-		"pnpm-workspace.yaml",
-		".gitignore",
-		"commitlint.config.js",
-		".changeset/config.json",
-		".husky/pre-commit",
-		".husky/commit-msg",
-	}
-	for _, rel := range wantFiles {
-		path := filepath.Join(target, rel)
-		if _, err := os.Stat(path); err != nil {
-			t.Errorf("missing file %s: %v", rel, err)
+	for _, rel := range []string{"one.manifest.json", ".gitignore", "apps", "services", "packages"} {
+		if _, err := os.Stat(filepath.Join(target, rel)); err != nil {
+			t.Fatalf("missing %s: %v", rel, err)
 		}
 	}
-
-	// Windows uses ACLs and does not expose Unix executable bits.
-	if runtime.GOOS != "windows" {
-		for _, rel := range []string{".husky/pre-commit", ".husky/commit-msg"} {
-			path := filepath.Join(target, rel)
-			info, err := os.Stat(path)
-			if err != nil {
-				t.Fatalf("stat %s: %v", rel, err)
-			}
-			mode := info.Mode().Perm()
-			if mode&0o111 == 0 {
-				t.Errorf("%s is not executable; mode=%v", rel, mode)
-			}
-		}
-	}
-
-	// package.json field order must match what buildPackageJSON
-	// stamps. As of manifest v2 there is NO `"one"` key — workspace
-	// configuration moved to one.manifest.json.
-	pkgRaw, err := os.ReadFile(filepath.Join(target, "package.json"))
-	if err != nil {
-		t.Fatal(err)
-	}
-	pkg := string(pkgRaw)
-	wantOrder := []string{`"name"`, `"private"`, `"version"`, `"packageManager"`, `"scripts"`, `"devDependencies"`}
-	prev := -1
-	for _, key := range wantOrder {
-		idx := strings.Index(pkg, key)
-		if idx < 0 {
-			t.Errorf("package.json missing key %s", key)
-			continue
-		}
-		if idx <= prev {
-			t.Errorf("package.json key order wrong: %s appears before its predecessor", key)
-		}
-		prev = idx
-	}
-	if strings.Contains(pkg, `"one"`) {
-		t.Errorf("package.json should not carry an `one` block in manifest v2")
-	}
-
-	// JSON files must end with a newline (fs-extra parity).
-	for _, rel := range []string{"package.json", ".changeset/config.json", "one.manifest.json"} {
-		raw, err := os.ReadFile(filepath.Join(target, rel))
-		if err != nil {
-			t.Fatal(err)
-		}
-		if len(raw) == 0 || raw[len(raw)-1] != '\n' {
-			t.Errorf("%s missing trailing newline (fs-extra emits one)", rel)
+	for _, rel := range []string{"package.json", "pnpm-workspace.yaml", "go.work", ".husky", ".changeset", "commitlint.config.js"} {
+		if _, err := os.Stat(filepath.Join(target, rel)); !os.IsNotExist(err) {
+			t.Fatalf("empty workspace should not create %s", rel)
 		}
 	}
 

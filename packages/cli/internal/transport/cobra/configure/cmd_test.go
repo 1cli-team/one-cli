@@ -53,6 +53,8 @@ func TestBuildContributionsTreeShape(t *testing.T) {
 		"use":     true,
 		"remove":  true,
 		"open":    true,
+		"mise":    true, // Workspace tool configuration; existing profile verbs stay intact.
+		"hooks":   true,
 		// `locale` is the first (and so far only) user-global
 		// preference under `configure`. Unlike the verbs above it
 		// doesn't take a (domain, backend) pair — it just reads /

@@ -1,7 +1,6 @@
 package cli_test
 
 import (
-	"fmt"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -21,7 +20,7 @@ func TestSnapshot_E2E_CreateDailyText(t *testing.T) {
 	if code != 0 {
 		t.Fatalf("create text flow failed: exit=%d stderr=%q", code, stderr)
 	}
-	want := fmt.Sprintf("✓ 工作区已创建：demo\n  位置：%s\n  包管理器：pnpm\n  环境变量来源：本地 .env 文件\n  本地开发：one dev\n\n下一步：\n  cd %s\n  one add\n", target, target)
+	want := "✓ 工作区已创建：demo\n  位置：~/demo\n  环境变量来源：本地 .env 文件\n  本地开发：one dev\n\n下一步：\n  cd demo\n  one add\n"
 	if stdout != want {
 		t.Fatalf("unexpected create success text:\n--- want\n%s--- got\n%s", want, stdout)
 	}
@@ -137,13 +136,16 @@ func TestSnapshot_E2E_WorkspaceOverviewAndDeferredDeployment(t *testing.T) {
 		t.Fatalf("unexpected project summary: %v", summary)
 	}
 
+	savedPath := os.Getenv("PATH")
+	t.Setenv("PATH", t.TempDir())
 	_, stderr, code = runBinaryIn(t, ws, "dev", "web", "-o", "json")
+	t.Setenv("PATH", savedPath)
 	if code == 0 {
-		t.Fatal("non-interactive dev should report missing Node dependencies")
+		t.Fatal("dev should report that the native package manager is unavailable")
 	}
 	devErr := mustParseJSON(t, firstJSONLine(stderr))
-	if devErr["error"].(map[string]any)["code"] != "DEPENDENCIES_NOT_INSTALLED" {
-		t.Fatalf("unexpected missing-dependencies error: %v", devErr)
+	if devErr["error"].(map[string]any)["code"] != "RUN_COMMAND_NOT_FOUND" {
+		t.Fatalf("unexpected missing-tool error: %v", devErr)
 	}
 
 	_, stderr, code = runBinaryIn(t, ws, "deploy", "web", "--provider", "aws-s3", "-o", "json")

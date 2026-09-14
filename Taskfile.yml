@@ -53,6 +53,7 @@ tasks:
       - 'packages/kernel/**/*.go'
       - 'packages/cli/cmd/**/*.go'
       - 'packages/cli/internal/**/*.go'
+      - 'packages/cli/internal/adapters/runtime/mise/assets/*'
       - 'packages/cli/pkg/**/*.go'
       - 'packages/cli/go.mod'
     generates:
@@ -183,7 +184,7 @@ tasks:
 
   build-all:
     desc: Cross-compile every supported platform under go-dist/
-    deps: [sync-bundled]
+    deps: [sync-bundled, sync-mise-all, sync-web]
     dir: '{{.CLI_DIR}}'
     cmds:
       - rm -rf ../../go-dist
@@ -361,7 +362,20 @@ tasks:
     generates:
       - 'apps/dashboard/dist/index.html'
 
+  sync-mise:
+    desc: Fetch and verify the pinned mise archive embedded for the local platform
+    run: once
+    cmds:
+      - go run ./packages/cli/tools/sync-mise
+
+  sync-mise-all:
+    desc: Fetch and verify mise archives for all release platforms
+    run: once
+    cmds:
+      - go run ./packages/cli/tools/sync-mise --all
+
   sync-bundled:
+    deps: [sync-mise]
     desc: Regenerate registry/_templates under packages/cli/internal/resources/bundled (go:embed sources)
     run: once
     summary: |

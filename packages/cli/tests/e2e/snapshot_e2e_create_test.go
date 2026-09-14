@@ -40,10 +40,12 @@ var expectedScaffoldPaths = []string{
 	"apps",
 	"services",
 	"packages",
-	"package.json",
-	"pnpm-workspace.yaml",
 	"one.manifest.json",
-	"commitlint.config.js",
+	".mise/conf.d/one.toml",
+	"hk.pkl",
+	".config/one/hk.pkl",
+	".git/hooks/pre-commit",
+	".git/hooks/commit-msg",
 }
 
 func TestSnapshot_E2E_Create_Default(t *testing.T) {
@@ -93,15 +95,15 @@ func TestSnapshot_E2E_Create_NameOverride(t *testing.T) {
 		t.Errorf("project_name override: want %q, got %v", "custom-name", got["project_name"])
 	}
 
-	// Workspace package.json should reflect the override too.
-	pkg, err := os.ReadFile(filepath.Join(target, "package.json"))
-	if err != nil {
-		t.Fatalf("read package.json: %v", err)
+	// The language-neutral workspace keeps its name in the manifest.
+	mf := readManifest(t, target)
+	if mf["workspace"].(map[string]any)["name"] != "custom-name" {
+		t.Fatal("workspace name override was lost")
 	}
-	pkgMap := mustParseJSON(t, string(pkg))
-	if pkgMap["name"] != "custom-name" {
-		t.Errorf("package.json name: want %q, got %v", "custom-name", pkgMap["name"])
+	if fileExists(t, filepath.Join(target, "package.json")) {
+		t.Fatal("empty workspace unexpectedly initialized Node")
 	}
+
 }
 
 func TestSnapshot_E2E_Create_NonEmptyTargetFails(t *testing.T) {

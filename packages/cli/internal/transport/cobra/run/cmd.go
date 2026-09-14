@@ -10,11 +10,9 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
-	"os/signal"
 	"path/filepath"
 	"runtime"
 	"strings"
-	"syscall"
 
 	"github.com/spf13/cobra"
 
@@ -24,11 +22,12 @@ import (
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/i18n"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/output"
 	platformprocess "github.com/torchstellar-team/one-cli/packages/cli/internal/platform/process"
+	runtimeport "github.com/torchstellar-team/one-cli/packages/cli/internal/ports/runtime"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/ports/secrets"
 )
 
-func Commands(loaders *secrets.Registry) []*cobra.Command {
-	return []*cobra.Command{newRunCmd(loaders)}
+func Commands(loaders *secrets.Registry, provider runtimeport.Provider) []*cobra.Command {
+	return []*cobra.Command{newRunCmd(loaders, provider), newExecCmd(loaders)}
 }
 
 // newRunCmd wires `one run` — exec a passthrough command with the resolved
@@ -48,13 +47,18 @@ func Commands(loaders *secrets.Registry) []*cobra.Command {
 // SIGINT/SIGTERM are forwarded so Ctrl-C kills the child first; we exit with
 // the child's exit code so scripts and CI can branch normally.
 type runFlags struct {
-	project     string
-	envName     string
-	envProvider string
+	project      string
+	envName      string
+	envProvider  string
+	runtime      string
+	prepared     bool
+	provider     runtimeport.Provider
+	dryRun       bool
+	outputFormat string
 }
 
-func newRunCmd(loaders *secrets.Registry) *cobra.Command {
-	flags := &runFlags{}
+func newRunCmd(loaders *secrets.Registry, provider runtimeport.Provider) *cobra.Command {
+	flags := &runFlags{provider: provider}
 	cmd := &cobra.Command{
 		Use:                   "run [project] [-p <name|path>] [--env-provider dotenv|infisical] [--env <name>] -- <cmd> [args...]",
 		DisableFlagsInUseLine: true,
@@ -92,6 +96,7 @@ func newRunCmd(loaders *secrets.Registry) *cobra.Command {
 		Args:               cobra.ArbitraryArgs,
 		DisableFlagParsing: false,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			flags.outputFormat, _ = cmd.Flags().GetString("output")
 			commandArgs, err := parseRunArgs(cmd, flags, args)
 			if err != nil {
 				return err
@@ -108,6 +113,7 @@ func newRunCmd(loaders *secrets.Registry) *cobra.Command {
 	cmd.Flags().StringVarP(&flags.project, "project", "p", "", "项目名（manifest.projects[].name）或相对路径；默认从 cwd 推导")
 	cmd.Flags().StringVar(&flags.envName, "env", "", "环境名（默认取 manifest.environments.default）")
 	cmd.Flags().StringVar(&flags.envProvider, "env-provider", "", "env provider: dotenv | infisical（默认取 workspace manifest 中已选的值）")
+	cmd.Flags().BoolVar(&flags.dryRun, "dry-run", false, "Print the execution plan without loading environment values or starting a command")
 	i18n.MarkShort(cmd, "run.short")
 	return cmd
 }
@@ -173,6 +179,48 @@ func runRun(ctx context.Context, loaders *secrets.Registry, flags *runFlags, arg
 		return err
 	}
 
+	if !flags.prepared {
+		flags.runtime, err = execution.RuntimeKind(projectRoot)
+		if err != nil {
+			return err
+		}
+	}
+	if err := runtimeport.Validate(flags.runtime); err != nil {
+		return err
+	}
+	if flags.dryRun {
+		output.Emit(map[string]any{"schema": "one-cli/run-plan/v1", "runtime": flags.runtime, "directory": targetDir, "argv": args, "environment": flags.envName, "dry_run": true})
+		return nil
+	}
+	if flags.runtime == runtimeport.Mise {
+		binary, err := os.Executable()
+		if err != nil {
+			return err
+		}
+		childArgs := []string{binary, "__exec", "--protocol", "1", "--project", relativeDir}
+		if flags.outputFormat != "" {
+			childArgs = append(childArgs, "--output", flags.outputFormat)
+		}
+		if flags.envName != "" {
+			childArgs = append(childArgs, "--env", flags.envName)
+		}
+		if flags.envProvider != "" {
+			childArgs = append(childArgs, "--env-provider", flags.envProvider)
+		}
+		childArgs = append(append(childArgs, "--"), args...)
+		if flags.provider == nil {
+			return cliErrors.New(cliErrors.ONE_CLI_ERROR, "mise runtime is not configured")
+		}
+		prepared, err := flags.provider.Prepare(ctx, runtimeport.Command{Directory: targetDir, Argv: childArgs, Env: os.Environ()})
+		if err != nil {
+			return err
+		}
+		child := platformprocess.Command(prepared.Argv[0], prepared.Argv[1:]...)
+		child.Dir, child.Env = prepared.Directory, prepared.Env
+		child.Stdin, child.Stdout, child.Stderr = os.Stdin, os.Stdout, os.Stderr
+		return platformprocess.RunForwarded(ctx, child)
+	}
+
 	vars, source, err := loadRunSecrets(
 		ctx, loaders, flags, projectRoot, activeWorkspace.Manifest(), relativeDir,
 	)
@@ -194,7 +242,11 @@ func runRun(ctx context.Context, loaders *secrets.Registry, flags *runFlags, arg
 	// inherited PATH last — this is the same precedence npm/pnpm use.
 	childEnv = augmentPathForRun(childEnv, projectRoot, targetDir)
 
-	binary, err := lookPathFor(args[0], childEnv)
+	commandName := args[0]
+	if !filepath.IsAbs(commandName) && strings.ContainsAny(commandName, "/\\") {
+		commandName = filepath.Join(targetDir, commandName)
+	}
+	binary, err := lookPathFor(commandName, childEnv)
 	if err != nil {
 		return cliErrors.New(cliErrors.RUN_COMMAND_NOT_FOUND,
 			fmt.Sprintf("命令未找到：%s（已在 PATH 中查过：含 %s/node_modules/.bin 与 %s/node_modules/.bin）",
@@ -211,41 +263,12 @@ func runRun(ctx context.Context, loaders *secrets.Registry, flags *runFlags, arg
 	child.Env = childEnv
 	child.Dir = targetDir
 
-	if err := child.Start(); err != nil {
-		return cliErrors.New(cliErrors.RUN_COMMAND_NOT_FOUND,
-			fmt.Sprintf("启动 %s 失败：%v", args[0], err)).
-			WithContext(map[string]any{"command": args[0]})
+	err = platformprocess.RunForwarded(ctx, child)
+	var exit *platformprocess.ExitStatus
+	if err != nil && !errors.As(err, &exit) {
+		return cliErrors.New(cliErrors.RUN_COMMAND_NOT_FOUND, fmt.Sprintf("启动 %s 失败：%v", args[0], err))
 	}
-
-	sigCh := make(chan os.Signal, 1)
-	signal.Notify(sigCh, os.Interrupt, syscall.SIGTERM)
-	done := make(chan struct{})
-	go func() {
-		for {
-			select {
-			case sig := <-sigCh:
-				if child.Process != nil {
-					_ = child.Process.Signal(sig)
-				}
-			case <-done:
-				return
-			}
-		}
-	}()
-
-	waitErr := child.Wait()
-	close(done)
-	signal.Stop(sigCh)
-
-	if waitErr != nil {
-		var exitErr *exec.ExitError
-		if errors.As(waitErr, &exitErr) {
-			os.Exit(exitErr.ExitCode())
-		}
-		return cliErrors.New(cliErrors.ONE_CLI_ERROR,
-			fmt.Sprintf("等待子进程失败：%v", waitErr))
-	}
-	return nil
+	return err
 }
 
 // loadRunSecrets resolves the secret source per --env-provider and returns

@@ -10,8 +10,7 @@ import (
 )
 
 type workspaceFilesOptions struct {
-	ProjectName    string
-	PackageManager string // "pnpm"
+	ProjectName string
 }
 
 // Names of bundled files that the workspace ships with. Centralised so a
@@ -28,47 +27,15 @@ func generateWorkspaceFiles(targetDir string, opts workspaceFilesOptions) error 
 	if err := os.MkdirAll(targetDir, 0o755); err != nil {
 		return err
 	}
-	for _, sub := range []string{".changeset", ".husky", "apps", "services", "packages"} {
+	for _, sub := range []string{"apps", "services", "packages"} {
 		if err := os.MkdirAll(filepath.Join(targetDir, sub), 0o755); err != nil {
 			return err
 		}
 	}
-
-	pkg := buildPackageJSON(opts.ProjectName)
-	if err := writeJSON(filepath.Join(targetDir, "package.json"), pkg); err != nil {
-		return err
-	}
-
 	if err := writeJSON(filepath.Join(targetDir, ManifestFilename), emptyManifest(opts.ProjectName)); err != nil {
 		return err
 	}
-
-	if err := os.WriteFile(filepath.Join(targetDir, WorkspaceFilename), []byte(pnpmWorkspaceContent), 0o644); err != nil {
-		return err
-	}
 	if err := os.WriteFile(filepath.Join(targetDir, ".gitignore"), []byte(gitignoreContent), 0o644); err != nil {
-		return err
-	}
-	if err := os.WriteFile(filepath.Join(targetDir, "commitlint.config.js"), []byte(commitlintConfigContent), 0o644); err != nil {
-		return err
-	}
-	if err := writeJSON(filepath.Join(targetDir, ".changeset", "config.json"), changesetConfig); err != nil {
-		return err
-	}
-
-	huskyPreCommit := filepath.Join(targetDir, ".husky", "pre-commit")
-	huskyCommitMsg := filepath.Join(targetDir, ".husky", "commit-msg")
-	if err := os.WriteFile(huskyPreCommit, []byte(huskyPreCommitContent), 0o755); err != nil {
-		return err
-	}
-	if err := os.WriteFile(huskyCommitMsg, []byte(huskyCommitMsgContent), 0o755); err != nil {
-		return err
-	}
-	// Re-chmod explicitly: WriteFile may apply umask which masks 0o755.
-	if err := os.Chmod(huskyPreCommit, 0o755); err != nil {
-		return err
-	}
-	if err := os.Chmod(huskyCommitMsg, 0o755); err != nil {
 		return err
 	}
 

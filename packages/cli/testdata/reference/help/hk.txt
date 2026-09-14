@@ -1,0 +1,18 @@
+
+DESCRIPTION
+Run workspace checks and fixes with hk through One
+
+USAGE
+  one hk [args...] [flags]
+
+EXAMPLES
+  one hk check
+  one hk check --all
+  one hk fix
+  one hk validate
+
+TIPS
+Use one hk check for changed files, one hk check --all for CI, and one hk fix for explicit fixes. Git hook installation and migration are managed by one configure hooks. hk and its tool environment run through One's bundled mise; application dependencies remain project-specific.
+
+COMMON OPTIONS
+  -o, --output <value>     Output format: json | yaml | text (default: terminal-friendly text, JSON when piped)

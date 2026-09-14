@@ -74,7 +74,7 @@ export function getDemoPost() {
 
 ## 说明
 
-这是模板仓库，不内置项目级 Changesets、commitlint、Biome 配置或发布工作流。相关治理由 `one-cli` 在工作区根目录统一生成和维护。
+这是模板仓库，不内置项目级 Git hooks、Biome 配置或发布工作流。工作区治理由 `one-cli` 提供，提交检查使用工作区的 hk 配置；版本管理和发布流程由项目按需配置。
 
 ## TypeScript 版本
 

@@ -21,6 +21,15 @@ const (
 	PROMPT_CANCELLED      Code = "PROMPT_CANCELLED"
 	OUTPUT_MARSHAL_FAILED Code = "OUTPUT_MARSHAL_FAILED"
 
+	// Optional tool runtime.
+	RUNTIME_INVALID          Code = "RUNTIME_INVALID"
+	MISE_NOT_FOUND           Code = "MISE_NOT_FOUND"
+	MISE_VERSION_UNSUPPORTED Code = "MISE_VERSION_UNSUPPORTED"
+	MISE_CONFIG_CONFLICT     Code = "MISE_CONFIG_CONFLICT"
+	HOOKS_CONFIG_CONFLICT    Code = "HOOKS_CONFIG_CONFLICT"
+	MISE_INSTALL_FAILED      Code = "MISE_INSTALL_FAILED"
+	RUNTIME_TASK_NOT_FOUND   Code = "RUNTIME_TASK_NOT_FOUND"
+
 	// Workspace / project.
 	NOT_ONE_PROJECT            Code = "NOT_ONE_PROJECT"
 	NODE_VERSION_UNSUPPORTED   Code = "NODE_VERSION_UNSUPPORTED"
@@ -168,10 +177,17 @@ type Definition struct {
 // from here, so any published error-code reference can be made
 // authoritative by template-rendering this map.
 var Codes = map[Code]Definition{
-	ONE_CLI_ERROR:         {Summary: "Generic CLI failure with no specific code."},
-	UNKNOWN_COMMAND:       {Summary: "First positional argument did not match any known subcommand.", Remediation: []output.Remediation{{Action: "show-help", Hint: "查看可用命令", Command: "one --help"}}},
-	PROMPT_CANCELLED:      {Summary: "User cancelled an interactive prompt (Ctrl+C / ESC)."},
-	OUTPUT_MARSHAL_FAILED: {Summary: "Internal: failed to marshal a result payload to JSON. Should never fire in practice."},
+	RUNTIME_INVALID:          {Summary: "The selected execution runtime is not builtin or mise."},
+	MISE_NOT_FOUND:           {Summary: "The explicitly selected mise executable is unavailable."},
+	MISE_INSTALL_FAILED:      {Summary: "One could not extract, verify, or prepare its bundled mise runtime."},
+	MISE_VERSION_UNSUPPORTED: {Summary: "The installed mise version is unsupported or could not be read."},
+	MISE_CONFIG_CONFLICT:     {Summary: "A managed mise configuration was modified or changed during generation."},
+	HOOKS_CONFIG_CONFLICT:    {Summary: "Existing Git hooks or hk configuration conflict with One's generated setup."},
+	RUNTIME_TASK_NOT_FOUND:   {Summary: "The project does not provide the requested runtime task."},
+	ONE_CLI_ERROR:            {Summary: "Generic CLI failure with no specific code."},
+	UNKNOWN_COMMAND:          {Summary: "First positional argument did not match any known subcommand.", Remediation: []output.Remediation{{Action: "show-help", Hint: "查看可用命令", Command: "one --help"}}},
+	PROMPT_CANCELLED:         {Summary: "User cancelled an interactive prompt (Ctrl+C / ESC)."},
+	OUTPUT_MARSHAL_FAILED:    {Summary: "Internal: failed to marshal a result payload to JSON. Should never fire in practice."},
 
 	NOT_ONE_PROJECT:            {Summary: "Current directory is not a One workspace (one.manifest.json is missing).", Remediation: []output.Remediation{{Action: "create-workspace", Hint: "当前目录缺少 one.manifest.json；请先创建工作区，或 cd 到已有工作区", Command: "one create <dir>"}}},
 	NODE_VERSION_UNSUPPORTED:   {Summary: "Local Node version is below the supported minimum.", Remediation: []output.Remediation{{Action: "upgrade-node", Hint: "升级到 Node.js 18+"}}},

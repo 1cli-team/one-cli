@@ -17,13 +17,17 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"runtime"
+	"strings"
 
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/core/workspace"
 	cliErrors "github.com/torchstellar-team/one-cli/packages/cli/internal/platform/errors"
+	runtimeport "github.com/torchstellar-team/one-cli/packages/cli/internal/ports/runtime"
 )
 
 // StartInput addresses Start.
 type StartInput struct {
+	Runtime     string
 	ProjectRoot string
 	DryRun      bool
 	// Process, when non-empty, restricts the supervisor to a single
@@ -33,8 +37,9 @@ type StartInput struct {
 
 // StartResult is the Start envelope.
 type StartResult struct {
-	Schema string   `json:"schema"`
-	Argv   []string `json:"argv"`
+	Runtime string   `json:"runtime,omitempty"`
+	Schema  string   `json:"schema"`
+	Argv    []string `json:"argv"`
 	// Runner is always "builtin" now — kept for forward-compat with
 	// JSON consumers that switch on it.
 	Runner  string `json:"runner"`
@@ -48,6 +53,9 @@ type StartResult struct {
 // synthetic argv for dry-run / JSON envelopes; blocks until the
 // supervisor exits otherwise.
 func Start(ctx context.Context, in StartInput) (*StartResult, error) {
+	if err := runtimeport.Validate(in.Runtime); err != nil {
+		return nil, err
+	}
 	m, err := workspace.ReadManifest(in.ProjectRoot)
 	if err != nil {
 		return nil, err
@@ -58,6 +66,25 @@ func Start(ctx context.Context, in StartInput) (*StartResult, error) {
 			selectorErrorMessage(m, in.Process))
 	}
 
+	if in.Runtime == runtimeport.Mise {
+		binary, err := os.Executable()
+		if err != nil {
+			return nil, err
+		}
+		for i := range entries {
+			command := workspace.ProjectDev(m, entries[i].Name)
+			shell := []string{"sh", "-c", command}
+			if runtime.GOOS == "windows" {
+				comspec := os.Getenv("ComSpec")
+				if comspec == "" {
+					comspec = "cmd.exe"
+				}
+				shell = []string{comspec, "/d", "/s", "/c", command}
+			}
+			entries[i].Argv = append([]string{binary, "run", "--project", entries[i].Name, "--"}, shell...)
+			entries[i].Cmd = strings.Join(entries[i].Argv, " ")
+		}
+	}
 	argv := []string{"<one cli builtin supervisor>"}
 	for _, e := range entries {
 		argv = append(argv, e.Name+"="+e.Cmd)
@@ -68,6 +95,9 @@ func Start(ctx context.Context, in StartInput) (*StartResult, error) {
 		Runner:  builtinRunnerID,
 		DryRun:  in.DryRun,
 		Process: in.Process,
+	}
+	if in.Runtime == runtimeport.Mise {
+		res.Runtime = runtimeport.Mise
 	}
 	if in.DryRun {
 		return res, nil

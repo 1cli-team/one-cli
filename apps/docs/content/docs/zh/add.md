@@ -3,6 +3,8 @@ title: one add
 description: 往工作区里加一个模板化项目。
 ---
 
+工作区已启用 hk 时，`one add` 会同步更新语言检查：Go 加入格式检查，JS/TS 根据项目工具加入 lint 和格式检查。用户的 `hk.pkl` 保留不变。旧工作区可先通过 `one configure hooks` 启用，详见 [`one hk`](/zh/docs/hk/)。
+
 `one add` 选择技术栈，生成一个可本地开发的项目并登记到 manifest。CI 和部署默认都保持未配置。
 
 有两条入口：
@@ -28,7 +30,7 @@ one add [template-id] --name <project-name> [--deploy-provider <backend>] [optio
 | `--deploy-provider <backend>` | 显式选择 deploy 后端（必须在模板的 compat 列表里） |
 | `-o, --output <fmt>` | `json` / `yaml` / `text` |
 
-工作区根用 pnpm；项目自身的工具链由模板决定（Node 模板用 pnpm，Go 模板用 Go toolchain，等等）。
+首次添加 JS/TS 项目时初始化 Node monorepo，新工作区默认使用 pnpm；已有 Node 工作区沿用其包管理器。首次添加 Go 模块时初始化根 `go.work`，从第一个模块开始维护 `use` 成员。Go 与 Node 配置可以共存，后续添加只增量登记。已有 `go.work` 的注释、`replace`、`toolchain` 和外部成员会保留；配置冲突会在写入前报告。
 
 ## 交互模式
 
@@ -127,4 +129,4 @@ one add nestjs-api --name user-api --yes -o json | jq
 - Agent 文档和本地开发配置会由 `one add` 同步
 - 下一步运行 `one dev <project>`；需要部署时再运行 `one deploy <project>`
 - 如需持续集成，单独运行 `one ci enable <project>` 生成 GitHub Actions 工作流
-- `one add` 不自动安装依赖：JS / TS 工作区在根目录跑 package manager install；Go 项目进项目目录跑 `go mod download`，修改 imports 或需要修复模块元数据时再跑 `go mod tidy`
+- `one add` 只生成项目和工作区配置；`one dev` 会自动准备工具与应用依赖。JS/TS 在根目录统一安装，Go 按当前模块或 `go.work` 构建图准备依赖。修改 imports 或模块声明需要修复时，显式运行 `one run <project> -- go mod tidy`。

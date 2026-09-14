@@ -12,6 +12,7 @@ import (
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/adapters/deploy/vercel"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/adapters/env/dotenv"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/adapters/env/infisical"
+	miseruntime "github.com/torchstellar-team/one-cli/packages/cli/internal/adapters/runtime/mise"
 	internaltoolchain "github.com/torchstellar-team/one-cli/packages/cli/internal/adapters/toolchain"
 	workspaceregistrylocal "github.com/torchstellar-team/one-cli/packages/cli/internal/adapters/workspaceregistry/local"
 	ciapp "github.com/torchstellar-team/one-cli/packages/cli/internal/application/ci"
@@ -24,6 +25,7 @@ import (
 	creationmodule "github.com/torchstellar-team/one-cli/packages/cli/internal/modules/creation"
 	environmentmodule "github.com/torchstellar-team/one-cli/packages/cli/internal/modules/environment"
 	deployport "github.com/torchstellar-team/one-cli/packages/cli/internal/ports/deploy"
+	runtimeport "github.com/torchstellar-team/one-cli/packages/cli/internal/ports/runtime"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/ports/secrets"
 	pkgci "github.com/torchstellar-team/one-cli/packages/cli/pkg/ci"
 )
@@ -32,6 +34,7 @@ import (
 // application services, cohesive feature modules, or narrow real ports;
 // vertical modules may compose their built-in adapters internally.
 type dependencies struct {
+	runtime      runtimeport.Provider
 	catalog      *catalog.Catalog
 	profiles     *configureapp.ProfileService
 	containers   *containermodule.Service
@@ -56,6 +59,7 @@ func composeDependencies() dependencies {
 	creation := mustCreationService(environments, registry)
 
 	return dependencies{
+		runtime:      miseruntime.Provider{},
 		catalog:      backendCatalog,
 		profiles:     profiles,
 		containers:   containers,

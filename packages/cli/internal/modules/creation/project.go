@@ -10,7 +10,10 @@ import (
 
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/core/template"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/core/workspace"
+	"github.com/torchstellar-team/one-cli/packages/cli/internal/modules/hooks"
+	"github.com/torchstellar-team/one-cli/packages/cli/internal/modules/miseconfig"
 	cliErrors "github.com/torchstellar-team/one-cli/packages/cli/internal/platform/errors"
+	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/fsutil"
 	"github.com/torchstellar-team/one-cli/packages/cli/pkg/toolchain"
 )
 
@@ -70,6 +73,30 @@ type ProjectResult struct {
 // created itself (mirrors cbb95a1's guard) — never touches a
 // pre-existing tree.
 func materializeProject(ctx context.Context, projectRoot string, in ProjectInput) (ProjectResult, error) {
+	projectRoot, err := filepath.EvalSymlinks(projectRoot)
+	if err != nil {
+		return ProjectResult{}, err
+	}
+	unlock, err := fsutil.WorkspaceLock(ctx, projectRoot, "creation")
+	if err != nil {
+		return ProjectResult{}, err
+	}
+	defer unlock()
+	// Share the mise writer's lock while publishing projected configuration.
+	unlockMise, err := fsutil.WorkspaceLock(ctx, projectRoot, "mise")
+	if err != nil {
+		return ProjectResult{}, err
+	}
+	defer unlockMise()
+	miseEnabled := miseconfig.Enabled(projectRoot)
+	files := fsutil.NewFilePlan(projectRoot)
+	if _, err := files.Read(workspace.ManifestFilename); err != nil {
+		return ProjectResult{}, err
+	}
+	manifest, err := workspace.ReadManifest(projectRoot)
+	if err != nil {
+		return ProjectResult{}, err
+	}
 	if in.Template == nil {
 		return ProjectResult{}, fmt.Errorf("creation: template is required")
 	}
@@ -84,6 +111,9 @@ func materializeProject(ctx context.Context, projectRoot string, in ProjectInput
 		return ProjectResult{}, err
 	}
 	targetDir := filepath.Join(projectRoot, categoryDir, in.Name)
+	if err := fsutil.SafeWritePath(projectRoot, targetDir); err != nil {
+		return ProjectResult{}, err
+	}
 
 	_, statErr := os.Stat(targetDir)
 	createdFromScratch := os.IsNotExist(statErr)
@@ -103,6 +133,12 @@ func materializeProject(ctx context.Context, projectRoot string, in ProjectInput
 	}
 
 	packageManager := defaultPackageManagerFor(string(entry.Toolchain))
+	if entry.Toolchain == "node" {
+		packageManager, err = nodePackageManager(files)
+		if err != nil {
+			return ProjectResult{}, err
+		}
+	}
 	vars := template.CommonVariables(in.Name, packageManager)
 
 	if err := template.Render(templateLocalID, targetDir, vars); err != nil {
@@ -111,21 +147,84 @@ func materializeProject(ctx context.Context, projectRoot string, in ProjectInput
 		}
 		return ProjectResult{}, err
 	}
+	registered := false
+	defer func() {
+		if !registered && createdFromScratch {
+			_ = os.RemoveAll(targetDir)
+		}
+	}()
 	relDir, err := filepath.Rel(projectRoot, targetDir)
 	if err != nil {
 		relDir = filepath.Join(categoryDir, in.Name)
 	}
 
 	manifestPM := manifestPackageManagerFor(string(entry.Toolchain), packageManager)
-	if err := workspace.UpsertManifestProject(projectRoot, workspace.ManifestProjectInput{
+	newProject := workspace.ManifestProject{
 		Name:           in.Name,
-		RelativeDir:    relDir,
+		RelativeDir:    filepath.ToSlash(relDir),
 		TemplateID:     entry.ID,
 		Toolchain:      string(entry.Toolchain),
 		PackageManager: manifestPM,
-	}); err != nil {
+	}
+	scripts, err := loadProjectScripts(targetDir)
+	if err != nil {
 		return ProjectResult{}, err
 	}
+	dev := workspace.ResolveScaffoldDevCommand(scripts, string(entry.Toolchain), targetDir)
+	if entry.Toolchain == "node" && packageManager != "pnpm" {
+		dev = strings.Replace(dev, "pnpm run ", packageManager+" run ", 1)
+	}
+	if dev != "" {
+		newProject.Domains = &workspace.ProjectDomains{Dev: &workspace.ProjectDevOverride{Command: dev}}
+	}
+	for _, p := range manifest.Projects {
+		if p.RelativeDir == newProject.RelativeDir || p.Name == in.Name {
+			return ProjectResult{}, fmt.Errorf("project %s is already registered", in.Name)
+		}
+	}
+	manifest.Projects = append(manifest.Projects, newProject)
+	if err := planLanguages(files, manifest); err != nil {
+		return ProjectResult{}, err
+	}
+	if entry.Toolchain == "node" {
+		if err := configureNodePackage(files, relDir, vars["projectNameKebabCase"], packageManager); err != nil {
+			return ProjectResult{}, err
+		}
+	}
+	if hk, err := files.Read(workspace.HooksConfigFilename); err != nil {
+		return ProjectResult{}, err
+	} else if hk != nil {
+		if err := hooks.PlanFiles(files, manifest); err != nil {
+			return ProjectResult{}, err
+		}
+	}
+	manifestRaw, err := workspace.MarshalManifest(manifest)
+	if err != nil {
+		return ProjectResult{}, err
+	}
+	if err := files.Set(workspace.ManifestFilename, manifestRaw, 0o644); err != nil {
+		return ProjectResult{}, err
+	}
+	if miseEnabled {
+		plan, err := miseconfig.BuildWithFiles(projectRoot, miseconfig.Options{}, files.Overlay())
+		if err != nil {
+			return ProjectResult{}, err
+		}
+		for path, content := range plan.ReadInputs() {
+			if err := files.Expect(path, content); err != nil {
+				return ProjectResult{}, err
+			}
+		}
+		for _, change := range plan.Changes {
+			if err := files.Set(change.Path, []byte(change.After), 0o644); err != nil {
+				return ProjectResult{}, err
+			}
+		}
+	}
+	if err := files.Apply(ctx); err != nil {
+		return ProjectResult{}, err
+	}
+	registered = true
 
 	deployBackend := ""
 	if !in.DeferDeployment {
@@ -185,8 +284,6 @@ func materializeProject(ctx context.Context, projectRoot string, in ProjectInput
 	compatManifest, _ := workspace.ReadManifest(projectRoot)
 	compatSelection := workspace.SelectionForProject(compatManifest, nil)
 	warnings := template.CheckAllowedBackends(*entry, compatSelection, "")
-
-	_ = ctx // ctx is currently unused; reserved for future cancellation hooks.
 
 	return ProjectResult{
 		Name:           in.Name,

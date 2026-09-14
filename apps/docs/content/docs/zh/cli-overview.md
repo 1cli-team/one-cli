@@ -22,6 +22,7 @@ description: one 顶层命令、常用子命令、输出模式和 agent 自动�
 | `one deploy` | 按 project 派发 kustomize / S3-compatible / Vercel / Cloudflare / EdgeOne 部署 | `one deploy --dry-run` |
 | `one ci` | 查看或管理可选的持续集成 | `one ci` |
 | `one run` | 注入项目 `.env` 后执行任意命令 | `one run -- npm test` |
+| `one hk` | 工作区检查、显式修复和 Git hooks | `one hk check --all` |
 | `one configure` | 配置机器级 endpoint profile | `one configure` |
 | `one serve` | 启动本地 Workspace、Project 与 Profile Dashboard | `one serve` |
 
@@ -72,6 +73,8 @@ one env pull [--env <env>] [-p <name|path>] [--force] [--dry-run]
 详见 [`one env`](/zh/docs/env-vars/)。
 
 ## 本机连接
+
+工作区的检查与提交 hook 使用 `one configure hooks` 配置，详见 [`one hk`](/zh/docs/hk/)。下面的连接命令用于机器级服务配置。
 
 ```bash
 one configure

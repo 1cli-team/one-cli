@@ -20,6 +20,8 @@ import (
 // (ops.go) build the slice directly from the manifest — there is no
 // longer any text-file parsing step.
 type ProcEntry struct {
+	// Argv bypasses shell parsing for runtime wrappers when present.
+	Argv []string
 	// Name is the workload identifier ("api", "web", ...). Sourced
 	// from manifest.projects[].name.
 	Name string

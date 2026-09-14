@@ -85,6 +85,33 @@ Windows 归档名是 `one-cli_windows_amd64.zip`。
 
 也就是说升级根本不需要任何 flag，重跑安装命令就行。降级 / 修复才用 `ONE_FORCE`。
 
+## One 自动管理 mise
+
+新建 workspace 的 `one run` 和 `one dev` 使用 mise 管理工具环境。**发布的 `one` 文件已内置当前平台的 mise 2026.9.7，无需单独安装，首次使用也无需下载 mise。** One 校验内置压缩包，解压并校验可执行文件后放入自己的缓存；后续运行复用缓存。macOS、Linux 的 x64 / arm64 和 Windows x64 发布文件分别携带对应平台资源。[官方二进制分发说明](https://mise.jdx.dev/installing-mise.html)。
+
+不需要激活 shell。配置信任遵循 mise 自身规则；默认模式下执行命令可能自动信任当前配置，设置 `MISE_PARANOID=1` 后需先显式审查并信任配置；Node、Go 等工具下载由 mise 处理，应用依赖仍由包管理器安装，尚未安装的工具和依赖仍可能需要联网。旧 workspace 在显式启用前继续沿用已有工具，详见 [`one configure mise`](/zh/docs/configure/#mise-工作区工具配置)。
+
+缓存位于 `$XDG_CACHE_HOME/one/runtimes/mise/<version>/<platform>/`，未设置时使用 `~/.cache/one/runtimes/mise/`。One 默认使用内置固定版本，仅在子进程 PATH 中加入缓存目录。缓存损坏会从内置资源重新解压，无需联网。内置 mise 随 One 升级；One 会关闭该子进程的 mise 自动升级和更新提示。内置资源会增加 One 发布文件体积；运行时需要可写、可执行的缓存目录。
+
+| 变量 | 用途 |
+|---|---|
+| `ONE_MISE_BINARY` | 显式使用其他 mise 可执行文件的绝对路径，最低支持版本为 2026.9.7 |
+| `ONE_RUNTIME=builtin` | 临时诊断时使用机器原有工具，跳过 mise |
+
+解压、写入或校验失败返回 `MISE_INSTALL_FAILED`；不会执行不完整的文件。修复缓存权限后重试原命令，内置资源损坏时重新安装 One。显式指定的 mise 文件不存在时返回 `MISE_NOT_FOUND`。`--dry-run`、创建项目和生成配置不会解压 runtime。
+
+需要访问 mise 的原生命令时，使用 `one mise`，无需把缓存目录加入 PATH：
+
+```bash
+one mise --version
+one mise doctor
+one mise trust .mise/conf.d/one.toml
+one mise trust apps/web/.mise/conf.d/one.toml
+one mise exec -- pnpm install
+```
+
+`trust` 请在审查对应配置后运行；自定义配置同样遵循 mise 的信任规则。安装依赖的例子应在 workspace 根目录执行。`one mise` 原样转发参数、IO 和退出码，不额外注入 One 项目密钥；需要项目密钥时继续使用 `one run`。`one mise --help` 展示 One 的入口说明，不触发解压。
+
 ## 配置 Provider 凭据
 
 Provider 凭据用顶层 `one configure add <domain>/<backend> --profile <name>` 配（一次配全工作区都能用）。当前支持这些 pair：

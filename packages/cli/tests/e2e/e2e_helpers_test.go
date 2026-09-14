@@ -280,6 +280,11 @@ func assertSnapshot(t *testing.T, name string, got map[string]any) {
 // per-test HOME.
 func isolateHome(t *testing.T, dir string) {
 	t.Helper()
+	// The existing suite pins the native execution contract without installing
+	// project toolchains. Runtime integration tests explicitly clear this override.
+	t.Setenv("ONE_RUNTIME", "builtin")
+	t.Setenv("ONE_MISE_BINARY", "")
+	t.Setenv("XDG_CACHE_HOME", filepath.Join(dir, ".cache"))
 	t.Setenv("HOME", dir)
 	t.Setenv("XDG_CONFIG_HOME", "")
 }

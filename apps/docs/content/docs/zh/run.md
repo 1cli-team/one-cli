@@ -11,7 +11,7 @@ description: 给任意命令注入项目环境变量，并在解析出的项目�
 one run [-p <name|path>] [--env-provider dotenv|infisical] [--env <env>] -- <cmd> [args...]
 ```
 
-也可以省略 `--`，但脚本里建议保留，避免把子命令 flag 误解析成 One CLI flag。
+必须使用 `--` 分隔 One 参数和子命令参数。项目也可以写成位置参数，例如 `one run web -- pnpm build`。
 
 ## 参数
 
@@ -20,11 +20,20 @@ one run [-p <name|path>] [--env-provider dotenv|infisical] [--env <env>] -- <cmd
 | `-p, --project <name|path>` | 选择项目；不传时从当前目录推导 |
 | `--env-provider dotenv|infisical` | 强制使用指定 env provider；默认取 workspace manifest |
 | `--env <env>` | 使用指定环境；默认取 manifest 的默认环境 |
+| `--dry-run` | 仅输出目录、原始参数和 runtime，不执行 mise、不读取密钥、不启动命令 |
 | `-o, --output <fmt>` | 只影响 One CLI 自己的输出；子进程 stdout/stderr 原样透传 |
 
 ## 交互模式
 
-`one run` 没有交互式向导；它只按参数解析项目、环境和子命令。因为后面的命令可能带自己的 flag，脚本里建议保留 `--` 分隔符。
+`one run` 没有交互式向导；它按参数解析项目、环境和子命令。子命令参数放在 `--` 后面。
+
+## mise 工具环境
+
+命令和原有参数保持不变。根目录存在 One 生成的 `.mise/conf.d/one.toml` 时，`one run` 自动通过 mise 准备项目工具和环境，再注入 One 环境变量并执行原始命令。新 workspace 自动生成该配置；旧 workspace 未启用时继续使用原有工具。
+
+覆盖顺序为：父进程环境 → mise 环境 → 当前项目的 One 环境变量。项目目录、参数边界、标准 IO 和应用退出码保持原有语义，不需要 `mise activate`。
+
+无需单独安装 mise：发布的 One 已内置固定版本，首次运行从自身解压到缓存，无需下载 mise；之后直接复用。配置信任遵循 mise 自身规则；需要显式审批时设置 `MISE_PARANOID=1`，审查配置后通过 `one mise trust` 授权。离线配置见 [One 自动管理 mise](/zh/docs/installation/#one-自动管理-mise)，旧项目启用和版本调整见 [`one configure mise`](/zh/docs/configure/#mise-工作区工具配置)。
 
 ## 示例
 

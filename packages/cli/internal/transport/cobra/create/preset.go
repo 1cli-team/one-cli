@@ -191,6 +191,9 @@ func runCreateWithPreset(deps Dependencies, cmd *cobra.Command, cwd, rawDir stri
 		},
 		PartialState: creationResult.PartialState,
 	}
+	if creationResult.HooksWarn != nil {
+		payload.Warnings = []string{i18n.Tf("create.hooks_warning", creationResult.HooksWarn)}
+	}
 	if len(creationResult.Preset.UnknownSegments) > 0 {
 		payload.UnknownSegments = creationResult.Preset.UnknownSegments
 	}
@@ -228,6 +231,7 @@ func presetProjectsPayload(projects []creationmodule.ProjectResult) []presetProj
 // non-preset path continues to emit createResult (v2) so its snapshot
 // fixture stays stable.
 type createPresetResult struct {
+	Warnings        []string               `json:"warnings,omitempty"`
 	Schema          string                 `json:"schema"`
 	Preset          presetEnvelope         `json:"preset"`
 	ProjectName     string                 `json:"project_name"`
@@ -268,7 +272,7 @@ func (r *createPresetResult) RenderTTY(w io.Writer) {
 		return
 	}
 	fmt.Fprintf(w, i18n.T("create.preset_success")+"\n", r.Preset.ID)
-	fmt.Fprintf(w, i18n.T("create.location")+"\n", r.CreatedPath)
+	fmt.Fprintf(w, i18n.T("create.location")+"\n", compactHomePath(r.CreatedPath))
 	for _, p := range r.Projects {
 		if p.DeployBackend != "" {
 			fmt.Fprintf(w, i18n.T("create.preset_project_deployed")+"\n", p.Name, p.TemplateID, p.DeployBackend)
@@ -277,4 +281,7 @@ func (r *createPresetResult) RenderTTY(w io.Writer) {
 		}
 	}
 	fmt.Fprintf(w, i18n.T("create.env_source")+"\n", r.EnvSummary.Backend)
+	for _, warning := range r.Warnings {
+		fmt.Fprintln(w, warning)
+	}
 }

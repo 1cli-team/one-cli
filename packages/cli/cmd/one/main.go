@@ -8,6 +8,7 @@ import (
 
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/bootstrap/cli"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/output"
+	platformprocess "github.com/torchstellar-team/one-cli/packages/cli/internal/platform/process"
 )
 
 // version is overridden at build time via -ldflags. Keep the source fallback
@@ -16,6 +17,10 @@ var version = "0.0.0-dev"
 
 func main() {
 	if err := cli.Execute(version, os.Args[1:]); err != nil {
+		var exit *platformprocess.ExitStatus
+		if errors.As(err, &exit) {
+			os.Exit(exit.Code)
+		}
 		// cli.Execute already emits the structured error envelope; we only
 		// need to surface the non-zero exit status here.
 		var cliErr *output.Error

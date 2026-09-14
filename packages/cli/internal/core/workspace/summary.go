@@ -32,6 +32,7 @@ type SummaryProject struct {
 	RelativeDir           string `json:"relative_dir"`
 	CanStartDevelopment   bool   `json:"can_start_development"`
 	DependenciesInstalled bool   `json:"dependencies_installed"`
+	DependenciesStatus    string `json:"dependencies_status,omitempty"`
 	DeploymentConfigured  bool   `json:"deployment_configured"`
 }
 
@@ -81,15 +82,20 @@ func BuildSummary(root string) (Summary, error) {
 		projectDir := filepath.Join(root, filepath.FromSlash(p.RelativeDir))
 		canDevelop := devCommand != ""
 		dependenciesInstalled := ProjectDependenciesInstalled(root, projectDir, p.Toolchain)
+		dependencyStatus := ""
+		if p.Toolchain == "go" {
+			dependencyStatus = "unverified"
+		}
 		deployConfigured := strings.TrimSpace(DeployForProject(m, p.Name).Backend) != ""
 		s.Projects = append(s.Projects, SummaryProject{
 			Name:                  p.Name,
 			RelativeDir:           p.RelativeDir,
 			CanStartDevelopment:   canDevelop,
 			DependenciesInstalled: dependenciesInstalled,
+			DependenciesStatus:    dependencyStatus,
 			DeploymentConfigured:  deployConfigured,
 		})
-		if canDevelop && !dependenciesInstalled {
+		if canDevelop && !dependenciesInstalled && dependencyStatus != "unverified" {
 			s.Issues = append(s.Issues, SummaryIssue{Code: "dependencies_not_installed", Project: p.Name})
 		}
 		if !canDevelop {
@@ -110,6 +116,11 @@ func BuildSummary(root string) (Summary, error) {
 // declared by the project rather than treating any node_modules directory as
 // proof that a newly added project was included in the last install.
 func ProjectDependenciesInstalled(root, projectDir, toolchain string) bool {
+	// A static summary cannot validate the Go build graph or module cache.
+	// The development preparation service verifies those through Go itself.
+	if strings.TrimSpace(toolchain) == "go" {
+		return false
+	}
 	if strings.TrimSpace(toolchain) != "node" {
 		return true
 	}
@@ -160,6 +171,9 @@ func (s *Summary) RenderTTY(w io.Writer) {
 			dev = i18n.T("workspace.dev_ready")
 			if !p.DependenciesInstalled {
 				dev = i18n.T("workspace.dependencies_missing")
+			}
+			if p.DependenciesStatus == "unverified" {
+				dev = i18n.T("workspace.dependencies_unverified")
 			}
 		}
 		deploy := i18n.T("workspace.deploy_missing")

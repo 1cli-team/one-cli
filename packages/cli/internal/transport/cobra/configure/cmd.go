@@ -48,6 +48,8 @@ import (
 
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/i18n"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/output"
+	hookscmd "github.com/torchstellar-team/one-cli/packages/cli/internal/transport/cobra/hooks"
+	misecmd "github.com/torchstellar-team/one-cli/packages/cli/internal/transport/cobra/mise"
 	servecmd "github.com/torchstellar-team/one-cli/packages/cli/internal/transport/cobra/serve"
 )
 
@@ -108,6 +110,8 @@ func buildContributions(
 		}), buildLocaleCmd(),
 	}
 	parent.AddCommand(children...)
+	parent.AddCommand(misecmd.Commands()...)
+	parent.AddCommand(hookscmd.ConfigureCommand())
 	i18n.MarkShort(parent, "configure.short")
 	i18n.MarkLong(parent, "configure.tip")
 	return []*cobra.Command{parent}

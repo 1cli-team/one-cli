@@ -27,6 +27,7 @@ import (
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/i18n"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/output"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/preferences"
+	platformprocess "github.com/torchstellar-team/one-cli/packages/cli/internal/platform/process"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/updatecheck"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/transport/cobra/add"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/transport/cobra/ci"
@@ -36,6 +37,8 @@ import (
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/transport/cobra/deploy"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/transport/cobra/dev"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/transport/cobra/env"
+	"github.com/torchstellar-team/one-cli/packages/cli/internal/transport/cobra/hooks"
+	"github.com/torchstellar-team/one-cli/packages/cli/internal/transport/cobra/mise"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/transport/cobra/run"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/transport/cobra/serve"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/transport/cobra/templates"
@@ -62,9 +65,11 @@ func newRootCommand() *cobra.Command {
 			Creation:   deps.creation,
 			NewService: deps.newDeploymentService,
 		}),
-		devcmd.Commands(),
+		devcmd.Commands(deps.runtime),
+		misecmd.RuntimeCommands(deps.runtime),
+		hookscmd.Commands(deps.runtime),
 		envcmd.Commands(envcmd.Dependencies{Service: deps.environments}),
-		runcmd.Commands(deps.loaders),
+		runcmd.Commands(deps.loaders, deps.runtime),
 		servecmd.Commands(servecmd.Dependencies{
 			Catalog: deps.catalog, Profiles: deps.profiles, Workspaces: deps.workspaces,
 			Registry: deps.registry, Manifest: deps.manifest, Environments: deps.environments,
@@ -143,8 +148,10 @@ func Execute(version string, args []string) (resultErr error) {
 	// in the defer below from cached state. Both calls are no-ops on
 	// CI / -o json / dev builds / opt-out, so this is free in those
 	// paths. See internal/platform/updatecheck.
-	updatecheck.MaybeRefreshAsync(version)
-	defer updatecheck.Notify(version)
+	if shouldCheckUpdates(args) {
+		updatecheck.MaybeRefreshAsync(version)
+		defer updatecheck.Notify(version)
+	}
 
 	if shouldRenderAllHelp(args) {
 		helpui.RenderAll(rootCmd, os.Stdout)
@@ -197,6 +204,10 @@ func Execute(version string, args []string) (resultErr error) {
 	}
 
 	if err := rootCmd.Execute(); err != nil {
+		var exit *platformprocess.ExitStatus
+		if errors.As(err, &exit) {
+			return err
+		}
 		// Wrap unknown errors into the structured envelope so JSON consumers
 		// always see one-cli/error/v1.
 		var cliErr *output.Error
@@ -209,6 +220,22 @@ func Execute(version string, args []string) (resultErr error) {
 		return wrapped
 	}
 	return nil
+}
+
+// Execution leaves and previews must not start another background network check.
+func shouldCheckUpdates(args []string) bool {
+	if first, _ := firstPositional(args); first == "__exec" || first == "mise" || first == "hk" || first == "__hook-gofmt" {
+		return false
+	}
+	for _, arg := range args {
+		if arg == "--" {
+			break
+		}
+		if arg == "--dry-run" || arg == "--dry-run=true" {
+			return false
+		}
+	}
+	return true
 }
 
 // helpFlags catches the tokens we treat as a request for help.

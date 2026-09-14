@@ -82,4 +82,4 @@ export function getHello() {
 
 ## 说明
 
-这是模板仓库，不内置项目级 Changesets、Biome、额外 docs 目录或发布流水线。相关治理由 `one-cli` 在工作区根目录统一生成和维护。
+这是模板仓库，不内置项目级 Biome、额外 docs 目录或发布流水线。工作区治理由 `one-cli` 提供；版本管理和发布流程由项目按需配置。

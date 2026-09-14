@@ -28,6 +28,8 @@ Use it when a coding agent or engineer needs a predictable workspace contract in
 - `one configure`: store local environment, deploy, and container settings.
 - `one env`: manage environment variables.
 - `one run`: run a project with the selected environment.
+- `one hk`: check or explicitly fix workspace files using hk through One's embedded mise.
+- `one configure hooks`: configure local Git hooks and migrate default Husky/commitlint setups.
 - `one deploy`: deploy configured projects.
 - `one container`: build and push container images.
 - `one serve`: open the local configuration UI.

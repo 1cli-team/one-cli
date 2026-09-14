@@ -39,6 +39,7 @@ TIPS
   one run --env staging -- npm run e2e            # 用 staging 环境的密钥
 
 COMMON OPTIONS
+  --dry-run                Print the execution plan without loading environment values or starting a command
   --env <value>            环境名（默认取 manifest.environments.default）
   --env-provider <value>   env provider: dotenv | infisical（默认取 workspace manifest 中已选的值）
   -o, --output <value>     Output format: json | yaml | text (default: terminal-friendly text, JSON when piped)

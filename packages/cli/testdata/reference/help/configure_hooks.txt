@@ -1,0 +1,15 @@
+
+DESCRIPTION
+Generate hk checks, migrate default Husky hooks, and install local Git launchers
+
+USAGE
+  one configure hooks [flags]
+
+EXAMPLES
+  one configure hooks --dry-run -o json
+  one configure hooks
+  one hk check --all
+
+COMMON OPTIONS
+  --dry-run                Preview configuration, migration, and local hook files without changing anything
+  -o, --output <value>     Output format: json | yaml | text (default: terminal-friendly text, JSON when piped)

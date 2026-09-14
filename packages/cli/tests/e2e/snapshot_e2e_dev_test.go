@@ -77,6 +77,26 @@ func TestSnapshot_E2E_DevFromManifest(t *testing.T) {
 	// scaffolded default (`go run ./cmd/server`) would block forever in
 	// the test environment.
 	overrideDevCommand(t, ws, "api", "echo built-in-supervisor-works")
+	// Keep dependency preparation real, but use a dependency-free module so
+	// this supervisor smoke test never installs the API template's toolchain.
+	apiDir := filepath.Join(ws, "services", "api")
+	if err := os.RemoveAll(apiDir); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(apiDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	for file, content := range map[string]string{
+		"go.work":              "go 1.25.0\nuse ./services/api\n",
+		"services/api/go.mod":  "module example.com/api\ngo 1.25.0\n",
+		"services/api/main.go": "package main\nfunc main(){}\n",
+	} {
+		if err := os.WriteFile(filepath.Join(ws, file), []byte(content), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	t.Setenv("GOTOOLCHAIN", "local")
+	t.Setenv("GOPROXY", "off")
 
 	stdout, stderr, code := runBinaryIn(t, ws, "dev", "api", "-o", "json")
 	if code != 0 {
