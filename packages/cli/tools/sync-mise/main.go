@@ -20,7 +20,10 @@ import (
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/fsutil"
 )
 
-const maxArchiveSize = 256 << 20
+const (
+	maxArchiveSize      = 256 << 20
+	maxDownloadAttempts = 4
+)
 
 func main() {
 	all := flag.Bool("all", false, "prepare archives for all five One release targets")
@@ -84,40 +87,85 @@ func syncArchive(ctx context.Context, client *http.Client, url, path, digest str
 		return nil
 	}
 	fmt.Fprintf(os.Stderr, "Fetching build resource %s\n", filepath.Base(path))
+	for attempt := 1; ; attempt++ {
+		if err := ctx.Err(); err != nil {
+			return err
+		}
+		retry, err := downloadArchive(ctx, client, url, path, digest)
+		if err == nil {
+			return nil
+		}
+		if ctx.Err() != nil {
+			return ctx.Err()
+		}
+		if !retry {
+			return err
+		}
+		if attempt == maxDownloadAttempts {
+			return fmt.Errorf("mise build resource failed after %d attempts: %w", attempt, err)
+		}
+		delay := time.Second << (attempt - 1)
+		fmt.Fprintf(os.Stderr, "Fetching %s failed: %v; retrying in %s (attempt %d/%d)\n", filepath.Base(path), err, delay, attempt+1, maxDownloadAttempts)
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-time.After(delay):
+		}
+	}
+}
+
+// Every attempt uses a fresh temporary file. Only transient download failures
+// are retried; verification and local filesystem errors remain fatal.
+func downloadArchive(ctx context.Context, client *http.Client, url, path, digest string) (retry bool, err error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
-		return err
+		return false, err
 	}
 	req.Header.Set("User-Agent", "one-cli/build-mise")
 	res, err := client.Do(req)
 	if err != nil {
-		return err
+		return true, err
 	}
 	defer res.Body.Close()
 	if res.StatusCode != http.StatusOK {
-		return fmt.Errorf("mise build resource returned HTTP %d", res.StatusCode)
+		retry := res.StatusCode == http.StatusRequestTimeout || res.StatusCode == http.StatusTooManyRequests || res.StatusCode >= 500 && res.StatusCode < 600
+		return retry, fmt.Errorf("mise build resource returned HTTP %d", res.StatusCode)
 	}
 	tmp, err := os.CreateTemp(filepath.Dir(path), ".fetch-*")
 	if err != nil {
-		return err
+		return false, err
 	}
 	defer os.Remove(tmp.Name())
 	hash := sha256.New()
-	n, copyErr := io.Copy(io.MultiWriter(tmp, hash), io.LimitReader(res.Body, maxArchiveSize+1))
+	body := &archiveReader{Reader: res.Body}
+	n, copyErr := io.Copy(io.MultiWriter(tmp, hash), io.LimitReader(body, maxArchiveSize+1))
 	closeErr := tmp.Close()
 	if copyErr != nil {
-		return copyErr
+		return body.err != nil, copyErr
 	}
 	if closeErr != nil {
-		return closeErr
+		return false, closeErr
 	}
 	if n > maxArchiveSize {
-		return fmt.Errorf("mise build resource exceeds size limit")
+		return false, fmt.Errorf("mise build resource exceeds size limit")
 	}
 	if fmt.Sprintf("%x", hash.Sum(nil)) != digest {
-		return fmt.Errorf("mise archive SHA256 mismatch: %s", filepath.Base(path))
+		return false, fmt.Errorf("mise archive SHA256 mismatch: %s", filepath.Base(path))
 	}
-	return fsutil.ReplaceFile(tmp.Name(), path)
+	return false, fsutil.ReplaceFile(tmp.Name(), path)
+}
+
+type archiveReader struct {
+	io.Reader
+	err error
+}
+
+func (r *archiveReader) Read(p []byte) (int, error) {
+	n, err := r.Reader.Read(p)
+	if err != nil && err != io.EOF {
+		r.err = err
+	}
+	return n, err
 }
 
 func validArchive(path, digest string) bool {
