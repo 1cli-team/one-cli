@@ -10,6 +10,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"sync"
 	"testing"
@@ -133,6 +134,57 @@ func TestGoUnresolvedImportFailsWithoutTidy(t *testing.T) {
 	b, _ := os.ReadFile(filepath.Join(root, "api/go.mod"))
 	if string(b) != module {
 		t.Fatal("implicit tidy changed go.mod")
+	}
+}
+
+func TestGoWorkspaceAcceptsSymlinkPaths(t *testing.T) {
+	for _, mode := range []string{"workspace-root", "gowork"} {
+		t.Run(mode, func(t *testing.T) {
+			root := setupGo(t)
+			write(t, root, "go.work", "go 1.25.0\nuse ./api\n")
+			write(t, root, "api/go.mod", "module example.com/api\ngo 1.25.0\n")
+			write(t, root, "api/main.go", "package main\nfunc main(){}\n")
+			physicalRoot, err := filepath.EvalSymlinks(root)
+			if err != nil {
+				t.Fatal(err)
+			}
+			linkTarget := filepath.Join(physicalRoot, "go.work")
+			alias := filepath.Join(physicalRoot, "alias.work")
+			if mode == "workspace-root" {
+				linkTarget = physicalRoot
+				alias = filepath.Join(t.TempDir(), "workspace-link")
+			}
+			if err := os.Symlink(linkTarget, alias); err != nil {
+				if runtime.GOOS == "windows" {
+					t.Skipf("symlinks unavailable: %v", err)
+				}
+				t.Fatal(err)
+			}
+			active := alias
+			if mode == "workspace-root" {
+				root, active = alias, filepath.Join(physicalRoot, "go.work")
+			}
+			t.Setenv("GOWORK", active)
+			in := Input{Root: root, Manifest: &workspace.Manifest{Projects: []workspace.ManifestProject{project("api", "api", "go")}}}
+			if err := (Service{}).Prepare(context.Background(), in); err != nil {
+				t.Fatal(err)
+			}
+		})
+	}
+}
+
+func TestGoWorkspaceRejectsExternalFileWithSameContents(t *testing.T) {
+	root := setupGo(t)
+	work := "go 1.25.0\n"
+	write(t, root, "go.work", work)
+	write(t, root, "api/go.mod", "module example.com/api\ngo 1.25.0\n")
+	external := t.TempDir()
+	write(t, external, "go.work", work)
+	active := filepath.Join(external, "go.work")
+	t.Setenv("GOWORK", active)
+	in := Input{Root: root, Manifest: &workspace.Manifest{Projects: []workspace.ManifestProject{project("api", "api", "go")}}}
+	if err := (Service{}).Prepare(context.Background(), in); err == nil || !strings.Contains(err.Error(), "uses external GOWORK="+active) {
+		t.Fatalf("expected external workspace rejection, got %v", err)
 	}
 }
 
