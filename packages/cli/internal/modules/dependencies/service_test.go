@@ -138,7 +138,7 @@ func TestGoUnresolvedImportFailsWithoutTidy(t *testing.T) {
 }
 
 func TestGoWorkspaceAcceptsSymlinkPaths(t *testing.T) {
-	for _, mode := range []string{"workspace-root", "gowork"} {
+	for _, mode := range []string{"workspace-root", "gowork", "gowork-parent", "pwd-alias"} {
 		t.Run(mode, func(t *testing.T) {
 			root := setupGo(t)
 			write(t, root, "go.work", "go 1.25.0\nuse ./api\n")
@@ -150,7 +150,7 @@ func TestGoWorkspaceAcceptsSymlinkPaths(t *testing.T) {
 			}
 			linkTarget := filepath.Join(physicalRoot, "go.work")
 			alias := filepath.Join(physicalRoot, "alias.work")
-			if mode == "workspace-root" {
+			if mode != "gowork" {
 				linkTarget = physicalRoot
 				alias = filepath.Join(t.TempDir(), "workspace-link")
 			}
@@ -161,8 +161,14 @@ func TestGoWorkspaceAcceptsSymlinkPaths(t *testing.T) {
 				t.Fatal(err)
 			}
 			active := alias
-			if mode == "workspace-root" {
+			switch mode {
+			case "workspace-root":
 				root, active = alias, filepath.Join(physicalRoot, "go.work")
+			case "gowork-parent":
+				active = filepath.Join(alias, "go.work")
+			case "pwd-alias":
+				active = filepath.Join(physicalRoot, "go.work")
+				t.Setenv("PWD", filepath.Join(alias, "api"))
 			}
 			t.Setenv("GOWORK", active)
 			in := Input{Root: root, Manifest: &workspace.Manifest{Projects: []workspace.ManifestProject{project("api", "api", "go")}}}
