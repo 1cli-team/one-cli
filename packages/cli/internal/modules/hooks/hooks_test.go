@@ -166,7 +166,20 @@ func TestConfigureLinkedWorktreeUsesCommonGitHooks(t *testing.T) {
 }
 
 func TestConfigureMigratesOnlyLegacyDefaults(t *testing.T) {
+	testLegacyMigration(t, fixture(t))
+}
+
+func TestConfigureMigratesLegacyDefaultsThroughSymlink(t *testing.T) {
 	root := fixture(t)
+	alias := filepath.Join(t.TempDir(), "workspace-alias")
+	if err := os.Symlink(root, alias); err != nil {
+		t.Skipf("directory symlinks unavailable: %v", err)
+	}
+	testLegacyMigration(t, alias)
+}
+
+func testLegacyMigration(t *testing.T, root string) {
+	t.Helper()
 	for path, content := range legacyFiles {
 		write(t, root, path, content)
 	}
@@ -201,8 +214,14 @@ func TestConfigureMigratesOnlyLegacyDefaults(t *testing.T) {
 	if len(deps) != 1 || deps["@changesets/cli"] == nil {
 		t.Fatalf("deps: %+v", deps)
 	}
-	if value, _ := hooksPath(context.Background(), root); value != filepath.ToSlash(filepath.Join(root, ".git/hooks")) {
-		t.Fatalf("hooksPath = %s", value)
+	// Installation resolves the common Git directory, including Windows short
+	// paths and workspace symlinks. Compare the same canonical directory here.
+	wantPath, err := filepath.EvalSymlinks(filepath.Join(root, ".git", "hooks"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if value, err := hooksPath(context.Background(), root); err != nil || value != filepath.ToSlash(wantPath) {
+		t.Fatalf("hooksPath = %q, want %q, error %v", value, filepath.ToSlash(wantPath), err)
 	}
 	if read(t, root, "pnpm-lock.yaml") != "lockfileVersion: '9.0'\n" {
 		t.Fatal("rewrote package manager lockfile")
