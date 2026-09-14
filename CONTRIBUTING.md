@@ -56,15 +56,16 @@ task pre-push               # 推前必跑（含上面所有 + verify-docs）
    pre-commit hook 会自动运行与 PR CI 相同的 `task check`；如果当前 checkout 尚未
    启用 hook，先运行 `task hooks:install`。hook 会拒绝混合已暂存、未暂存或未跟踪的
    文件，确保本地检查的内容与即将提交、随后由 CI 检查的快照一致
-4. **必跑** `task pre-push` 全绿（在 PR gate 之外额外运行 Go race detector）
+4. **必跑** `task pre-push` 全绿（包含 Go race detector）
 5. 推送 + 开 PR
 
-PR CI 在 Linux 上并行执行 `task check:static` 与 `task check:test`，同时在
-Windows 上执行 `task check`、macOS 上执行 `task check:test`。master 的保护规则
-要求 `lint`、`test`、`test-windows`、`test-macos` 四项检查全部通过才能合并。
+PR CI 在 Linux 上并行执行 `task check:static`、`task check:test` 与
+`task test:go`（Go race detector），同时在 Windows 上执行 `task check`、
+macOS 上执行 `task check:test`。master 的保护规则要求 `lint`、`test`、
+`test-windows`、`test-macos`、`test-race` 五项检查全部通过才能合并。
 本地 `task check` 和 `task pre-push` 只验证当前操作系统，不能代替其他平台的
-CI；`task pre-push` 额外运行 Go race detector，远端 race 检查保留在 master
-和手动触发的工作流中。
+CI；`task pre-push` 额外运行 Go race detector。远端五项检查会在 PR、master
+推送和手动触发的工作流中运行。
 
 ## 改不同部分的注意事项
 

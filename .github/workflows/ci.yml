@@ -1,5 +1,4 @@
-# PR-time test gate with native Linux, Windows, and macOS coverage.
-# Race checks remain on master/manual runs.
+# PR-time test gate with native Linux, Windows, macOS, and Go race coverage.
 #
 # Two PR jobs call the same subtasks used by the local `task check` entrypoint:
 #  - lint: `task check:static` covers documentation drift, Go vet/gofmt, and
@@ -10,8 +9,8 @@
 #  - test: `task check:test` builds bin/one then runs Go + Dashboard tests.
 #    Build is required because tests/e2e snapshot tests skip when
 #    bin/one is missing.
-# Native Windows and macOS jobs also run on every PR. The master ruleset
-# requires lint, test, test-windows, and test-macos before merging.
+# Native Windows, macOS, and Go race jobs also run on every PR. The master
+# ruleset requires lint, test, test-windows, test-macos, and test-race before merging.
 #
 # Both jobs need Node + pnpm because sync-web runs `pnpm install` +
 # `vite build` against apps/dashboard/.
@@ -212,9 +211,7 @@ jobs:
         run: task check
 
   test-race:
-    # Race tests are useful but slow on GitHub-hosted runners. Keep them off
-    # the PR critical path and run them before/after merging to master.
-    if: github.event_name != 'pull_request'
+    # Catch Go data races before merging, alongside the other required jobs.
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -271,11 +268,9 @@ jobs:
             exit 1
           fi
 
-      - name: Build binary
-        run: task build
-
-      - name: Run tests
-        run: task test
+      - name: Run Go race tests
+        # test:go builds the CLI for E2E coverage; Dashboard tests run in test.
+        run: task test:go
 
   test-macos:
     # Run before merging so macOS path and process regressions block PRs.
