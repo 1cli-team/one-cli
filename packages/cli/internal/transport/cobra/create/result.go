@@ -3,6 +3,7 @@ package createcmd
 import (
 	"fmt"
 	"io"
+	"os"
 	"path/filepath"
 	"strings"
 
@@ -76,7 +77,7 @@ func compactHomePath(path string) string {
 }
 
 func relativeOrAbs(cwd, targetDir string, useCurrentDir bool) string {
-	rel, err := filepath.Rel(cwd, targetDir)
+	rel, err := filepath.Rel(resolveDisplayPath(cwd), resolveDisplayPath(targetDir))
 	if err == nil && rel != "" {
 		return rel
 	}
@@ -84,6 +85,21 @@ func relativeOrAbs(cwd, targetDir string, useCurrentDir bool) string {
 		return "."
 	}
 	return targetDir
+}
+
+// resolveDisplayPath resolves symlinks in existing ancestors, even when the
+// workspace directory (and some of its parents) has not been created yet.
+// Other filesystem errors leave the original path available for display.
+func resolveDisplayPath(path string) string {
+	resolved, err := filepath.EvalSymlinks(path)
+	if err == nil {
+		return resolved
+	}
+	parent := filepath.Dir(path)
+	if !os.IsNotExist(err) || parent == path {
+		return path
+	}
+	return filepath.Join(resolveDisplayPath(parent), filepath.Base(path))
 }
 
 func parsePresetProjectNames(raw string, want int) ([]string, error) {

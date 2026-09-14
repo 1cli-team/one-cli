@@ -120,7 +120,13 @@ func (s Service) prepareGo(ctx context.Context, in Input, p workspace.ManifestPr
 	if active != "" && active != "off" {
 		want := filepath.Join(in.Root, "go.work")
 		if filepath.Clean(active) != filepath.Clean(want) {
-			return fmt.Errorf("%s uses external GOWORK=%s; use %s or GOWORK=off explicitly", p.Name, active, want)
+			// Go may return the physical path while the workspace root uses
+			// a symlink (for example /var and /private/var on macOS).
+			activeInfo, activeErr := os.Stat(active)
+			wantInfo, wantErr := os.Stat(want)
+			if activeErr != nil || wantErr != nil || !os.SameFile(activeInfo, wantInfo) {
+				return fmt.Errorf("%s uses external GOWORK=%s; use %s or GOWORK=off explicitly", p.Name, active, want)
+			}
 		}
 		lockRoot = in.Root
 	}
