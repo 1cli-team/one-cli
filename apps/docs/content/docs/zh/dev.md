@@ -5,6 +5,8 @@ description: 启动全部可开发项目，或只启动一个项目。
 
 `one dev` 从 manifest 读取每个项目的开发命令，并用 One CLI 内置 supervisor 运行。
 
+启用 mise 的 workspace 会自动在每个项目的 mise 工具环境中运行开发命令，仍然使用 `one dev` / `one dev web`，无需增加 runtime 参数。日志前缀、项目选择和整组服务的停止行为继续由原有 supervisor 负责。mise 的安装与旧项目启用见 [`one configure mise`](/zh/docs/configure/#mise-工作区工具配置)。
+
 ## 用法
 
 ```bash
@@ -17,12 +19,18 @@ one dev [project] [--dry-run]
 |---|---|
 | 位置参数 `project` | 只启动一个项目；支持 manifest 里的 `name` 或 `relativeDir` |
 | `-p, --project <name|path>` | 为旧脚本和 CI 保留的选择参数 |
-| `--dry-run` | 只打印将调用的 supervisor 命令，不启动进程 |
+| `--dry-run` | 只打印将调用的 supervisor 命令，不安装工具或依赖、不访问网络、不写文件 |
 | `-o, --output <fmt>` | `json` / `yaml` / `text`（默认按 TTY 检测） |
 
-## 交互模式
+## 依赖准备
 
-选中的 Node 项目缺少依赖时，终端会询问是否运行检测到的包管理器安装命令。确认后安装并继续，拒绝则成功退出；非交互调用返回 `DEPENDENCIES_NOT_INSTALLED` 和准确安装命令。
+`one dev` 在启动服务前自动准备所选项目的工具与应用依赖，交互和非交互调用行为一致。
+
+- Node：在工作区根目录安装一次。已有锁文件时执行冻结安装，锁文件与项目声明不一致会失败；新工作区首次安装生成锁文件。项目声明、工具版本改变或依赖目录被清理后会重新准备。
+- Go：独立模块下载固定构建列表并补充 `go.sum`；存在 `go.work` 时由 Go 按实际包依赖解析本地成员和外部依赖，按需维护 `go.work.sum`。准备过程不自动运行 `go mod tidy` 或 `go work sync`。
+- 所有准备成功后才启动 supervisor。失败保留底层错误和下载缓存，可修复后重试原命令；取消时停止准备进程。
+
+`go.work.sum` 不替代各模块发布所需的 `go.sum`。模块声明需要修复时，可显式运行 `one run api -- go mod tidy`。`one run` 保持直接执行命令，不自动安装应用依赖。
 
 ## 运行方式
 
@@ -38,7 +46,8 @@ one dev apps/web --dry-run
 
 | 错误码 | 处理 |
 |---|---|
-| `DEPENDENCIES_NOT_INSTALLED` | 执行 remediation 给出的安装命令，再重试 |
+| `RUN_COMMAND_NOT_FOUND` | 检查原生工具安装或 mise 配置 |
+| `ONE_CLI_ERROR` | 按底层依赖错误修复网络、锁文件或模块声明后重试 |
 | `SUBPROJECT_NOT_FOUND` | 使用项目 `name` 或 `relativeDir` |
 
 完整码表：[错误码大全](/zh/docs/error-codes/)。

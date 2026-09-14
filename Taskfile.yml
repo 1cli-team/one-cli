@@ -31,6 +31,8 @@ env:
   GOPROXY: '{{.GOPROXY}}'
 
 tasks:
+  # Keep cached tasks at the repository root so sources/generates resolve
+  # against the same paths. Use go -C when a command needs the CLI directory.
   default:
     desc: List available tasks
     cmds:
@@ -39,30 +41,35 @@ tasks:
   build:
     desc: Build the local binary into packages/cli/bin/one
     deps: [sync-bundled, sync-web]
-    dir: '{{.CLI_DIR}}'
     status:
-      - test -f 'bin/one{{.GOEXE}}'
-      - test "$(bin/one{{.GOEXE}} --version)" = "{{.BUILD_VERSION}}"
+      - test -f '{{.BIN}}'
+      - test "$({{.BIN}} --version)" = "{{.BUILD_VERSION}}"
     cmds:
-      - mkdir -p bin
-      - go build -trimpath -ldflags '{{.LDFLAGS}}' -o 'bin/one{{.GOEXE}}' ./cmd/one
+      - mkdir -p '{{.BIN_DIR}}'
+      - go -C '{{.CLI_DIR}}' build -trimpath -ldflags '{{.LDFLAGS}}' -o 'bin/one{{.GOEXE}}' ./cmd/one
     sources:
+      - 'Taskfile.yml'
       - 'go.work'
       - 'go.work.sum'
       - 'packages/kernel/go.mod'
       - 'packages/kernel/**/*.go'
       - 'packages/cli/cmd/**/*.go'
       - 'packages/cli/internal/**/*.go'
+      - 'packages/cli/internal/adapters/runtime/mise/assets/*.tar.gz'
+      - 'packages/cli/internal/adapters/runtime/mise/assets/*.zip'
+      - 'packages/cli/internal/adapters/deploy/kustomize/templates/*'
+      - 'packages/cli/internal/platform/i18n/locales/*.json'
+      - 'packages/cli/internal/resources/bundled/**/*'
       - 'packages/cli/pkg/**/*.go'
       - 'packages/cli/go.mod'
+      - 'packages/cli/go.sum'
     generates:
       - '{{.BIN}}'
 
   gen-error-codes:
     desc: Render apps/docs/content/docs/zh/error-codes.md from internal/platform/errors/codes.go
-    dir: '{{.CLI_DIR}}'
     cmds:
-      - go run ./tools/gen-error-codes
+      - go -C '{{.CLI_DIR}}' run ./tools/gen-error-codes
     sources:
       - 'packages/cli/internal/platform/errors/codes.go'
       - 'packages/cli/tools/gen-error-codes/**/*.go'
@@ -76,9 +83,8 @@ tasks:
     # registry/_templates; sync-web covers _web. Both run before
     # `go run` here so a fresh checkout works without prior task invocations.
     deps: [sync-bundled, sync-web]
-    dir: '{{.CLI_DIR}}'
     cmds:
-      - go run ./tools/verify-cli-references
+      - go -C '{{.CLI_DIR}}' run ./tools/verify-cli-references
     sources:
       - 'packages/cli/internal/**/*.go'
       - 'packages/cli/tools/verify-cli-references/**/*.go'
@@ -94,9 +100,8 @@ tasks:
     # The test package imports internal/core/template → internal/resources/bundled, so it
     # needs the embed sources present. Mirrors verify-cli-references.
     deps: [sync-bundled, sync-web]
-    dir: '{{.CLI_DIR}}'
     cmds:
-      - go test -count=1 -run 'TestTemplateCodesMatchGoldenAndRegistry|TestDeployCodesMatchGolden|TestEnvCodesMatchGolden|TestContainerCodesMatchGolden|TestGoldenSortedByCode' ./internal/modules/preset/...
+      - go -C '{{.CLI_DIR}}' test -count=1 -run 'TestTemplateCodesMatchGoldenAndRegistry|TestDeployCodesMatchGolden|TestEnvCodesMatchGolden|TestContainerCodesMatchGolden|TestGoldenSortedByCode' ./internal/modules/preset/...
     sources:
       - 'packages/cli/internal/modules/preset/**/*.go'
       - 'packages/cli/testdata/preset/v1_codes.json'
@@ -105,9 +110,8 @@ tasks:
   verify-preset-vectors:
     desc: Lock the v1 preset id encoding — Encode(spec) and Parse(id) roundtrip every frozen vector
     deps: [sync-bundled, sync-web]
-    dir: '{{.CLI_DIR}}'
     cmds:
-      - go test -count=1 -run 'TestEncodeVectors|TestParseEncodeRoundTrip|TestEncodeOrderIndependent' ./internal/modules/preset/...
+      - go -C '{{.CLI_DIR}}' test -count=1 -run 'TestEncodeVectors|TestParseEncodeRoundTrip|TestEncodeOrderIndependent' ./internal/modules/preset/...
     sources:
       - 'packages/cli/internal/modules/preset/**/*.go'
       - 'packages/cli/testdata/preset/v1_vectors.json'
@@ -119,11 +123,11 @@ tasks:
     # registry/_templates; sync-web covers _web. Mirrors the deps
     # on verify-cli-references and verify-preset-codes.
     deps: [sync-bundled, sync-web]
-    dir: '{{.CLI_DIR}}'
     cmds:
-      - go run ./tools/verify-help
+      - go -C '{{.CLI_DIR}}' run ./tools/verify-help
     sources:
       - 'packages/cli/internal/**/*.go'
+      - 'packages/cli/internal/platform/i18n/locales/*.json'
       - 'packages/cli/tools/verify-help/**/*.go'
 
   verify-docs:
@@ -183,7 +187,7 @@ tasks:
 
   build-all:
     desc: Cross-compile every supported platform under go-dist/
-    deps: [sync-bundled]
+    deps: [sync-bundled, sync-mise-all, sync-web]
     dir: '{{.CLI_DIR}}'
     cmds:
       - rm -rf ../../go-dist
@@ -361,7 +365,20 @@ tasks:
     generates:
       - 'apps/dashboard/dist/index.html'
 
+  sync-mise:
+    desc: Fetch and verify the pinned mise archive embedded for the local platform
+    run: once
+    cmds:
+      - go run ./packages/cli/tools/sync-mise
+
+  sync-mise-all:
+    desc: Fetch and verify mise archives for all release platforms
+    run: once
+    cmds:
+      - go run ./packages/cli/tools/sync-mise --all
+
   sync-bundled:
+    deps: [sync-mise]
     desc: Regenerate registry/_templates under packages/cli/internal/resources/bundled (go:embed sources)
     run: once
     summary: |

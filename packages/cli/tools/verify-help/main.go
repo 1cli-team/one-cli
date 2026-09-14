@@ -266,6 +266,11 @@ func scanInvocations(root, owner *cobra.Command, field, text string) []string {
 			// or just prose. Don't flag, just skip.
 			continue
 		}
+		if resolved.DisableFlagParsing {
+			// Passthrough commands such as one hk and one mise forward
+			// flags to the native tool instead of registering them in Cobra.
+			continue
+		}
 
 		// Extract --flag tokens from the FULL line so we catch flags
 		// even after the command path.

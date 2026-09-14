@@ -37,11 +37,11 @@ func TestProjectDependenciesInstalledChecksDeclaredNodeDependencies(t *testing.T
 	}
 }
 
-func TestProjectDependenciesInstalledHandlesNoInstallToolchains(t *testing.T) {
+func TestGoDependenciesRequireRuntimeVerification(t *testing.T) {
 	root := t.TempDir()
 	projectDir := filepath.Join(root, "services", "api")
-	if !ProjectDependenciesInstalled(root, projectDir, "go") {
-		t.Fatal("non-node toolchains do not have a package-manager install gate")
+	if ProjectDependenciesInstalled(root, projectDir, "go") {
+		t.Fatal("a static filesystem check cannot claim Go dependencies are installed")
 	}
 }
 

@@ -1,0 +1,17 @@
+
+DESCRIPTION
+Run mise commands using the runtime managed by One
+
+USAGE
+  one mise [args...] [flags]
+
+EXAMPLES
+  one mise trust
+  one mise doctor
+  one mise exec -- pnpm install
+
+TIPS
+Optional access to mise for configuration trust, diagnostics, and tool installation. One includes a pinned mise runtime and extracts it locally on first use without downloading mise. Arguments and output are passed through; project environment secrets are not loaded by One here. Normal development continues to use one dev and one run.
+
+COMMON OPTIONS
+  -o, --output <value>     Output format: json | yaml | text (default: terminal-friendly text, JSON when piped)

@@ -5,31 +5,27 @@ package devcmd
 
 import (
 	"fmt"
-	"os"
-	"os/exec"
-	"path/filepath"
 	"strings"
 
 	"github.com/spf13/cobra"
 
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/application/execution"
-	"github.com/torchstellar-team/one-cli/packages/cli/internal/core/workspace"
+	"github.com/torchstellar-team/one-cli/packages/cli/internal/modules/dependencies"
 	processorch "github.com/torchstellar-team/one-cli/packages/cli/internal/modules/development/process"
 	cliErrors "github.com/torchstellar-team/one-cli/packages/cli/internal/platform/errors"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/helpui"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/i18n"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/output"
-	platformprocess "github.com/torchstellar-team/one-cli/packages/cli/internal/platform/process"
-	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/prompt"
+	runtimeport "github.com/torchstellar-team/one-cli/packages/cli/internal/ports/runtime"
 )
 
-func Commands() []*cobra.Command { return buildContributions() }
+func Commands(provider runtimeport.Provider) []*cobra.Command { return buildContributions(provider) }
 
-func buildContributions() []*cobra.Command {
-	return []*cobra.Command{newDevCmd()}
+func buildContributions(provider runtimeport.Provider) []*cobra.Command {
+	return []*cobra.Command{newDevCmd(provider)}
 }
 
-func newDevCmd() *cobra.Command {
+func newDevCmd(provider runtimeport.Provider) *cobra.Command {
 	var (
 		project string
 		dryRun  bool
@@ -56,16 +52,21 @@ func newDevCmd() *cobra.Command {
 				return err
 			}
 			root := activeWorkspace.Root()
+			runtimeKind, err := execution.RuntimeKind(root)
+			if err != nil {
+				return err
+			}
 			processName, err := resolveProcessSelector(activeWorkspace, project)
 			if err != nil {
 				return err
 			}
 			if !dryRun {
-				if err := ensureDependencies(cmd, root, activeWorkspace.Manifest(), processName); err != nil {
+				if err := (dependencies.Service{Provider: provider}).Prepare(cmd.Context(), dependencies.Input{Root: root, Manifest: activeWorkspace.Manifest(), Project: processName, Runtime: runtimeKind, Log: cmd.ErrOrStderr()}); err != nil {
 					return err
 				}
 			}
 			res, err := processorch.Start(cmd.Context(), processorch.StartInput{
+				Runtime:     runtimeKind,
 				ProjectRoot: root,
 				DryRun:      dryRun,
 				Process:     processName,
@@ -91,91 +92,6 @@ func newDevCmd() *cobra.Command {
 	i18n.MarkShort(cmd, "dev.short")
 	i18n.MarkLong(cmd, "dev.tip")
 	return cmd
-}
-
-func ensureDependencies(cmd *cobra.Command, root string, manifest *workspace.Manifest, projectName string) error {
-	needsInstall := false
-	packageManager := ""
-	for i := range manifest.Projects {
-		p := &manifest.Projects[i]
-		if projectName != "" && p.Name != projectName {
-			continue
-		}
-		if p.Toolchain != "node" || strings.TrimSpace(workspace.ProjectDev(manifest, p.Name)) == "" {
-			continue
-		}
-		projectDir := filepath.Join(root, filepath.FromSlash(p.RelativeDir))
-		if !workspace.ProjectDependenciesInstalled(root, projectDir, p.Toolchain) {
-			needsInstall = true
-		}
-		if packageManager == "" {
-			packageManager = strings.TrimSpace(p.PackageManager)
-		}
-	}
-	if !needsInstall {
-		return nil
-	}
-	install := dependencyInstallCommand(root, packageManager)
-	installLine := strings.Join(install, " ")
-	if !output.CanPrompt() {
-		return cliErrors.New(cliErrors.DEPENDENCIES_NOT_INSTALLED,
-			i18n.T("dev.dependencies_missing")).
-			WithRemediation(output.Remediation{
-				Action:  "install-dependencies",
-				Hint:    i18n.T("dev.install_hint"),
-				Command: installLine,
-			})
-	}
-	ok, err := prompt.Confirm(i18n.Tf("dev.install_confirm", installLine), true,
-		i18n.T("common.install_continue"), i18n.T("common.cancel"))
-	if err != nil {
-		return err
-	}
-	if !ok {
-		return cliErrors.New(cliErrors.PROMPT_CANCELLED, i18n.T("common.cancelled")).WithExit0()
-	}
-	if _, err := exec.LookPath(install[0]); err != nil {
-		return cliErrors.New(cliErrors.RUN_COMMAND_NOT_FOUND,
-			i18n.Tf("dev.package_manager_missing", install[0]))
-	}
-	child := platformprocess.CommandContext(cmd.Context(), install[0], install[1:]...)
-	child.Dir = root
-	child.Stdin = os.Stdin
-	child.Stdout = os.Stdout
-	child.Stderr = os.Stderr
-	if err := child.Run(); err != nil {
-		return cliErrors.New(cliErrors.ONE_CLI_ERROR,
-			i18n.Tf("dev.install_failed", installLine, err))
-	}
-	return nil
-}
-
-func dependencyInstallCommand(root, projectPackageManager string) []string {
-	manager := strings.TrimSpace(projectPackageManager)
-	if pkg, err := workspace.ReadPackageJSON(root); err == nil && pkg != nil && pkg.PackageManager != "" {
-		manager = pkg.PackageManager
-	}
-	if i := strings.Index(manager, "@"); i > 0 {
-		manager = manager[:i]
-	}
-	if manager == "" {
-		switch {
-		case fileExists(filepath.Join(root, "bun.lock")), fileExists(filepath.Join(root, "bun.lockb")):
-			manager = "bun"
-		case fileExists(filepath.Join(root, "yarn.lock")):
-			manager = "yarn"
-		case fileExists(filepath.Join(root, "package-lock.json")):
-			manager = "npm"
-		default:
-			manager = "pnpm"
-		}
-	}
-	return []string{manager, "install"}
-}
-
-func fileExists(path string) bool {
-	_, err := os.Stat(path)
-	return err == nil
 }
 
 // resolveProcessSelector turns the user-facing -p value into a manifest

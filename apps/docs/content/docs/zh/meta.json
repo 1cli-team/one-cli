@@ -11,6 +11,7 @@
     "add",
     "env-vars",
     "configure",
+    "hk",
     "templates-cmd",
     "container",
     "dev",

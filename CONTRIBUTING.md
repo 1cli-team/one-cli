@@ -17,7 +17,8 @@ one --version                   # 验证装好
 
 > **fresh-clone 提示**：`packages/cli/internal/resources/bundled/` 整个目录是 gitignore 的——
 > registry / templates / dashboard dist 都由 `task sync-bundled` +
-> `task sync-web` 按需重建，作为 `task vet` / `test` / `build` 的依赖自动跑。
+> `task sync-web` 按需重建。`sync-bundled` 还会运行 `sync-mise`，下载并校验
+> 当前平台的固定 mise 压缩包用于内置，作为 `task vet` / `test` / `build` 的依赖自动跑。
 > 第一次 `task install` 会触发 `pnpm install + vite build`，~30s；之后
 > task fingerprint 命中，几乎零成本。如果你直接跑 `go build` 而不走 Taskfile，
 > 会看到 `pattern all:_templates: no matching files found` 这种报错——跑一次
@@ -67,6 +68,18 @@ PR CI 会并行执行 `task check:static` 与 `task check:test`，两者合起�
 
 - 公开 API（`packages/cli/pkg/`）改动要考虑 semver；详见 [CLAUDE.md 的 Public API stability](./CLAUDE.md)
 - 加新错误码：在 `packages/cli/internal/platform/errors/codes.go` 注册 `Code` 常量 + `Codes` map 条目；测试会强制对应；改完跑 `task gen-error-codes` 刷新文档
+
+### 内置 mise
+
+发布的 One 文件内置对应平台的 mise 压缩包，首次运行从自身解压，不下载 mise。
+`task sync-mise` 在构建时下载并校验本机平台资源；`task sync-mise-all` 准备五个平台。
+`task build`、检查任务自动准备本机资源，`task build-all` 和 GoReleaser 自动准备全部平台。
+资源位于被忽略的 `packages/cli/internal/adapters/runtime/mise/assets/`，不提交二进制资源。
+资源已准备且摘要匹配时可离线构建。首次构建需要访问 GitHub Releases。
+
+升级时更新 `internal/adapters/runtime/mise/miserelease/release.go` 中的版本、压缩包和解压后程序的 SHA256，
+以及 runtime 最低版本和相关文档；重新执行 `task sync-mise-all`。上游许可证保留于
+`third_party/mise/LICENSE`，也包含在内置的原始压缩包和 One 发布归档中。
 
 ### 改 templates（`packages/templates/<id>/`）
 

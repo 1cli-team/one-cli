@@ -52,7 +52,7 @@ func TestServiceOwnsWorkspaceAndProjectCreation(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if created.TargetDir != target || created.PackageManager != "pnpm" || created.EnvBackend != "dotenv" {
+	if created.TargetDir != target || created.PackageManager != "" || created.EnvBackend != "dotenv" {
 		t.Fatalf("CreateWorkspace() = %+v", created)
 	}
 	manifest, err := workspace.ReadManifest(target)

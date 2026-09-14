@@ -17,6 +17,9 @@ import (
 // project root.
 const ManifestFilename = "one.manifest.json"
 
+// MiseConfigFilename is the managed fragment marking a mise-enabled workspace.
+const MiseConfigFilename = ".mise/conf.d/one.toml"
+
 // ManifestVersion is the current manifest schema generation.
 const ManifestVersion = 1
 

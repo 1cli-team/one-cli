@@ -8,8 +8,10 @@ USAGE
 SUBCOMMANDS
   add            Create or update a local connection
   current        Show the current local connection
+  hooks          Generate hk checks, migrate default Husky hooks, and install local Git launchers
   list           List local connections
   locale         Show or set the display language (auto / zh-CN / en-US)
+  mise           Generate or refresh optional mise tool and task configuration
   open           Open the local settings page
   remove         Remove a local connection
   show           Show a local connection (secrets masked by default)
@@ -21,7 +23,7 @@ EXAMPLES
   one configure list
 
 TIPS
-Manages service connections and preferences stored only on this machine. Secrets are never written to the workspace or Git; first use starts the connection wizard.
+Manages service connections and preferences stored only on this machine. Secrets are never written to the workspace or Git; first use starts the connection wizard. Use configure mise to generate workspace tool configuration.
 
 COMMON OPTIONS
   -o, --output <value>     Output format: json | yaml | text (default: terminal-friendly text, JSON when piped)

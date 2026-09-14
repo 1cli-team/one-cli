@@ -41,40 +41,9 @@ coverage
 .DS_Store
 `
 
-const commitlintConfigContent = `module.exports = {
-  extends: ['@commitlint/config-conventional']
-};
-`
-
-const huskyPreCommitContent = `#!/usr/bin/env sh
-echo "pre-commit hook: add checks for this repository."
-`
-
-const huskyCommitMsgContent = `#!/usr/bin/env sh
-npx --no -- commitlint --edit "$1"
-`
-
-// changesetConfig is the .changeset/config.json scaffolders write at
-// create time. Encoded as orderedJSON so json.MarshalIndent preserves
-// the field order below.
-var changesetConfig = orderedJSON{
-	{Key: "$schema", Value: "https://unpkg.com/@changesets/config@3.1.1/schema.json"},
-	{Key: "changelog", Value: "@changesets/cli/changelog"},
-	{Key: "commit", Value: false},
-	{Key: "fixed", Value: []any{}},
-	{Key: "linked", Value: []any{}},
-	{Key: "access", Value: "restricted"},
-	{Key: "baseBranch", Value: "main"},
-	{Key: "updateInternalDependencies", Value: "patch"},
-	{Key: "ignore", Value: []any{}},
-}
-
 // Package manager spec strings shipped in the workspace-root
 // package.json.
-const (
-	packageManagerName = "pnpm"
-	packageManagerSpec = "pnpm@12.3.4"
-)
+const packageManagerSpec = "pnpm@12.3.4"
 
 // buildPackageJSON returns the workspace root package.json. Workspace-scope
 // One configuration moved into one.manifest.json in v2 — this file is now
@@ -86,16 +55,6 @@ func buildPackageJSON(name string) orderedJSON {
 		{Key: "version", Value: "0.0.0"},
 		{Key: "packageManager", Value: packageManagerSpec},
 		{Key: "engines", Value: orderedJSON{{Key: "node", Value: "^24.15.0 || >=26.0.0"}}},
-		{Key: "scripts", Value: orderedJSON{
-			{Key: "prepare", Value: "husky"},
-			{Key: "changeset", Value: "changeset"},
-		}},
-		{Key: "devDependencies", Value: orderedJSON{
-			{Key: "@changesets/cli", Value: "latest"},
-			{Key: "@commitlint/cli", Value: "latest"},
-			{Key: "@commitlint/config-conventional", Value: "latest"},
-			{Key: "husky", Value: "latest"},
-		}},
 	}
 }
 

@@ -13,8 +13,11 @@ import (
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/core/template"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/core/workspace"
 	environmentmodule "github.com/torchstellar-team/one-cli/packages/cli/internal/modules/environment"
+	"github.com/torchstellar-team/one-cli/packages/cli/internal/modules/hooks"
+	"github.com/torchstellar-team/one-cli/packages/cli/internal/modules/miseconfig"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/modules/preset"
 	cliErrors "github.com/torchstellar-team/one-cli/packages/cli/internal/platform/errors"
+	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/fsutil"
 )
 
 type Service struct {
@@ -60,6 +63,7 @@ type WorkspaceResult struct {
 	InfisicalBound  bool
 	EnvironmentWarn error
 	RegistryWarn    error
+	HooksWarn       error
 	Preset          PresetResult
 	PartialState    string
 }
@@ -105,7 +109,7 @@ func validateWorkspaceTarget(targetDir, displayPath string) error {
 func (s *Service) CreateWorkspace(ctx context.Context, input WorkspaceInput) (WorkspaceResult, error) {
 	result := WorkspaceResult{
 		Name: input.Name, TargetDir: input.TargetDir, CreatedInPlace: input.CreatedInPlace,
-		PackageManager: "pnpm", EnvBackend: strings.TrimSpace(input.EnvBackend), PartialState: "none",
+		EnvBackend: strings.TrimSpace(input.EnvBackend), PartialState: "none",
 	}
 	if !workspace.IsValidProjectName(input.Name) {
 		return result, cliErrors.New(
@@ -133,7 +137,7 @@ func (s *Service) CreateWorkspace(ctx context.Context, input WorkspaceInput) (Wo
 	_, statErr := os.Stat(input.TargetDir)
 	createdFromScratch := os.IsNotExist(statErr)
 	if err := generateWorkspaceFiles(input.TargetDir, workspaceFilesOptions{
-		ProjectName: input.Name, PackageManager: result.PackageManager,
+		ProjectName: input.Name,
 	}); err != nil {
 		if createdFromScratch && !input.CreatedInPlace {
 			_ = os.RemoveAll(input.TargetDir)
@@ -156,6 +160,17 @@ func (s *Service) CreateWorkspace(ctx context.Context, input WorkspaceInput) (Wo
 	}
 	result.InfisicalBound = environment.InfisicalBound
 	result.EnvironmentWarn = environment.BindWarning
+	manifest, err := workspace.ReadManifest(input.TargetDir)
+	if err != nil {
+		return result, err
+	}
+	files := fsutil.NewFilePlan(input.TargetDir)
+	if err := hooks.PlanFiles(files, manifest); err != nil {
+		return result, err
+	}
+	if err := files.Apply(ctx); err != nil {
+		return result, err
+	}
 
 	if input.Preset != nil {
 		applied, applyErr := ApplyPreset(ctx, input.TargetDir, *input.Preset, PresetOptions{
@@ -171,7 +186,27 @@ func (s *Service) CreateWorkspace(ctx context.Context, input WorkspaceInput) (Wo
 		}
 	}
 
-	_ = initGitRepo(input.TargetDir)
+	plan, err := miseconfig.Build(input.TargetDir, miseconfig.Options{})
+	if err == nil {
+		err = plan.Apply(ctx)
+	}
+	if err != nil {
+		return result, cliErrors.New(cliErrors.ONE_CLI_ERROR,
+			fmt.Sprintf("workspace was created but mise configuration is incomplete; fix the reported error and run one configure mise: %v", err)).
+			WithContext(map[string]any{"workspace": input.TargetDir, "partial_state": "mise_configuration_incomplete"})
+	}
+	if pkg, err := workspace.ReadPackageJSON(input.TargetDir); err == nil && pkg != nil {
+		result.PackageManager, _, _ = strings.Cut(pkg.PackageManager, "@")
+	}
+	if err := initGitRepo(input.TargetDir); err != nil {
+		result.HooksWarn = fmt.Errorf("Git initialization failed; initialize Git and run one configure hooks: %w", err)
+	} else {
+		install, err := hooks.PlanInstall(ctx, input.TargetDir, "", false)
+		if err == nil {
+			err = install.Apply(ctx)
+		}
+		result.HooksWarn = err
+	}
 	if s.observer != nil {
 		result.RegistryWarn = s.observer(ctx, input.TargetDir, "create")
 	}

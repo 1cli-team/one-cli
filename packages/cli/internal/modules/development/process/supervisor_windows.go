@@ -63,6 +63,9 @@ func runBuiltin(ctx context.Context, projectRoot string, entries []ProcEntry, op
 	}
 	for _, entry := range entries {
 		cmd := exec.Command(comspec, "/d", "/s", "/c", entry.Cmd)
+		if len(entry.Argv) > 0 {
+			cmd = exec.Command(entry.Argv[0], entry.Argv[1:]...)
+		}
 		cmd.Dir = projectRoot
 		cmd.Env = os.Environ()
 		cmd.SysProcAttr = &syscall.SysProcAttr{CreationFlags: windows.CREATE_NEW_PROCESS_GROUP}

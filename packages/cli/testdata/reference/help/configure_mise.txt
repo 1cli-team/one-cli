@@ -1,0 +1,17 @@
+
+DESCRIPTION
+Generate or refresh optional mise tool and task configuration
+
+USAGE
+  one configure mise [flags]
+
+EXAMPLES
+  one configure mise --dry-run -o json
+  one configure mise
+  one dev web
+
+COMMON OPTIONS
+  --dry-run                Print proposed file contents without writing files or executing mise
+  --go-version <value>     Exact Go version override (default: each project's go.mod)
+  --node-version <value>   Exact Node version (default: previous generated version or 24.15.0)
+  -o, --output <value>     Output format: json | yaml | text (default: terminal-friendly text, JSON when piped)

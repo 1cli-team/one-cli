@@ -649,6 +649,12 @@ deploy/edgeone profile 缺少 EdgeOne API token。
 
 - `configure-edgeone` — 创建 EdgeOne Pages API token 后写入 profile<br />运行：`one configure add deploy/edgeone --profile <name> --use --token $EDGEONE_API_TOKEN`
 
+### `HOOKS_CONFIG_CONFLICT`
+
+Existing Git hooks or hk configuration conflict with One's generated setup.
+
+> 没有默认 remediation。具体恢复方式请看错误的 `context` 字段。
+
 ### `IMAGE_TAG_NOT_FOUND`
 
 Container push target image tag does not exist in the local Docker daemon.
@@ -666,6 +672,30 @@ Container build needs a version tag but no subproject buildVersion, Git tag, or 
 - `provide-tag` — 显式指定镜像版本 tag<br />运行：`one container build <subproject> --build-version v0.1.0`
 - `set-build-version` — 或在 one.manifest.json 里设置 projects[].buildVersion
 - `create-git-tag` — 或在当前提交上创建 Git tag<br />运行：`git tag v0.1.0`
+
+### `MISE_CONFIG_CONFLICT`
+
+A managed mise configuration was modified or changed during generation.
+
+> 没有默认 remediation。具体恢复方式请看错误的 `context` 字段。
+
+### `MISE_INSTALL_FAILED`
+
+One could not extract, verify, or prepare its bundled mise runtime.
+
+> 没有默认 remediation。具体恢复方式请看错误的 `context` 字段。
+
+### `MISE_NOT_FOUND`
+
+The explicitly selected mise executable is unavailable.
+
+> 没有默认 remediation。具体恢复方式请看错误的 `context` 字段。
+
+### `MISE_VERSION_UNSUPPORTED`
+
+The installed mise version is unsupported or could not be read.
+
+> 没有默认 remediation。具体恢复方式请看错误的 `context` 字段。
 
 ### `PATCH_CONFLICT`
 
@@ -689,6 +719,18 @@ Preset id failed v1 grammar (bad version / segment shape / unknown code).
 
 - `regen-preset` — 用 `one serve` 打开 dashboard 重新挑组合得到新的 preset id（dashboard 页面将在后续版本上线）
 - `check-syntax` — v1 形如 `1.bgok.fnav.ei` —— 前缀为版本号，段以 `.` 分隔，每段首字符是 f/b/l/e kind
+
+### `RUNTIME_INVALID`
+
+The selected execution runtime is not builtin or mise.
+
+> 没有默认 remediation。具体恢复方式请看错误的 `context` 字段。
+
+### `RUNTIME_TASK_NOT_FOUND`
+
+The project does not provide the requested runtime task.
+
+> 没有默认 remediation。具体恢复方式请看错误的 `context` 字段。
 
 ### `RUN_COMMAND_NOT_FOUND`
 

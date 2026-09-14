@@ -177,11 +177,15 @@ func runCreate(deps Dependencies, cmd *cobra.Command, rawDir string, flags *crea
 		Schema:         "one-cli/create/v2",
 		ProjectName:    projectName,
 		CreatedPath:    result.TargetDir,
+		displayPath:    displayPath,
 		CreatedInPlace: result.CreatedInPlace,
 		PackageManager: result.PackageManager,
 		SecretsBackend: secretsBackend,
 		CIEnabled:      ciEnabled,
 		DevEnabled:     devEnabled,
+	}
+	if result.HooksWarn != nil {
+		payload.Warnings = []string{i18n.Tf("create.hooks_warning", result.HooksWarn)}
 	}
 	output.Emit(&payload)
 

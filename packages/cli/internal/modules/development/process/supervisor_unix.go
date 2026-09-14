@@ -88,6 +88,9 @@ func runBuiltin(ctx context.Context, projectRoot string, entries []ProcEntry, op
 	// already started.
 	for _, e := range entries {
 		cmd := exec.Command("sh", "-c", e.Cmd)
+		if len(e.Argv) > 0 {
+			cmd = exec.Command(e.Argv[0], e.Argv[1:]...)
+		}
 		cmd.Dir = projectRoot
 		cmd.Env = os.Environ()
 		cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
