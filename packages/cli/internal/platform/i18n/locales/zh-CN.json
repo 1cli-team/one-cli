@@ -1,4 +1,12 @@
 {
+  "skills.short": "安装 One CLI 的 Agent skill",
+  "skills.install.short": "为选定的 Agent 安装或刷新内置 one-cli skill",
+  "skills.install.long": "仅将内置 one-cli skill 安装到所选 Agent 的用户级 skills 目录。可离线执行，无需进入工作区。重复执行会替换 one-cli 目录及旧参考资料；其他 skills 和旧符号链接指向的共享目录保持原样。\n\n指定 --agent 时直接安装到所选目标。否则交互选择检测到的 Agent，默认全部勾选。使用 --yes 或处于非交互环境时安装到所有检测到的 Agent。未检测到目标时请显式指定 --agent。支持 CODEX_HOME、CLAUDE_CONFIG_DIR、XDG_CONFIG_HOME 和 VIBE_HOME 的绝对目录配置。\n\n安装后可从输出的目录加载 skill；Agent 若无法自动发现新 skill，请重新启动会话。",
+  "skills.flag.agent": "目标 Agent ID（可重复，优先于自动检测）",
+  "skills.flag.yes": "安装到所有检测到的 Agent，不进行交互",
+  "skills.supported": "支持的 Agent ID：",
+  "skills.select": "选择要安装 one-cli skill 的 Agent",
+  "skills.installed": "✓ one-cli skill 已安装",
   "root.short": "AI Native 单体仓库编排器",
   "root.help": "\none — 工作区开发与部署工具\n\n用法\n  one <command> [options]\n\n日常命令\n  create        创建新工作区\n  add           添加项目\n  dev           启动本地开发\n  deploy        部署项目\n  env           管理环境变量\n  configure     管理本机连接和偏好设置\n\n常用选项\n  -o, --output  输出格式：json | yaml | text\n  -h, --help    显示帮助\n  -v, --version 显示版本号\n\n示例\n  one create demo\n  one add\n  one dev\n  one deploy\n\n完整命令：one help --all\n命令帮助：one <command> --help\n",
   "root.help_all_title": "one — 完整命令",

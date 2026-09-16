@@ -69,29 +69,8 @@ func TestSnapshot_E2E_HelpDailyAndCompleteCatalogues(t *testing.T) {
 			t.Errorf("complete help missing %q:\n%s", command, all)
 		}
 	}
-	if strings.Contains(all, "\n  skills") {
-		t.Errorf("complete help advertises the removed skills command:\n%s", all)
-	}
-}
-
-func TestRemovedSkillsCommand(t *testing.T) {
-	tmp := t.TempDir()
-	isolateHome(t, tmp)
-	_, stderr, code := runBinaryIn(t, tmp, "skills", "install", "--yes", "-o", "json")
-	if code != 1 {
-		t.Fatalf("removed command should fail: exit=%d stderr=%q", code, stderr)
-	}
-	envelope := mustParseJSON(t, firstJSONLine(stderr))
-	err, ok := envelope["error"].(map[string]any)
-	if !ok || err["code"] != "UNKNOWN_COMMAND" {
-		t.Fatalf("expected UNKNOWN_COMMAND, got %s", pretty(envelope))
-	}
-	entries, readErr := os.ReadDir(tmp)
-	if readErr != nil {
-		t.Fatal(readErr)
-	}
-	if len(entries) != 0 {
-		t.Fatalf("removed command created files in the isolated home: %v", entries)
+	if !strings.Contains(all, "\n  skills") || !strings.Contains(all, "install") {
+		t.Errorf("complete help is missing skills install:\n%s", all)
 	}
 }
 

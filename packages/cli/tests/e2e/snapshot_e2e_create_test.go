@@ -10,6 +10,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/core/workspace"
@@ -41,6 +42,7 @@ var expectedScaffoldPaths = []string{
 	"services",
 	"packages",
 	"one.manifest.json",
+	"AGENTS.md",
 	".mise/conf.d/one.toml",
 	"hk.pkl",
 	".config/one/hk.pkl",
@@ -68,7 +70,7 @@ func TestSnapshot_E2E_Create_Default(t *testing.T) {
 			t.Errorf("expected scaffold path missing: %s", full)
 		}
 	}
-	assertNoAgentDocs(t, target)
+	assertWorkspaceAgentDocs(t, target)
 
 	// Manifest sanity. Schema is the current ManifestVersion.
 	mf := readManifest(t, target)
@@ -221,6 +223,25 @@ func TestSnapshot_E2E_Create_DefaultEnablesUniversalSet(t *testing.T) {
 	for _, removed := range []string{"ci", "dev"} {
 		if _, has := mf[removed]; has {
 			t.Errorf("manifest must not carry top-level %q, got %v", removed, mf[removed])
+		}
+	}
+}
+
+func assertWorkspaceAgentDocs(t *testing.T, root string) {
+	t.Helper()
+	body, err := os.ReadFile(filepath.Join(root, "AGENTS.md"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(body), "`one-cli` skill") || !strings.Contains(string(body), "one skills install") {
+		t.Fatalf("workspace guidance does not explain skill installation: %s", body)
+	}
+	for _, entry := range []string{"apps", "services", "packages"} {
+		assertNoAgentDocs(t, filepath.Join(root, entry))
+	}
+	for _, entry := range []string{"CLAUDE.md", ".one", ".agents"} {
+		if _, err := os.Stat(filepath.Join(root, entry)); !os.IsNotExist(err) {
+			t.Fatalf("unexpected generated %s: %v", entry, err)
 		}
 	}
 }

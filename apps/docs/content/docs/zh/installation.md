@@ -204,3 +204,7 @@ Windows 会创建 `~/.local/bin/one.exe`；如果系统不允许创建文件符�
 ## 装完了？
 
 跳到 [快速开始](/zh/docs/quick-start/) 跑通第一个工作区。
+
+## Agent skill
+
+运行 `one skills install`，将内置 `one-cli` skill 安装到 coding agent 的用户级 skills 目录。目标选择和支持的 Agent 见 `one skills install --help`，详见 [Skills](./skills)。

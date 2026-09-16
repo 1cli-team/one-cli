@@ -89,6 +89,7 @@ tasks:
       - 'packages/cli/internal/**/*.go'
       - 'packages/cli/tools/verify-cli-references/**/*.go'
       - 'README.md'
+      - 'skills/**/*.md'
       - 'CONTRIBUTING.md'
       - 'apps/docs/content/docs/**/*.md'
       - 'apps/docs/content/docs/**/*.mdx'
@@ -379,14 +380,14 @@ tasks:
 
   sync-bundled:
     deps: [sync-mise]
-    desc: Regenerate registry/_templates under packages/cli/internal/resources/bundled (go:embed sources)
+    desc: Regenerate registry/_templates/_skills under packages/cli/internal/resources/bundled (go:embed sources)
     run: once
     summary: |
       Go's embed cannot traverse `..` or follow symlinks, so we keep physical
       copies of canonical assets under packages/cli/internal/resources/bundled. The
       whole bundled tree is gitignored and regenerated on demand.
 
-      This task handles the cheap copies: registry.json, _templates/.
+      This task handles the cheap copies: registry.json, _templates/, _skills/.
       It runs implicitly as a dep of `vet` / `test` / `build`. The dashboard
       build (sync-web) is separate but identically wired — both have to run
       before any Go command will compile the bundled package.

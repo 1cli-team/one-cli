@@ -40,6 +40,18 @@ import { Callout } from "fumadocs-ui/components/callout";
 
 下面按命令域分组列出所有 code。
 
+## Agent skill 安装
+
+内置 one-cli skill 的目标选择与用户级目录安装错误。
+
+### `SKILLS_INSTALL_FAILED`
+
+The bundled one-cli skill could not be installed into the selected agents.
+
+**Remediation**:
+
+- `inspect-skill-install` — Check the target agent and directory permissions. Completed targets are listed in context.installed_to; retrying is safe.<br />运行：`one skills install --help`
+
 ## 通用 / 生命周期
 
 命令本身的失败、用户取消、内部序列化错误。

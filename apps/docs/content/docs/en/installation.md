@@ -178,3 +178,7 @@ For the full contributor flow, see [CONTRIBUTING.md](https://github.com/1cli-tea
 ## Installed?
 
 Go to [Quick start](/en/docs/quick-start/) and create your first workspace.
+
+## Agent skill
+
+Run `one skills install` to install the bundled `one-cli` skill into your coding agent's user skills directory. Use `one skills install --help` for target selection and supported agents. See [Skills](./skills).

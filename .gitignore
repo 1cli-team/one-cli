@@ -32,6 +32,7 @@ go-dist/
 # fail until one of those tasks has run at least once.
 packages/cli/internal/resources/bundled/registry.json
 packages/cli/internal/resources/bundled/_templates/
+packages/cli/internal/resources/bundled/_skills/
 packages/cli/internal/resources/bundled/_web/
 
 # go-task

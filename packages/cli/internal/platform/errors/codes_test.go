@@ -15,6 +15,7 @@ func TestEveryCodeHasDefinition(t *testing.T) {
 	// We can't enumerate constants by reflection, so we curate the list
 	// here and rely on grep + this test together. New code = new line.
 	allCodes := []cliErrors.Code{
+		cliErrors.SKILLS_INSTALL_FAILED,
 		cliErrors.ONE_CLI_ERROR,
 		cliErrors.UNKNOWN_COMMAND,
 		cliErrors.PROMPT_CANCELLED,

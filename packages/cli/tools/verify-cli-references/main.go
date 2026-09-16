@@ -126,6 +126,7 @@ func docFiles() ([]string, error) {
 	}
 	roots := []walkSpec{
 		{repoRel("apps", "docs", "content", "docs"), []string{".md", ".mdx"}},
+		{repoRel("skills"), []string{".md"}},
 	}
 	for _, w := range roots {
 		if err := filepath.WalkDir(w.root, func(path string, d fs.DirEntry, err error) error {

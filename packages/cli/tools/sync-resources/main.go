@@ -65,16 +65,22 @@ func syncBundled(root string) error {
 	if err := copyFile(filepath.Join(templates, "registry.json"), filepath.Join(bundled, "registry.json")); err != nil {
 		return err
 	}
-	return replaceDir(root, templates, filepath.Join(bundled, "_templates"), func(rel string, entry fs.DirEntry) bool {
+	if err := replaceDir(root, templates, filepath.Join(bundled, "_templates"), func(rel string, entry fs.DirEntry) bool {
 		if rel == "registry.json" {
 			return false
 		}
-		// Retired agent assets must not be distributed inside the binary.
+		// Workspace guidance and skills are distributed separately from templates.
 		switch strings.TrimSuffix(entry.Name(), ".hbs") {
 		case ".one", ".agents", "AGENTS.md", "CLAUDE.md", "SKILL.md":
 			return false
 		}
 		return entry.Name() != "go.mod"
+	}); err != nil {
+		return err
+	}
+	return replaceDir(root, filepath.Join(root, "skills"), filepath.Join(bundled, "_skills"), func(rel string, entry fs.DirEntry) bool {
+		rel = filepath.ToSlash(rel)
+		return rel == "one-cli" && entry.IsDir() || rel == "one-cli/SKILL.md" && entry.Type().IsRegular()
 	})
 }
 

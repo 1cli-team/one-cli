@@ -100,7 +100,15 @@ Full command docs live at [1cli.dev](https://1cli.dev).
 
 ## Work With AI Assistants
 
-One CLI is designed to make AI-assisted project work less fragile.
+Install the bundled `one-cli` skill for your coding agent:
+
+```bash
+one skills install
+```
+
+Use `--agent <id>` to choose an agent directly, or `--yes` to install into every detected agent. Installation works offline and only writes the selected agents' user skills directories.
+
+New workspaces include an `AGENTS.md` asking agents to use this skill and run `one skills install` if it is missing. The [skill](./skills/one-cli/SKILL.md) stays small: follow [One Workspace Convention](https://github.com/1cli-team/one-workspace-convention), then consult `one --help` and the relevant command help. Ordinary CLI upgrades do not require reinstalling it.
 
 You can ask an assistant for project-level changes in natural language, for example:
 
@@ -140,6 +148,7 @@ If you want to work on One CLI itself, the repository is organized like this:
 |---|---|
 | `packages/cli` | The One CLI app |
 | `packages/templates` | Starters used by `one add` |
+| `skills/one-cli` | Minimal workspace guidance installed by `one skills install` |
 | `apps/docs` | Documentation website |
 | `apps/dashboard` | Local Workspace, Project, and Profile Dashboard opened by `one serve` |
 | `assets` | Brand assets, including the logo |

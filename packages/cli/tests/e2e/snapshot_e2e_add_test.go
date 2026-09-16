@@ -49,7 +49,7 @@ func TestSnapshot_E2E_Add_DefersDeploymentDefaults(t *testing.T) {
 			t.Errorf("expected template file missing: %s", full)
 		}
 	}
-	assertNoAgentDocs(t, ws)
+	assertWorkspaceAgentDocs(t, ws)
 	assertNoAgentDocs(t, svcDir)
 	goModRaw, err := os.ReadFile(filepath.Join(svcDir, "go.mod"))
 	if err != nil {
@@ -274,7 +274,7 @@ func TestSnapshot_E2E_Add_GoLibTemplate(t *testing.T) {
 			t.Errorf("expected go-lib artifact missing: %s", full)
 		}
 	}
-	assertNoAgentDocs(t, ws)
+	assertWorkspaceAgentDocs(t, ws)
 	assertNoAgentDocs(t, libDir)
 
 	// Dev-only go.mod must NOT leak into the rendered output.

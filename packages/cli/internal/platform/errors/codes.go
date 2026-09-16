@@ -15,6 +15,9 @@ type Code string
 
 // Code constants. Keep alphabetical within each group for grep-ability.
 const (
+	// Bundled skill installation.
+	SKILLS_INSTALL_FAILED Code = "SKILLS_INSTALL_FAILED"
+
 	// Generic / lifecycle.
 	ONE_CLI_ERROR         Code = "ONE_CLI_ERROR"
 	UNKNOWN_COMMAND       Code = "UNKNOWN_COMMAND"
@@ -177,6 +180,10 @@ type Definition struct {
 // from here, so any published error-code reference can be made
 // authoritative by template-rendering this map.
 var Codes = map[Code]Definition{
+	SKILLS_INSTALL_FAILED: {
+		Summary:     "The bundled one-cli skill could not be installed into the selected agents.",
+		Remediation: []output.Remediation{{Action: "inspect-skill-install", Hint: "Check the target agent and directory permissions. Completed targets are listed in context.installed_to; retrying is safe.", Command: "one skills install --help"}},
+	},
 	RUNTIME_INVALID:          {Summary: "The selected execution runtime is not builtin or mise."},
 	MISE_NOT_FOUND:           {Summary: "The explicitly selected mise executable is unavailable."},
 	MISE_INSTALL_FAILED:      {Summary: "One could not extract, verify, or prepare its bundled mise runtime."},

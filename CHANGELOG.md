@@ -7,24 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Removed (BREAKING — agent skills 管理与分发)
+### Changed — 精简 One CLI skill 与显式安装
 
-One CLI 不再内置或安装 agent skills。删除 `one skills` / `one skills install`、
-agent 检测与安装路径注册表、共享 store / symlink 安装器，以及随二进制分发的
-`one-cli` / `one-migrate` 内容。公开 Go 包 `packages/cli/pkg/agentskills` 同时移除。
-
-`one create` 的普通与 preset JSON 输出均移除 `skills` 字段，成功提示不再引导安装。
-依赖旧命令、字段或 Go 包的调用方需要移除对应逻辑；旧命令返回 `UNKNOWN_COMMAND`。
-工作区 agent 说明也不再自动生成，详见下方说明。
-升级不会删除用户机器上以前安装的 skills 或修改其他 AI 工具的配置。
-
-### Removed (BREAKING — 自动生成 agent 说明)
-
-`one create`、preset 创建和 `one add` 不再生成或刷新 `AGENTS.md`、`CLAUDE.md`
-及 `.one/` 目录；模板渲染也会跳过 `.one`，已有文件保持原样。移除内部说明生成器和 `one add` JSON 的
-`ai_guides` 字段。团队可自行维护说明文件，One CLI 继续维护项目和 manifest。
-模板目录中遗留的 10 份 `CLAUDE.md` 已移除；打包流程排除 agent 说明、skill 入口及
-`.one` / `.agents` 目录，并校验最终嵌入资源不包含这些内容。
+- `one skills install` 安装单个内置 `one-cli` skill：遵循 One Workspace Convention，并通过当前 CLI 的 help 查询命令。日常 CLI 升级无需同步更新 skill。
+- 支持交互选择、`--agent` / `-a` 和 `--yes`；非交互安装到检测到的 Agent，无目标时提示显式选择。支持 JSON / YAML / text 输出及离线安装。
+- skill 直接复制到 Agent 的用户级目录。重复安装替换 `one-cli` 目录；兼容旧符号链接，不修改旧共享 store 或其他 skills。
+- 普通与 preset 创建均生成简短的根 `AGENTS.md`，要求使用 skill，缺失时运行 `one skills install`。创建项目不自动安装 skill，`one add` 保留已有指引。
+- 旧的 `one-migrate`、详细 playbook、共享 store 安装器和公开 Go 包 `packages/cli/pkg/agentskills` 保持移除。旧机器上的其他安装不自动清理。
+- `create` / `add` 输出不恢复旧 `skills` / `ai_guides` 字段；模板仍跳过独立的 `CLAUDE.md`、`AGENTS.md` 和 `.one` 元数据。
 
 ### Removed (BREAKING — `one serve` session token)
 
