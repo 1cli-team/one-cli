@@ -204,3 +204,7 @@ one <command> --help
 ```
 
 `one --help` shows the six everyday tasks. Use `one help --all` for the complete command catalogue and `one <command> --help` for exact flags.
+
+## `one skills install`
+
+Install or refresh the bundled `one-cli` skill for selected coding agents. Use `--agent <id>` (repeatable) for explicit targets, or `--yes` for all detected agents. Installation is offline, independent of the workspace, and repeatable. See [Skills](./skills).

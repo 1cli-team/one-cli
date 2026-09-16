@@ -287,6 +287,9 @@ func isolateHome(t *testing.T, dir string) {
 	t.Setenv("XDG_CACHE_HOME", filepath.Join(dir, ".cache"))
 	t.Setenv("HOME", dir)
 	t.Setenv("XDG_CONFIG_HOME", "")
+	for _, key := range []string{"CODEX_HOME", "CLAUDE_CONFIG_DIR", "VIBE_HOME"} {
+		t.Setenv(key, "")
+	}
 }
 
 // fileExists is a tiny convenience wrapper used in tree-shape assertions.

@@ -152,3 +152,7 @@ one dev api
 | `WORKSPACE_NESTED_FORBIDDEN` | 拒绝在已有 workspace 里再 create；换目录或用 `one add` |
 
 完整码表：[错误码大全](/zh/docs/error-codes/)。
+
+## Agent 指引
+
+普通创建和 preset 创建都会写入简短的根 `AGENTS.md`，要求使用 `one-cli` skill，缺失时运行 `one skills install`。Skill 安装是独立的用户级操作；后续 `one add` 保留这份文件及团队自行补充的内容。

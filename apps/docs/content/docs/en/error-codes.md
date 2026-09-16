@@ -37,6 +37,12 @@ Field meanings:
 - **`error.context`**: structured data from the failure site. It often already contains the data needed for recovery.
 - **`error.remediation`**: recovery actions. Each item has `action`, `hint`, and sometimes `command`; agents should prefer these before guessing.
 
+## Agent Skill Installation
+
+### `SKILLS_INSTALL_FAILED`
+
+The bundled `one-cli` skill could not be installed. Check the agent ID and destination permissions with `one skills install --help`. If some targets were installed before a failure, `context.installed_to` lists those directories. Retrying is safe.
+
 ## Generic / Lifecycle
 
 Command-level failures, user cancellation, and internal serialization failures.

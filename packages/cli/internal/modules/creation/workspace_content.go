@@ -6,6 +6,8 @@ import (
 
 // These are the verbatim file contents the scaffolder writes.
 
+const agentsContent = "# Development\n\nUse the `one-cli` skill when developing this workspace.\nIf it is not installed, run `one skills install` first.\n"
+
 const pnpmWorkspaceContent = `packages:
   - "apps/*"
   - "services/*"

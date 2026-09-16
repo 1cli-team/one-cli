@@ -119,10 +119,11 @@ packages/cli/internal/
     development/       local development process orchestration
     environment/       dotenv/Infisical workflows and workspace setup
     preset/            pure preset encoding, parsing, and resolution
+    skills/            bundled one-cli skill installation into agent user directories
   platform/
     errors/ helpui/ i18n/ output/ preferences/ process/ prompt/ updatecheck/
   resources/
-    bundled/           embedded templates, registry, and Dashboard
+    bundled/           embedded templates, registry, one-cli skill, and Dashboard
   transport/
     cobra/             one directory per command family
     http/              local Dashboard API

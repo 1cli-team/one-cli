@@ -207,3 +207,7 @@ one <command> --help
 ```
 
 `one --help` 只展示六个日常核心任务；`one help --all` 展示完整命令；具体 flag 以 `one <command> --help` 为准。
+
+## `one skills install`
+
+为选定的 coding agent 安装或刷新内置 `one-cli` skill。使用可重复的 `--agent <id>` 指定目标，或用 `--yes` 安装到所有检测到的 Agent。支持离线执行，无需进入工作区，可重复安装。详见 [Skills](./skills)。

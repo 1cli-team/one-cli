@@ -41,6 +41,7 @@ import (
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/transport/cobra/mise"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/transport/cobra/run"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/transport/cobra/serve"
+	"github.com/torchstellar-team/one-cli/packages/cli/internal/transport/cobra/skills"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/transport/cobra/templates"
 )
 
@@ -75,6 +76,7 @@ func newRootCommand() *cobra.Command {
 			Registry: deps.registry, Manifest: deps.manifest, Environments: deps.environments,
 		}),
 		templatescmd.Commands(),
+		skillscmd.Commands(),
 	}
 	for _, commands := range groups {
 		root.AddCommand(commands...)

@@ -241,3 +241,13 @@ func hasPrefix(xs []string, prefix string) bool {
 	}
 	return false
 }
+
+func TestOneCLISkillMatchesSource(t *testing.T) {
+	source, err := os.ReadFile(filepath.Join(repoRoot(t), "skills", "one-cli", "SKILL.md"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(source) == 0 || string(source) != string(bundled.OneCLISkill) {
+		t.Fatal("embedded skill differs from source; run task sync-bundled")
+	}
+}

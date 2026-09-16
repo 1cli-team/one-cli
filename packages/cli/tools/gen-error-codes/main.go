@@ -28,6 +28,11 @@ type group struct {
 
 var groups = []group{
 	{
+		title:  "Agent skill 安装",
+		intro:  "内置 one-cli skill 的目标选择与用户级目录安装错误。",
+		prefix: []string{"SKILLS_"},
+	},
+	{
 		title: "通用 / 生命周期",
 		intro: "命令本身的失败、用户取消、内部序列化错误。",
 		prefix: []string{

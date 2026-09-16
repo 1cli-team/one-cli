@@ -25,7 +25,7 @@ func TestGenerateWorkspaceFiles(t *testing.T) {
 		t.Fatalf("generateWorkspaceFiles() = %v", err)
 	}
 
-	for _, rel := range []string{"one.manifest.json", ".gitignore", "apps", "services", "packages"} {
+	for _, rel := range []string{"one.manifest.json", ".gitignore", "AGENTS.md", "apps", "services", "packages"} {
 		if _, err := os.Stat(filepath.Join(target, rel)); err != nil {
 			t.Fatalf("missing %s: %v", rel, err)
 		}

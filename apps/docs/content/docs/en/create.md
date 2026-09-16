@@ -145,3 +145,7 @@ pnpm install
 | `WORKSPACE_NESTED_FORBIDDEN` | Do not create a workspace inside an existing workspace; use another directory or `one add` |
 
 Full table: [Error codes](/en/docs/error-codes/).
+
+## Agent instructions
+
+Ordinary and preset creation write a short root `AGENTS.md` requiring the `one-cli` skill and directing agents to `one skills install` when it is missing. Skill installation is a separate user-level operation. Later `one add` calls preserve this file, including team edits.

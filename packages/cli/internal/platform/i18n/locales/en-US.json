@@ -1,4 +1,12 @@
 {
+  "skills.short": "Install the One CLI agent skill",
+  "skills.install.short": "Install or refresh the bundled one-cli skill for selected agents",
+  "skills.install.long": "Installs only the bundled one-cli skill into each selected agent's user skills directory. Works offline and outside a workspace. Repeating the command replaces the one-cli directory, including old references; other skills and legacy symlink stores remain untouched.\n\nWith --agent, install to those agents directly. Otherwise select detected agents interactively (all preselected). With --yes or without a terminal, use all detected agents. If no agents are detected, specify --agent explicitly. CODEX_HOME, CLAUDE_CONFIG_DIR, XDG_CONFIG_HOME and VIBE_HOME are honored when set to absolute directories.\n\nAfter installation, load the skill from the reported directory; restart your agent session if it does not discover new skills automatically.",
+  "skills.flag.agent": "Target agent ID (repeatable; overrides auto-detection)",
+  "skills.flag.yes": "Install to all detected agents without prompting",
+  "skills.supported": "Supported agent IDs:",
+  "skills.select": "Select agents to install the one-cli skill for",
+  "skills.installed": "✓ Installed the one-cli skill",
   "root.short": "AI Native monorepo workspace orchestrator",
   "root.help": "\none — workspace development and deployment\n\nUSAGE\n  one <command> [options]\n\nEVERYDAY COMMANDS\n  create        Create a workspace\n  add           Add a project\n  dev           Start local development\n  deploy        Deploy a project\n  env           Manage environment variables\n  configure     Manage local connections and preferences\n\nCOMMON OPTIONS\n  -o, --output  Output format: json | yaml | text\n  -h, --help    Show help\n  -v, --version Show version\n\nEXAMPLES\n  one create demo\n  one add\n  one dev\n  one deploy\n\nAll commands: one help --all\nCommand help: one <command> --help\n",
   "root.help_all_title": "one — all commands",

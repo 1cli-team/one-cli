@@ -159,7 +159,7 @@ func TestRootHelpDoesNotAdvertiseUnregisteredCommands(t *testing.T) {
 func TestIsKnownSubcommand(t *testing.T) {
 	// Every command is assembled by the composition root.
 	for _, name := range []string{
-		"create", "templates", "add",
+		"create", "templates", "add", "skills",
 		// Per-domain commands (post capability-interface refactor).
 		"env", "container", "dev", "deploy", "ci",
 		// configure owns the credential CRUD surface (renamed from
@@ -175,7 +175,7 @@ func TestIsKnownSubcommand(t *testing.T) {
 	// replaced by `one configure`, and `one profile`
 	// renamed to `one configure`.
 	for _, name := range []string{
-		"doctor", "status", "unknown", "secrets", "skill", "skills", "prd", "design",
+		"doctor", "status", "unknown", "secrets", "skill", "prd", "design",
 		"docker", "infisical", "dotenv", "procs", "compose", "k8s",
 		"plugins", "setup", "profile",
 		"",

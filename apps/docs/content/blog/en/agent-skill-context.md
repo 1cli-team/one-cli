@@ -1,12 +1,12 @@
 ---
 title: "Historical Design: One CLI Agent Skills"
-description: "Historical notes on the agent skills design, retired when One CLI removed skill distribution and generated instructions."
+description: "Historical notes on the earlier detailed agent skill design, now replaced by a minimal convention-and-help skill."
 date: "2026-05-12"
 author: "One CLI Team"
 tags: ["skill", "codex", "dependencies"]
 ---
 
-> Historical design note: One CLI no longer bundles or installs agent skills. Use [workspace AI guidance](/en/docs/ai-native/) and the [command reference](/en/docs/cli-overview/) for the current workflow.
+> Historical design note: the detailed playbooks described below have been replaced by a minimal `one-cli` skill. See [Skills](/en/docs/skills/) for the current `one skills install` workflow.
 
 ## A skill is not marketing copy
 

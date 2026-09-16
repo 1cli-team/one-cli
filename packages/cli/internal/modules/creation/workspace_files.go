@@ -38,6 +38,9 @@ func generateWorkspaceFiles(targetDir string, opts workspaceFilesOptions) error 
 	if err := os.WriteFile(filepath.Join(targetDir, ".gitignore"), []byte(gitignoreContent), 0o644); err != nil {
 		return err
 	}
+	if err := os.WriteFile(filepath.Join(targetDir, "AGENTS.md"), []byte(agentsContent), 0o644); err != nil {
+		return err
+	}
 
 	return nil
 }

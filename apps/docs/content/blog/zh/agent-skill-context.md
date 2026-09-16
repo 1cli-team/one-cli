@@ -1,12 +1,12 @@
 ---
 title: "历史设计：One CLI Agent Skills"
-description: "记录已退役的 agent skills 设计；One CLI 已移除 skill 分发与项目说明自动生成。"
+description: "记录早期详细的 agent skills 设计；当前采用仅包含结构规范和 help 查询的精简 skill。"
 date: "2026-05-12"
 author: "One CLI Team"
 tags: ["skill", "codex", "dependencies"]
 ---
 
-> 历史设计记录：One CLI 已移除 skills 的内置分发和安装功能。当前用法请参考 [AI 项目说明](/zh/docs/ai-native/)和[命令参考](/zh/docs/cli-overview/)。
+> 历史设计记录：下文的详细 playbook 已由精简的 `one-cli` skill 替代。当前 `one skills install` 用法见 [Skills](/zh/docs/skills/)。
 
 ## skill 不是营销文档
 
