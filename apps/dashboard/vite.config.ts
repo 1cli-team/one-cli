@@ -41,21 +41,26 @@ export default defineConfig({
 		// to each chunk). Drop for the binary; rebuild with `--sourcemap` if
 		// you need them locally.
 		sourcemap: false,
-		rollupOptions: {
+		rolldownOptions: {
 			output: {
-				manualChunks(id) {
-					if (id.includes("node_modules")) {
-						if (
-							id.includes("@radix-ui") ||
-							id.includes("lucide-react") ||
-							id.includes("sonner") ||
-							id.includes("class-variance-authority")
-						) {
-							return "ui";
-						}
-						if (id.includes("react-router")) return "router";
-						return "vendor";
-					}
+				codeSplitting: {
+					groups: [
+						{
+							name(id) {
+								if (!id.includes("node_modules")) return null;
+								if (
+									id.includes("@radix-ui") ||
+									id.includes("lucide-react") ||
+									id.includes("sonner") ||
+									id.includes("class-variance-authority")
+								) {
+									return "ui";
+								}
+								if (id.includes("react-router")) return "router";
+								return "vendor";
+							},
+						},
+					],
 				},
 			},
 		},

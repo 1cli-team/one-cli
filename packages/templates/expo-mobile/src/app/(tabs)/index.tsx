@@ -53,7 +53,10 @@ export default function HomeScreen() {
       <ThemedText type="title" className="mb-2 text-center">
         Welcome to One CLI
       </ThemedText>
-      <ThemedText className="mb-2 text-center text-gray-7" style={{ fontSize: 12, letterSpacing: 1.5 }}>
+      <ThemedText
+        className="mb-2 text-center text-gray-7"
+        style={{ fontSize: 12, letterSpacing: 1.5 }}
+      >
         EXPO · REACT NATIVE
       </ThemedText>
       <ThemedText className="mb-6 max-w-xs text-center text-gray-7">
@@ -66,10 +69,7 @@ export default function HomeScreen() {
 
       <View className="w-full max-w-xs gap-3">
         <ExternalLink href="https://1cli.dev/zh/docs/quick-start/" asChild>
-          <Pressable
-            style={{ backgroundColor: "#ea580c" }}
-            className="rounded-full px-5 py-3"
-          >
+          <Pressable style={{ backgroundColor: "#ea580c" }} className="rounded-full px-5 py-3">
             <ThemedText style={{ color: "#ffffff", textAlign: "center", fontWeight: "500" }}>
               开始构建
             </ThemedText>

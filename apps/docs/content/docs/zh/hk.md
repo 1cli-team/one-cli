@@ -17,6 +17,17 @@ one hk validate              # 校验 hk 配置
 
 One 从工作区根目录运行 hk；指定文件时使用相对工作区根目录的路径，例如 `one hk check apps/web/src/App.tsx`。hk 参数、标准输出和退出码直接透传。
 
+提交前检查失败时，One 会提示在工作区根目录执行 `one hk fix`。hk 会自动进入各项目目录，使用对应的 lint/format 工具；修复后检查改动，用 `git add` 重新暂存，再提交。无法自动修复的问题仍需根据检查输出手动处理。
+
+`one mise` 保留当前工作目录。hk 输出中的 `package.json`、`src/...` 等路径可能相对于子项目，不能直接在工作区根目录复制执行。手动运行 web 项目的格式化工具时，应明确进入该项目：
+
+```bash
+cd apps/web
+one mise exec -- pnpm exec oxfmt --write package.json
+```
+
+`oxfmt` 来自项目的开发依赖；如果项目目录内仍提示找不到命令，先在工作区根目录运行 `one mise exec -- pnpm install`。
+
 新工作区自动安装本地 `pre-commit` 和 `commit-msg` 启动器，继续正常使用 `git commit`。克隆已有工作区后，运行一次：
 
 ```bash
