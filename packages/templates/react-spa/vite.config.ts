@@ -1,7 +1,7 @@
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import tailwindcss from "@tailwindcss/vite";
-import react from "@vitejs/plugin-react-swc";
+import react from "@vitejs/plugin-react";
 import { defineConfig } from "vite";
 
 const templateDir = path.dirname(fileURLToPath(import.meta.url));
@@ -20,21 +20,26 @@ export default defineConfig({
 	},
 	build: {
 		sourcemap: true,
-		rollupOptions: {
+		rolldownOptions: {
 			output: {
-				manualChunks(id) {
-					if (id.includes("node_modules")) {
-						if (
-							id.includes("@radix-ui") ||
-							id.includes("lucide-react") ||
-							id.includes("sonner") ||
-							id.includes("class-variance-authority")
-						) {
-							return "ui";
-						}
-						if (id.includes("react-router")) return "router";
-						return "vendor";
-					}
+				codeSplitting: {
+					groups: [
+						{
+							name(id) {
+								if (!id.includes("node_modules")) return null;
+								if (
+									id.includes("@radix-ui") ||
+									id.includes("lucide-react") ||
+									id.includes("sonner") ||
+									id.includes("class-variance-authority")
+								) {
+									return "ui";
+								}
+								if (id.includes("react-router")) return "router";
+								return "vendor";
+							},
+						},
+					],
 				},
 			},
 		},
