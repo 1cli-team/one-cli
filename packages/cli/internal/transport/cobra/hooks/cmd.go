@@ -1,6 +1,7 @@
 package hookscmd
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -68,7 +69,13 @@ func Commands(provider runtimeport.Provider) []*cobra.Command {
 			child := platformprocess.Command(prepared.Argv[0], prepared.Argv[1:]...)
 			child.Dir, child.Env = prepared.Directory, prepared.Env
 			child.Stdin, child.Stdout, child.Stderr = cmd.InOrStdin(), cmd.OutOrStdout(), cmd.ErrOrStderr()
-			return platformprocess.RunForwarded(cmd.Context(), child)
+			err = platformprocess.RunForwarded(cmd.Context(), child)
+			var status *platformprocess.ExitStatus
+			isCheck := args[0] == "check" || len(args) > 1 && args[0] == "run" && args[1] == "pre-commit"
+			if isCheck && cmd.Context().Err() == nil && errors.As(err, &status) && status.Code > 0 && status.Code < 128 {
+				fmt.Fprintln(cmd.ErrOrStderr(), "\n"+i18n.T("hooks.check_failed_hint"))
+			}
+			return err
 		},
 	}
 	i18n.MarkShort(cmd, "hooks.short")

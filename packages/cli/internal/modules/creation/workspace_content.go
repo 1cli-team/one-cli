@@ -53,10 +53,10 @@ const packageManagerSpec = "pnpm@12.3.4"
 func buildPackageJSON(name string) orderedJSON {
 	return orderedJSON{
 		{Key: "name", Value: name},
-		{Key: "private", Value: true},
 		{Key: "version", Value: "0.0.0"},
-		{Key: "packageManager", Value: packageManagerSpec},
+		{Key: "private", Value: true},
 		{Key: "engines", Value: orderedJSON{{Key: "node", Value: "^24.15.0 || >=26.0.0"}}},
+		{Key: "packageManager", Value: packageManagerSpec},
 	}
 }
 

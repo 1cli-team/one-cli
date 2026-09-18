@@ -3,6 +3,7 @@ package hookscmd
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -14,14 +15,17 @@ import (
 	runtimeport "github.com/torchstellar-team/one-cli/packages/cli/internal/ports/runtime"
 )
 
-type recordingProvider struct{ command runtimeport.Command }
+type recordingProvider struct {
+	command  runtimeport.Command
+	exitCode int
+}
 
 func (p *recordingProvider) Prepare(context.Context, runtimeport.Command) (runtimeport.Command, error) {
 	panic("hk should use the runtime CLI entry")
 }
 func (p *recordingProvider) PrepareCLI(_ context.Context, c runtimeport.Command) (runtimeport.Command, error) {
 	p.command = c
-	c.Argv = []string{"sh", "-c", "printf hk-output; exit 37"}
+	c.Argv = []string{"sh", "-c", fmt.Sprintf("printf hk-output; printf hk-error >&2; exit %d", p.exitCode)}
 	return c, nil
 }
 
@@ -34,7 +38,7 @@ func TestHKForwardsArgumentsAndExitStatus(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(root, ".env"), []byte("ONE_HOOK_SECRET=must-not-load\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	p := &recordingProvider{}
+	p := &recordingProvider{exitCode: 37}
 	cmd := Commands(p)[0]
 	cmd.SilenceUsage, cmd.SilenceErrors = true, true
 	var out bytes.Buffer
@@ -58,6 +62,56 @@ func TestHKForwardsArgumentsAndExitStatus(t *testing.T) {
 		if strings.HasPrefix(item, "ONE_HOOK_SECRET=") {
 			t.Fatal("loaded app secrets")
 		}
+	}
+}
+
+func TestHKCheckFailureShowsWorkspaceRepairCommand(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("POSIX fake process")
+	}
+	t.Chdir(t.TempDir())
+	for _, tc := range []struct {
+		name     string
+		args     []string
+		code     int
+		wantHint bool
+	}{
+		{"pre-commit", []string{"run", "pre-commit"}, 37, true},
+		{"check", []string{"check", "--all"}, 1, true},
+		{"successful check", []string{"check"}, 0, false},
+		{"commit message", []string{"run", "commit-msg", "message.txt"}, 1, false},
+		{"fix", []string{"fix"}, 1, false},
+		{"interrupted", []string{"check"}, 130, false},
+		{"terminated", []string{"run", "pre-commit"}, 143, false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			cmd := Commands(&recordingProvider{exitCode: tc.code})[0]
+			cmd.SilenceUsage, cmd.SilenceErrors = true, true
+			var stdout, stderr bytes.Buffer
+			cmd.SetOut(&stdout)
+			cmd.SetErr(&stderr)
+			cmd.SetArgs(tc.args)
+			err := cmd.Execute()
+			if tc.code == 0 {
+				if err != nil {
+					t.Fatal(err)
+				}
+			} else if status, ok := err.(*platformprocess.ExitStatus); !ok || status.Code != tc.code {
+				t.Fatalf("exit status changed: %v", err)
+			}
+			if stdout.String() != "hk-output" {
+				t.Fatalf("stdout changed: %q", stdout.String())
+			}
+			if !strings.HasPrefix(stderr.String(), "hk-error") || !tc.wantHint && stderr.String() != "hk-error" {
+				t.Fatalf("child stderr changed: %q", stderr.String())
+			}
+			if got := strings.Contains(stderr.String(), "one hk fix"); got != tc.wantHint {
+				t.Fatalf("repair hint = %t, want %t: %s", got, tc.wantHint, stderr.String())
+			}
+			if tc.wantHint && (!strings.Contains(stderr.String(), "workspace root") || !strings.Contains(stderr.String(), "stage")) {
+				t.Fatalf("missing directory/staging guidance: %s", stderr.String())
+			}
+		})
 	}
 }
 

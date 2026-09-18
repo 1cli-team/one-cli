@@ -96,7 +96,8 @@ func configureNodePackage(p *fsutil.FilePlan, dir, name, manager string) error {
 	if pkg == nil {
 		return fmt.Errorf("project package.json must be an object")
 	}
-	pkg["name"], _ = json.Marshal(name)
+	updates := make(map[string]json.RawMessage)
+	updates["name"], _ = marshalJSONValue(name)
 	// The root packageManager is authoritative, including its pinned version.
 	root, err := p.Read("package.json")
 	if err != nil {
@@ -111,9 +112,9 @@ func configureNodePackage(p *fsutil.FilePlan, dir, name, manager string) error {
 		}
 	}
 	if rootPkg.PackageManager != "" {
-		pkg["packageManager"], _ = json.Marshal(rootPkg.PackageManager)
+		updates["packageManager"], _ = marshalJSONValue(rootPkg.PackageManager)
 	} else {
-		delete(pkg, "packageManager")
+		updates["packageManager"] = nil
 	}
 	if manager != "pnpm" {
 		var scripts map[string]string
@@ -122,18 +123,24 @@ func configureNodePackage(p *fsutil.FilePlan, dir, name, manager string) error {
 				return err
 			}
 		}
+		scriptUpdates := make(map[string]json.RawMessage)
 		for key, command := range scripts {
-			scripts[key] = strings.ReplaceAll(command, "pnpm run ", manager+" run ")
+			if updated := strings.ReplaceAll(command, "pnpm run ", manager+" run "); updated != command {
+				scriptUpdates[key], _ = marshalJSONValue(updated)
+			}
 		}
-		if scripts != nil {
-			pkg["scripts"], _ = json.Marshal(scripts)
+		if len(scriptUpdates) > 0 {
+			updates["scripts"], err = updateJSONFields(pkg["scripts"], scriptUpdates)
+			if err != nil {
+				return err
+			}
 		}
 	}
-	after, err := json.MarshalIndent(pkg, "", "  ")
+	after, err := updateJSONFields(raw, updates)
 	if err != nil {
 		return err
 	}
-	return p.Set(filepath.Join(dir, "package.json"), append(after, '\n'), 0o644)
+	return p.Set(filepath.Join(dir, "package.json"), after, 0o644)
 }
 
 func planNodeWorkspace(p *fsutil.FilePlan, m *workspace.Manifest, dirs []string) error {
@@ -151,11 +158,15 @@ func planNodeWorkspace(p *fsutil.FilePlan, m *workspace.Manifest, dirs []string)
 		if m.Workspace != nil {
 			name = m.Workspace.Name
 		}
-		raw, err = json.MarshalIndent(buildPackageJSON(name), "", "  ")
+		raw, err = marshalJSONValue(buildPackageJSON(name))
 		if err != nil {
 			return err
 		}
-		raw = append(raw, '\n')
+		var formatted bytes.Buffer
+		if err := json.Indent(&formatted, raw, "", "  "); err != nil {
+			return err
+		}
+		raw = append(formatted.Bytes(), '\n')
 	}
 	var pkg map[string]json.RawMessage
 	if err := json.Unmarshal(raw, &pkg); err != nil {
@@ -164,19 +175,16 @@ func planNodeWorkspace(p *fsutil.FilePlan, m *workspace.Manifest, dirs []string)
 	if pkg == nil {
 		return fmt.Errorf("root package.json must be an object")
 	}
-	changed := false
+	updates := make(map[string]json.RawMessage)
 	if _, ok := pkg["private"]; !ok {
-		pkg["private"] = json.RawMessage("true")
-		changed = true
+		updates["private"] = json.RawMessage("true")
 	}
 	if newRoot && manager != "pnpm" {
-		delete(pkg, "packageManager")
-		changed = true
+		updates["packageManager"] = nil
 	}
 	if manager == "pnpm" {
 		if _, ok := pkg["packageManager"]; !ok {
-			pkg["packageManager"], _ = json.Marshal(packageManagerSpec)
-			changed = true
+			updates["packageManager"], _ = marshalJSONValue(packageManagerSpec)
 		}
 		if err := planPNPMWorkspace(p, dirs); err != nil {
 			return err
@@ -199,17 +207,18 @@ func planNodeWorkspace(p *fsutil.FilePlan, m *workspace.Manifest, dirs []string)
 			return err
 		}
 		if len(updated) != len(patterns) {
-			b, _ := json.Marshal(updated)
+			b, _ := marshalJSONValue(updated)
 			if object != nil {
-				object["packages"] = b
-				b, _ = json.Marshal(object)
+				b, err = updateJSONFields(pkg["workspaces"], map[string]json.RawMessage{"packages": b})
+				if err != nil {
+					return err
+				}
 			}
-			pkg["workspaces"], changed = b, true
+			updates["workspaces"] = b
 		}
 	}
-	if changed {
-		raw, err = json.MarshalIndent(pkg, "", "  ")
-		raw = append(raw, '\n')
+	if len(updates) > 0 {
+		raw, err = updateJSONFields(raw, updates)
 	}
 	if err != nil {
 		return err

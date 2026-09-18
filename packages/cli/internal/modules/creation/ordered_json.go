@@ -2,11 +2,10 @@ package creation
 
 import (
 	"bytes"
-	"encoding/json"
 )
 
 // orderedJSON is a key/value list that marshals into a JSON object preserving
-// the order of its entries. Go's `map` randomises iteration; for files the
+// the order of its entries. encoding/json sorts map keys; for files the
 // user (and code review!) reads — package.json and friends — we want a
 // deterministic shape.
 //
@@ -36,13 +35,13 @@ func (o orderedJSON) MarshalJSON() ([]byte, error) {
 		if i > 0 {
 			buf.WriteByte(',')
 		}
-		k, err := json.Marshal(entry.Key)
+		k, err := marshalJSONValue(entry.Key)
 		if err != nil {
 			return nil, err
 		}
 		buf.Write(k)
 		buf.WriteByte(':')
-		v, err := json.Marshal(entry.Value)
+		v, err := marshalJSONValue(entry.Value)
 		if err != nil {
 			return nil, err
 		}
