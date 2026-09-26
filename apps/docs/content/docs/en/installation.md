@@ -85,6 +85,30 @@ On Windows, the archive is `one-cli_windows_amd64.zip`.
 
 For normal upgrades, rerun the install command. Use `ONE_FORCE` only for downgrade or repair.
 
+## mise Runtime
+
+One does not bundle mise. When a command needs it, One uses an explicit `ONE_MISE_BINARY` first, then a compatible mise on PATH (minimum 2026.9.7), then its own verified installation. If none is available, it downloads the pinned official mise 2026.9.7 release, verifies both archive and executable SHA256, and installs it atomically. Supported targets are macOS/Linux x64 and arm64, and Windows x64; Linux uses musl releases. [Official distribution](https://mise.jdx.dev/installing-mise.html).
+
+Selection happens again on each invocation. Removing system mise switches to the managed runtime; a missing or damaged managed executable is repaired automatically. A compatible system installation takes priority again when restored. Invalid explicit overrides report an error instead of falling back. No shell activation is required.
+
+| Managed content | Default location | Root override |
+|---|---|---|
+| mise executable | `~/.local/share/one/runtimes/mise/<version>/<platform>/` | `XDG_DATA_HOME` |
+| Tools and plugins | `~/.local/share/one/mise/` | `XDG_DATA_HOME` |
+| Global configuration | `~/.config/one/mise/` | `XDG_CONFIG_HOME` |
+| State and trust records | `~/.local/state/one/mise/` | `XDG_STATE_HOME` |
+| Disposable cache | `~/.cache/one/mise/` | `XDG_CACHE_HOME` |
+
+The same effective Home convention applies on Windows. XDG roots must be absolute. For managed mise, One sets `MISE_DATA_DIR`, `MISE_CONFIG_DIR`, `MISE_STATE_DIR`, and `MISE_CACHE_DIR` in the child environment, replacing inherited values. External mise retains its existing directory settings. Project configuration stays in the project. Switching to managed mise can require reinstalling tools and granting trust again; One does not copy external configuration or trust records.
+
+Managed mise updates with One; automatic self-updates are disabled for that child process. Manually replacing it with `mise self-update` causes the next invocation to restore the pinned executable. A verified executable from an older One cache can be migrated without downloading, preserving the old file. Cache cleanup does not remove tools or trust records.
+
+**Offline use:** a valid external, managed, or migratable legacy executable can be reused offline. A fresh environment without any of them needs network access. Prepare mise and the required tools/dependencies beforehand, or point `ONE_MISE_BINARY` to a compatible external executable. `ONE_RUNTIME=builtin` is a temporary diagnostic escape hatch using existing tools.
+
+Download, migration, or verification failures return `MISE_INSTALL_FAILED`. Check network/proxy access to GitHub Releases and permissions on One's runtime directory, then retry the same command. Help, dry-run, and static project/configuration generation do not prepare mise.
+
+Use `one mise --version`, `one mise doctor`, or `one mise trust <config-path>` to work with the same selected runtime. Review configuration before trusting it; `MISE_PARANOID=1` requires explicit trust. Arguments, IO, and exit codes are forwarded, without One project secrets; use `one run` when those secrets are needed.
+
 ## Configure Provider Credentials
 
 Provider credentials are configured once with `one configure add <domain>/<backend> --profile <name>` and can be reused across workspaces. Current configurable pairs are:

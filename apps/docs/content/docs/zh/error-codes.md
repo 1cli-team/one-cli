@@ -693,7 +693,7 @@ A managed mise configuration was modified or changed during generation.
 
 ### `MISE_INSTALL_FAILED`
 
-One could not extract, verify, or prepare its bundled mise runtime.
+One could not download, migrate, verify, or prepare its managed mise runtime.
 
 > 没有默认 remediation。具体恢复方式请看错误的 `context` 字段。
 

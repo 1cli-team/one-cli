@@ -8,13 +8,16 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	"errors"
 	"fmt"
+	"github.com/gofrs/flock"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
 	"sync"
-	"sync/atomic"
 	"testing"
+	"time"
 )
 
 func archiveFixture(t *testing.T, format string, binary []byte) (releaseAsset, []byte) {
@@ -84,11 +87,10 @@ func TestReleaseAssetsCoverSupportedOnePlatforms(t *testing.T) {
 func TestManagedInstallConcurrentOfflineReuseAndRepair(t *testing.T) {
 	for _, format := range []string{"tar.gz", "zip"} {
 		t.Run(format, func(t *testing.T) {
-			binary := []byte("verified executable fixture")
-			a, archive := archiveFixture(t, format, binary)
-			var preparations countWriter
+			a, archive := archiveFixture(t, format, []byte("verified executable fixture"))
+			d, server, requests := serveArchive(t, archive)
 			root := t.TempDir()
-			i := installer{root: root, archive: archive, out: &preparations}
+			i := installer{root: root, downloader: d}
 			var wg sync.WaitGroup
 			for range 8 {
 				wg.Add(1)
@@ -100,8 +102,8 @@ func TestManagedInstallConcurrentOfflineReuseAndRepair(t *testing.T) {
 				}()
 			}
 			wg.Wait()
-			if preparations.Load() != 1 {
-				t.Fatalf("extracted %d times", preparations.Load())
+			if requests.Load() != 1 {
+				t.Fatalf("downloaded %d times", requests.Load())
 			}
 			path, err := i.ensure(context.Background(), a)
 			if err != nil {
@@ -116,18 +118,26 @@ func TestManagedInstallConcurrentOfflineReuseAndRepair(t *testing.T) {
 			if _, err := i.ensure(context.Background(), a); err != nil {
 				t.Fatal(err)
 			}
-			if preparations.Load() != 2 {
-				t.Fatal("cache was not repaired")
+			if err := os.Remove(path); err != nil {
+				t.Fatal(err)
 			}
+			if _, err := i.ensure(context.Background(), a); err != nil {
+				t.Fatal(err)
+			}
+			if requests.Load() != 3 {
+				t.Fatalf("repair requests = %d, want 3", requests.Load())
+			}
+			server.Close()
 			if _, err := i.ensure(context.Background(), a); err != nil {
 				t.Fatalf("offline cache: %v", err)
 			}
+			assertNoTemporaryFiles(t, filepath.Dir(path))
 		})
 	}
 }
 
 func TestManagedInstallFailureNeverPublishesOrReplacesBinary(t *testing.T) {
-	for _, failure := range []string{"missing-archive", "archive-digest", "binary-digest", "cancelled"} {
+	for _, failure := range []string{"archive-digest", "binary-digest", "cancelled", "invalid-archive"} {
 		t.Run(failure, func(t *testing.T) {
 			a, archive := archiveFixture(t, "tar.gz", []byte("expected binary"))
 			if failure == "archive-digest" {
@@ -136,10 +146,12 @@ func TestManagedInstallFailureNeverPublishesOrReplacesBinary(t *testing.T) {
 			if failure == "binary-digest" {
 				a.BinarySHA256 = strings.Repeat("0", 64)
 			}
-			if failure == "missing-archive" {
-				archive = nil
+			if failure == "invalid-archive" {
+				archive = []byte("not a tarball")
+				a.ArchiveSHA256 = fmt.Sprintf("%x", sha256.Sum256(archive))
 			}
-			i := installer{root: t.TempDir(), archive: archive}
+			d, _, requests := serveArchive(t, archive)
+			i := installer{root: t.TempDir(), downloader: d}
 			dir := filepath.Join(i.root, managedVersion, a.Platform)
 			if err := os.MkdirAll(dir, 0o700); err != nil {
 				t.Fatal(err)
@@ -160,67 +172,121 @@ func TestManagedInstallFailureNeverPublishesOrReplacesBinary(t *testing.T) {
 			if err != nil || string(raw) != "previous file" {
 				t.Fatalf("previous binary modified: %v %q", err, raw)
 			}
-			entries, err := os.ReadDir(dir)
+			if failure == "cancelled" && requests.Load() != 0 {
+				t.Fatal("cancelled install downloaded")
+			}
+			assertNoTemporaryFiles(t, dir)
+		})
+	}
+}
+
+func TestManagedInstallMigratesOnlyVerifiedLegacyBinary(t *testing.T) {
+	for _, valid := range []bool{true, false} {
+		t.Run(fmt.Sprint(valid), func(t *testing.T) {
+			binary := []byte("verified legacy binary")
+			a, archive := archiveFixture(t, "tar.gz", binary)
+			d, server, requests := serveArchive(t, archive)
+			i := installer{root: filepath.Join(t.TempDir(), "new"), legacyRoot: filepath.Join(t.TempDir(), "old"), downloader: d}
+			legacy := filepath.Join(i.legacyRoot, managedVersion, a.Platform, a.BinaryName())
+			if err := os.MkdirAll(filepath.Dir(legacy), 0o700); err != nil {
+				t.Fatal(err)
+			}
+			old := binary
+			if !valid {
+				old = []byte("corrupt legacy")
+			} else {
+				server.Close()
+			}
+			if err := os.WriteFile(legacy, old, 0o755); err != nil {
+				t.Fatal(err)
+			}
+			target, err := i.ensure(context.Background(), a)
 			if err != nil {
 				t.Fatal(err)
 			}
-			for _, entry := range entries {
-				if strings.HasPrefix(entry.Name(), ".extract-") {
-					t.Errorf("temporary file leaked: %s", entry.Name())
-				}
+			if err := verifyExecutable(target, a.BinarySHA256); err != nil {
+				t.Fatal(err)
+			}
+			preserved, err := os.ReadFile(legacy)
+			if err != nil || !bytes.Equal(preserved, old) {
+				t.Fatal("legacy cache changed")
+			}
+			want := int32(1)
+			if valid {
+				want = 0
+			}
+			if requests.Load() != want {
+				t.Fatalf("requests = %d, want %d", requests.Load(), want)
 			}
 		})
 	}
 }
 
-func TestMissingBundleHasNoSideEffects(t *testing.T) {
-	a, _ := archiveFixture(t, "tar.gz", []byte("binary"))
-	root := filepath.Join(t.TempDir(), "not-created")
-	i := installer{root: root}
-	if _, err := i.ensure(context.Background(), a); err == nil {
-		t.Fatal("missing runtime accepted")
-	}
-	if _, err := os.Stat(root); !os.IsNotExist(err) {
-		t.Fatal("missing bundle wrote files")
-	}
-}
-
-// The real per-platform resource must unpack to the separately pinned digest.
-func TestBundledOfficialArchive(t *testing.T) {
-	a, err := currentAsset()
-	if err != nil {
-		t.Skip(err)
-	}
-	i := installer{root: t.TempDir(), archive: bundledArchive}
-	if _, err := i.ensure(context.Background(), a); err != nil {
+func TestManagedInstallCancellationWhileWaitingForLock(t *testing.T) {
+	a, archive := archiveFixture(t, "tar.gz", []byte("binary"))
+	d, _, requests := serveArchive(t, archive)
+	i := installer{root: t.TempDir(), downloader: d}
+	dir := filepath.Join(i.root, managedVersion, a.Platform)
+	if err := os.MkdirAll(dir, 0o700); err != nil {
 		t.Fatal(err)
 	}
+	lock := flock.New(filepath.Join(dir, ".install.lock"))
+	if err := lock.Lock(); err != nil {
+		t.Fatal(err)
+	}
+	defer lock.Unlock()
+	ctx, cancel := context.WithTimeout(context.Background(), 50*time.Millisecond)
+	defer cancel()
+	if _, err := i.ensure(ctx, a); !errors.Is(err, context.DeadlineExceeded) {
+		t.Fatalf("lock cancellation: %v", err)
+	}
+	if requests.Load() != 0 {
+		t.Fatal("downloaded before obtaining lock")
+	}
 }
 
-// sync-mise-all makes foreign release resources available for cross-builds.
-// Validate their executable digests too, without executing foreign binaries.
-func TestPreparedCrossPlatformArchives(t *testing.T) {
-	for _, target := range [][2]string{{"linux", "amd64"}, {"linux", "arm64"}, {"darwin", "amd64"}, {"darwin", "arm64"}, {"windows", "amd64"}} {
-		t.Run(target[0]+"-"+target[1], func(t *testing.T) {
-			a, err := assetFor(target[0], target[1])
-			if err != nil {
+func TestPublishFailureAndCancellationPreserveDestination(t *testing.T) {
+	for _, cancelWrite := range []bool{false, true} {
+		t.Run(fmt.Sprint(cancelWrite), func(t *testing.T) {
+			path := filepath.Join(t.TempDir(), "mise")
+			if err := os.WriteFile(path, []byte("previous"), 0o755); err != nil {
 				t.Fatal(err)
 			}
-			archive, err := os.ReadFile(filepath.Join("assets", "mise-"+target[0]+"-"+target[1]+"."+a.Format))
-			if os.IsNotExist(err) {
-				t.Skip("cross-platform resources are prepared by task sync-mise-all")
+			ctx, cancel := context.WithCancel(context.Background())
+			defer cancel()
+			data := []byte("new")
+			digest := fmt.Sprintf("%x", sha256.Sum256(data))
+			err := publishBinary(ctx, path, digest, func(w io.Writer) error {
+				if _, err := w.Write(data); err != nil {
+					return err
+				}
+				if cancelWrite {
+					cancel()
+					return nil
+				}
+				return errors.New("local write failed")
+			})
+			if err == nil {
+				t.Fatal("failed write published")
 			}
-			if err != nil {
-				t.Fatal(err)
+			got, err := os.ReadFile(path)
+			if err != nil || string(got) != "previous" {
+				t.Fatalf("destination: %q %v", got, err)
 			}
-			i := installer{root: t.TempDir(), archive: archive}
-			if _, err := i.ensure(context.Background(), a); err != nil {
-				t.Fatal(err)
-			}
+			assertNoTemporaryFiles(t, filepath.Dir(path))
 		})
 	}
 }
 
-type countWriter struct{ atomic.Int32 }
-
-func (w *countWriter) Write(p []byte) (int, error) { w.Add(1); return len(p), nil }
+func assertNoTemporaryFiles(t *testing.T, dir string) {
+	t.Helper()
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, entry := range entries {
+		if strings.HasPrefix(entry.Name(), ".extract-") || strings.HasPrefix(entry.Name(), ".fetch-") {
+			t.Errorf("temporary file leaked: %s", entry.Name())
+		}
+	}
+}

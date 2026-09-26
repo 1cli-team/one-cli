@@ -51,5 +51,5 @@ bin-go/
 .seo/blog-drafts/
 .seo/skills/
 .seo/patches/
-# Fixed mise release archives fetched by task sync-mise, embedded per target.
+# Legacy mise build resources from older checkouts; no longer used or embedded.
 /packages/cli/internal/adapters/runtime/mise/assets/

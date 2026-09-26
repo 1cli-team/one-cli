@@ -1,19 +1,25 @@
 package cli_test
 
 import (
+	"crypto/sha256"
 	"encoding/json"
+	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"runtime"
 	"strings"
 	"testing"
+
+	"github.com/torchstellar-team/one-cli/packages/cli/internal/adapters/runtime/mise/miserelease"
 )
 
 func runtimeFixture(t *testing.T) string {
 	t.Helper()
 	root := t.TempDir()
 	isolateHome(t, root)
+	t.Setenv("XDG_DATA_HOME", filepath.Join(root, ".local", "share"))
+	t.Setenv("XDG_STATE_HOME", filepath.Join(root, ".local", "state"))
 	t.Setenv("ONE_RUNTIME", "")
 	files := map[string]string{
 		"one.manifest.json":              `{"version":1,"workspace":{"id":"runtime-test","name":"runtime-test"},"projects":[{"name":"web","relativeDir":"apps/web","toolchain":"node","templateId":"react-spa","domains":{"dev":{"command":"node dev.cjs"}}},{"name":"api","relativeDir":"services/api","toolchain":"go","templateId":"go-api","domains":{"dev":{"command":"node dev.cjs"}}}]}`,
@@ -160,8 +166,10 @@ func TestE2E_MiseDryRunDoesNotRunHooksOrNeedMise(t *testing.T) {
 	if plan.Runtime != "mise" || !plan.DryRun || strings.Contains(out, "web-secret") {
 		t.Fatalf("bad plan: %s", out)
 	}
-	if _, err := os.Stat(filepath.Join(root, ".cache/one/runtimes/mise")); !os.IsNotExist(err) {
-		t.Fatal("dry-run prepared the bundled runtime")
+	for _, rel := range []string{".cache/one/runtimes/mise", ".local/share/one/runtimes/mise"} {
+		if _, err := os.Stat(filepath.Join(root, rel)); !os.IsNotExist(err) {
+			t.Fatal("dry-run prepared the runtime")
+		}
 	}
 	if _, err := os.Stat(filepath.Join(root, "mise-was-called")); !os.IsNotExist(err) {
 		t.Fatal("preview invoked mise")
@@ -211,49 +219,99 @@ func isolateMiseState(t *testing.T, root string) {
 	t.Setenv("MISE_AUTO_INSTALL", "false")
 }
 
-// No runtime network or preinstalled mise is needed, including on first use.
-func TestE2E_MiseBundledFirstRunWithoutMiseOnPath(t *testing.T) {
-	if runtime.GOOS != "linux" || runtime.GOARCH != "amd64" {
-		t.Skip("Linux amd64 offline fixture")
-	}
-	root := runtimeFixture(t)
-	isolateMiseState(t, root)
-	t.Setenv("PATH", "/usr/bin:/bin")
-	if _, err := exec.LookPath("mise"); err == nil {
-		t.Skip("fixture requires mise absent from system directories")
-	}
+func disableMiseNetwork(t *testing.T) {
+	t.Helper()
 	for _, key := range []string{"HTTP_PROXY", "HTTPS_PROXY", "ALL_PROXY", "http_proxy", "https_proxy", "all_proxy"} {
 		t.Setenv(key, "http://127.0.0.1:1")
 	}
 	t.Setenv("NO_PROXY", "")
 	t.Setenv("no_proxy", "")
-	t.Setenv("MISE_AUTO_UPDATE", "true")
-	t.Setenv("MISE_DISABLE_UPDATE_WARNING", "false")
-	out, stderr, code := runBinaryIn(t, root, "run", "web", "--", "/bin/sh", "-c", `printf '%s' "$ONE_MISE_TEST_VALUE"`)
-	if code != 0 || out != "web-secret" || !strings.Contains(stderr, "Preparing bundled mise") {
-		t.Fatalf("first run: %d %q %s", code, out, stderr)
+}
+
+func TestE2E_MiseSystemDiscoveryThenDeletionReportsDownloadFailure(t *testing.T) {
+	root := runtimeFixture(t)
+	installFakeMise(t)
+	system := os.Getenv("ONE_MISE_BINARY")
+	t.Setenv("ONE_MISE_BINARY", "")
+	t.Setenv("PATH", filepath.Dir(system))
+	disableMiseNetwork(t)
+	out, stderr, code := runBinaryIn(t, root, "mise", "--version")
+	if code != 0 || !strings.HasPrefix(out, "2026.9.7") || strings.Contains(stderr, "Downloading") {
+		t.Fatalf("system mise: %d %q %s", code, out, stderr)
 	}
-	// The user's auto-update preference must not mutate One's pinned runtime.
-	out, stderr, code = runBinaryIn(t, root, "run", "web", "--", "/bin/sh", "-c", `printf '%s %s' "$MISE_AUTO_UPDATE" "$MISE_DISABLE_UPDATE_WARNING"`)
-	if code != 0 || out != "false true" {
-		t.Fatalf("bundled update settings: %d %q %s", code, out, stderr)
+	if _, err := os.Stat(filepath.Join(root, ".local/share/one/runtimes/mise")); !os.IsNotExist(err) {
+		t.Fatal("system selection installed a managed runtime")
 	}
-	path := filepath.Join(root, ".cache/one/runtimes/mise/2026.9.7/linux-x64-musl/mise")
-	if _, err := os.Stat(path); err != nil {
+	if err := os.Remove(system); err != nil {
 		t.Fatal(err)
 	}
-	out, stderr, code = runBinaryIn(t, root, "run", "web", "--", "mise", "--version")
-	if code != 0 || !strings.HasPrefix(out, "2026.9.7") || strings.Contains(stderr, "Preparing bundled mise") {
-		t.Fatalf("cached run: %d %q %s", code, out, stderr)
+	out, stderr, code = runBinaryIn(t, root, "mise", "--version")
+	if code == 0 || !strings.Contains(stderr, "Downloading official mise") || !strings.Contains(out+stderr, "MISE_INSTALL_FAILED") {
+		t.Fatalf("deleted system/offline: %d %q %s", code, out, stderr)
+	}
+	if _, err := os.Stat(filepath.Join(root, ".local/share/one/runtimes/mise/2026.9.7")); err != nil {
+		t.Fatal("runtime did not attempt managed bootstrap")
+	}
+}
+
+// An opt-in official pinned binary checks real execution without putting mise
+// back into build inputs. Other compatible ONE_TEST_MISE_BINARY versions still
+// exercise configuration/trust tests, but cannot satisfy the managed digest.
+func TestE2E_MiseManagedLegacyMigrationAndOfflineReuse(t *testing.T) {
+	source := os.Getenv("ONE_TEST_MISE_BINARY")
+	if source == "" {
+		t.Skip("set ONE_TEST_MISE_BINARY to the pinned official mise for managed integration")
+	}
+	a, err := miserelease.ForPlatform(runtime.GOOS, runtime.GOARCH)
+	if err != nil {
+		t.Skip(err)
+	}
+	raw, err := os.ReadFile(source)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if fmt.Sprintf("%x", sha256.Sum256(raw)) != a.BinarySHA256 {
+		t.Skip("managed integration requires the pinned official binary digest")
+	}
+	root := runtimeFixture(t)
+	isolateMiseState(t, root)
+	t.Setenv("PATH", t.TempDir())
+	disableMiseNetwork(t)
+	legacy := filepath.Join(root, ".cache/one/runtimes/mise", miserelease.Version, a.Platform, a.BinaryName())
+	if err := os.MkdirAll(filepath.Dir(legacy), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(legacy, raw, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("MISE_AUTO_UPDATE", "true")
+	t.Setenv("MISE_DISABLE_UPDATE_WARNING", "false")
+	out, stderr, code := runBinaryIn(t, root, "mise", "--version")
+	if code != 0 || !strings.HasPrefix(out, miserelease.Version) || !strings.Contains(stderr, "Migrating verified mise") {
+		t.Fatalf("migration: %d %q %s", code, out, stderr)
+	}
+	managed := filepath.Join(root, ".local/share/one/runtimes/mise", miserelease.Version, a.Platform, a.BinaryName())
+	if _, err := os.Stat(managed); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := os.Stat(legacy); err != nil {
+		t.Fatal("migration removed legacy binary")
 	}
 	out, stderr, code = runBinaryIn(t, root, "mise", "--version")
-	if code != 0 || !strings.HasPrefix(out, "2026.9.7") {
-		t.Fatalf("offline mise command: %d %q %s", code, out, stderr)
+	if code != 0 || !strings.HasPrefix(out, miserelease.Version) || strings.Contains(stderr, "Migrating") || strings.Contains(stderr, "Downloading") {
+		t.Fatalf("offline reuse: %d %q %s", code, out, stderr)
 	}
-	if _, err := os.Stat(filepath.Join(root, "MISE_CACHE_DIR", "latest-version")); !os.IsNotExist(err) {
-		t.Fatal("bundled runtime performed a version update check")
+	// Pin the current shell path before hiding system mise; this command checks
+	// real mise directory settings and update flags through its exec environment.
+	shell := "/bin/sh"
+	if runtime.GOOS != "windows" {
+		args := []string{"run", "web", "--", shell, "-c", `printf '%s|%s|%s|%s|%s|%s' "$MISE_DATA_DIR" "$MISE_CONFIG_DIR" "$MISE_STATE_DIR" "$MISE_CACHE_DIR" "$MISE_AUTO_UPDATE" "$MISE_DISABLE_UPDATE_WARNING"`}
+		out, stderr, code = runBinaryIn(t, root, args...)
+		want := strings.Join([]string{filepath.Join(root, ".local/share/one/mise"), filepath.Join(root, ".config/one/mise"), filepath.Join(root, ".local/state/one/mise"), filepath.Join(root, ".cache/one/mise"), "false", "true"}, "|")
+		if code != 0 || out != want {
+			t.Fatalf("managed environment: %d %q want %q %s", code, out, want, stderr)
+		}
 	}
-
 }
 
 func TestE2E_MiseCreateAddAndRefreshWithoutNewFlags(t *testing.T) {

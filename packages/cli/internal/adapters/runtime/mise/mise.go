@@ -1,9 +1,10 @@
-// Package mise prepares commands through an explicitly selected or bundled mise CLI.
+// Package mise prepares commands using an external or One-managed mise CLI.
 package mise
 
 import (
 	"context"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -25,49 +26,133 @@ func (p Provider) Prepare(ctx context.Context, command runtimeport.Command) (run
 }
 
 func (Provider) PrepareCLI(ctx context.Context, command runtimeport.Command) (runtimeport.Command, error) {
-	path, err := resolveBinary(ctx, command)
+	paths, pathsErr := defaultPaths()
+	i := installer{root: paths.runtimeRoot(), legacyRoot: paths.legacyRoot(), downloader: defaultDownloader(), out: os.Stderr}
+	r := binaryResolver{paths: paths, pathsErr: pathsErr, asset: currentAsset, install: i.ensure, out: os.Stderr}
+	selected, err := r.resolve(ctx, command)
 	if err != nil {
 		return command, err
 	}
-	command.Argv = append([]string{path}, command.Argv...)
-	command.Env = prependRuntimePath(command.Env, filepath.Dir(path))
-	if os.Getenv("ONE_MISE_BINARY") == "" {
-		command.Env = pinnedRuntimeEnv(command.Env)
+	command.Argv = append([]string{selected.path}, command.Argv...)
+	command.Env = prependRuntimePath(command.Env, filepath.Dir(selected.path))
+	if selected.managed {
+		command.Env = paths.environment(command.Env)
 	}
 	return command, nil
 }
 
-func resolveBinary(ctx context.Context, command runtimeport.Command) (string, error) {
+type resolvedBinary struct {
+	path    string
+	source  string
+	managed bool
+}
+
+type binaryResolver struct {
+	paths    runtimePaths
+	pathsErr error
+	asset    func() (releaseAsset, error)
+	install  func(context.Context, releaseAsset) (string, error)
+	out      io.Writer
+}
+
+func (r binaryResolver) resolve(ctx context.Context, command runtimeport.Command) (resolvedBinary, error) {
+	if err := ctx.Err(); err != nil {
+		return resolvedBinary{}, err
+	}
 	if override := os.Getenv("ONE_MISE_BINARY"); override != "" {
 		path, err := filepath.Abs(override)
 		if err != nil {
-			return "", err
+			return resolvedBinary{}, err
 		}
-		if err := checkVersion(ctx, path, command); err != nil {
-			return "", err
+		owned := r.paths.owns(path)
+		if owned {
+			if r.pathsErr != nil {
+				return resolvedBinary{}, r.pathsErr
+			}
+			a, err := r.asset()
+			if err != nil {
+				return resolvedBinary{}, err
+			}
+			if err := verifyExecutable(canonicalPath(path), a.BinarySHA256); err != nil {
+				return resolvedBinary{}, cliErrors.New(cliErrors.MISE_INSTALL_FAILED, "Explicit One-managed mise failed verification: "+err.Error())
+			}
+		} else if err := checkVersion(ctx, path, command); err != nil {
+			return resolvedBinary{}, err
 		}
-		return path, nil
+		return resolvedBinary{path: path, source: "explicit", managed: owned}, nil
+	}
+	for _, path := range systemCandidates(command.Env) {
+		if r.paths.owns(path) {
+			continue
+		}
+		if err := checkVersion(ctx, path, command); err == nil {
+			return resolvedBinary{path: path, source: "system"}, nil
+		} else if ctx.Err() != nil {
+			return resolvedBinary{}, ctx.Err()
+		} else if r.out != nil {
+			fmt.Fprintf(r.out, "[one] Skipping unavailable or incompatible mise at %s: %v\n", path, err)
+		}
 	}
 	if err := ctx.Err(); err != nil {
-		return "", err
+		return resolvedBinary{}, err
 	}
-	a, err := currentAsset()
-	if err != nil {
-		return "", cliErrors.New(cliErrors.MISE_INSTALL_FAILED, err.Error())
+	if r.pathsErr != nil {
+		return resolvedBinary{}, cliErrors.New(cliErrors.MISE_INSTALL_FAILED, r.pathsErr.Error())
 	}
-	i, err := defaultInstaller()
+	a, err := r.asset()
 	if err != nil {
-		return "", cliErrors.New(cliErrors.MISE_INSTALL_FAILED, err.Error())
+		return resolvedBinary{}, cliErrors.New(cliErrors.MISE_INSTALL_FAILED, err.Error())
 	}
-	path, err := i.ensure(ctx, a)
+	path, err := r.install(ctx, a)
 	if err != nil {
-		return "", cliErrors.New(cliErrors.MISE_INSTALL_FAILED, "Could not prepare bundled mise: "+err.Error()).WithRemediation(output.Remediation{
-			Action: "prepare-mise", Hint: "Ensure the One runtime cache is writable and executable, then retry. Reinstall One if its bundled archive is damaged, or set ONE_MISE_BINARY to a compatible executable. ONE_RUNTIME=builtin uses existing tools for diagnostics.",
+		return resolvedBinary{}, cliErrors.New(cliErrors.MISE_INSTALL_FAILED, fmt.Sprintf("Could not prepare mise %s (%s) in %s: %v", managedVersion, a.Platform, r.paths.runtimeRoot(), err)).WithRemediation(output.Remediation{
+			Action: "prepare-mise", Hint: "Check network/proxy access to GitHub Releases and permissions on the One runtime directory, then retry the same command. For offline use, install a compatible mise on PATH or set ONE_MISE_BINARY to its executable. ONE_RUNTIME=builtin uses existing tools for diagnostics.",
 		})
 	}
-	// The executable digest already pins the bundled version. Probing it again
-	// would add startup work and mise's default online update check.
-	return path, nil
+	// The executable digest pins the managed version; no online probe is needed.
+	return resolvedBinary{path: path, source: "managed", managed: true}, nil
+}
+
+func systemCandidates(env []string) []string {
+	names := []string{"mise"}
+	if runtime.GOOS == "windows" {
+		names = nil
+		extensions := envValue(env, "PATHEXT")
+		if extensions == "" {
+			extensions = ".COM;.EXE;.BAT;.CMD"
+		}
+		for _, ext := range strings.Split(extensions, ";") {
+			// Native executables only: no implicit shell or command-script execution.
+			if strings.EqualFold(ext, ".exe") || strings.EqualFold(ext, ".com") {
+				names = append(names, "mise"+strings.ToLower(ext))
+			}
+		}
+	}
+	var paths []string
+	seen := make(map[string]bool)
+	for _, dir := range filepath.SplitList(envValue(env, "PATH")) {
+		// Like exec.ErrDot, do not silently run project-local executables.
+		if !filepath.IsAbs(dir) {
+			continue
+		}
+		for _, name := range names {
+			path := filepath.Join(dir, name)
+			info, err := os.Stat(path)
+			if err != nil || !info.Mode().IsRegular() {
+				continue
+			}
+			key := canonicalPath(path)
+			if runtime.GOOS == "windows" {
+				key = strings.ToLower(key)
+			}
+			if seen[key] {
+				continue
+			}
+			seen[key] = true
+			paths = append(paths, path)
+		}
+	}
+	return paths
 }
 
 func checkVersion(ctx context.Context, path string, command runtimeport.Command) error {
@@ -77,8 +162,12 @@ func checkVersion(ctx context.Context, path string, command runtimeport.Command)
 	probeCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 	probe := exec.CommandContext(probeCtx, path, "--version")
+	probe.WaitDelay = time.Second
 	probe.Dir, probe.Env = command.Directory, pinnedRuntimeEnv(command.Env)
 	version, err := probe.Output()
+	if ctx.Err() != nil {
+		return ctx.Err()
+	}
 	if err != nil {
 		return cliErrors.New(cliErrors.MISE_VERSION_UNSUPPORTED, "Could not read the mise version: "+err.Error())
 	}
@@ -88,38 +177,18 @@ func checkVersion(ctx context.Context, path string, command runtimeport.Command)
 	return nil
 }
 
-// One owns updates to its bundled runtime. These process-local settings also
+// One owns updates to its managed runtime. These process-local settings also
 // keep a --version probe from consulting the network or replacing the binary.
 func pinnedRuntimeEnv(env []string) []string {
-	if env == nil {
-		env = os.Environ()
-	}
-	result := make([]string, 0, len(env)+2)
-	for _, kv := range env {
-		key, _, _ := strings.Cut(kv, "=")
-		if runtime.GOOS == "windows" {
-			key = strings.ToUpper(key)
-		}
-		if key != "MISE_AUTO_UPDATE" && key != "MISE_DISABLE_UPDATE_WARNING" {
-			result = append(result, kv)
-		}
-	}
-	return append(result, "MISE_AUTO_UPDATE=false", "MISE_DISABLE_UPDATE_WARNING=true")
+	return replaceEnv(env, "MISE_AUTO_UPDATE=false", "MISE_DISABLE_UPDATE_WARNING=true")
 }
 
 func prependRuntimePath(env []string, dir string) []string {
-	if env == nil {
-		env = os.Environ()
+	value := envValue(env, "PATH")
+	if value != "" {
+		dir += string(os.PathListSeparator) + value
 	}
-	result := append([]string(nil), env...)
-	for i, kv := range result {
-		key, value, found := strings.Cut(kv, "=")
-		if found && (key == "PATH" || runtime.GOOS == "windows" && strings.EqualFold(key, "PATH")) {
-			result[i] = key + "=" + dir + string(os.PathListSeparator) + value
-			return result
-		}
-	}
-	return append(result, "PATH="+dir)
+	return replaceEnv(env, "PATH="+dir)
 }
 
 func supportedVersion(value string) bool {
@@ -131,7 +200,7 @@ func supportedVersion(value string) bool {
 	if len(parts) != 3 {
 		return false
 	}
-	minimum := []int{2026, 9, 7}
+	minimum := strings.Split(runtimeport.MinimumMiseVersion, ".")
 	comparison := 0
 	for i, part := range parts {
 		n, err := strconv.Atoi(part)
@@ -139,10 +208,11 @@ func supportedVersion(value string) bool {
 			return false
 		}
 		if comparison == 0 {
-			if n < minimum[i] {
+			min, _ := strconv.Atoi(minimum[i])
+			if n < min {
 				comparison = -1
 			}
-			if n > minimum[i] {
+			if n > min {
 				comparison = 1
 			}
 		}

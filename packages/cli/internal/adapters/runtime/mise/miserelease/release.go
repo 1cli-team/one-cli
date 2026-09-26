@@ -31,7 +31,7 @@ func ForPlatform(goos, goarch string) (Asset, error) {
 	case "windows/amd64":
 		a = Asset{"windows-x64", "zip", "caa1ca158f04d91f42dc2cd99bb1f69f6b5bfa0d0772d485150120aad9778685", "80552c6a4a03849707cb6154186a22795516388d06bf0760b4418729a42efe43"}
 	default:
-		return a, fmt.Errorf("bundled mise is unsupported on %s/%s; set ONE_MISE_BINARY to a compatible executable", goos, goarch)
+		return a, fmt.Errorf("managed mise download is unsupported on %s/%s; install a compatible mise on PATH or set ONE_MISE_BINARY", goos, goarch)
 	}
 	return a, nil
 }

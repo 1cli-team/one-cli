@@ -56,11 +56,11 @@ one dev [project]
 
 常规 `one run` / `one dev` 绑定当前 One 二进制。手动运行生成的 mise 任务时默认使用 PATH 中的 One，也支持 `ONE_BINARY_PATH` 指定测试二进制。生成任务只引用项目/操作，不复制 Manifest 或 package scripts 的命令正文。
 
-发布的 One 文件内置当前平台的 **mise 2026.9.7** 官方压缩包，用户只安装 One。首次运行校验内置包，从自身解压可执行文件，校验后原子写入私有缓存；运行时不下载 mise，并在内置 runtime 子进程中关闭 mise 自身的自动升级和更新检查。默认始终使用内置固定版本；`ONE_MISE_BINARY` 可显式指定兼容程序（最低 **2026.9.7**），指定程序不可用或版本不支持时直接报告错误。无需 shell 激活。[mise exec](https://mise.jdx.dev/cli/exec.html)。
+mise 分发方式已按 [2026-09-26 托管方案](2026-09-26-mise-runtime-bootstrap.md) 调整：One 不再嵌入程序或压缩包。`ONE_MISE_BINARY` 显式路径优先，其次为兼容的系统 PATH mise，否则在 One 私有目录复用或从官方 Release 下载固定版本 2026.9.7；系统版本最低要求仍为 2026.9.7。每次实际执行重新解析，外部程序被删时转用托管版本，托管程序损坏时校验并恢复。
 
-运行时缓存位于 `$XDG_CACHE_HOME/one/runtimes/mise/<version>/<platform>/`，默认 `~/.cache/one/runtimes/mise/`。压缩包与可执行文件分别固定 SHA256；并发解压使用文件锁，缓存损坏从内置资源恢复。Linux 使用 musl 发行包；覆盖 One 的五个发布平台，每个 One 文件只携带对应平台资源。`sync-mise` 在构建时准备本机资源，`sync-mise-all` 和 GoReleaser 准备全部平台；资源不加入 Git。保留上游 MIT 许可证。
+托管程序放在 `$XDG_DATA_HOME/one/runtimes/mise/<version>/<platform>/`，默认 `~/.local/share/one/runtimes/mise/`。工具、配置、状态和缓存使用各自 XDG 根下的 `one/mise/`；旧缓存中校验通过的同版本程序可迁移，原文件保留。托管子进程关闭自动更新。外部 mise 保留自己的目录；切换到托管模式可能需要重新安装工具、重新授权项目配置。
 
-One 仅修改子进程 PATH，不覆盖现有 mise，不额外设置自动信任。mise 默认模式可能自动信任执行中的配置；设置 `MISE_PARANOID=1` 可要求显式授权。创建、配置生成和 dry-run 均不触发解压。代价是 One 文件增大，首次运行需要缓存空间；Node、Go 等工具和应用依赖的下载仍由各自工具处理。
+构建不下载 mise；首次没有可用本地程序时需要联网。下载采用固定压缩包及程序 SHA256、文件锁、临时文件和原子替换。普通测试使用本地 HTTP fixture，真实官方版本验证由独立集成测试完成。One 仅调整子进程环境，不激活 shell，不额外设置自动信任；创建、静态配置生成和 dry-run 不触发准备。
 
 提供可选的 `one mise <args...>` 原生转发入口，用同一套 runtime 解析访问 trust、doctor、exec 等操作；该入口不先运行 mise exec，也不额外加载 One 项目密钥，因此未信任配置时也能执行显式 trust。普通 `create/add/dev/run` 仍保持原用法。
 
@@ -107,6 +107,6 @@ CI 与部署必须分别梳理 Cloudflare/EdgeOne 的本地 build、S3-compatibl
 - `mise_runtime_test.go` 验证原参数、退出码、环境顺序、静态预览、自动生成、冲突预检和真实生成任务。
 - `mise_runtime_unix_test.go` 验证 Ctrl-C / 子服务失败之后双服务释放端口。
 - 设置 `ONE_TEST_MISE_BINARY` 可启用真实 mise 集成；环境与任务测试通过用户 system 工具覆盖避免下载，不能替代干净机器安装验收。
-- installer 测试覆盖并发解压、tar/zip 校验、缓存损坏恢复、摘要失败和取消清理，并验证内置的真实官方压缩包。Linux 默认 e2e 在没有 PATH mise、不可用代理、空缓存的临时 workspace 中验证原始 One 命令首次执行和缓存复用。`ONE_TEST_MISE_BINARY` 可额外指定真实 mise 验证配置分层、信任和任务。
+- installer 测试使用本地 HTTP fixture 覆盖并发下载、tar/zip 校验、删除/损坏恢复、迁移、摘要失败和取消清理。e2e 验证系统发现以及空缓存离线失败；`ONE_TEST_MISE_BINARY` 可额外指定真实 mise 验证配置分层、信任和任务，固定官方版本还可验证托管迁移及离线复用。
 - 执行仓库规定的 `task check`，进程和配置相关包补充 race 检查；Windows 交叉编译不能代替实机验证。
 - 用户测试完成后再提交。后续阶段按实际验收推进，本轮不宣称 CI、部署、完整锁文件或跨平台实机验证已完成。

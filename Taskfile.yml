@@ -55,8 +55,6 @@ tasks:
       - 'packages/kernel/**/*.go'
       - 'packages/cli/cmd/**/*.go'
       - 'packages/cli/internal/**/*.go'
-      - 'packages/cli/internal/adapters/runtime/mise/assets/*.tar.gz'
-      - 'packages/cli/internal/adapters/runtime/mise/assets/*.zip'
       - 'packages/cli/internal/adapters/deploy/kustomize/templates/*'
       - 'packages/cli/internal/platform/i18n/locales/*.json'
       - 'packages/cli/internal/resources/bundled/**/*'
@@ -188,12 +186,12 @@ tasks:
 
   build-all:
     desc: Cross-compile every supported platform under go-dist/
-    deps: [sync-bundled, sync-mise-all, sync-web]
+    deps: [sync-bundled, sync-web]
     dir: '{{.CLI_DIR}}'
     cmds:
       - rm -rf ../../go-dist
       - mkdir -p ../../go-dist
-      - for: { var: PLATFORMS, default: ['darwin/amd64', 'darwin/arm64', 'linux/amd64', 'linux/arm64', 'windows/amd64'] }
+      - for: ['darwin/amd64', 'darwin/arm64', 'linux/amd64', 'linux/arm64', 'windows/amd64']
         cmd: |
           plat={{.ITEM}}
           os=${plat%/*}
@@ -366,20 +364,7 @@ tasks:
     generates:
       - 'apps/dashboard/dist/index.html'
 
-  sync-mise:
-    desc: Fetch and verify the pinned mise archive embedded for the local platform
-    run: once
-    cmds:
-      - go run ./packages/cli/tools/sync-mise
-
-  sync-mise-all:
-    desc: Fetch and verify mise archives for all release platforms
-    run: once
-    cmds:
-      - go run ./packages/cli/tools/sync-mise --all
-
   sync-bundled:
-    deps: [sync-mise]
     desc: Regenerate registry/_templates/_skills under packages/cli/internal/resources/bundled (go:embed sources)
     run: once
     summary: |

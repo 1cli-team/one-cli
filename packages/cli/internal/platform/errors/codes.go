@@ -186,7 +186,7 @@ var Codes = map[Code]Definition{
 	},
 	RUNTIME_INVALID:          {Summary: "The selected execution runtime is not builtin or mise."},
 	MISE_NOT_FOUND:           {Summary: "The explicitly selected mise executable is unavailable."},
-	MISE_INSTALL_FAILED:      {Summary: "One could not extract, verify, or prepare its bundled mise runtime."},
+	MISE_INSTALL_FAILED:      {Summary: "One could not download, migrate, verify, or prepare its managed mise runtime."},
 	MISE_VERSION_UNSUPPORTED: {Summary: "The installed mise version is unsupported or could not be read."},
 	MISE_CONFIG_CONFLICT:     {Summary: "A managed mise configuration was modified or changed during generation."},
 	HOOKS_CONFIG_CONFLICT:    {Summary: "Existing Git hooks or hk configuration conflict with One's generated setup."},

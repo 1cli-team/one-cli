@@ -2,7 +2,7 @@
 
 日期：2026-09-14。状态：已实现并通过自动检查与 Linux 真实运行验收；等待用户测试后再提交。
 
-延续 [mise 接入方案](./2026-09-14-mise-runtime-adoption.md)：保留现有 `create/add/dev/run` 用法，继续内置 mise，不增加额外二进制压缩。用户测试确认后再提交；实现阶段不按每个小步骤提交 commit。
+延续 [mise 接入方案](./2026-09-14-mise-runtime-adoption.md)：保留现有 `create/add/dev/run` 用法；mise 分发已按 [2026-09-26 方案](2026-09-26-mise-runtime-bootstrap.md) 改为系统优先、缺失时按需下载，不再内置。用户测试确认后再提交；实现阶段不按每个小步骤提交 commit。
 
 ## 目标和当前证据
 

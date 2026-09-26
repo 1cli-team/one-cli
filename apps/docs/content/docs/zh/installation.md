@@ -87,20 +87,34 @@ Windows 归档名是 `one-cli_windows_amd64.zip`。
 
 ## One 自动管理 mise
 
-新建 workspace 的 `one run` 和 `one dev` 使用 mise 管理工具环境。**发布的 `one` 文件已内置当前平台的 mise 2026.9.7，无需单独安装，首次使用也无需下载 mise。** One 校验内置压缩包，解压并校验可执行文件后放入自己的缓存；后续运行复用缓存。macOS、Linux 的 x64 / arm64 和 Windows x64 发布文件分别携带对应平台资源。[官方二进制分发说明](https://mise.jdx.dev/installing-mise.html)。
+新建 workspace 的 `one run` 和 `one dev` 使用 mise 管理工具环境。**One 安装包不包含 mise；实际使用时优先采用 PATH 中兼容的 mise，否则复用或从官方 GitHub Release 下载固定版本 2026.9.7。** 下载后校验压缩包和程序 SHA256，再原子安装。支持 macOS、Linux 的 x64 / arm64 和 Windows x64；Linux 使用 musl 资源。[官方二进制分发说明](https://mise.jdx.dev/installing-mise.html)。
 
-不需要激活 shell。配置信任遵循 mise 自身规则；默认模式下执行命令可能自动信任当前配置，设置 `MISE_PARANOID=1` 后需先显式审查并信任配置；Node、Go 等工具下载由 mise 处理，应用依赖仍由包管理器安装，尚未安装的工具和依赖仍可能需要联网。旧 workspace 在显式启用前继续沿用已有工具，详见 [`one configure mise`](/zh/docs/configure/#mise-工作区工具配置)。
+每次需要 runtime 时重新检查：系统 mise 被删除、版本过旧或不可执行时，One 转用托管版本；托管程序缺失或损坏时自动恢复。系统版本重新可用后恢复系统优先。显式设置 `ONE_MISE_BINARY` 的路径或版本有误时直接报错，不自动回退。
 
-缓存位于 `$XDG_CACHE_HOME/one/runtimes/mise/<version>/<platform>/`，未设置时使用 `~/.cache/one/runtimes/mise/`。One 默认使用内置固定版本，仅在子进程 PATH 中加入缓存目录。缓存损坏会从内置资源重新解压，无需联网。内置 mise 随 One 升级；One 会关闭该子进程的 mise 自动升级和更新提示。内置资源会增加 One 发布文件体积；运行时需要可写、可执行的缓存目录。
+不需要激活 shell。配置信任遵循 mise 自身规则；设置 `MISE_PARANOID=1` 后需先显式审查并信任配置。旧 workspace 在显式启用前继续沿用已有工具，详见 [`one configure mise`](/zh/docs/configure/#mise-工作区工具配置)。
+
+| 托管内容 | 默认目录 | 自定义根目录 |
+|---|---|---|
+| mise 程序 | `~/.local/share/one/runtimes/mise/<version>/<platform>/` | `XDG_DATA_HOME` |
+| Node、Go、插件等 | `~/.local/share/one/mise/` | `XDG_DATA_HOME` |
+| mise 全局配置 | `~/.config/one/mise/` | `XDG_CONFIG_HOME` |
+| 状态、信任记录 | `~/.local/state/one/mise/` | `XDG_STATE_HOME` |
+| 可清理缓存 | `~/.cache/one/mise/` | `XDG_CACHE_HOME` |
+
+Windows 同样使用有效用户 Home 下的对应目录。XDG 根必须是绝对路径。托管模式会在子进程中设置 `MISE_DATA_DIR`、`MISE_CONFIG_DIR`、`MISE_STATE_DIR`、`MISE_CACHE_DIR`，覆盖继承的同名变量；外部 mise 保留原目录设置。项目配置文件仍留在项目内。切换到托管模式时，工具可能需要重新安装，配置可能需要重新授权；不复制系统配置或信任记录。
+
+One 仅修改子进程 PATH。托管版本随 One 更新，自动升级和更新提示在该子进程中关闭；自行用 `mise self-update` 替换托管程序后，下次运行会按固定摘要修复。旧版 One 缓存中的同版本程序经校验后可迁移，旧文件保留。缓存与程序、工具、状态分开，清理缓存不会删除工具或信任记录。
+
+**离线使用**：已有可用系统版本、托管程序或可迁移旧缓存时无需下载 mise。全新环境没有这些程序时需要联网；可提前安装兼容 mise 或用 `ONE_MISE_BINARY` 指定已准备的程序。Node、Go、hk 和项目依赖也须提前安装，mise 程序可用并不代表这些工具已可离线使用。
 
 | 变量 | 用途 |
 |---|---|
-| `ONE_MISE_BINARY` | 显式使用其他 mise 可执行文件的绝对路径，最低支持版本为 2026.9.7 |
+| `ONE_MISE_BINARY` | 显式指定 mise 可执行文件的绝对路径，外部程序最低支持版本为 2026.9.7 |
 | `ONE_RUNTIME=builtin` | 临时诊断时使用机器原有工具，跳过 mise |
 
-解压、写入或校验失败返回 `MISE_INSTALL_FAILED`；不会执行不完整的文件。修复缓存权限后重试原命令，内置资源损坏时重新安装 One。显式指定的 mise 文件不存在时返回 `MISE_NOT_FOUND`。`--dry-run`、创建项目和生成配置不会解压 runtime。
+下载、迁移、写入或校验失败返回 `MISE_INSTALL_FAILED`；检查到 GitHub Releases 的网络/代理及托管目录权限后重试原命令。显式外部文件不存在时返回 `MISE_NOT_FOUND`。帮助、`--dry-run`、创建项目和生成配置不准备 runtime。
 
-需要访问 mise 的原生命令时，使用 `one mise`，无需把缓存目录加入 PATH：
+需要访问 mise 的原生命令时，使用 `one mise`，无需把托管程序目录加入 PATH：
 
 ```bash
 one mise --version
@@ -110,7 +124,7 @@ one mise trust apps/web/.mise/conf.d/one.toml
 one mise exec -- pnpm install
 ```
 
-`trust` 请在审查对应配置后运行；自定义配置同样遵循 mise 的信任规则。安装依赖的例子应在 workspace 根目录执行。`one mise` 原样转发参数、IO 和退出码，不额外注入 One 项目密钥；需要项目密钥时继续使用 `one run`。`one mise --help` 展示 One 的入口说明，不触发解压。
+`trust` 请在审查对应配置后运行；自定义配置同样遵循 mise 的信任规则。安装依赖的例子应在 workspace 根目录执行。`one mise` 原样转发参数、IO 和退出码，不额外注入 One 项目密钥；需要项目密钥时继续使用 `one run`。`one mise --help` 展示 One 的入口说明，不探测或下载 mise。
 
 ## 配置 Provider 凭据
 
