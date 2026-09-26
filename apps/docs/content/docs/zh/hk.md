@@ -3,7 +3,7 @@ title: one hk
 description: 使用 hk 统一工作区检查、显式修复和 Git 提交检查。
 ---
 
-`one hk` 通过 One 内置的 mise 运行固定版本的 hk。Go、JS/TS 和混合工作区使用同一套入口，不需要为了 Git hooks 安装 Husky 或 commitlint。
+`one hk` 通过 One 选择的 mise（优先系统版本，否则按需下载并托管） 运行固定版本的 hk。Go、JS/TS 和混合工作区使用同一套入口，不需要为了 Git hooks 安装 Husky 或 commitlint。
 
 ## 日常使用
 
@@ -34,7 +34,7 @@ one mise exec -- pnpm exec oxfmt --write package.json
 one configure hooks
 ```
 
-Git 启动器记录本次 One 可执行文件的位置，并通过它运行内置 mise；不依赖终端的 mise 激活状态。移动或更换 One 安装位置后，可以重新执行 `one configure hooks`。
+Git 启动器记录本次 One 可执行文件的位置，并通过它解析和运行 mise；不依赖终端的 mise 激活状态。移动或更换 One 安装位置后，可以重新执行 `one configure hooks`。
 
 ## 默认检查
 
@@ -48,7 +48,7 @@ Git 启动器记录本次 One 可执行文件的位置，并通过它运行内�
 
 提交检查不调用 Go 模板中包含 `go mod tidy` 的 `task check`。构建、类型检查和测试仍可通过项目原有命令执行，也可以自行加入 hk 配置。
 
-工具版本由 mise 提供，首次需要时下载并缓存。mise 本身已经内置在 One 中；hk 是单独安装的工作区工具。JS 检查使用项目依赖，需要先安装依赖；`one dev <project>` 会准备开发依赖，也可运行 `one mise exec -- pnpm install`。
+工具版本由 mise 提供，首次需要时下载并缓存。mise 本身优先使用系统版本，本地没有可用程序时由 One 下载并托管；hk 是单独安装的工作区工具。JS 检查使用项目依赖，需要先安装依赖；`one dev <project>` 会准备开发依赖，也可运行 `one mise exec -- pnpm install`。
 
 ## 配置与项目增量更新
 

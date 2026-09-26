@@ -15,10 +15,6 @@ version: 2
 
 project_name: one-cli
 
-before:
-  hooks:
-    - go run ./packages/cli/tools/sync-mise --all
-
 builds:
   - id: one
     dir: packages/cli

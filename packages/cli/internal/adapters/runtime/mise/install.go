@@ -3,7 +3,6 @@ package mise
 import (
 	"archive/tar"
 	"archive/zip"
-	"bytes"
 	"compress/gzip"
 	"context"
 	"crypto/sha256"
@@ -17,39 +16,24 @@ import (
 
 	"github.com/gofrs/flock"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/fsutil"
-	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/userdirs"
 )
 
 const maxArchiveSize = 256 << 20
 const maxBinarySize = 512 << 20
 
-// installer owns only One's private versioned runtime cache. It never changes
+// installer owns only One's private versioned runtime directory. It never changes
 // PATH, shell configuration, an existing mise installation, or config trust.
 type installer struct {
-	root    string
-	archive []byte
-	out     io.Writer
-}
-
-func defaultInstaller() (installer, error) {
-	cache := os.Getenv("XDG_CACHE_HOME")
-	if cache == "" {
-		home, err := userdirs.Home()
-		if err != nil {
-			return installer{}, err
-		}
-		cache = filepath.Join(home, ".cache")
-	}
-	if !filepath.IsAbs(cache) {
-		return installer{}, fmt.Errorf("mise runtime cache must have an absolute path")
-	}
-	return installer{
-		root:    filepath.Join(cache, "one", "runtimes", "mise"),
-		archive: bundledArchive, out: os.Stderr,
-	}, nil
+	root       string
+	legacyRoot string
+	downloader downloader
+	out        io.Writer
 }
 
 func (i installer) ensure(ctx context.Context, a releaseAsset) (string, error) {
+	if err := ctx.Err(); err != nil {
+		return "", err
+	}
 	dir := filepath.Join(i.root, managedVersion, a.Platform)
 	target := filepath.Join(dir, a.BinaryName())
 	if err := verifyExecutable(target, a.BinarySHA256); err == nil {
@@ -57,12 +41,6 @@ func (i installer) ensure(ctx context.Context, a releaseAsset) (string, error) {
 	}
 	if err := ctx.Err(); err != nil {
 		return "", err
-	}
-	if len(i.archive) == 0 {
-		return "", fmt.Errorf("this One build has no bundled mise for the current platform")
-	}
-	if len(i.archive) > maxArchiveSize || fmt.Sprintf("%x", sha256.Sum256(i.archive)) != a.ArchiveSHA256 {
-		return "", fmt.Errorf("bundled mise archive SHA256 mismatch")
 	}
 	if err := os.MkdirAll(dir, 0o700); err != nil {
 		return "", err
@@ -81,39 +59,66 @@ func (i installer) ensure(ctx context.Context, a releaseAsset) (string, error) {
 	if err := verifyExecutable(target, a.BinarySHA256); err == nil {
 		return target, nil
 	}
-	if i.out != nil {
-		fmt.Fprintf(i.out, "[one] Preparing bundled mise %s (%s); extracting to the One runtime cache.\n", managedVersion, a.Platform)
+	if i.legacyRoot != "" {
+		legacy := filepath.Join(i.legacyRoot, managedVersion, a.Platform, a.BinaryName())
+		if verifyExecutable(legacy, a.BinarySHA256) == nil {
+			if i.out != nil {
+				fmt.Fprintf(i.out, "[one] Migrating verified mise %s to %s.\n", managedVersion, dir)
+			}
+			return target, publishBinary(ctx, target, a.BinarySHA256, func(dest io.Writer) error {
+				f, err := os.Open(legacy)
+				if err != nil {
+					return err
+				}
+				defer f.Close()
+				return copyLimited(contextWriter{ctx: ctx, dest: dest}, f, maxBinarySize)
+			})
+		}
 	}
-
-	binary, err := os.CreateTemp(dir, ".extract-*")
+	if i.out != nil {
+		fmt.Fprintf(i.out, "[one] Downloading official mise %s (%s) into %s.\n", managedVersion, a.Platform, dir)
+	}
+	archive, err := i.downloader.fetch(ctx, dir, a)
 	if err != nil {
 		return "", err
 	}
+	defer os.Remove(archive)
+	return target, publishBinary(ctx, target, a.BinarySHA256, func(dest io.Writer) error {
+		return extractBinary(ctx, archive, a, dest)
+	})
+}
+
+func publishBinary(ctx context.Context, target, digest string, write func(io.Writer) error) error {
+	dir := filepath.Dir(target)
+	binary, err := os.CreateTemp(dir, ".extract-*")
+	if err != nil {
+		return err
+	}
 	defer os.Remove(binary.Name())
-	err = extractBinary(ctx, i.archive, a, binary)
+	err = write(binary)
 	if err == nil {
 		err = binary.Sync()
 	}
 	closeErr := binary.Close()
 	if err != nil {
-		return "", err
+		return err
 	}
 	if closeErr != nil {
-		return "", closeErr
+		return closeErr
 	}
-	if err := verifyFile(binary.Name(), a.BinarySHA256, maxBinarySize); err != nil {
-		return "", fmt.Errorf("mise executable verification failed: %w", err)
+	if err := verifyFile(binary.Name(), digest, maxBinarySize); err != nil {
+		return fmt.Errorf("mise executable verification failed: %w", err)
 	}
 	if err := ctx.Err(); err != nil {
-		return "", err
+		return err
 	}
 	if err := os.Chmod(binary.Name(), 0o755); err != nil {
-		return "", err
+		return err
 	}
 	if err := fsutil.ReplaceFile(binary.Name(), target); err != nil {
-		return "", err
+		return err
 	}
-	return target, fsutil.SyncDir(dir)
+	return fsutil.SyncDir(dir)
 }
 
 func verifyExecutable(path, expected string) error {
@@ -166,20 +171,35 @@ func copyLimited(dest io.Writer, source io.Reader, limit int64) error {
 
 // Extract only the expected executable into a caller-owned temporary file.
 // Archive paths are never joined to a destination or extracted as directories.
-func extractBinary(ctx context.Context, archive []byte, a releaseAsset, dest io.Writer) error {
+func extractBinary(ctx context.Context, archive string, a releaseAsset, dest io.Writer) error {
+	f, err := os.Open(archive)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
 	dest = contextWriter{ctx: ctx, dest: dest}
 	match := func(name string) bool {
 		name = strings.TrimPrefix(name, "./")
 		return name == "mise/bin/"+a.BinaryName() || name == a.BinaryName()
 	}
 	if a.Format == "zip" {
-		z, err := zip.NewReader(bytes.NewReader(archive), int64(len(archive)))
+		info, err := f.Stat()
+		if err != nil {
+			return err
+		}
+		z, err := zip.NewReader(f, info.Size())
 		if err != nil {
 			return err
 		}
 		for _, entry := range z.File {
+			if err := ctx.Err(); err != nil {
+				return err
+			}
 			if !match(entry.Name) || !entry.Mode().IsRegular() {
 				continue
+			}
+			if entry.UncompressedSize64 > maxBinarySize {
+				return fmt.Errorf("mise executable exceeds size limit")
 			}
 			r, err := entry.Open()
 			if err != nil {
@@ -189,13 +209,16 @@ func extractBinary(ctx context.Context, archive []byte, a releaseAsset, dest io.
 			return copyLimited(dest, r, maxBinarySize)
 		}
 	} else {
-		gz, err := gzip.NewReader(bytes.NewReader(archive))
+		gz, err := gzip.NewReader(f)
 		if err != nil {
 			return err
 		}
 		defer gz.Close()
 		tr := tar.NewReader(gz)
 		for {
+			if err := ctx.Err(); err != nil {
+				return err
+			}
 			entry, err := tr.Next()
 			if err == io.EOF {
 				break
@@ -204,6 +227,9 @@ func extractBinary(ctx context.Context, archive []byte, a releaseAsset, dest io.
 				return err
 			}
 			if match(entry.Name) && entry.Typeflag == tar.TypeReg {
+				if entry.Size > maxBinarySize {
+					return fmt.Errorf("mise executable exceeds size limit")
+				}
 				return copyLimited(dest, tr, maxBinarySize)
 			}
 		}

@@ -17,8 +17,8 @@ one --version                   # 验证装好
 
 > **fresh-clone 提示**：`packages/cli/internal/resources/bundled/` 整个目录是 gitignore 的——
 > registry / templates / dashboard dist 都由 `task sync-bundled` +
-> `task sync-web` 按需重建。`sync-bundled` 还会运行 `sync-mise`，下载并校验
-> 当前平台的固定 mise 压缩包用于内置，作为 `task vet` / `test` / `build` 的依赖自动跑。
+> `task sync-web` 按需重建。这些任务作为 `task vet` / `test` / `build` 的依赖自动运行；
+> mise 不再是内嵌资源，构建与普通测试不需要下载 mise。
 > 第一次 `task install` 会触发 `pnpm install + vite build`，~30s；之后
 > task fingerprint 命中，几乎零成本。如果你直接跑 `go build` 而不走 Taskfile，
 > 会看到 `pattern all:_templates: no matching files found` 这种报错——跑一次
@@ -74,17 +74,15 @@ CI；`task pre-push` 额外运行 Go race detector。远端五项检查会在 PR
 - 公开 API（`packages/cli/pkg/`）改动要考虑 semver；详见 [CLAUDE.md 的 Public API stability](./CLAUDE.md)
 - 加新错误码：在 `packages/cli/internal/platform/errors/codes.go` 注册 `Code` 常量 + `Codes` map 条目；测试会强制对应；改完跑 `task gen-error-codes` 刷新文档
 
-### 内置 mise
+### mise 运行时
 
-发布的 One 文件内置对应平台的 mise 压缩包，首次运行从自身解压，不下载 mise。
-`task sync-mise` 在构建时下载并校验本机平台资源；`task sync-mise-all` 准备五个平台。
-`task build`、检查任务自动准备本机资源，`task build-all` 和 GoReleaser 自动准备全部平台。
-资源位于被忽略的 `packages/cli/internal/adapters/runtime/mise/assets/`，不提交二进制资源。
-资源已准备且摘要匹配时可离线构建。首次构建需要访问 GitHub Releases。
+One 发布文件不包含 mise 程序或压缩包。实际运行时优先使用 `ONE_MISE_BINARY`，其次使用 PATH 中兼容的 mise，否则复用或从官方 GitHub Release 下载固定版本。最低兼容版本和托管版本分别维护；系统或托管程序被删除后，下一次需要 runtime 时重新解析并按需恢复。
 
-升级时更新 `internal/adapters/runtime/mise/miserelease/release.go` 中的版本、压缩包和解压后程序的 SHA256，
-以及 runtime 最低版本和相关文档；重新执行 `task sync-mise-all`。上游许可证保留于
-`third_party/mise/LICENSE`，也包含在内置的原始压缩包和 One 发布归档中。
+托管程序位于 `$XDG_DATA_HOME/one/runtimes/mise/<version>/<platform>/`，默认 `~/.local/share/one/runtimes/mise/`；工具、配置、状态和缓存分别使用对应 XDG 根下的 `one/mise/`。One 在托管子进程中设置四个 `MISE_*_DIR`，并关闭自动更新。外部 mise 沿用原目录。旧版 One 缓存中校验通过的同版本程序可以离线迁移，原缓存保留。
+
+升级时验证上游校验文件的签名，更新 `packages/cli/internal/adapters/runtime/mise/miserelease/release.go` 中的版本、压缩包和程序 SHA256，再更新需要提高的 runtime 最低版本及相关文档。托管版本随 One 更新，不通过 `mise self-update` 维护。上游许可证保留于 `third_party/mise/LICENSE` 和 One 发布归档。
+
+下载器及安装器测试使用本地 HTTP fixture，覆盖并发、重试、取消、摘要和删除修复。`ONE_TEST_MISE_BINARY=/absolute/path/to/mise go test ./packages/cli/tests/e2e -run Mise` 启用真实配置与信任测试；其中托管迁移测试要求与仓库固定摘要一致的官方程序。真实下载和多平台冒烟验证在发布前单独执行，不作为普通构建的资源依赖。
 
 ### 改 templates（`packages/templates/<id>/`）
 

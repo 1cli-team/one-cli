@@ -33,7 +33,7 @@ one run [-p <name|path>] [--env-provider dotenv|infisical] [--env <env>] -- <cmd
 
 覆盖顺序为：父进程环境 → mise 环境 → 当前项目的 One 环境变量。项目目录、参数边界、标准 IO 和应用退出码保持原有语义，不需要 `mise activate`。
 
-无需单独安装 mise：发布的 One 已内置固定版本，首次运行从自身解压到缓存，无需下载 mise；之后直接复用。配置信任遵循 mise 自身规则；需要显式审批时设置 `MISE_PARANOID=1`，审查配置后通过 `one mise trust` 授权。离线配置见 [One 自动管理 mise](/zh/docs/installation/#one-自动管理-mise)，旧项目启用和版本调整见 [`one configure mise`](/zh/docs/configure/#mise-工作区工具配置)。
+无需单独安装 mise：One 优先使用兼容的系统版本，否则复用或从官方下载到自己的目录；本地没有可用程序时首次运行需要联网，程序被删后会按需恢复。配置信任遵循 mise 自身规则；需要显式审批时设置 `MISE_PARANOID=1`，审查配置后通过 `one mise trust` 授权。离线配置见 [One 自动管理 mise](/zh/docs/installation/#one-自动管理-mise)，旧项目启用和版本调整见 [`one configure mise`](/zh/docs/configure/#mise-工作区工具配置)。
 
 ## 示例
 
