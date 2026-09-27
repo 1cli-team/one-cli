@@ -331,7 +331,7 @@ func TestE2E_MiseCreateAddAndRefreshWithoutNewFlags(t *testing.T) {
 			t.Fatalf("configuration %s: %v %s", rel, err, raw)
 		}
 	}
-	out, stderr, code := runBinaryIn(t, root, "configure", "mise", "--dry-run", "-o", "json")
+	out, stderr, code := runBinaryIn(t, root, "init", "mise", "--dry-run", "-o", "json")
 	if code != 0 || !strings.Contains(out, `"changes": []`) {
 		t.Fatalf("refresh: %d %s %s", code, out, stderr)
 	}

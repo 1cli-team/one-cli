@@ -34,10 +34,7 @@ func canonicalize(s Spec) Spec {
 		if a.TemplateCode != b.TemplateCode {
 			return a.TemplateCode < b.TemplateCode
 		}
-		if a.DeployCode != b.DeployCode {
-			return a.DeployCode < b.DeployCode
-		}
-		return a.ContainerCode < b.ContainerCode
+		return false
 	})
 	sort.Strings(out.UnknownSegments)
 	return out

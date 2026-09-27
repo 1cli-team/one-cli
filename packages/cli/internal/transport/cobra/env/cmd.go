@@ -24,7 +24,7 @@ func Commands(deps Dependencies) []*cobra.Command {
 		Use:     "env",
 		Long:    i18n.T("env.tip"),
 		Example: "  one env\n  one env set DATABASE_URL\n  one env list",
-		Args:    cobra.NoArgs,
+		Args:    i18n.NoArgs,
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			summary, err := deps.Service.Summary(commandScope(cmd))
 			if err != nil {
@@ -38,9 +38,10 @@ func Commands(deps Dependencies) []*cobra.Command {
 		newGetCmd(deps), newSetCmd(deps), newListCmd(deps), newPullCmd(deps), newSwitchCmd(deps),
 	}
 	for _, child := range children {
-		helpui.MarkAdvanced(child, "profile")
+		helpui.MarkAdvanced(child)
 	}
 	parent.AddCommand(children...)
+	configureGlobal(parent, deps)
 	i18n.MarkShort(parent, "env.short")
 	i18n.MarkLong(parent, "env.tip")
 	return []*cobra.Command{parent}

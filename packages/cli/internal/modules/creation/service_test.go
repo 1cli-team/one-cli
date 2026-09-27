@@ -7,7 +7,6 @@ import (
 	"path/filepath"
 	"testing"
 
-	configureapp "github.com/torchstellar-team/one-cli/packages/cli/internal/application/configure"
 	catalog "github.com/torchstellar-team/one-cli/packages/cli/internal/core/backend"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/core/template"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/core/workspace"
@@ -81,7 +80,7 @@ func TestServiceOwnsWorkspaceAndProjectCreation(t *testing.T) {
 		t.Fatal("react-spa template is absent")
 	}
 	added, err := service.AddProject(context.Background(), target, ProjectInput{
-		Template: selected, Name: "web", DeferDeployment: true,
+		Template: selected, Name: "web",
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -128,14 +127,7 @@ func TestCreateWorkspaceRechecksTargetBeforeMutation(t *testing.T) {
 func newCreationService(t *testing.T, observers ...WorkspaceObserver) *Service {
 	t.Helper()
 	backendCatalog := catalog.Builtin()
-	profiles, err := configureapp.NewProfileService(
-		backendCatalog,
-		configureapp.LocalProfileRepository{},
-	)
-	if err != nil {
-		t.Fatal(err)
-	}
-	environments, err := environmentmodule.NewService(backendCatalog, profiles)
+	environments, err := environmentmodule.NewService(backendCatalog)
 	if err != nil {
 		t.Fatal(err)
 	}

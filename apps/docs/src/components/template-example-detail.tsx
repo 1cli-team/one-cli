@@ -55,7 +55,7 @@ const copy = {
     templates: "包含模板",
     customizeCard: {
       title: "想自由组合？",
-      body: "打开自定义模板，挑选项目 / 部署 / env，命令实时生成。",
+      body: "打开自定义模板，挑选项目 / env，命令实时生成。",
       cta: "自定义模板",
     },
   },
@@ -67,7 +67,7 @@ const copy = {
     templates: "Templates included",
     customizeCard: {
       title: "Want a custom mix?",
-      body: "Open the builder to pick projects, deploy targets and env. Commands update live.",
+      body: "Open the builder to pick projects and env. Commands update live.",
       cta: "Build your own",
     },
   },

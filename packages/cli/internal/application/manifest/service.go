@@ -6,12 +6,11 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"sort"
+	"net/url"
 	"strings"
 	"sync"
 
 	catalog "github.com/torchstellar-team/one-cli/packages/cli/internal/core/backend"
-	"github.com/torchstellar-team/one-cli/packages/cli/internal/core/template"
 	workspacecore "github.com/torchstellar-team/one-cli/packages/cli/internal/core/workspace"
 )
 
@@ -60,18 +59,6 @@ type ProjectEnvironmentPatch struct {
 	Disabled bool   `json:"disabled"`
 }
 
-type ProjectContainerPatch struct {
-	Enabled   bool   `json:"enabled"`
-	Backend   string `json:"backend"`
-	Image     string `json:"image"`
-	Namespace string `json:"namespace"`
-}
-
-type ProjectDeployPatch struct {
-	Backend string         `json:"backend"`
-	Config  map[string]any `json:"config"`
-}
-
 // ProjectManifestPatch is intentionally a whitelist rather than a partial
 // Manifest. Browser clients can only update the user-facing project settings
 // represented here; identity, paths, toolchains and unknown backend config
@@ -80,12 +67,13 @@ type ProjectManifestPatch struct {
 	Project     string                   `json:"project"`
 	General     *ProjectGeneralPatch     `json:"general,omitempty"`
 	Environment *ProjectEnvironmentPatch `json:"environment,omitempty"`
-	Container   *ProjectContainerPatch   `json:"container,omitempty"`
-	Deploy      *ProjectDeployPatch      `json:"deploy,omitempty"`
 }
 
 type WorkspaceEnvironmentPatch struct {
-	Backend string `json:"backend"`
+	Backend     string  `json:"backend"`
+	ProjectID   *string `json:"projectId,omitempty"`
+	ProjectName *string `json:"projectName,omitempty"`
+	SiteURL     *string `json:"siteUrl,omitempty"`
 }
 
 type WorkspaceManifestPatch struct {
@@ -93,8 +81,9 @@ type WorkspaceManifestPatch struct {
 }
 
 type ApplyManifestInput struct {
-	Revision string                 `json:"revision"`
-	Changes  []ProjectManifestPatch `json:"changes"`
+	Workspace *WorkspaceManifestPatch `json:"workspace,omitempty"`
+	Revision  string                  `json:"revision"`
+	Changes   []ProjectManifestPatch  `json:"changes"`
 }
 
 type ApplyManifestResult struct {
@@ -127,7 +116,8 @@ func (s *Service) ApplyManifestDraft(
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	if strings.TrimSpace(input.Revision) == "" || len(input.Changes) == 0 {
+	hasWorkspaceChange := input.Workspace != nil && input.Workspace.Environment != nil
+	if strings.TrimSpace(input.Revision) == "" || (!hasWorkspaceChange && len(input.Changes) == 0) {
 		return ApplyManifestResult{}, fmt.Errorf("%w: revision and at least one change are required", ErrInvalidInput)
 	}
 	manifest, currentRevision, err := workspacecore.ReadManifestSnapshot(root)
@@ -138,11 +128,19 @@ func (s *Service) ApplyManifestDraft(
 		return ApplyManifestResult{}, &ManifestConflict{Expected: input.Revision, Current: currentRevision}
 	}
 
+	if hasWorkspaceChange {
+		if err := applyWorkspaceEnvironmentPatch(manifest, input.Workspace.Environment); err != nil {
+			return ApplyManifestResult{}, err
+		}
+	}
 	applied, err := s.applyProjectChanges(ctx, manifest, input.Changes)
 	if err != nil {
 		return ApplyManifestResult{}, err
 	}
 
+	if hasWorkspaceChange {
+		applied++
+	}
 	if err := workspacecore.WriteManifest(root, manifest); err != nil {
 		return ApplyManifestResult{}, err
 	}
@@ -211,6 +209,36 @@ func applyWorkspaceEnvironmentPatch(
 	if manifest.Domains.Env == nil {
 		manifest.Domains.Env = &workspacecore.BackendRef{}
 	}
+	if patch.ProjectID != nil {
+		if backend != workspacecore.EnvBackendInfisical {
+			return fmt.Errorf("%w: project binding requires Infisical", ErrInvalidInput)
+		}
+		if strings.TrimSpace(*patch.ProjectID) == "" {
+			return fmt.Errorf("%w: projectId is required", ErrInvalidInput)
+		}
+		config := map[string]any{}
+		if len(manifest.Domains.Env.Config) > 0 {
+			if err := json.Unmarshal(manifest.Domains.Env.Config, &config); err != nil {
+				return err
+			}
+		}
+		config["projectId"] = *patch.ProjectID
+		if patch.ProjectName != nil {
+			config["projectName"] = *patch.ProjectName
+		}
+		if patch.SiteURL != nil {
+			u, err := url.Parse(*patch.SiteURL)
+			if err != nil || u.Host == "" || u.User != nil || u.RawQuery != "" || u.Fragment != "" || u.Path != "" || (u.Scheme != "https" && !(u.Scheme == "http" && (u.Hostname() == "localhost" || u.Hostname() == "127.0.0.1" || u.Hostname() == "::1"))) {
+				return fmt.Errorf("%w: invalid Infisical instance URL", ErrInvalidInput)
+			}
+			config["siteUrl"] = u.String()
+		}
+		data, err := json.Marshal(config)
+		if err != nil {
+			return err
+		}
+		manifest.Domains.Env.Config = data
+	}
 	manifest.Domains.Env.Kind = backend
 	return nil
 }
@@ -220,18 +248,6 @@ func (s *Service) applyProjectChanges(
 	manifest *workspacecore.Manifest,
 	changes []ProjectManifestPatch,
 ) (int, error) {
-	var registry *template.Registry
-	var err error
-	for _, change := range changes {
-		if change.Deploy != nil {
-			registry, err = template.Fetch(ctx, "")
-			if err != nil {
-				return 0, err
-			}
-			break
-		}
-	}
-
 	seen := make(map[string]struct{}, len(changes))
 	applied := 0
 	for _, change := range changes {
@@ -247,7 +263,7 @@ func (s *Service) applyProjectChanges(
 		if project == nil {
 			return 0, fmt.Errorf("%w: %s", ErrProjectNotFound, name)
 		}
-		if change.General == nil && change.Environment == nil && change.Container == nil && change.Deploy == nil {
+		if change.General == nil && change.Environment == nil {
 			return 0, fmt.Errorf("%w: project %q has no changes", ErrInvalidInput, name)
 		}
 
@@ -278,18 +294,6 @@ func (s *Service) applyProjectChanges(
 			}
 			applied++
 		}
-		if change.Container != nil {
-			if err := s.applyContainerPatch(project, change.Container); err != nil {
-				return 0, err
-			}
-			applied++
-		}
-		if change.Deploy != nil {
-			if err := s.applyDeployPatch(manifest, project, change.Deploy, registry); err != nil {
-				return 0, err
-			}
-			applied++
-		}
 	}
 	return applied, nil
 }
@@ -315,184 +319,6 @@ func findProject(manifest *workspacecore.Manifest, name string) *workspacecore.M
 func unsafeSecretPath(value string) bool {
 	for _, part := range strings.Split(strings.ReplaceAll(value, "\\", "/"), "/") {
 		if part == ".." {
-			return true
-		}
-	}
-	return false
-}
-
-func (s *Service) applyContainerPatch(
-	project *workspacecore.ManifestProject,
-	patch *ProjectContainerPatch,
-) error {
-	ensureProjectDomains(project)
-	if !patch.Enabled {
-		project.Domains.Container = nil
-		return nil
-	}
-	backend := strings.TrimSpace(patch.Backend)
-	if _, ok := s.catalog.Lookup(catalog.DomainContainer, backend); !ok {
-		return fmt.Errorf("%w: unknown container backend %q", ErrInvalidInput, backend)
-	}
-	project.Domains.Container = &workspacecore.ProjectContainerOverride{
-		Kind: backend, Image: strings.TrimSpace(patch.Image), Namespace: strings.TrimSpace(patch.Namespace),
-	}
-	return nil
-}
-
-func (s *Service) applyDeployPatch(
-	manifest *workspacecore.Manifest,
-	project *workspacecore.ManifestProject,
-	patch *ProjectDeployPatch,
-	registry *template.Registry,
-) error {
-	ensureProjectDomains(project)
-	backend := strings.TrimSpace(patch.Backend)
-	if backend == "" {
-		project.Domains.Deploy = nil
-		return nil
-	}
-	spec, ok := s.catalog.Lookup(catalog.DomainDeploy, backend)
-	if !ok || !spec.Project.Configurable {
-		return fmt.Errorf("%w: unknown or non-configurable deploy backend %q", ErrInvalidInput, backend)
-	}
-	compatible := projectCompatibleDeployTargets(registry, project.TemplateID)
-	if len(compatible) > 0 && !containsString(compatible, backend) {
-		return fmt.Errorf("%w: deploy backend %q is incompatible with project %q", ErrInvalidInput, backend, project.Name)
-	}
-	existing := projectDeployConfig(project)
-	if project.Domains.Deploy == nil || strings.TrimSpace(project.Domains.Deploy.Kind) != backend {
-		existing = nil
-	}
-	raw, err := mergeProjectConfig(existing, patch.Config, spec.Project.Fields, manifest)
-	if err != nil {
-		return fmt.Errorf("%w: project %q deploy config: %v", ErrInvalidInput, project.Name, err)
-	}
-	project.Domains.Deploy = &workspacecore.ProjectDeployBackend{Kind: backend, Config: raw}
-	return nil
-}
-
-func projectCompatibleDeployTargets(registry *template.Registry, templateID string) []string {
-	if registry == nil {
-		return nil
-	}
-	for _, entry := range registry.Templates {
-		if entry.ID == templateID {
-			return append([]string(nil), entry.Compat[string(catalog.DomainDeploy)]...)
-		}
-	}
-	return nil
-}
-
-func projectDeployConfig(project *workspacecore.ManifestProject) json.RawMessage {
-	if project.Domains == nil || project.Domains.Deploy == nil {
-		return nil
-	}
-	return project.Domains.Deploy.Config
-}
-
-func mergeProjectConfig(
-	existing json.RawMessage,
-	input map[string]any,
-	fields []catalog.ProjectFieldSpec,
-	manifest *workspacecore.Manifest,
-) (json.RawMessage, error) {
-	object := map[string]any{}
-	if len(existing) > 0 {
-		if err := json.Unmarshal(existing, &object); err != nil || object == nil {
-			return nil, fmt.Errorf("existing config is not an object")
-		}
-	}
-	allowed := make(map[string]catalog.ProjectFieldSpec, len(fields))
-	for _, field := range fields {
-		allowed[field.Path] = field
-	}
-	flat := map[string]any{}
-	flattenConfig("", input, flat)
-	for path, value := range flat {
-		field, ok := allowed[path]
-		if !ok {
-			return nil, fmt.Errorf("field %q is not configurable", path)
-		}
-		text, ok := value.(string)
-		if !ok {
-			return nil, fmt.Errorf("field %q must be a string", path)
-		}
-		text = strings.TrimSpace(text)
-		if field.Required && text == "" {
-			return nil, fmt.Errorf("field %q is required", path)
-		}
-		if field.Type == catalog.ProjectFieldEnvironment && text != "" && !manifestHasEnvironment(manifest, text) {
-			return nil, fmt.Errorf("environment %q is not declared", text)
-		}
-		if text == "" {
-			deleteConfigPath(object, path)
-		} else {
-			setConfigPath(object, path, text)
-		}
-	}
-	if len(object) == 0 {
-		return nil, nil
-	}
-	return json.Marshal(object)
-}
-
-func flattenConfig(prefix string, input map[string]any, out map[string]any) {
-	keys := make([]string, 0, len(input))
-	for key := range input {
-		keys = append(keys, key)
-	}
-	sort.Strings(keys)
-	for _, key := range keys {
-		path := key
-		if prefix != "" {
-			path = prefix + "/" + key
-		}
-		if child, ok := input[key].(map[string]any); ok {
-			flattenConfig(path, child, out)
-			continue
-		}
-		out[path] = input[key]
-	}
-}
-
-func setConfigPath(object map[string]any, path string, value string) {
-	parts := strings.Split(path, "/")
-	current := object
-	for _, part := range parts[:len(parts)-1] {
-		next, ok := current[part].(map[string]any)
-		if !ok {
-			next = map[string]any{}
-			current[part] = next
-		}
-		current = next
-	}
-	current[parts[len(parts)-1]] = value
-}
-
-func deleteConfigPath(object map[string]any, path string) {
-	parts := strings.Split(path, "/")
-	current := object
-	for _, part := range parts[:len(parts)-1] {
-		next, ok := current[part].(map[string]any)
-		if !ok {
-			return
-		}
-		current = next
-	}
-	delete(current, parts[len(parts)-1])
-}
-
-func manifestHasEnvironment(manifest *workspacecore.Manifest, value string) bool {
-	if manifest == nil || manifest.Environments == nil {
-		return containsString(workspacecore.DefaultEnvironments, value)
-	}
-	return containsString(manifest.Environments.Names, value)
-}
-
-func containsString(values []string, target string) bool {
-	for _, value := range values {
-		if value == target {
 			return true
 		}
 	}

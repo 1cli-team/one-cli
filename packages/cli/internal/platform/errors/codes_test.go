@@ -1,10 +1,13 @@
 package errors_test
 
 import (
+	"fmt"
 	"reflect"
 	"testing"
 
 	cliErrors "github.com/torchstellar-team/one-cli/packages/cli/internal/platform/errors"
+	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/i18n"
+	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/output"
 )
 
 // TestEveryCodeHasDefinition catches drift between the typed Code constants
@@ -49,19 +52,11 @@ func TestEveryCodeHasDefinition(t *testing.T) {
 		cliErrors.BACKEND_NOT_ENABLED,
 		cliErrors.BACKEND_VERB_NOT_SUPPORTED,
 		cliErrors.BACKEND_INTERFACE_MISMATCH,
-		cliErrors.PROFILE_FILE_INVALID,
-		cliErrors.PROFILE_VERSION_UNSUPPORTED,
-		cliErrors.PROFILE_NOT_FOUND,
-		cliErrors.PROFILE_ALREADY_EXISTS,
-		cliErrors.PROFILE_NONE_CONFIGURED,
-		cliErrors.PROFILE_BACKEND_INVALID,
-		cliErrors.IMAGE_REF_INCOMPLETE,
-		cliErrors.IMAGE_TAG_NOT_FOUND,
+		cliErrors.PREFERENCES_FILE_INVALID,
+		cliErrors.PREFERENCES_INVALID,
 		cliErrors.CI_DISABLE_CONFIRMATION_REQUIRED,
 		cliErrors.CI_PROVIDER_UNKNOWN,
 		cliErrors.CI_RENDER_FAILED,
-		cliErrors.K8S_PACKAGE_UNSUPPORTED,
-		cliErrors.REGISTRY_CREDENTIAL_MISSING,
 		cliErrors.RELEASE_FLOW_MISMATCH,
 		cliErrors.ENV_PROFILE_NOT_FOUND,
 		cliErrors.LOCAL_ORCH_PORT_CONFLICT,
@@ -98,13 +93,34 @@ func TestEveryCodeHasDefinition(t *testing.T) {
 // Remediation slice from the registry automatically — agents rely on the
 // remediation field being present for known codes.
 func TestNew_PopulatesDefaultRemediation(t *testing.T) {
-	err := cliErrors.New(cliErrors.UNKNOWN_COMMAND, "boom")
-	if err == nil {
-		t.Fatal("New returned nil")
-	}
-	got := err.Remediation
-	want := cliErrors.Codes[cliErrors.UNKNOWN_COMMAND].Remediation
-	if !reflect.DeepEqual(got, want) {
-		t.Errorf("default remediation not populated\n  want: %#v\n  got:  %#v", want, got)
+	t.Cleanup(func() { _ = i18n.Init(i18n.DefaultLocale) })
+	for _, locale := range []string{"en-US", "zh-CN"} {
+		_ = i18n.Init(locale)
+		for code, definition := range cliErrors.Codes {
+			original := append([]output.Remediation(nil), definition.Remediation...)
+			want := append([]output.Remediation(nil), original...)
+			for i := range want {
+				if want[i].Hint != "" {
+					key := fmt.Sprintf("error.%s.hint.%d", code, i)
+					want[i].Hint = i18n.T(key)
+					if want[i].Hint == key {
+						t.Errorf("missing %s translation for %s", locale, key)
+					}
+				}
+			}
+			got := cliErrors.New(code, "project web failed").Remediation
+			if len(got) != len(want) || (len(got) != 0 && !reflect.DeepEqual(got, want)) {
+				t.Errorf("%s %s remediation: want %#v, got %#v", locale, code, want, got)
+			}
+			if !reflect.DeepEqual(definition.Remediation, cliErrors.Codes[code].Remediation) {
+				t.Fatalf("registry was mutated for %s", code)
+			}
+			if len(got) > 0 {
+				got[0].Hint = "custom hint"
+				if !reflect.DeepEqual(original, cliErrors.Codes[code].Remediation) {
+					t.Fatalf("remediation shares registry storage")
+				}
+			}
+		}
 	}
 }

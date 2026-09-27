@@ -2,22 +2,22 @@ package execution
 
 import (
 	"encoding/json"
-	"fmt"
 	"os"
 	"path/filepath"
 	"runtime"
-	"strings"
+
+	"gopkg.in/yaml.v3"
 
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/core/workspace"
 	cliErrors "github.com/torchstellar-team/one-cli/packages/cli/internal/platform/errors"
-	"gopkg.in/yaml.v3"
+	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/i18n"
 )
 
 // OperationArgs resolves the live source command, never a copy in generated TOML.
 func OperationArgs(w Workspace, selector, operation string) ([]string, error) {
 	p, ok := w.Project(selector)
 	if !ok {
-		return nil, cliErrors.New(cliErrors.SUBPROJECT_NOT_FOUND, "Unknown project: "+selector)
+		return nil, cliErrors.New(cliErrors.SUBPROJECT_NOT_FOUND, i18n.Tf("workspace.unknown_project", selector))
 	}
 	if operation == "dev" {
 		command := workspace.ProjectDev(w.Manifest(), p.Name)
@@ -33,6 +33,12 @@ func OperationArgs(w Workspace, selector, operation string) ([]string, error) {
 		}
 		return []string{"sh", "-c", command}, nil
 	}
+	return ProjectOperationArgs(w.Root(), *p, operation)
+}
+
+// ProjectOperationArgs resolves a task from the project's current source files.
+// It is shared by execution and the Dashboard and never installs or runs tools.
+func ProjectOperationArgs(root string, p workspace.Project, operation string) ([]string, error) {
 	if operation != "build" && operation != "test" && operation != "lint" {
 		return nil, missingOperation(p.Name, operation)
 	}
@@ -47,18 +53,9 @@ func OperationArgs(w Workspace, selector, operation string) ([]string, error) {
 		if err = json.Unmarshal(raw, &pkg); err != nil {
 			return nil, err
 		}
-		manager := p.PackageManager
-		if rootPkg, err := workspace.ReadPackageJSON(w.Root()); err == nil && rootPkg != nil && rootPkg.PackageManager != "" {
-			manager = rootPkg.PackageManager
-		}
-		manager, _, _ = strings.Cut(manager, "@")
-		if manager == "" {
-			manager = "pnpm"
-		}
-		switch manager {
-		case "pnpm", "npm", "yarn", "bun":
-		default:
-			return nil, fmt.Errorf("unsupported package manager %q", manager)
+		manager, err := workspace.ResolvePackageManager(root, p.PackageManager)
+		if err != nil {
+			return nil, err
 		}
 		if pkg.Scripts[operation] == "" {
 			return nil, missingOperation(p.Name, operation)
@@ -84,7 +81,7 @@ func OperationArgs(w Workspace, selector, operation string) ([]string, error) {
 		}
 		switch operation {
 		case "build":
-			return []string{"go", "build", "./..."}, nil
+			return nil, i18n.Errorf("build.taskfile_required", p.Name)
 		case "test":
 			return []string{"go", "test", "./..."}, nil
 		case "lint":
@@ -95,5 +92,5 @@ func OperationArgs(w Workspace, selector, operation string) ([]string, error) {
 }
 
 func missingOperation(project, operation string) error {
-	return cliErrors.New(cliErrors.RUNTIME_TASK_NOT_FOUND, fmt.Sprintf("Project %s has no %s task.", project, operation))
+	return cliErrors.New(cliErrors.RUNTIME_TASK_NOT_FOUND, i18n.Tf("task.operation_missing", project, operation))
 }

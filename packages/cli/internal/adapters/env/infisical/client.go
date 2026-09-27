@@ -2,27 +2,20 @@ package infisical
 
 import (
 	"context"
-	"fmt"
+	"io"
 	"net"
 	"regexp"
 	"strings"
-	"time"
 
 	infisical "github.com/infisical/go-sdk"
 	"github.com/infisical/go-sdk/packages/models"
 
-	"github.com/torchstellar-team/one-cli/packages/cli/internal/core/profile"
 	cliErrors "github.com/torchstellar-team/one-cli/packages/cli/internal/platform/errors"
+	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/i18n"
+	session "github.com/torchstellar-team/one-cli/packages/cli/internal/platform/infisicalsession"
 )
 
-// Client is the thin wrapper around the Infisical SDK that the rest of the
-// secrets package uses. Its purpose is centralising error mapping (SDK
-// errors → cliErrors.Code) so the cobra commands stay focused on UX.
-//
-// accessToken is captured after a successful UniversalAuthLogin so the
-// raw-HTTP project-creation path (CreateProject) can reach it without
-// going back through the SDK's Auth interface — this also makes the type
-// trivially mockable in tests.
+// Client wraps the SDK with the current browser session.
 type Client struct {
 	sdk         infisical.InfisicalClientInterface
 	cfg         *WorkspaceConfig
@@ -30,58 +23,14 @@ type Client struct {
 	accessToken string
 }
 
-// NewClient builds an authenticated client. Network IO happens here:
-// UniversalAuthLogin contacts Infisical to exchange the client id+secret
-// for an access token. Errors are mapped to typed cliErrors so the JSON
-// envelope reaches the agent with the right code.
-//
-// Caching: when cfg.ProfileName is set, we first try to reuse a recent
-// access token from ~/.config/one/cache/env/infisical/<profile>.json.
-// On hit we feed it into the SDK via SetAccessToken and skip the login
-// round-trip entirely. On miss / expired / parse failure / cache I/O
-// failure we transparently fall through to UniversalAuthLogin and
-// (best-effort) refresh the cache afterwards. Cache miss-on-401 is
-// not auto-retried in the first version: if a cached token is
-// rejected at first use, the resulting INFISICAL_AUTH_FAILED reaches
-// the user with a hint to clear the cache or rotate creds. Adding
-// retry-with-clear-on-401 is a future iteration.
 func NewClient(ctx context.Context, cfg *WorkspaceConfig, creds *Credentials) (*Client, error) {
-	sdk := infisical.NewInfisicalClient(ctx, infisical.Config{
-		SiteUrl:    cfg.SiteURLOrDefault(),
-		UserAgent:  "one-cli/" + clientVersion,
-		SilentMode: true,
-	})
-	profileName := strings.TrimSpace(cfg.ProfileName)
-	if profileName != "" {
-		if entry, _ := profile.ReadCache(profile.DomainEnv, "infisical", profileName); entry != nil && entry.Token != "" {
-			sdk.Auth().SetAccessToken(entry.Token)
-			return &Client{
-				sdk:         sdk,
-				cfg:         cfg,
-				credentials: creds,
-				accessToken: entry.Token,
-			}, nil
-		}
+	if creds == nil || creds.AccessToken == "" {
+		return nil, session.Missing()
 	}
-	loginResp, err := sdk.Auth().UniversalAuthLogin(creds.ClientID, creds.ClientSecret)
-	if err != nil {
-		return nil, mapAuthError(err)
-	}
-	if profileName != "" && loginResp.AccessToken != "" {
-		now := time.Now().UTC()
-		_ = profile.WriteCache(profile.DomainEnv, "infisical", profileName, &profile.CacheEntry{
-			Token:     loginResp.AccessToken,
-			TokenType: loginResp.TokenType,
-			ExpiresAt: now.Add(time.Duration(loginResp.ExpiresIn) * time.Second),
-			SavedAt:   now,
-		})
-	}
-	return &Client{
-		sdk:         sdk,
-		cfg:         cfg,
-		credentials: creds,
-		accessToken: sdk.Auth().GetAccessToken(),
-	}, nil
+	autoRefresh := false
+	sdk := infisical.NewInfisicalClient(ctx, infisical.Config{SiteUrl: cfg.SiteURLOrDefault(), UserAgent: "one-cli/" + clientVersion, SilentMode: true, LogWriter: io.Discard, AutoTokenRefresh: &autoRefresh})
+	sdk.Auth().SetAccessToken(creds.AccessToken)
+	return &Client{sdk: sdk, cfg: cfg, credentials: creds, accessToken: creds.AccessToken}, nil
 }
 
 // clientVersion is overridden at link-time via -ldflags. We don't bother
@@ -124,7 +73,7 @@ func (c *Client) RetrieveSecret(env, secretPath, key string) (*models.Secret, er
 		mapped := mapAPIError(err)
 		if isNotFound(err) {
 			return nil, cliErrors.New(cliErrors.ENV_KEY_NOT_FOUND,
-				"密钥不存在: "+key)
+				i18n.Tf("env.key_missing", key))
 		}
 		return nil, mapped
 	}
@@ -229,7 +178,7 @@ func (c *Client) DeleteSecret(env, secretPath, key string) (*models.Secret, erro
 	})
 	if err != nil {
 		if isNotFound(err) {
-			return nil, cliErrors.New(cliErrors.ENV_KEY_NOT_FOUND, "密钥不存在: "+key)
+			return nil, cliErrors.New(cliErrors.ENV_KEY_NOT_FOUND, i18n.Tf("env.key_missing", key))
 		}
 		return nil, mapAPIError(err)
 	}
@@ -251,7 +200,7 @@ func (c *Client) VerifyProjectExists(env string) error {
 	}
 	if isNotFound(err) {
 		return cliErrors.New(cliErrors.INFISICAL_PROJECT_NOT_FOUND,
-			"找不到 Infisical 项目: "+c.cfg.ProjectID).
+			i18n.Tf("infisical.project_missing", c.cfg.ProjectID)).
 			WithContext(map[string]any{"project_id": c.cfg.ProjectID, "site_url": c.cfg.SiteURLOrDefault()})
 	}
 	return mapAPIError(err)
@@ -259,47 +208,22 @@ func (c *Client) VerifyProjectExists(env string) error {
 
 // ----- error helpers below -----
 
-func mapAuthError(err error) error {
-	msg := err.Error()
-	lower := strings.ToLower(msg)
-	switch {
-	case isNetworkError(err):
-		return cliErrors.New(cliErrors.INFISICAL_NETWORK_ERROR,
-			"无法连接到 Infisical："+msg)
-	case strings.Contains(lower, "invalid credential") ||
-		strings.Contains(lower, "unauthorized") ||
-		strings.Contains(lower, "401"):
-		return cliErrors.New(cliErrors.INFISICAL_AUTH_FAILED,
-			"Infisical 拒绝了凭据：请确认 client id / secret 正确且未过期。")
-	default:
-		return cliErrors.New(cliErrors.INFISICAL_AUTH_FAILED,
-			"Infisical 登录失败："+msg)
-	}
-}
-
+func mapAuthError(err error) error { return mapAPIError(err) }
 func mapAPIError(err error) error {
 	if err == nil {
 		return nil
 	}
 	if isNetworkError(err) {
-		return cliErrors.New(cliErrors.INFISICAL_NETWORK_ERROR,
-			"无法连接到 Infisical："+err.Error())
+		return cliErrors.New(cliErrors.INFISICAL_NETWORK_ERROR, i18n.T("infisical.network"))
+	}
+	lower := strings.ToLower(err.Error())
+	if strings.Contains(lower, "401") || strings.Contains(lower, "unauthorized") {
+		return cliErrors.New(cliErrors.INFISICAL_AUTH_FAILED, i18n.T("infisical.relogin"))
 	}
 	if folder, env := parseFolderNotFound(err); folder != "" {
-		return cliErrors.New(cliErrors.INFISICAL_FOLDER_NOT_FOUND,
-			fmt.Sprintf("Infisical 中找不到 folder %q（环境=%s）。检查 --env 名是否正确，或先 `one env set --env %s -p %s KEY value` 创建。",
-				folder, env, env, strings.TrimPrefix(folder, "/"))).
-			WithContext(map[string]any{
-				"folder":      folder,
-				"environment": env,
-			})
+		return cliErrors.New(cliErrors.INFISICAL_FOLDER_NOT_FOUND, i18n.Tf("infisical.folder_missing", env, folder))
 	}
-	if isNotFound(err) {
-		return cliErrors.New(cliErrors.INFISICAL_API_ERROR,
-			"Infisical 资源不存在: "+err.Error())
-	}
-	return cliErrors.New(cliErrors.INFISICAL_API_ERROR, err.Error()).
-		WithContext(map[string]any{"underlying": err.Error()})
+	return cliErrors.New(cliErrors.INFISICAL_API_ERROR, i18n.T("infisical.request_failed"))
 }
 
 // folderNotFoundRE matches Infisical's folder-404 message shape:

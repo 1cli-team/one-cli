@@ -9,7 +9,6 @@ import (
 
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/core/workspace"
 	cliErrors "github.com/torchstellar-team/one-cli/packages/cli/internal/platform/errors"
-
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/i18n"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/userdirs"
 )
@@ -114,7 +113,7 @@ func parsePresetProjectNames(raw string, want int) ([]string, error) {
 		name := strings.TrimSpace(part)
 		if name == "" {
 			return nil, cliErrors.New(cliErrors.INVALID_NAME,
-				fmt.Sprintf("--project-names 第 %d 项为空。", i+1)).
+				i18n.Tf("create.project_names_empty", i+1)).
 				WithContext(map[string]any{
 					"project_names": raw,
 					"index":         i,
@@ -122,7 +121,7 @@ func parsePresetProjectNames(raw string, want int) ([]string, error) {
 		}
 		if !workspace.IsValidProjectName(name) {
 			return nil, cliErrors.New(cliErrors.INVALID_NAME,
-				fmt.Sprintf("子项目名称格式不合法: %q（来自 --project-names）", name)).
+				i18n.Tf("create.project_name_invalid", name)).
 				WithContext(map[string]any{
 					"project_names": raw,
 					"invalid_name":  name,
@@ -131,7 +130,7 @@ func parsePresetProjectNames(raw string, want int) ([]string, error) {
 		}
 		if seen[name] {
 			return nil, cliErrors.New(cliErrors.INVALID_NAME,
-				fmt.Sprintf("--project-names 包含重复名称: %q", name)).
+				i18n.Tf("create.project_names_duplicate", name)).
 				WithContext(map[string]any{
 					"project_names":  raw,
 					"duplicate_name": name,
@@ -143,7 +142,7 @@ func parsePresetProjectNames(raw string, want int) ([]string, error) {
 	}
 	if len(names) != want {
 		return nil, cliErrors.New(cliErrors.PRESET_INVALID,
-			fmt.Sprintf("--project-names 数量为 %d，但 preset 会展开 %d 个子项目。", len(names), want)).
+			i18n.Tf("create.project_names_count", len(names), want)).
 			WithContext(map[string]any{
 				"project_names": raw,
 				"provided":      len(names),

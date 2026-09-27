@@ -40,7 +40,7 @@ func handleListSecrets(opts MuxOpts) http.HandlerFunc {
 			RepositoryReadOnly: true,
 		})
 		if err != nil {
-			writeProfileError(w, err)
+			writeServiceError(w, err)
 			return
 		}
 		writeJSON(w, http.StatusOK, result)
@@ -62,7 +62,7 @@ func handleGetSecret(opts MuxOpts) http.HandlerFunc {
 			Key: r.PathValue("key"), RepositoryReadOnly: true,
 		})
 		if err != nil {
-			writeProfileError(w, err)
+			writeServiceError(w, err)
 			return
 		}
 		writeJSON(w, http.StatusOK, result)
@@ -122,7 +122,7 @@ func applySecretSet(
 		Environment: r.URL.Query().Get("env"), Project: project,
 	})
 	if err != nil {
-		writeProfileError(w, err)
+		writeServiceError(w, err)
 		return
 	}
 	plan = plan.WithProject(project)
@@ -130,7 +130,7 @@ func applySecretSet(
 		Plan: plan, Key: key, Value: value, Overwrite: overwrite, RepositoryReadOnly: true,
 	})
 	if err != nil {
-		writeProfileError(w, err)
+		writeServiceError(w, err)
 		return
 	}
 	status := http.StatusOK
@@ -152,7 +152,7 @@ func handleDeleteSecret(opts MuxOpts) http.HandlerFunc {
 			Key: r.PathValue("key"), RepositoryReadOnly: true,
 		})
 		if err != nil {
-			writeProfileError(w, err)
+			writeServiceError(w, err)
 			return
 		}
 		writeJSON(w, http.StatusOK, result)
@@ -176,7 +176,7 @@ func requireInfisicalSecretBackend(
 		execution.NewScope(r.Context(), opts.WorkspaceRoot),
 		r.URL.Query().Get("env"),
 	); err != nil {
-		writeProfileError(w, err)
+		writeServiceError(w, err)
 		return false
 	}
 	return true

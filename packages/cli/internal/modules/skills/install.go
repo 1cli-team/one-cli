@@ -3,10 +3,10 @@ package skills
 import (
 	"context"
 	"errors"
-	"fmt"
 	"os"
 	"path/filepath"
 
+	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/i18n"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/resources/bundled"
 )
 
@@ -18,7 +18,7 @@ const Name = "one-cli"
 func Install(ctx context.Context, targets []Agent) ([]string, error) {
 	installed := []string{}
 	if len(targets) == 0 {
-		return installed, errors.New("no target agents selected")
+		return installed, errors.New(i18n.T("skills.no_selection"))
 	}
 	seen := map[string]bool{}
 	for _, target := range targets {
@@ -27,13 +27,13 @@ func Install(ctx context.Context, targets []Agent) ([]string, error) {
 		}
 		root := filepath.Clean(target.GlobalPath)
 		if !filepath.IsAbs(root) {
-			return installed, fmt.Errorf("agent %s: installation directory must be absolute", target.ID)
+			return installed, i18n.Errorf("skills.directory_absolute", target.ID)
 		}
 		if seen[root] {
 			continue
 		}
 		if err := installAt(root); err != nil {
-			return installed, fmt.Errorf("install %s for %s at %s: %w", Name, target.ID, root, err)
+			return installed, i18n.Errorf("skills.install_failed", Name, target.ID, root, err)
 		}
 		seen[root] = true
 		installed = append(installed, root)
@@ -70,7 +70,7 @@ func installAt(root string) error {
 	hadPrevious := false
 	if info, err := os.Lstat(dest); err == nil {
 		if !info.IsDir() && info.Mode()&os.ModeSymlink == 0 {
-			return fmt.Errorf("destination is not a skill directory: %s", dest)
+			return i18n.Errorf("skills.destination_invalid", dest)
 		}
 		if err := os.Rename(dest, backup); err != nil {
 			return err
@@ -84,7 +84,7 @@ func installAt(root string) error {
 			if restoreErr := os.Rename(backup, dest); restoreErr != nil {
 				// Preserve the only remaining old copy if restoration also fails.
 				cleanup = false
-				return fmt.Errorf("publish: %w; restore failed: %v; previous installation is at %s", err, restoreErr, backup)
+				return i18n.Errorf("skills.publish_failed", err, restoreErr, backup)
 			}
 		}
 		return err

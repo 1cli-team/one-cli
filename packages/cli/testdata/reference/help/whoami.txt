@@ -1,0 +1,9 @@
+
+DESCRIPTION
+Show Infisical login status without displaying tokens
+
+USAGE
+  one whoami [flags]
+
+COMMON OPTIONS
+  -o, --output <value>     Output format: json | yaml | text (default: terminal-friendly text, JSON when piped)

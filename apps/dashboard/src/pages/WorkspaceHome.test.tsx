@@ -1,4 +1,5 @@
-import { render, screen, within } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { HttpResponse, http } from "msw";
 import { setupServer } from "msw/node";
 import { MemoryRouter } from "react-router-dom";
@@ -73,15 +74,15 @@ function renderHome(path = "/") {
 	);
 }
 
+beforeAll(async () => {
+	server.listen({ onUnhandledRequest: "error" });
+	await i18n.changeLanguage("en-US");
+});
+
+afterEach(() => server.resetHandlers());
+afterAll(() => server.close());
+
 describe("WorkspaceHome", () => {
-	beforeAll(async () => {
-		server.listen({ onUnhandledRequest: "error" });
-		await i18n.changeLanguage("en-US");
-	});
-
-	afterEach(() => server.resetHandlers());
-	afterAll(() => server.close());
-
 	it("shows an explicit loading state while the registry is being read", () => {
 		let releaseRequest = () => {};
 		const pending = new Promise<void>((resolve) => {
@@ -170,5 +171,82 @@ describe("WorkspaceHome", () => {
 		expect(await screen.findByRole("heading", { name: "Workspaces" })).toBeDefined();
 		expect(screen.getByRole("heading", { name: "No Workspaces yet" })).toBeDefined();
 		expect(screen.getByText(/Run one create to create a Workspace/)).toBeDefined();
+	});
+});
+
+describe("Workspace discovery and recovery", () => {
+	function serveRegistry() {
+		server.use(
+			http.get("http://localhost/api/workspaces", () =>
+				HttpResponse.json({ schema: "one-cli/workspaces/v1", workspaces }),
+			),
+		);
+	}
+
+	it("combines path search with attention filtering and restores the list on clear", async () => {
+		serveRegistry();
+		const user = userEvent.setup();
+		renderHome("/?env=preview");
+		await screen.findByRole("link", { name: /Alpha/ });
+		const search = screen.getByRole("textbox", { name: "Search name, path or ID…" });
+		await user.type(search, " /WORKSPACES/ALPHA ");
+		expect(screen.getAllByRole("article")).toHaveLength(1);
+		expect(screen.getByRole("link", { name: /Alpha/ }).getAttribute("href")).toBe(
+			"/workspace/alpha-entry?env=preview",
+		);
+		await user.click(screen.getByRole("button", { name: /Needs attention/ }));
+		expect(screen.getByText("No matching workspaces")).toBeDefined();
+		await user.click(screen.getByRole("button", { name: "Clear filters" }));
+		expect(document.activeElement).toBe(search);
+		expect(screen.getAllByRole("article")).toHaveLength(5);
+		await user.click(screen.getByRole("button", { name: /Needs attention/ }));
+		expect(screen.getAllByRole("article")).toHaveLength(4);
+		expect(screen.queryByRole("link", { name: /Alpha/ })).toBeNull();
+	});
+
+	it("keeps existing workspaces during a failed refresh and supports retry", async () => {
+		serveRegistry();
+		const user = userEvent.setup();
+		renderHome();
+		await screen.findByRole("link", { name: /Alpha/ });
+		server.use(
+			http.get("http://localhost/api/workspaces", () =>
+				HttpResponse.json({ error: { message: "Registry offline" } }, { status: 500 }),
+			),
+		);
+		await user.click(screen.getByRole("button", { name: "Refresh" }));
+		const alert = await screen.findByRole("alert");
+		expect(screen.getAllByRole("article")).toHaveLength(5);
+		serveRegistry();
+		await user.click(within(alert).getByRole("button", { name: "Retry" }));
+		await waitFor(() => expect(screen.queryByRole("alert")).toBeNull());
+		expect(screen.getAllByRole("article")).toHaveLength(5);
+	});
+
+	it("keeps a failed removal open and removes only the selected workspace on retry", async () => {
+		serveRegistry();
+		const user = userEvent.setup();
+		renderHome();
+		await screen.findByRole("link", { name: /Alpha/ });
+		server.use(
+			http.delete("http://localhost/api/workspaces/alpha-entry", () =>
+				HttpResponse.json({ error: { message: "Registry is busy" } }, { status: 500 }),
+			),
+		);
+		await user.click(screen.getByRole("button", { name: "Remove Alpha" }));
+		const dialog = await screen.findByRole("alertdialog");
+		await user.click(within(dialog).getByRole("button", { name: "Remove Alpha" }));
+		expect((await within(dialog).findByRole("alert")).textContent).toContain("Registry is busy");
+		expect(screen.getAllByRole("article", { hidden: true })).toHaveLength(5);
+		server.use(
+			http.delete(
+				"http://localhost/api/workspaces/alpha-entry",
+				() => new HttpResponse(null, { status: 204 }),
+			),
+		);
+		await user.click(within(dialog).getByRole("button", { name: "Remove Alpha" }));
+		await waitFor(() => expect(screen.queryByRole("alertdialog")).toBeNull());
+		expect(screen.queryByRole("link", { name: /Alpha/ })).toBeNull();
+		expect(screen.getAllByRole("article")).toHaveLength(4);
 	});
 });

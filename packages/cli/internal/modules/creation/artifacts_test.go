@@ -35,7 +35,7 @@ func TestSyncProjectOwnsDevAndEnvironmentArtifacts(t *testing.T) {
 	}
 
 	err := syncProject(syncProjectOptions{
-		ProjectRoot: root, TargetDir: targetDir, ProjectName: "web",
+		ProjectRoot: root, TargetDir: targetDir,
 		Toolchain: toolchain.Node, PackageManager: toolchain.PMpnpm,
 		Selected: map[string]string{"env": "env/infisical"},
 	})

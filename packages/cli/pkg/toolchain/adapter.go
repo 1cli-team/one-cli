@@ -11,7 +11,5 @@ type Adapter interface {
 	UsesPackageManager() bool
 	InstallPlan(in PlanInput) CommandStep
 	PackageManagerForManifest(pm PackageManager) PackageManager
-	ResolveRuntime(in PlanInput) RuntimeResolution
-	RenderDockerfile(in DockerfileInput) string
 	RenderWorkflow(in WorkflowInput) string
 }

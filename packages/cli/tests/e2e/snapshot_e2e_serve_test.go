@@ -72,9 +72,9 @@ func TestSnapshot_E2E_Serve_StartupEnvelope(t *testing.T) {
 		t.Fatalf("startup envelope still exposes token: %v", envelope)
 	}
 
-	// Probe /api/configure directly. Empty config should yield a 200 with the
+	// Probe /api/global-env/location directly. Empty config should yield a 200 with the
 	// schema-shaped payload.
-	probe := rawURL + "api/configure"
+	probe := rawURL + "api/global-env/location"
 	res, err := http.Get(probe)
 	if err != nil {
 		t.Fatalf("probe: %v", err)

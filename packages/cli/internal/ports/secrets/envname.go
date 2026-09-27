@@ -1,11 +1,11 @@
 package secrets
 
 import (
-	"fmt"
 	"strings"
 
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/core/workspace"
 	cliErrors "github.com/torchstellar-team/one-cli/packages/cli/internal/platform/errors"
+	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/i18n"
 )
 
 // ResolveEnvName picks the effective environment name for a verb
@@ -52,7 +52,7 @@ func ResolveEnvName(projectRoot, flag string, allowUnknown bool) (string, []stri
 		return chosen, declared, nil
 	}
 	return "", declared, cliErrors.New(cliErrors.ENV_UNKNOWN_ENVIRONMENT,
-		fmt.Sprintf("环境 %q 未在 manifest.environments.names 中（已声明：%s）。",
+		i18n.Tf("env.environment_unknown",
 			chosen, strings.Join(declared, ", "))).
 		WithContext(map[string]any{
 			"requested":    chosen,

@@ -21,16 +21,9 @@ func IsProjectKind(b byte) bool {
 //   - Kind: one of 'f' / 'b' / 'l'.
 //   - TemplateCode: the 2-char [a-z0-9] template code (matches the
 //     `code` field in registry.json).
-//   - DeployCode: the 1-char deploy code; empty = use template default.
-//     KindLibrary forbids a non-empty DeployCode (Resolve catches it).
-//   - ContainerCode: the 1-char container code; empty = use the preset
-//     default for kustomize deploys. It is only legal when DeployCode
-//     resolves to kustomize.
 type Item struct {
-	Kind          Kind
-	TemplateCode  string
-	DeployCode    string
-	ContainerCode string
+	Kind         Kind
+	TemplateCode string
 }
 
 // Spec is the parsed in-memory representation of a preset id.

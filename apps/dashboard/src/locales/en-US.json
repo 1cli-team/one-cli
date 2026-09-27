@@ -8,7 +8,10 @@
 		"language": "Language",
 		"languageAuto": "Follow system",
 		"languageZh": "中文",
-		"languageEn": "English"
+		"languageEn": "English",
+		"navigation": "Navigation",
+		"openNavigation": "Open navigation",
+		"closeNavigation": "Close navigation"
 	},
 	"topbar": {
 		"home": "Workbench",
@@ -35,7 +38,9 @@
 		"discard": "Discard draft",
 		"saved": "Manifest changes saved",
 		"saveFailed": "Could not save manifest changes",
-		"conflict": "one.manifest.json changed after this draft was opened. Discard the draft, review the latest configuration, and try again."
+		"conflict": "one.manifest.json changed after this draft was opened. Discard the draft, review the latest configuration, and try again.",
+		"changedFields": "Changed fields",
+		"jumpToChange": "Go to first change"
 	},
 	"environmentSwitcher": {
 		"label": "Environment",
@@ -47,7 +52,7 @@
 		"workspaceLabel": "Workspace",
 		"loading": "Loading workspace",
 		"retry": "Retry",
-		"openProfiles": "Open credential profiles",
+		"openProfiles": "Open settings",
 		"home": {
 			"title": "Workspaces",
 			"description": "Open a registered Workspace and manage its projects.",
@@ -68,7 +73,18 @@
 			"emptyDescription": "Run one create to create a Workspace, or run one serve inside an existing Workspace to register it.",
 			"listLabel": "Registered Workspaces",
 			"registeredOnMachine": "Registered on this machine",
-			"registrationHint": "New Workspaces appear here after you run one serve."
+			"registrationHint": "New Workspaces appear here after you run one serve.",
+			"refresh": "Refresh",
+			"search": "Search name, path or ID…",
+			"clearSearch": "Clear search",
+			"filterLabel": "Filter workspaces",
+			"all": "All workspaces",
+			"attention": "Needs attention",
+			"noResults": "No matching workspaces",
+			"noResultsDescription": "Try another name or path, or clear your filters.",
+			"clearFilters": "Clear filters",
+			"resultCount": "{{count}} matching workspaces",
+			"registrationHelp": "How to add a workspace"
 		},
 		"rail": {
 			"title": "Workspaces",
@@ -107,7 +123,7 @@
 		"forget": {
 			"short": "Remove Workspace",
 			"action": "Remove {{name}}",
-			"confirm": "Remove Workspace \"{{name}}\"? This only removes the local registry entry; no project files or Profiles will be deleted.",
+			"confirm": "Remove Workspace \"{{name}}\"? This only removes the local registry entry; no project files or remote variables will be deleted.",
 			"done": "Removed {{name}}",
 			"failed": "Could not remove Workspace",
 			"pageHint": "Use the trash action beside this Workspace in the left rail to remove only its local registry entry."
@@ -122,7 +138,7 @@
 		},
 		"unknown": {
 			"title": "Workspace not found",
-			"description": "This registry entry no longer exists. Choose another Workspace from the left rail.",
+			"description": "This registry entry no longer exists. Return home to choose another workspace.",
 			"back": "Choose a Workspace"
 		},
 		"noneReady": {
@@ -131,7 +147,9 @@
 		}
 	},
 	"notFound": {
-		"message": "404 - Page not found"
+		"message": "404 - Page not found",
+		"title": "Page not found",
+		"description": "This address does not match a dashboard page. Return home to continue."
 	},
 	"errorBoundary": {
 		"title": "The application hit an error",
@@ -149,62 +167,12 @@
 	},
 	"sections": {
 		"groupLabel": {
-			"env": "Environment variables",
-			"deploy": "Deploy",
-			"container": "Container"
+			"env": "Environment variables"
 		},
 		"env": {
 			"infisical": {
 				"title": "Infisical",
 				"description": "Universal Auth credentials and Infisical site URL for the env domain."
-			}
-		},
-		"deploy": {
-			"aliyun-oss": {
-				"title": "Aliyun OSS",
-				"description": "Aliyun OSS endpoint plus AK/SK using the S3 protocol."
-			},
-			"tencent-cos": {
-				"title": "Tencent COS",
-				"description": "Tencent COS endpoint plus AK/SK using the S3 protocol."
-			},
-			"aws-s3": {
-				"title": "AWS S3",
-				"description": "AWS S3 region plus AK/SK; leave endpoint blank for SDK defaults."
-			},
-			"minio": {
-				"title": "MinIO",
-				"description": "Self-hosted MinIO object storage with path-style addressing."
-			},
-			"rustfs": {
-				"title": "RustFS",
-				"description": "Self-hosted RustFS object storage with path-style addressing."
-			},
-			"r2": {
-				"title": "Cloudflare R2",
-				"description": "Cloudflare R2 endpoint plus AK/SK."
-			},
-			"kustomize": {
-				"title": "Kustomize",
-				"description": "Kubeconfig context for the deploy domain."
-			},
-			"vercel": {
-				"title": "Vercel",
-				"description": "Vercel API token with optional team slug."
-			},
-			"cloudflare": {
-				"title": "Cloudflare",
-				"description": "Cloudflare API token with optional account ID."
-			},
-			"edgeone": {
-				"title": "EdgeOne Pages",
-				"description": "Tencent EdgeOne Pages token with optional region."
-			}
-		},
-		"container": {
-			"docker": {
-				"title": "Docker Registry",
-				"description": "ACR, Docker Hub, GHCR, Harbor, or another container registry."
 			}
 		}
 	},
@@ -296,7 +264,11 @@
 			"regionDefaultLabel": "(default)",
 			"registryUnset": "(no registry)",
 			"acrRegionUnset": "(no region)"
-		}
+		},
+		"close": "Close",
+		"discardTitle": "Discard unsaved changes?",
+		"discardDescription": "Your changes have not been saved. Discard them to close this editor.",
+		"continueEditing": "Keep editing"
 	},
 	"toast": {
 		"updated": "Updated {{name}}",
@@ -331,7 +303,6 @@
 		"matrix": {
 			"project": "Project",
 			"environment": "Environment",
-			"deploy": "Deploy",
 			"status": "Status",
 			"notApplicable": "-",
 			"notApplicableTitle": "This configuration does not apply to the project",
@@ -354,8 +325,7 @@
 		"tabs": {
 			"label": "Project configuration sections",
 			"overview": "Overview",
-			"environment": "Environment",
-			"deploy": "Deploy"
+			"environment": "Environment"
 		},
 		"loadFailed": "Unable to load project configuration",
 		"retry": "Retry",
@@ -380,7 +350,14 @@
 			"buildVersion": "Build version",
 			"packageManager": "Package manager",
 			"packageManagerAutomatic": "Detect automatically",
-			"devCommand": "Development command"
+			"devCommand": "Development command",
+			"buildCommand": "Build command",
+			"buildSource": "one build reads {{source}}. Edit that file to change the build task.",
+			"buildMissing": "No build task configured",
+			"buildUnavailable": "Unable to read build configuration",
+			"buildUnsupported": "No build task is available for this project.",
+			"metadata": "Project information",
+			"runtime": "Development and build"
 		},
 		"environment": {
 			"title": "Environment configuration",
@@ -392,17 +369,6 @@
 			"disabledHint": "Do not inject environment variables into project commands.",
 			"keys": "Declared variable names"
 		},
-		"container": {
-			"title": "Image configuration",
-			"enabled": "Build an image for deployment",
-			"enabledHint": "Build and push this project's image with one container before deployment.",
-			"image": "Image address",
-			"namespace": "Image namespace"
-		},
-		"deploy": {
-			"title": "Deployment configuration",
-			"notSupported": "This project's Template does not support a deployment target."
-		},
 		"profile": {
 			"label": "Project profile",
 			"description": "Choose machine-level credentials scoped to this project and environment.",
@@ -413,7 +379,8 @@
 			"inherited": "Inherit {{name}} ({{source}})",
 			"none": "No profile currently resolves",
 			"manage": "Manage in Settings"
-		}
+		},
+		"draftHint": "Changes are kept in a draft. Review and save them to apply."
 	},
 	"secrets": {
 		"title": "Infisical secrets",
@@ -448,7 +415,15 @@
 		"deleteFailed": "Could not delete the secret",
 		"deleteTitle": "Delete {{key}}?",
 		"deleteDescription": "This removes the value from the selected Infisical environment and folder. This action cannot be undone here.",
-		"deleteConfirmation": "Type {{key}} to confirm"
+		"deleteConfirmation": "Type {{key}} to confirm",
+		"notConfiguredTitle": "Connect a storage project",
+		"notConfiguredHint": "Choose a storage project in Workspace settings, or connect automatically to load this environment’s secrets.",
+		"connectAndLoad": "Connect and load secrets",
+		"search": "Search secret keys",
+		"noMatches": "No matching secrets",
+		"scopeHint": "Changes here are saved directly to Infisical.",
+		"loadError": "Unable to load secrets",
+		"more": "More actions for {{key}}"
 	},
 	"project": {
 		"fields": {
@@ -472,7 +447,7 @@
 			"title": "Workspace environment",
 			"scope": "Workspace scope",
 			"readOnly": "Read-only",
-			"description": "The Backend is written to the workspace manifest; Profile selections are saved automatically to this machine.",
+			"description": "Configure workspace environment storage and manage shared secrets.",
 			"localBinding": "Machine-local Profile binding",
 			"manifestLegend": "Shared manifest",
 			"localLegend": "This machine",
@@ -502,7 +477,9 @@
 				"inherited": "Automatic · {{name}} ({{source}})",
 				"none": "No Profile currently resolves",
 				"manage": "Manage in Settings"
-			}
+			},
+			"signInHint": "Sign in to Infisical in Settings to choose a storage project.",
+			"noProjects": "No storage projects available. Create one from Shared credentials."
 		},
 		"tabs": {
 			"label": "Workspace sections",
@@ -554,15 +531,11 @@
 		},
 		"issue": {
 			"label": {
-				"container": "container",
-				"deploy": "deploy",
 				"env": "env",
 				"profile": "profile"
 			},
 			"missingProfile": "{{section}} is missing a usable credential profile{{profile}}. Fill in the API key / token.",
 			"missing": {
-				"container": "No container backend is configured. `one container build` will fail.",
-				"deploy": "No deploy backend is configured. `one deploy` will fail.",
 				"env": "Workspace has no env backend selected. Set one before using `one env`."
 			}
 		},
@@ -570,5 +543,80 @@
 			"profileCta": "Add credentials",
 			"cliHint": "Configure this Backend with One CLI."
 		}
+	},
+	"session": {
+		"description": "CLI and Dashboard share one Infisical session.",
+		"loading": "Loading…",
+		"organization": "Organization",
+		"logout": "Log out",
+		"expired": "Your session expired. Sign in again.",
+		"signedOut": "Not signed in to Infisical",
+		"waiting": "Waiting for browser login…",
+		"reopen": "Reopen login page",
+		"cancel": "Cancel",
+		"login": "Sign in with browser",
+		"custom": "Use a custom instance",
+		"site": "Instance URL",
+		"language": "Display language",
+		"unavailable": "Session unavailable",
+		"settingsHint": "Manage your connected account and dashboard preferences.",
+		"connected": "Connected",
+		"account": "Account",
+		"languageHint": "Choose a language or follow your system setting."
+	},
+	"global": {
+		"title": "Shared credentials",
+		"description": "Manage credentials and variables shared across projects.",
+		"loginRequired": "Sign in to Infisical to manage shared credentials.",
+		"location": "Default storage location",
+		"mismatch": "The saved location belongs to another account or instance. Select a project again.",
+		"locationHint": "Select or create a storage project. Only its location is saved here; credential values stay in Infisical.",
+		"project": "Storage project",
+		"selectProject": "Select a project",
+		"defaultEnv": "Default browsing environment",
+		"selectEnv": "Select an environment",
+		"noProjects": "No credential projects available. Use the default location or create a project.",
+		"saveLocation": "Save location",
+		"browseHint": "Browsing another environment does not change the CLI default.",
+		"environment": "Browsing environment",
+		"parent": "Parent folder",
+		"refresh": "Refresh",
+		"folders": "Folders",
+		"addFolder": "New folder",
+		"search": "Search variable names",
+		"add": "Add variable",
+		"key": "Name",
+		"value": "Value",
+		"actions": "Actions",
+		"hide": "Hide",
+		"reveal": "Reveal",
+		"copy": "Copy",
+		"edit": "Edit",
+		"delete": "Delete",
+		"empty": "No variables in this folder.",
+		"newValue": "New value",
+		"saveRemote": "Save to Infisical",
+		"discard": "Discard changes",
+		"deleteHint": "Delete {{key}} from {{project}} / {{environment}} / {{path}}? This takes effect immediately.",
+		"folderName": "Folder name",
+		"defaultLocation": "Use the default location",
+		"defaultLocationHint": "Prepare the storage project and save its location. An existing project with this name will be reused.",
+		"useDefault": "Initialize default location",
+		"saving": "Saving…",
+		"createProject": "New project",
+		"createProjectHint": "Create a credential storage project in the current Infisical organization. It will be selected so you can save it as your default location.",
+		"projectName": "Project name",
+		"createAndSelect": "Create and select",
+		"creatingProject": "Creating…",
+		"copied": "Value copied",
+		"saved": "Variable saved",
+		"folderCreated": "Folder created",
+		"noFolders": "No subfolders",
+		"count_one": "{{count}} variable",
+		"count_other": "{{count}} variables",
+		"more": "More actions for {{key}}",
+		"noMatches": "No matching variables",
+		"noMatchesHint": "Try another name or clear the search.",
+		"emptyHint": "Add a variable to share it across your projects."
 	}
 }

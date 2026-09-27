@@ -32,26 +32,27 @@ const MENU_WIDTH = 160;
 const TRIGGER_WIDTH = 28;
 const CENTERED_END_OFFSET = -(MENU_WIDTH - TRIGGER_WIDTH) / 2;
 
-export function LanguageSwitcher() {
+export function LanguageSwitcher({ showLabel = false }: { showLabel?: boolean }) {
 	const { mode, setMode } = useLocaleStore();
 	const { t } = useTranslation();
 	return (
 		<DropdownMenu>
 			<DropdownMenuTrigger asChild>
 				<Button
-					variant="ghost"
-					size="icon"
-					className="h-7 w-7"
+					variant={showLabel ? "outline" : "ghost"}
+					size={showLabel ? "default" : "icon"}
+
 					title={t("sidebar.language")}
 					aria-label={t("sidebar.language")}
 				>
-					<Languages className="h-4 w-4" />
+					<Languages className="size-4" aria-hidden="true" />
+					{showLabel && t(OPTIONS.find((option) => option.mode === mode)!.labelKey)}
 				</Button>
 			</DropdownMenuTrigger>
 			<DropdownMenuContent
-				side="top"
+				side={showLabel ? "bottom" : "top"}
 				align="end"
-				alignOffset={CENTERED_END_OFFSET}
+				alignOffset={showLabel ? 0 : CENTERED_END_OFFSET}
 				sideOffset={8}
 				className="w-40"
 			>

@@ -1,21 +1,14 @@
 import {
-	Boxes,
-	CloudUpload,
-	Code2,
-	KeyRound,
-	Library,
-	MoonStar,
-	Settings2,
-	SunMedium,
-} from "lucide-react";
+	manifestDraftKey,
+	useManifestDraftStore,
+} from "@/features/manifest-draft/manifest-draft-store";
+import { Server, Code2, FileKey2, Library, Search, LayoutGrid, LockKeyhole } from "lucide-react";
 import type React from "react";
-import { useEffect, useId, useRef, useState } from "react";
+import { useEffect, useId, useState } from "react";
 import { useTranslation } from "react-i18next";
 import useSWR from "swr";
-import { backendRequiresContainerArtifact, useBackendCatalog } from "@/api/catalog";
 import { getProjectSettings, projectSettingsKey } from "@/api/workspace";
-import { LanguageSwitcher } from "@/components/LanguageSwitcher";
-import { ManifestSaveControl } from "@/components/TopBar";
+import { ManifestSaveControl } from "@/features/manifest-draft/ManifestSaveControl";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
 	AlertDialog,
@@ -29,22 +22,22 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/input-group";
+import {
+	Select,
+	SelectContent,
+	SelectItem,
+	SelectTrigger,
+	SelectValue,
+} from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { EnvironmentLink } from "@/features/environment-context/EnvironmentLink";
 import { EnvironmentSelector } from "@/features/environment-context/EnvironmentSelector";
 import { useEnvironmentDirtyStore } from "@/features/environment-context/environment-dirty-store";
-import {
-	manifestDraftKey,
-	useManifestDraftStore,
-} from "@/features/manifest-draft/manifest-draft-store";
-import { ContainerForm } from "@/features/project-settings/forms/ContainerForm";
-import { DeployForm } from "@/features/project-settings/forms/DeployForm";
 import { EnvironmentForm } from "@/features/project-settings/forms/EnvironmentForm";
 import { GeneralForm } from "@/features/project-settings/forms/GeneralForm";
 import type { ProjectInspectorTab } from "@/features/project-settings/ProjectMatrix";
 import { WorkspaceSettingsDialog } from "@/features/workspace-settings/WorkspaceSettingsDialog";
-import { useThemeStore } from "@/lib/stores/theme";
 import { cn } from "@/lib/utils";
 import type { OverviewProject, ProjectSettingsResponse } from "@/types/api";
 
@@ -60,9 +53,8 @@ const TAB_ITEMS: ReadonlyArray<{
 	id: ProjectInspectorTab;
 	icon: React.ComponentType<{ className?: string }>;
 }> = [
-	{ id: "overview", icon: Settings2 },
-	{ id: "environment", icon: KeyRound },
-	{ id: "deploy", icon: CloudUpload },
+	{ id: "overview", icon: LayoutGrid },
+	{ id: "environment", icon: FileKey2 },
 ];
 
 export const ProjectInspector: React.FC<ProjectInspectorProps> = ({
@@ -73,15 +65,14 @@ export const ProjectInspector: React.FC<ProjectInspectorProps> = ({
 	readOnly,
 }) => {
 	const { t } = useTranslation();
-	const { mode, toggle } = useThemeStore();
 	const dirtyOwner = useId();
+	const [query, setQuery] = useState("");
 	const [dirty, setDirty] = useState(false);
 	const [pendingAction, setPendingAction] = useState<(() => void) | null>(null);
 	const [selectedName, setSelectedName] = useState(projects[0]?.name ?? "");
 	const setEnvironmentDirty = useEnvironmentDirtyStore((state) => state.setDirty);
 	const clearEnvironmentDirty = useEnvironmentDirtyStore((state) => state.clearOwner);
 	const selectedProject = projects.find((project) => project.name === selectedName) ?? projects[0];
-	const logoSrc = mode === "dark" ? "/brand/icon-inverted.svg" : "/brand/icon.svg";
 
 	function setInspectorDirty(next: boolean) {
 		setDirty(next);
@@ -103,114 +94,149 @@ export const ProjectInspector: React.FC<ProjectInspectorProps> = ({
 		setPendingAction(() => action);
 	}
 
+	const filteredProjects = projects.filter((project) =>
+		`${project.name} ${project.relativeDir} ${project.domains?.env ?? currentBackend ?? ""}`
+			.toLocaleLowerCase()
+			.includes(query.trim().toLocaleLowerCase()),
+	);
+	function selectProject(name: string) {
+		if (name === selectedProject?.name) return;
+		requestDiscard(() => {
+			setInspectorDirty(false);
+			setSelectedName(name);
+		});
+	}
+
 	return (
 		<>
 			<section
 				role="region"
 				aria-label={t("projectInspector.workspaceTitle")}
-				className="grid h-full min-h-0 grid-cols-[244px_minmax(0,1fr)] overflow-hidden bg-card"
+				className="flex h-full min-h-0 flex-col overflow-hidden bg-background ud-md:grid ud-md:grid-cols-[208px_minmax(0,1fr)] ud-lg:grid-cols-[240px_minmax(0,1fr)]"
 			>
-				<aside className="flex min-h-0 flex-col border-r border-border bg-muted/30">
-					<EnvironmentLink
-						to="/"
-						className="flex min-h-16 items-center gap-2.5 px-4 outline-none transition-colors hover:bg-muted/60 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
-						aria-label={t("topbar.workspaces")}
-					>
-						<img src={logoSrc} alt="One CLI" className="size-8 shrink-0" />
-						<div>
-							<h1 className="font-heading text-base font-semibold leading-none tracking-tight">
-								One CLI
-							</h1>
-							<p className="mt-1 font-mono text-[9px] font-medium tracking-[0.12em] text-muted-foreground uppercase">
-								{t("sidebar.brand")}
-							</p>
+				<aside className="hidden min-h-0 flex-col border-r border-border bg-card ud-md:flex">
+					<div className="space-y-3 px-4 pt-5 pb-3">
+						<div className="flex items-center justify-between">
+							<h2 className="text-sm font-semibold">{t("projectInspector.projectsTitle")}</h2>
+							<Badge variant="muted">{projects.length}</Badge>
 						</div>
-					</EnvironmentLink>
+						<InputGroup>
+							<InputGroupAddon>
+								<Search />
+							</InputGroupAddon>
+							<InputGroupInput
+								value={query}
+								onChange={(event) => setQuery(event.target.value)}
+								placeholder={t("projects.search")}
+								aria-label={t("projects.search")}
+							/>
+						</InputGroup>
+					</div>
 					<nav
 						aria-label={t("projectInspector.projectListLabel")}
-						className="grid min-h-0 flex-1 content-start gap-1 overflow-y-auto px-2 pt-5 pb-2"
+						className="grid min-h-0 flex-1 content-start gap-1 overflow-y-auto px-2 pb-3"
 					>
-						{projects.map((project) => {
+						{filteredProjects.map((project) => {
 							const Icon = PROJECT_KIND_ICON[project.kind];
 							const selected = project.name === selectedProject?.name;
 							return (
 								<Button
 									key={project.name}
 									type="button"
-									variant="ghost"
+									variant="navigation"
+									size="navigation"
 									aria-label={`${project.name} ${project.relativeDir}`}
 									aria-current={selected ? "page" : undefined}
-									onClick={() =>
-										requestDiscard(() => {
-											setInspectorDirty(false);
-											setSelectedName(project.name);
-										})
-									}
-									className={cn(
-										"relative h-auto min-h-14 w-full justify-start gap-2.5 rounded-lg border border-transparent px-3 py-2 text-left font-normal hover:border-border hover:bg-card/80",
-										selected &&
-											"border-primary/20 bg-card shadow-sm before:absolute before:inset-y-2 before:left-0 before:w-[3px] before:rounded-r before:bg-primary",
-									)}
+									onClick={() => selectProject(project.name)}
 								>
 									<span
 										className={cn(
 											"grid size-7 shrink-0 place-items-center rounded-md border border-border/80 bg-muted/50 text-muted-foreground",
-											selected && "border-primary/15 bg-primary/8 text-primary",
+											selected && "border-transparent bg-accent text-primary-text",
 										)}
 									>
-										<Icon className="size-3.5" />
+										<Icon className="size-4" />
 									</span>
 									<span className="min-w-0 flex-1">
 										<span className="block truncate text-sm font-semibold">{project.name}</span>
-										<span className="mt-0.5 block truncate font-mono text-[10px] text-muted-foreground">
+										<span className="mt-0.5 block truncate font-mono text-xs text-muted-foreground">
 											{project.relativeDir}
 										</span>
 									</span>
 								</Button>
 							);
 						})}
+						{filteredProjects.length === 0 ? (
+							<div className="space-y-2 p-3 text-sm text-muted-foreground">
+								<p>{query ? t("projects.empty.title") : t("projectInspector.empty")}</p>
+								{query ? (
+									<Button variant="outline" onClick={() => setQuery("")}>
+										{t("workspaces.home.clearSearch")}
+									</Button>
+								) : null}
+							</div>
+						) : null}
 					</nav>
-					<div className="mt-auto grid h-12 shrink-0 grid-cols-4 place-items-center border-t border-border px-3">
-						<EnvironmentSelector variant="icon" />
-						<WorkspaceSettingsDialog
-							currentBackend={currentBackend}
-							environment={environment}
-							projects={projects}
-							workspaceEntryId={workspaceEntryId}
-							readOnly={readOnly}
-							triggerVariant="icon"
-						/>
-						<LanguageSwitcher />
-						<Button
-							type="button"
-							variant="ghost"
-							size="icon-sm"
-							onClick={toggle}
-							title={mode === "light" ? t("sidebar.themeToDark") : t("sidebar.themeToLight")}
-							aria-label={mode === "light" ? t("sidebar.themeToDark") : t("sidebar.themeToLight")}
-						>
-							{mode === "light" ? <MoonStar /> : <SunMedium />}
-						</Button>
-					</div>
 				</aside>
-
-				<div className="min-h-0 min-w-0 overflow-hidden">
-					{selectedProject ? (
-						<InspectorBody
-							key={`${workspaceEntryId ?? "current"}:${environment}:${selectedProject.name}`}
-							project={selectedProject}
-							environment={environment}
-							workspaceEntryId={workspaceEntryId}
-							readOnly={readOnly}
-							initialTab="overview"
-							onDirtyChange={setInspectorDirty}
-							onRequestDiscard={requestDiscard}
-						/>
-					) : (
-						<div className="grid h-full min-h-0 place-items-center p-5 text-center text-sm text-muted-foreground">
-							{t("projectInspector.empty")}
+				<div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
+					<div className="flex shrink-0 flex-wrap items-center justify-between gap-3 border-b border-border bg-card px-4 py-3 ud-md:px-6">
+						<div className="min-w-0 flex-1 ud-md:hidden">
+							<Select
+								value={selectedProject?.name ?? ""}
+								onValueChange={selectProject}
+								disabled={projects.length === 0}
+							>
+								<SelectTrigger aria-label={t("projectInspector.projectListLabel")}>
+									<SelectValue placeholder={t("projectInspector.empty")} />
+								</SelectTrigger>
+								<SelectContent>
+									{projects.map((project) => (
+										<SelectItem key={project.name} value={project.name}>
+											{project.name}
+										</SelectItem>
+									))}
+								</SelectContent>
+							</Select>
 						</div>
-					)}
+						<p
+							className="hidden min-w-0 flex-1 truncate text-sm font-medium ud-md:block"
+							title={selectedProject?.relativeDir}
+						>
+							{selectedProject?.name}
+							<span className="ml-3 font-mono text-xs font-normal text-muted-foreground">
+								{selectedProject?.relativeDir}
+							</span>
+						</p>
+						<div className="flex items-center gap-2">
+							<EnvironmentSelector />
+							<WorkspaceSettingsDialog
+								currentBackend={currentBackend}
+								environment={environment}
+								projects={projects}
+								workspaceEntryId={workspaceEntryId}
+								readOnly={readOnly}
+								triggerVariant="default"
+							/>
+						</div>
+					</div>
+					<div className="min-h-0 min-w-0 flex-1 overflow-hidden">
+						{selectedProject ? (
+							<InspectorBody
+								key={`${workspaceEntryId ?? "current"}:${environment}:${selectedProject.name}`}
+								project={selectedProject}
+								environment={environment}
+								workspaceEntryId={workspaceEntryId}
+								readOnly={readOnly}
+								initialTab="overview"
+								onDirtyChange={setInspectorDirty}
+								onRequestDiscard={requestDiscard}
+							/>
+						) : (
+							<div className="grid h-full min-h-0 place-items-center p-5 text-center text-sm text-muted-foreground">
+								{t("projectInspector.empty")}
+							</div>
+						)}
+					</div>
 				</div>
 			</section>
 
@@ -255,7 +281,7 @@ const PROJECT_KIND_ICON: Record<
 	React.ComponentType<{ className?: string }>
 > = {
 	app: Code2,
-	service: Boxes,
+	service: Server,
 	package: Library,
 };
 
@@ -280,10 +306,10 @@ const InspectorBody: React.FC<{
 	const [activeTab, setActiveTab] = useState(initialTab);
 	const key = projectSettingsKey(project.name, workspaceEntryId, environment);
 	const result = useSWR(key, () => getProjectSettings(project.name, workspaceEntryId, environment));
+	const draft = useManifestDraftStore((state) => state.drafts[manifestDraftKey(workspaceEntryId)]);
 	const sectionTitle = t(
 		`projectInspector.${activeTab === "overview" ? "general" : activeTab}.title`,
 	);
-	const isManifestDraftSection = activeTab !== "deploy";
 
 	return (
 		<Tabs
@@ -298,41 +324,41 @@ const InspectorBody: React.FC<{
 			}}
 			className="flex h-full min-h-0 flex-col gap-0"
 		>
-			<div className="flex min-h-16 shrink-0 flex-col justify-between gap-3 border-b border-border px-4 py-3 sm:flex-row sm:items-center">
-				<div className="min-w-0">
+			<div className="shrink-0 border-b border-border bg-card px-4 pt-5 ud-md:px-6">
+				<div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+					<h1 className="text-2xl font-semibold tracking-tight">{project.name}</h1>
 					<div className="flex items-center gap-2">
-						<h2 className="font-heading text-lg font-semibold tracking-tight">{sectionTitle}</h2>
-						{isManifestDraftSection ? (
-							<Badge variant="secondary" className="font-mono text-[10px]">
-								{t("projectInspector.manifestDraft")}
+						{readOnly ? (
+							<Badge variant="muted">
+								<LockKeyhole className="size-3" />
+								{t("projectInspector.manifestReadOnly")}
 							</Badge>
+						) : draft ? (
+							<Badge variant="warning">{t("projectInspector.manifestDraft")}</Badge>
+						) : null}
+						{workspaceEntryId && !readOnly ? (
+							<ManifestSaveControl entryId={workspaceEntryId} />
 						) : null}
 					</div>
 				</div>
-				<div className="flex items-center gap-2">
-					<TabsList
-						variant="default"
-						className="h-9 max-w-full justify-start gap-1 overflow-x-auto rounded-lg border border-border/70 bg-muted/60 p-0.5"
-						aria-label={t("projectInspector.tabs.label")}
-					>
-						{TAB_ITEMS.map(({ id, icon: Icon }) => (
-							<TabsTrigger
-								key={id}
-								value={id}
-								className="h-8 flex-none rounded-md border-0 bg-transparent px-2.5 text-xs text-muted-foreground shadow-none hover:text-foreground data-[state=active]:bg-card data-[state=active]:text-foreground data-[state=active]:shadow-sm"
-							>
-								<Icon className="h-3.5 w-3.5" />
-								{t(`projectInspector.tabs.${id}`)}
-							</TabsTrigger>
-						))}
-					</TabsList>
-					{workspaceEntryId ? <ManifestSaveControl entryId={workspaceEntryId} /> : null}
-				</div>
+				<h2 className="sr-only">{sectionTitle}</h2>
+				<TabsList
+					variant="line"
+					className="max-w-full justify-start"
+					aria-label={t("projectInspector.tabs.label")}
+				>
+					{TAB_ITEMS.map(({ id, icon: Icon }) => (
+						<TabsTrigger key={id} value={id} className="flex-none px-3">
+							<Icon className="size-4" />
+							{t(`projectInspector.tabs.${id}`)}
+						</TabsTrigger>
+					))}
+				</TabsList>
 			</div>
 
-			<div className="min-h-0 flex-1 overflow-y-auto bg-muted/[0.1] p-4">
+			<div className="@container min-h-0 flex-1 overflow-y-auto p-4 ud-md:p-6">
 				{TAB_ITEMS.map(({ id }) => (
-					<TabsContent key={id} value={id} className="mt-0 outline-none">
+					<TabsContent key={id} value={id} className="mx-auto mt-0 max-w-6xl outline-none">
 						{result.isLoading ? <InspectorLoading /> : null}
 						{result.error ? <InspectorError onRetry={() => void result.mutate()} /> : null}
 						{result.data ? (
@@ -356,13 +382,16 @@ const InspectorBody: React.FC<{
 	);
 };
 
-const InspectorLoading: React.FC = () => (
-	<div className="space-y-4" aria-label="Loading">
-		<Skeleton className="h-5 w-40" />
-		<Skeleton className="h-20" />
-		<Skeleton className="h-32" />
-	</div>
-);
+const InspectorLoading: React.FC = () => {
+	const { t } = useTranslation();
+	return (
+		<div role="status" className="space-y-4" aria-label={t("workspaces.loading")}>
+			<Skeleton className="h-5 w-40" />
+			<Skeleton className="h-20" />
+			<Skeleton className="h-32" />
+		</div>
+	);
+};
 
 const InspectorError: React.FC<{ onRetry(): void }> = ({ onRetry }) => {
 	const { t } = useTranslation();
@@ -414,7 +443,7 @@ const ProjectSettingsPanel: React.FC<ProjectSettingsPanelProps> = ({
 	if (activeTab === "environment") {
 		return (
 			<EnvironmentForm
-				key={project.environment.selectedProfile ?? ""}
+				key={project.name}
 				project={project}
 				revision={data.revision}
 				environment={environment}
@@ -428,73 +457,5 @@ const ProjectSettingsPanel: React.FC<ProjectSettingsPanelProps> = ({
 			/>
 		);
 	}
-	return (
-		<DeploymentSettingsPanel
-			project={project}
-			revision={data.revision}
-			environment={environment}
-			workspaceEntryId={workspaceEntryId}
-			readOnly={readOnly}
-			onUpdated={onUpdated}
-			onDirtyChange={onDirtyChange}
-		/>
-	);
-};
-
-type ProfileSection = "deploy" | "container";
-
-const DeploymentSettingsPanel: React.FC<
-	Omit<ProjectSettingsPanelProps, "data" | "activeTab"> & {
-		project: ProjectSettingsResponse["project"];
-		revision: string;
-	}
-> = ({ project, revision, environment, workspaceEntryId, readOnly, onUpdated, onDirtyChange }) => {
-	const catalog = useBackendCatalog();
-	const dirtySections = useRef<Record<ProfileSection, boolean>>({
-		deploy: false,
-		container: false,
-	});
-	const [containerProfileDirty, setContainerProfileDirty] = useState(false);
-	const stagedDeploy = useManifestDraftStore(
-		(state) => state.drafts[manifestDraftKey(workspaceEntryId)]?.changes[project.name]?.deploy,
-	);
-	const deployBackend = stagedDeploy?.backend ?? project.deploy.backend;
-	const requiresImage = backendRequiresContainerArtifact(
-		deployBackend ? catalog.byID.get(`deploy/${deployBackend}`) : undefined,
-	);
-
-	function setSectionDirty(section: ProfileSection, dirty: boolean) {
-		dirtySections.current[section] = dirty;
-		if (section === "container") setContainerProfileDirty(dirty);
-		onDirtyChange(dirtySections.current.deploy || dirtySections.current.container);
-	}
-
-	function sectionUpdated(section: ProfileSection, next: ProjectSettingsResponse) {
-		setSectionDirty(section, false);
-		onUpdated(next);
-	}
-
-	return (
-		<DeployForm
-			project={project}
-			revision={revision}
-			environment={environment}
-			workspaceEntryId={workspaceEntryId}
-			readOnly={readOnly}
-			onUpdated={(next) => sectionUpdated("deploy", next)}
-			onDirtyChange={(dirty) => setSectionDirty("deploy", dirty)}
-		>
-			{requiresImage || containerProfileDirty ? (
-				<ContainerForm
-					project={project}
-					revision={revision}
-					environment={environment}
-					workspaceEntryId={workspaceEntryId}
-					readOnly={readOnly}
-					onUpdated={(next) => sectionUpdated("container", next)}
-					onDirtyChange={(dirty) => setSectionDirty("container", dirty)}
-				/>
-			) : null}
-		</DeployForm>
-	);
+	return null;
 };

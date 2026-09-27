@@ -6,82 +6,30 @@ import (
 
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/adapters/env/infisical"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/application/execution"
-	"github.com/torchstellar-team/one-cli/packages/cli/internal/core/profile"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/core/workspace"
 	cliErrors "github.com/torchstellar-team/one-cli/packages/cli/internal/platform/errors"
+	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/i18n"
+	session "github.com/torchstellar-team/one-cli/packages/cli/internal/platform/infisicalsession"
 )
 
-func (s *Service) resolveInfisical(
-	activeWorkspace execution.Workspace,
-	profileFlag, environment, projectName string,
-) (*infisical.WorkspaceConfig, *infisical.Credentials, error) {
-	resolved, err := s.resolveInfisicalProfile(
-		activeWorkspace, profileFlag, environment, projectName,
-	)
-	if err != nil || resolved == nil {
+func (s *Service) resolveInfisical() (*infisical.WorkspaceConfig, *infisical.Credentials, error) {
+	current, err := session.Require()
+	if err != nil {
 		return nil, nil, err
 	}
-	if resolved.Profile.Infisical == nil {
-		return nil, nil, nil
-	}
-	value := resolved.Profile.Infisical
-	config := &infisical.WorkspaceConfig{
-		SiteURL: value.SiteURL, ProfileName: resolved.Name,
-	}
-	var credentials *infisical.Credentials
-	if value.Credentials != nil {
-		credentials = &infisical.Credentials{
-			ClientID: value.Credentials.ClientID, ClientSecret: value.Credentials.ClientSecret,
-		}
-	}
-	return config, credentials, nil
-}
-
-func (s *Service) resolveInfisicalProfile(
-	activeWorkspace execution.Workspace,
-	profileFlag, environment, projectName string,
-) (*profile.Resolved, error) {
-	environment = workspace.ProfileBindingEnvironment(activeWorkspace.Manifest(), environment)
-	resolved, err := s.profiles.Resolve(profile.ResolveInput{
-		Domain:        profile.DomainEnv,
-		Backend:       workspace.EnvBackendInfisical,
-		FlagOverride:  profileFlag,
-		WorkspaceID:   workspace.WorkspaceID(activeWorkspace.Manifest()),
-		WorkspaceRoot: activeWorkspace.Root(),
-		Environment:   environment,
-		ProjectName:   projectName,
-	})
-	if err != nil {
-		if coded, ok := err.(interface{ ErrorCode() string }); ok &&
-			coded.ErrorCode() == "PROFILE_NONE_CONFIGURED" {
-			return nil, nil
-		}
-		return nil, err
-	}
-	return resolved, nil
+	return &infisical.WorkspaceConfig{SiteURL: current.SiteURL}, &infisical.Credentials{AccessToken: current.Token}, nil
 }
 
 func (s *Service) ensureInfisicalBound(
 	ctx context.Context,
 	activeWorkspace execution.Workspace,
-	profileFlag, environment, projectName string,
 ) error {
 	projectRoot := activeWorkspace.Root()
 	config, _ := infisical.LoadWorkspaceConfig(projectRoot)
 	if config != nil && strings.TrimSpace(config.ProjectID) != "" {
 		return nil
 	}
-	resolved, err := s.resolveInfisicalProfile(
-		activeWorkspace, profileFlag, environment, projectName,
-	)
-	if err != nil {
-		return err
-	}
-	profileName := ""
-	if resolved != nil {
-		profileName = resolved.Name
-	}
-	_, err = s.initInfisical(ctx, projectRoot, infisical.InitInput{ProfileName: profileName})
+	_, err := s.initInfisical(ctx, projectRoot, infisical.InitInput{})
 	return err
 }
 
@@ -89,7 +37,7 @@ func requireInfisicalBackend(resolution resolution) error {
 	if resolution.Scope.Backend().Name != workspace.EnvBackendInfisical {
 		return cliErrors.New(
 			cliErrors.ENV_BACKEND_INVALID,
-			"当前工作区没有选择 Infisical backend。",
+			i18n.T("env.infisical_required"),
 		)
 	}
 	return nil
@@ -125,13 +73,7 @@ func (s *Service) EnsureInfisicalReady(
 	if err := requireInfisicalBackend(resolution); err != nil {
 		return err
 	}
-	return s.ensureInfisicalBound(
-		ctx,
-		resolution.Workspace,
-		"",
-		resolution.Scope.Environment(),
-		profileProjectName(resolution.Workspace, project),
-	)
+	return s.ensureInfisicalBound(ctx, resolution.Workspace)
 }
 
 func (s *Service) resolveInfisicalFolderPath(
@@ -140,13 +82,20 @@ func (s *Service) resolveInfisicalFolderPath(
 	selector string,
 ) (string, error) {
 	projectRoot := activeWorkspace.Root()
-	if config == nil {
-		if existing, err := infisical.LoadWorkspaceConfig(projectRoot); err == nil && existing != nil {
-			config = &infisical.WorkspaceConfig{RootPath: existing.RootPath}
-		} else {
-			config = &infisical.WorkspaceConfig{}
-		}
+	// Path metadata always comes from the workspace, independently of session credentials.
+	stored, err := infisical.LoadWorkspaceConfig(projectRoot)
+	if err != nil {
+		return "", err
 	}
+	pathConfig := &infisical.WorkspaceConfig{}
+	if config != nil {
+		*pathConfig = *config
+	}
+	if stored != nil {
+		pathConfig.RootPath = stored.RootPath
+	}
+	config = pathConfig
+
 	selector = strings.TrimSpace(selector)
 	if selector != "" {
 		if project, ok := activeWorkspace.Project(selector); ok {
@@ -160,8 +109,7 @@ func (s *Service) resolveInfisicalFolderPath(
 			return infisical.NormalizePath(selector), nil
 		}
 		return "", cliErrors.New(cliErrors.SUBPROJECT_NOT_FOUND,
-			"找不到名字或路径匹配 "+selector+" 的项目。已声明: "+
-				strings.Join(activeWorkspace.ProjectNames(), ", "))
+			i18n.Tf("workspace.project_selector_missing", selector, strings.Join(activeWorkspace.ProjectNames(), ", ")))
 	}
 	if project, ok := activeWorkspace.ProjectFromWorkingDirectory(); ok {
 		override, err := infisical.LoadSubprojectConfig(projectRoot, project.RelativeDir)

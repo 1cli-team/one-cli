@@ -6,7 +6,6 @@ package template
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"io"
 	"net/http"
 	"os"
@@ -15,6 +14,7 @@ import (
 	"time"
 
 	cliErrors "github.com/torchstellar-team/one-cli/packages/cli/internal/platform/errors"
+	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/i18n"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/resources/bundled"
 )
 
@@ -181,20 +181,20 @@ func loadHTTP(ctx context.Context, url string) ([]byte, error) {
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
-		return nil, cliErrors.New(cliErrors.REGISTRY_FETCH_FAILED, "注册表拉取失败，请检查网络连接。")
+		return nil, cliErrors.New(cliErrors.REGISTRY_FETCH_FAILED, i18n.T("registry.fetch_failed"))
 	}
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
-		return nil, cliErrors.New(cliErrors.REGISTRY_FETCH_FAILED, "注册表拉取失败，请检查网络连接。")
+		return nil, cliErrors.New(cliErrors.REGISTRY_FETCH_FAILED, i18n.T("registry.fetch_failed"))
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		return nil, cliErrors.New(cliErrors.REGISTRY_FETCH_FAILED,
-			fmt.Sprintf("注册表拉取失败（HTTP %d）。请检查网络连接。", resp.StatusCode))
+			i18n.Tf("registry.http_failed", resp.StatusCode))
 	}
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return nil, cliErrors.New(cliErrors.REGISTRY_FETCH_FAILED, "注册表读取失败。")
+		return nil, cliErrors.New(cliErrors.REGISTRY_FETCH_FAILED, i18n.T("registry.read_failed"))
 	}
 	return body, nil
 }
@@ -209,11 +209,11 @@ func loadLocal(p string) ([]byte, error) {
 	}
 	if _, err := os.Stat(abs); err != nil {
 		return nil, cliErrors.New(cliErrors.REGISTRY_NOT_FOUND,
-			fmt.Sprintf("找不到本地注册表文件: %s", abs))
+			i18n.Tf("registry.file_missing", abs))
 	}
 	body, err := os.ReadFile(abs)
 	if err != nil {
-		return nil, cliErrors.New(cliErrors.REGISTRY_INVALID, "registry.json 格式不正确。")
+		return nil, cliErrors.New(cliErrors.REGISTRY_INVALID, i18n.T("registry.invalid"))
 	}
 	return body, nil
 }
@@ -221,33 +221,30 @@ func loadLocal(p string) ([]byte, error) {
 func parseAndValidate(raw []byte) (*Registry, error) {
 	var doc map[string]json.RawMessage
 	if err := json.Unmarshal(raw, &doc); err != nil {
-		return nil, cliErrors.New(cliErrors.REGISTRY_INVALID, "registry.json 格式不正确。")
+		return nil, cliErrors.New(cliErrors.REGISTRY_INVALID, i18n.T("registry.invalid"))
 	}
 	versionRaw, ok := doc["version"]
 	if !ok {
-		return nil, cliErrors.New(cliErrors.REGISTRY_INVALID, "registry.json 缺少有效 version。")
+		return nil, cliErrors.New(cliErrors.REGISTRY_INVALID, i18n.T("registry.version_missing"))
 	}
 	var version int
 	if err := json.Unmarshal(versionRaw, &version); err != nil {
-		return nil, cliErrors.New(cliErrors.REGISTRY_INVALID, "registry.json 缺少有效 version。")
+		return nil, cliErrors.New(cliErrors.REGISTRY_INVALID, i18n.T("registry.version_missing"))
 	}
 	if version != RegistryVersion {
-		msg := fmt.Sprintf("registry.json 版本 %d 不支持，当前 CLI 仅认 v%d。", version, RegistryVersion)
+		msg := i18n.Tf("registry.version_unsupported", version, RegistryVersion)
 		if version == 0 {
-			msg += " 当前 schema 把每个模板的 defaults / compat 合并进 domains: " +
-				"`defaults.<domain>` + `compat.<domain>` → " +
-				"`domains.<domain>: { default: \"<backend>\", compat: [\"<b1>\", ...] }`。" +
-				"toolchain 字段为必填。改完同步把顶层 \"version\" 字段改为 1。"
+			msg += i18n.T("registry.migrate")
 		}
 		return nil, cliErrors.New(cliErrors.REGISTRY_INVALID, msg)
 	}
 	templatesRaw, ok := doc["templates"]
 	if !ok {
-		return nil, cliErrors.New(cliErrors.REGISTRY_INVALID, "registry.json 缺少有效 templates 数组。")
+		return nil, cliErrors.New(cliErrors.REGISTRY_INVALID, i18n.T("registry.templates_missing"))
 	}
 	var rawTemplates []map[string]json.RawMessage
 	if err := json.Unmarshal(templatesRaw, &rawTemplates); err != nil {
-		return nil, cliErrors.New(cliErrors.REGISTRY_INVALID, "registry.json 缺少有效 templates 数组。")
+		return nil, cliErrors.New(cliErrors.REGISTRY_INVALID, i18n.T("registry.templates_missing"))
 	}
 
 	templates := make([]Template, 0, len(rawTemplates))
@@ -276,58 +273,58 @@ func validateTemplate(raw map[string]json.RawMessage, index int) (Template, erro
 	var t Template
 	if err := unmarshalString(raw, "id", &t.ID); err != nil || t.ID == "" {
 		return t, cliErrors.New(cliErrors.REGISTRY_INVALID,
-			fmt.Sprintf("registry.json 模板缺少有效 id（index=%d）。", index))
+			i18n.Tf("registry.id_missing", index))
 	}
 	if err := unmarshalString(raw, "code", &t.Code); err != nil || !isValidTemplateCode(t.Code) {
 		return t, cliErrors.New(cliErrors.REGISTRY_INVALID,
-			fmt.Sprintf("registry.json 模板缺少有效 code（id=%s）：必须为 2 字符 [a-z0-9]。", t.ID))
+			i18n.Tf("registry.code_invalid", t.ID))
 	}
 	if err := unmarshalString(raw, "name", &t.Name); err != nil || t.Name == "" {
 		return t, cliErrors.New(cliErrors.REGISTRY_INVALID,
-			fmt.Sprintf("registry.json 模板缺少有效 name（id=%s）。", t.ID))
+			i18n.Tf("registry.name_missing", t.ID))
 	}
 	if err := unmarshalString(raw, "description", &t.Description); err != nil {
 		return t, cliErrors.New(cliErrors.REGISTRY_INVALID,
-			fmt.Sprintf("registry.json 模板缺少有效 description（id=%s）。", t.ID))
+			i18n.Tf("registry.description_missing", t.ID))
 	}
 	var category string
 	if err := unmarshalString(raw, "category", &category); err != nil {
 		return t, cliErrors.New(cliErrors.REGISTRY_INVALID,
-			fmt.Sprintf("registry.json 模板 category 非法（id=%s）。", t.ID))
+			i18n.Tf("registry.category_invalid", t.ID))
 	}
 	t.Category = Category(category)
 	if _, ok := validCategories[t.Category]; !ok {
 		return t, cliErrors.New(cliErrors.REGISTRY_INVALID,
-			fmt.Sprintf("registry.json 模板 category 非法（id=%s）。", t.ID))
+			i18n.Tf("registry.category_invalid", t.ID))
 	}
 	if tagsRaw, ok := raw["tags"]; ok {
 		if err := json.Unmarshal(tagsRaw, &t.Tags); err != nil {
 			return t, cliErrors.New(cliErrors.REGISTRY_INVALID,
-				fmt.Sprintf("registry.json 模板 tags 非法（id=%s）。", t.ID))
+				i18n.Tf("registry.tags_invalid", t.ID))
 		}
 	} else {
 		return t, cliErrors.New(cliErrors.REGISTRY_INVALID,
-			fmt.Sprintf("registry.json 模板 tags 非法（id=%s）。", t.ID))
+			i18n.Tf("registry.tags_invalid", t.ID))
 	}
 	if err := unmarshalString(raw, "repo", &t.Repo); err != nil || t.Repo == "" {
 		return t, cliErrors.New(cliErrors.REGISTRY_INVALID,
-			fmt.Sprintf("registry.json 模板缺少有效 repo（id=%s）。", t.ID))
+			i18n.Tf("registry.repo_missing", t.ID))
 	}
 	// toolchain is required in the current schema.
 	toolchainRaw, ok := raw["toolchain"]
 	if !ok {
 		return t, cliErrors.New(cliErrors.REGISTRY_INVALID,
-			fmt.Sprintf("registry.json 模板缺少 toolchain（id=%s），当前 schema 要求 toolchain 为必填。", t.ID))
+			i18n.Tf("registry.toolchain_missing", t.ID))
 	}
 	var toolchain string
 	if err := json.Unmarshal(toolchainRaw, &toolchain); err != nil {
 		return t, cliErrors.New(cliErrors.REGISTRY_INVALID,
-			fmt.Sprintf("registry.json 模板 toolchain 非法（id=%s）。", t.ID))
+			i18n.Tf("registry.toolchain_invalid", t.ID))
 	}
 	t.Toolchain = Toolchain(toolchain)
 	if _, ok := validToolchains[t.Toolchain]; !ok {
 		return t, cliErrors.New(cliErrors.REGISTRY_INVALID,
-			fmt.Sprintf("registry.json 模板 toolchain 非法（id=%s）。", t.ID))
+			i18n.Tf("registry.toolchain_invalid", t.ID))
 	}
 	// Unified domains block: `domains: { <name>: { default, compat } }`
 	// is the on-disk shape; we flatten it to t.Defaults / t.Compat for the
@@ -336,7 +333,7 @@ func validateTemplate(raw map[string]json.RawMessage, index int) (Template, erro
 		var domains map[string]templateDomainSpec
 		if err := json.Unmarshal(dRaw, &domains); err != nil {
 			return t, cliErrors.New(cliErrors.REGISTRY_INVALID,
-				fmt.Sprintf("registry.json 模板 domains 非法（id=%s）。", t.ID))
+				i18n.Tf("registry.domains_invalid", t.ID))
 		}
 		for name, spec := range domains {
 			if spec.Default != "" {
@@ -359,7 +356,7 @@ func validateTemplate(raw map[string]json.RawMessage, index int) (Template, erro
 func unmarshalString(raw map[string]json.RawMessage, key string, dst *string) error {
 	v, ok := raw[key]
 	if !ok {
-		return fmt.Errorf("%s missing", key)
+		return i18n.Errorf("registry.field_missing", key)
 	}
 	return json.Unmarshal(v, dst)
 }

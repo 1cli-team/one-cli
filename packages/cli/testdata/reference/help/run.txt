@@ -6,41 +6,18 @@ USAGE
   one run [project] [-p <name|path>] [--env-provider dotenv|infisical] [--env <name>] -- <cmd> [args...]
 
 TIPS
-把项目环境变量注入到任意命令，类似 infisical run。
+Loads project environment variables and runs a command in the project directory. Select a project by name or relative path, or run from inside a project. The positional project and --project must agree when both are used.
 
-项目解析：
-  - 不传 project / -p：从当前目录推导（必须 cd 到某个项目目录里）
-  - 传位置参数：按 manifest.projects[].name 或相对路径选择（如 web、apps/web）
-  - 传 -p <name>：按 manifest.projects[].name 选（如 -p web）
-  - 传 -p <relativeDir>：按相对路径选（如 -p apps/web）
-  - 位置参数和 -p 是等价写法；同时使用时必须指向同一个项目
+Use -- to separate One options from the child command. --env overrides the workspace default environment; --env-provider selects dotenv or Infisical. Loaded values override existing shell environment variables.
 
-命令分隔：
-  必须使用 -- 分隔 One CLI 参数和要执行的命令。
-
-密钥来源（--env-provider，默认取 workspace 在 one create 时选择的 provider）：
-  - dotenv    ：读 <project>/.env 文件
-  - infisical ：联网从 Infisical 拉
-
-环境名（--env）：
-  覆盖 manifest.environments.default，比如 --env staging。
-
-工作目录：
-  子进程总在解析出的项目目录里运行（不论你从哪里 cd 进来）。
-
-注入的密钥默认会覆盖已存在的 shell 环境变量。
-
-示例：
-  one run -- npm run dev                          # 用 workspace 默认 provider
-  one run web -- npm start                        # 用位置参数选择项目
-  one run apps/web -- npm start                   # 位置参数也接受相对路径
-  one run -p web -- npm start                     # 按 manifest 里的 name 选
-  one run --env-provider dotenv -- npm test       # 强制走 dotenv（离线场景）
-  one run --env staging -- npm run e2e            # 用 staging 环境的密钥
+With --global, provide --env and --path explicitly. The command keeps the current working directory. Use --keys to select which shared credentials to inject.
 
 COMMON OPTIONS
   --dry-run                Print the execution plan without loading environment values or starting a command
-  --env <value>            环境名（默认取 manifest.environments.default）
-  --env-provider <value>   env provider: dotenv | infisical（默认取 workspace manifest 中已选的值）
+  --env <value>            Environment name (default: manifest.environments.default)
+  --env-provider <value>   Environment source: dotenv or infisical (default: workspace configuration)
+  --global                 Use shared credentials, keeping the current working directory
+  --keys <value>           Inject only the specified variable names, separated by commas
   -o, --output <value>     Output format: json | yaml | text (default: terminal-friendly text, JSON when piped)
-  -p, --project <value>    项目名（manifest.projects[].name）或相对路径；默认从 cwd 推导
+  --path <value>           Shared credential folder (must be explicit)
+  -p, --project <value>    Project name or relative path; inferred from the current directory by default

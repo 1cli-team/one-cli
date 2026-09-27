@@ -2,12 +2,12 @@ package hooks
 
 import (
 	"encoding/json"
-	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
 
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/fsutil"
+	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/i18n"
 )
 
 // Only One's exact former defaults may be removed automatically. A customized
@@ -27,7 +27,7 @@ func planLegacy(p *fsutil.FilePlan) (bool, error) {
 	for _, entry := range rootEntries {
 		name := entry.Name()
 		if name != "commitlint.config.js" && (strings.HasPrefix(name, "commitlint.config.") || strings.HasPrefix(name, ".commitlintrc")) {
-			return false, conflict(name, "custom commitlint configuration must be integrated into hk.pkl before migration")
+			return false, conflict(name, i18n.T("hooks.commitlint_custom"))
 		}
 	}
 	for path, expected := range legacyFiles {
@@ -37,7 +37,7 @@ func planLegacy(p *fsutil.FilePlan) (bool, error) {
 		}
 		if raw != nil {
 			if string(raw) != expected {
-				return false, conflict(path, "custom hook or commitlint rules require migration into hk.pkl; the file has been preserved")
+				return false, conflict(path, i18n.T("hooks.rules_custom"))
 			}
 			legacy = true
 		}
@@ -48,7 +48,7 @@ func planLegacy(p *fsutil.FilePlan) (bool, error) {
 	}
 	for _, entry := range entries {
 		if entry.Name() != "_" && entry.Name() != "pre-commit" && entry.Name() != "commit-msg" {
-			return false, conflict(".husky/"+entry.Name(), "custom Husky content must be integrated before migration")
+			return false, conflict(".husky/"+entry.Name(), i18n.T("hooks.husky_custom"))
 		}
 	}
 	raw, err := p.Read("package.json")
@@ -58,10 +58,10 @@ func planLegacy(p *fsutil.FilePlan) (bool, error) {
 	var pkg map[string]json.RawMessage
 	if raw != nil {
 		if err := json.Unmarshal(raw, &pkg); err != nil || pkg == nil {
-			return false, fmt.Errorf("invalid root package.json")
+			return false, i18n.Errorf("hooks.package_invalid")
 		}
 		if pkg["commitlint"] != nil {
-			return false, conflict("package.json", "custom commitlint configuration must be integrated into hk.pkl before migration")
+			return false, conflict("package.json", i18n.T("hooks.commitlint_custom"))
 		}
 	}
 	if !legacy {
@@ -80,7 +80,7 @@ func planLegacy(p *fsutil.FilePlan) (bool, error) {
 				if prepare := values["prepare"]; prepare != nil {
 					var command string
 					if json.Unmarshal(prepare, &command) != nil || command != "husky" {
-						return false, conflict("package.json", "custom prepare script must be migrated explicitly")
+						return false, conflict("package.json", i18n.T("hooks.prepare_custom"))
 					}
 					delete(values, "prepare")
 				}

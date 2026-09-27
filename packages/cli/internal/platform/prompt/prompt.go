@@ -18,9 +18,10 @@ import (
 	"os"
 	"os/signal"
 
-	"github.com/charmbracelet/huh"
+	"charm.land/huh/v2"
 
 	cliErrors "github.com/torchstellar-team/one-cli/packages/cli/internal/platform/errors"
+	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/i18n"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/output"
 )
 
@@ -43,7 +44,7 @@ func Text(title, placeholder string, validate func(string) error) (string, error
 	if validate != nil {
 		field = field.Validate(validate)
 	}
-	if err := runHuh(field.WithTheme(defaultTheme()).Run); err != nil {
+	if err := runField(field); err != nil {
 		return "", mapErr(err)
 	}
 	return value, nil
@@ -60,25 +61,31 @@ func Password(title string, validate func(string) error) (string, error) {
 	if validate != nil {
 		field = field.Validate(validate)
 	}
-	if err := runHuh(field.WithTheme(defaultTheme()).Run); err != nil {
+	if err := runField(field); err != nil {
 		return "", mapErr(err)
 	}
 	return value, nil
 }
 
 // Confirm shows a yes/no prompt. defaultValue seeds the cursor; affirmative
-// and negative override the default "Yes" / "No" labels (set to "" for
-// huh's defaults). On Ctrl-C returns PROMPT_CANCELLED.
+// and negative override the localized yes/no labels (set to "" for
+// the active locale's defaults). On Ctrl-C returns PROMPT_CANCELLED.
 func Confirm(title string, defaultValue bool, affirmative, negative string) (bool, error) {
 	value := defaultValue
 	field := huh.NewConfirm().Title(title).Value(&value)
+	if affirmative == "" {
+		affirmative = i18n.T("common.yes")
+	}
+	if negative == "" {
+		negative = i18n.T("common.no")
+	}
 	if affirmative != "" {
 		field = field.Affirmative(affirmative)
 	}
 	if negative != "" {
 		field = field.Negative(negative)
 	}
-	if err := runHuh(field.WithTheme(defaultTheme()).Run); err != nil {
+	if err := runField(field); err != nil {
 		return false, mapErr(err)
 	}
 	return value, nil
@@ -97,7 +104,7 @@ func Select[T comparable](title string, options []Option[T]) (T, error) {
 		Title(title).
 		Options(huhOpts...).
 		Value(&value)
-	if err := runHuh(field.WithTheme(defaultTheme()).Run); err != nil {
+	if err := runField(field); err != nil {
 		return value, mapErr(err)
 	}
 	return value, nil
@@ -123,7 +130,7 @@ func MultiSelect[T comparable](title string, options []Option[T], preSelected []
 		Title(title).
 		Options(huhOpts...).
 		Value(&values)
-	if err := runHuh(field.WithTheme(defaultTheme()).Run); err != nil {
+	if err := runField(field); err != nil {
 		return nil, mapErr(err)
 	}
 	return values, nil
@@ -182,12 +189,17 @@ func mapErr(err error) error {
 	if stderrors.Is(err, huh.ErrUserAborted) {
 		// PROMPT_CANCELLED is a cooperative, quiet exit. Scripts see exit 0
 		// and users do not get a red error after choosing to stop.
-		return cliErrors.New(cliErrors.PROMPT_CANCELLED, "操作已取消。").
+		return cliErrors.New(cliErrors.PROMPT_CANCELLED, i18n.T("common.cancelled")).
 			WithExit0().
 			WithRemediation(output.Remediation{
 				Action: "rerun-with-yes",
-				Hint:   "如果你只是想跳过提问，可以加 --yes 走纯非交互模式。",
+				Hint:   i18n.T("prompt.skip_hint"),
 			})
 	}
 	return cliErrors.New(cliErrors.ONE_CLI_ERROR, err.Error())
+}
+
+func runField(field huh.Field) error {
+	form := huh.NewForm(huh.NewGroup(field)).WithTheme(defaultTheme()).WithKeyMap(defaultKeyMap()).WithShowHelp(false)
+	return runHuh(form.Run)
 }

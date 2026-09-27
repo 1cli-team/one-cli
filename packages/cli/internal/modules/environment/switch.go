@@ -3,7 +3,6 @@ package environment
 import (
 	"context"
 	"errors"
-	"fmt"
 	"os"
 	"path/filepath"
 	"sort"
@@ -14,6 +13,7 @@ import (
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/application/execution"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/core/workspace"
 	cliErrors "github.com/torchstellar-team/one-cli/packages/cli/internal/platform/errors"
+	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/i18n"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/output"
 )
 
@@ -31,7 +31,7 @@ func (s *Service) PlanSwitch(scope execution.Scope, target string) (SwitchPlan, 
 	target = strings.TrimSpace(target)
 	if target != workspace.EnvBackendDotenv && target != workspace.EnvBackendInfisical {
 		return SwitchPlan{}, cliErrors.New(cliErrors.ENV_BACKEND_INVALID,
-			fmt.Sprintf("不支持的 backend %q；合法值: dotenv / infisical", target))
+			i18n.Tf("env.backend_invalid", target))
 	}
 	resolution, err := s.resolve(resolveInput{Scope: scope, AllowUnknown: true})
 	if err != nil {
@@ -43,7 +43,7 @@ func (s *Service) PlanSwitch(scope execution.Scope, target string) (SwitchPlan, 
 	}
 	if current == target {
 		return SwitchPlan{}, cliErrors.New(cliErrors.ENV_BACKEND_UNCHANGED,
-			fmt.Sprintf("工作区已经是 %s 后端，无需切换。", target)).
+			i18n.Tf("env.backend_unchanged", target)).
 			WithContext(map[string]any{"backend": target})
 	}
 	plan := SwitchPlan{
@@ -53,9 +53,7 @@ func (s *Service) PlanSwitch(scope execution.Scope, target string) (SwitchPlan, 
 	if target == workspace.EnvBackendDotenv {
 		return plan, nil
 	}
-	// Resolve credentials during Switch, not while planning: every dotenv
-	// tuple can select a different machine-local Profile by project and
-	// environment, and PlanSwitch does not yet know whether sync will run.
+	// Planning only reads local metadata; authentication occurs during execution.
 	plan.tuples, err = collectDotenvTuples(
 		resolution.Workspace.Root(), resolution.Workspace.Manifest(),
 	)
@@ -66,12 +64,9 @@ func (s *Service) PlanSwitch(scope execution.Scope, target string) (SwitchPlan, 
 }
 
 type SwitchOptions struct {
-	Sync      bool
-	Overwrite bool
-	DryRun    bool
-	// Environment selects the machine-local Profile context used to initialize
-	// an Infisical binding when the caller is not migrating dotenv tuples. CLI
-	// migrations leave this empty and keep using the first tuple's context.
+	Sync        bool
+	Overwrite   bool
+	DryRun      bool
 	Environment string
 }
 
@@ -103,22 +98,12 @@ func (s *Service) Switch(
 	// must have a remote project binding before any env operation can work.
 	// Initialize that binding even when the caller deliberately skips data
 	// migration (the Dashboard switch flow does exactly that).
-	bindEnvironment := strings.TrimSpace(options.Environment)
-	bindProject := ""
-	if bindEnvironment == "" && len(plan.tuples) > 0 {
-		bindEnvironment = plan.tuples[0].environment
-		bindProject = plan.tuples[0].project
-	}
-	if err := s.ensureInfisicalBound(
-		ctx, plan.Workspace, "", bindEnvironment, bindProject,
-	); err != nil {
+	if err := s.ensureInfisicalBound(ctx, plan.Workspace); err != nil {
 		return nil, err
 	}
 	if options.Sync && len(plan.tuples) > 0 {
 		for _, tuple := range plan.tuples {
-			config, credentials, err := s.resolveInfisical(
-				plan.Workspace, "", tuple.environment, tuple.project,
-			)
+			config, credentials, err := s.resolveInfisical()
 			if err != nil {
 				return nil, err
 			}
@@ -139,7 +124,7 @@ func (s *Service) Switch(
 		}
 		if result.Conflicts > 0 {
 			return nil, cliErrors.New(cliErrors.ENV_MIGRATE_CONFLICT,
-				fmt.Sprintf("%d 个 key 在 Infisical 已存在且值不同；加 --overwrite 重跑以覆盖。", result.Conflicts)).
+				i18n.Tf("env.migrate_conflicts", result.Conflicts)).
 				WithContext(map[string]any{
 					"backend": plan.To, "conflicts": result.Conflicts, "synced": result.Synced,
 				})
@@ -205,7 +190,7 @@ func collectDotenvTuples(root string, manifest *workspace.Manifest) ([]dotenvTup
 					if os.IsNotExist(err) {
 						continue
 					}
-					return nil, fmt.Errorf("read %s: %w", file, err)
+					return nil, i18n.Errorf("file.read_error", file, err)
 				}
 				for key, value := range dotenv.Parse(string(content)) {
 					merged[key] = value

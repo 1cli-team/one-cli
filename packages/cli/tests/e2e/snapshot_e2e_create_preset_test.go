@@ -20,7 +20,7 @@ import (
 // tests).
 var presetFullstackPaths = []string{
 	"services/go-api",
-	"services/go-api/Dockerfile",
+	"services/go-api/Taskfile.yml",
 	"apps/nextjs-app",
 	"one.manifest.json",
 }
@@ -33,7 +33,7 @@ func TestSnapshot_E2E_Create_Preset_Fullstack(t *testing.T) {
 	isolateHome(t, tmp)
 
 	target := filepath.Join(tmp, "fs")
-	stdout, stderr, code := runBinary(t, "create", target, "--preset", "1.bgok.fnav", "-y", "-o", "json")
+	stdout, stderr, code := runBinary(t, "create", target, "--preset", "1.bgo.fna", "-y", "-o", "json")
 	if code != 0 {
 		t.Fatalf("expected exit 0, got %d\n  stdout: %s\n  stderr: %s", code, stdout, stderr)
 	}
@@ -70,82 +70,13 @@ func TestSnapshot_E2E_Create_Preset_Fullstack(t *testing.T) {
 	for _, project := range manifest.Projects {
 		if project.Name == "go-api" {
 			foundGoAPI = true
-			if project.Domains == nil || project.Domains.Container == nil {
-				t.Fatalf("go-api missing container domain: %s", rawManifest)
-			}
-			if project.Domains.Container.Kind != "dockerhub" {
-				t.Fatalf("go-api container kind: got %q, want dockerhub", project.Domains.Container.Kind)
+			if project.Domains != nil && project.Domains.Container != nil {
+				t.Fatalf("go-api includes retired container domain: %s", rawManifest)
 			}
 		}
 	}
 	if !foundGoAPI {
 		t.Fatalf("go-api project missing from manifest: %s", rawManifest)
-	}
-}
-
-// TestSnapshot_E2E_Create_Preset_MixedDeployContainerScope locks the
-// docs-facing marketing preset: NestJS goes to kustomize + Docker Hub,
-// while Astro stays on Cloudflare and must not gain a container domain,
-// Dockerfile, or kustomize workload.
-func TestSnapshot_E2E_Create_Preset_MixedDeployContainerScope(t *testing.T) {
-	tmp := t.TempDir()
-	isolateHome(t, tmp)
-
-	target := filepath.Join(tmp, "marketing")
-	stdout, stderr, code := runBinary(t, "create", target, "--preset", "1.bnekh.fasc.ed", "-y", "-o", "json")
-	if code != 0 {
-		t.Fatalf("expected exit 0, got %d\n  stdout: %s\n  stderr: %s", code, stdout, stderr)
-	}
-
-	rawManifest, err := os.ReadFile(filepath.Join(target, "one.manifest.json"))
-	if err != nil {
-		t.Fatalf("read manifest: %v", err)
-	}
-	var manifest struct {
-		Projects []struct {
-			Name    string `json:"name"`
-			Domains *struct {
-				Container *struct {
-					Kind string `json:"kind"`
-				} `json:"container,omitempty"`
-				Deploy *struct {
-					Kind string `json:"kind"`
-				} `json:"deploy,omitempty"`
-			} `json:"domains,omitempty"`
-		} `json:"projects"`
-	}
-	if err := json.Unmarshal(rawManifest, &manifest); err != nil {
-		t.Fatalf("parse manifest: %v", err)
-	}
-
-	projects := map[string]struct {
-		container string
-		deploy    string
-	}{}
-	for _, project := range manifest.Projects {
-		got := projects[project.Name]
-		if project.Domains != nil && project.Domains.Container != nil {
-			got.container = project.Domains.Container.Kind
-		}
-		if project.Domains != nil && project.Domains.Deploy != nil {
-			got.deploy = project.Domains.Deploy.Kind
-		}
-		projects[project.Name] = got
-	}
-	if got := projects["nestjs-api"]; got.container != "dockerhub" || got.deploy != "kustomize" {
-		t.Fatalf("nestjs-api domains = %+v, want dockerhub + kustomize\nmanifest: %s", got, rawManifest)
-	}
-	if got := projects["astro-site"]; got.container != "" || got.deploy != "cloudflare" {
-		t.Fatalf("astro-site domains = %+v, want no container + cloudflare\nmanifest: %s", got, rawManifest)
-	}
-	if !fileExists(t, filepath.Join(target, "services", "nestjs-api", "Dockerfile")) {
-		t.Fatal("nestjs-api Dockerfile missing")
-	}
-	if fileExists(t, filepath.Join(target, "apps", "astro-site", "Dockerfile")) {
-		t.Fatal("astro-site must not have a Dockerfile")
-	}
-	if fileExists(t, filepath.Join(target, "kustomize", "base", "astro-site.yaml")) {
-		t.Fatal("astro-site must not have a kustomize workload")
 	}
 }
 
@@ -180,31 +111,6 @@ func TestSnapshot_E2E_Create_Preset_InvalidNoProject(t *testing.T) {
 	if fileExists(t, target) {
 		t.Errorf("pre-flight failure must not create target dir: %s", target)
 	}
-}
-
-// TestSnapshot_E2E_Create_Preset_DeployIncompat locks the
-// PROFILE_BACKEND_INVALID path: `--preset 1.femv` references
-// expo-mobile (no deploy domain) with deploy=vercel.
-func TestSnapshot_E2E_Create_Preset_DeployIncompat(t *testing.T) {
-	tmp := t.TempDir()
-	isolateHome(t, tmp)
-
-	target := filepath.Join(tmp, "bad")
-	_, stderr, code := runBinary(t, "create", target, "--preset", "1.femv", "-y", "-o", "json")
-	if code == 0 {
-		t.Fatalf("expected non-zero exit, got 0\n  stderr: %s", stderr)
-	}
-
-	envelope := firstJSONLine(stderr)
-	got := mustParseJSON(t, envelope)
-	errMap, ok := got["error"].(map[string]any)
-	if !ok {
-		t.Fatalf("envelope missing error object: %s", envelope)
-	}
-	if errMap["code"] != "PROFILE_BACKEND_INVALID" {
-		t.Errorf("expected error.code=PROFILE_BACKEND_INVALID, got %v", errMap["code"])
-	}
-	assertSnapshot(t, "create-preset-deploy-incompat.json", got)
 }
 
 // TestSnapshot_E2E_Create_Preset_FlagConflict locks the
@@ -262,7 +168,7 @@ func TestSnapshot_E2E_Create_Preset_ProjectNames(t *testing.T) {
 
 	target := filepath.Join(tmp, "custom-names")
 	stdout, stderr, code := runBinary(t, "create", target,
-		"--preset", "1.bnekh.frsc.ltl.ed",
+		"--preset", "1.bne.frs.ltl.ed",
 		"--project-names", "api,admin,shared",
 		"-y", "-o", "json")
 	if code != 0 {
@@ -305,7 +211,7 @@ func TestSnapshot_E2E_Create_Preset_ProjectNamesCountMismatch(t *testing.T) {
 
 	target := filepath.Join(tmp, "bad-names")
 	_, stderr, code := runBinary(t, "create", target,
-		"--preset", "1.bnekh.frsc.ed",
+		"--preset", "1.bne.frs.ed",
 		"--project-names", "api",
 		"-y", "-o", "json")
 	if code == 0 {
@@ -332,7 +238,7 @@ func TestSnapshot_E2E_Create_Preset_ProjectNamesInvalidName(t *testing.T) {
 
 	target := filepath.Join(tmp, "bad-name")
 	_, stderr, code := runBinary(t, "create", target,
-		"--preset", "1.bnekh.frsc.ed",
+		"--preset", "1.bne.frs.ed",
 		"--project-names", "api,not valid",
 		"-y", "-o", "json")
 	if code == 0 {

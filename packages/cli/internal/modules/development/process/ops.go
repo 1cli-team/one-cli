@@ -1,17 +1,7 @@
 package processorch
 
-// ops.go exposes Start as the package-level entry point for `one dev`.
-// Behaviour summary:
-//   - Reads the workspace manifest at <projectRoot>/one.manifest.json
-//   - Walks projects[] and gathers each project's domains.dev.command
-//   - Wraps each command as `one run -p <relativeDir> -- <cmd>` so
-//     per-project secrets injection still happens
-//   - Runs the built-in supervisor (supervisor_unix.go on Unix, stub on
-//     other platforms)
-//
-// Procfile.dev is no longer written or read. External Procfile runners
-// (overmind / hivemind / foreman / honcho) are no longer probed —
-// `one dev` is self-contained.
+// Start resolves manifest commands and delegates execution to the shared task
+// session. one run remains the owner of runtime and per-project environment.
 
 import (
 	"context"
@@ -22,8 +12,17 @@ import (
 
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/core/workspace"
 	cliErrors "github.com/torchstellar-team/one-cli/packages/cli/internal/platform/errors"
+	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/i18n"
+	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/output"
+	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/taskrun"
 	runtimeport "github.com/torchstellar-team/one-cli/packages/cli/internal/ports/runtime"
 )
+
+// ProcEntry is a manifest task before terminal execution is selected.
+type ProcEntry struct {
+	Name, Cmd string
+	Argv      []string
+}
 
 // StartInput addresses Start.
 type StartInput struct {
@@ -32,7 +31,10 @@ type StartInput struct {
 	DryRun      bool
 	// Process, when non-empty, restricts the supervisor to a single
 	// project entry by manifest project name.
-	Process string
+	Process   string
+	Processes []string
+	UI        taskrun.Mode
+	KeepGoing bool
 }
 
 // StartResult is the Start envelope.
@@ -42,9 +44,10 @@ type StartResult struct {
 	Argv    []string `json:"argv"`
 	// Runner is always "builtin" now — kept for forward-compat with
 	// JSON consumers that switch on it.
-	Runner  string `json:"runner"`
-	DryRun  bool   `json:"dry_run"`
-	Process string `json:"process,omitempty"`
+	Runner    string   `json:"runner"`
+	DryRun    bool     `json:"dry_run"`
+	Process   string   `json:"process,omitempty"`
+	Processes []string `json:"processes,omitempty"`
 }
 
 // Start launches the built-in supervisor against the projects declared
@@ -60,13 +63,20 @@ func Start(ctx context.Context, in StartInput) (*StartResult, error) {
 	if err != nil {
 		return nil, err
 	}
-	entries := buildEntriesFromManifest(m, in.Process)
+	selectors := in.Processes
+	if len(selectors) == 0 && in.Process != "" {
+		selectors = []string{in.Process}
+	}
+	entries, err := EntriesForProjects(m, selectors)
+	if err != nil {
+		return nil, err
+	}
 	if len(entries) == 0 {
 		return nil, cliErrors.New(cliErrors.SUBPROJECT_NOT_FOUND,
 			selectorErrorMessage(m, in.Process))
 	}
 
-	if in.Runtime == runtimeport.Mise {
+	{
 		binary, err := os.Executable()
 		if err != nil {
 			return nil, err
@@ -99,10 +109,23 @@ func Start(ctx context.Context, in StartInput) (*StartResult, error) {
 	if in.Runtime == runtimeport.Mise {
 		res.Runtime = runtimeport.Mise
 	}
+	if len(selectors) == 1 {
+		res.Process = selectors[0]
+	} else if len(selectors) > 1 {
+		res.Processes = selectors
+	}
 	if in.DryRun {
 		return res, nil
 	}
-	if err := runBuiltin(ctx, in.ProjectRoot, entries, BuiltinOpts{Out: os.Stdout}); err != nil {
+	tasks := make([]taskrun.Task, 0, len(entries))
+	for _, e := range entries {
+		tasks = append(tasks, taskrun.Task{Name: e.Name, Directory: in.ProjectRoot, Argv: e.Argv})
+	}
+	log := os.Stdout
+	if output.IsStructured() {
+		log = os.Stderr
+	}
+	if _, err := taskrun.Run(ctx, tasks, taskrun.Options{Mode: in.UI, Title: "dev", Development: true, KeepGoing: in.KeepGoing, Output: log}); err != nil {
 		return nil, err
 	}
 	return res, nil
@@ -140,12 +163,31 @@ func buildEntriesFromManifest(m *workspace.Manifest, selector string) []ProcEntr
 // filter at all.
 func selectorErrorMessage(m *workspace.Manifest, selector string) string {
 	if selector != "" {
-		return fmt.Sprintf("项目 %q 在 one.manifest.json 里没有声明 dev 命令。"+
-			"重新 `one add %s` 让模板写入，或手工编辑 projects[].domains.dev.command。", selector, selector)
+		return i18n.Tf("dev.project_command_missing", selector, selector)
 	}
 	if m == nil || len(m.Projects) == 0 {
-		return "工作区里还没有任何项目。先 `one add <template>` 加一个再跑 one dev。"
+		return i18n.T("dev.no_projects")
 	}
-	return "工作区里没有项目声明 dev 命令。" +
-		"重新 `one add <template>` 让 dev 配置重建，或手工编辑 one.manifest.json 的 projects[].domains.dev.command。"
+	return i18n.T("dev.commands_missing")
+}
+
+// EntriesForProjects validates every explicit selection before any installation.
+func EntriesForProjects(m *workspace.Manifest, selectors []string) ([]ProcEntry, error) {
+	if len(selectors) == 0 {
+		return buildEntriesFromManifest(m, ""), nil
+	}
+	var entries []ProcEntry
+	seen := map[string]bool{}
+	for _, name := range selectors {
+		if seen[name] {
+			continue
+		}
+		seen[name] = true
+		matching := buildEntriesFromManifest(m, name)
+		if len(matching) == 0 {
+			return nil, cliErrors.New(cliErrors.SUBPROJECT_NOT_FOUND, selectorErrorMessage(m, name))
+		}
+		entries = append(entries, matching...)
+	}
+	return entries, nil
 }

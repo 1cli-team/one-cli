@@ -6,7 +6,6 @@ import {
   ClipboardCheck,
   Code2,
   FileJson2,
-  Github,
   Layers3,
   PackageCheck,
   Route,
@@ -14,6 +13,7 @@ import {
   Sparkles,
   Wrench,
 } from "lucide-react";
+import { GithubIcon as Github } from "@/components/github-icon";
 import {
   defaultLocale,
   localeLabels,
@@ -141,9 +141,9 @@ const homeCopy = {
               也能继续加。
             </>
           ),
-          body: "one add 只在已有 One 项目里使用。你可以直接输入 one add 进入交互式选择，也可以在脚本里写明模板名、项目名和部署方式。",
+          body: "one add 只在已有 One 项目里使用。你可以直接输入 one add 进入交互式选择，也可以在脚本里写明模板名和项目名。",
           bullets: [
-            ["交互添加", "直接输入 one add，会让你选择模板、项目名和可选部署方式。"],
+            ["交互添加", "直接输入 one add，会让你选择模板和项目名。"],
             ["自动化模式", "CI 或 AI 才需要写 one add nextjs-app --name web --yes。"],
             ["同步默认值", "按模板生成项目代码，并登记本地开发命令。"],
           ],
@@ -167,19 +167,19 @@ const homeCopy = {
               放在安全位置。
             </>
           ),
-          body: "one configure 保存本机要用的环境、部署和镜像账号。直接运行会进入配置向导；脚本里才需要写 env/infisical、deploy/*、container/docker 这些完整路径。",
+          body: "one configure 保存本机的 Infisical 凭据和偏好设置。直接运行会进入配置向导；脚本里使用 env/infisical 路径。",
           bullets: [
             ["本机保存", "配置写到 ~/.config/one；密钥文件只有本人可读。"],
             ["远程环境", "远程 env 指 Infisical 云服务或你自己的 Infisical；不需要额外启动 One CLI 服务。"],
-            ["后续复用", "one env、one run、one deploy 会自动读取当前配置。"],
+            ["后续复用", "one env、one run 会自动读取当前配置。"],
           ],
           href: ["cli-overview"],
           cta: "查看 CLI 参考",
           sample: "one configure",
           output: [
-            "打开 env / deploy / container 配置向导",
+            "打开 Infisical 配置向导",
             "保存本机配置档和凭据",
-            "供 one env、one run、one deploy 后续读取",
+            "供 one env、one run 后续读取",
           ],
         },
         {
@@ -380,7 +380,7 @@ const homeCopy = {
     meta: {
       title: "One CLI | From product idea to launch-ready project",
       description:
-        "One CLI gives AI a real product foundation: website, backend, docs, environment config, and deployment flow.",
+        "One CLI gives AI a real product foundation: website, backend, docs, environment config, and build commands.",
     },
     nav: {
       docs: "Docs",
@@ -403,9 +403,9 @@ const homeCopy = {
           Start with one command.
         </>
       ),
-      body: "Give AI a real product foundation: website, backend, docs, environment config, and deployment flow, ready from day one.",
+      body: "Give AI a real product foundation: website, backend, docs, environment config, and build commands, ready from day one.",
       canvasAria:
-        "One CLI workspace module canvas showing apps, API, docs, packages, manifest, env, deploy, and CLI interface modules",
+        "One CLI workspace module canvas showing apps, API, docs, packages, manifest, env, build, and CLI interface modules",
       install: "Start building",
       github: "View on GitHub",
       copy: "copy",
@@ -482,9 +482,9 @@ const homeCopy = {
               after the project exists.
             </>
           ),
-          body: "one add is for an existing One project. You can run one add directly to use the picker, or pass the template name, project name, and deploy option in scripts.",
+          body: "one add is for an existing One project. You can run one add directly to use the picker, or pass the template name and project name in scripts.",
           bullets: [
-            ["PROMPTED ADD", "Run one add to choose the template, project name, and optional deploy backend."],
+            ["PROMPTED ADD", "Run one add to choose the template and project name."],
             ["AUTOMATION", "CI and AI use one add nextjs-app --name web --yes."],
             ["SYNC DEFAULTS", "Templates generate project code and register local development commands."],
           ],
@@ -508,19 +508,19 @@ const homeCopy = {
               in the right place.
             </>
           ),
-          body: "one configure saves the env, deploy, and container accounts this machine can use. Run it directly for the wizard; scripts use full paths such as env/infisical, deploy/*, or container/docker.",
+          body: "one configure saves this machine's Infisical credentials and preferences. Run it directly for the wizard; scripts use the env/infisical path.",
           bullets: [
             ["LOCAL FILES", "Writes under ~/.config/one; secret files are readable only by you."],
             ["REMOTE ENV", "Remote env means Infisical Cloud or your own Infisical. You do not run a separate One CLI service."],
-            ["REUSED LATER", "one env, one run, and one deploy read the default profile automatically."],
+            ["REUSED LATER", "one env and one run read the default profile automatically."],
           ],
           href: ["cli-overview"],
           cta: "Explore CLI reference",
           sample: "one configure",
           output: [
-            "open env / deploy / container profile prompts",
+            "open Infisical profile prompts",
             "save local profile and credential files",
-            "feed later one env, one run, and one deploy commands",
+            "feed later one env and one run commands",
           ],
         },
         {

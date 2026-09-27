@@ -8,14 +8,8 @@ package workspace
 // in".
 
 import (
-	"context"
-	"errors"
 	"sort"
 	"strings"
-
-	"github.com/torchstellar-team/one-cli/packages/cli/internal/core/profile"
-	"github.com/torchstellar-team/one-cli/packages/cli/internal/core/template"
-	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/output"
 )
 
 // OverviewSchema is the JSON envelope version stamp.
@@ -37,14 +31,11 @@ const (
 // skips it silently). Flagging that as a missing-config issue would be a
 // false positive.
 const (
-	IssueDomainContainer = "container"
-	IssueDomainDeploy    = "deploy"
-	IssueDomainEnv       = "env"
+	IssueDomainEnv = "env"
 
 	IssueSeverityMissing = "missing"
 
 	IssueReasonBackend = "backend"
-	IssueReasonProfile = "profile"
 )
 
 // Overview is the response shape for GET /api/workspace/overview. Present is
@@ -78,14 +69,13 @@ type OverviewWorkspace struct {
 // default merged with per-project overrides) so the UI can render the
 // effective state without duplicating selector logic.
 type OverviewProject struct {
-	Name                    string            `json:"name"`
-	RelativeDir             string            `json:"relativeDir"`
-	Kind                    string            `json:"kind"`
-	TemplateID              string            `json:"templateId,omitempty"`
-	Toolchain               string            `json:"toolchain,omitempty"`
-	CompatibleDeployTargets []string          `json:"compatibleDeployTargets,omitempty"`
-	Domains                 map[string]string `json:"domains,omitempty"`
-	Issues                  []OverviewIssue   `json:"issues,omitempty"`
+	Name        string            `json:"name"`
+	RelativeDir string            `json:"relativeDir"`
+	Kind        string            `json:"kind"`
+	TemplateID  string            `json:"templateId,omitempty"`
+	Toolchain   string            `json:"toolchain,omitempty"`
+	Domains     map[string]string `json:"domains,omitempty"`
+	Issues      []OverviewIssue   `json:"issues,omitempty"`
 }
 
 // OverviewIssue is one "missing configuration" finding. Message is a short
@@ -98,7 +88,6 @@ type OverviewIssue struct {
 	Reason   string `json:"reason,omitempty"`
 	Backend  string `json:"backend,omitempty"`
 	Section  string `json:"section,omitempty"`
-	Profile  string `json:"profile,omitempty"`
 }
 
 // BuildOverview reads the manifest at root and produces the Overview
@@ -120,15 +109,6 @@ func BuildOverview(root string, environments ...string) (Overview, error) {
 	if m == nil || !HasManifest(root) {
 		return Overview{Schema: OverviewSchema, Present: false}, nil
 	}
-	profileEnvironment := ProfileBindingEnvironment(m, environment)
-	profiles, _, err := profile.Load()
-	if err != nil {
-		return Overview{Schema: OverviewSchema, Present: false}, err
-	}
-	registry, err := template.Fetch(context.Background(), "")
-	if err != nil {
-		return Overview{Schema: OverviewSchema, Present: false}, err
-	}
 
 	ov := Overview{
 		Schema:      OverviewSchema,
@@ -146,12 +126,10 @@ func BuildOverview(root string, environments ...string) (Overview, error) {
 			Message:  "workspace env backend is not selected",
 			Reason:   IssueReasonBackend,
 		})
-	} else if issue := profileIssue(profiles, m, root, profileEnvironment, IssueDomainEnv, m.Domains.Env.Kind, ""); issue != nil {
-		ov.Issues = append(ov.Issues, *issue)
 	}
 
 	for i := range m.Projects {
-		ov.Projects = append(ov.Projects, buildProject(root, profileEnvironment, m, profiles, registry, &m.Projects[i]))
+		ov.Projects = append(ov.Projects, buildProject(m, &m.Projects[i]))
 	}
 	return ov, nil
 }
@@ -173,12 +151,6 @@ func buildWorkspaceSummary(m *Manifest) *OverviewWorkspace {
 		if m.Domains.Env != nil && m.Domains.Env.Kind != "" {
 			domains[IssueDomainEnv] = m.Domains.Env.Kind
 		}
-		if m.Domains.Deploy != nil && m.Domains.Deploy.Kind != "" {
-			domains[IssueDomainDeploy] = m.Domains.Deploy.Kind
-		}
-		if m.Domains.Container != nil && m.Domains.Container.Kind != "" {
-			domains[IssueDomainContainer] = m.Domains.Container.Kind
-		}
 		if len(domains) > 0 {
 			s.Domains = domains
 		}
@@ -186,136 +158,18 @@ func buildWorkspaceSummary(m *Manifest) *OverviewWorkspace {
 	return s
 }
 
-func buildProject(
-	root, environment string,
-	m *Manifest,
-	profiles *profile.Config,
-	registry *template.Registry,
-	p *ManifestProject,
-) OverviewProject {
+func buildProject(m *Manifest, p *ManifestProject) OverviewProject {
 	kind := projectKindFromDir(p.RelativeDir)
 	out := OverviewProject{
-		Name:                    p.Name,
-		RelativeDir:             p.RelativeDir,
-		Kind:                    kind,
-		TemplateID:              p.TemplateID,
-		Toolchain:               p.Toolchain,
-		CompatibleDeployTargets: compatibleDeployTargets(registry, p.TemplateID),
-		Domains:                 projectResolvedDomains(m, p),
-	}
-
-	// packages aren't expected to deploy / build containers / have a dev
-	// command, so we suppress those three checks for them.
-	if kind == ProjectKindPackage {
-		return out
-	}
-
-	if projectNeedsContainer(m, p) {
-		hasContainerWorkspaceDefault := m.Domains != nil && m.Domains.Container != nil
-		if enabled, _ := ContainerForProject(m, p.Name); !enabled && !hasContainerWorkspaceDefault {
-			out.Issues = append(out.Issues, OverviewIssue{
-				Domain:   IssueDomainContainer,
-				Severity: IssueSeverityMissing,
-				Message:  "no container backend selected for this project",
-				Reason:   IssueReasonBackend,
-			})
-		}
-	}
-	if backend := out.Domains[IssueDomainContainer]; backend != "" {
-		if issue := profileIssue(profiles, m, root, environment, IssueDomainContainer, backend, p.Name); issue != nil {
-			out.Issues = append(out.Issues, *issue)
-		}
-	}
-
-	if len(out.CompatibleDeployTargets) > 0 {
-		hasDeployWorkspaceDefault := m.Domains != nil && m.Domains.Deploy != nil && m.Domains.Deploy.Kind != ""
-		if DeployForProject(m, p.Name).Backend == "" && !hasDeployWorkspaceDefault {
-			out.Issues = append(out.Issues, OverviewIssue{
-				Domain:   IssueDomainDeploy,
-				Severity: IssueSeverityMissing,
-				Message:  "no deploy backend selected for this project",
-				Reason:   IssueReasonBackend,
-			})
-		}
-		if backend := out.Domains[IssueDomainDeploy]; backend != "" {
-			if issue := profileIssue(profiles, m, root, environment, IssueDomainDeploy, backend, p.Name); issue != nil {
-				out.Issues = append(out.Issues, *issue)
-			}
-		}
+		Name:        p.Name,
+		RelativeDir: p.RelativeDir,
+		Kind:        kind,
+		TemplateID:  p.TemplateID,
+		Toolchain:   p.Toolchain,
+		Domains:     projectResolvedDomains(m, p),
 	}
 
 	return out
-}
-
-func compatibleDeployTargets(registry *template.Registry, templateID string) []string {
-	if registry == nil {
-		return nil
-	}
-	for _, entry := range registry.Templates {
-		if entry.ID == templateID {
-			return append([]string(nil), entry.Compat[IssueDomainDeploy]...)
-		}
-	}
-	return nil
-}
-
-func profileIssue(
-	cfg *profile.Config,
-	m *Manifest,
-	root, environment, domain, backend, projectName string,
-) *OverviewIssue {
-	if cfg == nil || backend == "" {
-		return nil
-	}
-	if backend == EnvBackendDotenv || backend == DeployBackendEdgeOne {
-		return nil
-	}
-	section := profile.SectionKey(profile.Domain(domain), backend)
-	resolved, err := profile.Resolve(profile.ResolveInput{
-		Domain:        profile.Domain(domain),
-		Backend:       backend,
-		WorkspaceID:   manifestWorkspaceID(m),
-		WorkspaceRoot: root,
-		Environment:   environment,
-		ProjectName:   projectName,
-	})
-	if err != nil {
-		requestedProfile := profileNameFromResolveError(err)
-		return &OverviewIssue{
-			Domain:   domain,
-			Severity: IssueSeverityMissing,
-			Reason:   IssueReasonProfile,
-			Backend:  backend,
-			Section:  section,
-			Profile:  requestedProfile,
-			Message:  "no credential profile configured for " + section,
-		}
-	}
-	if !profileComplete(backend, resolved.Profile) {
-		return &OverviewIssue{
-			Domain:   domain,
-			Severity: IssueSeverityMissing,
-			Reason:   IssueReasonProfile,
-			Backend:  backend,
-			Section:  section,
-			Profile:  resolved.Name,
-			Message:  "credential profile " + resolved.Name + " for " + section + " is missing required credentials",
-		}
-	}
-	return nil
-}
-
-func profileNameFromResolveError(err error) string {
-	var cliErr *output.Error
-	if !errors.As(err, &cliErr) || cliErr.Context == nil {
-		return ""
-	}
-	for _, key := range []string{"requested", "profile"} {
-		if value, ok := cliErr.Context[key].(string); ok {
-			return strings.TrimSpace(value)
-		}
-	}
-	return ""
 }
 
 func manifestWorkspaceID(m *Manifest) string {
@@ -325,57 +179,10 @@ func manifestWorkspaceID(m *Manifest) string {
 	return strings.TrimSpace(m.Workspace.ID)
 }
 
-func profileComplete(backend string, p profile.Profile) bool {
-	switch {
-	case p.Infisical != nil:
-		c := p.Infisical.Credentials
-		return c != nil && strings.TrimSpace(c.ClientID) != "" && strings.TrimSpace(c.ClientSecret) != ""
-	case p.S3 != nil:
-		c := p.S3.Credentials
-		return c != nil && strings.TrimSpace(c.AccessKeyID) != "" && strings.TrimSpace(c.AccessKeySecret) != ""
-	case p.Vercel != nil:
-		return p.Vercel.Credentials != nil && strings.TrimSpace(p.Vercel.Credentials.APIToken) != ""
-	case p.Cloudflare != nil:
-		return p.Cloudflare.Credentials != nil && strings.TrimSpace(p.Cloudflare.Credentials.APIToken) != ""
-	case p.Container != nil:
-		c := p.Container.Credentials
-		return c != nil && strings.TrimSpace(c.Username) != "" && strings.TrimSpace(c.Password) != ""
-	case p.Dotenv != nil:
-		return true
-	case p.Kustomize != nil:
-		// kubectl's normal lookup chain already supports an omitted
-		// kubeconfigPath (KUBECONFIG, then ~/.kube/config). Kustomize still
-		// needs an explicit Profile object so the user can choose a machine
-		// connection/context, but the path inside that object is optional.
-		return true
-	case p.EdgeOne != nil:
-		// EdgeOne supports `edgeone login`; an inline token is useful but not mandatory.
-		return true
-	default:
-		_ = backend
-		return false
-	}
-}
-
-// projectResolvedDomains collapses workspace defaults + per-project
-// overrides into a single domain→kind map (same logic the UI would re-do).
-// "container" only appears when the project actually opted in via its own
-// override OR a workspace-level default exists; that matches what
-// container-related commands actually run.
 func projectResolvedDomains(m *Manifest, p *ManifestProject) map[string]string {
 	out := map[string]string{}
 	if env := EnvBackend(m); env != "" {
 		out[IssueDomainEnv] = env
-	}
-	if sel := DeployForProject(m, p.Name); sel.Backend != "" {
-		out[IssueDomainDeploy] = sel.Backend
-	} else if m.Domains != nil && m.Domains.Deploy != nil && m.Domains.Deploy.Kind != "" {
-		out[IssueDomainDeploy] = m.Domains.Deploy.Kind
-	}
-	if enabled, _ := ContainerForProject(m, p.Name); enabled {
-		out[IssueDomainContainer] = ContainerKindForProject(m, p.Name)
-	} else if projectNeedsContainer(m, p) && m.Domains != nil && m.Domains.Container != nil && m.Domains.Container.Kind != "" {
-		out[IssueDomainContainer] = m.Domains.Container.Kind
 	}
 	if len(out) == 0 {
 		return nil
@@ -391,23 +198,6 @@ func projectResolvedDomains(m *Manifest, p *ManifestProject) map[string]string {
 		ordered[k] = out[k]
 	}
 	return ordered
-}
-
-func projectEffectiveDeploy(m *Manifest, p *ManifestProject) string {
-	if m == nil || p == nil {
-		return ""
-	}
-	if sel := DeployForProject(m, p.Name); sel.Backend != "" {
-		return sel.Backend
-	}
-	if m.Domains != nil && m.Domains.Deploy != nil {
-		return strings.TrimSpace(m.Domains.Deploy.Kind)
-	}
-	return ""
-}
-
-func projectNeedsContainer(m *Manifest, p *ManifestProject) bool {
-	return projectEffectiveDeploy(m, p) == DeployBackendKustomize
 }
 
 // projectKindFromDir maps the manifest's RelativeDir to a coarse "app /

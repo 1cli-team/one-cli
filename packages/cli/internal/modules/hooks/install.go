@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/fsutil"
+	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/i18n"
 )
 
 const launcherHeader = "# Managed by One CLI hooks/v1; sha256="
@@ -26,7 +27,7 @@ type InstallPlan struct {
 func PlanInstall(ctx context.Context, root, binary string, migrateHusky bool) (*InstallPlan, error) {
 	top, err := gitOutput(ctx, root, "rev-parse", "--show-toplevel")
 	if err != nil {
-		return nil, fmt.Errorf("initialize Git, then run one configure hooks: %w", err)
+		return nil, i18n.Errorf("hooks.git_required", err)
 	}
 	canonicalRoot, err := filepath.EvalSymlinks(root)
 	if err != nil {
@@ -34,7 +35,7 @@ func PlanInstall(ctx context.Context, root, binary string, migrateHusky bool) (*
 	}
 	canonicalTop, err := filepath.EvalSymlinks(top)
 	if err != nil || canonicalRoot != canonicalTop {
-		return nil, conflict(root, "the One workspace must be the Git repository root")
+		return nil, conflict(root, i18n.T("hooks.root_required"))
 	}
 	common, err := gitOutput(ctx, root, "rev-parse", "--path-format=absolute", "--git-common-dir")
 	if err != nil {
@@ -55,7 +56,7 @@ func PlanInstall(ctx context.Context, root, binary string, migrateHusky bool) (*
 			resolved = filepath.Join(root, resolved)
 		}
 		if filepath.Clean(resolved) != defaultPath && !(migrateHusky && (filepath.ToSlash(configured) == ".husky/_" || filepath.ToSlash(configured) == ".husky")) {
-			return nil, conflict("core.hooksPath", "existing hook directory "+configured+" is user-managed; preserve and integrate its checks before changing the hook setup")
+			return nil, conflict("core.hooksPath", i18n.Tf("hooks.custom_directory", configured))
 		}
 	}
 	if binary == "" {
@@ -108,7 +109,7 @@ func (p *InstallPlan) Apply(ctx context.Context) error {
 		return err
 	}
 	if current != p.previousPath {
-		return conflict("core.hooksPath", "changed while configuring hooks; retry")
+		return conflict("core.hooksPath", i18n.T("hooks.configuration_changed"))
 	}
 	if err := p.Files.Apply(ctx); err != nil {
 		return err

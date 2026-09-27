@@ -1,12 +1,12 @@
 package mise
 
 import (
-	"fmt"
 	"os"
 	"path/filepath"
 	"runtime"
 	"strings"
 
+	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/i18n"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/userdirs"
 )
 
@@ -42,7 +42,7 @@ func defaultPaths() (runtimePaths, error) {
 		}
 		if !filepath.IsAbs(root) {
 			if firstErr == nil {
-				firstErr = fmt.Errorf("%s must resolve to an absolute path", entry.key)
+				firstErr = i18n.Errorf("path.absolute_required", entry.key)
 			}
 			continue
 		}

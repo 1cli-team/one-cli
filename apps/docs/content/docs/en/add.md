@@ -15,7 +15,7 @@ There are two entry points:
 ## Usage
 
 ```bash
-one add [template-id] --name <project-name> [--deploy-provider <backend>] [options]
+one add [template-id] --name <project-name> [options]
 ```
 
 ## Arguments
@@ -25,7 +25,6 @@ one add [template-id] --name <project-name> [--deploy-provider <backend>] [optio
 | `template-id` | Template ID, such as `nestjs-api`. Omit it for interactive selection |
 | `-n, --name` | Project name; required in non-interactive mode |
 | `-y, --yes` | Non-interactive mode |
-| `--deploy-provider <backend>` | Explicit deploy backend; must be in the template's compat list |
 | `-o, --output <fmt>` | `json` / `yaml` / `text` |
 
 The workspace root uses pnpm. Each project's toolchain comes from the template: Node templates use the workspace package manager, Go templates use the Go toolchain, and so on.
@@ -104,7 +103,6 @@ one add nestjs-api --name user-api --yes -o json | jq
 - Registers the project in `one.manifest.json#projects[]`
 - Writes the project's local development command
 - Leaves continuous integration unconfigured
-- Leaves deployment and image configuration absent until first deploy
 
 Non-blocking sync issues are reported in `warnings[]`; the project is still added.
 
@@ -130,6 +128,6 @@ Not sure which one to use? Read the [template decision tree](/en/docs/templates/
 
 - Check `one.manifest.json#projects[]` to confirm registration
 - Agent docs and local-development configuration are synced by `one add`
-- Run `one dev <project>` next; choose deployment later with `one deploy <project>`
+- Run `one dev <project>` for development and `one build <project>` to build
 - Optionally run `one ci enable <project>` to generate its GitHub Actions workflow
 - `one add` does not install dependencies: JS / TS workspaces install from the root with the package manager; Go projects run `go mod download` in the project directory, then `go mod tidy` only after changing imports or when module metadata needs repair

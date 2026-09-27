@@ -15,6 +15,7 @@ import (
 	"strings"
 
 	cliErrors "github.com/torchstellar-team/one-cli/packages/cli/internal/platform/errors"
+	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/i18n"
 )
 
 // WalkUpToManifest resolves a possibly-empty --dir flag to an absolute
@@ -55,7 +56,7 @@ func WalkUpToManifest(dirFlag string) (string, error) {
 		parent := filepath.Dir(cur)
 		if parent == cur {
 			return "", cliErrors.New(cliErrors.NOT_ONE_PROJECT,
-				"找不到 one.manifest.json：从 "+start+" 向上每一级都没找到。")
+				i18n.Tf("workspace.not_found", start))
 		}
 		cur = parent
 	}

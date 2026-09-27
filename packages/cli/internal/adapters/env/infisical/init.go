@@ -14,6 +14,7 @@ import (
 
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/core/workspace"
 	cliErrors "github.com/torchstellar-team/one-cli/packages/cli/internal/platform/errors"
+	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/i18n"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/output"
 )
 
@@ -25,22 +26,14 @@ import (
 // project), and --project-name overrides the desired name when
 // auto-creating.
 //
-// Scope split (post-profile refactor):
-//   - This path writes WORKSPACE-level fields to manifest.domains.env.config
-//     and manifest.environments (projectId, projectName, environments,
-//     defaultEnv, rootPath).
-//   - SiteURL + credentials are MACHINE-level — they come from a
-//     profile (`one configure add env/infisical --profile <name>`), not from flags here.
+// Authentication uses the single browser session stored in the system keyring.
+// Only project metadata is persisted in the workspace manifest.
 type InitInput struct {
 	ProjectID    string
 	ProjectName  string
 	Environments []string
 	DefaultEnv   string
 	RootPath     string
-	// ProfileName one-shot overrides the default env profile (for the
-	// network call that creates / verifies the project). Doesn't change
-	// machine default.
-	ProfileName string
 	// SkipVerify lets `init` write the config without contacting Infisical
 	// (useful for offline workflows / generation tooling). Default off:
 	// the CLI's value is in catching configuration mistakes early.
@@ -68,19 +61,19 @@ func (r *InitResult) RenderTTY(w io.Writer) {
 	if r == nil {
 		return
 	}
-	fmt.Fprintln(w, "✓ Secrets configuration written")
+	fmt.Fprintln(w, i18n.T("infisical.init.success"))
 	if r.Created {
-		fmt.Fprintf(w, "  Project: %s (%s) — created\n", r.ProjectName, r.ProjectID)
+		fmt.Fprintf(w, i18n.T("infisical.init.project_created"), r.ProjectName, r.ProjectID)
 	} else if r.ProjectName != "" {
-		fmt.Fprintf(w, "  Project: %s (%s)\n", r.ProjectName, r.ProjectID)
+		fmt.Fprintf(w, i18n.T("infisical.init.project_named"), r.ProjectName, r.ProjectID)
 	} else {
-		fmt.Fprintf(w, "  Project: %s\n", r.ProjectID)
+		fmt.Fprintf(w, i18n.T("infisical.init.project"), r.ProjectID)
 	}
-	fmt.Fprintf(w, "  Environments: %s (default: %s)\n",
+	fmt.Fprintf(w, i18n.T("infisical.init.environments"),
 		strings.Join(r.Environments, ", "), r.DefaultEnv)
-	fmt.Fprintf(w, "  Root path: %s\n", r.RootPath)
-	fmt.Fprintf(w, "  Auth: %s\n", r.AuthStatus)
-	fmt.Fprintf(w, "  Written to: %s\n", r.WrittenTo)
+	fmt.Fprintf(w, i18n.T("infisical.init.path"), r.RootPath)
+	fmt.Fprintf(w, i18n.T("infisical.init.auth"), r.AuthStatus)
+	fmt.Fprintf(w, i18n.T("infisical.init.written"), r.WrittenTo)
 }
 
 // maxCreateProjectRetries caps the suffix-retry loop. Five 4-char hex
@@ -106,7 +99,7 @@ const maxCreateProjectRetries = 5
 func Init(ctx context.Context, projectRoot string, in InitInput) (*InitResult, error) {
 	if !workspace.HasManifest(projectRoot) {
 		return nil, cliErrors.New(cliErrors.NOT_ONE_PROJECT,
-			"未找到 one.manifest.json。请先在 One workspace 根目录执行。")
+			i18n.T("workspace.manifest_required"))
 	}
 	// Inherit existing manifest.environments.names / default when the
 	// caller didn't pass --envs / --default-env. This keeps re-runs of
@@ -152,18 +145,17 @@ func Init(ctx context.Context, projectRoot string, in InitInput) (*InitResult, e
 	if cfg.ProjectID == "" {
 		if in.SkipVerify {
 			return nil, cliErrors.New(cliErrors.INFISICAL_NOT_CONFIGURED,
-				"--skip-verify 与自动创建项目互斥。请显式传 --project-id，或去掉 --skip-verify。")
+				i18n.T("infisical.init.verify_conflict"))
 		}
 		desiredName, err := resolveProjectName(projectRoot, cfg.ProjectName)
 		if err != nil {
 			return nil, err
 		}
-		profileName, creds, siteURL, err := loadInitCreds(projectRoot, in.ProfileName)
+		creds, siteURL, err := sessionCredentials()
 		if err != nil {
 			return nil, err
 		}
 		cfg.SiteURL = siteURL
-		cfg.ProfileName = profileName
 		client, err := NewClient(ctx, cfg, creds)
 		if err != nil {
 			return nil, err
@@ -186,12 +178,11 @@ func Init(ctx context.Context, projectRoot string, in InitInput) (*InitResult, e
 		}
 	} else if !in.SkipVerify {
 		// Branch 1 / Branch-2-rewrite: validate the explicit / cached id.
-		profileName, creds, siteURL, err := loadInitCreds(projectRoot, in.ProfileName)
+		creds, siteURL, err := sessionCredentials()
 		if err != nil {
 			return nil, err
 		}
 		cfg.SiteURL = siteURL
-		cfg.ProfileName = profileName
 		client, err := NewClient(ctx, cfg, creds)
 		if err != nil {
 			return nil, err
@@ -229,13 +220,6 @@ func Init(ctx context.Context, projectRoot string, in InitInput) (*InitResult, e
 	}, nil
 }
 
-// loadInitCreds is a thin alias around requireProfileCreds, kept so the
-// two call sites in Init read locally rather than spelling out the
-// shared helper name. Profile-only — env vars retired.
-func loadInitCreds(projectRoot, profileFlag string) (string, *Credentials, string, error) {
-	return requireProfileCreds(projectRoot, profileFlag)
-}
-
 // resolveProjectName picks the Infisical project name when env init is
 // auto-creating. Precedence: explicit override → manifest.project.name →
 // package.json#name → workspace folder basename. The first non-empty value
@@ -255,7 +239,7 @@ func resolveProjectName(projectRoot, override string) (string, error) {
 		return base, nil
 	}
 	return "", cliErrors.New(cliErrors.INFISICAL_NOT_CONFIGURED,
-		"无法推断 Infisical 项目名（manifest.project.name / package.json#name 都为空）。请显式传 --project-name 或 --project-id。")
+		i18n.T("infisical.init.name_required"))
 }
 
 func readPackageJSONName(projectRoot string) string {
@@ -317,7 +301,7 @@ func createWithRetry(client *Client, baseName string) (string, string, error) {
 		return "", "", err
 	}
 	return "", "", cliErrors.New(cliErrors.INFISICAL_PROJECT_NAME_TAKEN,
-		fmt.Sprintf("Infisical 项目名 %q 反复冲突，已重试 %d 次。请显式传 --project-name 指定一个唯一名字。",
+		i18n.Tf("infisical.init.name_conflicts",
 			baseName, maxCreateProjectRetries))
 }
 

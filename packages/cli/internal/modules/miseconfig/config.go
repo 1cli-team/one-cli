@@ -16,12 +16,14 @@ import (
 	"strings"
 
 	"github.com/pelletier/go-toml/v2"
+	"gopkg.in/yaml.v3"
+
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/core/workspace"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/modules/gowork"
 	cliErrors "github.com/torchstellar-team/one-cli/packages/cli/internal/platform/errors"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/fsutil"
+	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/i18n"
 	runtimeport "github.com/torchstellar-team/one-cli/packages/cli/internal/ports/runtime"
-	"gopkg.in/yaml.v3"
 )
 
 const Filename = workspace.MiseConfigFilename
@@ -132,10 +134,10 @@ func BuildWithFiles(root string, opts Options, files map[string][]byte) (*Plan, 
 		opts.NodeVersion = "24.15.0"
 	}
 	if !exactVersion.MatchString(opts.NodeVersion) {
-		return nil, fmt.Errorf("--node-version requires an exact version such as 24.15.0")
+		return nil, i18n.Errorf("miseconfig.node_version")
 	}
 	if opts.GoVersion != "" && !exactVersion.MatchString(opts.GoVersion) {
-		return nil, fmt.Errorf("--go-version requires an exact version such as 1.27.0")
+		return nil, i18n.Errorf("miseconfig.go_version")
 	}
 	rootConfig := config{MinVersion: runtimeport.MinimumMiseVersion, MonorepoRoot: true, Monorepo: &monorepo{ConfigRoots: []string{}}, Tools: map[string]string{}}
 	hooks, err := p.readOptional(workspace.HooksConfigFilename)
@@ -164,12 +166,12 @@ func BuildWithFiles(root string, opts Options, files map[string][]byte) (*Plan, 
 		name, version, ok := strings.Cut(pkg.PackageManager, "@")
 		version, _, _ = strings.Cut(version, "+") // Corepack integrity suffix is not a mise version.
 		if !ok || !exactVersion.MatchString(version) {
-			return nil, fmt.Errorf("package.json packageManager must specify an exact version")
+			return nil, i18n.Errorf("miseconfig.package_version")
 		}
 		switch name {
 		case "pnpm", "npm", "yarn", "bun":
 		default:
-			return nil, fmt.Errorf("unsupported package manager %q", name)
+			return nil, i18n.Errorf("workspace.package_manager_unsupported", name)
 		}
 		rootConfig.Tools[name] = version
 		rootConfig.Tools["node"] = opts.NodeVersion
@@ -193,15 +195,15 @@ func BuildWithFiles(root string, opts Options, files map[string][]byte) (*Plan, 
 		return nil, err
 	}
 	if opts.GoVersion != "" && goWorkspace.Version != "" && compareVersions(opts.GoVersion, goWorkspace.Version) < 0 {
-		return nil, fmt.Errorf("Go %s is below the go.work requirement %s", opts.GoVersion, goWorkspace.Version)
+		return nil, i18n.Errorf("miseconfig.go_work_version", opts.GoVersion, goWorkspace.Version)
 	}
 	for _, project := range m.Projects {
 		if !workspace.IsValidProjectName(project.Name) {
-			return nil, fmt.Errorf("invalid project name %q", project.Name)
+			return nil, i18n.Errorf("miseconfig.project_name", project.Name)
 		}
 		rel := filepath.ToSlash(filepath.Clean(project.RelativeDir))
 		if rel == "." || filepath.IsAbs(rel) || rel == ".." || strings.HasPrefix(rel, "../") {
-			return nil, conflict(rel, "project path must stay inside the workspace")
+			return nil, conflict(rel, i18n.T("config.project_path"))
 		}
 		rootConfig.Monorepo.ConfigRoots = append(rootConfig.Monorepo.ConfigRoots, rel)
 		pc := config{MinVersion: runtimeport.MinimumMiseVersion, Tasks: map[string]task{}, Tools: map[string]string{}}
@@ -237,7 +239,7 @@ func BuildWithFiles(root string, opts Options, files map[string][]byte) (*Plan, 
 				return nil, fmt.Errorf("%s: %w", project.Name, err)
 			}
 			if !exactVersion.MatchString(version) {
-				return nil, fmt.Errorf("cannot determine Go version for %s; pass --go-version", project.Name)
+				return nil, i18n.Errorf("miseconfig.go_version_unknown", project.Name)
 			}
 			if opts.GoVersion == "" {
 				if goWorkspace.Version != "" && compareVersions(version, goWorkspace.Version) < 0 {
@@ -250,7 +252,7 @@ func BuildWithFiles(root string, opts Options, files map[string][]byte) (*Plan, 
 				return nil, err
 			}
 			if rawTask == nil {
-				operations = append(operations, "build", "test", "lint")
+				operations = append(operations, "test", "lint")
 			} else {
 				pc.Tools["task"] = "3.51.1"
 				var tasks struct {
@@ -315,7 +317,7 @@ func goVersion(raw []byte, override string) (string, error) {
 	}
 	if override != "" {
 		if minimum != "" && compareVersions(override, minimum) < 0 {
-			return "", fmt.Errorf("Go %s is below the go.mod requirement %s", override, minimum)
+			return "", i18n.Errorf("miseconfig.go_mod_version", override, minimum)
 		}
 		return override, nil
 	}
@@ -342,7 +344,7 @@ func (p *Plan) add(rel string, value config) error {
 	if err != nil {
 		return err
 	}
-	after := []byte(fmt.Sprintf("%s%x\n# Edit user overrides in mise.toml; refresh with one configure mise.\n%s", header, sha256.Sum256(body), body))
+	after := []byte(fmt.Sprintf("%s%x\n# Edit user overrides in mise.toml; refresh with one init mise.\n%s", header, sha256.Sum256(body), body))
 	if !bytes.Equal(before, after) {
 		p.Changes = append(p.Changes, Change{Path: rel, Before: string(before), After: string(after)})
 	}
@@ -352,7 +354,7 @@ func (p *Plan) add(rel string, value config) error {
 func validateManaged(path string, raw []byte) error {
 	lines := bytes.SplitN(raw, []byte("\n"), 3)
 	if len(lines) != 3 || string(lines[0]) != fmt.Sprintf("%s%x", header, sha256.Sum256(lines[2])) {
-		return conflict(path, "file is user-owned or has been modified; preserve it and resolve the conflict before regenerating")
+		return conflict(path, i18n.T("config.user_modified"))
 	}
 	return nil
 }
@@ -367,7 +369,7 @@ func (p *Plan) read(rel string) ([]byte, error) {
 	raw, err := os.ReadFile(filepath.Join(p.Root, filepath.FromSlash(rel)))
 	if err == nil {
 		if previous, exists := p.inputs[rel]; exists && (previous == nil || !bytes.Equal(previous, raw)) {
-			return nil, conflict(rel, "file changed while preparing configuration; retry")
+			return nil, conflict(rel, i18n.T("config.prepare_changed"))
 		}
 		p.inputs[rel] = raw
 	}
@@ -377,7 +379,7 @@ func (p *Plan) readOptional(rel string) ([]byte, error) {
 	raw, err := p.read(rel)
 	if os.IsNotExist(err) {
 		if previous, exists := p.inputs[rel]; exists && previous != nil {
-			return nil, conflict(rel, "file was removed while preparing configuration; retry")
+			return nil, conflict(rel, i18n.T("config.prepare_removed"))
 		}
 		p.inputs[rel] = nil
 		return nil, nil
@@ -387,7 +389,7 @@ func (p *Plan) readOptional(rel string) ([]byte, error) {
 func (p *Plan) safePath(rel string) error {
 	clean := filepath.Clean(filepath.FromSlash(rel))
 	if filepath.IsAbs(clean) || clean == ".." || strings.HasPrefix(clean, ".."+string(filepath.Separator)) {
-		return conflict(rel, "path escapes workspace")
+		return conflict(rel, i18n.T("config.path_escape"))
 	}
 	current := p.Root
 	for _, part := range strings.Split(clean, string(filepath.Separator)) {
@@ -400,7 +402,7 @@ func (p *Plan) safePath(rel string) error {
 			return err
 		}
 		if info.Mode()&os.ModeSymlink != 0 {
-			return conflict(rel, "symbolic links are not supported in generated configuration paths")
+			return conflict(rel, i18n.T("config.symlink"))
 		}
 	}
 	return nil
@@ -408,7 +410,7 @@ func (p *Plan) safePath(rel string) error {
 
 func (p *Plan) Apply(ctx context.Context) error {
 	if p.overlay != nil {
-		return fmt.Errorf("a projected mise plan must be applied by its workspace transaction")
+		return i18n.Errorf("miseconfig.transaction_required")
 	}
 	unlock, err := fsutil.WorkspaceLock(ctx, p.Root, "mise")
 	if err != nil {
@@ -428,7 +430,7 @@ func (p *Plan) Apply(ctx context.Context) error {
 			return err
 		}
 		if !bytes.Equal(actual, expected) || (expected == nil) != os.IsNotExist(err) {
-			return conflict(rel, "file changed after the plan was prepared; retry")
+			return conflict(rel, i18n.T("config.plan_changed"))
 		}
 	}
 	applied := []Change{}
@@ -440,7 +442,7 @@ func (p *Plan) Apply(ctx context.Context) error {
 				path := filepath.Join(p.Root, c.Path)
 				current, readErr := os.ReadFile(path)
 				if readErr != nil || string(current) != c.After {
-					failures = append(failures, conflict(c.Path, "could not restore configuration because the file changed during rollback"))
+					failures = append(failures, conflict(c.Path, i18n.T("config.rollback_changed")))
 					continue
 				}
 				var rollbackErr error
@@ -450,7 +452,7 @@ func (p *Plan) Apply(ctx context.Context) error {
 					rollbackErr = writeAtomic(path, []byte(c.Before))
 				}
 				if rollbackErr != nil {
-					failures = append(failures, fmt.Errorf("restore %s: %w", c.Path, rollbackErr))
+					failures = append(failures, i18n.Errorf("file.restore_failed", c.Path, rollbackErr))
 				}
 			}
 			return errors.Join(failures...)

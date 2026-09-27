@@ -36,14 +36,6 @@ type CommandStep struct {
 	Args    []string
 }
 
-// RuntimeResolution is what the Dockerfile / docker-compose service
-// block needs from a toolchain: the container entrypoint command + the
-// port the service listens on.
-type RuntimeResolution struct {
-	RunCommand    string
-	ContainerPort int
-}
-
 // PlanInput is supplied by `add` to drive runtime resolution.
 type PlanInput struct {
 	PackageManager PackageManager    // empty for Go
@@ -58,12 +50,6 @@ type WorkflowInput struct {
 	WorkflowFilePath string
 	PackageManager   PackageManager
 	Scripts          map[string]string
-}
-
-// DockerfileInput drives Dockerfile generation.
-type DockerfileInput struct {
-	PackageManager PackageManager
-	Runtime        RuntimeResolution
 }
 
 // StringifyCommandStep formats a CommandStep as `command arg1 arg2 ...`

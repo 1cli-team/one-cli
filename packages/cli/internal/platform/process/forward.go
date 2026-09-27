@@ -47,3 +47,25 @@ func RunForwarded(ctx context.Context, child *exec.Cmd) error {
 	}
 	return err
 }
+
+// ExitCode preserves signal exits as well as explicit process exit statuses.
+func ExitCode(err error) int {
+	if err == nil {
+		return 0
+	}
+	var status *ExitStatus
+	if errors.As(err, &status) {
+		return status.Code
+	}
+	var exit *exec.ExitError
+	if errors.As(err, &exit) {
+		if code := exit.ExitCode(); code >= 0 {
+			return code
+		}
+		return signalExitCode(exit)
+	}
+	if errors.Is(err, context.Canceled) {
+		return 130
+	}
+	return 1
+}

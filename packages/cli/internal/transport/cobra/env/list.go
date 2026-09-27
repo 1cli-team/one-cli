@@ -9,14 +9,14 @@ import (
 )
 
 func newListCmd(deps Dependencies) *cobra.Command {
-	var project, environment, profile string
+	var project, environment string
 	cmd := &cobra.Command{
 		Use:   "list",
-		Short: "列出所有 KEY",
+		Short: i18n.T("env.list.short"),
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			result, err := deps.Service.List(cmd.Context(), environmentmodule.ListInput{
 				Scope: commandScope(cmd), Environment: environment,
-				Project: project, Profile: profile,
+				Project: project,
 			})
 			if err != nil {
 				return err
@@ -26,9 +26,10 @@ func newListCmd(deps Dependencies) *cobra.Command {
 		},
 	}
 	cmd.Flags().StringVarP(&project, "project", "p", "", i18n.T("env.flag.project"))
+	i18n.MarkFlagUsage(cmd, "project", "env.flag.project")
 	cmd.Flags().StringVar(&environment, "env", "", i18n.T("env.flag.environment"))
-	cmd.Flags().StringVar(&profile, "profile", "", i18n.T("env.flag.profile"))
-	markEnvFlagUsage(cmd, "project", "env", "profile")
+	i18n.MarkFlagUsage(cmd, "env", "env.flag.environment")
+	markEnvFlagUsage(cmd, "project", "env")
 	i18n.MarkShort(cmd, "env.list.short")
 	return cmd
 }

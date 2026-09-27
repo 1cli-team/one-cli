@@ -7,7 +7,11 @@ import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 import { SecretsManager } from "@/features/secrets/SecretsManager";
 import i18n from "@/lib/i18n";
 
-const server = setupServer();
+const server = setupServer(
+	http.get("http://localhost/api/session", () =>
+		HttpResponse.json({ session: { loggedIn: true, expired: false } }),
+	),
+);
 
 function renderManager() {
 	return render(
@@ -149,8 +153,8 @@ describe("Infisical secrets manager", () => {
 		const user = userEvent.setup();
 		renderManager();
 
-		expect(await screen.findByText("Infisical project binding is missing.")).toBeDefined();
-		await user.click(screen.getByRole("button", { name: "Retry" }));
+		expect(await screen.findByText("Connect a storage project")).toBeDefined();
+		await user.click(screen.getByRole("button", { name: "Connect and load secrets" }));
 		expect(
 			await screen.findByText("No secrets are defined directly in this scope yet."),
 		).toBeDefined();

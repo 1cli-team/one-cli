@@ -46,6 +46,7 @@ export default defineConfig({
 				codeSplitting: {
 					groups: [
 						{
+							debugName: "vendor-groups",
 							name(id) {
 								if (!id.includes("node_modules")) return null;
 								if (

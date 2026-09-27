@@ -2,7 +2,6 @@ import {
 	AlertCircle,
 	Boxes,
 	CheckCircle2,
-	CloudUpload,
 	Code2,
 	KeyRound,
 	Library,
@@ -46,9 +45,9 @@ import type {
 	OverviewProjectKind,
 } from "@/types/api";
 
-export type ProjectInspectorTab = "overview" | "environment" | "deploy";
+export type ProjectInspectorTab = "overview" | "environment";
 
-type MatrixDomain = Exclude<OverviewIssueDomain, "container">;
+type MatrixDomain = OverviewIssueDomain;
 
 interface ProjectMatrixProps {
 	projects: OverviewProject[];
@@ -70,12 +69,6 @@ function issueFor(
 	return project.issues?.find((issue) => issue.domain === domain);
 }
 
-function domainIsApplicable(project: OverviewProject, domain: MatrixDomain): boolean {
-	if (domain === "env") return true;
-	if (project.kind === "package") return false;
-	return (project.compatibleDeployTargets?.length ?? 0) > 0;
-}
-
 function projectSearchText(project: OverviewProject): string {
 	return [
 		project.name,
@@ -90,11 +83,6 @@ function projectSearchText(project: OverviewProject): string {
 		.toLowerCase();
 }
 
-function inspectorTabForIssue(issue: OverviewIssue): ProjectInspectorTab {
-	if (issue.domain === "env") return "environment";
-	return "deploy";
-}
-
 interface DomainCellProps {
 	project: OverviewProject;
 	domain: MatrixDomain;
@@ -105,25 +93,12 @@ interface DomainCellProps {
 
 const DOMAIN_ICON: Record<MatrixDomain, React.ComponentType<{ className?: string }>> = {
 	env: KeyRound,
-	deploy: CloudUpload,
 };
 
 const DomainCell: React.FC<DomainCellProps> = ({ project, domain, backend, readOnly, onClick }) => {
 	const { t } = useTranslation();
 	const issue = issueFor(project, domain);
-	const applicable = domainIsApplicable(project, domain);
 	const Icon = DOMAIN_ICON[domain];
-
-	if (!applicable) {
-		return (
-			<span
-				className="pl-3 text-sm text-muted-foreground/55"
-				title={t("projects.matrix.notApplicableTitle")}
-			>
-				{t("projects.matrix.notApplicable")}
-			</span>
-		);
-	}
 
 	return (
 		<Button
@@ -279,9 +254,8 @@ export const ProjectMatrix: React.FC<ProjectMatrixProps> = ({
 				<Table className="table-fixed">
 					<TableHeader className="bg-muted/55">
 						<TableRow className="hover:bg-transparent">
-							<TableHead className="w-[34%] pl-5">{t("projects.matrix.project")}</TableHead>
-							<TableHead className="w-[22%]">{t("projects.matrix.environment")}</TableHead>
-							<TableHead className="w-[24%]">{t("projects.matrix.deploy")}</TableHead>
+							<TableHead className="w-[45%] pl-5">{t("projects.matrix.project")}</TableHead>
+							<TableHead className="w-[35%]">{t("projects.matrix.environment")}</TableHead>
 							<TableHead className="w-[20%] pr-5 text-right">
 								{t("projects.matrix.status")}
 							</TableHead>
@@ -323,15 +297,6 @@ export const ProjectMatrix: React.FC<ProjectMatrixProps> = ({
 											onClick={() => onInspect(project, "environment")}
 										/>
 									</TableCell>
-									<TableCell className="p-2">
-										<DomainCell
-											project={project}
-											domain="deploy"
-											backend={project.domains?.deploy}
-											readOnly={readOnly}
-											onClick={() => onInspect(project, "deploy")}
-										/>
-									</TableCell>
 									<TableCell className="py-2 pr-5 text-right">
 										{issueCount > 0 ? (
 											<Button
@@ -342,7 +307,7 @@ export const ProjectMatrix: React.FC<ProjectMatrixProps> = ({
 												className="border-error-border bg-error-surface text-error-foreground hover:bg-error-surface/70 hover:text-error-foreground"
 												onClick={() => {
 													const issue = project.issues?.[0];
-													if (issue) onInspect(project, inspectorTabForIssue(issue));
+													if (issue) onInspect(project, "environment");
 												}}
 											>
 												<AlertCircle className="h-3.5 w-3.5" />

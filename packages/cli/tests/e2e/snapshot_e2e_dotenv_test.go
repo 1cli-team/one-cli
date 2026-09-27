@@ -93,7 +93,7 @@ func TestSnapshot_E2E_Env_DotenvBackend_GetMissingKeyReturnsStructuredError(t *t
 	}
 
 	_, stderr, code := runBinaryIn(t, ws,
-		"env", "get", "MISSING_KEY", "-p", subRel, "-o", "json",
+		"env", "get", "MISSING_KEY", "--reveal", "-p", subRel, "-o", "json",
 	)
 	if code == 0 {
 		t.Fatalf("expected non-zero exit for missing key")

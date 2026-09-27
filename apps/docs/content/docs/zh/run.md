@@ -33,7 +33,7 @@ one run [-p <name|path>] [--env-provider dotenv|infisical] [--env <env>] -- <cmd
 
 覆盖顺序为：父进程环境 → mise 环境 → 当前项目的 One 环境变量。项目目录、参数边界、标准 IO 和应用退出码保持原有语义，不需要 `mise activate`。
 
-无需单独安装 mise：One 优先使用兼容的系统版本，否则复用或从官方下载到自己的目录；本地没有可用程序时首次运行需要联网，程序被删后会按需恢复。配置信任遵循 mise 自身规则；需要显式审批时设置 `MISE_PARANOID=1`，审查配置后通过 `one mise trust` 授权。离线配置见 [One 自动管理 mise](/zh/docs/installation/#one-自动管理-mise)，旧项目启用和版本调整见 [`one configure mise`](/zh/docs/configure/#mise-工作区工具配置)。
+无需单独安装 mise：One 优先使用兼容的系统版本，否则复用或从官方下载到自己的目录；本地没有可用程序时首次运行需要联网，程序被删后会按需恢复。配置信任遵循 mise 自身规则；需要显式审批时设置 `MISE_PARANOID=1`，审查配置后通过 `one mise trust` 授权。离线配置见 [One 自动管理 mise](/zh/docs/installation/#one-自动管理-mise)，旧项目启用和版本调整见 [`one init mise`](/zh/docs/login/#mise-工作区工具配置)。
 
 ## 示例
 
@@ -66,7 +66,7 @@ one run --env staging -- npm run e2e
 | `infisical` | 联网从 Infisical 拉取当前环境变量 |
 | 空 | 读取 workspace manifest 记录的 provider |
 
-`--env-provider infisical` 需要先配置 `env/infisical` profile；离线或本地调试可以用 `--env-provider dotenv`。
+`--env-provider infisical` 需要先通过 `one login` 登录；离线或本地调试可以用 `--env-provider dotenv`。
 
 ## 错误恢复
 
@@ -76,7 +76,7 @@ one run --env staging -- npm run e2e
 | `SUBPROJECT_NOT_FOUND` | `-p` 改成 manifest 里的 `name` 或 `relativeDir` |
 | `RUN_COMMAND_NOT_FOUND` | 确认命令在 PATH、项目 `node_modules/.bin` 或 workspace `node_modules/.bin` 内 |
 | `ENV_FILE_NOT_FOUND` | 建项目 `.env`，或切到 `--env-provider infisical` |
-| `INFISICAL_AUTH_MISSING` | 先 `one configure add env/infisical --profile <name> --use` |
+| `INFISICAL_AUTH_MISSING` | 先 `one login` |
 
 完整码表：[错误码大全](/zh/docs/error-codes/)。
 
@@ -85,3 +85,13 @@ one run --env staging -- npm run e2e
 - [环境变量注入命令](/zh/tutorials/run-passthrough/) — 真实使用场景
 - [`one env`](/zh/docs/env-vars/) — 设置 / 拉取环境变量
 - [`one dev`](/zh/docs/dev/) — 启动全部可开发项目
+
+
+## 使用全局凭据
+
+```bash
+one run --global --env dev --path /oss --keys OSS_ACCESS_KEY_ID,OSS_ACCESS_KEY_SECRET -- upload-assets
+one run --global --env dev --path /oss --dry-run -- upload-assets
+```
+
+环境和目录必须显式指定。只读取该层目录，指定 `--keys` 时只获取所选变量；dry-run 不读取凭据。全局模式不加载项目环境或仓库内的隐式命令路径。命令在当前目录运行；输出遮盖仅尽力匹配原始密钥值，不是安全沙箱。

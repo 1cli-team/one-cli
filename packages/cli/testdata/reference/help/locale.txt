@@ -1,0 +1,14 @@
+
+DESCRIPTION
+Show or set the display language (auto / zh-CN / en-US)
+
+USAGE
+  one locale [auto|zh-CN|en-US] [flags]
+
+TIPS
+Shows the saved language preference and the language active in this terminal. Pass auto, zh-CN, or en-US to change the preference.
+
+auto follows LC_ALL, LC_MESSAGES, then LANG; the fallback is English. The Dashboard shares this preference. Project and third-party tool logs keep their original language.
+
+COMMON OPTIONS
+  -o, --output <value>     Output format: json | yaml | text (default: terminal-friendly text, JSON when piped)

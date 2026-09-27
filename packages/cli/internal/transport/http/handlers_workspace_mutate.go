@@ -1,9 +1,7 @@
 package serve
 
 import (
-	"encoding/json"
 	"errors"
-	"io"
 	"net/http"
 	"strings"
 
@@ -18,15 +16,11 @@ import (
 func registerWorkspaceMutateRoutes(mux *http.ServeMux, opts MuxOpts) {
 	// Profile bindings persist in machine-local One configuration. Manifest
 	// publication has its own revision-checked, typed endpoint below.
-	mux.HandleFunc("PUT /workspace/profile-bindings/env", handlePutWorkspaceEnvironmentProfile(opts))
+
 	mux.HandleFunc("PUT /workspace/environment/backend", handlePutWorkspaceEnvironmentBackend(opts))
 	mux.HandleFunc(
 		"POST /workspace/environment/backend/initialize",
 		handleInitializeWorkspaceEnvironmentBackend(opts),
-	)
-	mux.HandleFunc(
-		"PUT /workspace/projects/{name}/profile-bindings/{domain}",
-		handlePutProjectProfileBinding(opts),
 	)
 	mux.HandleFunc("PUT /workspace/manifest", handlePutWorkspaceManifest(opts))
 	mux.HandleFunc("POST /workspace/manifest/preview", handlePreviewWorkspaceManifest(opts))
@@ -36,10 +30,6 @@ func registerWorkspaceMutateRoutes(mux *http.ServeMux, opts MuxOpts) {
 	for _, pattern := range []string{
 		"PUT /workspace/projects/{name}",
 		"PUT /workspace/projects/{name}/environment",
-		"PUT /workspace/projects/{name}/deploy",
-		"PUT /workspace/projects/{name}/container",
-		"PUT /workspace/projects/{name}/settings/deploy",
-		"PUT /workspace/projects/{name}/settings/container",
 	} {
 		mux.HandleFunc(pattern, handleRepositoryReadOnly())
 	}
@@ -57,10 +47,10 @@ func handleInitializeWorkspaceEnvironmentBackend(opts MuxOpts) http.HandlerFunc 
 			r.URL.Query().Get("env"),
 			secretProject(r),
 		); err != nil {
-			writeProfileError(w, err)
+			writeServiceError(w, err)
 			return
 		}
-		settings, err := opts.WorkspaceService.WorkspaceEnvironmentProfile(
+		settings, err := opts.WorkspaceService.WorkspaceEnvironment(
 			r.Context(), opts.WorkspaceRoot, r.URL.Query().Get("env"),
 		)
 		if err != nil {
@@ -112,16 +102,16 @@ func handlePutWorkspaceEnvironmentBackend(opts MuxOpts) http.HandlerFunc {
 		scope := execution.NewScope(r.Context(), opts.WorkspaceRoot)
 		plan, err := opts.EnvironmentService.PlanSwitch(scope, body.Backend)
 		if err != nil {
-			writeProfileError(w, err)
+			writeServiceError(w, err)
 			return
 		}
 		if _, err := opts.EnvironmentService.Switch(r.Context(), plan, environmentmodule.SwitchOptions{
 			Environment: r.URL.Query().Get("env"),
 		}); err != nil {
-			writeProfileError(w, err)
+			writeServiceError(w, err)
 			return
 		}
-		settings, err := opts.WorkspaceService.WorkspaceEnvironmentProfile(
+		settings, err := opts.WorkspaceService.WorkspaceEnvironment(
 			r.Context(), opts.WorkspaceRoot, r.URL.Query().Get("env"),
 		)
 		if err != nil {
@@ -170,87 +160,6 @@ func handlePreviewWorkspaceManifest(opts MuxOpts) http.HandlerFunc {
 		}
 		writeJSON(w, http.StatusOK, result)
 	}
-}
-
-type workspaceProfileBindingReq struct {
-	Profile *string `json:"profile"`
-}
-
-func handlePutWorkspaceEnvironmentProfile(opts MuxOpts) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		if opts.WorkspaceRoot == "" {
-			writeNoWorkspace(w)
-			return
-		}
-		body, ok := decodeProfileBinding(w, r)
-		if !ok {
-			return
-		}
-		settings, err := opts.WorkspaceService.UpdateWorkspaceEnvironmentProfile(
-			r.Context(), opts.WorkspaceRoot, r.URL.Query().Get("env"), *body.Profile,
-		)
-		if err != nil {
-			writeWorkspaceMutationErr(w, err)
-			return
-		}
-		writeJSON(w, http.StatusOK, settings)
-	}
-}
-
-func handlePutProjectProfileBinding(opts MuxOpts) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		if opts.WorkspaceRoot == "" {
-			writeNoWorkspace(w)
-			return
-		}
-		body, ok := decodeProfileBinding(w, r)
-		if !ok {
-			return
-		}
-		settings, err := opts.WorkspaceService.UpdateProjectProfileBinding(
-			r.Context(),
-			opts.WorkspaceRoot,
-			r.PathValue("name"),
-			r.PathValue("domain"),
-			r.URL.Query().Get("env"),
-			*body.Profile,
-		)
-		if err != nil {
-			writeWorkspaceMutationErr(w, err)
-			return
-		}
-		writeJSON(w, http.StatusOK, settings)
-	}
-}
-
-func decodeProfileBinding(
-	w http.ResponseWriter,
-	r *http.Request,
-) (workspaceProfileBindingReq, bool) {
-	var body workspaceProfileBindingReq
-	if r.Body == nil {
-		writeBadPayload(w, "empty body")
-		return workspaceProfileBindingReq{}, false
-	}
-	defer r.Body.Close()
-	decoder := json.NewDecoder(r.Body)
-	decoder.DisallowUnknownFields()
-	if err := decoder.Decode(&body); err != nil {
-		writeBadPayload(w, err.Error())
-		return workspaceProfileBindingReq{}, false
-	}
-	if err := decoder.Decode(&struct{}{}); !errors.Is(err, io.EOF) {
-		if err == nil {
-			err = errors.New("request body must contain exactly one JSON object")
-		}
-		writeBadPayload(w, err.Error())
-		return workspaceProfileBindingReq{}, false
-	}
-	if body.Profile == nil {
-		writeBadPayload(w, "profile is required")
-		return workspaceProfileBindingReq{}, false
-	}
-	return body, true
 }
 
 func handleRepositoryReadOnly() http.HandlerFunc {

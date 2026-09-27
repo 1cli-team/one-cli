@@ -1,8 +1,6 @@
 package envcmd
 
 import (
-	"fmt"
-
 	"github.com/spf13/cobra"
 
 	environmentmodule "github.com/torchstellar-team/one-cli/packages/cli/internal/modules/environment"
@@ -15,9 +13,9 @@ func newSwitchCmd(deps Dependencies) *cobra.Command {
 	var yes, noSync, overwrite, dryRun bool
 	cmd := &cobra.Command{
 		Use:   "switch <backend>",
-		Short: "切换工作区的 env 后端 (dotenv / infisical)",
+		Short: i18n.T("env.switch.short"),
 		Long:  i18n.T("env.switch.tip"),
-		Args:  cobra.ExactArgs(1),
+		Args:  i18n.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			plan, err := deps.Service.PlanSwitch(commandScope(cmd), args[0])
 			if err != nil {
@@ -26,8 +24,8 @@ func newSwitchCmd(deps Dependencies) *cobra.Command {
 			sync := !noSync
 			if sync && !yes && plan.Entries() > 0 {
 				sync, err = prompt.Confirm(
-					fmt.Sprintf("发现 %d 个本地 .env 条目要推到 Infisical，继续？", plan.Entries()),
-					true, "是，同步并切换", "否，只切 manifest",
+					i18n.Tf("env.switch.confirm", plan.Entries()),
+					true, i18n.T("env.switch.confirm_yes"), i18n.T("env.switch.confirm_no"),
 				)
 				if err != nil {
 					return err

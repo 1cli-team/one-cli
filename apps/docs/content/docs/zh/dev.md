@@ -5,7 +5,7 @@ description: 启动全部可开发项目，或只启动一个项目。
 
 `one dev` 从 manifest 读取每个项目的开发命令，并用 One CLI 内置 supervisor 运行。
 
-启用 mise 的 workspace 会自动在每个项目的 mise 工具环境中运行开发命令，仍然使用 `one dev` / `one dev web`，无需增加 runtime 参数。日志前缀、项目选择和整组服务的停止行为继续由原有 supervisor 负责。mise 的安装与旧项目启用见 [`one configure mise`](/zh/docs/configure/#mise-工作区工具配置)。
+启用 mise 的 workspace 会自动在每个项目的 mise 工具环境中运行开发命令，仍然使用 `one dev` / `one dev web`，无需增加 runtime 参数。日志前缀、项目选择和整组服务的停止行为继续由原有 supervisor 负责。mise 的安装与旧项目启用见 [`one init mise`](/zh/docs/login/#mise-工作区工具配置)。
 
 ## 用法
 
@@ -26,7 +26,8 @@ one dev [project] [--dry-run]
 
 `one dev` 在启动服务前自动准备所选项目的工具与应用依赖，交互和非交互调用行为一致。
 
-- Node：在工作区根目录安装一次。已有锁文件时执行冻结安装，锁文件与项目声明不一致会失败；新工作区首次安装生成锁文件。项目声明、工具版本改变或依赖目录被清理后会重新准备。
+- Node：在工作区根目录统一准备依赖。使用 pnpm 时，先通过 pnpm 自身检查工作区的安装状态；手动 `pnpm install` 后，只要依赖与当前工作区一致，就直接复用。需要安装时执行 `pnpm install --no-frozen-lockfile`，自动同步新增项目或依赖变更。pnpm 10.14 之前的版本沿用 One 的安装缓存。其他包管理器仍使用原有锁文件策略。
+- `one build` 保留现有的严格安装策略：已有 pnpm 依赖锁文件时使用 `--frozen-lockfile`。构建发现锁文件过期后，需要先安装并审阅锁文件变更。
 - Go：独立模块下载固定构建列表并补充 `go.sum`；存在 `go.work` 时由 Go 按实际包依赖解析本地成员和外部依赖，按需维护 `go.work.sum`。准备过程不自动运行 `go mod tidy` 或 `go work sync`。
 - 所有准备成功后才启动 supervisor。失败保留底层错误和下载缓存，可修复后重试原命令；取消时停止准备进程。
 

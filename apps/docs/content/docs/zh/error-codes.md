@@ -169,15 +169,6 @@ Registry is empty.
 
 > 没有默认 remediation。具体恢复方式请看错误的 `context` 字段。
 
-### `REGISTRY_CREDENTIAL_MISSING`
-
-Container push needs a registry, but none is configured.
-
-**Remediation**:
-
-- `build-local` — 只需要本地镜像时，使用 build，不需要 push<br />运行：`one container build <subproject>`
-- `setup-registry` — 需要推送到镜像仓库时，先配置 registry<br />运行：`one configure add container/docker --profile <name> --use`
-
 ### `REGISTRY_FETCH_FAILED`
 
 Failed to download the template registry.
@@ -232,9 +223,9 @@ Workspace 后置同步失败：写入 manifest 后某个后端 sync 回滚或失
 
 - `retry` — 重试触发该错误的命令
 
-## 插件 / Profile / 部署
+## Profile / CI / 本地开发
 
-插件选择、profile 解析、部署 / CI 产物生成过程中的问题。
+Profile 解析、CI 产物生成和本地开发过程中的问题。
 
 ### `CI_DISABLE_CONFIRMATION_REQUIRED`
 
@@ -260,92 +251,11 @@ The selected CI provider returned an error while rendering the workflow.
 
 > 没有默认 remediation。具体恢复方式请看错误的 `context` 字段。
 
-### `IMAGE_REF_INCOMPLETE`
-
-Deploy / CI backend needs the container image ref but it is missing or incomplete (registry / name / tag).
-
-> 没有默认 remediation。具体恢复方式请看错误的 `context` 字段。
-
-### `K8S_PACKAGE_UNSUPPORTED`
-
-A deploy backend selected a Kubernetes packaging form this build does not bundle.
-
-> 没有默认 remediation。具体恢复方式请看错误的 `context` 字段。
-
-### `K8S_PLATFORM_UNDETECTED`
-
-Kubernetes node architecture could not be detected before building an image for deploy.
-
-**Remediation**:
-
-- `check-k8s` — 确认 kubeconfig/context 可访问并能列出节点<br />运行：`kubectl get nodes -o wide`
-
 ### `LOCAL_ORCH_PORT_CONFLICT`
 
 Two projects requested the same dev port and the dev runner could not auto-allocate a free one.
 
 > 没有默认 remediation。具体恢复方式请看错误的 `context` 字段。
-
-### `PROFILE_ALREADY_EXISTS`
-
-A profile with this name already exists. Re-run `one configure add <domain>/<backend> --profile <name>` to update existing credentials, or pick a different name.
-
-> 没有默认 remediation。具体恢复方式请看错误的 `context` 字段。
-
-### `PROFILE_BACKEND_INVALID`
-
-Profile.backend value is not recognised, or it doesn't belong to the declared domain.
-
-> 没有默认 remediation。具体恢复方式请看错误的 `context` 字段。
-
-### `PROFILE_CREDENTIAL_SOURCE_UNSUPPORTED`
-
-Profile's credentialSource is set to a value this build does not implement (only `file` is wired up so far).
-
-**Remediation**:
-
-- `use-file-source` — 把 config.json 中该 profile 的 credentialSource 改回 "file"（或删除该字段），并确保对应密钥写在 credentials.json
-
-### `PROFILE_FILE_INVALID`
-
-One of config.json, credentials.json, or profile-bindings.json failed to parse as JSON.
-
-**Remediation**:
-
-- `edit-profile-file` — 根据 error.context.path 检查并修复对应的机器本地文件；删除 profile-bindings.json 只会清除本机选择，不会删除凭据或修改仓库
-
-### `PROFILE_IN_USE`
-
-The Profile is still selected by one or more environment-aware Workspace or Project bindings.
-
-**Remediation**:
-
-- `unbind-profile` — 先在 Dashboard 中把对应 Workspace / Project Profile 选择改为 Automatic，再删除
-
-### `PROFILE_NONE_CONFIGURED`
-
-No Profile resolved from --profile, environment-aware Project/Workspace bindings, legacy bindings, or the machine default.
-
-**Remediation**:
-
-- `add-profile` — 创建第一个 profile（替换 <domain>/<backend> 为对应 pair，如 env/infisical / deploy/aws-s3 / container/docker）<br />运行：`one configure add <domain>/<backend> --profile work`
-
-### `PROFILE_NOT_FOUND`
-
-Requested profile does not exist under the (domain/backend) section.
-
-**Remediation**:
-
-- `list-profiles` — <br />运行：`one configure list env/infisical`
-- `add-profile` — 创建新 profile<br />运行：`one configure add env/infisical --profile <name>`
-
-### `PROFILE_VERSION_UNSUPPORTED`
-
-A machine-local Profile file schema does not match this binary.
-
-**Remediation**:
-
-- `upgrade-cli` — 升级 one cli，或仅重建 error.context.path 指向的不兼容机器本地文件；无需升级 one.manifest.json
 
 ### `RELEASE_FLOW_MISMATCH`
 
@@ -460,20 +370,19 @@ Infisical API returned an unexpected error. See error.context for details.
 
 ### `INFISICAL_AUTH_FAILED`
 
-Universal Auth login was rejected by Infisical (bad client id / secret, or rate limited).
+The Infisical session was rejected or expired.
 
 **Remediation**:
 
-- `rotate-credentials` — 重新生成 client secret 或确认 client id 来自正确的 organization
+- `login` — <br />运行：`one login`
 
 ### `INFISICAL_AUTH_MISSING`
 
-No default env profile supplies Universal Auth credentials.
+No active Infisical browser session.
 
 **Remediation**:
 
-- `add-profile` — 在 Infisical → Organization → Access Control → Identities 创建 Universal Auth machine identity，再用 client-id / client-secret 配 profile<br />运行：`one configure add env/infisical --profile <name> --client-id <id> --client-secret <secret> --use`
-- `use-existing-profile` — 或切到已配置的 profile<br />运行：`one configure use env/infisical --profile <name>`
+- `login` — <br />运行：`one login`
 
 ### `INFISICAL_FOLDER_NOT_FOUND`
 
@@ -493,21 +402,17 @@ Network error reaching the Infisical API. Check siteUrl + connectivity.
 
 ### `INFISICAL_NOT_CONFIGURED`
 
-one.manifest.json#domains.env is missing, or the workspace is not using env/infisical.
+The workspace has no Infisical project binding.
 
 **Remediation**:
 
-- `create-with-infisical` — 新工作区在 create 时选择 Infisical<br />运行：`one create <dir> --env-provider infisical`
-- `configure-profile` — 已有工作区需确认 manifest.domains.env.kind=infisical，并配置 env/infisical profile<br />运行：`one configure add env/infisical --profile <name> --use`
+- `select-project` — 在 Dashboard 工作区设置中选择 Infisical 项目<br />运行：`one serve`
 
 ### `INFISICAL_PROJECT_CREATE_FORBIDDEN`
 
-机器身份没有 create-project 权限。
+当前账号没有创建项目权限，请选择一个已有且有权访问的项目。
 
-**Remediation**:
-
-- `grant-admin-role` — 在 Infisical 后台给该 machine identity 授予 organization-level 的 admin 角色，或先手动建项目并把 projectId 写入 manifest
-- `use-explicit-id` — 手动在 UI 创建项目后，把 ID 写进 one.manifest.json#domains.env.config.projectId
+> 没有默认 remediation。具体恢复方式请看错误的 `context` 字段。
 
 ### `INFISICAL_PROJECT_NAME_TAKEN`
 
@@ -519,7 +424,7 @@ Infisical 项目名已被占用；auto-bind 会自动加随机后缀重试，但
 
 ### `INFISICAL_PROJECT_NOT_FOUND`
 
-Infisical project id does not exist or the machine identity has no access to it.
+Infisical project id does not exist or the current account has no access to it.
 
 > 没有默认 remediation。具体恢复方式请看错误的 `context` 字段。
 
@@ -561,48 +466,6 @@ The active backend in this domain does not implement the requested verb (e.g. `o
 
 - `switch-backend` — 切换到支持该 verb 的同 domain backend（例如 env 域改用 infisical）
 
-### `CLOUDFLARE_CLI_MISSING`
-
-deploy/cloudflare 找不到 wrangler CLI。
-
-**Remediation**:
-
-- `install-project-wrangler` — 在当前 subproject 目录安装 wrangler<br />运行：`pnpm add -D wrangler`
-- `install-wrangler` — 或全局安装 wrangler CLI<br />运行：`npm i -g wrangler`
-
-### `CLOUDFLARE_DEPLOY_FAILED`
-
-wrangler CLI 退出码非 0；查看上游日志获取详情。
-
-**Remediation**:
-
-- `verify-token` — 确认 API token 仍然有效，且对目标 account / Worker 有 Edit Workers 权限
-- `verify-account-id` — 多账号场景下 wrangler 需要 CLOUDFLARE_ACCOUNT_ID；在 profile 里设置 --account-id 或在 dash 里复制 Account ID
-
-### `CLOUDFLARE_PROFILE_INVALID`
-
-deploy/cloudflare profile 缺少 API token。
-
-**Remediation**:
-
-- `configure-cloudflare` — 在 dash.cloudflare.com → My Profile → API Tokens 创建 API token，然后写入 profile<br />运行：`one configure add deploy/cloudflare --profile <name> --use --token $CLOUDFLARE_API_TOKEN`
-
-### `CONTAINER_KIND_UNKNOWN`
-
-manifest declares an unrecognised container kind. Supported kinds: docker / dockerhub / ghcr / acr.
-
-**Remediation**:
-
-- `fix-manifest-kind` — 把 projects[i].domains.container.kind 改成支持的 kind
-
-### `CONTAINER_PROFILE_INVALID`
-
-Container profile is missing required fields for its kind (e.g. acr needs region, docker needs registry).
-
-**Remediation**:
-
-- `reconfigure-container` — 重新配置 container profile<br />运行：`one configure add container/<kind> --profile <name> --use`
-
 ### `DEPENDENCIES_NOT_INSTALLED`
 
 Node dependencies required for local development are not installed.
@@ -635,55 +498,11 @@ A domain (container / deploy / dev / ci / env) is required but its section is mi
 
 > 没有默认 remediation。具体恢复方式请看错误的 `context` 字段。
 
-### `EDGEONE_CLI_MISSING`
-
-deploy/edgeone 找不到 edgeone CLI。
-
-**Remediation**:
-
-- `install-edgeone` — 全局安装腾讯云 EdgeOne CLI<br />运行：`npm i -g edgeone`
-- `install-edgeone-via-pnpm` — 或使用 pnpm 全局安装<br />运行：`pnpm add -g edgeone`
-
-### `EDGEONE_DEPLOY_FAILED`
-
-edgeone CLI 退出码非 0；查看上游日志获取详情。
-
-**Remediation**:
-
-- `verify-token` — 确认 EdgeOne API token 仍然有效，且对目标 EdgeOne Pages 项目有部署权限
-- `verify-project` — 首次部署需要先在 EdgeOne 控制台创建 Pages 项目；project name 写在 manifest.projects[i].domains.deploy.config.projectName
-
-### `EDGEONE_PROFILE_INVALID`
-
-deploy/edgeone profile 缺少 EdgeOne API token。
-
-**Remediation**:
-
-- `configure-edgeone` — 创建 EdgeOne Pages API token 后写入 profile<br />运行：`one configure add deploy/edgeone --profile <name> --use --token $EDGEONE_API_TOKEN`
-
 ### `HOOKS_CONFIG_CONFLICT`
 
 Existing Git hooks or hk configuration conflict with One's generated setup.
 
 > 没有默认 remediation。具体恢复方式请看错误的 `context` 字段。
-
-### `IMAGE_TAG_NOT_FOUND`
-
-Container push target image tag does not exist in the local Docker daemon.
-
-**Remediation**:
-
-- `build-image` — 先构建要推送的镜像<br />运行：`one container build <subproject>`
-
-### `IMAGE_TAG_REQUIRED`
-
-Container build needs a version tag but no subproject buildVersion, Git tag, or package version was available.
-
-**Remediation**:
-
-- `provide-tag` — 显式指定镜像版本 tag<br />运行：`one container build <subproject> --build-version v0.1.0`
-- `set-build-version` — 或在 one.manifest.json 里设置 projects[].buildVersion
-- `create-git-tag` — 或在当前提交上创建 Git tag<br />运行：`git tag v0.1.0`
 
 ### `MISE_CONFIG_CONFLICT`
 
@@ -712,6 +531,18 @@ The installed mise version is unsupported or could not be read.
 ### `PATCH_CONFLICT`
 
 Two configuration fragments contributed conflicting patches to the same backend target.
+
+> 没有默认 remediation。具体恢复方式请看错误的 `context` 字段。
+
+### `PREFERENCES_FILE_INVALID`
+
+The local preferences file could not be read or parsed.
+
+> 没有默认 remediation。具体恢复方式请看错误的 `context` 字段。
+
+### `PREFERENCES_INVALID`
+
+The requested preference value is not supported.
 
 > 没有默认 remediation。具体恢复方式请看错误的 `context` 字段。
 
@@ -772,7 +603,7 @@ one run arguments do not match `one run [project] -- <cmd> [args...]`.
 
 ### `SERVE_BIND_FORBIDDEN`
 
-one serve 拒绝绑定到非 loopback 地址（profile 文件含敏感凭据，仅 127.0.0.1 / localhost 才安全）。
+one serve 拒绝绑定到非 loopback 地址（本地接口可操作敏感凭据，仅 127.0.0.1 / localhost 才安全）。
 
 **Remediation**:
 
@@ -814,32 +645,6 @@ Dashboard only writes explicitly allowlisted Project fields and env Backend swit
 **Remediation**:
 
 - `list-projects` — 查看现有项目<br />运行：`cat one.manifest.json`
-
-### `VERCEL_CLI_MISSING`
-
-deploy/vercel 找不到 vercel CLI。
-
-**Remediation**:
-
-- `install-vercel-cli` — 全局安装 vercel CLI（推荐用 pnpm/npm 全局）<br />运行：`npm i -g vercel`
-- `install-vercel-cli-via-pnpm` — 或使用 pnpm 全局安装<br />运行：`pnpm add -g vercel`
-
-### `VERCEL_DEPLOY_FAILED`
-
-vercel CLI 退出码非 0；查看上游日志获取详情。
-
-**Remediation**:
-
-- `verify-token` — 确认 API token 仍然有效，且对目标 team / project 有 deploy 权限
-- `verify-project-link` — 首次部署需要 vercel link：cd 到项目目录手动跑一次 `vercel link --token $TOKEN`
-
-### `VERCEL_PROFILE_INVALID`
-
-deploy/vercel profile 缺少 API token。
-
-**Remediation**:
-
-- `configure-vercel` — 在 vercel.com → Account Settings → Tokens 创建 API token，然后写入 profile<br />运行：`one configure add deploy/vercel --profile <name> --use --token $VERCEL_TOKEN`
 
 ### `WORKSPACE_NESTED_FORBIDDEN`
 

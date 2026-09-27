@@ -2,7 +2,6 @@ package environment
 
 import (
 	"context"
-	"fmt"
 	"strings"
 
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/adapters/env/dotenv"
@@ -10,6 +9,7 @@ import (
 	catalog "github.com/torchstellar-team/one-cli/packages/cli/internal/core/backend"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/core/workspace"
 	cliErrors "github.com/torchstellar-team/one-cli/packages/cli/internal/platform/errors"
+	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/i18n"
 )
 
 // PrepareWorkspaceInput contains the workspace-level environment setup that
@@ -40,13 +40,13 @@ func (s *Service) PrepareWorkspace(
 	if !ok || !spec.Has(catalog.CapabilityScaffold) {
 		return PrepareWorkspaceResult{}, cliErrors.New(
 			cliErrors.ENV_BACKEND_INVALID,
-			fmt.Sprintf("不支持的 env backend %q", backend),
+			i18n.Tf("env.backend_unknown", backend),
 		)
 	}
 	if err := dotenv.Sync(input.ProjectRoot); err != nil {
 		return PrepareWorkspaceResult{}, cliErrors.New(
 			cliErrors.STATUS_FIX_FAILED,
-			fmt.Sprintf("env/dotenv 同步失败: %v", err),
+			i18n.Tf("env.dotenv_sync_failed", err),
 		)
 	}
 	if backend == workspace.EnvBackendDotenv {

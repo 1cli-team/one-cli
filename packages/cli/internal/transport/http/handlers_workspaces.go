@@ -20,19 +20,15 @@ func registerWorkspacesRoutes(mux *http.ServeMux, opts MuxOpts) {
 
 	mux.HandleFunc("GET /workspaces/{entryId}/overview",
 		handleResolvedWorkspaceRead(opts, handleGetWorkspaceOverview))
-	mux.HandleFunc("GET /workspaces/{entryId}/profile-bindings/env",
-		handleResolvedWorkspaceRead(opts, handleGetWorkspaceEnvironmentProfile))
+	mux.HandleFunc("GET /workspaces/{entryId}/environment",
+		handleResolvedWorkspaceRead(opts, handleGetWorkspaceEnvironment))
 	mux.HandleFunc("GET /workspaces/{entryId}/projects/{name}",
 		handleResolvedWorkspaceRead(opts, handleGetWorkspaceProject))
 
-	mux.HandleFunc("PUT /workspaces/{entryId}/profile-bindings/env",
-		handleResolvedWorkspace(opts, handlePutWorkspaceEnvironmentProfile))
 	mux.HandleFunc("PUT /workspaces/{entryId}/environment/backend",
 		handleResolvedWorkspace(opts, handlePutWorkspaceEnvironmentBackend))
 	mux.HandleFunc("POST /workspaces/{entryId}/environment/backend/initialize",
 		handleResolvedWorkspace(opts, handleInitializeWorkspaceEnvironmentBackend))
-	mux.HandleFunc("PUT /workspaces/{entryId}/projects/{name}/profile-bindings/{domain}",
-		handleResolvedWorkspace(opts, handlePutProjectProfileBinding))
 	mux.HandleFunc("PUT /workspaces/{entryId}/manifest",
 		handleResolvedWorkspace(opts, handlePutWorkspaceManifest))
 	mux.HandleFunc("POST /workspaces/{entryId}/manifest/preview",
@@ -51,10 +47,6 @@ func registerWorkspacesRoutes(mux *http.ServeMux, opts MuxOpts) {
 	for _, pattern := range []string{
 		"PUT /workspaces/{entryId}/projects/{name}",
 		"PUT /workspaces/{entryId}/projects/{name}/environment",
-		"PUT /workspaces/{entryId}/projects/{name}/deploy",
-		"PUT /workspaces/{entryId}/projects/{name}/container",
-		"PUT /workspaces/{entryId}/projects/{name}/settings/deploy",
-		"PUT /workspaces/{entryId}/projects/{name}/settings/container",
 	} {
 		mux.HandleFunc(pattern, handleRepositoryReadOnly())
 	}

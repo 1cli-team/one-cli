@@ -38,7 +38,7 @@ export default async function Page(props: {
     title: string;
     description?: string;
     body: React.ComponentType;
-    toc?: import("fumadocs-core/server").TableOfContents;
+    toc?: import("fumadocs-core/toc").TableOfContents;
     full?: boolean;
   };
   const MDX = data.body;
@@ -61,8 +61,8 @@ export default async function Page(props: {
           />
         ),
       }}
-      container={{ className: "one-docs-page" }}
-      article={{ id: "nd-page_article", className: "one-docs-article" }}
+      id="nd-page_article"
+      className="one-docs-page one-docs-article"
       tableOfContent={{
         component: <DocsToc docPath={docPath} items={toc} lang={lang} />,
       }}

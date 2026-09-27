@@ -3,8 +3,9 @@ package creation
 import (
 	"bytes"
 	"encoding/json"
-	"fmt"
 	"sort"
+
+	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/i18n"
 )
 
 // marshalJSONValue retains shell operators and version ranges as readable JSON
@@ -46,12 +47,12 @@ type jsonField struct {
 
 func updateJSONField(raw []byte, key string, value json.RawMessage) ([]byte, error) {
 	if !json.Valid(raw) || value != nil && !json.Valid(value) {
-		return nil, fmt.Errorf("invalid JSON while updating %q", key)
+		return nil, i18n.Errorf("creation.json_invalid", key)
 	}
 	decoder := json.NewDecoder(bytes.NewReader(raw))
 	token, _ := decoder.Token()
 	if token != json.Delim('{') {
-		return nil, fmt.Errorf("JSON document must be an object")
+		return nil, i18n.Errorf("creation.json_object")
 	}
 	openEnd := int(decoder.InputOffset())
 	var fields []jsonField
@@ -67,7 +68,7 @@ func updateJSONField(raw []byte, key string, value json.RawMessage) ([]byte, err
 		}
 		fieldKey := token.(string)
 		if seen[fieldKey] {
-			return nil, fmt.Errorf("duplicate JSON field %q", fieldKey)
+			return nil, i18n.Errorf("creation.json_duplicate", fieldKey)
 		}
 		seen[fieldKey] = true
 		var fieldValue json.RawMessage

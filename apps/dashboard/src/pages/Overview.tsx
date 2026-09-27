@@ -18,7 +18,7 @@ export const Overview: React.FC<{
 	const projects = data.projects ?? [];
 
 	return (
-		<div className="flex h-full min-h-0 w-full flex-col [&_[data-slot=button]]:rounded-md [&_[data-slot=input]]:h-9 [&_[data-slot=input]]:rounded-md [&_[data-slot=select-trigger]]:h-9 [&_[data-slot=select-trigger]]:rounded-md [&_[data-slot=textarea]]:rounded-md">
+		<div className="flex h-full min-h-0 w-full flex-col">
 			{readOnly ? (
 				<Alert className="shrink-0 rounded-none border-x-0 border-t-0">
 					<Layers3 className="h-4 w-4" />

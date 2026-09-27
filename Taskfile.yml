@@ -55,7 +55,6 @@ tasks:
       - 'packages/kernel/**/*.go'
       - 'packages/cli/cmd/**/*.go'
       - 'packages/cli/internal/**/*.go'
-      - 'packages/cli/internal/adapters/deploy/kustomize/templates/*'
       - 'packages/cli/internal/platform/i18n/locales/*.json'
       - 'packages/cli/internal/resources/bundled/**/*'
       - 'packages/cli/pkg/**/*.go'
@@ -95,12 +94,12 @@ tasks:
       - 'packages/templates/*/README.md.hbs'
 
   verify-preset-codes:
-    desc: Lock the v1 preset code table (template + deploy + env + container) — codes are append-only and never re-used
+    desc: Lock the v1 preset code table (template + env) — codes are append-only and never re-used
     # The test package imports internal/core/template → internal/resources/bundled, so it
     # needs the embed sources present. Mirrors verify-cli-references.
     deps: [sync-bundled, sync-web]
     cmds:
-      - go -C '{{.CLI_DIR}}' test -count=1 -run 'TestTemplateCodesMatchGoldenAndRegistry|TestDeployCodesMatchGolden|TestEnvCodesMatchGolden|TestContainerCodesMatchGolden|TestGoldenSortedByCode' ./internal/modules/preset/...
+      - go -C '{{.CLI_DIR}}' test -count=1 -run 'TestTemplateCodesMatchGoldenAndRegistry|TestEnvCodesMatchGolden|TestGoldenSortedByCode' ./internal/modules/preset/...
     sources:
       - 'packages/cli/internal/modules/preset/**/*.go'
       - 'packages/cli/testdata/preset/v1_codes.json'
@@ -315,8 +314,8 @@ tasks:
       Dashboard on http://localhost:5173. Open that Vite URL directly.
 
       Workspace and Project data comes from the checked-in Dashboard fixture.
-      Profile CRUD still reads and writes this machine's real One config;
-      Profile bindings are real and scoped to the fixture Workspace root.
+      Login and global-variable operations use the real local Infisical session.
+      Workspace configuration is scoped to the fixture Workspace root.
 
       Both processes stop together when you press Ctrl-C.
     deps: [sync-bundled, sync-web]
@@ -331,7 +330,7 @@ tasks:
   dev:dashboard:
     env:
       VITE_DEV_API_TARGET: http://127.0.0.1:5174
-      VITE_DEV_DATA_MODE: fixture-live-profiles
+      VITE_DEV_DATA_MODE: fixture-live-session
     cmds:
       - pnpm --filter one-serve-web dev
 

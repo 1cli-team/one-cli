@@ -26,7 +26,7 @@ description: 多环境环境变量 — set / get / list / pull 子命令的完�
 
 ```bash
 one env set  <KEY[=VALUE]> [VALUE] [--env <env>] [-p <name|path>] [--yes]
-one env get  <KEY>                 [--env <env>] [-p <name|path>]
+one env get  <KEY>                 [--env <env>] [-p <name|path>] --reveal
 one env list                       [--env <env>] [-p <name|path>]
 one env pull                       [--env <env>] [-p <name|path>] [--force] [--dry-run]
 ```
@@ -43,9 +43,9 @@ one env pull --env staging       # 拉所有项目的 staging 环境变量
 
 通用输出 flag 是 `-o / --output`，取值 `json` / `yaml` / `text`。
 
-> 当前没有 `one env init` 子命令。Infisical project binding 由 `one create --env-provider infisical` 自动尝试；如果 create 时 profile、网络或权限还没准备好，首次 `set/get/list/pull` 会再尝试 lazy auto-bind。
+> 当前没有 `one env init` 子命令。Infisical project binding 由 `one create --env-provider infisical` 自动尝试；如果 create 时登录、网络或权限还没准备好，首次 `set/get/list/pull` 会再尝试 lazy auto-bind。
 
-机器级 Infisical 凭据通过 [`one configure add env/infisical`](/zh/docs/cli-overview/#one-configure) 配，不进入 manifest。
+机器级 Infisical 凭据通过 [`one login`](/zh/docs/login/) 配，不进入 manifest。
 
 ## 交互模式
 
@@ -106,8 +106,8 @@ one env set JWT_SECRET=dev-only-secret --env dev -p api --yes
 读取单个 key：
 
 ```bash
-one env get DATABASE_URL --env dev -p api
-DB_URL=$(one env get DATABASE_URL --env dev -p api -o json | jq -r .value)
+one env get DATABASE_URL --env dev -p api --reveal
+DB_URL=$(one env get DATABASE_URL --env dev -p api -o json | jq -r .value) --reveal
 ```
 
 输出 schema：`one-cli/env-get/v1`
@@ -186,8 +186,8 @@ Workspace 级 env 后端写在 `one.manifest.json#domains.env`，环境列表写
   "domains": {
     "env": {
       "kind": "infisical",
-      "profile": "work",
       "config": {
+        "siteUrl": "https://app.infisical.com",
         "projectId": "...",
         "projectName": "my-workspace",
         "rootPath": "/"
@@ -216,18 +216,18 @@ Workspace 级 env 后端写在 `one.manifest.json#domains.env`，环境列表写
 }
 ```
 
-值本身和本机 Profile 名永远不进 Manifest；Manifest 只记录 Backend、folder path 和 key 名，机器 Profile 定义与环境感知绑定位于 `~/.config/one/`。
+变量值不进入 Manifest；Manifest 记录项目 ID、实例地址、目录和 key 名。认证使用系统钥匙串中的单一浏览器会话。
 
 ## 凭据安全
 
-`one configure add env/infisical` 写 `~/.config/one/config.json` 与 `~/.config/one/credentials.json`（mode 0600）。不要把 client id / client secret 写进仓库；CI 用 secret store 注入。
+通过 `one login` 登录，令牌只保存在系统钥匙串，不落入项目或普通配置文件。
 
 ## 错误恢复
 
 | 错误码 | 处理 |
 |---|---|
-| `INFISICAL_NOT_CONFIGURED` | 确认工作区用了 `--env-provider infisical`，并有 default `env/infisical` profile |
-| `INFISICAL_AUTH_MISSING` | 重新跑 `one configure add env/infisical --profile work ... --use` |
+| `INFISICAL_NOT_CONFIGURED` | 确认工作区用了 `--env-provider infisical`，并已通过 `one login` 登录 |
+| `INFISICAL_AUTH_MISSING` | 重新跑 `one login` |
 | `INFISICAL_AUTH_FAILED` | Infisical 后台重新生成 client secret |
 | `INFISICAL_PROJECT_NAME_TAKEN` | 修改 `domains.env.config.projectName` 后重跑 env 命令触发 lazy bind |
 | `INFISICAL_PROJECT_CREATE_FORBIDDEN` | 给 machine identity 加 admin 角色，或手动建项目后填 `domains.env.config.projectId` |
@@ -243,3 +243,8 @@ Workspace 级 env 后端写在 `one.manifest.json#domains.env`，环境列表写
 
 - [环境变量指南](/zh/tutorials/env-vars/) — 心智模型 + 完整工作流
 - [`one create`](/zh/docs/create/) — 起骨架时用 `--env-provider infisical` 接 Infisical
+
+
+## 共享凭据
+
+共享凭据独立于工作区。使用 `one env bind --global` 选择存放位置，`one env list --global --env dev --path /` 浏览元数据，`one run --global --env dev --path /folder -- command` 注入明确范围的变量。完整的命令和安全边界见[登录与共享凭据](/zh/docs/login/)。

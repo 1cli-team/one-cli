@@ -102,11 +102,14 @@ func TestSnapshot_E2E_DevFromManifest(t *testing.T) {
 	if code != 0 {
 		t.Fatalf("dev failed: %d\n  stderr: %s\n  stdout: %s", code, stderr, stdout)
 	}
-	if !strings.Contains(stdout, "built-in-supervisor-works") {
-		t.Errorf("supervisor output missing echo line in stdout:\n%s", stdout)
+	if !strings.Contains(stderr, "built-in-supervisor-works") {
+		t.Errorf("supervisor output missing echo line in stderr:\n%s", stderr)
 	}
-	if !strings.Contains(stdout, "api | ") && !strings.Contains(stdout, "api|") {
-		t.Errorf("supervisor output missing api prefix in stdout:\n%s", stdout)
+	if !strings.Contains(stderr, "api | ") {
+		t.Errorf("supervisor output missing api prefix in stderr:\n%s", stderr)
+	}
+	if !json.Valid([]byte(stdout)) {
+		t.Fatalf("logs polluted JSON stdout: %s", stdout)
 	}
 	envelope := firstJSONLine(stdout)
 	if envelope == "" {

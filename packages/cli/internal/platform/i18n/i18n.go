@@ -1,5 +1,4 @@
-// Package i18n is a minimal message catalog for the CLI's first-pass
-// localisation.
+// Package i18n provides the CLI's English and Chinese message catalogs.
 //
 // The catalogue covers the user-facing command/help/output surface. Stable
 // protocol values (JSON fields, error codes, provider ids and command-line
@@ -43,8 +42,8 @@ var localesFS embed.FS
 
 const (
 	// FallbackLocale is the canonical reference language. Every key
-	// MUST exist in FallbackLocale; other locales are allowed to be
-	// incomplete and fall back to this one.
+	// must exist in both supported locales. Fallback protects users
+	// from unexpected missing translations at runtime.
 	FallbackLocale = "en-US"
 
 	// DefaultLocale is what the CLI starts up in if neither
@@ -162,6 +161,11 @@ func Tf(key string, args ...any) string {
 	return fmt.Sprintf(T(key), args...)
 }
 
+// Errorf formats a localized error, preserving fmt.Errorf's %w wrapping.
+func Errorf(key string, args ...any) error {
+	return fmt.Errorf(T(key), args...)
+}
+
 // MarkShort records the i18n key for cmd.Short and immediately
 // applies the translation. After locale changes (Init), call
 // RefreshTree(root) so cmd.Short picks up the new locale.
@@ -236,7 +240,7 @@ func RefreshTree(root *cobra.Command) {
 }
 
 // AvailableLocales returns the sorted list of locale tags we have
-// catalogs for. Used by `one configure locale` to print the choices.
+// catalogs for. Used by `one locale` to print the choices.
 func AvailableLocales() []string {
 	ensureLoaded()
 	mu.RLock()
@@ -246,4 +250,23 @@ func AvailableLocales() []string {
 		out = append(out, k)
 	}
 	return out
+}
+
+// LocalizedValue translates known catalog metadata, preserving custom text.
+// Template IDs alone are insufficient because custom registries can reuse them.
+func LocalizedValue(key, value string) string {
+	ensureLoaded()
+	mu.RLock()
+	known := false
+	for _, catalog := range catalogs {
+		if text, ok := catalog[key]; ok && text == value {
+			known = true
+			break
+		}
+	}
+	mu.RUnlock()
+	if known {
+		return T(key)
+	}
+	return value
 }

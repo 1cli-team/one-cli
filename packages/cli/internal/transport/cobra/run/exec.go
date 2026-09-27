@@ -1,10 +1,10 @@
 package runcmd
 
 import (
-	"fmt"
-
 	"github.com/spf13/cobra"
+
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/application/execution"
+	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/i18n"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/ports/secrets"
 )
 
@@ -17,14 +17,14 @@ func newExecCmd(loaders *secrets.Registry) *cobra.Command {
 		Use: "__exec", Hidden: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if protocol != 1 {
-				return fmt.Errorf("unsupported One execution protocol %d; regenerate the mise configuration", protocol)
+				return i18n.Errorf("run.protocol_unsupported", protocol)
 			}
 			if flags.project == "" {
-				return fmt.Errorf("internal execution requires --project")
+				return i18n.Errorf("run.internal_project_required")
 			}
 			if operation != "" {
 				if len(args) > 0 {
-					return fmt.Errorf("generated operation tasks do not accept extra arguments; use one run for custom commands")
+					return i18n.Errorf("run.operation_arguments")
 				}
 				w, err := execution.ResolveWorkspace(cmd.Context())
 				if err != nil {
@@ -35,7 +35,7 @@ func newExecCmd(loaders *secrets.Registry) *cobra.Command {
 					return err
 				}
 			} else if cmd.ArgsLenAtDash() != 0 || len(args) == 0 {
-				return fmt.Errorf("internal execution requires -- followed by a command")
+				return i18n.Errorf("run.internal_command_required")
 			}
 			return runRun(cmd.Context(), loaders, flags, args)
 		},

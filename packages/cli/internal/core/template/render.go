@@ -11,6 +11,7 @@ import (
 	"github.com/aymerick/raymond"
 
 	cliErrors "github.com/torchstellar-team/one-cli/packages/cli/internal/platform/errors"
+	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/i18n"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/resources/bundled"
 )
 
@@ -37,15 +38,22 @@ func CommonVariables(projectName, packageManager string) Variables {
 
 // excludedTemplateEntries are filenames the renderer never copies into
 // the destination. .git / node_modules are obvious; go.mod / go.sum are
-// dev-only module-isolation files for Go templates.
+// dev-only module-isolation files for Go templates. Node lockfiles belong
+// to the destination workspace and must be resolved after all packages join it.
 var excludedTemplateEntries = map[string]struct{}{
-	".git":         {},
-	".one":         {},
-	"node_modules": {},
-	"AGENTS.md":    {},
-	"CLAUDE.md":    {},
-	"go.mod":       {},
-	"go.sum":       {},
+	".git":                {},
+	".one":                {},
+	"node_modules":        {},
+	"AGENTS.md":           {},
+	"CLAUDE.md":           {},
+	"go.mod":              {},
+	"go.sum":              {},
+	"pnpm-lock.yaml":      {},
+	"package-lock.json":   {},
+	"npm-shrinkwrap.json": {},
+	"yarn.lock":           {},
+	"bun.lock":            {},
+	"bun.lockb":           {},
 }
 
 // pathVarRE matches the __varName__ placeholder syntax used in
@@ -68,7 +76,7 @@ func Render(templateID string, targetDir string, vars Variables) error {
 	// Sanity check that the directory exists in the embed FS.
 	if _, err := fs.Stat(bundled.TemplatesFS, root); err != nil {
 		return cliErrors.New(cliErrors.TEMPLATE_NOT_FOUND,
-			fmt.Sprintf("本地模板不存在：%s。请确认 templates/%s 已存在。", templateID, templateID))
+			i18n.Tf("template.local_missing", templateID, templateID))
 	}
 	if err := os.MkdirAll(targetDir, 0o755); err != nil {
 		return err
@@ -115,7 +123,7 @@ func renderEmbeddedTree(srcRoot string, dstRoot string, vars Variables, isRoot b
 			dstName = strings.TrimSuffix(renderedName, ".hbs")
 		}
 		// Agent instructions belong to the user, including templated filenames.
-		if dstName == "AGENTS.md" || dstName == "CLAUDE.md" {
+		if dstName == "AGENTS.md" || dstName == "CLAUDE.md" || isNodeLockfile(dstName) {
 			continue
 		}
 		dstPath := filepath.Join(dstRoot, dstName)
@@ -131,7 +139,7 @@ func renderEmbeddedTree(srcRoot string, dstRoot string, vars Variables, isRoot b
 			rendered, rerr := renderHandlebars(string(raw), vars)
 			if rerr != nil {
 				return cliErrors.New(cliErrors.TEMPLATE_NOT_FOUND,
-					fmt.Sprintf("模板渲染失败 %s: %v", srcPath, rerr))
+					i18n.Tf("template.render_failed", srcPath, rerr))
 			}
 			body = []byte(rendered)
 		} else {
@@ -239,4 +247,12 @@ func capFirst(s string) string {
 // currentYear is a package-level seam for tests; production calls time.Now().
 var currentYear = func() int {
 	return _now().Year()
+}
+
+func isNodeLockfile(name string) bool {
+	switch name {
+	case "pnpm-lock.yaml", "package-lock.json", "npm-shrinkwrap.json", "yarn.lock", "bun.lock", "bun.lockb":
+		return true
+	}
+	return false
 }

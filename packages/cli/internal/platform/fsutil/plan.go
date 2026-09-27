@@ -13,6 +13,8 @@ import (
 	"time"
 
 	"github.com/gofrs/flock"
+
+	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/i18n"
 )
 
 // FilePlan stages related configuration writes and checks all read inputs
@@ -59,7 +61,7 @@ func (p *FilePlan) Read(path string) ([]byte, error) {
 func (p *FilePlan) Expect(path string, expected []byte) error {
 	path = p.path(path)
 	if previous, ok := p.inputs[path]; ok && (!bytes.Equal(previous, expected) || (previous == nil) != (expected == nil)) {
-		return fmt.Errorf("%s changed between workspace plans; retry", path)
+		return i18n.Errorf("file.plan_conflict", path)
 	}
 	p.inputs[path] = bytes.Clone(expected)
 	return nil
@@ -126,7 +128,7 @@ func (p *FilePlan) Apply(ctx context.Context) error {
 			return err
 		}
 		if !bytes.Equal(actual, expected) || (expected == nil) != os.IsNotExist(err) {
-			return fmt.Errorf("%s changed while preparing the workspace; retry", path)
+			return i18n.Errorf("file.prepare_conflict", path)
 		}
 	}
 	paths := make([]string, 0, len(p.writes))
@@ -155,7 +157,7 @@ func (p *FilePlan) Apply(ctx context.Context) error {
 				path := applied[i]
 				current, readErr := os.ReadFile(path)
 				if (readErr != nil && !os.IsNotExist(readErr)) || !bytes.Equal(current, p.writes[path]) || (p.writes[path] == nil) != os.IsNotExist(readErr) {
-					failures = append(failures, fmt.Errorf("cannot restore concurrently modified %s", path))
+					failures = append(failures, i18n.Errorf("file.restore_conflict", path))
 					continue
 				}
 				var restoreErr error
@@ -182,7 +184,7 @@ func SafeWritePath(root, path string) error {
 		return err
 	}
 	if rel == "." || rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
-		return fmt.Errorf("configuration path escapes workspace: %s", path)
+		return i18n.Errorf("file.path_escape", path)
 	}
 	current := root
 	for _, part := range strings.Split(rel, string(filepath.Separator)) {
@@ -195,7 +197,7 @@ func SafeWritePath(root, path string) error {
 			return err
 		}
 		if info.Mode()&os.ModeSymlink != 0 {
-			return fmt.Errorf("configuration path is a symbolic link: %s", current)
+			return i18n.Errorf("file.path_symlink", current)
 		}
 	}
 	return nil
@@ -244,7 +246,7 @@ func WorkspaceLock(ctx context.Context, root, purpose string) (func(), error) {
 		return nil, err
 	}
 	if !locked {
-		return nil, fmt.Errorf("workspace %s is locked", purpose)
+		return nil, i18n.Errorf("file.workspace_locked", purpose)
 	}
 	return func() { _ = lock.Unlock() }, nil
 }

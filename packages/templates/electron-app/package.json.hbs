@@ -1,0 +1,33 @@
+{
+  "name": "{{projectNameKebabCase}}",
+  "version": "0.1.0",
+  "private": true,
+  "description": "electron-template",
+  "keywords": [],
+  "license": "MIT",
+  "author": "",
+  "scripts": {
+    "dev": "pnpm -F @{{projectNameKebabCase}}/preload build && pnpm -r --parallel -F @{{projectNameKebabCase}}/electron -F @{{projectNameKebabCase}}/ui run dev",
+    "build": "pnpm -F @{{projectNameKebabCase}}/preload run build && pnpm -r --parallel -F @{{projectNameKebabCase}}/electron -F @{{projectNameKebabCase}}/ui run build",
+    "pack": "pnpm -F @{{projectNameKebabCase}}/electron run pack",
+    "sandbox:profile": "pnpm --silent -F @{{projectNameKebabCase}}/electron run sandbox:profile",
+    "release": "pnpm run build && pnpm -F @{{projectNameKebabCase}}/electron run release",
+    "lint": "oxlint",
+    "lint:fix": "oxlint --fix",
+    "format": "oxfmt",
+    "format:check": "oxfmt --check"
+  },
+  "devDependencies": {
+    "oxfmt": "^0.67.0",
+    "oxlint": "^1.82.0"
+  },
+  "engines": {
+    "node": "^24.15.0 || >=26.0.0"
+  },
+  "packageManager": "pnpm@12.3.4",
+  "workspaces": [
+    "apps/electron",
+    "apps/ui",
+    "packages/preload"
+  ]
+}

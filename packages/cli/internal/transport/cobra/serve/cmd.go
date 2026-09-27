@@ -17,7 +17,6 @@ import (
 	"github.com/pkg/browser"
 	"github.com/spf13/cobra"
 
-	configureapp "github.com/torchstellar-team/one-cli/packages/cli/internal/application/configure"
 	manifestapp "github.com/torchstellar-team/one-cli/packages/cli/internal/application/manifest"
 	workspaceapp "github.com/torchstellar-team/one-cli/packages/cli/internal/application/workspace"
 	catalog "github.com/torchstellar-team/one-cli/packages/cli/internal/core/backend"
@@ -25,12 +24,11 @@ import (
 	environmentmodule "github.com/torchstellar-team/one-cli/packages/cli/internal/modules/environment"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/i18n"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/output"
-	"github.com/torchstellar-team/one-cli/packages/cli/internal/transport/http"
+	serve "github.com/torchstellar-team/one-cli/packages/cli/internal/transport/http"
 )
 
 type Dependencies struct {
 	Catalog      *catalog.Catalog
-	Profiles     *configureapp.ProfileService
 	Manifest     *manifestapp.Service
 	Environments *environmentmodule.Service
 	Workspaces   *workspaceapp.Service
@@ -48,20 +46,9 @@ func newServeCmd(deps Dependencies) *cobra.Command {
 		open bool
 	)
 	cmd := &cobra.Command{
-		Use: "serve",
-		Long: `启动一个本地 HTTP 服务，在浏览器里查看本机 Workspace、配置其中的
-Project、审阅后保存 Manifest 配置、管理 Infisical 密钥，并管理 profile（env / deploy / container 各 backend）。Profile
-含 API key、kubeconfig path、registry token 等敏感字段，AI 不应读写；
-本命令是给你（人类）的入口。
-
-默认行为：绑定 127.0.0.1 + 内核分配空闲端口 + 自动用系统默认浏览器
-打开 URL。打印 URL 后阻塞，按 Ctrl-C 退出。
-
-安全模型：
-  - 仅绑定 127.0.0.1（loopback）
-  - Host header 校验，挡 DNS rebinding
-  - 全部 mutating 请求做 Origin 校验`,
-		Args: cobra.NoArgs,
+		Use:  "serve",
+		Long: i18n.T("serve.tip"),
+		Args: i18n.NoArgs,
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			parent := cmd.Context()
 			if parent == nil {
@@ -80,11 +67,11 @@ Project、审阅后保存 Manifest 配置、管理 Infisical 密钥，并管理 
 			}
 
 			return serve.Run(ctx, serve.Opts{
-				Host:               host,
-				Port:               port,
-				WorkspaceRoot:      target.Root,
-				Catalog:            deps.Catalog,
-				ProfileService:     deps.Profiles,
+				Host:          host,
+				Port:          port,
+				WorkspaceRoot: target.Root,
+				Catalog:       deps.Catalog,
+
 				ManifestService:    deps.Manifest,
 				EnvironmentService: deps.Environments,
 				WorkspaceService:   deps.Workspaces,
@@ -98,6 +85,7 @@ Project、审阅后保存 Manifest 配置、管理 Infisical 密钥，并管理 
 			})
 		},
 	}
+	i18n.MarkLong(cmd, "serve.tip")
 	cmd.Flags().StringVar(&host, "host", "127.0.0.1", i18n.T("serve.flag.host"))
 	cmd.Flags().IntVar(&port, "port", 0, i18n.T("serve.flag.port"))
 	cmd.Flags().BoolVar(&open, "open", true, i18n.T("serve.flag.open"))
@@ -151,17 +139,6 @@ func workspaceDashboardURL(baseURL, entryID string) string {
 		return baseURL
 	}
 	return strings.TrimRight(baseURL, "/") + "/workspace/" + url.PathEscape(entryID)
-}
-
-// NewOpenCmd exposes the same local settings server under the user-facing
-// `one configure open` path while keeping `one serve` compatible.
-func NewOpenCmd(deps Dependencies) *cobra.Command {
-	cmd := newServeCmd(deps)
-	cmd.Use = "open"
-	cmd.Example = "  one configure open"
-	i18n.MarkShort(cmd, "configure.open.short")
-	i18n.MarkLong(cmd, "configure.open.tip")
-	return cmd
 }
 
 // maybeOpenBrowser fires `pkg/browser`'s OpenURL when it makes sense.

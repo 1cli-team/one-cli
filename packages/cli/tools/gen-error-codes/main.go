@@ -69,11 +69,10 @@ var groups = []group{
 		prefix: []string{"STATUS_FIX_"},
 	},
 	{
-		title: "插件 / Profile / 部署",
-		intro: "插件选择、profile 解析、部署 / CI 产物生成过程中的问题。",
+		title: "Profile / CI / 本地开发",
+		intro: "Profile 解析、CI 产物生成和本地开发过程中的问题。",
 		prefix: []string{
-			"PLUGIN_", "PROFILE_",
-			"IMAGE_REF_", "CI_", "K8S_", "LOCAL_ORCH_", "RELEASE_FLOW_",
+			"PROFILE_", "CI_", "LOCAL_ORCH_", "RELEASE_FLOW_",
 		},
 	},
 	{

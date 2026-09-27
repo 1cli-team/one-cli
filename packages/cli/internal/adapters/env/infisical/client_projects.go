@@ -2,33 +2,38 @@ package infisical
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
-	"fmt"
 	"io"
 	"net/http"
 	"strings"
 	"time"
 
 	cliErrors "github.com/torchstellar-team/one-cli/packages/cli/internal/platform/errors"
+	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/i18n"
 )
 
 // CreateProject calls Infisical's POST /api/v2/workspace endpoint to create
 // a new secret-manager project named `projectName`. It does not use the
 // Infisical Go SDK because the SDK's public surface is secrets-only — we
-// reach into the access token the SDK already obtained via UniversalAuthLogin
+// reuse the active browser session access token
 // and issue the HTTP request directly.
 //
 // Returned (id, resolvedName) reflect what Infisical actually accepted; the
 // caller may have to retry with a suffix when the API surfaces a name
 // collision (INFISICAL_PROJECT_NAME_TAKEN).
 func (c *Client) CreateProject(projectName string) (string, string, error) {
+	return c.CreateProjectContext(context.Background(), projectName)
+}
+
+func (c *Client) CreateProjectContext(ctx context.Context, projectName string) (string, string, error) {
 	token := c.accessToken
 	if token == "" && c.sdk != nil {
 		token = c.sdk.Auth().GetAccessToken()
 	}
 	if token == "" {
 		return "", "", cliErrors.New(cliErrors.INFISICAL_AUTH_FAILED,
-			"Infisical access token 不可用，无法调用 create-project。")
+			i18n.T("infisical.token_missing"))
 	}
 
 	body, err := json.Marshal(map[string]any{
@@ -40,7 +45,7 @@ func (c *Client) CreateProject(projectName string) (string, string, error) {
 	}
 
 	url := strings.TrimRight(c.cfg.SiteURLOrDefault(), "/") + "/api/v2/workspace"
-	req, err := http.NewRequest(http.MethodPost, url, bytes.NewReader(body))
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewReader(body))
 	if err != nil {
 		return "", "", err
 	}
@@ -49,18 +54,18 @@ func (c *Client) CreateProject(projectName string) (string, string, error) {
 	req.Header.Set("Authorization", "Bearer "+token)
 	req.Header.Set("User-Agent", "one-cli/"+clientVersion)
 
-	httpClient := &http.Client{Timeout: 30 * time.Second}
+	httpClient := &http.Client{Timeout: 30 * time.Second, CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}
 	resp, err := httpClient.Do(req)
 	if err != nil {
 		if isNetworkError(err) {
 			return "", "", cliErrors.New(cliErrors.INFISICAL_NETWORK_ERROR,
-				"无法连接到 Infisical："+err.Error())
+				i18n.T("infisical.unreachable"))
 		}
-		return "", "", cliErrors.New(cliErrors.INFISICAL_API_ERROR, err.Error())
+		return "", "", cliErrors.New(cliErrors.INFISICAL_API_ERROR, i18n.T("infisical.request_error"))
 	}
 	defer resp.Body.Close()
 
-	respBody, _ := io.ReadAll(resp.Body)
+	respBody, _ := io.ReadAll(io.LimitReader(resp.Body, 8<<20))
 
 	switch {
 	case resp.StatusCode >= 200 && resp.StatusCode < 300:
@@ -72,13 +77,11 @@ func (c *Client) CreateProject(projectName string) (string, string, error) {
 		}
 		if err := json.Unmarshal(respBody, &parsed); err != nil {
 			return "", "", cliErrors.New(cliErrors.INFISICAL_API_ERROR,
-				"Infisical create-project 响应解析失败："+err.Error()).
-				WithContext(map[string]any{"body": string(respBody)})
+				i18n.Tf("infisical.create_response_invalid", err.Error()))
 		}
 		if parsed.Project.ID == "" {
 			return "", "", cliErrors.New(cliErrors.INFISICAL_API_ERROR,
-				"Infisical create-project 响应缺少 project.id").
-				WithContext(map[string]any{"body": string(respBody)})
+				i18n.T("infisical.create_missing_id"))
 		}
 		name := parsed.Project.Name
 		if name == "" {
@@ -88,13 +91,11 @@ func (c *Client) CreateProject(projectName string) (string, string, error) {
 
 	case resp.StatusCode == http.StatusForbidden:
 		return "", "", cliErrors.New(cliErrors.INFISICAL_PROJECT_CREATE_FORBIDDEN,
-			"Infisical 拒绝创建项目（403）。机器身份缺少 create-project 权限。").
-			WithContext(map[string]any{"body": string(respBody)})
+			i18n.T("infisical.create_forbidden"))
 
 	case resp.StatusCode == http.StatusUnauthorized:
 		return "", "", cliErrors.New(cliErrors.INFISICAL_AUTH_FAILED,
-			"Infisical 拒绝了访问令牌（401）。").
-			WithContext(map[string]any{"body": string(respBody)})
+			i18n.T("infisical.token_rejected"))
 
 	default:
 		// Look for known name-collision signals in the body before falling
@@ -106,11 +107,11 @@ func (c *Client) CreateProject(projectName string) (string, string, error) {
 			strings.Contains(lower, "name is already taken") ||
 			strings.Contains(lower, "duplicate") {
 			return "", "", cliErrors.New(cliErrors.INFISICAL_PROJECT_NAME_TAKEN,
-				"Infisical 项目名 "+projectName+" 已被占用").
-				WithContext(map[string]any{"status": resp.StatusCode, "body": string(respBody)})
+				i18n.Tf("infisical.project_name_taken", projectName)).
+				WithContext(map[string]any{"status": resp.StatusCode})
 		}
 		return "", "", cliErrors.New(cliErrors.INFISICAL_API_ERROR,
-			fmt.Sprintf("Infisical create-project 失败（HTTP %d）", resp.StatusCode)).
-			WithContext(map[string]any{"status": resp.StatusCode, "body": string(respBody)})
+			i18n.Tf("infisical.create_failed", resp.StatusCode)).
+			WithContext(map[string]any{"status": resp.StatusCode})
 	}
 }

@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	catalog "github.com/torchstellar-team/one-cli/packages/cli/internal/core/backend"
@@ -62,14 +63,10 @@ func TestCatalogEndpointContainsNoCredentialValues(t *testing.T) {
 	if err := json.Unmarshal(raw, &payload); err != nil {
 		t.Fatal(err)
 	}
-	if len(payload.Backends) != 16 {
-		t.Fatalf("len(backends) = %d, want 16", len(payload.Backends))
+	if len(payload.Backends) != 2 {
+		t.Fatalf("len(backends) = %d, want 2", len(payload.Backends))
 	}
-	for _, backend := range payload.Backends {
-		for _, field := range backend.Profile.Fields {
-			if field.Type == catalog.FieldSecret && field.Default != nil {
-				t.Fatalf("secret field %s/%s exposes a default", backend.Pair, field.Path)
-			}
-		}
+	if strings.Contains(string(raw), "profile") || strings.Contains(string(raw), "credentials") {
+		t.Fatal("catalog still exposes credential profile schema")
 	}
 }

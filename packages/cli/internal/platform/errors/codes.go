@@ -73,56 +73,27 @@ const (
 	// Surface when one.manifest.json references a backend the build doesn't
 	// know about, when a domain is required but missing, or when a profile
 	// is mismatched with its target backend.
-	BACKEND_ID_UNKNOWN                    Code = "BACKEND_ID_UNKNOWN"
-	DOMAIN_REQUIRED                       Code = "DOMAIN_REQUIRED"
-	DOMAIN_INVALID                        Code = "DOMAIN_INVALID"
-	DOMAIN_NOT_REGISTERED                 Code = "DOMAIN_NOT_REGISTERED"
-	DOMAIN_NOT_PER_SUBPROJECT             Code = "DOMAIN_NOT_PER_SUBPROJECT"
-	SUBPROJECT_NOT_FOUND                  Code = "SUBPROJECT_NOT_FOUND"
-	PATCH_CONFLICT                        Code = "PATCH_CONFLICT"
-	BACKEND_INVOKE_FAILED                 Code = "BACKEND_INVOKE_FAILED"
-	BACKEND_NOT_ENABLED                   Code = "BACKEND_NOT_ENABLED"
-	BACKEND_VERB_NOT_SUPPORTED            Code = "BACKEND_VERB_NOT_SUPPORTED"
-	BACKEND_INTERFACE_MISMATCH            Code = "BACKEND_INTERFACE_MISMATCH"
-	PROFILE_FILE_INVALID                  Code = "PROFILE_FILE_INVALID"
-	PROFILE_VERSION_UNSUPPORTED           Code = "PROFILE_VERSION_UNSUPPORTED"
-	PROFILE_NOT_FOUND                     Code = "PROFILE_NOT_FOUND"
-	PROFILE_ALREADY_EXISTS                Code = "PROFILE_ALREADY_EXISTS"
-	PROFILE_IN_USE                        Code = "PROFILE_IN_USE"
-	PROFILE_NONE_CONFIGURED               Code = "PROFILE_NONE_CONFIGURED"
-	PROFILE_BACKEND_INVALID               Code = "PROFILE_BACKEND_INVALID"
-	PROFILE_CREDENTIAL_SOURCE_UNSUPPORTED Code = "PROFILE_CREDENTIAL_SOURCE_UNSUPPORTED"
+	BACKEND_ID_UNKNOWN         Code = "BACKEND_ID_UNKNOWN"
+	DOMAIN_REQUIRED            Code = "DOMAIN_REQUIRED"
+	DOMAIN_INVALID             Code = "DOMAIN_INVALID"
+	DOMAIN_NOT_REGISTERED      Code = "DOMAIN_NOT_REGISTERED"
+	DOMAIN_NOT_PER_SUBPROJECT  Code = "DOMAIN_NOT_PER_SUBPROJECT"
+	SUBPROJECT_NOT_FOUND       Code = "SUBPROJECT_NOT_FOUND"
+	PATCH_CONFLICT             Code = "PATCH_CONFLICT"
+	BACKEND_INVOKE_FAILED      Code = "BACKEND_INVOKE_FAILED"
+	BACKEND_NOT_ENABLED        Code = "BACKEND_NOT_ENABLED"
+	BACKEND_VERB_NOT_SUPPORTED Code = "BACKEND_VERB_NOT_SUPPORTED"
+	BACKEND_INTERFACE_MISMATCH Code = "BACKEND_INTERFACE_MISMATCH"
+	PREFERENCES_FILE_INVALID   Code = "PREFERENCES_FILE_INVALID"
+	PREFERENCES_INVALID        Code = "PREFERENCES_INVALID"
 
-	IMAGE_REF_INCOMPLETE             Code = "IMAGE_REF_INCOMPLETE"
-	IMAGE_TAG_NOT_FOUND              Code = "IMAGE_TAG_NOT_FOUND"
-	IMAGE_TAG_REQUIRED               Code = "IMAGE_TAG_REQUIRED"
 	CI_DISABLE_CONFIRMATION_REQUIRED Code = "CI_DISABLE_CONFIRMATION_REQUIRED"
 	CI_NOT_ENABLED                   Code = "CI_NOT_ENABLED"
 	CI_PROVIDER_UNKNOWN              Code = "CI_PROVIDER_UNKNOWN"
 	CI_RENDER_FAILED                 Code = "CI_RENDER_FAILED"
-	K8S_PLATFORM_UNDETECTED          Code = "K8S_PLATFORM_UNDETECTED"
-	K8S_PACKAGE_UNSUPPORTED          Code = "K8S_PACKAGE_UNSUPPORTED"
-	REGISTRY_CREDENTIAL_MISSING      Code = "REGISTRY_CREDENTIAL_MISSING"
-	CONTAINER_KIND_UNKNOWN           Code = "CONTAINER_KIND_UNKNOWN"
-	CONTAINER_PROFILE_INVALID        Code = "CONTAINER_PROFILE_INVALID"
 	RELEASE_FLOW_MISMATCH            Code = "RELEASE_FLOW_MISMATCH"
 	ENV_PROFILE_NOT_FOUND            Code = "ENV_PROFILE_NOT_FOUND"
 	LOCAL_ORCH_PORT_CONFLICT         Code = "LOCAL_ORCH_PORT_CONFLICT"
-
-	// Vercel deploy backend.
-	VERCEL_CLI_MISSING     Code = "VERCEL_CLI_MISSING"
-	VERCEL_PROFILE_INVALID Code = "VERCEL_PROFILE_INVALID"
-	VERCEL_DEPLOY_FAILED   Code = "VERCEL_DEPLOY_FAILED"
-
-	// Cloudflare deploy backend.
-	CLOUDFLARE_CLI_MISSING     Code = "CLOUDFLARE_CLI_MISSING"
-	CLOUDFLARE_PROFILE_INVALID Code = "CLOUDFLARE_PROFILE_INVALID"
-	CLOUDFLARE_DEPLOY_FAILED   Code = "CLOUDFLARE_DEPLOY_FAILED"
-
-	// EdgeOne (Tencent) deploy backend.
-	EDGEONE_CLI_MISSING     Code = "EDGEONE_CLI_MISSING"
-	EDGEONE_PROFILE_INVALID Code = "EDGEONE_PROFILE_INVALID"
-	EDGEONE_DEPLOY_FAILED   Code = "EDGEONE_DEPLOY_FAILED"
 
 	// Env vars — input validation (provider-agnostic).
 	ENV_INVALID_ENV_NAME       Code = "ENV_INVALID_ENV_NAME"
@@ -222,52 +193,26 @@ var Codes = map[Code]Definition{
 
 	STATUS_FIX_FAILED: {Summary: "Workspace 后置同步失败：写入 manifest 后某个后端 sync 回滚或失败。", Remediation: []output.Remediation{{Action: "retry", Hint: "重试触发该错误的命令"}}},
 
-	BACKEND_ID_UNKNOWN:                    {Summary: "one.manifest.json refers to a backend id that this build does not recognise."},
-	DOMAIN_REQUIRED:                       {Summary: "A domain (container / deploy / dev / ci / env) is required but its section is missing in one.manifest.json."},
-	DOMAIN_INVALID:                        {Summary: "Domain name is not one of the recognised domains (container / deploy / dev / ci / env)."},
-	DOMAIN_NOT_REGISTERED:                 {Summary: "Domain is recognised but this build has no backend implementation for it."},
-	DOMAIN_NOT_PER_SUBPROJECT:             {Summary: "This domain operates at workspace scope; -p / --project is not allowed.", Remediation: []output.Remediation{{Action: "drop-flag", Hint: "去掉 -p / --project 重试"}}},
-	SUBPROJECT_NOT_FOUND:                  {Summary: "-p / --project named a project that does not exist in manifest.projects.", Remediation: []output.Remediation{{Action: "list-projects", Hint: "查看现有项目", Command: "cat one.manifest.json"}}},
-	PATCH_CONFLICT:                        {Summary: "Two configuration fragments contributed conflicting patches to the same backend target."},
-	BACKEND_INVOKE_FAILED:                 {Summary: "Backend's Invoke method returned an error."},
-	BACKEND_NOT_ENABLED:                   {Summary: "A domain command was invoked in a workspace where that domain is not configured.", Remediation: []output.Remediation{{Action: "configure-domain", Hint: "在 one.manifest.json 的 domains 块中配置该域（domains.env.kind / projects[].domains.container 等），或选用声明它的模板再 one add"}}},
-	BACKEND_VERB_NOT_SUPPORTED:            {Summary: "The active backend in this domain does not implement the requested verb (e.g. `one env pull` against the dotenv backend).", Remediation: []output.Remediation{{Action: "switch-backend", Hint: "切换到支持该 verb 的同 domain backend（例如 env 域改用 infisical）"}}},
-	BACKEND_INTERFACE_MISMATCH:            {Summary: "Internal: the dispatched backend failed its capability assertion. Build-side bug; should never reach end users."},
-	PROFILE_FILE_INVALID:                  {Summary: "One of config.json, credentials.json, or profile-bindings.json failed to parse as JSON.", Remediation: []output.Remediation{{Action: "edit-profile-file", Hint: "根据 error.context.path 检查并修复对应的机器本地文件；删除 profile-bindings.json 只会清除本机选择，不会删除凭据或修改仓库"}}},
-	PROFILE_VERSION_UNSUPPORTED:           {Summary: "A machine-local Profile file schema does not match this binary.", Remediation: []output.Remediation{{Action: "upgrade-cli", Hint: "升级 one cli，或仅重建 error.context.path 指向的不兼容机器本地文件；无需升级 one.manifest.json"}}},
-	PROFILE_NOT_FOUND:                     {Summary: "Requested profile does not exist under the (domain/backend) section.", Remediation: []output.Remediation{{Action: "list-profiles", Command: "one configure list env/infisical"}, {Action: "add-profile", Hint: "创建新 profile", Command: "one configure add env/infisical --profile <name>"}}},
-	PROFILE_ALREADY_EXISTS:                {Summary: "A profile with this name already exists. Re-run `one configure add <domain>/<backend> --profile <name>` to update existing credentials, or pick a different name."},
-	PROFILE_IN_USE:                        {Summary: "The Profile is still selected by one or more environment-aware Workspace or Project bindings.", Remediation: []output.Remediation{{Action: "unbind-profile", Hint: "先在 Dashboard 中把对应 Workspace / Project Profile 选择改为 Automatic，再删除"}}},
-	PROFILE_NONE_CONFIGURED:               {Summary: "No Profile resolved from --profile, environment-aware Project/Workspace bindings, legacy bindings, or the machine default.", Remediation: []output.Remediation{{Action: "add-profile", Hint: "创建第一个 profile（替换 <domain>/<backend> 为对应 pair，如 env/infisical / deploy/aws-s3 / container/docker）", Command: "one configure add <domain>/<backend> --profile work"}}},
-	PROFILE_BACKEND_INVALID:               {Summary: "Profile.backend value is not recognised, or it doesn't belong to the declared domain."},
-	PROFILE_CREDENTIAL_SOURCE_UNSUPPORTED: {Summary: "Profile's credentialSource is set to a value this build does not implement (only `file` is wired up so far).", Remediation: []output.Remediation{{Action: "use-file-source", Hint: "把 config.json 中该 profile 的 credentialSource 改回 \"file\"（或删除该字段），并确保对应密钥写在 credentials.json"}}},
-	IMAGE_REF_INCOMPLETE:                  {Summary: "Deploy / CI backend needs the container image ref but it is missing or incomplete (registry / name / tag)."},
-	IMAGE_TAG_NOT_FOUND:                   {Summary: "Container push target image tag does not exist in the local Docker daemon.", Remediation: []output.Remediation{{Action: "build-image", Hint: "先构建要推送的镜像", Command: "one container build <subproject>"}}},
-	IMAGE_TAG_REQUIRED:                    {Summary: "Container build needs a version tag but no subproject buildVersion, Git tag, or package version was available.", Remediation: []output.Remediation{{Action: "provide-tag", Hint: "显式指定镜像版本 tag", Command: "one container build <subproject> --build-version v0.1.0"}, {Action: "set-build-version", Hint: "或在 one.manifest.json 里设置 projects[].buildVersion"}, {Action: "create-git-tag", Hint: "或在当前提交上创建 Git tag", Command: "git tag v0.1.0"}}},
-	CI_DISABLE_CONFIRMATION_REQUIRED:      {Summary: "A non-interactive CI disable requires explicit --yes confirmation."},
-	CI_NOT_ENABLED:                        {Summary: "The selected project does not have a generated CI workflow."},
-	CI_PROVIDER_UNKNOWN:                   {Summary: "The requested CI provider is not implemented by this build."},
-	CI_RENDER_FAILED:                      {Summary: "The selected CI provider returned an error while rendering the workflow."},
-	K8S_PLATFORM_UNDETECTED:               {Summary: "Kubernetes node architecture could not be detected before building an image for deploy.", Remediation: []output.Remediation{{Action: "check-k8s", Hint: "确认 kubeconfig/context 可访问并能列出节点", Command: "kubectl get nodes -o wide"}}},
-	K8S_PACKAGE_UNSUPPORTED:               {Summary: "A deploy backend selected a Kubernetes packaging form this build does not bundle."},
-	REGISTRY_CREDENTIAL_MISSING:           {Summary: "Container push needs a registry, but none is configured.", Remediation: []output.Remediation{{Action: "build-local", Hint: "只需要本地镜像时，使用 build，不需要 push", Command: "one container build <subproject>"}, {Action: "setup-registry", Hint: "需要推送到镜像仓库时，先配置 registry", Command: "one configure add container/docker --profile <name> --use"}}},
-	CONTAINER_KIND_UNKNOWN:                {Summary: "manifest declares an unrecognised container kind. Supported kinds: docker / dockerhub / ghcr / acr.", Remediation: []output.Remediation{{Action: "fix-manifest-kind", Hint: "把 projects[i].domains.container.kind 改成支持的 kind"}}},
-	CONTAINER_PROFILE_INVALID:             {Summary: "Container profile is missing required fields for its kind (e.g. acr needs region, docker needs registry).", Remediation: []output.Remediation{{Action: "reconfigure-container", Hint: "重新配置 container profile", Command: "one configure add container/<kind> --profile <name> --use"}}},
-	RELEASE_FLOW_MISMATCH:                 {Summary: "The release-flow backend's expected toolchain or repo state does not match the workspace."},
-	ENV_PROFILE_NOT_FOUND:                 {Summary: "manifest.environments[<env>] was requested by a backend but is missing or empty."},
-	LOCAL_ORCH_PORT_CONFLICT:              {Summary: "Two projects requested the same dev port and the dev runner could not auto-allocate a free one."},
-
-	VERCEL_CLI_MISSING:     {Summary: "deploy/vercel 找不到 vercel CLI。", Remediation: []output.Remediation{{Action: "install-vercel-cli", Hint: "全局安装 vercel CLI（推荐用 pnpm/npm 全局）", Command: "npm i -g vercel"}, {Action: "install-vercel-cli-via-pnpm", Hint: "或使用 pnpm 全局安装", Command: "pnpm add -g vercel"}}},
-	VERCEL_PROFILE_INVALID: {Summary: "deploy/vercel profile 缺少 API token。", Remediation: []output.Remediation{{Action: "configure-vercel", Hint: "在 vercel.com → Account Settings → Tokens 创建 API token，然后写入 profile", Command: "one configure add deploy/vercel --profile <name> --use --token $VERCEL_TOKEN"}}},
-	VERCEL_DEPLOY_FAILED:   {Summary: "vercel CLI 退出码非 0；查看上游日志获取详情。", Remediation: []output.Remediation{{Action: "verify-token", Hint: "确认 API token 仍然有效，且对目标 team / project 有 deploy 权限"}, {Action: "verify-project-link", Hint: "首次部署需要 vercel link：cd 到项目目录手动跑一次 `vercel link --token $TOKEN`"}}},
-
-	CLOUDFLARE_CLI_MISSING:     {Summary: "deploy/cloudflare 找不到 wrangler CLI。", Remediation: []output.Remediation{{Action: "install-project-wrangler", Hint: "在当前 subproject 目录安装 wrangler", Command: "pnpm add -D wrangler"}, {Action: "install-wrangler", Hint: "或全局安装 wrangler CLI", Command: "npm i -g wrangler"}}},
-	CLOUDFLARE_PROFILE_INVALID: {Summary: "deploy/cloudflare profile 缺少 API token。", Remediation: []output.Remediation{{Action: "configure-cloudflare", Hint: "在 dash.cloudflare.com → My Profile → API Tokens 创建 API token，然后写入 profile", Command: "one configure add deploy/cloudflare --profile <name> --use --token $CLOUDFLARE_API_TOKEN"}}},
-	CLOUDFLARE_DEPLOY_FAILED:   {Summary: "wrangler CLI 退出码非 0；查看上游日志获取详情。", Remediation: []output.Remediation{{Action: "verify-token", Hint: "确认 API token 仍然有效，且对目标 account / Worker 有 Edit Workers 权限"}, {Action: "verify-account-id", Hint: "多账号场景下 wrangler 需要 CLOUDFLARE_ACCOUNT_ID；在 profile 里设置 --account-id 或在 dash 里复制 Account ID"}}},
-
-	EDGEONE_CLI_MISSING:     {Summary: "deploy/edgeone 找不到 edgeone CLI。", Remediation: []output.Remediation{{Action: "install-edgeone", Hint: "全局安装腾讯云 EdgeOne CLI", Command: "npm i -g edgeone"}, {Action: "install-edgeone-via-pnpm", Hint: "或使用 pnpm 全局安装", Command: "pnpm add -g edgeone"}}},
-	EDGEONE_PROFILE_INVALID: {Summary: "deploy/edgeone profile 缺少 EdgeOne API token。", Remediation: []output.Remediation{{Action: "configure-edgeone", Hint: "创建 EdgeOne Pages API token 后写入 profile", Command: "one configure add deploy/edgeone --profile <name> --use --token $EDGEONE_API_TOKEN"}}},
-	EDGEONE_DEPLOY_FAILED:   {Summary: "edgeone CLI 退出码非 0；查看上游日志获取详情。", Remediation: []output.Remediation{{Action: "verify-token", Hint: "确认 EdgeOne API token 仍然有效，且对目标 EdgeOne Pages 项目有部署权限"}, {Action: "verify-project", Hint: "首次部署需要先在 EdgeOne 控制台创建 Pages 项目；project name 写在 manifest.projects[i].domains.deploy.config.projectName"}}},
+	BACKEND_ID_UNKNOWN:               {Summary: "one.manifest.json refers to a backend id that this build does not recognise."},
+	DOMAIN_REQUIRED:                  {Summary: "A domain (container / deploy / dev / ci / env) is required but its section is missing in one.manifest.json."},
+	DOMAIN_INVALID:                   {Summary: "Domain name is not one of the recognised domains (container / deploy / dev / ci / env)."},
+	DOMAIN_NOT_REGISTERED:            {Summary: "Domain is recognised but this build has no backend implementation for it."},
+	DOMAIN_NOT_PER_SUBPROJECT:        {Summary: "This domain operates at workspace scope; -p / --project is not allowed.", Remediation: []output.Remediation{{Action: "drop-flag", Hint: "去掉 -p / --project 重试"}}},
+	SUBPROJECT_NOT_FOUND:             {Summary: "-p / --project named a project that does not exist in manifest.projects.", Remediation: []output.Remediation{{Action: "list-projects", Hint: "查看现有项目", Command: "cat one.manifest.json"}}},
+	PATCH_CONFLICT:                   {Summary: "Two configuration fragments contributed conflicting patches to the same backend target."},
+	BACKEND_INVOKE_FAILED:            {Summary: "Backend's Invoke method returned an error."},
+	BACKEND_NOT_ENABLED:              {Summary: "A domain command was invoked in a workspace where that domain is not configured.", Remediation: []output.Remediation{{Action: "configure-domain", Hint: "在 one.manifest.json 的 domains 块中配置该域（domains.env.kind / projects[].domains.container 等），或选用声明它的模板再 one add"}}},
+	BACKEND_VERB_NOT_SUPPORTED:       {Summary: "The active backend in this domain does not implement the requested verb (e.g. `one env pull` against the dotenv backend).", Remediation: []output.Remediation{{Action: "switch-backend", Hint: "切换到支持该 verb 的同 domain backend（例如 env 域改用 infisical）"}}},
+	BACKEND_INTERFACE_MISMATCH:       {Summary: "Internal: the dispatched backend failed its capability assertion. Build-side bug; should never reach end users."},
+	PREFERENCES_FILE_INVALID:         {Summary: "The local preferences file could not be read or parsed."},
+	PREFERENCES_INVALID:              {Summary: "The requested preference value is not supported."},
+	CI_DISABLE_CONFIRMATION_REQUIRED: {Summary: "A non-interactive CI disable requires explicit --yes confirmation."},
+	CI_NOT_ENABLED:                   {Summary: "The selected project does not have a generated CI workflow."},
+	CI_PROVIDER_UNKNOWN:              {Summary: "The requested CI provider is not implemented by this build."},
+	CI_RENDER_FAILED:                 {Summary: "The selected CI provider returned an error while rendering the workflow."},
+	RELEASE_FLOW_MISMATCH:            {Summary: "The release-flow backend's expected toolchain or repo state does not match the workspace."},
+	ENV_PROFILE_NOT_FOUND:            {Summary: "manifest.environments[<env>] was requested by a backend but is missing or empty."},
+	LOCAL_ORCH_PORT_CONFLICT:         {Summary: "Two projects requested the same dev port and the dev runner could not auto-allocate a free one."},
 
 	ENV_INVALID_ENV_NAME:       {Summary: "Environment name fails ^[a-zA-Z0-9][a-zA-Z0-9-_]*$ (e.g. dev, staging, prod)."},
 	ENV_INVALID_KEY:            {Summary: "Variable name fails POSIX env-var pattern (uppercase + underscore + digits, must not start with digit)."},
@@ -283,12 +228,12 @@ var Codes = map[Code]Definition{
 	ENV_MIGRATE_CONFLICT:  {Summary: "目标 backend 已有同名 key 但值不一致；为防止误覆盖，默认拒绝。", Remediation: []output.Remediation{{Action: "overwrite", Hint: "确认要覆盖，加 --overwrite 重跑", Command: "one env switch infisical --overwrite", Destructive: true}, {Action: "skip-sync", Hint: "或只切 manifest，不做数据迁移", Command: "one env switch infisical --no-sync"}}},
 	ENV_MIGRATE_PARTIAL:   {Summary: "部分 key 同步失败；manifest 已切换，但未完成的 key 仍只在原 backend。", Remediation: []output.Remediation{{Action: "retry", Hint: "检查报错原因（网络 / 权限），修复后再跑同步：one env switch infisical（manifest 已切，等价 sync-only）"}}},
 
-	INFISICAL_NOT_CONFIGURED:           {Summary: "one.manifest.json#domains.env is missing, or the workspace is not using env/infisical.", Remediation: []output.Remediation{{Action: "create-with-infisical", Hint: "新工作区在 create 时选择 Infisical", Command: "one create <dir> --env-provider infisical"}, {Action: "configure-profile", Hint: "已有工作区需确认 manifest.domains.env.kind=infisical，并配置 env/infisical profile", Command: "one configure add env/infisical --profile <name> --use"}}},
-	INFISICAL_AUTH_MISSING:             {Summary: "No default env profile supplies Universal Auth credentials.", Remediation: []output.Remediation{{Action: "add-profile", Hint: "在 Infisical → Organization → Access Control → Identities 创建 Universal Auth machine identity，再用 client-id / client-secret 配 profile", Command: "one configure add env/infisical --profile <name> --client-id <id> --client-secret <secret> --use"}, {Action: "use-existing-profile", Hint: "或切到已配置的 profile", Command: "one configure use env/infisical --profile <name>"}}},
-	INFISICAL_AUTH_FAILED:              {Summary: "Universal Auth login was rejected by Infisical (bad client id / secret, or rate limited).", Remediation: []output.Remediation{{Action: "rotate-credentials", Hint: "重新生成 client secret 或确认 client id 来自正确的 organization"}}},
-	INFISICAL_PROJECT_NOT_FOUND:        {Summary: "Infisical project id does not exist or the machine identity has no access to it."},
+	INFISICAL_NOT_CONFIGURED:           {Summary: "The workspace has no Infisical project binding.", Remediation: []output.Remediation{{Action: "select-project", Hint: "在 Dashboard 工作区设置中选择 Infisical 项目", Command: "one serve"}}},
+	INFISICAL_AUTH_MISSING:             {Summary: "No active Infisical browser session.", Remediation: []output.Remediation{{Action: "login", Command: "one login"}}},
+	INFISICAL_AUTH_FAILED:              {Summary: "The Infisical session was rejected or expired.", Remediation: []output.Remediation{{Action: "login", Command: "one login"}}},
+	INFISICAL_PROJECT_NOT_FOUND:        {Summary: "Infisical project id does not exist or the current account has no access to it."},
 	INFISICAL_PROJECT_NAME_TAKEN:       {Summary: "Infisical 项目名已被占用；auto-bind 会自动加随机后缀重试，但重试次数耗尽后会冒泡此错误。", Remediation: []output.Remediation{{Action: "use-explicit-name", Hint: "在 one.manifest.json#domains.env.config.projectName 写一个不冲突的项目名后重试 env 命令"}}},
-	INFISICAL_PROJECT_CREATE_FORBIDDEN: {Summary: "机器身份没有 create-project 权限。", Remediation: []output.Remediation{{Action: "grant-admin-role", Hint: "在 Infisical 后台给该 machine identity 授予 organization-level 的 admin 角色，或先手动建项目并把 projectId 写入 manifest"}, {Action: "use-explicit-id", Hint: "手动在 UI 创建项目后，把 ID 写进 one.manifest.json#domains.env.config.projectId"}}},
+	INFISICAL_PROJECT_CREATE_FORBIDDEN: {Summary: "当前账号没有创建项目权限，请选择一个已有且有权访问的项目。"},
 	INFISICAL_NETWORK_ERROR:            {Summary: "Network error reaching the Infisical API. Check siteUrl + connectivity."},
 	INFISICAL_API_ERROR:                {Summary: "Infisical API returned an unexpected error. See error.context for details."},
 	INFISICAL_FOLDER_NOT_FOUND:         {Summary: "The requested Infisical folder does not exist in the requested environment.", Remediation: []output.Remediation{{Action: "check-env-name", Hint: "确认 --env 名是否拼对（dev / staging / prod 等）"}, {Action: "create-folder", Hint: "在该 folder 下写入第一个环境变量值时会自动创建", Command: "one env set --env <env> -p <name|path> KEY value"}, {Action: "verify-path", Hint: "或在 Infisical UI 里确认 folder 是否存在"}}},
@@ -298,7 +243,7 @@ var Codes = map[Code]Definition{
 	RUN_USAGE_INVALID:     {Summary: "one run arguments do not match `one run [project] -- <cmd> [args...]`.", Remediation: []output.Remediation{{Action: "use-run-separator", Hint: "用 -- 分隔 One CLI 参数和子进程命令", Command: "one run [project] -- <cmd> [args...]"}}},
 
 	SERVE_PORT_BUSY:            {Summary: "one serve 无法绑定请求的端口（被占用或权限不足）。", Remediation: []output.Remediation{{Action: "use-random-port", Hint: "改用随机端口（让内核分配空闲端口）", Command: "one serve --port 0"}, {Action: "pick-different-port", Hint: "或显式换一个空闲端口", Command: "one serve --port 17900"}}},
-	SERVE_BIND_FORBIDDEN:       {Summary: "one serve 拒绝绑定到非 loopback 地址（profile 文件含敏感凭据，仅 127.0.0.1 / localhost 才安全）。", Remediation: []output.Remediation{{Action: "use-loopback", Hint: "改用 127.0.0.1（默认）", Command: "one serve --host 127.0.0.1"}}},
+	SERVE_BIND_FORBIDDEN:       {Summary: "one serve 拒绝绑定到非 loopback 地址（本地接口可操作敏感凭据，仅 127.0.0.1 / localhost 才安全）。", Remediation: []output.Remediation{{Action: "use-loopback", Hint: "改用 127.0.0.1（默认）", Command: "one serve --host 127.0.0.1"}}},
 	SERVE_PAYLOAD_INVALID:      {Summary: "POST/PUT 请求体不是合法 JSON 或缺少必要字段。"},
 	SERVE_MANIFEST_CONFLICT:    {Summary: "one.manifest.json changed after the Dashboard draft was opened; the stale draft was not written.", Remediation: []output.Remediation{{Action: "reload-manifest", Hint: "重新加载 Workspace 配置，确认磁盘上的新修改后再应用草稿"}}},
 	SERVE_REPOSITORY_READ_ONLY: {Summary: "Dashboard only writes explicitly allowlisted Project fields and env Backend switches through their revision-checked endpoints; this legacy route is not writable."},

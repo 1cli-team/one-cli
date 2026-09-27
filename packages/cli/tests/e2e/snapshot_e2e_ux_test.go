@@ -34,7 +34,7 @@ func TestSnapshot_E2E_CreateDailyText(t *testing.T) {
 	if code == 0 {
 		t.Fatal("non-interactive create without a directory should fail")
 	}
-	for _, want := range []string{"✗ 非交互创建需要指定工作区目录。", "错误代码：PROJECT_NAME_REQUIRED", "可尝试：", "one create <workspace-directory>"} {
+	for _, want := range []string{"✗ 非交互模式下必须提供 [dir] 位置参数", "错误代码：PROJECT_NAME_REQUIRED", "可尝试：", "one create <workspace-directory>"} {
 		if !strings.Contains(errorText, want) {
 			t.Errorf("localized error missing %q: %q", want, errorText)
 		}
@@ -49,12 +49,12 @@ func TestSnapshot_E2E_HelpDailyAndCompleteCatalogues(t *testing.T) {
 	if code != 0 || stderr != "" {
 		t.Fatalf("one --help failed: exit=%d stderr=%q", code, stderr)
 	}
-	for _, command := range []string{"create", "add", "dev", "deploy", "env", "configure"} {
+	for _, command := range []string{"create", "add", "dev", "build", "env", "login"} {
 		if !strings.Contains(daily, "  "+command) {
 			t.Errorf("daily help missing %q:\n%s", command, daily)
 		}
 	}
-	for _, command := range []string{"ci", "templates", "container", "run", "serve"} {
+	for _, command := range []string{"ci", "templates", "run", "serve"} {
 		if strings.Contains(daily, "\n  "+command) {
 			t.Errorf("daily help should not advertise advanced command %q:\n%s", command, daily)
 		}
@@ -64,7 +64,7 @@ func TestSnapshot_E2E_HelpDailyAndCompleteCatalogues(t *testing.T) {
 	if code != 0 || stderr != "" {
 		t.Fatalf("one help --all failed: exit=%d stderr=%q", code, stderr)
 	}
-	for _, command := range []string{"create", "add", "dev", "deploy", "env", "configure", "ci", "templates", "container", "run", "serve"} {
+	for _, command := range []string{"create", "add", "dev", "build", "env", "login", "ci", "templates", "run", "serve"} {
 		if !strings.Contains(all, "  "+command) {
 			t.Errorf("complete help missing %q:\n%s", command, all)
 		}
@@ -111,7 +111,7 @@ func TestSnapshot_E2E_WorkspaceOverviewAndDeferredDeployment(t *testing.T) {
 	}
 	summary := mustParseJSON(t, stdout)
 	project := summary["projects"].([]any)[0].(map[string]any)
-	if project["deployment_configured"] != false || summary["next_command"] != "one dev web" {
+	if project["deployment_configured"] != nil || summary["next_command"] != "one dev web" {
 		t.Fatalf("unexpected project summary: %v", summary)
 	}
 
@@ -127,13 +127,13 @@ func TestSnapshot_E2E_WorkspaceOverviewAndDeferredDeployment(t *testing.T) {
 		t.Fatalf("unexpected missing-tool error: %v", devErr)
 	}
 
-	_, stderr, code = runBinaryIn(t, ws, "deploy", "web", "--provider", "aws-s3", "-o", "json")
+	_, stderr, code = runBinaryIn(t, ws, "deploy", "-o", "json")
 	if code == 0 {
-		t.Fatal("non-interactive first deploy without a local connection should fail")
+		t.Fatal("removed deploy command should fail")
 	}
 	deployErr := mustParseJSON(t, firstJSONLine(stderr))
-	if deployErr["error"].(map[string]any)["code"] != "PROFILE_NONE_CONFIGURED" {
-		t.Fatalf("unexpected first-deploy error: %v", deployErr)
+	if deployErr["error"].(map[string]any)["code"] != "UNKNOWN_COMMAND" {
+		t.Fatalf("unexpected removed-command error: %v", deployErr)
 	}
 	manifestAfter, err := os.ReadFile(filepath.Join(ws, "one.manifest.json"))
 	if err != nil {
@@ -197,17 +197,13 @@ func TestSnapshot_E2E_EnvSummaryYAMLKeepsStableProtocolFields(t *testing.T) {
 	}
 }
 
-func TestSnapshot_E2E_ConfigureSummaryAndBilingualHelp(t *testing.T) {
+func TestSnapshot_E2E_RemovedConfigureAndBilingualHelp(t *testing.T) {
 	tmp := t.TempDir()
 	isolateHome(t, tmp)
 
-	stdout, stderr, code := runBinaryIn(t, tmp, "configure", "-o", "json")
-	if code != 0 || stderr != "" {
-		t.Fatalf("configure summary failed: exit=%d stderr=%q", code, stderr)
-	}
-	summary := mustParseJSON(t, stdout)
-	if summary["schema"] != "one-cli/configure-summary/v1" || len(summary["connections"].([]any)) != 0 {
-		t.Fatalf("unexpected configure summary: %v", summary)
+	_, _, code := runBinaryIn(t, tmp, "configure", "-o", "json")
+	if code == 0 {
+		t.Fatal("removed configure command still accepted")
 	}
 
 	t.Setenv("LC_ALL", "zh_CN.UTF-8")

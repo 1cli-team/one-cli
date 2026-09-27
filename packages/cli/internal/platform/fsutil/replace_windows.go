@@ -10,6 +10,8 @@ import (
 	"unsafe"
 
 	"golang.org/x/sys/windows"
+
+	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/i18n"
 )
 
 const replaceRetryWindow = 2 * time.Second
@@ -102,7 +104,7 @@ func readFileShared(path string) ([]byte, error) {
 	file := os.NewFile(uintptr(handle), path)
 	if file == nil {
 		_ = windows.CloseHandle(handle)
-		return nil, errors.New("create os.File from Windows handle")
+		return nil, errors.New(i18n.T("file.windows_handle"))
 	}
 	data, readErr := io.ReadAll(file)
 	closeErr := file.Close()

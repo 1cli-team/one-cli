@@ -16,12 +16,12 @@ import (
 )
 
 func Commands() []*cobra.Command {
-	parent := &cobra.Command{Use: "skills", Args: cobra.NoArgs}
+	parent := &cobra.Command{Use: "skills", Args: i18n.NoArgs}
 	i18n.MarkShort(parent, "skills.short")
 	var agents []string
 	var yes bool
 	install := &cobra.Command{
-		Use: "install", Args: cobra.NoArgs,
+		Use: "install", Args: i18n.NoArgs,
 		Example: "one skills install\none skills install --agent claude-code --agent codex\none skills install --yes -o json",
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			targets, err := selectTargets(agents, yes)
@@ -73,7 +73,7 @@ func selectTargets(ids []string, yes bool) ([]skills.Agent, error) {
 		return nil, err
 	}
 	if len(picked) == 0 {
-		return nil, cliErrors.New(cliErrors.SKILLS_INSTALL_FAILED, "no target agents selected")
+		return nil, cliErrors.New(cliErrors.SKILLS_INSTALL_FAILED, i18n.T("skills.no_selection"))
 	}
 	return skills.ResolveTargets(picked)
 }

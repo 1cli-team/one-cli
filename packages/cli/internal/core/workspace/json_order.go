@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
+
+	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/i18n"
 )
 
 // parseScriptKeysInOrder walks raw package.json bytes and returns the keys
@@ -21,7 +23,7 @@ func parseScriptKeysInOrder(raw []byte) ([]string, error) {
 		return nil, err
 	}
 	if delim, ok := tok.(json.Delim); !ok || delim != '{' {
-		return nil, errors.New("package.json root is not an object")
+		return nil, errors.New(i18n.T("workspace.package_object"))
 	}
 	for dec.More() {
 		keyTok, err := dec.Token()
@@ -30,7 +32,7 @@ func parseScriptKeysInOrder(raw []byte) ([]string, error) {
 		}
 		key, ok := keyTok.(string)
 		if !ok {
-			return nil, errors.New("non-string key in package.json")
+			return nil, errors.New(i18n.T("workspace.package_key"))
 		}
 		if key != "scripts" {
 			if err := skipValue(dec); err != nil {
@@ -55,7 +57,7 @@ func parseScriptKeysInOrder(raw []byte) ([]string, error) {
 			}
 			scriptKey, ok := scriptKeyTok.(string)
 			if !ok {
-				return nil, errors.New("non-string key inside scripts")
+				return nil, errors.New(i18n.T("workspace.script_key"))
 			}
 			out = append(out, scriptKey)
 			if err := skipValue(dec); err != nil {

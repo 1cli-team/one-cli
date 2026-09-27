@@ -15,7 +15,9 @@ import (
 	"time"
 
 	"github.com/gofrs/flock"
+
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/fsutil"
+	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/i18n"
 )
 
 const maxArchiveSize = 256 << 20
@@ -51,7 +53,7 @@ func (i installer) ensure(ctx context.Context, a releaseAsset) (string, error) {
 		return "", err
 	}
 	if !locked {
-		return "", fmt.Errorf("could not lock mise runtime installation")
+		return "", i18n.Errorf("mise.install.lock_failed")
 	}
 	defer lock.Unlock()
 	// Another process (for example the other half of `one dev`) may have
@@ -63,7 +65,7 @@ func (i installer) ensure(ctx context.Context, a releaseAsset) (string, error) {
 		legacy := filepath.Join(i.legacyRoot, managedVersion, a.Platform, a.BinaryName())
 		if verifyExecutable(legacy, a.BinarySHA256) == nil {
 			if i.out != nil {
-				fmt.Fprintf(i.out, "[one] Migrating verified mise %s to %s.\n", managedVersion, dir)
+				fmt.Fprintf(i.out, i18n.T("mise.install.migrating"), managedVersion, dir)
 			}
 			return target, publishBinary(ctx, target, a.BinarySHA256, func(dest io.Writer) error {
 				f, err := os.Open(legacy)
@@ -76,7 +78,7 @@ func (i installer) ensure(ctx context.Context, a releaseAsset) (string, error) {
 		}
 	}
 	if i.out != nil {
-		fmt.Fprintf(i.out, "[one] Downloading official mise %s (%s) into %s.\n", managedVersion, a.Platform, dir)
+		fmt.Fprintf(i.out, i18n.T("mise.install.downloading"), managedVersion, a.Platform, dir)
 	}
 	archive, err := i.downloader.fetch(ctx, dir, a)
 	if err != nil {
@@ -107,7 +109,7 @@ func publishBinary(ctx context.Context, target, digest string, write func(io.Wri
 		return closeErr
 	}
 	if err := verifyFile(binary.Name(), digest, maxBinarySize); err != nil {
-		return fmt.Errorf("mise executable verification failed: %w", err)
+		return i18n.Errorf("mise.install.verification", err)
 	}
 	if err := ctx.Err(); err != nil {
 		return err
@@ -130,7 +132,7 @@ func verifyExecutable(path, expected string) error {
 		return err
 	}
 	if runtime.GOOS != "windows" && info.Mode().Perm()&0o111 == 0 {
-		return fmt.Errorf("cached mise is not executable")
+		return i18n.Errorf("mise.install.not_executable")
 	}
 	return nil
 }
@@ -141,7 +143,7 @@ func verifyFile(path, expected string, limit int64) error {
 		return err
 	}
 	if !info.Mode().IsRegular() || info.Size() > limit {
-		return fmt.Errorf("invalid cached file: %s", path)
+		return i18n.Errorf("mise.install.invalid_cache", path)
 	}
 	f, err := os.Open(path)
 	if err != nil {
@@ -153,7 +155,7 @@ func verifyFile(path, expected string, limit int64) error {
 		return err
 	}
 	if fmt.Sprintf("%x", hash.Sum(nil)) != expected {
-		return fmt.Errorf("SHA256 mismatch for %s", filepath.Base(path))
+		return i18n.Errorf("mise.install.checksum", filepath.Base(path))
 	}
 	return nil
 }
@@ -164,7 +166,7 @@ func copyLimited(dest io.Writer, source io.Reader, limit int64) error {
 		return err
 	}
 	if n > limit {
-		return fmt.Errorf("mise archive or executable exceeds size limit")
+		return i18n.Errorf("mise.install.size_limit")
 	}
 	return nil
 }
@@ -199,7 +201,7 @@ func extractBinary(ctx context.Context, archive string, a releaseAsset, dest io.
 				continue
 			}
 			if entry.UncompressedSize64 > maxBinarySize {
-				return fmt.Errorf("mise executable exceeds size limit")
+				return i18n.Errorf("mise.install.executable_size_limit")
 			}
 			r, err := entry.Open()
 			if err != nil {
@@ -228,13 +230,13 @@ func extractBinary(ctx context.Context, archive string, a releaseAsset, dest io.
 			}
 			if match(entry.Name) && entry.Typeflag == tar.TypeReg {
 				if entry.Size > maxBinarySize {
-					return fmt.Errorf("mise executable exceeds size limit")
+					return i18n.Errorf("mise.install.executable_size_limit")
 				}
 				return copyLimited(dest, tr, maxBinarySize)
 			}
 		}
 	}
-	return fmt.Errorf("mise archive does not contain the expected executable")
+	return i18n.Errorf("mise.install.missing_executable")
 }
 
 // Observe cancellation while inflating large release binaries.

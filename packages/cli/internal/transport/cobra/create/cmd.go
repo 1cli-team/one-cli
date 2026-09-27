@@ -35,7 +35,7 @@ var workspaceDefaultEnables = []string{
 // canonicalDomainOrder is the canonical iteration order for emitting
 // the list of enabled backends in the create envelope. Mirrors the
 // legacy ordering.
-var canonicalDomainOrder = []string{"container", "dev", "deploy", "ci", "env"}
+var canonicalDomainOrder = []string{"dev", "ci", "env"}
 
 type createFlags struct {
 	name         string
@@ -51,7 +51,7 @@ func newCreateCmd(deps Dependencies) *cobra.Command {
 		Use:     "create [dir]",
 		Long:    i18n.T("create.tip"),
 		Example: "  one create demo\n  one create . --name demo\n  one create demo --yes",
-		Args:    cobra.MaximumNArgs(1),
+		Args:    i18n.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			dir := ""
 			if len(args) > 0 {

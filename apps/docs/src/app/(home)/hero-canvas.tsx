@@ -12,10 +12,10 @@ type HomeHeroCanvasProps = { ariaLabel?: string; lang?: Locale };
 
 const copy = {
   zh: {
-    description: "One CLI 品牌双弧归一后生成工作区模块，展示前端、后端、文档、共享库、部署和 CLI 接口模块。",
+    description: "One CLI 品牌双弧归一后生成工作区模块，展示前端、后端、文档、共享库、构建和 CLI 接口模块。",
   },
   en: {
-    description: "One CLI brand arcs reunite before the workspace assembles, showing frontend, backend, docs, library, deploy, and CLI interface modules.",
+    description: "One CLI brand arcs reunite before the workspace assembles, showing frontend, backend, docs, library, build, and CLI interface modules.",
   },
 };
 

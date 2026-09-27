@@ -1,6 +1,7 @@
 "use client";
 
-import { Github, Menu } from "lucide-react";
+import { Menu } from "lucide-react";
+import { GithubIcon as Github } from "@/components/github-icon";
 import Link from "next/link";
 import { BrandMark } from "@/components/brand-mark";
 import { localeLabels, locales, type Locale } from "@/i18n";

@@ -23,7 +23,7 @@ func (runLoader) Priority() secrets.Priority { return secrets.PriorityRemoteBack
 
 // Available is the gate for --from auto: Infisical must be both
 // configured in the workspace manifest AND have credentials available
-// (env vars OR a default env profile). We avoid a network probe here
+// (the single browser session). We avoid a network probe here
 // — it's a cheap pre-flight, not a healthcheck. If creds are stale,
 // the actual Load() call will surface the auth error.
 func (runLoader) Available(projectRoot string) bool {
@@ -31,12 +31,12 @@ func (runLoader) Available(projectRoot string) bool {
 	if err != nil || cfg == nil {
 		return false
 	}
-	// projectId is required even when creds come from a profile —
+	// projectId is required even when credentials come from a session —
 	// project-level fields stay in the manifest.
 	if strings.TrimSpace(cfg.ProjectID) == "" {
 		return false
 	}
-	return runCredsAvailable(projectRoot)
+	return sessionAvailable()
 }
 
 // Load delegates to FetchSecretsForSubproject — same code path the

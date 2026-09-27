@@ -1,0 +1,58 @@
+---
+title: 登录与本机设置
+description: 浏览器登录 Infisical、系统钥匙串与共享凭据。
+---
+
+## 浏览器登录
+
+```bash
+one login
+one whoami
+one logout
+one login --site-url https://secrets.example.com
+```
+
+One 只保留一个 Infisical 账号。登录会打开浏览器，完成后把会话令牌存入系统钥匙串；不再要求 Client ID、Client Secret 或 Profile。更换账号或实例前先退出。系统钥匙串不可用时会报错，不回退到明文文件。会话过期后需显式重新登录；读取变量不会自动打开浏览器。
+
+本机只保存共享凭据的位置、界面语言和工作区记录等元数据。旧版凭据文件不再读取，也不会自动删除。
+
+## 共享凭据
+
+在 Dashboard 的「共享凭据」页点击「初始化默认位置」，即可创建或复用 `shared-credentials` 项目，并将 `dev` 环境的根目录作为默认浏览位置。也可以直接新建其他项目，或选择已有 Secret Manager 项目。已有存放位置会保留。
+
+CLI 仍使用 `--global` 访问共享凭据，也可以手动选择存放位置：
+
+```bash
+one env bind --global
+one env bind --global --project-id PROJECT_ID --env dev
+one env --global
+one env list --global --env dev --path /
+one env list --global --env dev --path /docker
+one run --global --env dev --path /docker --keys REGISTRY_USER,REGISTRY_PASSWORD -- docker-push-script
+```
+
+列表返回当前层目录、变量名和说明，不返回值。执行时必须显式提供环境与目录；不会递归读取子目录、导入变量或展开跨目录引用。`--keys` 可进一步缩小注入范围。命令可在工作区之外使用，保留当前目录；普通 `one dev`、`one build` 和项目模式不会自动加载共享凭据。
+
+明文读取需要 `one env get KEY --global --env dev --path /docker --reveal`。写入可使用交互式密码输入，或 `one env set KEY --global --env dev --path /docker --stdin` 从标准输入读取；覆盖已有值需要 `--yes`。`one env unset KEY --global --env dev --path /docker` 删除远端变量。
+
+## Dashboard
+
+运行 `one serve`。设置页管理登录、等待回调、取消登录、退出和语言；共享凭据页管理存放项目、浏览环境与目录，以及增删改查变量。查看或复制时才读取明文，切换账号、环境、目录或离开页面会清除页面中的明文。远端变量操作即时生效；工作区绑定项目等 Manifest 修改先进入草稿，审阅后一次保存。
+
+## 安全边界
+
+变量注入和输出遮盖用于减少误泄露，不是同一系统账号下 Agent 的安全隔离。Agent 能执行任意程序时，仍可能读取或传出凭据；说明文字也是不可信数据。请在 Infisical 和云服务中限制账号权限、目录、环境及凭据有效期。One 对已知原始值做尽力输出遮盖，无法覆盖编码、变形或子进程写出的文件。Docker 等工具也可能自行保存登录凭据。
+
+## 本机偏好与工作区工具
+
+```bash
+one locale zh-CN
+one locale en-US
+one locale auto
+one init mise --dry-run
+one init mise
+one init hooks --dry-run
+one init hooks
+```
+
+`one init mise` 生成工具配置，保留用户配置；`one init hooks` 配置 hk 检查和当前 checkout 的 Git 钩子。`one mise` 与 `one hk` 保持工具透传。语言偏好存入本机 preferences 文件。

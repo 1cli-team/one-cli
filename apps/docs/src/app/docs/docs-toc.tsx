@@ -2,7 +2,6 @@
 
 import { TOCItem, type TOCItemType, useActiveAnchor } from "fumadocs-core/toc";
 import { MessageSquare, Pencil } from "lucide-react";
-import { PageTOC } from "fumadocs-ui/layouts/docs/page";
 import type { Locale } from "@/i18n";
 
 type DocsTocProps = {
@@ -17,49 +16,55 @@ export function DocsToc({ docPath, items, lang }: DocsTocProps) {
   const labels = tocLabels[lang];
 
   return (
-    <PageTOC className="one-docs-toc">
-      <p className="one-docs-toc-heading">{labels.heading}</p>
-      <div className="one-docs-toc-list">
-        {items.map((item) => {
-          const active =
-            item.url === `#${activeAnchor}` ||
-            (activeAnchor === undefined && item.url === fallbackActive);
+    <aside
+      id="nd-toc"
+      aria-label={labels.heading}
+      className="one-docs-toc sticky top-(--fd-docs-row-1) h-[calc(var(--fd-docs-height)-var(--fd-docs-row-1))] w-(--fd-toc-width) [grid-area:toc] max-xl:hidden"
+    >
+      <div className="flex h-full flex-col overflow-y-auto">
+        <p className="one-docs-toc-heading">{labels.heading}</p>
+        <div className="one-docs-toc-list">
+          {items.map((item) => {
+            const active =
+              item.url === `#${activeAnchor}` ||
+              (activeAnchor === undefined && item.url === fallbackActive);
 
-          return (
-            <TOCItem
-              className="one-docs-toc-link"
-              data-active={active}
-              data-depth={item.depth}
-              href={item.url}
-              key={item.url}
-            >
-              {item.title}
-            </TOCItem>
-          );
-        })}
+            return (
+              <TOCItem
+                className="one-docs-toc-link"
+                data-active={active}
+                data-depth={item.depth}
+                href={item.url}
+                key={item.url}
+              >
+                {item.title}
+              </TOCItem>
+            );
+          })}
+        </div>
+
+        <div className="one-docs-toc-rule" />
+
+        <div className="one-docs-toc-actions">
+          <a
+            href={`https://github.com/1cli-team/one-cli/blob/master/apps/docs/content/docs/${docPath}`}
+            target="_blank"
+            rel="noreferrer"
+          >
+            <Pencil className="size-[13px]" />
+            {labels.edit}
+          </a>
+          <a
+            href="https://github.com/1cli-team/one-cli/issues"
+            target="_blank"
+            rel="noreferrer"
+          >
+            <MessageSquare className="size-[13px]" />
+            {labels.issue}
+          </a>
+        </div>
       </div>
-
-      <div className="one-docs-toc-rule" />
-
-      <div className="one-docs-toc-actions">
-        <a
-          href={`https://github.com/1cli-team/one-cli/blob/master/apps/docs/content/docs/${docPath}`}
-          target="_blank"
-          rel="noreferrer"
-        >
-          <Pencil className="size-[13px]" />
-          {labels.edit}
-        </a>
-        <a
-          href="https://github.com/1cli-team/one-cli/issues"
-          target="_blank"
-          rel="noreferrer"
-        >
-          <MessageSquare className="size-[13px]" />
-          {labels.issue}
-        </a>
-      </div>
-    </PageTOC>
+    </aside>
   );
 }
 

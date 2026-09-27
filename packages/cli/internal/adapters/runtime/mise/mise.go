@@ -14,6 +14,7 @@ import (
 	"time"
 
 	cliErrors "github.com/torchstellar-team/one-cli/packages/cli/internal/platform/errors"
+	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/i18n"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/output"
 	runtimeport "github.com/torchstellar-team/one-cli/packages/cli/internal/ports/runtime"
 )
@@ -74,7 +75,7 @@ func (r binaryResolver) resolve(ctx context.Context, command runtimeport.Command
 				return resolvedBinary{}, err
 			}
 			if err := verifyExecutable(canonicalPath(path), a.BinarySHA256); err != nil {
-				return resolvedBinary{}, cliErrors.New(cliErrors.MISE_INSTALL_FAILED, "Explicit One-managed mise failed verification: "+err.Error())
+				return resolvedBinary{}, cliErrors.New(cliErrors.MISE_INSTALL_FAILED, i18n.Tf("mise.explicit_failed", err))
 			}
 		} else if err := checkVersion(ctx, path, command); err != nil {
 			return resolvedBinary{}, err
@@ -90,7 +91,7 @@ func (r binaryResolver) resolve(ctx context.Context, command runtimeport.Command
 		} else if ctx.Err() != nil {
 			return resolvedBinary{}, ctx.Err()
 		} else if r.out != nil {
-			fmt.Fprintf(r.out, "[one] Skipping unavailable or incompatible mise at %s: %v\n", path, err)
+			fmt.Fprintf(r.out, i18n.T("mise.skipping"), path, err)
 		}
 	}
 	if err := ctx.Err(); err != nil {
@@ -105,8 +106,8 @@ func (r binaryResolver) resolve(ctx context.Context, command runtimeport.Command
 	}
 	path, err := r.install(ctx, a)
 	if err != nil {
-		return resolvedBinary{}, cliErrors.New(cliErrors.MISE_INSTALL_FAILED, fmt.Sprintf("Could not prepare mise %s (%s) in %s: %v", managedVersion, a.Platform, r.paths.runtimeRoot(), err)).WithRemediation(output.Remediation{
-			Action: "prepare-mise", Hint: "Check network/proxy access to GitHub Releases and permissions on the One runtime directory, then retry the same command. For offline use, install a compatible mise on PATH or set ONE_MISE_BINARY to its executable. ONE_RUNTIME=builtin uses existing tools for diagnostics.",
+		return resolvedBinary{}, cliErrors.New(cliErrors.MISE_INSTALL_FAILED, i18n.Tf("mise.prepare_failed", managedVersion, a.Platform, r.paths.runtimeRoot(), err)).WithRemediation(output.Remediation{
+			Action: "prepare-mise", Hint: i18n.T("mise.prepare_hint"),
 		})
 	}
 	// The executable digest pins the managed version; no online probe is needed.
@@ -157,7 +158,7 @@ func systemCandidates(env []string) []string {
 
 func checkVersion(ctx context.Context, path string, command runtimeport.Command) error {
 	if _, err := os.Stat(path); err != nil {
-		return cliErrors.New(cliErrors.MISE_NOT_FOUND, "Cannot access the mise executable: "+err.Error())
+		return cliErrors.New(cliErrors.MISE_NOT_FOUND, i18n.Tf("mise.access_failed", err))
 	}
 	probeCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
@@ -169,10 +170,10 @@ func checkVersion(ctx context.Context, path string, command runtimeport.Command)
 		return ctx.Err()
 	}
 	if err != nil {
-		return cliErrors.New(cliErrors.MISE_VERSION_UNSUPPORTED, "Could not read the mise version: "+err.Error())
+		return cliErrors.New(cliErrors.MISE_VERSION_UNSUPPORTED, i18n.Tf("mise.version_failed", err))
 	}
 	if !supportedVersion(string(version)) {
-		return cliErrors.New(cliErrors.MISE_VERSION_UNSUPPORTED, fmt.Sprintf("mise %s or newer is required.", runtimeport.MinimumMiseVersion))
+		return cliErrors.New(cliErrors.MISE_VERSION_UNSUPPORTED, i18n.Tf("mise.version_required", runtimeport.MinimumMiseVersion))
 	}
 	return nil
 }

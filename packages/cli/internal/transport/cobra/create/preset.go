@@ -9,15 +9,13 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/torchstellar-team/one-cli/packages/cli/internal/core/workspace"
-	cliErrors "github.com/torchstellar-team/one-cli/packages/cli/internal/platform/errors"
-
-	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/i18n"
-	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/output"
-
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/core/template"
+	"github.com/torchstellar-team/one-cli/packages/cli/internal/core/workspace"
 	creationmodule "github.com/torchstellar-team/one-cli/packages/cli/internal/modules/creation"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/modules/preset"
+	cliErrors "github.com/torchstellar-team/one-cli/packages/cli/internal/platform/errors"
+	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/i18n"
+	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/output"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/prompt"
 )
 
@@ -71,14 +69,9 @@ func runCreateWithPreset(deps Dependencies, cmd *cobra.Command, cwd, rawDir stri
 			if re.TemplateID != "" {
 				ctx["template_id"] = re.TemplateID
 			}
-			if len(re.Compat) > 0 {
-				ctx["compat"] = re.Compat
-			}
 			switch re.Kind {
 			case "template":
 				return cliErrors.New(cliErrors.TEMPLATE_NOT_FOUND, err.Error()).WithContext(ctx)
-			case "deploy", "container":
-				return cliErrors.New(cliErrors.PROFILE_BACKEND_INVALID, err.Error()).WithContext(ctx)
 			case "env", "extension":
 				return cliErrors.New(cliErrors.PRESET_INVALID, err.Error()).WithContext(ctx)
 			}
@@ -90,14 +83,14 @@ func runCreateWithPreset(deps Dependencies, cmd *cobra.Command, cwd, rawDir stri
 	flagProvider := strings.TrimSpace(flags.envProvider)
 	if flagProvider != "" && flagProvider != "dotenv" && flagProvider != "infisical" {
 		return cliErrors.New(cliErrors.BACKEND_ID_UNKNOWN,
-			fmt.Sprintf("--env-provider 值无效: %q（合法值: dotenv / infisical）", flagProvider))
+			i18n.Tf("env.provider_invalid", flagProvider))
 	}
 	effectiveEnv, err := preset.ResolveEnvWithFlag(resolved.EnvProvider, flagProvider)
 	if err != nil {
 		var ce *preset.EnvConflictError
 		if errors.As(err, &ce) {
 			return cliErrors.New(cliErrors.PRESET_FLAG_CONFLICT,
-				fmt.Sprintf("preset 声明 env=%q，但 --env-provider %q 与之冲突", ce.Preset, ce.Flag)).
+				i18n.Tf("create.preset_provider_conflict", ce.Preset, ce.Flag)).
 				WithContext(map[string]any{
 					"preset_env_provider": ce.Preset,
 					"flag_env_provider":   ce.Flag,
@@ -118,7 +111,7 @@ func runCreateWithPreset(deps Dependencies, cmd *cobra.Command, cwd, rawDir stri
 	// minus the interactive form).
 	if rawDir == "" {
 		return cliErrors.New(cliErrors.PROJECT_NAME_REQUIRED,
-			"--preset 模式下必须提供 [dir] 位置参数（使用 `.` 表示当前目录）。").
+			i18n.T("create.preset_directory_required")).
 			WithContext(map[string]any{"preset_id": flags.preset})
 	}
 	useCurrentDir := rawDir == "." || rawDir == "./"
@@ -129,7 +122,7 @@ func runCreateWithPreset(deps Dependencies, cmd *cobra.Command, cwd, rawDir stri
 	}
 	if !workspace.IsValidProjectName(projectName) {
 		return cliErrors.New(cliErrors.INVALID_NAME,
-			fmt.Sprintf("工作区名称格式不合法: %q（来自 --name 或 basename(dir)）", projectName))
+			i18n.Tf("create.name_invalid", projectName))
 	}
 	displayPath := relativeOrAbs(cwd, targetDir, useCurrentDir)
 
@@ -163,8 +156,8 @@ func runCreateWithPreset(deps Dependencies, cmd *cobra.Command, cwd, rawDir stri
 	}
 	prompt.Step(i18n.Tf("create.generated", displayPath))
 	if creationResult.EnvironmentWarn != nil {
-		prompt.Step(fmt.Sprintf(
-			"Infisical 自动绑定未完成（%v）；首次运行 `one env set/get/list/pull` 时会再尝试一次",
+		prompt.Step(i18n.Tf(
+			"create.infisical_binding_warning",
 			creationResult.EnvironmentWarn,
 		))
 	}
@@ -184,7 +177,6 @@ func runCreateWithPreset(deps Dependencies, cmd *cobra.Command, cwd, rawDir stri
 		CIEnabled:      false,
 		DevEnabled:     true,
 		Projects:       presetProjectsPayload(creationResult.Preset.Projects),
-		DeploySummary:  creationResult.Preset.SummarizeDeploys(),
 		EnvSummary: envSummary{
 			Backend:        effectiveEnv,
 			InfisicalBound: creationResult.InfisicalBound,
@@ -219,7 +211,6 @@ func presetProjectsPayload(projects []creationmodule.ProjectResult) []presetProj
 			Name:           p.Name,
 			TemplateID:     p.TemplateID,
 			TargetPath:     p.TargetPath,
-			DeployBackend:  p.DeployBackend,
 			Toolchain:      p.Toolchain,
 			PackageManager: p.PackageManager,
 		})
@@ -242,7 +233,6 @@ type createPresetResult struct {
 	CIEnabled       bool                   `json:"ci_enabled"`
 	DevEnabled      bool                   `json:"dev_enabled"`
 	Projects        []presetProjectPayload `json:"projects"`
-	DeploySummary   map[string]int         `json:"deploy_summary"`
 	EnvSummary      envSummary             `json:"env_summary"`
 	PartialState    string                 `json:"partial_state"`
 	UnknownSegments []string               `json:"preset_unknown_segments,omitempty"`
@@ -257,7 +247,6 @@ type presetProjectPayload struct {
 	Name           string `json:"name"`
 	TemplateID     string `json:"template_id"`
 	TargetPath     string `json:"target_path"`
-	DeployBackend  string `json:"deploy_backend,omitempty"`
 	Toolchain      string `json:"toolchain"`
 	PackageManager string `json:"package_manager,omitempty"`
 }
@@ -274,11 +263,7 @@ func (r *createPresetResult) RenderTTY(w io.Writer) {
 	fmt.Fprintf(w, i18n.T("create.preset_success")+"\n", r.Preset.ID)
 	fmt.Fprintf(w, i18n.T("create.location")+"\n", compactHomePath(r.CreatedPath))
 	for _, p := range r.Projects {
-		if p.DeployBackend != "" {
-			fmt.Fprintf(w, i18n.T("create.preset_project_deployed")+"\n", p.Name, p.TemplateID, p.DeployBackend)
-		} else {
-			fmt.Fprintf(w, i18n.T("create.preset_project")+"\n", p.Name, p.TemplateID)
-		}
+		fmt.Fprintf(w, i18n.T("create.preset_project")+"\n", p.Name, p.TemplateID)
 	}
 	fmt.Fprintf(w, i18n.T("create.env_source")+"\n", r.EnvSummary.Backend)
 	for _, warning := range r.Warnings {

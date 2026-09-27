@@ -10,7 +10,7 @@ import (
 func TestServiceOverviewIsAReadOnlyProjection(t *testing.T) {
 	root := seedProjectSettingsWorkspace(t)
 	before := snapshotWorkspaceTree(t, root)
-	service, err := NewService(catalog.Builtin(), projectProfileStub())
+	service, err := NewService(catalog.Builtin())
 	if err != nil {
 		t.Fatal(err)
 	}

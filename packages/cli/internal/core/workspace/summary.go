@@ -33,7 +33,6 @@ type SummaryProject struct {
 	CanStartDevelopment   bool   `json:"can_start_development"`
 	DependenciesInstalled bool   `json:"dependencies_installed"`
 	DependenciesStatus    string `json:"dependencies_status,omitempty"`
-	DeploymentConfigured  bool   `json:"deployment_configured"`
 }
 
 type SummaryIssue struct {
@@ -86,23 +85,18 @@ func BuildSummary(root string) (Summary, error) {
 		if p.Toolchain == "go" {
 			dependencyStatus = "unverified"
 		}
-		deployConfigured := strings.TrimSpace(DeployForProject(m, p.Name).Backend) != ""
 		s.Projects = append(s.Projects, SummaryProject{
 			Name:                  p.Name,
 			RelativeDir:           p.RelativeDir,
 			CanStartDevelopment:   canDevelop,
 			DependenciesInstalled: dependenciesInstalled,
 			DependenciesStatus:    dependencyStatus,
-			DeploymentConfigured:  deployConfigured,
 		})
 		if canDevelop && !dependenciesInstalled && dependencyStatus != "unverified" {
 			s.Issues = append(s.Issues, SummaryIssue{Code: "dependencies_not_installed", Project: p.Name})
 		}
 		if !canDevelop {
 			s.Issues = append(s.Issues, SummaryIssue{Code: "development_not_available", Project: p.Name})
-		}
-		if projectKindFromDir(p.RelativeDir) != ProjectKindPackage && !deployConfigured {
-			s.Issues = append(s.Issues, SummaryIssue{Code: "deployment_not_configured", Project: p.Name})
 		}
 	}
 
@@ -124,6 +118,26 @@ func ProjectDependenciesInstalled(root, projectDir, toolchain string) bool {
 	if strings.TrimSpace(toolchain) != "node" {
 		return true
 	}
+	rel, err := filepath.Rel(root, projectDir)
+	if err != nil {
+		return false
+	}
+	if rel == "." {
+		return nodePackageDependenciesInstalled(root, projectDir)
+	}
+	dirs, err := NodeProjectPackageDirs(root, rel, nil)
+	if err != nil {
+		return false
+	}
+	for _, dir := range dirs {
+		if !nodePackageDependenciesInstalled(root, filepath.Join(root, dir)) {
+			return false
+		}
+	}
+	return true
+}
+
+func nodePackageDependenciesInstalled(root, projectDir string) bool {
 	pkg, err := ReadPackageJSON(projectDir)
 	if err != nil || pkg == nil {
 		return false
@@ -176,11 +190,7 @@ func (s *Summary) RenderTTY(w io.Writer) {
 				dev = i18n.T("workspace.dependencies_unverified")
 			}
 		}
-		deploy := i18n.T("workspace.deploy_missing")
-		if p.DeploymentConfigured {
-			deploy = i18n.T("workspace.deploy_ready")
-		}
-		fmt.Fprintf(w, "  %s  %s  %s\n", p.Name, dev, deploy)
+		fmt.Fprintf(w, "  %s  %s\n", p.Name, dev)
 	}
 	fmt.Fprintf(w, i18n.T("workspace.environment")+"\n", environmentSourceLabel(s.EnvironmentSource), s.DefaultEnvironment)
 	if len(s.Issues) > 0 {

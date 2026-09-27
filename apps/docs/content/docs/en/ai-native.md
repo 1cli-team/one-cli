@@ -107,8 +107,8 @@ One CLI can manage env, container, and deploy configuration, but agents should n
 
 Recommended boundary:
 
-- `one.manifest.json` records reviewable Workspace/Project/Backend configuration; local Profile names never enter it.
-- `one configure` manages machine Profiles, while `one serve` opens a local `127.0.0.1` UI for Profile values, environment-aware local bindings, and reviewed revision-checked Backend/Project configuration drafts. Source files and non-allowlisted Manifest fields stay view-only there.
+- `one.manifest.json` records reviewable Workspace/Project/Backend configuration; secret values and session tokens never enter it.
+- `one login` manages one browser session in the system keyring. `one serve` exposes account settings, global-variable metadata, and reviewed Manifest drafts.
 - `.env*`, private keys, and cloud tokens stay out of Git and out of reusable agent-facing docs.
 - Agents can read structured state, install missing dependencies, and scaffold projects, but publishing, deletion, and credential overwrites should go through team policy or human confirmation.
 

@@ -17,7 +17,7 @@ import (
 
 func registerWorkspaceRoutes(mux *http.ServeMux, opts MuxOpts) {
 	mux.HandleFunc("GET /workspace/overview", handleGetWorkspaceOverview(opts))
-	mux.HandleFunc("GET /workspace/profile-bindings/env", handleGetWorkspaceEnvironmentProfile(opts))
+	mux.HandleFunc("GET /workspace/environment", handleGetWorkspaceEnvironment(opts))
 	mux.HandleFunc("GET /workspace/projects/{name}", handleGetWorkspaceProject(opts))
 }
 
@@ -50,13 +50,13 @@ func handleGetWorkspaceProject(opts MuxOpts) http.HandlerFunc {
 	}
 }
 
-func handleGetWorkspaceEnvironmentProfile(opts MuxOpts) http.HandlerFunc {
+func handleGetWorkspaceEnvironment(opts MuxOpts) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if opts.WorkspaceRoot == "" {
 			writeNoWorkspace(w)
 			return
 		}
-		settings, err := opts.WorkspaceService.WorkspaceEnvironmentProfile(
+		settings, err := opts.WorkspaceService.WorkspaceEnvironment(
 			r.Context(), opts.WorkspaceRoot, r.URL.Query().Get("env"),
 		)
 		if err != nil {

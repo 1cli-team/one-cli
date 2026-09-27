@@ -39,7 +39,7 @@ export default async function Page(props: {
     body: React.ComponentType<{
       components?: Record<string, React.ComponentType<unknown>>;
     }>;
-    toc?: import("fumadocs-core/server").TableOfContents;
+    toc?: import("fumadocs-core/toc").TableOfContents;
     full?: boolean;
     kind?: string;
   };
@@ -65,8 +65,8 @@ export default async function Page(props: {
           />
         ),
       }}
-      container={{ className: "one-docs-page" }}
-      article={{ id: "nd-page_article", className: "one-docs-article" }}
+      id="nd-page_article"
+      className="one-docs-page one-docs-article"
       tableOfContent={{
         component: <DocsToc docPath={docPath} items={toc} lang={lang} />,
       }}

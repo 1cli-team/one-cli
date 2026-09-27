@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/core/workspace"
+	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/i18n"
 )
 
 // FetchSecretsForSubproject pulls every secret a subproject can see from
@@ -18,10 +19,10 @@ import (
 //
 // Errors propagate raw so callers can branch:
 //   - INFISICAL_NOT_CONFIGURED — workspace's domains.env.config.projectId is unset
-//   - INFISICAL_AUTH_MISSING   — no default env profile / profile has no creds
+//   - INFISICAL_AUTH_MISSING   — no active browser session
 //   - INFISICAL_AUTH_FAILED / INFISICAL_API_ERROR — network / API-level
 //
-// Credentials + siteUrl come exclusively from the resolved env profile.
+// Credentials + siteUrl come exclusively from the active browser session.
 // Env vars are no longer read.
 func FetchSecretsForSubproject(ctx context.Context, projectRoot, relativeDir, envName string) (map[string]string, error) {
 	cfg, err := RequireWorkspaceConfig(projectRoot)
@@ -32,14 +33,14 @@ func FetchSecretsForSubproject(ctx context.Context, projectRoot, relativeDir, en
 	if err != nil {
 		return nil, err
 	}
-	profileName, creds, siteURL, err := requireProfileCredsForContext(
-		projectRoot, "", env, manifestProjectName(projectRoot, relativeDir),
-	)
+	creds, siteURL, err := sessionCredentials()
 	if err != nil {
 		return nil, err
 	}
+	if cfg.SiteURL != "" && cfg.SiteURL != siteURL {
+		return nil, i18n.Errorf("infisical.binding_instance_mismatch")
+	}
 	cfg.SiteURL = siteURL
-	cfg.ProfileName = profileName
 	client, err := NewClient(ctx, cfg, creds)
 	if err != nil {
 		return nil, err
@@ -71,26 +72,6 @@ func FetchSecretsForSubproject(ctx context.Context, projectRoot, relativeDir, en
 		}
 	}
 	return merged, nil
-}
-
-// manifestProjectName maps the loader's relative directory back to the stable
-// project name used by Profile bindings. Unknown/root paths intentionally fall
-// back to Workspace scope.
-func manifestProjectName(projectRoot, relativeDir string) string {
-	relativeDir = workspace.ToPosixPath(relativeDir)
-	if relativeDir == "" || relativeDir == "." {
-		return ""
-	}
-	m, err := workspace.ReadManifest(projectRoot)
-	if err != nil || m == nil {
-		return ""
-	}
-	for _, project := range m.Projects {
-		if workspace.ToPosixPath(project.RelativeDir) == relativeDir {
-			return project.Name
-		}
-	}
-	return ""
 }
 
 // isFolderNotFound reports whether err is the structured

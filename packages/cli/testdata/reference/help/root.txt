@@ -1,5 +1,5 @@
 
-one — workspace development and deployment
+one — workspace development
 
 USAGE
   one <command> [options]
@@ -8,9 +8,9 @@ EVERYDAY COMMANDS
   create        Create a workspace
   add           Add a project
   dev           Start local development
-  deploy        Deploy a project
+  build         Build projects
   env           Manage environment variables
-  configure     Manage local connections and preferences
+  login         Sign in to Infisical in your browser
 
 COMMON OPTIONS
   -o, --output  Output format: json | yaml | text
@@ -21,7 +21,7 @@ EXAMPLES
   one create demo
   one add
   one dev
-  one deploy
+  one build
 
 All commands: one help --all
 Command help: one <command> --help

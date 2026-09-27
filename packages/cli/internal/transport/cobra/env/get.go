@@ -9,15 +9,15 @@ import (
 )
 
 func newGetCmd(deps Dependencies) *cobra.Command {
-	var project, environment, profile string
+	var project, environment string
 	cmd := &cobra.Command{
 		Use:   "get <KEY>",
-		Short: "读取一个环境变量值",
-		Args:  cobra.ExactArgs(1),
+		Short: i18n.T("env.get.short"),
+		Args:  i18n.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			result, err := deps.Service.Get(cmd.Context(), environmentmodule.GetInput{
 				Scope: commandScope(cmd), Environment: environment,
-				Project: project, Profile: profile, Key: args[0],
+				Project: project, Key: args[0],
 			})
 			if err != nil {
 				return err
@@ -27,9 +27,10 @@ func newGetCmd(deps Dependencies) *cobra.Command {
 		},
 	}
 	cmd.Flags().StringVarP(&project, "project", "p", "", i18n.T("env.flag.project"))
+	i18n.MarkFlagUsage(cmd, "project", "env.flag.project")
 	cmd.Flags().StringVar(&environment, "env", "", i18n.T("env.flag.environment"))
-	cmd.Flags().StringVar(&profile, "profile", "", i18n.T("env.flag.profile"))
-	markEnvFlagUsage(cmd, "project", "env", "profile")
+	i18n.MarkFlagUsage(cmd, "env", "env.flag.environment")
+	markEnvFlagUsage(cmd, "project", "env")
 	i18n.MarkShort(cmd, "env.get.short")
 	return cmd
 }

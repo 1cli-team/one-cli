@@ -52,7 +52,7 @@ One CLI is useful when you want to:
 
 - start from a clean project foundation
 - add a frontend, backend, docs site, mobile app, desktop app, or library later
-- keep local settings and deployment choices out of random notes
+- keep environment configuration and local settings organized
 - let an AI assistant help without guessing how the project is arranged
 - use the same simple commands across different kinds of projects
 
@@ -89,11 +89,11 @@ one add nestjs-api --name api
 |---|---|
 | `one create <workspace>` | Create an empty workspace |
 | `one add <starter>` | Add another app, service, docs site, or library |
-| `one dev [project]` | Run every project, or one selected project, locally |
-| `one deploy [project]` | Choose a target on first deploy, then deploy |
+| `one dev [projects...]` | Run all or selected projects; native output for one task, TUI for multiple tasks |
+| `one build [projects...]` | Build all or selected projects in dependency order; optional bounded concurrency |
 | `one env` | Review and manage environment variables |
-| `one configure` | Manage local connections and preferences |
-| `one serve` | Inspect Workspaces and Projects; manage local Profiles and bindings |
+| `one login` | Sign in to Infisical with your browser |
+| `one serve` | Inspect workspaces, manage the current account and shared credentials |
 | `one ci [enable\|sync\|disable]` | Optionally manage generated GitHub Actions workflows |
 
 Full command docs live at [1cli.dev](https://1cli.dev).
@@ -122,23 +122,17 @@ The assistant can read `one.manifest.json` and project README files, then use On
 
 ## Local Settings
 
-Some projects need environment values, deployment accounts, or image registry settings. One CLI keeps those in your local user config, not inside the project files you share with the team.
+One CLI manages local dotenv and Infisical variables. Run `one login` to sign in with your browser; the single session is stored in the OS keyring, with no plaintext fallback. Use `one whoami` to inspect status and `one logout` to remove the local session.
 
-For a guided browser-based setup:
+Run `one serve` for account settings, workspaces, and shared credentials. Workspace and project configuration changes share one reviewed, revision-checked Manifest draft. Remote variable edits take effect immediately; lists omit values and reveal/copy fetch plaintext only on demand.
 
-```bash
-one configure open
-```
-
-The page only binds to your local machine by default, so it is a better place for sensitive values than a chat window or a shared document. Workspace environment Backend and Project configuration edits remain browser drafts until the top-bar save action shows an exact diff. Project changes use atomic revision-checked Manifest patches; Backend changes use the revision-checked env switch workflow, including Infisical project binding initialization. Source files and non-allowlisted Manifest fields remain read-only. Backend changes do not migrate secret values between providers. Infisical workspaces also expose scoped secret CRUD: lists omit values, and cleartext is fetched one key at a time with no-store responses.
-
-Profile definitions and credentials live in `~/.config/one/config.json` and `credentials.json`. They are machine-global, so Profile CRUD in Settings is not environment-scoped. The Dashboard UI offers Development, Preview, and Production binding contexts; those selections live separately in `~/.config/one/profile-bindings.json`, keyed by canonical Workspace root and environment. These local files never modify the repository manifest; only the explicit reviewed Project draft and environment Backend switch endpoints can do that.
+Choose shared credential storage with `one env bind --global`. Agents discover environments and folders through `one env --global` and `one env list --global`, then execute with `one run --global --env dev --path /folder --keys KEY -- command`. Explicit scope and best-effort masking reduce accidental exposure; they do not isolate arbitrary programs running as the same OS user. Use least-privilege remote permissions.
 
 ## Project Map
 
 Every One CLI project has a `one.manifest.json` file at the root. Most users do not need to edit it by hand.
 
-Think of it as the project map. It records which parts exist, where they live, and which starter created them. One CLI reads it when you add, run, deploy, or inspect parts of the project. `one serve` writes it only after an explicit reviewed, revision-checked Dashboard action; other repository changes stay in the normal code-review workflow.
+Think of it as the project map. It records which parts exist, where they live, and which starter created them. One CLI reads it when you add, run, build, or inspect parts of the project. `one serve` writes it only after an explicit reviewed, revision-checked Dashboard action; other repository changes stay in the normal code-review workflow.
 
 ## Repository Layout
 
@@ -150,7 +144,7 @@ If you want to work on One CLI itself, the repository is organized like this:
 | `packages/templates` | Starters used by `one add` |
 | `skills/one-cli` | Minimal workspace guidance installed by `one skills install` |
 | `apps/docs` | Documentation website |
-| `apps/dashboard` | Local Workspace, Project, and Profile Dashboard opened by `one serve` |
+| `apps/dashboard` | Local workspace, account, and global-variable Dashboard opened by `one serve` |
 | `assets` | Brand assets, including the logo |
 
 Common contributor commands:
@@ -176,3 +170,36 @@ Read [CONTRIBUTING.md](./CONTRIBUTING.md) before opening a pull request.
 ## License
 
 MIT.
+
+### Development and build terminals
+
+```sh
+one dev web api                   # Run a selected set of projects in parallel
+one dev --select                  # Search and select projects interactively
+one dev web                       # Keep the project's native colors, progress, and input
+one dev web api --keep-going      # Keep peers running if a project exits
+one dev web api --ui=stream       # Use continuous prefixed logs
+one build web api --concurrency=4 # Build ready tasks concurrently, respecting local dependencies
+```
+
+`--ui=auto` uses a native terminal for one task and a TUI for multiple tasks.
+Override it with `raw`, `tui`, or `stream`. TUI and raw require an interactive
+terminal with text output; CI, pipes, and JSON/YAML output use streaming logs.
+Structured results remain on stdout and task logs go to stderr. `--dry-run`
+only prints the selected execution plan.
+
+In the TUI, use ↑/↓ to select a project, Enter to send it keyboard input, and
+Ctrl+] to return to navigation. PgUp/PgDn scroll history, f resumes following,
+/ searches projects, and h hides the project list. In dev, r restarts the selected
+project and s stops it. Ctrl+C in navigation stops the session and its process
+trees. Ctrl+C in input mode is sent to the selected application. By default any
+dev process exiting stops the group; `--keep-going` keeps the other projects alive.
+
+Build concurrency defaults to 1. Selected local Node dependencies run first;
+project selection does not implicitly add unselected dependencies. Failed builds
+stop new scheduling, finish already running independent builds, and block tasks
+that depend on the failure. Build sessions return to the shell automatically.
+
+Interactive task terminals currently support Unix (including Linux and macOS).
+Windows supports native single-task output and streaming multiple tasks; auto
+falls back to streaming until a ConPTY adapter is available.

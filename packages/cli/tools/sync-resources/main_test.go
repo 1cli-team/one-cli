@@ -15,6 +15,8 @@ func TestSyncBundledCopiesCanonicalAssetsAndStripsNestedModules(t *testing.T) {
 		"AGENTS.md", "CLAUDE.md", "SKILL.md", "CLAUDE.md.hbs",
 		".one/agents/conventions.md", ".agents/skills/example/references/guide.md",
 		"nested/AGENTS.md.hbs",
+		"pnpm-lock.yaml", "nested/package-lock.json", "yarn.lock.hbs",
+		"bun.lock", "bun.lockb", "npm-shrinkwrap.json",
 	}
 	for _, rel := range retiredAssets {
 		writeTestFile(t, root, "packages/templates/go-api/"+rel, "retired agent guidance")

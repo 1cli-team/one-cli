@@ -229,3 +229,27 @@ func TestFailedWriteRestoresAlreadyWrittenFiles(t *testing.T) {
 		t.Fatal("partial configuration was not rolled back")
 	}
 }
+
+func TestGoWithoutTaskfileDoesNotGenerateBuildFallback(t *testing.T) {
+	root := fixture(t)
+	if err := os.Remove(filepath.Join(root, "services/api/Taskfile.yml")); err != nil {
+		t.Fatal(err)
+	}
+	plan, err := Build(root, Options{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := plan.Apply(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	raw, err := os.ReadFile(filepath.Join(root, "services/api", Filename))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(string(raw), "one:build") {
+		t.Fatal("Go build fallback must not be generated without a Taskfile")
+	}
+	if !strings.Contains(string(raw), "one:test") {
+		t.Fatal("existing test fallback was removed")
+	}
+}

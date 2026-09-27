@@ -1,0 +1,13 @@
+
+DESCRIPTION
+Delete an Infisical environment variable
+
+USAGE
+  one env unset <KEY> [flags]
+
+COMMON OPTIONS
+  --env <value>            Environment name
+  --global                 Manage Infisical shared credentials, including outside a workspace
+  -o, --output <value>     Output format: json | yaml | text (default: terminal-friendly text, JSON when piped)
+  --path <value>           Shared credential folder (current level only, not recursive)
+  -p, --project <value>    Project name or path

@@ -1,67 +1,40 @@
 {
   "version": 1,
-  "doc": "Frozen v1 preset id encoding vectors. Each entry pairs a canonical id with the Spec that produced it. Tests in packages/cli/internal/modules/preset/encode_test.go assert: (a) Encode(spec) == id, (b) Parse(id).canonicalize().Encode == id. If either side drifts, fix the encoder rather than this file — vectors are golden.",
+  "doc": "Frozen v1 preset id encoding vectors. Each entry pairs a canonical id with the Spec that produced it. Tests in packages/cli/internal/modules/preset/encode_test.go assert: (a) Encode(spec) == id, (b) Parse(id).canonicalize().Encode == id. If either side drifts, fix the encoder rather than this file \u2014 vectors are golden.",
   "vectors": [
     {
       "id": "1.fas",
       "spec": {
-        "items": [{ "kind": "f", "template_code": "as" }],
-        "env_code": ""
-      }
-    },
-    {
-      "id": "1.fasv",
-      "spec": {
-        "items": [{ "kind": "f", "template_code": "as", "deploy_code": "v" }],
-        "env_code": ""
-      }
-    },
-    {
-      "id": "1.fasa",
-      "spec": {
-        "items": [{ "kind": "f", "template_code": "as", "deploy_code": "a" }],
-        "env_code": ""
-      }
-    },
-    {
-      "id": "1.fass",
-      "spec": {
-        "items": [{ "kind": "f", "template_code": "as", "deploy_code": "s" }],
-        "env_code": ""
-      }
-    },
-    {
-      "id": "1.fasm",
-      "spec": {
-        "items": [{ "kind": "f", "template_code": "as", "deploy_code": "m" }],
-        "env_code": ""
-      }
-    },
-    {
-      "id": "1.fas2",
-      "spec": {
-        "items": [{ "kind": "f", "template_code": "as", "deploy_code": "2" }],
+        "items": [
+          {
+            "kind": "f",
+            "template_code": "as"
+          }
+        ],
         "env_code": ""
       }
     },
     {
       "id": "1.bgo",
       "spec": {
-        "items": [{ "kind": "b", "template_code": "go" }],
-        "env_code": ""
-      }
-    },
-    {
-      "id": "1.bgokh",
-      "spec": {
-        "items": [{ "kind": "b", "template_code": "go", "deploy_code": "k", "container_code": "h" }],
+        "items": [
+          {
+            "kind": "b",
+            "template_code": "go"
+          }
+        ],
         "env_code": ""
       }
     },
     {
       "id": "1.bgo.ei",
       "spec": {
-        "items": [{ "kind": "b", "template_code": "go" }],
+        "items": [
+          {
+            "kind": "b",
+            "template_code": "go"
+          }
+        ],
         "env_code": "i"
       }
     },
@@ -69,29 +42,50 @@
       "id": "1.bne.fna",
       "spec": {
         "items": [
-          { "kind": "f", "template_code": "na" },
-          { "kind": "b", "template_code": "ne" }
+          {
+            "kind": "f",
+            "template_code": "na"
+          },
+          {
+            "kind": "b",
+            "template_code": "ne"
+          }
         ],
         "env_code": ""
       }
     },
     {
-      "id": "1.bnek.fnav.ei",
+      "id": "1.bne.fna.ei",
       "spec": {
         "items": [
-          { "kind": "b", "template_code": "ne", "deploy_code": "k" },
-          { "kind": "f", "template_code": "na", "deploy_code": "v" }
+          {
+            "kind": "b",
+            "template_code": "ne"
+          },
+          {
+            "kind": "f",
+            "template_code": "na"
+          }
         ],
         "env_code": "i"
       }
     },
     {
-      "id": "1.bgok.fna.fsl",
+      "id": "1.bgo.fna.fsl",
       "spec": {
         "items": [
-          { "kind": "f", "template_code": "na" },
-          { "kind": "f", "template_code": "sl" },
-          { "kind": "b", "template_code": "go", "deploy_code": "k" }
+          {
+            "kind": "f",
+            "template_code": "na"
+          },
+          {
+            "kind": "f",
+            "template_code": "sl"
+          },
+          {
+            "kind": "b",
+            "template_code": "go"
+          }
         ],
         "env_code": ""
       }
@@ -100,21 +94,42 @@
       "id": "1.bgo.ltl",
       "spec": {
         "items": [
-          { "kind": "b", "template_code": "go" },
-          { "kind": "l", "template_code": "tl" }
+          {
+            "kind": "b",
+            "template_code": "go"
+          },
+          {
+            "kind": "l",
+            "template_code": "tl"
+          }
         ],
         "env_code": ""
       }
     },
     {
-      "id": "1.bnek.fasv.fea.fem.fslc.ei",
+      "id": "1.bne.fas.fea.fem.fsl.ei",
       "spec": {
         "items": [
-          { "kind": "f", "template_code": "as", "deploy_code": "v" },
-          { "kind": "f", "template_code": "ea" },
-          { "kind": "f", "template_code": "em" },
-          { "kind": "f", "template_code": "sl", "deploy_code": "c" },
-          { "kind": "b", "template_code": "ne", "deploy_code": "k" }
+          {
+            "kind": "f",
+            "template_code": "as"
+          },
+          {
+            "kind": "f",
+            "template_code": "ea"
+          },
+          {
+            "kind": "f",
+            "template_code": "em"
+          },
+          {
+            "kind": "f",
+            "template_code": "sl"
+          },
+          {
+            "kind": "b",
+            "template_code": "ne"
+          }
         ],
         "env_code": "i"
       }

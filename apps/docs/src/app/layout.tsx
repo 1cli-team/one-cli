@@ -1,5 +1,5 @@
 import "./global.css";
-import { RootProvider } from "fumadocs-ui/provider";
+import { RootProvider } from "fumadocs-ui/provider/next";
 import { ViewTransitions } from "next-view-transitions";
 import Script from "next/script";
 import type { ReactNode } from "react";

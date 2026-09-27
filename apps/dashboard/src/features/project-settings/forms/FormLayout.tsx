@@ -48,10 +48,14 @@ export const SwitchField: React.FC<{
 	<Field
 		orientation="horizontal"
 		className={cn(
-			"flex cursor-pointer items-start gap-3 rounded-lg border border-border bg-background p-3 transition-colors hover:border-primary/25 hover:bg-primary/[0.025]",
+			"flex items-start gap-4 border-b border-border py-4 last:border-b-0",
 			disabled && "cursor-not-allowed opacity-50",
 		)}
 	>
+		<FieldLabel htmlFor={id} className="block min-w-0 flex-1 cursor-pointer font-normal">
+			<span className="block text-sm font-medium">{label}</span>
+			<span className="mt-1 block text-sm text-muted-foreground">{description}</span>
+		</FieldLabel>
 		<Switch
 			id={id}
 			checked={checked}
@@ -59,12 +63,6 @@ export const SwitchField: React.FC<{
 			disabled={disabled}
 			className="mt-0.5"
 		/>
-		<FieldLabel htmlFor={id} className="min-w-0 cursor-inherit font-normal">
-			<span className="block text-sm font-medium">{label}</span>
-			<span className="mt-1 block text-xs leading-relaxed text-muted-foreground">
-				{description}
-			</span>
-		</FieldLabel>
 	</Field>
 );
 
@@ -75,8 +73,8 @@ export const ReadOnlyDatum: React.FC<{
 	className?: string;
 }> = ({ label, value, mono, className }) => (
 	<div>
-		<p className="text-[11px] font-medium text-muted-foreground">{label}</p>
-		<div className={cn("mt-1.5 truncate text-sm font-medium", mono && "font-mono", className)}>
+		<p className="text-xs font-medium text-muted-foreground">{label}</p>
+		<div className={cn("mt-1.5 break-words text-sm font-medium", mono && "font-mono", className)}>
 			{value || "-"}
 		</div>
 	</div>

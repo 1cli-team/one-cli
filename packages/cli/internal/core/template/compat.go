@@ -19,9 +19,10 @@ package template
 //                         domain (mobile/library/electron for "deploy")
 
 import (
-	"fmt"
 	"sort"
 	"strings"
+
+	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/i18n"
 )
 
 // Warning is one compat-mismatch line surfaced to the user.
@@ -45,12 +46,12 @@ func (w Warning) Message() string {
 	allowed := strings.Join(w.AllowedIDs, ", ")
 	switch {
 	case w.SubprojectName != "":
-		return fmt.Sprintf(
-			"工作区当前 %s/%s 与 subproject %q（模板 %s）不兼容；该模板的 %s 域支持: [%s]",
+		return i18n.Tf(
+			"template.compat.project",
 			w.Domain, w.SelectedID, w.SubprojectName, w.TemplateID, w.Domain, allowed)
 	default:
-		return fmt.Sprintf(
-			"工作区当前 %s/%s 不适用于模板 %s；该模板的 %s 域支持: [%s]。建议手动调整 manifest 切到 %s，或保持现状（仅其他 subproject 走 %s）",
+		return i18n.Tf(
+			"template.compat.workspace",
 			w.Domain, strings.TrimPrefix(w.SelectedID, w.Domain+"/"),
 			w.TemplateID, w.Domain, allowed,
 			firstID(w.AllowedIDs), w.Domain,

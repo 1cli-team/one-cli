@@ -58,7 +58,7 @@ You now have your first Web project running:
 | `pnpm install` | Downloaded the packages the project uses |
 | `pnpm -C apps/web dev` | Started the first Web project |
 
-Continue by goal: use `one env` for environment variables and `one deploy` for production deploys. Container image build / push is a lower-level deploy step; only open the advanced docs when you need to control it directly.
+Continue with `one env` for environment variables and `one build` to build your projects.
 
 ## Next
 

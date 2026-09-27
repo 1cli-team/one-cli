@@ -68,8 +68,5 @@ func (stubAdapter) InstallPlan(toolchain.PlanInput) toolchain.CommandStep {
 func (stubAdapter) PackageManagerForManifest(p toolchain.PackageManager) toolchain.PackageManager {
 	return p
 }
-func (stubAdapter) ResolveRuntime(toolchain.PlanInput) toolchain.RuntimeResolution {
-	return toolchain.RuntimeResolution{}
-}
-func (stubAdapter) RenderDockerfile(toolchain.DockerfileInput) string { return "" }
-func (stubAdapter) RenderWorkflow(toolchain.WorkflowInput) string     { return "" }
+
+func (stubAdapter) RenderWorkflow(toolchain.WorkflowInput) string { return "" }

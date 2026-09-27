@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/adapters/runtime/mise/miserelease"
+	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/i18n"
 )
 
 const maxDownloadAttempts = 4
@@ -29,10 +30,10 @@ func defaultDownloader() downloader {
 			Timeout: 2 * time.Minute,
 			CheckRedirect: func(req *http.Request, via []*http.Request) error {
 				if req.URL.Scheme != "https" {
-					return fmt.Errorf("mise download cannot redirect to non-HTTPS URL")
+					return i18n.Errorf("mise.download.https_required")
 				}
 				if len(via) >= 10 {
-					return fmt.Errorf("mise download exceeded redirect limit")
+					return i18n.Errorf("mise.download.redirect_limit")
 				}
 				return nil
 			},
@@ -58,7 +59,7 @@ func (d downloader) fetch(ctx context.Context, dir string, a releaseAsset) (stri
 			return "", ctx.Err()
 		}
 		if !retry || attempt == maxDownloadAttempts {
-			return "", fmt.Errorf("mise download failed after %d attempt(s): %w", attempt, err)
+			return "", i18n.Errorf("mise.download.failed", attempt, err)
 		}
 		timer := time.NewTimer(d.backoff << (attempt - 1))
 		select {
@@ -83,10 +84,10 @@ func (d downloader) attempt(ctx context.Context, dir string, a releaseAsset) (pa
 	defer res.Body.Close()
 	if res.StatusCode != http.StatusOK {
 		retry = res.StatusCode == http.StatusRequestTimeout || res.StatusCode == http.StatusTooManyRequests || res.StatusCode >= 500 && res.StatusCode < 600
-		return "", retry, fmt.Errorf("official mise release returned HTTP %d", res.StatusCode)
+		return "", retry, i18n.Errorf("mise.download.http_status", res.StatusCode)
 	}
 	if res.ContentLength > maxArchiveSize {
-		return "", false, fmt.Errorf("mise archive exceeds size limit")
+		return "", false, i18n.Errorf("mise.download.archive_too_large")
 	}
 	f, err := os.CreateTemp(dir, ".fetch-*")
 	if err != nil {
@@ -109,10 +110,10 @@ func (d downloader) attempt(ctx context.Context, dir string, a releaseAsset) (pa
 		return "", false, closeErr
 	}
 	if n > maxArchiveSize {
-		return "", false, fmt.Errorf("mise archive exceeds size limit")
+		return "", false, i18n.Errorf("mise.download.archive_too_large")
 	}
 	if fmt.Sprintf("%x", hash.Sum(nil)) != a.ArchiveSHA256 {
-		return "", false, fmt.Errorf("mise archive SHA256 mismatch: %s", filepath.Base(a.Filename()))
+		return "", false, i18n.Errorf("mise.download.checksum", filepath.Base(a.Filename()))
 	}
 	keep = true
 	return f.Name(), false, nil

@@ -1,16 +1,6 @@
 import { overviewKeyFor } from "@/api/workspace";
 import type { useToast } from "@/hooks/useToast";
-import type { ProfileValue, ProjectProfileBinding } from "@/types/api";
-
-export function projectBindingValue(
-	selectedProfile: string | undefined,
-	binding: ProjectProfileBinding | undefined,
-	environment: string,
-): string {
-	if (selectedProfile !== undefined) return selectedProfile;
-	const directSource = environment ? "workspace-project-environment" : "workspace-project";
-	return binding?.source === directSource ? binding.name : "";
-}
+import type { JsonValue } from "@/types/api";
 
 export function refreshOverview(
 	mutate: (key: string) => unknown,
@@ -30,31 +20,31 @@ export function showSaveError(
 }
 
 export function configPathValue(
-	config: Record<string, ProfileValue>,
+	config: Record<string, JsonValue>,
 	path: string,
-): ProfileValue | undefined {
-	let value: ProfileValue | undefined = config;
+): JsonValue | undefined {
+	let value: JsonValue | undefined = config;
 	for (const segment of path.split("/").filter(Boolean)) {
 		if (!value || typeof value !== "object" || Array.isArray(value)) return undefined;
-		value = (value as Record<string, ProfileValue | undefined>)[segment];
+		value = (value as Record<string, JsonValue | undefined>)[segment];
 	}
 	return value;
 }
 
 export function setConfigPathValue(
-	config: Record<string, ProfileValue>,
+	config: Record<string, JsonValue>,
 	path: string,
 	nextValue: string,
-): Record<string, ProfileValue> {
+): Record<string, JsonValue> {
 	const result = structuredClone(config);
 	const segments = path.split("/").filter(Boolean);
-	let current: Record<string, ProfileValue> = result;
+	let current: Record<string, JsonValue> = result;
 	for (const segment of segments.slice(0, -1)) {
 		const existing = current[segment];
 		if (!existing || typeof existing !== "object" || Array.isArray(existing)) {
 			current[segment] = {};
 		}
-		current = current[segment] as Record<string, ProfileValue>;
+		current = current[segment] as Record<string, JsonValue>;
 	}
 	current[segments.at(-1) ?? path] = nextValue;
 	return result;

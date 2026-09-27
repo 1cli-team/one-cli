@@ -1,10 +1,6 @@
 "use client";
 
-import {
-  Sidebar,
-  SidebarContent,
-  SidebarContentMobile,
-} from "fumadocs-ui/components/layout/sidebar";
+import { DocsSidebarShell } from "./docs-sidebar-shell";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { localizedDocsPath, type Locale } from "@/i18n";
@@ -54,13 +50,7 @@ const sectionsByLocale: Record<Locale, SidebarSection[]> = {
           href: "/docs/templates-cmd/",
           mono: true,
         },
-        {
-          label: "one container",
-          href: "/docs/container/",
-          mono: true,
-        },
         { label: "one dev", href: "/docs/dev/", mono: true },
-        { label: "one deploy", href: "/docs/deploy/", mono: true },
         { label: "one run", href: "/docs/run/", mono: true },
         { label: "one serve", href: "/docs/serve/", mono: true },
         { label: "错误码", href: "/docs/error-codes/" },
@@ -100,13 +90,7 @@ const sectionsByLocale: Record<Locale, SidebarSection[]> = {
           href: "/docs/templates-cmd/",
           mono: true,
         },
-        {
-          label: "one container",
-          href: "/docs/container/",
-          mono: true,
-        },
         { label: "one dev", href: "/docs/dev/", mono: true },
-        { label: "one deploy", href: "/docs/deploy/", mono: true },
         { label: "one run", href: "/docs/run/", mono: true },
         { label: "one serve", href: "/docs/serve/", mono: true },
         {
@@ -134,21 +118,10 @@ const sidebarText: Record<
 };
 
 export function DocsSidebar({ lang }: { lang: Locale }) {
-  const sidebar = <DocsSidebarInner lang={lang} />;
-
   return (
-    <Sidebar
-      Content={
-        <SidebarContent className="one-docs-sidebar-shell">
-          {sidebar}
-        </SidebarContent>
-      }
-      Mobile={
-        <SidebarContentMobile className="one-docs-sidebar-mobile">
-          {sidebar}
-        </SidebarContentMobile>
-      }
-    />
+    <DocsSidebarShell>
+      <DocsSidebarInner lang={lang} />
+    </DocsSidebarShell>
   );
 }
 

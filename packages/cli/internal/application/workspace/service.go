@@ -8,7 +8,6 @@ import (
 	"sync"
 
 	catalog "github.com/torchstellar-team/one-cli/packages/cli/internal/core/backend"
-	"github.com/torchstellar-team/one-cli/packages/cli/internal/core/profile"
 	workspacecore "github.com/torchstellar-team/one-cli/packages/cli/internal/core/workspace"
 )
 
@@ -18,36 +17,15 @@ var (
 )
 
 type Service struct {
-	catalog  *catalog.Catalog
-	profiles ProfileAccess
-	mu       sync.RWMutex
+	catalog *catalog.Catalog
+	mu      sync.RWMutex
 }
 
-// ProfileAccess is the narrow machine-profile capability needed by project
-// settings. The configure application service implements this interface; the
-// workspace package never needs profile values and only exposes the resolved
-// profile name and its precedence source.
-type ProfileAccess interface {
-	BindWorkspaceProfile(string, string, string, string, profile.Domain, string, string) error
-	UnbindWorkspaceProfile(string, string, profile.Domain, string) error
-	BindEnvironmentProfile(string, string, string, string, string, profile.Domain, string, string) error
-	UnbindEnvironmentProfile(string, string, string, profile.Domain, string) error
-	EnvironmentProfileBinding(string, string, string, profile.Domain, string) (string, error)
-	Resolve(profile.ResolveInput) (*profile.Resolved, error)
-}
-
-// NewService constructs the workspace use-case boundary. profiles is optional
-// so existing non-Dashboard callers and focused tests keep their lightweight
-// construction path; production composition injects the configure service.
-func NewService(backendCatalog *catalog.Catalog, profiles ...ProfileAccess) (*Service, error) {
+func NewService(backendCatalog *catalog.Catalog) (*Service, error) {
 	if backendCatalog == nil {
 		return nil, errors.New("workspace: backend catalog is required")
 	}
-	var profileAccess ProfileAccess
-	if len(profiles) > 0 {
-		profileAccess = profiles[0]
-	}
-	return &Service{catalog: backendCatalog, profiles: profileAccess}, nil
+	return &Service{catalog: backendCatalog}, nil
 }
 
 func (s *Service) Overview(root string, environments ...string) (workspacecore.Overview, error) {

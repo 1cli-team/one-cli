@@ -51,7 +51,7 @@ const copyText = {
   zh: {
     eyebrow: "TEMPLATE EXAMPLES",
     title: "从一个完整的起步套件开始。",
-    body: "每个示例都是一个完整的 One CLI workspace 配置（项目 + 部署 + env）。直接复制创建命令、或点开查看默认页面与可粘贴 prompt。",
+    body: "每个示例都是一个完整的 One CLI workspace 配置（项目 + env）。直接复制创建命令、或点开查看默认页面与可粘贴 prompt。",
     customizeBtn: "自定义模板",
     filterAll: "全部",
     countSuffix: "个示例",
@@ -68,12 +68,12 @@ const copyText = {
     } satisfies Record<ListCategory, string>,
     notFoundTitle: "找不到完全匹配的示例？",
     notFoundBody:
-      "用“自定义模板”自由组合项目、部署目标和 env，命令实时生成。",
+      "用“自定义模板”自由组合项目和 env，命令实时生成。",
   },
   en: {
     eyebrow: "TEMPLATE EXAMPLES",
     title: "Start from a complete starter kit.",
-    body: "Each example is a full One CLI workspace (projects + deploy + env). Copy the create command directly, or open it to see the default pages and a paste-ready prompt.",
+    body: "Each example is a full One CLI workspace (projects + env). Copy the create command directly, or open it to see the default pages and a paste-ready prompt.",
     customizeBtn: "Build your own",
     filterAll: "All",
     countSuffix: "examples",
@@ -90,7 +90,7 @@ const copyText = {
     } satisfies Record<ListCategory, string>,
     notFoundTitle: "Don't see a perfect match?",
     notFoundBody:
-      "Use “Build your own” to compose projects, deploy targets and env. Commands update live.",
+      "Use “Build your own” to compose projects and env. Commands update live.",
   },
 } satisfies Record<ListLocale, unknown>;
 

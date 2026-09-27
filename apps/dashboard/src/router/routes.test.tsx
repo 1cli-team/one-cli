@@ -7,6 +7,8 @@ import { MemoryRouter, useLocation } from "react-router-dom";
 import { SWRConfig } from "swr";
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import i18n from "@/lib/i18n";
+import { App } from "@/App";
+import { TopBar } from "@/components/TopBar";
 import { AppRoutes } from "@/router/routes";
 import type {
 	BackendSpec,
@@ -15,7 +17,11 @@ import type {
 	WorkspacesResponse,
 } from "@/types/api";
 
-const server = setupServer();
+const server = setupServer(
+	http.get("http://localhost/api/session", () =>
+		HttpResponse.json({ session: { loggedIn: false, expired: false } }),
+	),
+);
 
 const alpha: WorkspaceRegistryEntry = {
 	entryId: "alpha-entry",
@@ -52,7 +58,6 @@ const infisicalBackend: BackendSpec = {
 	domain: "env",
 	name: "infisical",
 	capabilities: ["env-load"],
-	profile: { configurable: true, fields: [] },
 	project: { configurable: false },
 };
 
@@ -96,6 +101,7 @@ function renderDashboard(path = "/") {
 	return render(
 		<SWRConfig value={{ provider: () => new Map(), dedupingInterval: 10_000 }}>
 			<MemoryRouter initialEntries={[path]}>
+				<TopBar />
 				<main data-testid="route-content">
 					<AppRoutes />
 				</main>
@@ -110,21 +116,18 @@ function registerCatalogHandler() {
 		http.get("http://localhost/api/catalog", () =>
 			HttpResponse.json({ schema: "one-cli/catalog/v1", backends: [] }),
 		),
-		http.get(
-			"http://localhost/api/workspaces/:entryId/profile-bindings/env",
-			({ params, request }) => {
-				const entry = params.entryId === beta.entryId ? beta : alpha;
-				return HttpResponse.json({
-					schema: "one-cli/workspace-profile/v1",
-					root: entry.root,
-					environment: new URL(request.url).searchParams.get("env") ?? "dev",
-					domain: "env",
-					backend: "dotenv",
-					configurable: false,
-					selectedProfile: "",
-				});
-			},
-		),
+		http.get("http://localhost/api/workspaces/:entryId/environment", ({ params, request }) => {
+			const entry = params.entryId === beta.entryId ? beta : alpha;
+			return HttpResponse.json({
+				schema: "one-cli/workspace-environment/v1",
+				revision: "sha256:fixture",
+				root: entry.root,
+				environment: new URL(request.url).searchParams.get("env") ?? "dev",
+				domain: "env",
+				backend: "dotenv",
+				configurable: false,
+			});
+		}),
 		http.get(
 			"http://localhost/api/workspaces/:entryId/projects/:projectName",
 			({ params, request }) => {
@@ -173,24 +176,6 @@ function registerSettingsHandlers() {
 			HttpResponse.json({
 				schema: "one-cli/catalog/v1",
 				backends: [infisicalBackend],
-			}),
-		),
-		http.get("http://localhost/api/configure", () =>
-			HttpResponse.json({
-				schema: "one-cli/serve-configure-config/v1",
-				config_path: "/machine/config.json",
-				credentials_path: "/machine/credentials.json",
-				reveal: false,
-				config: { version: 1 },
-			}),
-		),
-		http.get("http://localhost/api/configure/env/infisical", () =>
-			HttpResponse.json({
-				schema: "one-cli/serve-configure-section/v1",
-				domain: "env",
-				backend: "infisical",
-				reveal: false,
-				section: { profiles: {} },
 			}),
 		),
 	);
@@ -265,7 +250,7 @@ describe("multi-workspace routing", () => {
 		const content = within(screen.getByTestId("route-content"));
 		expect(await content.findByRole("heading", { name: "Workspaces" })).toBeDefined();
 		expect(content.getByRole("heading", { name: "No Workspaces yet" })).toBeDefined();
-		expect(content.queryByRole("heading", { name: "Settings" })).toBeNull();
+		expect(content.queryByRole("heading", { name: "Infisical" })).toBeNull();
 		expect(screen.getByTestId("location").textContent).toBe("/");
 		expect(screen.getByTestId("location-search").textContent).toBe("?env=preview");
 	});
@@ -311,7 +296,7 @@ describe("multi-workspace routing", () => {
 		const confirmation = await screen.findByRole("alertdialog");
 		expect(
 			within(confirmation).getByText(
-				'Remove Workspace "Broken"? This only removes the local registry entry; no project files or Profiles will be deleted.',
+				'Remove Workspace "Broken"? This only removes the local registry entry; no project files or remote variables will be deleted.',
 			),
 		).toBeDefined();
 		await user.click(within(confirmation).getByRole("button", { name: "Remove Broken" }));
@@ -349,12 +334,12 @@ describe("multi-workspace routing", () => {
 		).toBe(true);
 	});
 
-	it("opens machine profile management at the Settings route", async () => {
+	it("opens single-account settings", async () => {
 		registerSettingsHandlers();
 
 		renderDashboard("/settings");
 
-		expect(await screen.findByRole("heading", { name: "Settings" })).toBeDefined();
+		expect(await screen.findByRole("heading", { name: "Infisical" })).toBeDefined();
 		expect(screen.getByTestId("location").textContent).toBe("/settings");
 		expect(screen.queryByText("env/infisical")).toBeNull();
 	});
@@ -366,7 +351,7 @@ describe("multi-workspace routing", () => {
 
 		await waitFor(() => expect(screen.getByTestId("location").textContent).toBe("/settings"));
 		expect(screen.getByTestId("location-search").textContent).toBe("?env=prod");
-		expect(await screen.findByRole("heading", { name: "Settings" })).toBeDefined();
+		expect(await screen.findByRole("heading", { name: "Infisical" })).toBeDefined();
 	});
 
 	it("redirects legacy section URLs to the corresponding Settings backend", async () => {
@@ -374,48 +359,37 @@ describe("multi-workspace routing", () => {
 
 		renderDashboard("/section/env/infisical?env=preview");
 
-		await waitFor(() =>
-			expect(screen.getByTestId("location").textContent).toBe("/settings/env/infisical"),
-		);
+		await waitFor(() => expect(screen.getByTestId("location").textContent).toBe("/settings"));
 		expect(screen.getByTestId("location-search").textContent).toBe("?env=preview");
 		expect(await screen.findByRole("heading", { name: "Infisical" })).toBeDefined();
 	});
 
-	it("confirms a destructive Profile removal before calling the API", async () => {
-		let deletedProfile = "";
-		registerSettingsHandlers();
+	it("exposes shared credentials and account settings through the actual application navigation", async () => {
+		await i18n.changeLanguage("en-US");
 		server.use(
-			http.get("http://localhost/api/configure/env/infisical", () =>
-				HttpResponse.json({
-					schema: "one-cli/serve-configure-section/v1",
-					domain: "env",
-					backend: "infisical",
-					reveal: false,
-					section: { default: "work", profiles: { work: {} } },
-				}),
+			http.get("http://localhost/api/session", () =>
+				HttpResponse.json({ session: { loggedIn: false, expired: false } }),
 			),
-			http.delete("http://localhost/api/configure/env/infisical/:name", ({ params }) => {
-				deletedProfile = String(params.name);
-				return HttpResponse.json({
-					schema: "one-cli/serve-configure-remove/v1",
-					status: "removed",
-					name: deletedProfile,
-				});
-			}),
+			http.get("http://localhost/api/global-env/location", () =>
+				HttpResponse.json({ location: null }),
+			),
+			http.get("http://localhost/api/workspaces", () =>
+				HttpResponse.json({ schema: "one-cli/workspaces/v1", workspaces: [] }),
+			),
 		);
 		const user = userEvent.setup();
-
-		renderDashboard("/settings/env/infisical");
-		expect(await screen.findByText("work")).toBeDefined();
-
-		await user.click(screen.getByRole("button", { name: "Delete" }));
-		const confirmation = await screen.findByRole("alertdialog");
-		expect(
-			within(confirmation).getByText('Delete profile "work"? This cannot be undone.'),
-		).toBeDefined();
-		expect(deletedProfile).toBe("");
-
-		await user.click(within(confirmation).getByRole("button", { name: "Delete" }));
-		await waitFor(() => expect(deletedProfile).toBe("work"));
+		render(
+			<SWRConfig value={{ provider: () => new Map(), shouldRetryOnError: false }}>
+				<MemoryRouter>
+					<App />
+				</MemoryRouter>
+			</SWRConfig>,
+		);
+		const navigation = await screen.findAllByRole("link", { name: "Shared credentials" });
+		await user.click(navigation[0]);
+		await screen.findByRole("heading", { name: "Shared credentials" });
+		await user.click(screen.getByRole("link", { name: "Sign in with browser" }));
+		await screen.findByRole("heading", { name: "Infisical" });
+		expect(screen.getByRole("button", { name: "Sign in with browser" })).toBeTruthy();
 	});
 });

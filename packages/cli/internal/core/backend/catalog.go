@@ -34,12 +34,6 @@ func New(specs ...BackendSpec) (*Catalog, error) {
 		if len(spec.Capabilities) == 0 {
 			return nil, fmt.Errorf("catalog: backend %q declares no capabilities", spec.Pair)
 		}
-		if spec.Profile.Configurable && spec.Profile.Type == "" {
-			return nil, fmt.Errorf("catalog: configurable backend %q declares no profile type", spec.Pair)
-		}
-		if err := validateProfileFields(spec); err != nil {
-			return nil, err
-		}
 		if err := validateProjectFields(spec); err != nil {
 			return nil, err
 		}
@@ -49,54 +43,12 @@ func New(specs ...BackendSpec) (*Catalog, error) {
 	return c, nil
 }
 
-func validateProfileFields(spec BackendSpec) error {
-	paths := make(map[string]struct{}, len(spec.Profile.Fields))
-	inputs := make(map[string]struct{}, len(spec.Profile.Fields))
-	for _, field := range spec.Profile.Fields {
-		if strings.TrimSpace(field.Path) == "" || strings.TrimSpace(field.InputName) == "" || strings.TrimSpace(field.LabelKey) == "" {
-			return fmt.Errorf("catalog: backend %q has incomplete field metadata", spec.Pair)
-		}
-		if _, exists := paths[field.Path]; exists {
-			return fmt.Errorf("catalog: backend %q declares field path %q twice", spec.Pair, field.Path)
-		}
-		if _, exists := inputs[field.InputName]; exists {
-			return fmt.Errorf("catalog: backend %q declares input %q twice", spec.Pair, field.InputName)
-		}
-		paths[field.Path] = struct{}{}
-		inputs[field.InputName] = struct{}{}
-		switch field.Type {
-		case FieldString:
-			if field.Default != nil {
-				if _, ok := field.Default.(string); !ok {
-					return fmt.Errorf("catalog: backend %q field %q has a non-string default", spec.Pair, field.Path)
-				}
-			}
-		case FieldSecret:
-			if field.Default != nil {
-				return fmt.Errorf("catalog: backend %q secret field %q declares a default", spec.Pair, field.Path)
-			}
-		case FieldBoolean:
-			if field.Default != nil {
-				if _, ok := field.Default.(bool); !ok {
-					return fmt.Errorf("catalog: backend %q field %q has a non-boolean default", spec.Pair, field.Path)
-				}
-			}
-		default:
-			return fmt.Errorf("catalog: backend %q field %q has unknown type %q", spec.Pair, field.Path, field.Type)
-		}
-	}
-	return nil
-}
-
 func validateProjectFields(spec BackendSpec) error {
 	if !spec.Project.Configurable {
 		if len(spec.Project.Fields) > 0 {
 			return fmt.Errorf("catalog: backend %q declares project fields but is not project-configurable", spec.Pair)
 		}
 		return nil
-	}
-	if !spec.Has(CapabilityDeploy) {
-		return fmt.Errorf("catalog: project-configurable backend %q does not declare deploy capability", spec.Pair)
 	}
 	if len(spec.Project.Fields) == 0 {
 		return fmt.Errorf("catalog: project-configurable backend %q declares no project fields", spec.Pair)
@@ -154,7 +106,6 @@ func cloneSpec(spec BackendSpec) BackendSpec {
 	spec.Capabilities = append([]Capability(nil), spec.Capabilities...)
 	spec.Traits = append([]Trait(nil), spec.Traits...)
 	spec.Requirements = append([]Requirement(nil), spec.Requirements...)
-	spec.Profile.Fields = append([]FieldSpec(nil), spec.Profile.Fields...)
 	spec.Project.Fields = append([]ProjectFieldSpec(nil), spec.Project.Fields...)
 	return spec
 }
@@ -193,20 +144,6 @@ func (c *Catalog) ForDomain(domain Domain) []BackendSpec {
 	var out []BackendSpec
 	for _, spec := range c.ordered {
 		if spec.ID.Domain == domain {
-			out = append(out, cloneSpec(spec))
-		}
-	}
-	return out
-}
-
-// ProfileBackends returns only backends that expose a configure profile.
-func (c *Catalog) ProfileBackends() []BackendSpec {
-	if c == nil {
-		return nil
-	}
-	var out []BackendSpec
-	for _, spec := range c.ordered {
-		if spec.Profile.Configurable {
 			out = append(out, cloneSpec(spec))
 		}
 	}

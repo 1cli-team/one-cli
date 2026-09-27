@@ -1,6 +1,6 @@
 package preset
 
-import "fmt"
+import "github.com/torchstellar-team/one-cli/packages/cli/internal/platform/i18n"
 
 // ResolveEnvWithFlag combines a preset env code with an explicit
 // --env-provider flag value. Empty values mean that source made no choice.
@@ -25,5 +25,5 @@ type EnvConflictError struct {
 }
 
 func (e *EnvConflictError) Error() string {
-	return fmt.Sprintf("preset declared env=%q but --env-provider %q was also passed", e.Preset, e.Flag)
+	return i18n.Tf("preset.environment_conflict", e.Preset, e.Flag)
 }

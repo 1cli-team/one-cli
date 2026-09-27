@@ -14,7 +14,6 @@ package cli
 import (
 	"context"
 	"errors"
-	"fmt"
 	"os"
 	"strings"
 
@@ -29,20 +28,21 @@ import (
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/preferences"
 	platformprocess "github.com/torchstellar-team/one-cli/packages/cli/internal/platform/process"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/updatecheck"
-	"github.com/torchstellar-team/one-cli/packages/cli/internal/transport/cobra/add"
-	"github.com/torchstellar-team/one-cli/packages/cli/internal/transport/cobra/ci"
-	"github.com/torchstellar-team/one-cli/packages/cli/internal/transport/cobra/configure"
-	"github.com/torchstellar-team/one-cli/packages/cli/internal/transport/cobra/container"
-	"github.com/torchstellar-team/one-cli/packages/cli/internal/transport/cobra/create"
-	"github.com/torchstellar-team/one-cli/packages/cli/internal/transport/cobra/deploy"
-	"github.com/torchstellar-team/one-cli/packages/cli/internal/transport/cobra/dev"
-	"github.com/torchstellar-team/one-cli/packages/cli/internal/transport/cobra/env"
-	"github.com/torchstellar-team/one-cli/packages/cli/internal/transport/cobra/hooks"
-	"github.com/torchstellar-team/one-cli/packages/cli/internal/transport/cobra/mise"
-	"github.com/torchstellar-team/one-cli/packages/cli/internal/transport/cobra/run"
-	"github.com/torchstellar-team/one-cli/packages/cli/internal/transport/cobra/serve"
-	"github.com/torchstellar-team/one-cli/packages/cli/internal/transport/cobra/skills"
-	"github.com/torchstellar-team/one-cli/packages/cli/internal/transport/cobra/templates"
+	addcmd "github.com/torchstellar-team/one-cli/packages/cli/internal/transport/cobra/add"
+	authcmd "github.com/torchstellar-team/one-cli/packages/cli/internal/transport/cobra/auth"
+	buildcmd "github.com/torchstellar-team/one-cli/packages/cli/internal/transport/cobra/build"
+	cicmd "github.com/torchstellar-team/one-cli/packages/cli/internal/transport/cobra/ci"
+	createcmd "github.com/torchstellar-team/one-cli/packages/cli/internal/transport/cobra/create"
+	devcmd "github.com/torchstellar-team/one-cli/packages/cli/internal/transport/cobra/dev"
+	envcmd "github.com/torchstellar-team/one-cli/packages/cli/internal/transport/cobra/env"
+	hookscmd "github.com/torchstellar-team/one-cli/packages/cli/internal/transport/cobra/hooks"
+	initcmd "github.com/torchstellar-team/one-cli/packages/cli/internal/transport/cobra/init"
+	localecmd "github.com/torchstellar-team/one-cli/packages/cli/internal/transport/cobra/locale"
+	misecmd "github.com/torchstellar-team/one-cli/packages/cli/internal/transport/cobra/mise"
+	runcmd "github.com/torchstellar-team/one-cli/packages/cli/internal/transport/cobra/run"
+	servecmd "github.com/torchstellar-team/one-cli/packages/cli/internal/transport/cobra/serve"
+	skillscmd "github.com/torchstellar-team/one-cli/packages/cli/internal/transport/cobra/skills"
+	templatescmd "github.com/torchstellar-team/one-cli/packages/cli/internal/transport/cobra/templates"
 )
 
 func newRootCommand() *cobra.Command {
@@ -54,25 +54,18 @@ func newRootCommand() *cobra.Command {
 	}
 	groups := [][]*cobra.Command{
 		addcmd.Commands(deps.creation),
+		buildcmd.Commands(deps.runtime),
 		cicmd.Commands(deps.ci),
-		configurecmd.Commands(deps.catalog, deps.profiles, deps.workspaces, deps.registry),
-		containercmd.Commands(containercmd.Dependencies{
-			Service: deps.containers,
-		}),
+		authcmd.Commands(),
+		{localecmd.Command(), initcmd.Command()},
 		createcmd.Commands(createcmd.Dependencies{Creation: deps.creation}),
-		deploycmd.Commands(deploycmd.Dependencies{
-			Catalog:    deps.catalog,
-			Profiles:   deps.profiles,
-			Creation:   deps.creation,
-			NewService: deps.newDeploymentService,
-		}),
 		devcmd.Commands(deps.runtime),
 		misecmd.RuntimeCommands(deps.runtime),
 		hookscmd.Commands(deps.runtime),
 		envcmd.Commands(envcmd.Dependencies{Service: deps.environments}),
 		runcmd.Commands(deps.loaders, deps.runtime),
 		servecmd.Commands(servecmd.Dependencies{
-			Catalog: deps.catalog, Profiles: deps.profiles, Workspaces: deps.workspaces,
+			Catalog: deps.catalog, Workspaces: deps.workspaces,
 			Registry: deps.registry, Manifest: deps.manifest, Environments: deps.environments,
 		}),
 		templatescmd.Commands(),
@@ -84,6 +77,7 @@ func newRootCommand() *cobra.Command {
 	i18n.MarkShort(root, "root.short")
 	root.SetVersionTemplate("{{.Version}}\n")
 	root.SetHelpFunc(helpui.Render)
+	root.SetFlagErrorFunc(i18n.FlagError)
 	root.PersistentFlags().StringP("output", "o", "", i18n.T("common.flag.output"))
 	i18n.MarkFlagUsage(root, "output", "common.flag.output")
 	return root
@@ -199,7 +193,7 @@ func Execute(version string, args []string) (resultErr error) {
 	if first, ok := firstPositional(args); ok && !isKnownSubcommand(first) {
 		err := cliErrors.New(
 			cliErrors.UNKNOWN_COMMAND,
-			fmt.Sprintf("未知命令: %s", first),
+			i18n.Tf("command.unknown", first),
 		).WithContext(map[string]any{"command": "one " + first})
 		output.EmitError(err)
 		return err

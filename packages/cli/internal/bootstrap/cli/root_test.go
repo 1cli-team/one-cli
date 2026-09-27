@@ -161,10 +161,10 @@ func TestIsKnownSubcommand(t *testing.T) {
 	for _, name := range []string{
 		"create", "templates", "add", "skills",
 		// Per-domain commands (post capability-interface refactor).
-		"env", "container", "dev", "deploy", "ci",
+		"env", "dev", "build", "ci",
 		// configure owns the credential CRUD surface (renamed from
 		// `profile` to align with industry standard CLIs).
-		"configure",
+		"login", "whoami", "logout", "locale", "init",
 	} {
 		if !isKnownSubcommand(name) {
 			t.Errorf("isKnownSubcommand(%q) = false, want true", name)
@@ -177,7 +177,7 @@ func TestIsKnownSubcommand(t *testing.T) {
 	for _, name := range []string{
 		"doctor", "status", "unknown", "secrets", "skill", "prd", "design",
 		"docker", "infisical", "dotenv", "procs", "compose", "k8s",
-		"plugins", "setup", "profile",
+		"plugins", "setup", "profile", "container", "deploy",
 		"",
 	} {
 		if isKnownSubcommand(name) {

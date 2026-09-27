@@ -33,10 +33,6 @@ func seedManifest(t *testing.T) (string, *Service, string) {
 			Domains: &workspacecore.ProjectDomains{
 				Dev: &workspacecore.ProjectDevOverride{Command: "pnpm dev"},
 				Env: &workspacecore.ProjectEnvOverride{Path: "/apps/web", Inherits: &value, Keys: []string{"API_URL"}},
-				Container: &workspacecore.ProjectContainerOverride{
-					Kind: "docker", Image: "web:latest", Namespace: "one",
-				},
-				Deploy: &workspacecore.ProjectDeployBackend{Kind: "vercel", Config: config},
 			},
 		}},
 	}
@@ -62,15 +58,12 @@ func TestApplyManifestDraftPublishesAllowlistedFieldsAtomically(t *testing.T) {
 			Project:     "web",
 			General:     &ProjectGeneralPatch{BuildVersion: "v2.1.0", DevCommand: "pnpm start"},
 			Environment: &ProjectEnvironmentPatch{Path: "/frontend", Inherits: false, Disabled: true},
-			Container: &ProjectContainerPatch{
-				Enabled: true, Backend: "ghcr", Image: "ghcr.io/acme/web:2.1.0", Namespace: "acme",
-			},
 		}},
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if result.Applied != 3 || result.Revision == revision {
+	if result.Applied != 2 || result.Revision == revision {
 		t.Fatalf("result = %#v", result)
 	}
 	manifest, err := workspacecore.ReadManifest(root)
@@ -86,9 +79,6 @@ func TestApplyManifestDraftPublishesAllowlistedFieldsAtomically(t *testing.T) {
 	}
 	if len(project.Domains.Env.Keys) != 1 || project.Domains.Env.Keys[0] != "API_URL" {
 		t.Fatalf("environment keys were not preserved: %#v", project.Domains.Env.Keys)
-	}
-	if project.Domains.Container.Kind != "ghcr" || project.Domains.Container.Namespace != "acme" {
-		t.Fatalf("container patch = %#v", project.Domains.Container)
 	}
 }
 
@@ -123,21 +113,13 @@ func TestApplyManifestDraftRejectsUnknownFieldsAndUnsafeValues(t *testing.T) {
 		change ProjectManifestPatch
 	}{
 		{
-			name: "unknown container backend",
-			change: ProjectManifestPatch{Project: "web", Container: &ProjectContainerPatch{
-				Enabled: true, Backend: "unknown",
-			}},
+			name:   "empty changes",
+			change: ProjectManifestPatch{Project: "web"},
 		},
 		{
 			name: "unsafe environment path",
 			change: ProjectManifestPatch{Project: "web", Environment: &ProjectEnvironmentPatch{
 				Path: "../../shared", Inherits: true,
-			}},
-		},
-		{
-			name: "undeclared deploy config",
-			change: ProjectManifestPatch{Project: "web", Deploy: &ProjectDeployPatch{
-				Backend: "vercel", Config: map[string]any{"apiToken": "must-not-enter-manifest"},
 			}},
 		},
 	} {
@@ -248,5 +230,39 @@ func TestPreviewManifestDraftRejectsStaleRevisionWithoutWriting(t *testing.T) {
 	}
 	if string(after) != string(before) {
 		t.Fatal("stale preview changed the manifest")
+	}
+}
+
+func TestWorkspaceBindingAndProjectChangesPublishTogether(t *testing.T) {
+	root, service, revision := seedManifest(t)
+	id, name, site := "remote-project", "Shared", "https://app.infisical.com"
+	binding := &WorkspaceManifestPatch{Environment: &WorkspaceEnvironmentPatch{Backend: "infisical", ProjectID: &id, ProjectName: &name, SiteURL: &site}}
+	before, _ := os.ReadFile(workspacecore.ManifestPath(root))
+	_, err := service.ApplyManifestDraft(context.Background(), root, ApplyManifestInput{Revision: revision, Workspace: binding, Changes: []ProjectManifestPatch{{Project: "missing", General: &ProjectGeneralPatch{BuildVersion: "2.0.0"}}}})
+	if err == nil {
+		t.Fatal("invalid project accepted")
+	}
+	after, _ := os.ReadFile(workspacecore.ManifestPath(root))
+	if string(before) != string(after) {
+		t.Fatal("failed project patch partially wrote workspace binding")
+	}
+	_, err = service.PreviewManifestDraft(context.Background(), root, PreviewManifestInput{Revision: revision, Workspace: binding})
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = service.ApplyManifestDraft(context.Background(), root, ApplyManifestInput{Revision: revision, Workspace: binding})
+	if err != nil {
+		t.Fatal(err)
+	}
+	manifest, err := workspacecore.ReadManifest(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var config map[string]string
+	if err = json.Unmarshal(manifest.Domains.Env.Config, &config); err != nil {
+		t.Fatal(err)
+	}
+	if config["projectId"] != id || config["siteUrl"] != site || config["projectName"] != name {
+		t.Fatalf("binding: %#v", config)
 	}
 }

@@ -1,0 +1,9 @@
+
+DESCRIPTION
+Sign out of Infisical on this machine, keeping variable locations
+
+USAGE
+  one logout [flags]
+
+COMMON OPTIONS
+  -o, --output <value>     Output format: json | yaml | text (default: terminal-friendly text, JSON when piped)

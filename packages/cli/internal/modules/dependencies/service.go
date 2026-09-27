@@ -1,4 +1,4 @@
-// Package dependencies prepares application dependencies before development.
+// Package dependencies prepares application dependencies before development and builds.
 // Tool installation belongs to the runtime provider; run remains a plain runner.
 package dependencies
 
@@ -14,16 +14,20 @@ import (
 	"os/exec"
 	"os/signal"
 	"path/filepath"
+	"sort"
+	"strconv"
 	"strings"
 	"syscall"
+
+	"gopkg.in/yaml.v3"
 
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/core/workspace"
 	cliErrors "github.com/torchstellar-team/one-cli/packages/cli/internal/platform/errors"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/fsutil"
+	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/i18n"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/output"
 	platformprocess "github.com/torchstellar-team/one-cli/packages/cli/internal/platform/process"
 	runtimeport "github.com/torchstellar-team/one-cli/packages/cli/internal/ports/runtime"
-	"gopkg.in/yaml.v3"
 )
 
 type Runner func(context.Context, runtimeport.Command, io.Writer, io.Writer) error
@@ -37,8 +41,14 @@ type Input struct {
 	Root     string
 	Manifest *workspace.Manifest
 	Project  string
+	// Projects selects an explicit set, including projects without a dev command.
+	// nil preserves the development selection used by existing callers.
+	Projects []string
 	Runtime  string
 	Log      io.Writer
+	// Development allows pnpm to synchronize the lockfile and reuse a manual
+	// install after pnpm has verified the workspace dependency state.
+	Development bool
 }
 
 func (s Service) Prepare(ctx context.Context, in Input) error {
@@ -47,9 +57,17 @@ func (s Service) Prepare(ctx context.Context, in Input) error {
 	if in.Log == nil {
 		in.Log = io.Discard
 	}
+	selected := map[string]bool{}
+	for _, name := range in.Projects {
+		selected[name] = true
+	}
 	var nodes, goProjects []workspace.ManifestProject
 	for _, p := range in.Manifest.Projects {
-		if (in.Project != "" && p.Name != in.Project) || strings.TrimSpace(workspace.ProjectDev(in.Manifest, p.Name)) == "" {
+		if in.Projects != nil {
+			if !selected[p.Name] {
+				continue
+			}
+		} else if (in.Project != "" && p.Name != in.Project) || strings.TrimSpace(workspace.ProjectDev(in.Manifest, p.Name)) == "" {
 			continue
 		}
 		switch p.Toolchain {
@@ -79,7 +97,7 @@ func (s Service) run(ctx context.Context, in Input, dir string, args []string, e
 	command := runtimeport.Command{Directory: dir, Argv: args, Env: env}
 	if in.Runtime == runtimeport.Mise {
 		if s.Provider == nil {
-			return fmt.Errorf("mise provider is required")
+			return i18n.Errorf("dependencies.mise_required")
 		}
 		var err error
 		command, err = s.Provider.Prepare(ctx, command)
@@ -88,7 +106,7 @@ func (s Service) run(ctx context.Context, in Input, dir string, args []string, e
 		}
 	}
 	if len(command.Argv) == 0 {
-		return fmt.Errorf("dependency runtime returned an empty command")
+		return i18n.Errorf("dependencies.command_empty")
 	}
 	run := s.Run
 	if run == nil {
@@ -132,7 +150,7 @@ func (s Service) prepareGo(ctx context.Context, in Input, p workspace.ManifestPr
 			activeInfo, activeErr := os.Stat(active)
 			wantInfo, wantErr := os.Stat(want)
 			if activeErr != nil || wantErr != nil || !os.SameFile(activeInfo, wantInfo) {
-				return fmt.Errorf("%s uses external GOWORK=%s; use %s or GOWORK=off explicitly", p.Name, active, want)
+				return i18n.Errorf("dependencies.external_gowork", p.Name, active, want)
 			}
 		}
 		// Resolve the root, not the go.work file itself: relative use paths
@@ -145,7 +163,7 @@ func (s Service) prepareGo(ctx context.Context, in Input, p workspace.ManifestPr
 		return err
 	}
 	defer unlock()
-	fmt.Fprintf(in.Log, "[one] %s: preparing Go dependencies\n", p.Name)
+	fmt.Fprintf(in.Log, i18n.T("dependencies.go_preparing"), p.Name)
 	// In workspace mode, package loading uses the actual Go build graph and
 	// writes workspace sums as needed. Expanding `all` can fetch historical
 	// versions of local members; only use it for a standalone module.
@@ -163,7 +181,7 @@ func (s Service) prepareGo(ctx context.Context, in Input, p workspace.ManifestPr
 		if err := s.run(ctx, in, dir, args, env, out, io.MultiWriter(in.Log, &detail)); err != nil {
 			failure := preparationError(p.Name, dir, strings.Join(args, " "), err, detail.String())
 			if args[1] == "list" {
-				return failure.WithRemediation(output.Remediation{Action: "repair-go-module", Hint: "Inspect the Go error. If module declarations need repair, run tidy explicitly.", Command: "one run " + p.Name + " -- go mod tidy"})
+				return failure.WithRemediation(output.Remediation{Action: "repair-go-module", Hint: i18n.T("dependencies.go_repair_hint"), Command: "one run " + p.Name + " -- go mod tidy"})
 			}
 			return failure
 		}
@@ -181,7 +199,7 @@ func (s Service) downloadModule(ctx context.Context, in Input, p workspace.Manif
 		return err
 	}
 	if module == nil {
-		return fmt.Errorf("missing go.mod for %s", p.Name)
+		return i18n.Errorf("dependencies.go_mod_missing", p.Name)
 	}
 	sums, err := files.Read("go.sum")
 	if err != nil {
@@ -218,8 +236,8 @@ func (s Service) downloadModule(ctx context.Context, in Input, p workspace.Manif
 		return err
 	}
 	if !bytes.Equal(module, after) {
-		return cliErrors.New(cliErrors.ONE_CLI_ERROR, "Go dependencies require changes to "+p.Name+"/go.mod; automatic preparation preserved the original file").WithRemediation(output.Remediation{
-			Action: "repair-go-module", Command: "one run " + p.Name + " -- go mod tidy", Hint: "Review the module declarations and run tidy explicitly.",
+		return cliErrors.New(cliErrors.ONE_CLI_ERROR, i18n.Tf("dependencies.go_changes_required", p.Name)).WithRemediation(output.Remediation{
+			Action: "repair-go-module", Command: "one run " + p.Name + " -- go mod tidy", Hint: i18n.T("dependencies.go_tidy_hint"),
 		})
 	}
 	afterSums, err := os.ReadFile(sumName)
@@ -241,11 +259,30 @@ func (s Service) prepareNode(ctx context.Context, in Input, fallback string) err
 		return err
 	}
 	defer unlock()
-	manager := PackageManager(in.Root, fallback)
+	manager, err := workspace.ResolvePackageManager(in.Root, fallback)
+	if err != nil {
+		return err
+	}
 	var versions bytes.Buffer
 	for _, args := range [][]string{{manager, "--version"}, {"node", "--version"}} {
 		if err := s.run(ctx, in, in.Root, args, os.Environ(), &versions, in.Log); err != nil {
 			return preparationError("Node workspace", in.Root, strings.Join(args, " "), err, versions.String())
+		}
+	}
+	// Ask pnpm itself to validate installed dependencies. Its check covers the
+	// workspace structure, manifest changes, lockfile, and installation settings.
+	// The error policy never installs; stale or unsupported state falls through
+	// to the ordinary install below. This also recognizes manual `pnpm install`.
+	nativeCheck := in.Development && manager == "pnpm" && supportsPNPMDependencyCheck(versions.String())
+	if nativeCheck {
+		if nodeInstalled(in) {
+			args := []string{"pnpm", "--config.verify-deps-before-run=error", "exec", "node", "--eval", ""}
+			if err := s.run(ctx, in, in.Root, args, os.Environ(), io.Discard, io.Discard); err == nil {
+				return nil
+			}
+		}
+		if err := ctx.Err(); err != nil {
+			return err
 		}
 	}
 	before, err := nodeFingerprint(in, versions.String())
@@ -258,20 +295,50 @@ func (s Service) prepareNode(ctx context.Context, in Input, fallback string) err
 	}
 	marker := filepath.Join(cache, "one", "dependencies", fmt.Sprintf("%x", sha256.Sum256([]byte(in.Root))))
 	previous, _ := os.ReadFile(marker)
-	if string(previous) == before && nodeInstalled(in) {
+	if !nativeCheck && string(previous) == before && nodeInstalled(in) {
 		return nil
 	}
 	args := NodeInstallCommand(in.Root, manager)
-	fmt.Fprintf(in.Log, "[one] Preparing Node workspace dependencies: %s\n", strings.Join(args, " "))
+	if in.Development && manager == "pnpm" {
+		args = []string{manager, "install", "--no-frozen-lockfile"}
+	}
+	fmt.Fprintf(in.Log, i18n.T("dependencies.node_preparing"), strings.Join(args, " "))
 	var detail bytes.Buffer
 	if err := s.run(ctx, in, in.Root, args, os.Environ(), in.Log, io.MultiWriter(in.Log, &detail)); err != nil {
-		return preparationError("Node workspace", in.Root, strings.Join(args, " "), err, detail.String())
+		failure := preparationError("Node workspace", in.Root, strings.Join(args, " "), err, detail.String())
+		if in.Log != io.Discard {
+			// stderr has already been streamed. Keep it in structured context
+			// without printing the same diagnostic again in the final summary.
+			failure.Message = i18n.Tf("dependencies.failed_summary", "Node workspace", strings.Join(args, " "), err)
+			failure.Context["stderr"] = detail.String()
+		}
+		return failure
+	}
+	if nativeCheck {
+		return nil // pnpm owns the installed-state cache for this path.
 	}
 	after, err := nodeFingerprint(in, versions.String())
 	if err != nil {
 		return err
 	}
 	return fsutil.WriteAtomic(marker, []byte(after), 0o600)
+}
+
+// verifyDepsBeforeRun=error is supported by the pnpm versions we can verify
+// without parsing private lockfile/state formats. Older/unknown versions keep
+// the regular installation path and One's fingerprint cache.
+func supportsPNPMDependencyCheck(versions string) bool {
+	fields := strings.Fields(versions)
+	if len(fields) == 0 {
+		return false
+	}
+	parts := strings.Split(strings.TrimPrefix(fields[0], "v"), ".")
+	if len(parts) != 3 {
+		return false
+	}
+	major, majorErr := strconv.Atoi(parts[0])
+	minor, minorErr := strconv.Atoi(parts[1])
+	return majorErr == nil && minorErr == nil && (major > 10 || major == 10 && minor >= 14)
 }
 
 func nodeInstalled(in Input) bool {
@@ -288,12 +355,14 @@ func nodeInstalled(in Input) bool {
 
 func nodeFingerprint(in Input, versions string) (string, error) {
 	h := sha256.New()
-	fmt.Fprintln(h, versions)
+	fmt.Fprintln(h, "node-dependencies-v3", in.Development, in.Runtime, versions)
 	paths := []string{"package.json", "pnpm-workspace.yaml", "pnpm-lock.yaml", "package-lock.json", "yarn.lock", "bun.lock", "bun.lockb", ".npmrc", ".yarnrc.yml"}
-	for _, p := range in.Manifest.Projects {
-		if p.Toolchain == "node" {
-			paths = append(paths, filepath.Join(p.RelativeDir, "package.json"))
-		}
+	dirs, err := nodePackageDirs(in)
+	if err != nil {
+		return "", err
+	}
+	for _, dir := range dirs {
+		paths = append(paths, filepath.Join(dir, "package.json"), filepath.Join(dir, ".npmrc"))
 	}
 	for _, path := range paths {
 		b, err := os.ReadFile(filepath.Join(in.Root, path))
@@ -304,23 +373,6 @@ func nodeFingerprint(in Input, versions string) (string, error) {
 		h.Write(b)
 	}
 	return hex.EncodeToString(h.Sum(nil)), nil
-}
-
-func PackageManager(root, fallback string) string {
-	manager := strings.TrimSpace(fallback)
-	if pkg, err := workspace.ReadPackageJSON(root); err == nil && pkg != nil && pkg.PackageManager != "" {
-		manager = pkg.PackageManager
-	}
-	manager, _, _ = strings.Cut(manager, "@")
-	if manager != "" {
-		return manager
-	}
-	for _, item := range []struct{ file, manager string }{{"bun.lock", "bun"}, {"bun.lockb", "bun"}, {"yarn.lock", "yarn"}, {"package-lock.json", "npm"}} {
-		if exists(filepath.Join(root, item.file)) {
-			return item.manager
-		}
-	}
-	return "pnpm"
 }
 
 func NodeInstallCommand(root, manager string) []string {
@@ -410,5 +462,29 @@ func preparationError(project, dir, command string, err error, detail string) *o
 	if errors.As(err, &exit) {
 		context["exit_code"] = exit.ExitCode()
 	}
-	return cliErrors.New(code, fmt.Sprintf("%s dependency preparation failed (%s): %v\n%s", project, command, err, strings.TrimSpace(detail))).WithContext(context)
+	return cliErrors.New(code, i18n.Tf("dependencies.failed", project, command, err, strings.TrimSpace(detail))).WithContext(context)
+}
+
+// Internal packages belong to the same install even when only their parent is
+// registered in one.manifest.json or selected for development/building.
+func nodePackageDirs(in Input) ([]string, error) {
+	seen := map[string]bool{}
+	var dirs []string
+	for _, p := range in.Manifest.Projects {
+		if p.Toolchain != "node" {
+			continue
+		}
+		members, err := workspace.NodeProjectPackageDirs(in.Root, p.RelativeDir, nil)
+		if err != nil {
+			return nil, err
+		}
+		for _, member := range members {
+			if !seen[member] {
+				seen[member] = true
+				dirs = append(dirs, member)
+			}
+		}
+	}
+	sort.Strings(dirs)
+	return dirs, nil
 }

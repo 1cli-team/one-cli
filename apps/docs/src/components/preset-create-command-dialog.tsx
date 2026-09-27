@@ -17,7 +17,6 @@ import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import type { Example } from "@/data/examples";
 import {
   templates,
-  type DeployOption,
   type TemplateKind,
   type TemplateMeta,
 } from "@/data/templates";
@@ -31,7 +30,6 @@ import {
 
 type DialogLocale = "zh" | "en";
 type KindFilter = "all" | TemplateKind;
-type ContainerKind = "docker" | "dockerhub" | "ghcr" | "acr";
 
 const kindOrder: KindFilter[] = ["all", "frontend", "backend", "library"];
 
@@ -41,21 +39,6 @@ const kindIcons: Record<KindFilter, typeof Layers3> = {
   backend: Server,
   library: Library,
 };
-
-const containerOptions: {
-  id: ContainerKind;
-  code: string;
-  name: Record<DialogLocale, string>;
-}[] = [
-  { id: "dockerhub", code: "h", name: { zh: "Docker Hub", en: "Docker Hub" } },
-  { id: "ghcr", code: "g", name: { zh: "GHCR", en: "GHCR" } },
-  { id: "acr", code: "a", name: { zh: "阿里云 ACR", en: "Aliyun ACR" } },
-  {
-    id: "docker",
-    code: "d",
-    name: { zh: "通用 Docker Registry", en: "Generic Docker Registry" },
-  },
-];
 
 const copy = {
   zh: {
@@ -78,12 +61,6 @@ const copy = {
       backend: "后端",
       library: "库",
     } satisfies Record<KindFilter, string>,
-    deployModal: {
-      title: "选择部署目标",
-      containerTitle: "Container 类型",
-      cancel: "取消",
-      confirm: "添加",
-    },
   },
   en: {
     title: "Copy create command",
@@ -105,12 +82,6 @@ const copy = {
       backend: "Backend",
       library: "Library",
     } satisfies Record<KindFilter, string>,
-    deployModal: {
-      title: "Choose a deploy target",
-      containerTitle: "Container type",
-      cancel: "Cancel",
-      confirm: "Add",
-    },
   },
 } satisfies Record<DialogLocale, unknown>;
 
@@ -129,9 +100,6 @@ export function PresetCreateCommandDialog({
   const [workspaceName, setWorkspaceName] = useState("my-workspace");
   const [projects, setProjects] = useState<CommandProject[]>([]);
   const [pickerOpen, setPickerOpen] = useState(false);
-  const [pendingTemplate, setPendingTemplate] = useState<TemplateMeta | null>(
-    null,
-  );
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
@@ -144,7 +112,6 @@ export function PresetCreateCommandDialog({
       })),
     );
     setPickerOpen(false);
-    setPendingTemplate(null);
     setCopied(false);
   }, [example, open]);
 
@@ -187,17 +154,11 @@ export function PresetCreateCommandDialog({
   }
 
   function attemptAdd(template: TemplateMeta) {
-    if (template.deployOptions.length === 0) {
-      addProject(template, null, null);
-      return;
-    }
-    setPendingTemplate(template);
+    addProject(template);
   }
 
   function addProject(
     template: TemplateMeta,
-    deployCode: string | null,
-    containerCode: string | null,
   ) {
     setProjects((prev) => [
       ...prev,
@@ -205,8 +166,6 @@ export function PresetCreateCommandDialog({
         uid: `${template.id}-${Date.now()}-${prev.length}`,
         kind: template.presetKind,
         tcode: template.code,
-        dcode: deployCode ?? undefined,
-        ccode: containerCode ?? undefined,
         templateId: template.id,
         title: template.title,
         defaultName: template.defaultName,
@@ -358,18 +317,7 @@ export function PresetCreateCommandDialog({
         }}
       />
 
-      <DeployPickerDialog
-        lang={lang}
-        template={pendingTemplate}
-        text={text}
-        onCancel={() => setPendingTemplate(null)}
-        onConfirm={({ deployCode, containerCode }) => {
-          if (pendingTemplate) {
-            addProject(pendingTemplate, deployCode, containerCode);
-          }
-          setPendingTemplate(null);
-        }}
-      />
+
     </>
   );
 }
@@ -469,186 +417,6 @@ function AddProjectDialog({
         </div>
       </DialogContent>
     </Dialog>
-  );
-}
-
-function DeployPickerDialog({
-  lang,
-  template,
-  text,
-  onCancel,
-  onConfirm,
-}: {
-  lang: DialogLocale;
-  template: TemplateMeta | null;
-  text: (typeof copy)[DialogLocale];
-  onCancel: () => void;
-  onConfirm: (value: {
-    deployCode: string | null;
-    containerCode: string | null;
-  }) => void;
-}) {
-  const [chosen, setChosen] = useState<string | null>(null);
-  const [container, setContainer] = useState<string>("h");
-
-  useEffect(() => {
-    if (!template) return;
-    setChosen(template.defaultDeployCode);
-    setContainer("h");
-  }, [template]);
-
-  return (
-    <Dialog open={template !== null} onOpenChange={(nextOpen) => !nextOpen && onCancel()}>
-      <DialogContent
-        showCloseButton={false}
-        className="!w-[calc(100%-2rem)] !max-w-md !p-0 !gap-0 max-h-[min(640px,calc(100vh-2rem))] flex flex-col overflow-hidden !rounded-xl border border-stone-200 bg-white !text-stone-900"
-      >
-        {template && (
-          <>
-            <header className="flex items-start justify-between gap-3 px-5 pb-3 pt-5">
-              <div className="min-w-0">
-                <div className="flex items-center gap-2">
-                  <Rocket className="size-4 shrink-0 text-[#ea580c]" />
-                  <DialogTitle className="!font-sans !text-base !font-semibold !leading-tight text-stone-900 truncate">
-                    {text.deployModal.title}
-                  </DialogTitle>
-                </div>
-                <p className="mt-1 text-xs leading-5 text-stone-500">
-                  {template.title[lang]}
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={onCancel}
-                aria-label={text.close}
-                className="-mr-1 inline-flex size-8 shrink-0 items-center justify-center rounded-md text-stone-400 hover:bg-stone-100 hover:text-stone-700"
-              >
-                <X className="size-4" />
-              </button>
-            </header>
-
-            <ul className="flex min-h-0 flex-1 flex-col gap-1 overflow-auto px-3 pb-3">
-              {template.deployOptions.map((opt) => (
-                <DeployOptionRow
-                  key={opt.code}
-                  option={opt}
-                  lang={lang}
-                  isDefault={opt.code === template.defaultDeployCode}
-                  checked={chosen === opt.code}
-                  onChoose={() => setChosen(opt.code)}
-                />
-              ))}
-            </ul>
-
-            {chosen === "k" && (
-              <div className="border-t border-stone-100 px-5 py-3">
-                <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-stone-500">
-                  {text.deployModal.containerTitle}
-                </p>
-                <div className="grid grid-cols-2 gap-1">
-                  {containerOptions.map((opt) => (
-                    <button
-                      key={opt.id}
-                      type="button"
-                      onClick={() => setContainer(opt.code)}
-                      className={[
-                        "rounded-md border px-2.5 py-2 text-left text-xs transition",
-                        container === opt.code
-                          ? "border-orange-200 bg-orange-50 text-stone-900"
-                          : "border-stone-200 bg-white text-stone-600 hover:border-stone-300 hover:text-stone-900",
-                      ].join(" ")}
-                    >
-                      {opt.name[lang]}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            <footer className="flex items-center justify-end gap-2 border-t border-stone-100 px-5 py-3">
-              <button
-                type="button"
-                onClick={onCancel}
-                className="inline-flex h-8 items-center rounded-md px-3 text-sm font-medium text-stone-600 hover:bg-stone-100 hover:text-stone-900"
-              >
-                {text.deployModal.cancel}
-              </button>
-              <button
-                type="button"
-                onClick={() =>
-                  onConfirm({
-                    deployCode: chosen,
-                    containerCode: chosen === "k" ? container : null,
-                  })
-                }
-                className="inline-flex h-8 items-center gap-1.5 rounded-md bg-[#ea580c] px-3.5 text-sm font-semibold text-white hover:bg-[#c2410c]"
-              >
-                {text.deployModal.confirm}
-              </button>
-            </footer>
-          </>
-        )}
-      </DialogContent>
-    </Dialog>
-  );
-}
-
-function DeployOptionRow({
-  option,
-  lang,
-  isDefault,
-  checked,
-  onChoose,
-}: {
-  option: DeployOption;
-  lang: DialogLocale;
-  isDefault: boolean;
-  checked: boolean;
-  onChoose: () => void;
-}) {
-  return (
-    <li>
-      <button
-        type="button"
-        onClick={onChoose}
-        className={[
-          "flex w-full items-center gap-3 rounded-md px-3 py-2 text-left transition",
-          checked
-            ? "bg-orange-50 text-stone-900"
-            : "text-stone-700 hover:bg-stone-50",
-        ].join(" ")}
-      >
-        <span
-          className={[
-            "inline-flex size-4 shrink-0 items-center justify-center rounded-full border-2 transition",
-            checked
-              ? "border-[#ea580c] bg-[#ea580c]"
-              : "border-stone-300 bg-white",
-          ].join(" ")}
-          aria-hidden
-        >
-          {checked && <Check className="size-2.5 text-white" strokeWidth={3} />}
-        </span>
-        <span className="min-w-0 flex-1 truncate text-sm font-medium">
-          {option.name[lang]}
-        </span>
-        <code
-          className={[
-            "shrink-0 rounded px-1.5 py-0.5 font-mono text-[10px] transition",
-            checked
-              ? "bg-orange-100 text-[#c2410c]"
-              : "bg-stone-100 text-stone-500",
-          ].join(" ")}
-        >
-          {option.code}
-        </code>
-        {isDefault && (
-          <span className="shrink-0 text-[10px] text-stone-400">
-            {lang === "zh" ? "默认" : "default"}
-          </span>
-        )}
-      </button>
-    </li>
   );
 }
 
