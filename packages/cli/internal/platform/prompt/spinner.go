@@ -61,7 +61,6 @@ func renderSpinner(w io.Writer, title string, stop <-chan struct{}, done chan<- 
 
 	accent := compat.AdaptiveColor{Light: lipgloss.Color("#0E7490"), Dark: lipgloss.Color("#22D3EE")}
 	frameStyle := lipgloss.NewStyle().Foreground(accent)
-	titleStyle := lipgloss.NewStyle().Foreground(compat.AdaptiveColor{Light: lipgloss.Color("#374151"), Dark: lipgloss.Color("#D1D5DB")})
 
 	t := time.NewTicker(frameInterval)
 	defer t.Stop()
@@ -69,7 +68,7 @@ func renderSpinner(w io.Writer, title string, stop <-chan struct{}, done chan<- 
 	idx := 0
 	// Print initial frame so the spinner appears immediately.
 	render := func() {
-		lipgloss.Fprintf(w, "\r%s %s ", frameStyle.Render(frames[idx]), titleStyle.Render(title))
+		lipgloss.Fprintf(w, "\r%s %s ", frameStyle.Render(frames[idx]), title)
 		idx = (idx + 1) % len(frames)
 	}
 	render()

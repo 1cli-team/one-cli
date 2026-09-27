@@ -1,7 +1,6 @@
 package build
 
 import (
-	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -104,18 +103,5 @@ func TestPreparationFailureAndCancellationPreventBuilds(t *testing.T) {
 				t.Fatal(result)
 			}
 		})
-	}
-}
-
-func TestPrefixWriterPreservesLargeAndPartialOutput(t *testing.T) {
-	var out bytes.Buffer
-	w := &prefixWriter{out: &out, prefix: "[web] "}
-	_, _ = w.Write([]byte("first\npar"))
-	_, _ = w.Write([]byte("tial\n" + strings.Repeat("x", 200000)))
-	w.Flush()
-	got := strings.ReplaceAll(out.String(), "[web] ", "")
-	want := "first\npartial\n" + strings.Repeat("x", 200000) + "\n"
-	if got != want {
-		t.Fatalf("output lost: length %d, want %d", len(got), len(want))
 	}
 }

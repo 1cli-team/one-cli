@@ -89,8 +89,8 @@ one add nestjs-api --name api
 |---|---|
 | `one create <workspace>` | Create an empty workspace |
 | `one add <starter>` | Add another app, service, docs site, or library |
-| `one dev [project]` | Run every project, or one selected project, locally |
-| `one build [project]` | Build every buildable project, or one selected project |
+| `one dev [projects...]` | Run all or selected projects; native output for one task, TUI for multiple tasks |
+| `one build [projects...]` | Build all or selected projects in dependency order; optional bounded concurrency |
 | `one env` | Review and manage environment variables |
 | `one login` | Sign in to Infisical with your browser |
 | `one serve` | Inspect workspaces, manage the current account and shared credentials |
@@ -170,3 +170,36 @@ Read [CONTRIBUTING.md](./CONTRIBUTING.md) before opening a pull request.
 ## License
 
 MIT.
+
+### Development and build terminals
+
+```sh
+one dev web api                   # Run a selected set of projects in parallel
+one dev --select                  # Search and select projects interactively
+one dev web                       # Keep the project's native colors, progress, and input
+one dev web api --keep-going      # Keep peers running if a project exits
+one dev web api --ui=stream       # Use continuous prefixed logs
+one build web api --concurrency=4 # Build ready tasks concurrently, respecting local dependencies
+```
+
+`--ui=auto` uses a native terminal for one task and a TUI for multiple tasks.
+Override it with `raw`, `tui`, or `stream`. TUI and raw require an interactive
+terminal with text output; CI, pipes, and JSON/YAML output use streaming logs.
+Structured results remain on stdout and task logs go to stderr. `--dry-run`
+only prints the selected execution plan.
+
+In the TUI, use ↑/↓ to select a project, Enter to send it keyboard input, and
+Ctrl+] to return to navigation. PgUp/PgDn scroll history, f resumes following,
+/ searches projects, and h hides the project list. In dev, r restarts the selected
+project and s stops it. Ctrl+C in navigation stops the session and its process
+trees. Ctrl+C in input mode is sent to the selected application. By default any
+dev process exiting stops the group; `--keep-going` keeps the other projects alive.
+
+Build concurrency defaults to 1. Selected local Node dependencies run first;
+project selection does not implicitly add unselected dependencies. Failed builds
+stop new scheduling, finish already running independent builds, and block tasks
+that depend on the failure. Build sessions return to the shell automatically.
+
+Interactive task terminals currently support Unix (including Linux and macOS).
+Windows supports native single-task output and streaming multiple tasks; auto
+falls back to streaming until a ConPTY adapter is available.

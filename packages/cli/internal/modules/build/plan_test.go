@@ -173,3 +173,14 @@ func TestEmptyBuildAndInvalidEnvironment(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
+func TestMultipleProjectSelectionOrdersDependenciesAndDeduplicates(t *testing.T) {
+	w := fixture(t)
+	p, err := NewPlanForProjects(w, []string{"apps/web", "library", "web"}, "")
+	if err != nil || len(p.Tasks) != 2 || p.Tasks[0].Project != "library" || p.Tasks[1].Project != "web" {
+		t.Fatalf("%+v %v", p, err)
+	}
+	if _, err := NewPlanForProjects(w, []string{"web", "unknown"}, ""); err == nil {
+		t.Fatal("unknown project accepted")
+	}
+}

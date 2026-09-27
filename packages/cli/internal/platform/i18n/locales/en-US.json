@@ -174,7 +174,7 @@
   "workspace.issue.development_not_available": "local development command is not configured",
   "workspace.next": "Next: ",
   "dev.short": "Start local development",
-  "dev.tip": "Starts every developable project when no project is given, or only the named project. If Node dependencies are missing, you will be asked before they are installed.",
+  "dev.tip": "Start all developable projects, or the selected project names or paths, in parallel. One task keeps its native terminal; multiple tasks use the TUI. Pipes and CI use streaming logs. Missing Node dependencies are installed after confirmation.",
   "dev.dependencies_missing": "Node dependencies required for local development are not installed.",
   "dev.install_hint": "Install workspace dependencies, then rerun the development command",
   "dev.install_mise_hint": "Run this installation command from the workspace root, then retry one dev. One prepares the mise runtime automatically.",
@@ -260,7 +260,7 @@
   "templates.list.short": "List available technology stacks",
   "locale.short": "Show or set the display language (auto / zh-CN / en-US)",
   "build.short": "Build projects",
-  "build.tip": "Build all projects with build tasks, or one selected project. Node projects run their build script; Go projects run task build. Full workspace builds run local dependencies first, one project at a time. Tools and dependencies are prepared automatically before building.",
+  "build.tip": "Build all buildable projects, or selected project names or paths. Node runs its build script; Go runs task build. Respect local dependencies among selected projects, with concurrency 1 by default. Tools and dependencies are prepared first. One task keeps its native terminal; multiple tasks use the TUI.",
   "build.flag.project": "Project name or relative path; defaults to all buildable projects",
   "build.flag.env": "Environment to load for each project",
   "build.flag.dry_run": "Show the build plan without installing tools, loading secrets, or running commands",
@@ -270,5 +270,12 @@
   "build.status.not_run": "not run",
   "build.status.failed": "failed",
   "build.status.succeeded": "succeeded",
-  "build.summary": "Builds: %d succeeded, %d failed, %d skipped, %d not run."
+  "build.summary": "Builds: %d succeeded, %d failed, %d skipped, %d not run.",
+  "task.flag.ui": "Terminal interface: auto | raw | tui | stream",
+  "dev.flag.select": "Interactively search and select projects to start",
+  "dev.flag.keep_going": "Keep other projects running when a project exits",
+  "dev.select_title": "Select projects to start",
+  "build.flag.concurrency": "Maximum concurrent builds, respecting dependencies",
+  "build.status.blocked": "blocked by dependency",
+  "build.status.stopped": "stopped"
 }

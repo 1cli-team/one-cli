@@ -1,12 +1,10 @@
 //go:build windows
 
-package processorch
+package taskrun
 
 import (
 	"bytes"
 	"context"
-	"fmt"
-	"os"
 	"strings"
 	"testing"
 	"time"
@@ -14,7 +12,7 @@ import (
 
 func TestRunBuiltinWindows_NoEntries_NoOp(t *testing.T) {
 	var out bytes.Buffer
-	if err := runBuiltin(context.Background(), t.TempDir(), nil, BuiltinOpts{Out: &out}); err != nil {
+	if err := runTestProcesses(context.Background(), t.TempDir(), nil, testOpts{Out: &out}); err != nil {
 		t.Fatalf("empty entries should be a no-op: %v", err)
 	}
 	if out.Len() != 0 {
@@ -24,11 +22,11 @@ func TestRunBuiltinWindows_NoEntries_NoOp(t *testing.T) {
 
 func TestRunBuiltinWindows_PrefixesOutput(t *testing.T) {
 	var out bytes.Buffer
-	err := runBuiltin(context.Background(), t.TempDir(), []ProcEntry{
+	err := runTestProcesses(context.Background(), t.TempDir(), []testEntry{
 		{Name: "api", Cmd: "echo hello-from-windows"},
-	}, BuiltinOpts{Out: &out})
+	}, testOpts{Out: &out})
 	if err != nil {
-		t.Fatalf("runBuiltin: %v", err)
+		t.Fatalf("runTestProcesses: %v", err)
 	}
 	if !strings.Contains(out.String(), "api | hello-from-windows") {
 		t.Fatalf("missing prefixed output: %q", out.String())
@@ -37,10 +35,10 @@ func TestRunBuiltinWindows_PrefixesOutput(t *testing.T) {
 
 func TestRunBuiltinWindows_ChildFailureStopsSiblings(t *testing.T) {
 	start := time.Now()
-	err := runBuiltin(context.Background(), t.TempDir(), []ProcEntry{
+	err := runTestProcesses(context.Background(), t.TempDir(), []testEntry{
 		{Name: "failure", Cmd: "exit /b 7"},
 		{Name: "long", Cmd: "ping -n 30 127.0.0.1 >nul"},
-	}, BuiltinOpts{Out: &bytes.Buffer{}})
+	}, testOpts{Out: &bytes.Buffer{}})
 	if err == nil {
 		t.Fatal("expected child failure")
 	}
@@ -56,23 +54,13 @@ func TestRunBuiltinWindows_ContextCancelStopsProcessTree(t *testing.T) {
 		cancel()
 	}()
 	start := time.Now()
-	err := runBuiltin(ctx, t.TempDir(), []ProcEntry{
+	err := runTestProcesses(ctx, t.TempDir(), []testEntry{
 		{Name: "long", Cmd: "ping -n 30 127.0.0.1 >nul"},
-	}, BuiltinOpts{Out: &bytes.Buffer{}})
+	}, testOpts{Out: &bytes.Buffer{}})
 	if err == nil {
 		t.Fatal("expected context cancellation")
 	}
 	if elapsed := time.Since(start); elapsed > 5*time.Second {
 		t.Fatalf("context cancellation did not stop process tree promptly: %v", elapsed)
-	}
-}
-
-func TestWindowsSignalError(t *testing.T) {
-	err := &windowsSignalError{sig: os.Interrupt}
-	if err.ExitCode() != 130 {
-		t.Fatalf("interrupt exit code = %d, want 130", err.ExitCode())
-	}
-	if !IsSignal(err) || IsSignal(fmt.Errorf("ordinary")) {
-		t.Fatal("IsSignal classification is incorrect")
 	}
 }

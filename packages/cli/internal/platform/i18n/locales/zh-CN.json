@@ -174,7 +174,7 @@
   "workspace.issue.development_not_available": "未配置本地开发命令",
   "workspace.next": "下一步：",
   "dev.short": "启动本地开发",
-  "dev.tip": "不指定项目时启动全部可开发项目；传入项目名时只启动该项目。检测到 Node 依赖缺失时会先询问是否安装。",
+  "dev.tip": "不指定项目时并行启动全部可开发项目；可传入多个项目名或路径。单任务保留原生终端，多任务使用 TUI；管道和 CI 使用连续日志。检测到 Node 依赖缺失时会先询问是否安装。",
   "dev.dependencies_missing": "本地开发所需的 Node 依赖尚未安装。",
   "dev.install_hint": "先安装工作区依赖，再重新运行开发命令",
   "dev.install_mise_hint": "在工作区根目录运行此安装命令，再重试 one dev。One 会自动准备 mise runtime。",
@@ -260,7 +260,7 @@
   "templates.list.short": "查看可用技术栈",
   "locale.short": "查看或设置显示语言（auto / zh-CN / en-US）",
   "build.short": "构建项目",
-  "build.tip": "构建全部有 build 任务的项目，或只构建一个项目。Node 执行 build 脚本，Go 执行 task build。全量构建先处理本地依赖，逐个执行项目；构建前自动准备工具和应用依赖。",
+  "build.tip": "构建全部有 build 任务的项目，或指定的多个项目。Node 执行 build 脚本，Go 执行 task build。按所选项目的本地依赖顺序构建，默认并发数为 1；构建前自动准备工具和依赖。单任务保留原生终端，多任务使用 TUI。",
   "build.flag.project": "项目名或相对路径；默认构建所有可构建项目",
   "build.flag.env": "每个项目使用的环境",
   "build.flag.dry_run": "只展示构建计划，不安装工具、不读取密钥、不执行命令",
@@ -270,5 +270,12 @@
   "build.status.not_run": "未执行",
   "build.status.failed": "失败",
   "build.status.succeeded": "成功",
-  "build.summary": "构建结果：%d 个成功，%d 个失败，%d 个跳过，%d 个未执行。"
+  "build.summary": "构建结果：%d 个成功，%d 个失败，%d 个跳过，%d 个未执行。",
+  "task.flag.ui": "终端界面：auto | raw | tui | stream",
+  "dev.flag.select": "交互式搜索并多选要启动的项目",
+  "dev.flag.keep_going": "一个项目退出后继续运行其他项目",
+  "dev.select_title": "选择要启动的项目",
+  "build.flag.concurrency": "最多同时构建的项目数（遵守依赖顺序）",
+  "build.status.blocked": "依赖失败",
+  "build.status.stopped": "已停止"
 }

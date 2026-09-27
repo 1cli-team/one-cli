@@ -44,6 +44,14 @@ type nodePackage struct {
 // NewPlan reads project configuration only. It never prepares a runtime,
 // installs dependencies, loads secrets, or runs a child command.
 func NewPlan(w execution.Workspace, selector, environment string) (*Plan, error) {
+	var selectors []string
+	if selector != "" {
+		selectors = []string{selector}
+	}
+	return NewPlanForProjects(w, selectors, environment)
+}
+
+func NewPlanForProjects(w execution.Workspace, selectors []string, environment string) (*Plan, error) {
 	kind, err := execution.RuntimeKind(w.Root())
 	if err != nil {
 		return nil, err
@@ -53,12 +61,16 @@ func NewPlan(w execution.Workspace, selector, environment string) (*Plan, error)
 		return nil, err
 	}
 	projects := w.Projects()
-	if selector != "" {
-		p, ok := w.Project(selector)
-		if !ok {
-			return nil, cliErrors.New(cliErrors.SUBPROJECT_NOT_FOUND, "Unknown project: "+selector)
+	if len(selectors) > 0 {
+		names, err := w.SelectProjects(selectors, "")
+		if err != nil {
+			return nil, err
 		}
-		projects = append(projects[:0:0], *p)
+		projects = projects[:0:0]
+		for _, name := range names {
+			p, _ := w.Project(name)
+			projects = append(projects, *p)
+		}
 	}
 	plan := &Plan{Schema: "one-cli/build-plan/v1", Runtime: kind, Environment: environment, DryRun: true, Tasks: []Task{}}
 	packages := map[string]nodePackage{}
@@ -72,14 +84,14 @@ func NewPlan(w execution.Workspace, selector, environment string) (*Plan, error)
 		task.Argv, err = execution.OperationArgs(w, p.Name, "build")
 		if err != nil {
 			var missing *output.Error
-			if selector != "" || !errors.As(err, &missing) || missing.Code != string(cliErrors.RUNTIME_TASK_NOT_FOUND) {
+			if len(selectors) > 0 || !errors.As(err, &missing) || missing.Code != string(cliErrors.RUNTIME_TASK_NOT_FOUND) {
 				return nil, fmt.Errorf("%s: %w", p.Name, err)
 			}
 			task.Status, task.Reason = "skipped", "no-build-task"
 		} else {
 			ready++
 		}
-		if p.Toolchain == "node" && selector == "" {
+		if p.Toolchain == "node" && len(projects) > 1 {
 			raw, err := os.ReadFile(filepath.Join(p.TargetDir, "package.json"))
 			if err != nil {
 				return nil, err

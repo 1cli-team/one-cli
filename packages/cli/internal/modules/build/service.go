@@ -6,23 +6,23 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"os/exec"
-	"os/signal"
+
 	"strings"
-	"syscall"
-	"time"
 
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/application/execution"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/modules/dependencies"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/i18n"
 	platformprocess "github.com/torchstellar-team/one-cli/packages/cli/internal/platform/process"
+	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/taskrun"
 )
 
 type Runner func(context.Context, string, Task, string, io.Writer) error
 
 type Service struct {
-	Prepare func(context.Context, dependencies.Input) error
-	Run     Runner
+	Prepare     func(context.Context, dependencies.Input) error
+	UI          taskrun.Mode
+	Concurrency int
+	Run         Runner
 }
 
 type Result struct {
@@ -50,7 +50,7 @@ func (r *Result) RenderTTY(w io.Writer) {
 	for _, task := range r.Tasks {
 		counts[task.Status]++
 	}
-	fmt.Fprintf(w, i18n.T("build.summary")+"\n", counts["succeeded"], counts["failed"], counts["skipped"], counts["not_run"])
+	fmt.Fprintf(w, i18n.T("build.summary")+"\n", counts["succeeded"], counts["failed"], counts["skipped"], counts["not_run"]+counts["blocked"]+counts["stopped"])
 	if r.Error != "" {
 		fmt.Fprintln(w, r.Error)
 	}
@@ -59,6 +59,8 @@ func (r *Result) RenderTTY(w io.Writer) {
 // Execute prepares all selected projects before running any build, then runs
 // each finite task to completion. A failure leaves remaining tasks not_run.
 func (s Service) Execute(ctx context.Context, w execution.Workspace, plan *Plan, log io.Writer) (*Result, error) {
+	ctx, stop := taskrun.SignalContext(ctx)
+	defer stop()
 	copyPlan := *plan
 	copyPlan.Tasks = append([]Task{}, plan.Tasks...)
 	copyPlan.Schema, copyPlan.DryRun = "one-cli/build-result/v1", false
@@ -73,22 +75,6 @@ func (s Service) Execute(ctx context.Context, w execution.Workspace, plan *Plan,
 	if log == nil {
 		log = io.Discard
 	}
-	ctx, cancel := context.WithCancelCause(ctx)
-	defer cancel(nil)
-	signals := make(chan os.Signal, 1)
-	signal.Notify(signals, os.Interrupt, syscall.SIGTERM)
-	defer signal.Stop(signals)
-	go func() {
-		select {
-		case sig := <-signals:
-			code := 130
-			if sig == syscall.SIGTERM {
-				code = 143
-			}
-			cancel(&platformprocess.ExitStatus{Code: code})
-		case <-ctx.Done():
-		}
-	}()
 	fail := func(err error) (*Result, error) {
 		if ctx.Err() != nil {
 			err = context.Cause(ctx)
@@ -111,95 +97,47 @@ func (s Service) Execute(ctx context.Context, w execution.Workspace, plan *Plan,
 			return fail(err)
 		}
 	}
-	run := s.Run
-	if run == nil {
-		run = runProject
+	binary, err := os.Executable()
+	if err != nil {
+		return fail(err)
 	}
-	for i := range result.Tasks {
-		task := &result.Tasks[i]
+	var tasks []taskrun.Task
+	byName := map[string]int{}
+	for i, task := range result.Tasks {
 		if task.Status == "skipped" {
 			continue
 		}
-		if ctx.Err() != nil {
-			return fail(ctx.Err())
+		argv := []string{binary, "run", "--project", task.Project, "-o", "json"}
+		if plan.Environment != "" {
+			argv = append(argv, "--env", plan.Environment)
 		}
-		fmt.Fprintf(log, "[%s] %s\n", task.Project, strings.Join(task.Argv, " "))
-		start := time.Now()
-		err := run(ctx, w.Root(), *task, plan.Environment, log)
-		task.DurationMS = time.Since(start).Milliseconds()
-		if err != nil {
-			task.Status = "failed"
-			res, exit := fail(fmt.Errorf("%s: %w", task.Project, err))
-			task.ExitCode = res.ExitCode
-			return res, exit
+		argv = append(append(argv, "--"), task.Argv...)
+		tasks = append(tasks, taskrun.Task{Name: task.Project, Directory: w.Root(), Argv: argv, Dependencies: task.Dependencies})
+		byName[task.Project] = i
+	}
+	opts := taskrun.Options{Mode: s.UI, Title: "build", Concurrency: s.Concurrency, Output: log}
+	if s.Run != nil {
+		opts.Run = func(ctx context.Context, t taskrun.Task, out io.Writer) error {
+			return s.Run(ctx, w.Root(), result.Tasks[byName[t.Name]], plan.Environment, out)
 		}
-		task.Status = "succeeded"
+	}
+	outcomes, err := taskrun.Run(ctx, tasks, opts)
+	for _, outcome := range outcomes {
+		task := &result.Tasks[byName[outcome.Name]]
+		task.Status = outcome.Status
+		task.ExitCode = outcome.ExitCode
+		task.DurationMS = outcome.Duration.Milliseconds()
+		if outcome.Status == "failed" && result.Error == "" {
+			result.Error = fmt.Sprintf("%s: %v", outcome.Name, outcome.Err)
+		}
+	}
+	if err != nil {
+		message := result.Error
+		res, e := fail(err)
+		if message != "" {
+			res.Error = message
+		}
+		return res, e
 	}
 	return result, nil
-}
-
-func runProject(ctx context.Context, root string, task Task, environment string, log io.Writer) error {
-	binary, err := os.Executable()
-	if err != nil {
-		return err
-	}
-	args := []string{"run", "--project", task.Project, "-o", "json"}
-	if environment != "" {
-		args = append(args, "--env", environment)
-	}
-	args = append(append(args, "--"), task.Argv...)
-	child := platformprocess.CommandContext(ctx, binary, args...)
-	child.Dir, child.Stdin = root, os.Stdin
-	// The runner is a process boundary: one run remains the single owner of
-	// mise preparation, project secrets, PATH augmentation, and argv execution.
-	child.Env = os.Environ()
-	out := &prefixWriter{out: log, prefix: "[" + task.Project + "] "}
-	child.Stdout, child.Stderr = out, out
-	platformprocess.CancelProcessTree(child)
-	err = child.Run()
-	out.Flush()
-	if ctx.Err() != nil {
-		return context.Cause(ctx)
-	}
-	var exit *exec.ExitError
-	if errors.As(err, &exit) {
-		code := exit.ExitCode()
-		if code < 0 {
-			code = 1
-		}
-		return &platformprocess.ExitStatus{Code: code}
-	}
-	return err
-}
-
-// exec serializes writes when stdout and stderr share the same comparable
-// writer. Chunking long lines bounds memory without dropping any child output.
-type prefixWriter struct {
-	out     io.Writer
-	prefix  string
-	pending string
-}
-
-func (w *prefixWriter) Write(p []byte) (int, error) {
-	w.pending += string(p)
-	for len(w.pending) > 0 {
-		end := strings.IndexByte(w.pending, '\n')
-		if end < 0 {
-			if len(w.pending) < 64*1024 {
-				break
-			}
-			end = 64*1024 - 1
-		}
-		if _, err := fmt.Fprint(w.out, w.prefix, w.pending[:end+1]); err != nil {
-			return 0, err
-		}
-		w.pending = w.pending[end+1:]
-	}
-	return len(p), nil
-}
-func (w *prefixWriter) Flush() {
-	if w.pending != "" {
-		fmt.Fprintln(w.out, w.prefix+w.pending)
-		w.pending = ""
-	}
 }

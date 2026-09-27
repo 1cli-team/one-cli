@@ -7,7 +7,8 @@ import (
 
 // defaultTheme is a clack-ish minimalist theme: thin cyan accents, gray
 // descriptions, ◇/◆ glyphs for the prompt cursor, no thick left border.
-// Huh supplies the terminal background when resolving these styles.
+// Huh supplies the terminal background for accents. Body text keeps the
+// terminal foreground because some terminals cannot report their background.
 //
 // Centralised here so every prompt helper (Text / Select / Confirm / …)
 // applies it consistently. Callers don't need to know about huh.Theme.
@@ -30,8 +31,8 @@ func themeStyles(isDark bool) *huh.Styles {
 		success = lightDark(lipgloss.Color("#16A34A"), lipgloss.Color("#4ADE80"))
 		// Muted red for errors — not blood-red, easier on the eyes.
 		danger = lightDark(lipgloss.Color("#DC2626"), lipgloss.Color("#F87171"))
-		// Body foreground colour — neutral, defers to the terminal scheme.
-		body = lightDark(lipgloss.Color("#111827"), lipgloss.Color("#E5E7EB"))
+		// Buttons paint their own background, so keep a matching foreground.
+		buttonText = lightDark(lipgloss.Color("#111827"), lipgloss.Color("#E5E7EB"))
 	)
 
 	// Replace the thick left border (huh default) with a thin one in the
@@ -63,8 +64,10 @@ func themeStyles(isDark bool) *huh.Styles {
 		Foreground(muted).
 		SetString("◇ ")
 	t.Focused.SelectedOption = t.Focused.SelectedOption.Foreground(success)
-	t.Focused.UnselectedOption = t.Focused.UnselectedOption.Foreground(body)
-	t.Focused.Option = t.Focused.Option.Foreground(body)
+	// Keep unselected labels readable even when background detection falls
+	// back to the wrong light/dark mode. The terminal owns their foreground.
+	t.Focused.UnselectedOption = t.Focused.UnselectedOption.UnsetForeground()
+	t.Focused.Option = t.Focused.Option.UnsetForeground()
 
 	t.Focused.NextIndicator = lipgloss.NewStyle().Foreground(accent).MarginLeft(1).SetString("→")
 	t.Focused.PrevIndicator = lipgloss.NewStyle().Foreground(accent).MarginRight(1).SetString("←")
@@ -80,7 +83,7 @@ func themeStyles(isDark bool) *huh.Styles {
 		Foreground(lipgloss.Color("#FFFFFF")).
 		Background(accent)
 	t.Focused.BlurredButton = t.Focused.BlurredButton.
-		Foreground(body).
+		Foreground(buttonText).
 		Background(lightDark(lipgloss.Color("#E5E7EB"), lipgloss.Color("#1F2937")))
 	t.Focused.Next = t.Focused.FocusedButton
 

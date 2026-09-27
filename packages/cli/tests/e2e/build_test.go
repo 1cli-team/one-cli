@@ -103,7 +103,7 @@ func TestE2E_BuildFailureStopsRemainingTasksAndReturnsChildCode(t *testing.T) {
 	if err := json.Unmarshal([]byte(stdout), &result); err != nil {
 		t.Fatal(err, stdout, stderr)
 	}
-	if code != 42 || result.ExitCode != 42 || result.Tasks[0].Status != "failed" || result.Tasks[1].Status != "not_run" {
+	if code != 42 || result.ExitCode != 42 || result.Tasks[0].Status != "failed" || result.Tasks[1].Status != "blocked" {
 		t.Fatalf("%d %+v %s", code, result, stderr)
 	}
 	if _, err := os.Stat(filepath.Join(root, "order")); !os.IsNotExist(err) {

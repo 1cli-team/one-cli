@@ -67,7 +67,7 @@ func TestE2E_BuildSignalStopsProcessTree(t *testing.T) {
 			if err := json.Unmarshal(out.Bytes(), &result); err != nil {
 				t.Fatal(err, out.String())
 			}
-			if result.Tasks[0].Status != "failed" || result.Tasks[1].Status != "not_run" {
+			if result.Tasks[0].Status != "stopped" || result.Tasks[1].Status != "not_run" {
 				t.Fatal(result.Tasks)
 			}
 			deadline = time.Now().Add(3 * time.Second)
