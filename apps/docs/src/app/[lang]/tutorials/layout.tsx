@@ -1,4 +1,4 @@
-import { DocsLayout } from "fumadocs-ui/layouts/docs";
+import { DocsLayout } from "../../docs/docs-layout";
 import type { ReactNode } from "react";
 import { SiteTopNav } from "@/components/site-top-nav";
 import { isLocale } from "@/i18n";
@@ -31,9 +31,9 @@ export default async function Layout({
             "one-docs-layout md:[--fd-nav-height:64px] md:[--fd-sidebar-width:280px] xl:[--fd-toc-width:260px] xl:[--fd-page-width:1160px]",
         }}
         sidebar={{
-          component: <TutorialsSidebar lang={lang} />,
-          tabs: false,
+          children: <TutorialsSidebar lang={lang} />,
         }}
+        tabs={false}
         searchToggle={{ enabled: false }}
       >
         {children}

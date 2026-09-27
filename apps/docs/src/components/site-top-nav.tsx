@@ -1,4 +1,5 @@
-import { Github, Search } from "lucide-react";
+import { Search } from "lucide-react";
+import { GithubIcon as Github } from "@/components/github-icon";
 import Link from "next/link";
 import { BrandMark } from "@/components/brand-mark";
 import {

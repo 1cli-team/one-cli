@@ -1,7 +1,7 @@
 package prompt
 
 import (
-	"github.com/charmbracelet/huh"
+	"charm.land/huh/v2"
 )
 
 // Form is a fluent builder for multi-step prompts that share one

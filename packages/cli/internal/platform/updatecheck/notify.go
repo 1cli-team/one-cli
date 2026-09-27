@@ -9,7 +9,7 @@ import (
 	"os"
 	"runtime"
 
-	"github.com/charmbracelet/lipgloss"
+	"charm.land/lipgloss/v2"
 
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/output"
 )
@@ -62,8 +62,8 @@ func printWarning(w *os.File, latest, current string) {
 	dim := lipgloss.NewStyle().Foreground(lipgloss.Color("8"))
 	headline := yellow.Render(fmt.Sprintf("⚠  one cli 有新版本可用：%s（当前 %s）", latest, current))
 	cmd := dim.Render("   " + installCommand(runtime.GOOS))
-	fmt.Fprintln(w, headline)
-	fmt.Fprintln(w, cmd)
+	lipgloss.Fprintln(w, headline)
+	lipgloss.Fprintln(w, cmd)
 }
 
 // shouldSkip is the single source of truth for "should this command

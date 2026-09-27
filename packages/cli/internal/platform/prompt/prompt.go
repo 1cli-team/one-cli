@@ -18,7 +18,7 @@ import (
 	"os"
 	"os/signal"
 
-	"github.com/charmbracelet/huh"
+	"charm.land/huh/v2"
 
 	cliErrors "github.com/torchstellar-team/one-cli/packages/cli/internal/platform/errors"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/output"

@@ -1,10 +1,6 @@
 "use client";
 
-import {
-  Sidebar,
-  SidebarContent,
-  SidebarContentMobile,
-} from "fumadocs-ui/components/layout/sidebar";
+import { DocsSidebarShell } from "./docs-sidebar-shell";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { localizedTutorialsPath, type Locale } from "@/i18n";
@@ -84,21 +80,10 @@ const sidebarText: Record<
 };
 
 export function TutorialsSidebar({ lang }: { lang: Locale }) {
-  const sidebar = <TutorialsSidebarInner lang={lang} />;
-
   return (
-    <Sidebar
-      Content={
-        <SidebarContent className="one-docs-sidebar-shell">
-          {sidebar}
-        </SidebarContent>
-      }
-      Mobile={
-        <SidebarContentMobile className="one-docs-sidebar-mobile">
-          {sidebar}
-        </SidebarContentMobile>
-      }
-    />
+    <DocsSidebarShell>
+      <TutorialsSidebarInner lang={lang} />
+    </DocsSidebarShell>
   );
 }
 

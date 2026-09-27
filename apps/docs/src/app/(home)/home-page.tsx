@@ -6,7 +6,6 @@ import {
   ClipboardCheck,
   Code2,
   FileJson2,
-  Github,
   Layers3,
   PackageCheck,
   Route,
@@ -14,6 +13,7 @@ import {
   Sparkles,
   Wrench,
 } from "lucide-react";
+import { GithubIcon as Github } from "@/components/github-icon";
 import {
   defaultLocale,
   localeLabels,

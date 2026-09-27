@@ -6,14 +6,14 @@
 
 ```bash
 brew install go go-task node    # macOS；Linux 用 apt / dnf 类比
-npm i -g pnpm                   # 或 corepack enable && corepack prepare pnpm@10
+npm i -g pnpm@10.14.0           # 与根 package.json 的 packageManager 一致
 git clone https://github.com/1cli-team/one-cli
 cd one-cli
 task install                    # 打包 Dashboard + CLI，再创建当前平台的本地启动器
 one --version                   # 验证装好
 ```
 
-工具链：**Go 1.25+**、**Node 20+**、**pnpm 10+**。`go-task`（不是 GNU make）是任务总线，跨平台一致。
+工具链：**Go 1.26+**、**pnpm 10.14.0**。Node 推荐使用 **24.x（至少 24.15.0）**，也支持 22.x（至少 22.22.2）或 26+；Dashboard 测试依赖的 jsdom 不再支持 Node 20。`go-task`（不是 GNU make）是任务总线，跨平台一致。
 
 > **fresh-clone 提示**：`packages/cli/internal/resources/bundled/` 整个目录是 gitignore 的——
 > registry / templates / dashboard dist 都由 `task sync-bundled` +

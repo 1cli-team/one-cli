@@ -6,7 +6,8 @@ import (
 	"os"
 	"time"
 
-	"github.com/charmbracelet/lipgloss"
+	"charm.land/lipgloss/v2"
+	"charm.land/lipgloss/v2/compat"
 
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/output"
 )
@@ -58,9 +59,9 @@ func Spin(title string, action func() error) error {
 func renderSpinner(w io.Writer, title string, stop <-chan struct{}, done chan<- struct{}) {
 	defer close(done)
 
-	accent := lipgloss.AdaptiveColor{Light: "#0E7490", Dark: "#22D3EE"}
+	accent := compat.AdaptiveColor{Light: lipgloss.Color("#0E7490"), Dark: lipgloss.Color("#22D3EE")}
 	frameStyle := lipgloss.NewStyle().Foreground(accent)
-	titleStyle := lipgloss.NewStyle().Foreground(lipgloss.AdaptiveColor{Light: "#374151", Dark: "#D1D5DB"})
+	titleStyle := lipgloss.NewStyle().Foreground(compat.AdaptiveColor{Light: lipgloss.Color("#374151"), Dark: lipgloss.Color("#D1D5DB")})
 
 	t := time.NewTicker(frameInterval)
 	defer t.Stop()
@@ -68,7 +69,7 @@ func renderSpinner(w io.Writer, title string, stop <-chan struct{}, done chan<- 
 	idx := 0
 	// Print initial frame so the spinner appears immediately.
 	render := func() {
-		fmt.Fprintf(w, "\r%s %s ", frameStyle.Render(frames[idx]), titleStyle.Render(title))
+		lipgloss.Fprintf(w, "\r%s %s ", frameStyle.Render(frames[idx]), titleStyle.Render(title))
 		idx = (idx + 1) % len(frames)
 	}
 	render()
@@ -94,7 +95,7 @@ func Step(message string) {
 		return
 	}
 	check := lipgloss.NewStyle().
-		Foreground(lipgloss.AdaptiveColor{Light: "#16A34A", Dark: "#4ADE80"}).
+		Foreground(compat.AdaptiveColor{Light: lipgloss.Color("#16A34A"), Dark: lipgloss.Color("#4ADE80")}).
 		SetString("✓")
-	fmt.Fprintf(os.Stderr, "%s %s\n", check, message)
+	lipgloss.Fprintf(os.Stderr, "%s %s\n", check, message)
 }

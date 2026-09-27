@@ -585,6 +585,13 @@ article blockquote {
   background: var(--surface-primary);
 }
 
+@media (min-width: 768px) {
+  .one-docs-layout {
+    --fd-banner-height: 64px;
+    padding-top: 64px;
+  }
+}
+
 .one-docs-sidebar-shell {
   align-items: stretch !important;
   background: var(--surface-primary) !important;
@@ -1321,10 +1328,6 @@ article blockquote {
 }
 
 @media (max-width: 1279px) {
-  .one-docs-layout {
-    --fd-sidebar-width: 256px;
-  }
-
   .one-docs-topbar {
     padding: 0 32px;
   }
@@ -1332,6 +1335,12 @@ article blockquote {
   .one-docs-sidebar-inner {
     padding-right: 26px;
     padding-left: 32px;
+  }
+}
+
+@media (min-width: 768px) and (max-width: 1279px) {
+  .one-docs-layout {
+    --fd-sidebar-width: 256px;
   }
 
   .one-docs-article {

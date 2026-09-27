@@ -1,33 +1,37 @@
 package prompt
 
 import (
-	"github.com/charmbracelet/huh"
-	"github.com/charmbracelet/lipgloss"
+	"charm.land/huh/v2"
+	"charm.land/lipgloss/v2"
 )
 
 // defaultTheme is a clack-ish minimalist theme: thin cyan accents, gray
 // descriptions, ◇/◆ glyphs for the prompt cursor, no thick left border.
-// Tuned to read well on both light and dark terminals via lipgloss
-// AdaptiveColor.
+// Huh supplies the terminal background when resolving these styles.
 //
 // Centralised here so every prompt helper (Text / Select / Confirm / …)
 // applies it consistently. Callers don't need to know about huh.Theme.
-func defaultTheme() *huh.Theme {
-	t := huh.ThemeBase()
+func defaultTheme() huh.Theme {
+	return huh.ThemeFunc(themeStyles)
+}
+
+func themeStyles(isDark bool) *huh.Styles {
+	t := huh.ThemeBase(isDark)
+	lightDark := lipgloss.LightDark(isDark)
 
 	var (
 		// Soft cyan for active selection / cursor — clack uses cyan as its
-		// signature accent. AdaptiveColor lets terminals with light bg pick
+		// signature accent. LightDark lets terminals with light bg pick
 		// the deeper shade.
-		accent = lipgloss.AdaptiveColor{Light: "#0E7490", Dark: "#22D3EE"}
+		accent = lightDark(lipgloss.Color("#0E7490"), lipgloss.Color("#22D3EE"))
 		// Muted gray for descriptions / placeholders / blurred state.
-		muted = lipgloss.AdaptiveColor{Light: "#6B7280", Dark: "#9CA3AF"}
+		muted = lightDark(lipgloss.Color("#6B7280"), lipgloss.Color("#9CA3AF"))
 		// Subtle green for confirmed selections.
-		success = lipgloss.AdaptiveColor{Light: "#16A34A", Dark: "#4ADE80"}
+		success = lightDark(lipgloss.Color("#16A34A"), lipgloss.Color("#4ADE80"))
 		// Muted red for errors — not blood-red, easier on the eyes.
-		danger = lipgloss.AdaptiveColor{Light: "#DC2626", Dark: "#F87171"}
+		danger = lightDark(lipgloss.Color("#DC2626"), lipgloss.Color("#F87171"))
 		// Body foreground colour — neutral, defers to the terminal scheme.
-		body = lipgloss.AdaptiveColor{Light: "#111827", Dark: "#E5E7EB"}
+		body = lightDark(lipgloss.Color("#111827"), lipgloss.Color("#E5E7EB"))
 	)
 
 	// Replace the thick left border (huh default) with a thin one in the
@@ -77,7 +81,7 @@ func defaultTheme() *huh.Theme {
 		Background(accent)
 	t.Focused.BlurredButton = t.Focused.BlurredButton.
 		Foreground(body).
-		Background(lipgloss.AdaptiveColor{Light: "#E5E7EB", Dark: "#1F2937"})
+		Background(lightDark(lipgloss.Color("#E5E7EB"), lipgloss.Color("#1F2937")))
 	t.Focused.Next = t.Focused.FocusedButton
 
 	// Blurred state: hide the border so non-active groups read as quiet.
