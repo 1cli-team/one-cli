@@ -25,7 +25,7 @@ func TestGlobalLocationAndListingStayScoped(t *testing.T) {
 		}
 		switch {
 		case r.URL.Path == "/api/v1/workspace/project-1":
-			w.Write([]byte(`{"workspace":{"id":"project-1","name":"Shared","orgId":"org-1","environments":[{"slug":"dev","name":"Development"},{"slug":"prod","name":"Production"}]}}`))
+			w.Write([]byte(`{"workspace":{"type":"secret-manager","id":"project-1","name":"Shared","orgId":"org-1","environments":[{"slug":"dev","name":"Development"},{"slug":"prod","name":"Production"}]}}`))
 		case strings.Contains(r.URL.Path, "folders"):
 			if r.URL.Query().Get("path") != "/docker" {
 				t.Errorf("folder request: %s", r.URL)
@@ -95,7 +95,7 @@ func TestGlobalSelectedKeysDoNotReadOtherValuesOrExpandReferences(t *testing.T) 
 		w.Header().Set("Content-Type", "application/json")
 		switch r.URL.Path {
 		case "/api/v1/workspace/shared":
-			w.Write([]byte(`{"workspace":{"id":"shared","orgId":"org","environments":[{"slug":"prod"}]}}`))
+			w.Write([]byte(`{"workspace":{"type":"secret-manager","id":"shared","orgId":"org","environments":[{"slug":"prod"}]}}`))
 		case "/api/v3/secrets/raw/AK":
 			reads++
 			q := r.URL.Query()

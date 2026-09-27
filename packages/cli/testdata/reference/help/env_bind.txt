@@ -1,13 +1,13 @@
 
 DESCRIPTION
-选择全局变量的存放项目和默认环境
+选择共享凭据的存放项目和默认环境
 
 USAGE
   one env bind [flags]
 
 COMMON OPTIONS
   --env <value>            默认环境
-  --global                 管理 Infisical 全局变量，可在工作区之外使用
+  --global                 管理 Infisical 共享凭据，可在工作区之外使用
   -o, --output <value>     Output format: json | yaml | text (default: terminal-friendly text, JSON when piped)
-  --path <value>           全局变量目录（仅当前层，不递归）
+  --path <value>           共享凭据目录（仅当前层，不递归）
   --project-id <value>     已有 Infisical 项目 ID

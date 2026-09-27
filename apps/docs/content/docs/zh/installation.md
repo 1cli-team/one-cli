@@ -128,7 +128,7 @@ one mise exec -- pnpm install
 
 ## Infisical 登录
 
-运行 `one login` 在浏览器中登录，会话保存在系统钥匙串。参见[登录与全局变量](/zh/docs/login/)。
+运行 `one login` 在浏览器中登录，会话保存在系统钥匙串。参见[登录与共享凭据](/zh/docs/login/)。
 
 ## 环境变量参考
 

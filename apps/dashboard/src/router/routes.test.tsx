@@ -362,7 +362,7 @@ describe("multi-workspace routing", () => {
 		expect(await screen.findByRole("heading", { name: "Infisical" })).toBeDefined();
 	});
 
-	it("exposes global variables and account settings through the actual application navigation", async () => {
+	it("exposes shared credentials and account settings through the actual application navigation", async () => {
 		await i18n.changeLanguage("en-US");
 		server.use(
 			http.get("http://localhost/api/session", () =>
@@ -383,9 +383,9 @@ describe("multi-workspace routing", () => {
 				</MemoryRouter>
 			</SWRConfig>,
 		);
-		const navigation = await screen.findAllByRole("link", { name: "Global variables" });
+		const navigation = await screen.findAllByRole("link", { name: "Shared credentials" });
 		await user.click(navigation[0]);
-		await screen.findByRole("heading", { name: "Global variables" });
+		await screen.findByRole("heading", { name: "Shared credentials" });
 		await user.click(screen.getByRole("link", { name: "Sign in with browser" }));
 		await screen.findByRole("heading", { name: "Infisical" });
 		expect(screen.getByRole("button", { name: "Sign in with browser" })).toBeTruthy();

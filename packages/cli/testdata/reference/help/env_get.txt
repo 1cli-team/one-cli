@@ -7,8 +7,8 @@ USAGE
 
 COMMON OPTIONS
   --env <value>            Environment name (default: workspace default)
-  --global                 管理 Infisical 全局变量，可在工作区之外使用
+  --global                 管理 Infisical 共享凭据，可在工作区之外使用
   -o, --output <value>     Output format: json | yaml | text (default: terminal-friendly text, JSON when piped)
-  --path <value>           全局变量目录（仅当前层，不递归）
+  --path <value>           共享凭据目录（仅当前层，不递归）
   -p, --project <value>    Project name or relative path; defaults to the current project
   --reveal                 显式输出明文；通常请通过 one run 使用变量

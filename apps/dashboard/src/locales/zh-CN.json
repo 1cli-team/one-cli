@@ -526,17 +526,17 @@
 		"unavailable": "登录状态暂不可用"
 	},
 	"global": {
-		"title": "全局变量",
+		"title": "共享凭据",
 		"description": "集中管理跨项目使用的凭据与变量。",
-		"loginRequired": "登录 Infisical 后即可查看和管理全局变量。",
-		"location": "全局变量位置",
+		"loginRequired": "登录 Infisical 后即可查看和管理共享凭据。",
+		"location": "默认存放位置",
 		"mismatch": "当前账号或实例与已保存的位置不匹配，请重新选择存放项目。",
-		"locationHint": "选择已有 Infisical 项目。这里只保存位置，变量值保存在 Infisical。",
+		"locationHint": "选择或新建存放项目。这里只保存位置，凭据值保存在 Infisical。",
 		"project": "存放项目",
 		"selectProject": "选择存放项目",
 		"defaultEnv": "默认浏览环境",
 		"selectEnv": "选择环境",
-		"noProjects": "没有可用项目，请先在 Infisical 中创建。",
+		"noProjects": "暂无可用的凭据项目，可以使用默认位置或新建项目。",
 		"saveLocation": "保存位置",
 		"browseHint": "切换浏览环境不会修改 CLI 的默认环境。",
 		"environment": "浏览环境",
@@ -559,6 +559,15 @@
 		"saveRemote": "保存到 Infisical",
 		"discard": "放弃修改",
 		"deleteHint": "确认删除 {{project}} / {{environment}} / {{path}} 中的 {{key}}？此操作立即生效。",
-		"folderName": "目录名"
+		"folderName": "目录名",
+		"defaultLocation": "使用默认位置",
+		"defaultLocationHint": "一键准备存放项目并保存位置；已有同名项目会直接复用。",
+		"useDefault": "初始化默认位置",
+		"saving": "正在保存…",
+		"createProject": "新建项目",
+		"createProjectHint": "在当前 Infisical 组织中创建用于存放凭据的项目。创建后选中它，再保存为默认位置。",
+		"projectName": "项目名称",
+		"createAndSelect": "创建并选中",
+		"creatingProject": "正在创建…"
 	}
 }

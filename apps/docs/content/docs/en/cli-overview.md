@@ -18,4 +18,4 @@ description: Daily commands and advanced entry points.
 | `one init mise` / `one init hooks` | Workspace tool configuration |
 | `one ci` / `one templates` / `one skills` | Automation and resources |
 
-Discover the full catalogue with `one help --all`, then read command-specific `--help`. Agents discover metadata and execution options through the CLI, without copying commands from the Dashboard. See [login and global variables](/en/docs/login/).
+Discover the full catalogue with `one help --all`, then read command-specific `--help`. Agents discover metadata and execution options through the CLI, without copying commands from the Dashboard. See [login and shared credentials](/en/docs/login/).

@@ -3,13 +3,11 @@ import { useTranslation } from "react-i18next";
 import useSWR from "swr";
 import { Link } from "react-router-dom";
 import {
-	bindLocation,
 	createGlobalFolder,
 	deleteGlobalSecret,
 	getGlobalListing,
 	getLocation,
 	getProject,
-	getProjects,
 	getSession,
 	globalQuery,
 	locationKey,
@@ -19,6 +17,7 @@ import {
 	sessionKey,
 	type GlobalLocation,
 } from "@/api/session";
+import { LocationPicker } from "./LocationPicker";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -87,6 +86,7 @@ export function GlobalVariables() {
 			{mismatched ? <p role="alert">{t("global.mismatch")}</p> : null}
 			{!current || configure || mismatched ? (
 				<LocationPicker
+					key={`${session.data.session.siteUrl}:${session.data.session.userId}:${session.data.session.organizationId}`}
 					initial={current ?? undefined}
 					onSaved={async () => {
 						await location.mutate();
@@ -101,118 +101,6 @@ export function GlobalVariables() {
 				/>
 			)}
 		</div>
-	);
-}
-function LocationPicker({
-	initial,
-	onSaved,
-	onCancel,
-}: {
-	initial?: GlobalLocation;
-	onSaved: () => Promise<void>;
-	onCancel?: () => void;
-}) {
-	const { t } = useTranslation();
-	const projects = useSWR("/infisical/projects", getProjects);
-	const [project, setProject] = useState(initial?.projectId ?? "");
-	const [environment, setEnvironment] = useState(initial?.defaultEnvironment ?? "");
-	const detail = useSWR(project ? `/infisical/projects/${project}` : null, () =>
-		getProject(project),
-	);
-	const [busy, setBusy] = useState(false);
-	const [error, setError] = useState("");
-	return (
-		<Card>
-			<CardContent className="space-y-4 p-5">
-				<h2 className="font-semibold">{t("global.location")}</h2>
-				<p className="text-sm text-muted-foreground">{t("global.locationHint")}</p>
-				<div className="grid gap-4 sm:grid-cols-2">
-					<div className="space-y-2">
-						<Label>{t("global.project")}</Label>
-						<Select
-							value={project}
-							onValueChange={(v) => {
-								setProject(v);
-								setEnvironment("");
-							}}
-							disabled={busy}
-						>
-							<SelectTrigger aria-label={t("global.project")}>
-								<SelectValue placeholder={t("global.selectProject")} />
-							</SelectTrigger>
-							<SelectContent>
-								{projects.data?.map((p) => (
-									<SelectItem key={p.id} value={p.id}>
-										{p.name}
-									</SelectItem>
-								))}
-							</SelectContent>
-						</Select>
-					</div>
-					<div className="space-y-2">
-						<Label>{t("global.defaultEnv")}</Label>
-						<Select
-							value={environment}
-							onValueChange={setEnvironment}
-							disabled={busy || !detail.data}
-						>
-							<SelectTrigger aria-label={t("global.defaultEnv")}>
-								<SelectValue placeholder={t("global.selectEnv")} />
-							</SelectTrigger>
-							<SelectContent>
-								{detail.data?.environments.map((e) => (
-									<SelectItem key={e.slug} value={e.slug}>
-										{e.name} ({e.slug})
-									</SelectItem>
-								))}
-							</SelectContent>
-						</Select>
-					</div>
-				</div>
-				{projects.data?.length === 0 ? (
-					<p>
-						{t("global.noProjects")}{" "}
-						<a
-							className="underline"
-							href={initial?.siteUrl || "https://app.infisical.com"}
-							target="_blank"
-							rel="noreferrer"
-						>
-							Infisical
-						</a>
-					</p>
-				) : null}
-				{error || projects.error || detail.error ? (
-					<p role="alert" className="text-sm text-error-foreground">
-						{error || message(projects.error || detail.error)}
-					</p>
-				) : null}
-				<div className="flex gap-2">
-					<Button
-						disabled={busy || !project || !environment}
-						onClick={async () => {
-							setBusy(true);
-							setError("");
-							try {
-								await bindLocation(project, environment);
-								await onSaved();
-							} catch (e) {
-								setError(message(e));
-							} finally {
-								setBusy(false);
-							}
-						}}
-					>
-						{t("global.saveLocation")}
-					</Button>
-					{onCancel ? (
-						<Button variant="outline" onClick={onCancel}>
-							{t("session.cancel")}
-						</Button>
-					) : null}
-				</div>
-			</CardContent>
-		</Card>
 	);
 }
 function VariableBrowser({ location }: { location: GlobalLocation }) {

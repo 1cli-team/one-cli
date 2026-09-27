@@ -35,3 +35,10 @@ func GlobalValues(ctx context.Context, env, path string, keys []string) (map[str
 func GlobalSummary(ctx context.Context) (*GlobalLocation, []remote.RemoteEnvironment, error) {
 	return remote.GlobalSummary(ctx)
 }
+
+func CreateRemoteProject(ctx context.Context, name string) (*RemoteProject, error) {
+	return remote.CreateRemoteProject(ctx, name)
+}
+func EnsureDefaultGlobal(ctx context.Context) (*GlobalLocation, error) {
+	return remote.EnsureDefaultGlobal(ctx)
+}

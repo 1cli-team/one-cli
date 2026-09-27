@@ -245,6 +245,6 @@ Workspace 级 env 后端写在 `one.manifest.json#domains.env`，环境列表写
 - [`one create`](/zh/docs/create/) — 起骨架时用 `--env-provider infisical` 接 Infisical
 
 
-## 全局变量
+## 共享凭据
 
-全局变量独立于工作区。使用 `one env bind --global` 选择存放位置，`one env list --global --env dev --path /` 浏览元数据，`one run --global --env dev --path /folder -- command` 注入明确范围的变量。完整的命令和安全边界见[登录与全局变量](/zh/docs/login/)。
+共享凭据独立于工作区。使用 `one env bind --global` 选择存放位置，`one env list --global --env dev --path /` 浏览元数据，`one run --global --env dev --path /folder -- command` 注入明确范围的变量。完整的命令和安全边界见[登录与共享凭据](/zh/docs/login/)。

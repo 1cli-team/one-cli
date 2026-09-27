@@ -111,7 +111,7 @@ Use `one mise --version`, `one mise doctor`, or `one mise trust <config-path>` t
 
 ## Infisical login
 
-Run `one login` to sign in with a browser. The session is saved in your system keyring. See [login and global variables](/en/docs/login/).
+Run `one login` to sign in with a browser. The session is saved in your system keyring. See [login and shared credentials](/en/docs/login/).
 
 ## Environment Variables
 

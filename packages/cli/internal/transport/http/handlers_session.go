@@ -95,6 +95,22 @@ func registerSessionRoutes(mux *http.ServeMux) {
 		}
 		writeJSON(w, 200, p)
 	})
+	mux.HandleFunc("POST /infisical/projects", func(w http.ResponseWriter, r *http.Request) {
+		setNoStore(w)
+		var body struct {
+			Name string `json:"name"`
+		}
+		if err := decodeJSON(r, &body); err != nil {
+			writeBadPayload(w, err.Error())
+			return
+		}
+		project, err := remote.CreateRemoteProject(r.Context(), body.Name)
+		if err != nil {
+			writeServiceError(w, err)
+			return
+		}
+		writeJSON(w, http.StatusCreated, project)
+	})
 	mux.HandleFunc("GET /infisical/projects/{id}", func(w http.ResponseWriter, r *http.Request) {
 		setNoStore(w)
 		p, e := remote.Project(r.Context(), r.PathValue("id"))
@@ -106,6 +122,15 @@ func registerSessionRoutes(mux *http.ServeMux) {
 	})
 }
 func registerGlobalRoutes(mux *http.ServeMux) {
+	mux.HandleFunc("POST /global-env/location/default", func(w http.ResponseWriter, r *http.Request) {
+		setNoStore(w)
+		location, err := remote.EnsureDefaultGlobal(r.Context())
+		if err != nil {
+			writeServiceError(w, err)
+			return
+		}
+		writeJSON(w, http.StatusOK, map[string]any{"location": location})
+	})
 	mux.HandleFunc("GET /global-env/location", func(w http.ResponseWriter, r *http.Request) {
 		setNoStore(w)
 		l, e := remote.LoadGlobalLocation()

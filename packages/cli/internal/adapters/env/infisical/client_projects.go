@@ -2,6 +2,7 @@ package infisical
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -22,6 +23,10 @@ import (
 // caller may have to retry with a suffix when the API surfaces a name
 // collision (INFISICAL_PROJECT_NAME_TAKEN).
 func (c *Client) CreateProject(projectName string) (string, string, error) {
+	return c.CreateProjectContext(context.Background(), projectName)
+}
+
+func (c *Client) CreateProjectContext(ctx context.Context, projectName string) (string, string, error) {
 	token := c.accessToken
 	if token == "" && c.sdk != nil {
 		token = c.sdk.Auth().GetAccessToken()
@@ -40,7 +45,7 @@ func (c *Client) CreateProject(projectName string) (string, string, error) {
 	}
 
 	url := strings.TrimRight(c.cfg.SiteURLOrDefault(), "/") + "/api/v2/workspace"
-	req, err := http.NewRequest(http.MethodPost, url, bytes.NewReader(body))
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewReader(body))
 	if err != nil {
 		return "", "", err
 	}

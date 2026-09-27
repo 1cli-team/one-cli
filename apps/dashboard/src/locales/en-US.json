@@ -526,17 +526,17 @@
 		"unavailable": "Session unavailable"
 	},
 	"global": {
-		"title": "Global variables",
+		"title": "Shared credentials",
 		"description": "Manage credentials and variables shared across projects.",
-		"loginRequired": "Sign in to Infisical to manage global variables.",
-		"location": "Global variable location",
+		"loginRequired": "Sign in to Infisical to manage shared credentials.",
+		"location": "Default storage location",
 		"mismatch": "The saved location belongs to another account or instance. Select a project again.",
-		"locationHint": "Choose an existing Infisical project. Only its location is stored here; values stay in Infisical.",
+		"locationHint": "Select or create a storage project. Only its location is saved here; credential values stay in Infisical.",
 		"project": "Storage project",
 		"selectProject": "Select a project",
 		"defaultEnv": "Default browsing environment",
 		"selectEnv": "Select an environment",
-		"noProjects": "No projects available. Create one in Infisical first.",
+		"noProjects": "No credential projects available. Use the default location or create a project.",
 		"saveLocation": "Save location",
 		"browseHint": "Browsing another environment does not change the CLI default.",
 		"environment": "Browsing environment",
@@ -559,6 +559,15 @@
 		"saveRemote": "Save to Infisical",
 		"discard": "Discard changes",
 		"deleteHint": "Delete {{key}} from {{project}} / {{environment}} / {{path}}? This takes effect immediately.",
-		"folderName": "Folder name"
+		"folderName": "Folder name",
+		"defaultLocation": "Use the default location",
+		"defaultLocationHint": "Prepare the storage project and save its location. An existing project with this name will be reused.",
+		"useDefault": "Initialize default location",
+		"saving": "Saving…",
+		"createProject": "New project",
+		"createProjectHint": "Create a credential storage project in the current Infisical organization. It will be selected so you can save it as your default location.",
+		"projectName": "Project name",
+		"createAndSelect": "Create and select",
+		"creatingProject": "Creating…"
 	}
 }

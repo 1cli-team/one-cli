@@ -26,6 +26,8 @@ export interface RemoteProject {
 	environments: { name: string; slug: string }[];
 }
 export const getProjects = () => http.get<RemoteProject[]>("/infisical/projects");
+export const createRemoteProject = (name: string) =>
+	http.post<RemoteProject>("/infisical/projects", { name }, { timeout: 120000 });
 export const getProject = (id: string) =>
 	http.get<RemoteProject>(`/infisical/projects/${encodeURIComponent(id)}`);
 export interface GlobalLocation {
@@ -47,6 +49,8 @@ export const locationKey = "/global-env/location";
 export const getLocation = () => http.get<{ location: GlobalLocation | null }>(locationKey);
 export const bindLocation = (projectId: string, environment: string) =>
 	http.put<{ location: GlobalLocation }>(locationKey, { projectId, environment });
+export const initializeGlobalLocation = () =>
+	http.post<{ location: GlobalLocation }>(`${locationKey}/default`, {}, { timeout: 120000 });
 export const globalQuery = (environment: string, path: string) =>
 	`?${new URLSearchParams({ env: environment, path })}`;
 export const getGlobalListing = (query: string) =>

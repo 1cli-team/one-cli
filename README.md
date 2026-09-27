@@ -93,7 +93,7 @@ one add nestjs-api --name api
 | `one build [project]` | Build every buildable project, or one selected project |
 | `one env` | Review and manage environment variables |
 | `one login` | Sign in to Infisical with your browser |
-| `one serve` | Inspect workspaces, manage the current account and global variables |
+| `one serve` | Inspect workspaces, manage the current account and shared credentials |
 | `one ci [enable\|sync\|disable]` | Optionally manage generated GitHub Actions workflows |
 
 Full command docs live at [1cli.dev](https://1cli.dev).
@@ -124,7 +124,7 @@ The assistant can read `one.manifest.json` and project README files, then use On
 
 One CLI manages local dotenv and Infisical variables. Run `one login` to sign in with your browser; the single session is stored in the OS keyring, with no plaintext fallback. Use `one whoami` to inspect status and `one logout` to remove the local session.
 
-Run `one serve` for account settings, workspaces, and global variables. Workspace and project configuration changes share one reviewed, revision-checked Manifest draft. Remote variable edits take effect immediately; lists omit values and reveal/copy fetch plaintext only on demand.
+Run `one serve` for account settings, workspaces, and shared credentials. Workspace and project configuration changes share one reviewed, revision-checked Manifest draft. Remote variable edits take effect immediately; lists omit values and reveal/copy fetch plaintext only on demand.
 
 Choose shared credential storage with `one env bind --global`. Agents discover environments and folders through `one env --global` and `one env list --global`, then execute with `one run --global --env dev --path /folder --keys KEY -- command`. Explicit scope and best-effort masking reduce accidental exposure; they do not isolate arbitrary programs running as the same OS user. Use least-privilege remote permissions.
 

@@ -123,8 +123,8 @@ func newRunCmd(loaders *secrets.Registry, provider runtimeport.Provider) *cobra.
 	cmd.Flags().StringVar(&flags.envName, "env", "", "环境名（默认取 manifest.environments.default）")
 	cmd.Flags().StringVar(&flags.envProvider, "env-provider", "", "env provider: dotenv | infisical（默认取 workspace manifest 中已选的值）")
 	cmd.Flags().BoolVar(&flags.dryRun, "dry-run", false, "Print the execution plan without loading environment values or starting a command")
-	cmd.Flags().BoolVar(&flags.global, "global", false, "使用全局变量，保留当前工作目录")
-	cmd.Flags().StringVar(&flags.globalPath, "path", "", "全局变量目录（必须显式指定）")
+	cmd.Flags().BoolVar(&flags.global, "global", false, "使用共享凭据，保留当前工作目录")
+	cmd.Flags().StringVar(&flags.globalPath, "path", "", "共享凭据目录（必须显式指定）")
 	cmd.Flags().StringSliceVar(&flags.globalKeys, "keys", nil, "只注入指定的变量名，逗号分隔")
 	i18n.MarkShort(cmd, "run.short")
 	return cmd

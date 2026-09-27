@@ -13,10 +13,10 @@ import (
 )
 
 func configureGlobal(parent *cobra.Command, deps Dependencies) {
-	parent.PersistentFlags().Bool("global", false, "管理 Infisical 全局变量，可在工作区之外使用")
-	parent.PersistentFlags().String("path", "/", "全局变量目录（仅当前层，不递归）")
+	parent.PersistentFlags().Bool("global", false, "管理 Infisical 共享凭据，可在工作区之外使用")
+	parent.PersistentFlags().String("path", "/", "共享凭据目录（仅当前层，不递归）")
 	parent.Flags().String("env", "", "环境名")
-	bind := &cobra.Command{Use: "bind", Short: "选择全局变量的存放项目和默认环境", Args: cobra.NoArgs}
+	bind := &cobra.Command{Use: "bind", Short: "选择共享凭据的存放项目和默认环境", Args: cobra.NoArgs}
 	bind.Flags().String("project-id", "", "已有 Infisical 项目 ID")
 	bind.Flags().String("env", "", "默认环境")
 	bind.RunE = func(c *cobra.Command, _ []string) error {
@@ -38,7 +38,7 @@ func configureGlobal(parent *cobra.Command, deps Dependencies) {
 			for _, p := range ps {
 				options = append(options, prompt.Option[string]{Label: p.Name, Value: p.ID})
 			}
-			id, e = prompt.Select("选择存放全局变量的项目", options)
+			id, e = prompt.Select("选择存放共享凭据的项目", options)
 			if e != nil {
 				return e
 			}
@@ -88,7 +88,7 @@ func configureGlobal(parent *cobra.Command, deps Dependencies) {
 			c.Flags().Bool("reveal", false, "显式输出明文；通常请通过 one run 使用变量")
 		}
 		if c.Name() == "set" {
-			c.Flags().Bool("stdin", false, "从标准输入读取值，避免写入命令历史（全局变量）")
+			c.Flags().Bool("stdin", false, "从标准输入读取值，避免写入命令历史（共享凭据）")
 		}
 		original := c.RunE
 		if original == nil {

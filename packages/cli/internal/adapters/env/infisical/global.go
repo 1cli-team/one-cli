@@ -26,6 +26,7 @@ type RemoteProject struct {
 	ID             string              `json:"id"`
 	LegacyID       string              `json:"_id,omitempty"`
 	Name           string              `json:"name"`
+	Type           string              `json:"type"`
 	OrganizationID string              `json:"orgId"`
 	Environments   []RemoteEnvironment `json:"environments"`
 }
@@ -35,10 +36,13 @@ func Projects(ctx context.Context) ([]RemoteProject, error) {
 	if e != nil {
 		return nil, e
 	}
+	return projectsFor(ctx, s)
+}
+func projectsFor(ctx context.Context, s *session.Session) ([]RemoteProject, error) {
 	var result struct {
 		Projects []RemoteProject `json:"workspaces"`
 	}
-	if e = session.Request(ctx, s, http.MethodGet, "/api/v1/workspace", nil, &result); e != nil {
+	if e := session.Request(ctx, s, http.MethodGet, "/api/v1/workspace", nil, &result); e != nil {
 		return nil, e
 	}
 	projects := []RemoteProject{}
@@ -47,7 +51,7 @@ func Projects(ctx context.Context) ([]RemoteProject, error) {
 			p.ID = p.LegacyID
 		}
 		p.LegacyID = ""
-		if s.OrganizationID == "" || p.OrganizationID == s.OrganizationID {
+		if p.Type == "secret-manager" && (s.OrganizationID == "" || p.OrganizationID == s.OrganizationID) {
 			projects = append(projects, p)
 		}
 	}
@@ -82,6 +86,9 @@ func projectFor(ctx context.Context, s *session.Session, id string) (*RemoteProj
 	if s.OrganizationID != "" && p.OrganizationID != s.OrganizationID {
 		return nil, fmt.Errorf("项目不属于当前登录组织")
 	}
+	if p.Type != "secret-manager" {
+		return nil, fmt.Errorf("请选择 Secret Manager 项目，当前项目不能存放共享凭据")
+	}
 	return &p, nil
 }
 
@@ -108,21 +115,33 @@ func LoadGlobalLocation() (*GlobalLocation, error) {
 	}
 	var location GlobalLocation
 	if json.Unmarshal(data, &location) != nil {
-		return nil, fmt.Errorf("全局变量位置配置损坏，请重新选择存放项目")
+		return nil, fmt.Errorf("共享凭据位置配置损坏，请重新选择存放项目")
 	}
 	return &location, nil
 }
 func BindGlobal(ctx context.Context, projectID, env string) (*GlobalLocation, error) {
-	s, e := session.Require()
-	if e != nil {
-		return nil, e
-	}
+	return withLocationLock(ctx, func() (*GlobalLocation, error) {
+		s, e := session.Require()
+		if e != nil {
+			return nil, e
+		}
+		return bindGlobalFor(ctx, s, projectID, env)
+	})
+}
+func bindGlobalFor(ctx context.Context, s *session.Session, projectID, env string) (*GlobalLocation, error) {
 	p, e := projectFor(ctx, s, projectID)
 	if e != nil {
 		return nil, e
 	}
 	if e = validateRemoteEnvironment(p, env); e != nil {
 		return nil, e
+	}
+	current, e := session.Require()
+	if e != nil {
+		return nil, e
+	}
+	if current.SiteURL != s.SiteURL || current.UserID != s.UserID || current.OrganizationID != s.OrganizationID || current.Token != s.Token {
+		return nil, fmt.Errorf("登录状态已改变，请重新选择共享凭据位置")
 	}
 	location := &GlobalLocation{SiteURL: s.SiteURL, UserID: s.UserID, OrganizationID: p.OrganizationID, ProjectID: p.ID, ProjectName: p.Name, DefaultEnvironment: env}
 	file, e := session.ConfigPath("global-env.json")
@@ -167,17 +186,17 @@ func globalClient(ctx context.Context, env string) (*Client, *GlobalLocation, st
 		return nil, nil, "", e
 	}
 	if location == nil {
-		return nil, nil, "", fmt.Errorf("尚未选择全局变量位置，请运行 one env bind --global")
+		return nil, nil, "", fmt.Errorf("尚未选择共享凭据位置，请运行 one env bind --global")
 	}
 	if location.SiteURL != s.SiteURL || location.UserID != s.UserID || (s.OrganizationID != "" && location.OrganizationID != s.OrganizationID) {
-		return nil, nil, "", fmt.Errorf("全局变量位置与当前账号、实例或组织不匹配，请重新选择存放项目")
+		return nil, nil, "", fmt.Errorf("共享凭据位置与当前账号、实例或组织不匹配，请重新选择存放项目")
 	}
 	p, e := projectFor(ctx, s, location.ProjectID)
 	if e != nil {
 		return nil, nil, "", e
 	}
 	if p.OrganizationID != location.OrganizationID {
-		return nil, nil, "", fmt.Errorf("全局变量项目组织已改变，请重新选择存放项目")
+		return nil, nil, "", fmt.Errorf("共享凭据项目组织已改变，请重新选择存放项目")
 	}
 	if env == "" {
 		env = location.DefaultEnvironment
