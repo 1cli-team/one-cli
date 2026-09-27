@@ -103,7 +103,13 @@ func (s *Session) runRaw() ([]Result, error) {
 	}
 	inputDone := make(chan struct{})
 	go func() { defer close(inputDone); _, _ = io.Copy(p, input) }()
-	defer func() { input.Cancel(); _ = input.Close(); <-inputDone }()
+	defer func() {
+		input.Cancel()
+		// Keep the cancellation pipe and poller open until the blocked reader
+		// consumes the wakeup. Closing them first can leave it stuck in epoll.
+		<-inputDone
+		_ = input.Close()
+	}()
 	resized := make(chan os.Signal, 1)
 	signal.Notify(resized, syscall.SIGWINCH)
 	defer signal.Stop(resized)

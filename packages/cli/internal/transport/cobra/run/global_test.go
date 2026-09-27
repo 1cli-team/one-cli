@@ -29,8 +29,10 @@ func TestSecretWriterMasksAcrossChunks(t *testing.T) {
 	}
 }
 func TestGlobalCommandEnvRejectsRepositoryAndRelativePATH(t *testing.T) {
-	env := globalCommandEnv([]string{"OTHER=keep", "PATH=" + strings.Join([]string{".", "relative", filepath.Join(t.TempDir(), "node_modules", ".bin"), "/usr/bin"}, string(os.PathListSeparator))})
-	if strings.Join(env, "\n") != "OTHER=keep\nPATH=/usr/bin" {
+	root := t.TempDir()
+	binDir := filepath.Join(root, "bin")
+	env := globalCommandEnv([]string{"OTHER=keep", "PATH=" + strings.Join([]string{".", "relative", filepath.Join(root, "node_modules", ".bin"), binDir}, string(os.PathListSeparator))})
+	if strings.Join(env, "\n") != "OTHER=keep\nPATH="+binDir {
 		t.Fatal(env)
 	}
 	for _, k := range []string{"PATH", "LD_PRELOAD", "NODE_OPTIONS", "GIT_CONFIG_COUNT"} {

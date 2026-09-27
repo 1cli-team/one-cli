@@ -4,6 +4,7 @@ package cli_test
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
 	"os"
 	"os/exec"
@@ -35,7 +36,13 @@ func startTaskTerminal(t *testing.T, root string, args ...string) *taskTerminal 
 	tt := &taskTerminal{cmd: cmd, pty: pt, out: &lockedBuffer{}, done: make(chan error, 1), readDone: make(chan struct{})}
 	go func() {
 		defer close(tt.readDone)
-		replies := map[string]string{"\x1b]11;?": "\x1b]11;rgb:0000/0000/0000\x1b\\", "\x1b[c": "\x1b[?1;2c", "\x1b[6n": "\x1b[1;1R"}
+		// Lip Gloss stops reading once it gets the device-attributes reply.
+		// Send the background reply first so it cannot leak into child stdin.
+		replies := []struct{ query, response string }{
+			{"\x1b]11;?", "\x1b]11;rgb:0000/0000/0000\x1b\\"},
+			{"\x1b[c", "\x1b[?1;2c"},
+			{"\x1b[6n", "\x1b[1;1R"},
+		}
 		counts := map[string]int{}
 		buf := make([]byte, 8192)
 		for {
@@ -43,11 +50,11 @@ func startTaskTerminal(t *testing.T, root string, args ...string) *taskTerminal 
 			if n > 0 {
 				_, _ = tt.out.Write(buf[:n])
 				all := tt.out.String()
-				for query, reply := range replies {
-					count := strings.Count(all, query)
-					for counts[query] < count {
-						_, _ = io.WriteString(pt, reply)
-						counts[query]++
+				for _, reply := range replies {
+					count := strings.Count(all, reply.query)
+					for counts[reply.query] < count {
+						_, _ = io.WriteString(pt, reply.response)
+						counts[reply.query]++
 					}
 				}
 			}
@@ -122,6 +129,29 @@ func TestE2E_SingleDevAndBuildKeepNativeTTY(t *testing.T) {
 		})
 	}
 }
+
+func TestE2E_SingleDevAndBuildExitWithIdleTerminalInput(t *testing.T) {
+	for _, command := range []string{"dev", "build"} {
+		for _, tc := range []struct {
+			name string
+			code int
+		}{{"success", 0}, {"failure", 42}} {
+			t.Run(command+"/"+tc.name, func(t *testing.T) {
+				root := devTerminalFixture(t, false)
+				// The input relay remains blocked while the child finishes without
+				// reading stdin. Exiting must cancel that read and keep the exit code.
+				script := fmt.Sprintf("test -t 0 && test -t 1 && test -t 2 || exit 91\nprintf 'NATIVE_DONE\\n'\nexit %d\n", tc.code)
+				buildWrite(t, root, "packages/lib/"+command+".sh", script)
+				tt := startTaskTerminal(t, root, command, "lib", "-o", "text")
+				tt.wait(t, tc.code)
+				if !strings.Contains(tt.out.String(), "NATIVE_DONE") {
+					t.Fatal(tt.out.String())
+				}
+			})
+		}
+	}
+}
+
 func TestE2E_DevTUIInputResizeAndStop(t *testing.T) {
 	root := devTerminalFixture(t, true)
 	buildWrite(t, root, "apps/web/dev.sh", "test -t 0 && test -t 1 || exit 91\necho run >> runs\necho WEB_READY\nwhile read value; do printf 'web:%s\\n' \"$value\"; done\n")
