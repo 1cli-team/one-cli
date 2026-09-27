@@ -127,7 +127,7 @@ one create my-app -y
 cd my-app
 one add react-spa --name web -y
 one dev web
-one run web -- pnpm build
+one build web
 ```
 
 旧 workspace 可一次性生成配置，之后也使用同样的日常命令：

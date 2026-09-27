@@ -7,7 +7,7 @@
 // Two checks:
 //
 //   - **help catalogue completeness.** The concise root help deliberately
-//     lists only the six everyday commands. `one help --all` is generated
+//     lists only the seven everyday commands. `one help --all` is generated
 //     from the Cobra tree and must contain every registered top-level
 //     command.
 //
@@ -50,7 +50,7 @@ func main() {
 			fmt.Fprintf(os.Stderr, "  %s\n", p)
 		}
 		fmt.Fprintln(os.Stderr, "\nFix one of:")
-		fmt.Fprintln(os.Stderr, "  - Keep root help limited to the six everyday commands and keep `one help --all` complete.")
+		fmt.Fprintln(os.Stderr, "  - Keep root help limited to the seven everyday commands and keep `one help --all` complete.")
 		fmt.Fprintln(os.Stderr, "  - Update the Example / Long text in the offending cmd.go to use a flag that actually exists.")
 		fmt.Fprintln(os.Stderr, "  - Re-run with UPDATE_SNAPSHOTS=1 if you have also intentionally changed help text:")
 		fmt.Fprintln(os.Stderr, "      UPDATE_SNAPSHOTS=1 go test ./tests/e2e/ -run TestHelpSnapshots")
@@ -124,7 +124,7 @@ func checkRootHelp(root *cobra.Command) []string {
 	}
 
 	want := map[string]bool{
-		"create": true, "add": true, "dev": true,
+		"create": true, "add": true, "dev": true, "build": true,
 		"deploy": true, "env": true, "configure": true,
 	}
 

@@ -8,6 +8,7 @@ EVERYDAY COMMANDS
   create        Create a workspace
   add           Add a project
   dev           Start local development
+  build         Build projects
   deploy        Deploy a project
   env           Manage environment variables
   configure     Manage local connections and preferences

@@ -15,6 +15,7 @@
     "templates-cmd",
     "container",
     "dev",
+    "build",
     "ci",
     "deploy",
     "run",

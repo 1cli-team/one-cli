@@ -19,6 +19,7 @@ description: one 顶层命令、常用子命令、输出模式和 agent 自动�
 | `one env` | 管理 workspace 的 dotenv / Infisical 环境变量 | `one env list` |
 | `one container` | 查看、构建、推送 Dockerfile-driven 镜像 | `one container info` |
 | `one dev` | 并行启动所有项目的本地开发进程 | `one dev` |
+| `one build` | 构建全部项目或指定项目 | `one build web` |
 | `one deploy` | 按 project 派发 kustomize / S3-compatible / Vercel / Cloudflare / EdgeOne 部署 | `one deploy --dry-run` |
 | `one ci` | 查看或管理可选的持续集成 | `one ci` |
 | `one run` | 注入项目 `.env` 后执行任意命令 | `one run -- npm test` |

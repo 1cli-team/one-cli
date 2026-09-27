@@ -161,7 +161,7 @@ func TestIsKnownSubcommand(t *testing.T) {
 	for _, name := range []string{
 		"create", "templates", "add", "skills",
 		// Per-domain commands (post capability-interface refactor).
-		"env", "container", "dev", "deploy", "ci",
+		"env", "container", "dev", "build", "deploy", "ci",
 		// configure owns the credential CRUD surface (renamed from
 		// `profile` to align with industry standard CLIs).
 		"configure",

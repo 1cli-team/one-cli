@@ -250,7 +250,7 @@ func BuildWithFiles(root string, opts Options, files map[string][]byte) (*Plan, 
 				return nil, err
 			}
 			if rawTask == nil {
-				operations = append(operations, "build", "test", "lint")
+				operations = append(operations, "test", "lint")
 			} else {
 				pc.Tools["task"] = "3.51.1"
 				var tasks struct {

@@ -1,0 +1,23 @@
+
+DESCRIPTION
+Build projects
+
+USAGE
+  one build [project] [flags]
+
+EXAMPLES
+  one build
+  one build web
+  one build apps/web --dry-run
+  one build web --env prod
+
+TIPS
+Build all projects with build tasks, or one selected project. Node projects run their build script; Go projects run task build. Full workspace builds run local dependencies first, one project at a time. Tools and dependencies are prepared automatically before building.
+
+COMMON OPTIONS
+  --dry-run                Show the build plan without installing tools, loading secrets, or running commands
+  -o, --output <value>     Output format: json | yaml | text (default: terminal-friendly text, JSON when piped)
+
+AUTOMATION AND ADVANCED OPTIONS
+  --env <value>            Environment to load for each project
+  -p, --project <value>    Project name or relative path; defaults to all buildable projects

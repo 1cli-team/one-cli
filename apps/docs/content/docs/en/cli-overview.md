@@ -19,6 +19,7 @@ One CLI is a single binary. It creates workspaces, adds projects, manages enviro
 | `one env` | Manage dotenv / Infisical environment variables | `one env list` |
 | `one container` | Inspect, build, and push Dockerfile-driven images | `one container info` |
 | `one dev` | Start every project's local dev process in parallel | `one dev` |
+| `one build` | Build all projects or one selected project | `one build web` |
 | `one deploy` | Dispatch per-project deploys to kustomize / S3-compatible / Vercel / Cloudflare / EdgeOne | `one deploy --dry-run` |
 | `one ci` | Inspect or manage optional continuous integration | `one ci` |
 | `one run` | Run a command with project `.env` injected | `one run -- npm test` |

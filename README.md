@@ -90,6 +90,7 @@ one add nestjs-api --name api
 | `one create <workspace>` | Create an empty workspace |
 | `one add <starter>` | Add another app, service, docs site, or library |
 | `one dev [project]` | Run every project, or one selected project, locally |
+| `one build [project]` | Build every buildable project, or one selected project |
 | `one deploy [project]` | Choose a target on first deploy, then deploy |
 | `one env` | Review and manage environment variables |
 | `one configure` | Manage local connections and preferences |

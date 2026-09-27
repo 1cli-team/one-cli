@@ -1,4 +1,4 @@
-// Package dependencies prepares application dependencies before development.
+// Package dependencies prepares application dependencies before development and builds.
 // Tool installation belongs to the runtime provider; run remains a plain runner.
 package dependencies
 
@@ -37,6 +37,9 @@ type Input struct {
 	Root     string
 	Manifest *workspace.Manifest
 	Project  string
+	// Projects selects an explicit set, including projects without a dev command.
+	// nil preserves the development selection used by existing callers.
+	Projects []string
 	Runtime  string
 	Log      io.Writer
 }
@@ -47,9 +50,17 @@ func (s Service) Prepare(ctx context.Context, in Input) error {
 	if in.Log == nil {
 		in.Log = io.Discard
 	}
+	selected := map[string]bool{}
+	for _, name := range in.Projects {
+		selected[name] = true
+	}
 	var nodes, goProjects []workspace.ManifestProject
 	for _, p := range in.Manifest.Projects {
-		if (in.Project != "" && p.Name != in.Project) || strings.TrimSpace(workspace.ProjectDev(in.Manifest, p.Name)) == "" {
+		if in.Projects != nil {
+			if !selected[p.Name] {
+				continue
+			}
+		} else if (in.Project != "" && p.Name != in.Project) || strings.TrimSpace(workspace.ProjectDev(in.Manifest, p.Name)) == "" {
 			continue
 		}
 		switch p.Toolchain {
@@ -241,7 +252,10 @@ func (s Service) prepareNode(ctx context.Context, in Input, fallback string) err
 		return err
 	}
 	defer unlock()
-	manager := PackageManager(in.Root, fallback)
+	manager, err := workspace.ResolvePackageManager(in.Root, fallback)
+	if err != nil {
+		return err
+	}
 	var versions bytes.Buffer
 	for _, args := range [][]string{{manager, "--version"}, {"node", "--version"}} {
 		if err := s.run(ctx, in, in.Root, args, os.Environ(), &versions, in.Log); err != nil {
@@ -304,23 +318,6 @@ func nodeFingerprint(in Input, versions string) (string, error) {
 		h.Write(b)
 	}
 	return hex.EncodeToString(h.Sum(nil)), nil
-}
-
-func PackageManager(root, fallback string) string {
-	manager := strings.TrimSpace(fallback)
-	if pkg, err := workspace.ReadPackageJSON(root); err == nil && pkg != nil && pkg.PackageManager != "" {
-		manager = pkg.PackageManager
-	}
-	manager, _, _ = strings.Cut(manager, "@")
-	if manager != "" {
-		return manager
-	}
-	for _, item := range []struct{ file, manager string }{{"bun.lock", "bun"}, {"bun.lockb", "bun"}, {"yarn.lock", "yarn"}, {"package-lock.json", "npm"}} {
-		if exists(filepath.Join(root, item.file)) {
-			return item.manager
-		}
-	}
-	return "pnpm"
 }
 
 func NodeInstallCommand(root, manager string) []string {

@@ -49,7 +49,7 @@ func TestSnapshot_E2E_HelpDailyAndCompleteCatalogues(t *testing.T) {
 	if code != 0 || stderr != "" {
 		t.Fatalf("one --help failed: exit=%d stderr=%q", code, stderr)
 	}
-	for _, command := range []string{"create", "add", "dev", "deploy", "env", "configure"} {
+	for _, command := range []string{"create", "add", "dev", "build", "deploy", "env", "configure"} {
 		if !strings.Contains(daily, "  "+command) {
 			t.Errorf("daily help missing %q:\n%s", command, daily)
 		}
@@ -64,7 +64,7 @@ func TestSnapshot_E2E_HelpDailyAndCompleteCatalogues(t *testing.T) {
 	if code != 0 || stderr != "" {
 		t.Fatalf("one help --all failed: exit=%d stderr=%q", code, stderr)
 	}
-	for _, command := range []string{"create", "add", "dev", "deploy", "env", "configure", "ci", "templates", "container", "run", "serve"} {
+	for _, command := range []string{"create", "add", "dev", "build", "deploy", "env", "configure", "ci", "templates", "container", "run", "serve"} {
 		if !strings.Contains(all, "  "+command) {
 			t.Errorf("complete help missing %q:\n%s", command, all)
 		}

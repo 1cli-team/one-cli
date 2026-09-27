@@ -9,6 +9,7 @@ Requires Go 1.27 or newer. Use the latest patch release for your Go version.
 
 ```bash
 go mod tidy
+task build
 task check
 task test
 ```
@@ -18,7 +19,7 @@ task test
 ```text
 pkg/greeter/           # public API — what consumers import
 go.mod                 # module declaration
-Taskfile.yml           # go-task tasks (fmt / vet / test / tidy / check)
+Taskfile.yml           # go-task tasks (build / fmt / vet / test / tidy / check)
 LICENSE                # MIT
 ```
 

@@ -346,3 +346,31 @@ func TestPNPMEnvironmentDocumentDoesNotPretendDependenciesAreLocked(t *testing.T
 		}
 	}
 }
+
+// Build selection must include libraries with no development process.
+func TestExplicitProjectsPrepareGoLibrariesWithoutDev(t *testing.T) {
+	root := t.TempDir()
+	write(t, root, "go.work", "go 1.25.0\nuse ./packages/lib\n")
+	p := workspace.ManifestProject{Name: "lib", RelativeDir: "packages/lib", Toolchain: "go"}
+	write(t, root, "packages/lib/go.mod", "module example.com/lib\ngo 1.25.0\n")
+	calls := []string{}
+	service := Service{Run: func(_ context.Context, cmd runtimeport.Command, out, _ io.Writer) error {
+		calls = append(calls, strings.Join(cmd.Argv, " "))
+		if strings.Join(cmd.Argv, " ") == "go env GOWORK" {
+			fmt.Fprintln(out, filepath.Join(root, "go.work"))
+		}
+		return nil
+	}}
+	in := Input{Root: root, Manifest: &workspace.Manifest{Projects: []workspace.ManifestProject{p}}, Projects: []string{"lib"}, Runtime: runtimeport.Builtin}
+	if err := service.Prepare(context.Background(), in); err != nil {
+		t.Fatal(err)
+	}
+	if len(calls) != 2 || calls[1] != "go list -mod=readonly -buildvcs=false -deps ./..." {
+		t.Fatal(calls)
+	}
+	calls = nil
+	in.Projects = []string{}
+	if err := service.Prepare(context.Background(), in); err != nil || len(calls) != 0 {
+		t.Fatalf("empty selection: %v %v", calls, err)
+	}
+}

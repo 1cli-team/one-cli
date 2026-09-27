@@ -30,6 +30,7 @@ import (
 	platformprocess "github.com/torchstellar-team/one-cli/packages/cli/internal/platform/process"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/updatecheck"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/transport/cobra/add"
+	"github.com/torchstellar-team/one-cli/packages/cli/internal/transport/cobra/build"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/transport/cobra/ci"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/transport/cobra/configure"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/transport/cobra/container"
@@ -54,6 +55,7 @@ func newRootCommand() *cobra.Command {
 	}
 	groups := [][]*cobra.Command{
 		addcmd.Commands(deps.creation),
+		buildcmd.Commands(deps.runtime),
 		cicmd.Commands(deps.ci),
 		configurecmd.Commands(deps.catalog, deps.profiles, deps.workspaces, deps.registry),
 		containercmd.Commands(containercmd.Dependencies{

@@ -6,7 +6,6 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
-	"strings"
 
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/core/workspace"
 	cliErrors "github.com/torchstellar-team/one-cli/packages/cli/internal/platform/errors"
@@ -47,18 +46,9 @@ func OperationArgs(w Workspace, selector, operation string) ([]string, error) {
 		if err = json.Unmarshal(raw, &pkg); err != nil {
 			return nil, err
 		}
-		manager := p.PackageManager
-		if rootPkg, err := workspace.ReadPackageJSON(w.Root()); err == nil && rootPkg != nil && rootPkg.PackageManager != "" {
-			manager = rootPkg.PackageManager
-		}
-		manager, _, _ = strings.Cut(manager, "@")
-		if manager == "" {
-			manager = "pnpm"
-		}
-		switch manager {
-		case "pnpm", "npm", "yarn", "bun":
-		default:
-			return nil, fmt.Errorf("unsupported package manager %q", manager)
+		manager, err := workspace.ResolvePackageManager(w.Root(), p.PackageManager)
+		if err != nil {
+			return nil, err
 		}
 		if pkg.Scripts[operation] == "" {
 			return nil, missingOperation(p.Name, operation)
@@ -84,7 +74,7 @@ func OperationArgs(w Workspace, selector, operation string) ([]string, error) {
 		}
 		switch operation {
 		case "build":
-			return []string{"go", "build", "./..."}, nil
+			return nil, fmt.Errorf("project %s requires Taskfile.yml with a build task", p.Name)
 		case "test":
 			return []string{"go", "test", "./..."}, nil
 		case "lint":
