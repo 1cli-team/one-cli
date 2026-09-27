@@ -96,7 +96,7 @@ func newDevCmd(provider runtimeport.Provider) *cobra.Command {
 				selected = append(selected, entry.Name)
 			}
 			if !dryRun {
-				if err := (dependencies.Service{Provider: provider}).Prepare(cmd.Context(), dependencies.Input{Root: root, Manifest: activeWorkspace.Manifest(), Projects: selected, Runtime: runtimeKind, Log: cmd.ErrOrStderr()}); err != nil {
+				if err := (dependencies.Service{Provider: provider}).Prepare(cmd.Context(), dependencies.Input{Root: root, Manifest: activeWorkspace.Manifest(), Projects: selected, Runtime: runtimeKind, Development: true, Log: cmd.ErrOrStderr()}); err != nil {
 					if ctx.Err() != nil {
 						return context.Cause(ctx)
 					}

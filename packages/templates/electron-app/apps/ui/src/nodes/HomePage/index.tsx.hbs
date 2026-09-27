@@ -3,9 +3,9 @@
  *
  * Pre-wired infrastructure (don't recreate; import from these paths):
  *   - IPC client:       useElectron() in src/hooks/electron.ts
- *                       (electron.invoke / .send / .on; types from @app/preload/channels)
+ *                       (electron.invoke / .send / .on; types from @{{projectNameKebabCase}}/preload/channels)
  *   - IPC channels:     IPC.dialog.open / IPC.shell.open / IPC.contextMenu.show, etc.
- *                       (full list in @app/preload/channels — DO NOT redefine)
+ *                       (full list in @{{projectNameKebabCase}}/preload/channels — DO NOT redefine)
  *   - IPC events:       EVENT.update.downloadProgress, etc. — subscribe via electron.on()
  *   - Store:            useAppStore (zustand + immer) in src/store/app-store.ts
  *   - HTTP client:      src/lib/http.ts (axios fetcher, e.g. for SWR with public APIs)

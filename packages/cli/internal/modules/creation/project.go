@@ -133,6 +133,16 @@ func materializeProject(ctx context.Context, projectRoot string, in ProjectInput
 		relDir = filepath.Join(categoryDir, in.Name)
 	}
 
+	if entry.Toolchain == "node" {
+		dirs, err := workspace.NodeProjectPackageDirs(projectRoot, relDir, files.Read)
+		if err != nil {
+			return ProjectResult{}, err
+		}
+		if len(dirs) > 1 && packageManager != "pnpm" {
+			return ProjectResult{}, i18n.Errorf("creation.composite_requires_pnpm", entry.ID, packageManager)
+		}
+	}
+
 	manifestPM := manifestPackageManagerFor(string(entry.Toolchain), packageManager)
 	newProject := workspace.ManifestProject{
 		Name:           in.Name,
@@ -163,6 +173,9 @@ func materializeProject(ctx context.Context, projectRoot string, in ProjectInput
 	}
 	if entry.Toolchain == "node" {
 		if err := configureNodePackage(files, relDir, vars["projectNameKebabCase"], packageManager); err != nil {
+			return ProjectResult{}, err
+		}
+		if err := validateNodePackageNames(files, manifest); err != nil {
 			return ProjectResult{}, err
 		}
 	}

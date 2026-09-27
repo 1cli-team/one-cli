@@ -19,6 +19,8 @@ allowBuilds:
   '@scarf/scarf': false
   '@swc/core': true
   electron: true
+  # The Electron template uses NSIS, not the optional Squirrel installer.
+  electron-winstaller: false
   esbuild: true
   unrs-resolver: true
 `

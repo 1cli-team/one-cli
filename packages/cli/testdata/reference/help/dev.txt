@@ -12,7 +12,7 @@ EXAMPLES
   one dev --select
 
 TIPS
-Start all developable projects, or the selected project names or paths, in parallel. One task keeps its native terminal; multiple tasks use the TUI. Pipes and CI use streaming logs. Missing Node dependencies are installed after confirmation.
+Start all developable projects, or the selected project names or paths, in parallel. One task keeps its native terminal; multiple tasks use the TUI. Pipes and CI use streaming logs. Dependencies are prepared before startup. For pnpm, local development synchronizes the lockfile when needed and reuses an up-to-date installation.
 
 COMMON OPTIONS
   --dry-run                Print the development command without starting it

@@ -14,6 +14,8 @@ import (
 	"os/exec"
 	"os/signal"
 	"path/filepath"
+	"sort"
+	"strconv"
 	"strings"
 	"syscall"
 
@@ -44,6 +46,9 @@ type Input struct {
 	Projects []string
 	Runtime  string
 	Log      io.Writer
+	// Development allows pnpm to synchronize the lockfile and reuse a manual
+	// install after pnpm has verified the workspace dependency state.
+	Development bool
 }
 
 func (s Service) Prepare(ctx context.Context, in Input) error {
@@ -264,6 +269,22 @@ func (s Service) prepareNode(ctx context.Context, in Input, fallback string) err
 			return preparationError("Node workspace", in.Root, strings.Join(args, " "), err, versions.String())
 		}
 	}
+	// Ask pnpm itself to validate installed dependencies. Its check covers the
+	// workspace structure, manifest changes, lockfile, and installation settings.
+	// The error policy never installs; stale or unsupported state falls through
+	// to the ordinary install below. This also recognizes manual `pnpm install`.
+	nativeCheck := in.Development && manager == "pnpm" && supportsPNPMDependencyCheck(versions.String())
+	if nativeCheck {
+		if nodeInstalled(in) {
+			args := []string{"pnpm", "--config.verify-deps-before-run=error", "exec", "node", "--eval", ""}
+			if err := s.run(ctx, in, in.Root, args, os.Environ(), io.Discard, io.Discard); err == nil {
+				return nil
+			}
+		}
+		if err := ctx.Err(); err != nil {
+			return err
+		}
+	}
 	before, err := nodeFingerprint(in, versions.String())
 	if err != nil {
 		return err
@@ -274,20 +295,50 @@ func (s Service) prepareNode(ctx context.Context, in Input, fallback string) err
 	}
 	marker := filepath.Join(cache, "one", "dependencies", fmt.Sprintf("%x", sha256.Sum256([]byte(in.Root))))
 	previous, _ := os.ReadFile(marker)
-	if string(previous) == before && nodeInstalled(in) {
+	if !nativeCheck && string(previous) == before && nodeInstalled(in) {
 		return nil
 	}
 	args := NodeInstallCommand(in.Root, manager)
+	if in.Development && manager == "pnpm" {
+		args = []string{manager, "install", "--no-frozen-lockfile"}
+	}
 	fmt.Fprintf(in.Log, i18n.T("dependencies.node_preparing"), strings.Join(args, " "))
 	var detail bytes.Buffer
 	if err := s.run(ctx, in, in.Root, args, os.Environ(), in.Log, io.MultiWriter(in.Log, &detail)); err != nil {
-		return preparationError("Node workspace", in.Root, strings.Join(args, " "), err, detail.String())
+		failure := preparationError("Node workspace", in.Root, strings.Join(args, " "), err, detail.String())
+		if in.Log != io.Discard {
+			// stderr has already been streamed. Keep it in structured context
+			// without printing the same diagnostic again in the final summary.
+			failure.Message = i18n.Tf("dependencies.failed_summary", "Node workspace", strings.Join(args, " "), err)
+			failure.Context["stderr"] = detail.String()
+		}
+		return failure
+	}
+	if nativeCheck {
+		return nil // pnpm owns the installed-state cache for this path.
 	}
 	after, err := nodeFingerprint(in, versions.String())
 	if err != nil {
 		return err
 	}
 	return fsutil.WriteAtomic(marker, []byte(after), 0o600)
+}
+
+// verifyDepsBeforeRun=error is supported by the pnpm versions we can verify
+// without parsing private lockfile/state formats. Older/unknown versions keep
+// the regular installation path and One's fingerprint cache.
+func supportsPNPMDependencyCheck(versions string) bool {
+	fields := strings.Fields(versions)
+	if len(fields) == 0 {
+		return false
+	}
+	parts := strings.Split(strings.TrimPrefix(fields[0], "v"), ".")
+	if len(parts) != 3 {
+		return false
+	}
+	major, majorErr := strconv.Atoi(parts[0])
+	minor, minorErr := strconv.Atoi(parts[1])
+	return majorErr == nil && minorErr == nil && (major > 10 || major == 10 && minor >= 14)
 }
 
 func nodeInstalled(in Input) bool {
@@ -304,12 +355,14 @@ func nodeInstalled(in Input) bool {
 
 func nodeFingerprint(in Input, versions string) (string, error) {
 	h := sha256.New()
-	fmt.Fprintln(h, versions)
+	fmt.Fprintln(h, "node-dependencies-v3", in.Development, in.Runtime, versions)
 	paths := []string{"package.json", "pnpm-workspace.yaml", "pnpm-lock.yaml", "package-lock.json", "yarn.lock", "bun.lock", "bun.lockb", ".npmrc", ".yarnrc.yml"}
-	for _, p := range in.Manifest.Projects {
-		if p.Toolchain == "node" {
-			paths = append(paths, filepath.Join(p.RelativeDir, "package.json"))
-		}
+	dirs, err := nodePackageDirs(in)
+	if err != nil {
+		return "", err
+	}
+	for _, dir := range dirs {
+		paths = append(paths, filepath.Join(dir, "package.json"), filepath.Join(dir, ".npmrc"))
 	}
 	for _, path := range paths {
 		b, err := os.ReadFile(filepath.Join(in.Root, path))
@@ -410,4 +463,28 @@ func preparationError(project, dir, command string, err error, detail string) *o
 		context["exit_code"] = exit.ExitCode()
 	}
 	return cliErrors.New(code, i18n.Tf("dependencies.failed", project, command, err, strings.TrimSpace(detail))).WithContext(context)
+}
+
+// Internal packages belong to the same install even when only their parent is
+// registered in one.manifest.json or selected for development/building.
+func nodePackageDirs(in Input) ([]string, error) {
+	seen := map[string]bool{}
+	var dirs []string
+	for _, p := range in.Manifest.Projects {
+		if p.Toolchain != "node" {
+			continue
+		}
+		members, err := workspace.NodeProjectPackageDirs(in.Root, p.RelativeDir, nil)
+		if err != nil {
+			return nil, err
+		}
+		for _, member := range members {
+			if !seen[member] {
+				seen[member] = true
+				dirs = append(dirs, member)
+			}
+		}
+	}
+	sort.Strings(dirs)
+	return dirs, nil
 }

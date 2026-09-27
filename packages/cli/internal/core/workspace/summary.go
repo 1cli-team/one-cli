@@ -118,6 +118,26 @@ func ProjectDependenciesInstalled(root, projectDir, toolchain string) bool {
 	if strings.TrimSpace(toolchain) != "node" {
 		return true
 	}
+	rel, err := filepath.Rel(root, projectDir)
+	if err != nil {
+		return false
+	}
+	if rel == "." {
+		return nodePackageDependenciesInstalled(root, projectDir)
+	}
+	dirs, err := NodeProjectPackageDirs(root, rel, nil)
+	if err != nil {
+		return false
+	}
+	for _, dir := range dirs {
+		if !nodePackageDependenciesInstalled(root, filepath.Join(root, dir)) {
+			return false
+		}
+	}
+	return true
+}
+
+func nodePackageDependenciesInstalled(root, projectDir string) bool {
 	pkg, err := ReadPackageJSON(projectDir)
 	if err != nil || pkg == nil {
 		return false

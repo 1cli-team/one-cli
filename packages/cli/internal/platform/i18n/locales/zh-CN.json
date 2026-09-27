@@ -174,7 +174,7 @@
   "workspace.issue.development_not_available": "未配置本地开发命令",
   "workspace.next": "下一步：",
   "dev.short": "启动本地开发",
-  "dev.tip": "不指定项目时并行启动全部可开发项目；可传入多个项目名或路径。单任务保留原生终端，多任务使用 TUI；管道和 CI 使用连续日志。检测到 Node 依赖缺失时会先询问是否安装。",
+  "dev.tip": "并行启动所有可开发项目，或指定名称、相对路径对应的项目。单个任务保留原始终端输出，多个任务使用 TUI；管道和 CI 使用流式日志。启动前自动准备依赖。使用 pnpm 时，本地开发会按需同步锁文件，并复用已安装且与工作区一致的依赖。",
   "dev.dependencies_missing": "本地开发所需的 Node 依赖尚未安装。",
   "dev.install_hint": "先安装工作区依赖，再重新运行开发命令",
   "dev.install_mise_hint": "在工作区根目录运行此安装命令，再重试 one dev。One 会自动准备 mise runtime。",
@@ -796,5 +796,9 @@
   "mise.access_failed": "无法访问 mise 可执行文件：%v",
   "mise.version_failed": "无法读取 mise 版本：%v",
   "dependencies.go_changes_required": "Go 依赖需要修改 %s/go.mod；自动准备过程已保留原文件",
-  "hooks.custom_directory": "已有钩子目录 %s 由用户管理；请保留它并整合其检查后再修改钩子配置"
+  "hooks.custom_directory": "已有钩子目录 %s 由用户管理；请保留它并整合其检查后再修改钩子配置",
+  "dependencies.failed_summary": "%s 的依赖准备失败（%s）：%v",
+  "workspace.node_member_pattern": "项目 %q 中的 workspace 路径模式 %q 不受支持。请使用相对包路径或单层通配符。",
+  "creation.composite_requires_pnpm": "模板 %q 包含多个 Node 包，需要 pnpm 工作区；当前工作区使用 %q。",
+  "creation.duplicate_package": "包名 %q 同时用于 %q 和 %q，请选择不同的项目名。"
 }

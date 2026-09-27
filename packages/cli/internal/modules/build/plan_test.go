@@ -184,3 +184,31 @@ func TestMultipleProjectSelectionOrdersDependenciesAndDeduplicates(t *testing.T)
 		t.Fatal("unknown project accepted")
 	}
 }
+
+func TestCompositeBuildDependenciesBelongToParentProject(t *testing.T) {
+	for _, spec := range []string{"workspace:*", "file:../../../../packages/lib", "link:../../../../packages/lib"} {
+		t.Run(spec, func(t *testing.T) {
+			w := fixture(t)
+			write(t, w.Root(), "apps/web/package.json", `{"name":"desktop","workspaces":["apps/ui","packages/preload"],"scripts":{"build":"build-desktop"}}`)
+			write(t, w.Root(), "apps/web/apps/ui/package.json", `{"name":"@desktop/ui","dependencies":{"@test/lib":"`+spec+`","@desktop/preload":"workspace:*"}}`)
+			write(t, w.Root(), "apps/web/packages/preload/package.json", `{"name":"@desktop/preload"}`)
+			plan, err := NewPlanForProjects(w, []string{"web", "library"}, "")
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(plan.Tasks) != 2 || plan.Tasks[0].Project != "library" || !reflect.DeepEqual(plan.Tasks[1].Dependencies, []string{"library"}) {
+				t.Fatalf("wrong composite order: %+v", plan.Tasks)
+			}
+			// A consumer of an internal package depends on its logical owner.
+			write(t, w.Root(), "apps/web/apps/ui/package.json", `{"name":"@desktop/ui","dependencies":{"@desktop/preload":"workspace:*"}}`)
+			write(t, w.Root(), "packages/lib/package.json", `{"name":"@test/lib","scripts":{"build":"build-lib"},"dependencies":{"@desktop/preload":"workspace:*"}}`)
+			plan, err = NewPlanForProjects(w, []string{"library", "web"}, "")
+			if err != nil {
+				t.Fatal(err)
+			}
+			if plan.Tasks[0].Project != "web" || !reflect.DeepEqual(plan.Tasks[1].Dependencies, []string{"web"}) {
+				t.Fatalf("wrong internal package owner: %+v", plan.Tasks)
+			}
+		})
+	}
+}

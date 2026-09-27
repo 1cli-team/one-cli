@@ -174,7 +174,7 @@
   "workspace.issue.development_not_available": "local development command is not configured",
   "workspace.next": "Next: ",
   "dev.short": "Start local development",
-  "dev.tip": "Start all developable projects, or the selected project names or paths, in parallel. One task keeps its native terminal; multiple tasks use the TUI. Pipes and CI use streaming logs. Missing Node dependencies are installed after confirmation.",
+  "dev.tip": "Start all developable projects, or the selected project names or paths, in parallel. One task keeps its native terminal; multiple tasks use the TUI. Pipes and CI use streaming logs. Dependencies are prepared before startup. For pnpm, local development synchronizes the lockfile when needed and reuses an up-to-date installation.",
   "dev.dependencies_missing": "Node dependencies required for local development are not installed.",
   "dev.install_hint": "Install workspace dependencies, then rerun the development command",
   "dev.install_mise_hint": "Run this installation command from the workspace root, then retry one dev. One prepares the mise runtime automatically.",
@@ -796,5 +796,9 @@
   "mise.access_failed": "Cannot access the mise executable: %v",
   "mise.version_failed": "Could not read the mise version: %v",
   "dependencies.go_changes_required": "Go dependencies require changes to %s/go.mod; automatic preparation preserved the original file",
-  "hooks.custom_directory": "Existing hook directory %s is user-managed; preserve it and integrate its checks before changing the hook setup"
+  "hooks.custom_directory": "Existing hook directory %s is user-managed; preserve it and integrate its checks before changing the hook setup",
+  "dependencies.failed_summary": "%s dependency preparation failed (%s): %v",
+  "workspace.node_member_pattern": "Project %q has unsupported workspace pattern %q. Use relative package paths or single-level globs.",
+  "creation.composite_requires_pnpm": "Template %q contains multiple Node packages and requires a pnpm workspace; the current workspace uses %q.",
+  "creation.duplicate_package": "Package name %q is shared by %q and %q. Choose a different project name."
 }

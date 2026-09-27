@@ -23,7 +23,7 @@ export const defaultScheme = DEFAULT_SCHEME;
 export const noop = () => {};
 
 // preload 脚本绝对路径 —— 主窗口 webPreferences.preload 要指向这里
-// @app/preload 包的 main 指向 dist/index.cjs，这里 resolve 出真实路径
-export const preloadPath = requireFromHere.resolve("@app/preload");
+// @{{projectNameKebabCase}}/preload 包的 main 指向 dist/index.cjs，这里 resolve 出真实路径
+export const preloadPath = requireFromHere.resolve("@{{projectNameKebabCase}}/preload");
 
 export { __dirname, __filename };

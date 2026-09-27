@@ -1,0 +1,62 @@
+# {{projectName}}
+
+Electron + React + Vite，包含主进程、渲染进程和 preload 三个内部包。
+Electron + React + Vite, with separate main, renderer, and preload packages.
+
+## 工作区 / Workspace
+
+这是一个 One 项目，内部包共享仓库根目录的 `pnpm-workspace.yaml` 和
+`pnpm-lock.yaml`。包名使用 `@{{projectNameKebabCase}}/` 前缀，支持在一个仓库中添加多个桌面应用。
+
+This is one One project. Its internal packages share the repository's root
+`pnpm-workspace.yaml` and `pnpm-lock.yaml`. Package names use the
+`@{{projectNameKebabCase}}/` scope so multiple desktop apps can coexist.
+
+```text
+apps/electron/     Electron main process
+apps/ui/           React renderer
+packages/preload/  Preload bridge and shared IPC types
+```
+
+需要 pnpm 工作区。Node.js 和 pnpm 版本沿用仓库根目录配置。
+Requires a pnpm workspace. Node.js and pnpm versions follow the root configuration.
+
+## 开发和构建 / Development and builds
+
+从仓库根目录运行 / Run from the repository root:
+
+```sh
+one dev {{projectName}}
+one build {{projectName}}
+```
+
+开发时会按需更新根锁文件；请将其提交 Git。已有锁文件在构建时严格校验。
+Development updates the root lockfile when needed; commit it to Git.
+Builds validate an existing lockfile without rewriting it.
+
+也可以在本项目目录运行 `pnpm run dev`、`pnpm run build`。
+You can also run `pnpm run dev` and `pnpm run build` from this project directory.
+
+先构建 preload，再运行主进程和 UI。多个桌面应用同时开发时，分别在各项目环境中设置
+`ELECTRON_RENDERER_PORT`（默认 `5173`），主进程和 Vite 会使用相同端口。
+
+Preload builds first, followed by the main process and UI. When developing multiple
+desktop apps at once, set a different `ELECTRON_RENDERER_PORT` in each project's
+environment (default `5173`). The main process and Vite use the same port.
+
+## 依赖 / Dependencies
+
+安装依赖使用仓库根目录配置，包括 registry、镜像和安装脚本策略。
+模板不会携带独立锁文件或覆盖根目录 `.npmrc`。Electron 需要允许运行安装脚本；
+已有策略中的显式禁用会保留，需要在根目录自行调整后重新安装。
+
+Dependency installation uses the root configuration, including the registry,
+mirrors, and build-script policy. The template does not carry a separate lockfile
+or override the root `.npmrc`. Electron needs its installation script enabled;
+existing explicit denials are preserved and must be adjusted at the root before reinstalling.
+
+新增内部包时，在本项目 `package.json` 的 `workspaces` 和根 `pnpm-workspace.yaml`
+中登记路径。
+
+When adding an internal package, register its path in this project's `package.json`
+`workspaces` and the root `pnpm-workspace.yaml`.

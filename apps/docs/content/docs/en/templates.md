@@ -97,3 +97,23 @@ one add ts-library --name shared
 Run `one templates -o json` for full template metadata, or run `one add` interactively. The picker includes category and one-line descriptions.
 
 You can also pick one of the recommended combos above, get it running, and change course once you know more.
+
+## Template dependencies and Electron workspaces
+
+Node templates do not copy pre-generated lockfiles. `one dev` creates or updates the
+repository's root lockfile when needed; commit it to Git. `one build` validates an
+existing lockfile without rewriting it.
+
+`electron-app` requires a pnpm workspace. It remains one One project, while its main,
+UI, and preload packages join the root `pnpm-workspace.yaml` and share the root lockfile.
+Package names use the project name as their scope, for example `@desktop/electron`,
+`@desktop/ui`, and `@desktop/preload`, so multiple desktop apps can coexist.
+
+The template follows the root package-manager version, registry, and mirror settings.
+Existing build-script policies are preserved; configurations without a policy receive
+the bundled template defaults. Explicit denials of Electron's installation script
+must be adjusted at the root. For concurrent desktop development, set a different
+`ELECTRON_RENDERER_PORT` in each project's environment.
+
+These rules apply to newly generated projects. Existing Electron projects are not
+automatically rewritten or migrated.

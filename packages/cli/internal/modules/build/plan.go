@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/application/execution"
+	"github.com/torchstellar-team/one-cli/packages/cli/internal/core/workspace"
 	cliErrors "github.com/torchstellar-team/one-cli/packages/cli/internal/platform/errors"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/i18n"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/output"
@@ -36,6 +37,7 @@ type Plan struct {
 }
 
 type nodePackage struct {
+	Directory            string            `json:"-"`
 	Name                 string            `json:"name"`
 	Dependencies         map[string]string `json:"dependencies"`
 	DevDependencies      map[string]string `json:"devDependencies"`
@@ -74,7 +76,7 @@ func NewPlanForProjects(w execution.Workspace, selectors []string, environment s
 		}
 	}
 	plan := &Plan{Schema: "one-cli/build-plan/v1", Runtime: kind, Environment: environment, DryRun: true, Tasks: []Task{}}
-	packages := map[string]nodePackage{}
+	packages := map[string][]nodePackage{}
 	names := map[string]string{}
 	directories := map[string]string{}
 	tasks := map[string]Task{}
@@ -93,22 +95,34 @@ func NewPlanForProjects(w execution.Workspace, selectors []string, environment s
 			ready++
 		}
 		if p.Toolchain == "node" && len(projects) > 1 {
-			raw, err := os.ReadFile(filepath.Join(p.TargetDir, "package.json"))
+			rel, err := filepath.Rel(w.Root(), p.TargetDir)
 			if err != nil {
 				return nil, err
 			}
-			var pkg nodePackage
-			if err := json.Unmarshal(raw, &pkg); err != nil {
+			dirs, err := workspace.NodeProjectPackageDirs(w.Root(), rel, nil)
+			if err != nil {
 				return nil, err
 			}
-			if pkg.Name != "" {
-				if previous, ok := names[pkg.Name]; ok {
-					return nil, i18n.Errorf("build.duplicate_package", pkg.Name, previous, p.Name)
+			for _, dir := range dirs {
+				absolute := filepath.Join(w.Root(), dir)
+				raw, err := os.ReadFile(filepath.Join(absolute, "package.json"))
+				if err != nil {
+					return nil, err
 				}
-				names[pkg.Name] = p.Name
+				var pkg nodePackage
+				if err := json.Unmarshal(raw, &pkg); err != nil {
+					return nil, err
+				}
+				pkg.Directory = absolute
+				if pkg.Name != "" {
+					if previous, ok := names[pkg.Name]; ok {
+						return nil, i18n.Errorf("build.duplicate_package", pkg.Name, previous, p.Name)
+					}
+					names[pkg.Name] = p.Name
+				}
+				packages[p.Name] = append(packages[p.Name], pkg)
+				directories[filepath.Clean(absolute)] = p.Name
 			}
-			packages[p.Name] = pkg
-			directories[filepath.Clean(p.TargetDir)] = p.Name
 		}
 		tasks[p.Name] = task
 		order = append(order, p.Name)
@@ -118,18 +132,20 @@ func NewPlanForProjects(w execution.Workspace, selectors []string, environment s
 	}
 	// Package names, not manifest aliases, identify local Node dependencies.
 	// Keep manifest order among otherwise independent projects.
-	for name, pkg := range packages {
+	for name, members := range packages {
 		local := map[string]bool{}
-		for _, deps := range []map[string]string{pkg.Dependencies, pkg.DevDependencies, pkg.OptionalDependencies} {
-			for dep, spec := range deps {
-				target := names[dep]
-				for _, prefix := range []string{"file:", "link:"} {
-					if strings.HasPrefix(spec, prefix) {
-						target = directories[filepath.Clean(filepath.Join(tasks[name].Directory, strings.TrimPrefix(spec, prefix)))]
+		for _, pkg := range members {
+			for _, deps := range []map[string]string{pkg.Dependencies, pkg.DevDependencies, pkg.OptionalDependencies} {
+				for dep, spec := range deps {
+					target := names[dep]
+					for _, prefix := range []string{"file:", "link:"} {
+						if strings.HasPrefix(spec, prefix) {
+							target = directories[filepath.Clean(filepath.Join(pkg.Directory, strings.TrimPrefix(spec, prefix)))]
+						}
 					}
-				}
-				if target != "" {
-					local[target] = true
+					if target != "" && (target != name || len(members) == 1) {
+						local[target] = true
+					}
 				}
 			}
 		}

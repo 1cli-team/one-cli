@@ -97,3 +97,18 @@ one add ts-library     --name shared
 跑 `one templates -o json` 看每个模板的完整描述，或者直接 `one add` 进入交互式选择 —— 选择器里会带上类别和一句话提示。
 
 或者直接选 [推荐组合](#推荐组合) 里的栈，先跑起来，跑不通再换。
+
+## 模板依赖和 Electron 工作区
+
+Node 模板不复制预生成的锁文件。`one dev` 会按需生成或更新仓库根锁文件，
+请将它提交 Git；`one build` 对已有锁文件执行严格校验。
+
+`electron-app` 需要 pnpm 工作区。它仍是一个 One 项目，内部的主进程、UI 和 preload
+包会自动加入根 `pnpm-workspace.yaml`，共享根锁文件。包名以项目名作为 scope，
+例如 `@desktop/electron`、`@desktop/ui`、`@desktop/preload`，可在同一仓库中添加多个桌面应用。
+
+模板沿用根目录包管理器版本、registry 和镜像配置。已有安装脚本策略会保留；未配置时
+使用内置模板默认规则。若显式禁用了 Electron 安装脚本，需要在根目录调整策略。
+多个桌面应用同时开发时，通过各项目环境中的 `ELECTRON_RENDERER_PORT` 配置不同端口。
+
+这些规则适用于新生成的项目，已有 Electron 项目不会自动改写目录或依赖配置。

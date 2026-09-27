@@ -1,5 +1,5 @@
 {
-  "name": "@app/electron",
+  "name": "@{{projectNameKebabCase}}/electron",
   "version": "0.1.0",
   "description": "electron-template electron main process",
   "license": "MIT",
@@ -13,7 +13,7 @@
     "release": "cross-env NODE_ENV=production node script/release.mjs"
   },
   "dependencies": {
-    "@app/preload": "workspace:*",
+    "@{{projectNameKebabCase}}/preload": "workspace:*",
     "@inversifyjs/binding-decorators": "^3.0.0",
     "dayjs": "^1.11.23",
     "electron-devtools-installer": "^4.0.0",

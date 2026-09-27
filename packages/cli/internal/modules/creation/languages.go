@@ -26,7 +26,11 @@ func planLanguages(p *fsutil.FilePlan, m *workspace.Manifest) error {
 		case "go":
 			goDirs = append(goDirs, rel)
 		case "node":
-			nodeDirs = append(nodeDirs, rel)
+			dirs, err := workspace.NodeProjectPackageDirs(p.Root, rel, p.Read)
+			if err != nil {
+				return err
+			}
+			nodeDirs = append(nodeDirs, dirs...)
 		}
 	}
 	if len(goDirs) > 0 {
@@ -267,6 +271,29 @@ func planPNPMWorkspace(p *fsutil.FilePlan, dirs []string) error {
 		return i18n.Errorf("creation.pnpm_mapping")
 	}
 	root := doc.Content[0]
+	hasBuildPolicy := false
+	for i := 0; i < len(root.Content); i += 2 {
+		switch root.Content[i].Value {
+		case "allowBuilds", "onlyBuiltDependencies", "onlyBuiltDependenciesFile", "ignoredBuiltDependencies", "neverBuiltDependencies", "ignoreScripts", "ignoreDepScripts", "dangerouslyAllowAllBuilds", "strictDepBuilds":
+			hasBuildPolicy = true
+		}
+	}
+	// Existing policies are authoritative, including explicit denials and
+	// pnpm 10 settings. New configurations use the same template defaults as
+	// a freshly created workspace.
+	addedBuildPolicy := !hasBuildPolicy
+	if addedBuildPolicy {
+		var defaults yaml.Node
+		if err := yaml.Unmarshal([]byte(pnpmWorkspaceContent), &defaults); err != nil {
+			return err
+		}
+		fields := defaults.Content[0].Content
+		for i := 0; i < len(fields); i += 2 {
+			if fields[i].Value == "allowBuilds" {
+				root.Content = append(root.Content, fields[i], fields[i+1])
+			}
+		}
+	}
 	var packages *yaml.Node
 	for i := 0; i < len(root.Content); i += 2 {
 		if root.Content[i].Value == "packages" {
@@ -295,6 +322,8 @@ func planPNPMWorkspace(p *fsutil.FilePlan, dirs []string) error {
 		for _, dir := range updated[len(patterns):] {
 			packages.Content = append(packages.Content, &yaml.Node{Kind: yaml.ScalarNode, Tag: "!!str", Value: dir})
 		}
+	}
+	if len(updated) != len(patterns) || addedBuildPolicy {
 		var buf bytes.Buffer
 		enc := yaml.NewEncoder(&buf)
 		enc.SetIndent(2)
@@ -306,4 +335,39 @@ func planPNPMWorkspace(p *fsutil.FilePlan, dirs []string) error {
 		return nil
 	}
 	return p.Set(WorkspaceFilename, raw, 0o644)
+}
+
+// Prevent filter commands from matching a different project after names are
+// normalized (for example DesktopApp and desktop-app use the same npm scope).
+func validateNodePackageNames(p *fsutil.FilePlan, m *workspace.Manifest) error {
+	names := map[string]string{}
+	for _, project := range m.Projects {
+		if project.Toolchain != "node" {
+			continue
+		}
+		dirs, err := workspace.NodeProjectPackageDirs(p.Root, project.RelativeDir, p.Read)
+		if err != nil {
+			return err
+		}
+		for _, dir := range dirs {
+			raw, err := p.Read(path.Join(dir, "package.json"))
+			if err != nil {
+				return err
+			}
+			var pkg struct {
+				Name string `json:"name"`
+			}
+			if err := json.Unmarshal(raw, &pkg); err != nil {
+				return err
+			}
+			if pkg.Name == "" {
+				continue
+			}
+			if previous, exists := names[pkg.Name]; exists && previous != dir {
+				return i18n.Errorf("creation.duplicate_package", pkg.Name, previous, dir)
+			}
+			names[pkg.Name] = dir
+		}
+	}
+	return nil
 }

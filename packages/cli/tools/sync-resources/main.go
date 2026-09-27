@@ -71,7 +71,8 @@ func syncBundled(root string) error {
 		}
 		// Workspace guidance and skills are distributed separately from templates.
 		switch strings.TrimSuffix(entry.Name(), ".hbs") {
-		case ".one", ".agents", "AGENTS.md", "CLAUDE.md", "SKILL.md":
+		case ".one", ".agents", "AGENTS.md", "CLAUDE.md", "SKILL.md",
+			"pnpm-lock.yaml", "package-lock.json", "npm-shrinkwrap.json", "yarn.lock", "bun.lock", "bun.lockb":
 			return false
 		}
 		return entry.Name() != "go.mod"
