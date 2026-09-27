@@ -128,7 +128,7 @@ func Pull(ctx context.Context, projectRoot string, in PullInput) (*PullResult, e
 		}
 		if conflict {
 			return nil, cliErrors.New(cliErrors.ENV_PULL_CONFLICT,
-				"已有 .env 与 Infisical 拉取的密钥不一致："+entry.EnvFilePath+"。如需覆盖请加 --force。").
+				i18n.Tf("env.pull.file_conflict", entry.EnvFilePath)).
 				WithContext(map[string]any{
 					"env_file_path":  entry.EnvFilePath,
 					"relative_dir":   entry.RelativeDir,
@@ -219,11 +219,10 @@ func buildPullTargets(projectRoot string, cfg *WorkspaceConfig, projectSelector 
 	if len(out) == 0 {
 		if wantSub != "" {
 			return nil, cliErrors.New(cliErrors.SUBPROJECT_NOT_FOUND,
-				"找不到名字或路径匹配 "+wantSub+" 的项目。已声明: "+
-					strings.Join(workspace.ProjectNames(m), ", "))
+				i18n.Tf("workspace.project_selector_missing", wantSub, strings.Join(workspace.ProjectNames(m), ", ")))
 		}
 		return nil, cliErrors.New(cliErrors.MANIFEST_MISSING_OR_EMPTY,
-			"manifest 没有声明任何项目，且 workspace 根也没有 keys 可拉。先 `one add` 新建一个，或 `one env set` 在根级写入 keys。")
+			i18n.T("env.pull.empty"))
 	}
 	return out, nil
 }

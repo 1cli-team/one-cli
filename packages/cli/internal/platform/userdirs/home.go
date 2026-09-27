@@ -5,6 +5,8 @@ import (
 	"errors"
 	"os"
 	"strings"
+
+	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/i18n"
 )
 
 // Home returns the effective home directory. HOME wins when explicitly set,
@@ -20,7 +22,7 @@ func Home() (string, error) {
 		return "", err
 	}
 	if strings.TrimSpace(home) == "" {
-		return "", errors.New("user home directory is empty")
+		return "", errors.New(i18n.T("path.home_empty"))
 	}
 	return home, nil
 }

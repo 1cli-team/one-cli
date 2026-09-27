@@ -17,13 +17,15 @@ import (
 	"strings"
 	"syscall"
 
+	"gopkg.in/yaml.v3"
+
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/core/workspace"
 	cliErrors "github.com/torchstellar-team/one-cli/packages/cli/internal/platform/errors"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/fsutil"
+	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/i18n"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/output"
 	platformprocess "github.com/torchstellar-team/one-cli/packages/cli/internal/platform/process"
 	runtimeport "github.com/torchstellar-team/one-cli/packages/cli/internal/ports/runtime"
-	"gopkg.in/yaml.v3"
 )
 
 type Runner func(context.Context, runtimeport.Command, io.Writer, io.Writer) error
@@ -90,7 +92,7 @@ func (s Service) run(ctx context.Context, in Input, dir string, args []string, e
 	command := runtimeport.Command{Directory: dir, Argv: args, Env: env}
 	if in.Runtime == runtimeport.Mise {
 		if s.Provider == nil {
-			return fmt.Errorf("mise provider is required")
+			return i18n.Errorf("dependencies.mise_required")
 		}
 		var err error
 		command, err = s.Provider.Prepare(ctx, command)
@@ -99,7 +101,7 @@ func (s Service) run(ctx context.Context, in Input, dir string, args []string, e
 		}
 	}
 	if len(command.Argv) == 0 {
-		return fmt.Errorf("dependency runtime returned an empty command")
+		return i18n.Errorf("dependencies.command_empty")
 	}
 	run := s.Run
 	if run == nil {
@@ -143,7 +145,7 @@ func (s Service) prepareGo(ctx context.Context, in Input, p workspace.ManifestPr
 			activeInfo, activeErr := os.Stat(active)
 			wantInfo, wantErr := os.Stat(want)
 			if activeErr != nil || wantErr != nil || !os.SameFile(activeInfo, wantInfo) {
-				return fmt.Errorf("%s uses external GOWORK=%s; use %s or GOWORK=off explicitly", p.Name, active, want)
+				return i18n.Errorf("dependencies.external_gowork", p.Name, active, want)
 			}
 		}
 		// Resolve the root, not the go.work file itself: relative use paths
@@ -156,7 +158,7 @@ func (s Service) prepareGo(ctx context.Context, in Input, p workspace.ManifestPr
 		return err
 	}
 	defer unlock()
-	fmt.Fprintf(in.Log, "[one] %s: preparing Go dependencies\n", p.Name)
+	fmt.Fprintf(in.Log, i18n.T("dependencies.go_preparing"), p.Name)
 	// In workspace mode, package loading uses the actual Go build graph and
 	// writes workspace sums as needed. Expanding `all` can fetch historical
 	// versions of local members; only use it for a standalone module.
@@ -174,7 +176,7 @@ func (s Service) prepareGo(ctx context.Context, in Input, p workspace.ManifestPr
 		if err := s.run(ctx, in, dir, args, env, out, io.MultiWriter(in.Log, &detail)); err != nil {
 			failure := preparationError(p.Name, dir, strings.Join(args, " "), err, detail.String())
 			if args[1] == "list" {
-				return failure.WithRemediation(output.Remediation{Action: "repair-go-module", Hint: "Inspect the Go error. If module declarations need repair, run tidy explicitly.", Command: "one run " + p.Name + " -- go mod tidy"})
+				return failure.WithRemediation(output.Remediation{Action: "repair-go-module", Hint: i18n.T("dependencies.go_repair_hint"), Command: "one run " + p.Name + " -- go mod tidy"})
 			}
 			return failure
 		}
@@ -192,7 +194,7 @@ func (s Service) downloadModule(ctx context.Context, in Input, p workspace.Manif
 		return err
 	}
 	if module == nil {
-		return fmt.Errorf("missing go.mod for %s", p.Name)
+		return i18n.Errorf("dependencies.go_mod_missing", p.Name)
 	}
 	sums, err := files.Read("go.sum")
 	if err != nil {
@@ -229,8 +231,8 @@ func (s Service) downloadModule(ctx context.Context, in Input, p workspace.Manif
 		return err
 	}
 	if !bytes.Equal(module, after) {
-		return cliErrors.New(cliErrors.ONE_CLI_ERROR, "Go dependencies require changes to "+p.Name+"/go.mod; automatic preparation preserved the original file").WithRemediation(output.Remediation{
-			Action: "repair-go-module", Command: "one run " + p.Name + " -- go mod tidy", Hint: "Review the module declarations and run tidy explicitly.",
+		return cliErrors.New(cliErrors.ONE_CLI_ERROR, i18n.Tf("dependencies.go_changes_required", p.Name)).WithRemediation(output.Remediation{
+			Action: "repair-go-module", Command: "one run " + p.Name + " -- go mod tidy", Hint: i18n.T("dependencies.go_tidy_hint"),
 		})
 	}
 	afterSums, err := os.ReadFile(sumName)
@@ -276,7 +278,7 @@ func (s Service) prepareNode(ctx context.Context, in Input, fallback string) err
 		return nil
 	}
 	args := NodeInstallCommand(in.Root, manager)
-	fmt.Fprintf(in.Log, "[one] Preparing Node workspace dependencies: %s\n", strings.Join(args, " "))
+	fmt.Fprintf(in.Log, i18n.T("dependencies.node_preparing"), strings.Join(args, " "))
 	var detail bytes.Buffer
 	if err := s.run(ctx, in, in.Root, args, os.Environ(), in.Log, io.MultiWriter(in.Log, &detail)); err != nil {
 		return preparationError("Node workspace", in.Root, strings.Join(args, " "), err, detail.String())
@@ -407,5 +409,5 @@ func preparationError(project, dir, command string, err error, detail string) *o
 	if errors.As(err, &exit) {
 		context["exit_code"] = exit.ExitCode()
 	}
-	return cliErrors.New(code, fmt.Sprintf("%s dependency preparation failed (%s): %v\n%s", project, command, err, strings.TrimSpace(detail))).WithContext(context)
+	return cliErrors.New(code, i18n.Tf("dependencies.failed", project, command, err, strings.TrimSpace(detail))).WithContext(context)
 }

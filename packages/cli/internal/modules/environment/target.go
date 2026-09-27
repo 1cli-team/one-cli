@@ -8,6 +8,7 @@ import (
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/application/execution"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/core/workspace"
 	cliErrors "github.com/torchstellar-team/one-cli/packages/cli/internal/platform/errors"
+	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/i18n"
 	session "github.com/torchstellar-team/one-cli/packages/cli/internal/platform/infisicalsession"
 )
 
@@ -36,7 +37,7 @@ func requireInfisicalBackend(resolution resolution) error {
 	if resolution.Scope.Backend().Name != workspace.EnvBackendInfisical {
 		return cliErrors.New(
 			cliErrors.ENV_BACKEND_INVALID,
-			"当前工作区没有选择 Infisical backend。",
+			i18n.T("env.infisical_required"),
 		)
 	}
 	return nil
@@ -108,8 +109,7 @@ func (s *Service) resolveInfisicalFolderPath(
 			return infisical.NormalizePath(selector), nil
 		}
 		return "", cliErrors.New(cliErrors.SUBPROJECT_NOT_FOUND,
-			"找不到名字或路径匹配 "+selector+" 的项目。已声明: "+
-				strings.Join(activeWorkspace.ProjectNames(), ", "))
+			i18n.Tf("workspace.project_selector_missing", selector, strings.Join(activeWorkspace.ProjectNames(), ", ")))
 	}
 	if project, ok := activeWorkspace.ProjectFromWorkingDirectory(); ok {
 		override, err := infisical.LoadSubprojectConfig(projectRoot, project.RelativeDir)

@@ -1,10 +1,10 @@
 package preset
 
 import (
-	"fmt"
 	"strings"
 
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/core/template"
+	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/i18n"
 )
 
 // ResolvedItem pairs a parsed Item with its registry template.
@@ -38,7 +38,7 @@ type ResolveError struct {
 }
 
 func (e *ResolveError) Error() string {
-	return fmt.Sprintf("preset resolve: %s", e.Reason)
+	return i18n.Tf("preset.resolve_failed", e.Reason)
 }
 
 // Resolve looks up every code in spec against registry, validating
@@ -46,7 +46,7 @@ func (e *ResolveError) Error() string {
 // for Apply, or a *ResolveError describing the first failure.
 func Resolve(spec Spec, registry *template.Registry) (ResolvedSpec, error) {
 	if registry == nil {
-		return ResolvedSpec{}, &ResolveError{Reason: "registry is nil"}
+		return ResolvedSpec{}, &ResolveError{Reason: i18n.T("preset.registry_required")}
 	}
 	if len(spec.UnknownSegments) > 0 {
 		// Caller decides how strict to be; we surface them so the
@@ -54,7 +54,7 @@ func Resolve(spec Spec, registry *template.Registry) (ResolvedSpec, error) {
 		// pre-flight) treats this as fail-fast PRESET_INVALID; future
 		// versions may downgrade to warnings.
 		return ResolvedSpec{Spec: spec}, &ResolveError{
-			Reason:       "preset references unknown segments (CLI may be out of date)",
+			Reason:       i18n.T("preset.unknown_segments"),
 			Kind:         "extension",
 			UnknownCount: len(spec.UnknownSegments),
 		}
@@ -73,7 +73,7 @@ func Resolve(spec Spec, registry *template.Registry) (ResolvedSpec, error) {
 		tpl := byCode[it.TemplateCode]
 		if tpl == nil {
 			return ResolvedSpec{}, &ResolveError{
-				Reason:  fmt.Sprintf("template code %q is not registered", it.TemplateCode),
+				Reason:  i18n.Tf("preset.template_not_registered", it.TemplateCode),
 				Kind:    "template",
 				Segment: itemSegmentString(it),
 				Code:    it.TemplateCode,
@@ -97,7 +97,7 @@ func Resolve(spec Spec, registry *template.Registry) (ResolvedSpec, error) {
 		envID := EnvProviderForCode(spec.EnvCode[0])
 		if envID == "" {
 			return ResolvedSpec{}, &ResolveError{
-				Reason:  fmt.Sprintf("env code %q is not registered", spec.EnvCode),
+				Reason:  i18n.Tf("preset.env_not_registered", spec.EnvCode),
 				Kind:    "env",
 				Segment: "e" + spec.EnvCode,
 				Code:    spec.EnvCode,
@@ -126,7 +126,7 @@ func kindCategoryMismatch(k Kind, tpl *template.Template) string {
 		KindLibrary:  template.CategoryLibrary,
 	}[k]
 	if tpl.Category != expected {
-		return fmt.Sprintf("template %s is %s; cannot be used as %s segment",
+		return i18n.Tf("preset.category_mismatch",
 			tpl.ID, tpl.Category, kindLongName(k))
 	}
 	return ""

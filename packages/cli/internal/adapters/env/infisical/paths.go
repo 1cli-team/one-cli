@@ -6,6 +6,7 @@ import (
 
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/core/workspace"
 	cliErrors "github.com/torchstellar-team/one-cli/packages/cli/internal/platform/errors"
+	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/i18n"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/ports/secrets"
 )
 
@@ -19,7 +20,7 @@ func SanitizeEnvName(s string) (string, error) {
 	v := strings.TrimSpace(s)
 	if !envNameRE.MatchString(v) {
 		return "", cliErrors.New(cliErrors.ENV_INVALID_ENV_NAME,
-			"环境名称非法："+s+"（必须匹配 ^[a-zA-Z0-9][a-zA-Z0-9-_]*$，例如 dev / staging / prod）")
+			i18n.Tf("env.environment_format", s))
 	}
 	return v, nil
 }

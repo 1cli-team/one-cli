@@ -139,10 +139,10 @@ func Get(in GetInput) (*GetResult, error) {
 	if !ok {
 		where := strings.Join(sources, " + ")
 		if where == "" {
-			where = "未找到 .env"
+			where = i18n.T("dotenv.no_file")
 		}
 		return nil, cliErrors.New(cliErrors.ENV_KEY_NOT_FOUND,
-			fmt.Sprintf("KEY %q 不在 dotenv 文件中（%s）", in.Key, where))
+			i18n.Tf("dotenv.key_missing", in.Key, where))
 	}
 	// Source = the last file in the overlay that defined this key.
 	source := sources[len(sources)-1]
@@ -194,7 +194,7 @@ func List(in ListInput) (*ListResult, error) {
 func Set(in SetInput) (*SetResult, error) {
 	if strings.TrimSpace(in.Key) == "" {
 		return nil, cliErrors.New(cliErrors.ENV_SET_KEY_REQUIRED,
-			"必须提供 <KEY> 位置参数。")
+			i18n.T("env.key_required"))
 	}
 	subDir, err := resolveSubprojectDir(in.ProjectRoot, in.SubprojectPath)
 	if err != nil {
@@ -205,7 +205,7 @@ func Set(in SetInput) (*SetResult, error) {
 	existing, found, err := LoadDotenvFile(target)
 	if err != nil {
 		return nil, cliErrors.New(cliErrors.RUN_DOTENV_MISSING,
-			fmt.Sprintf("读取 %s 失败：%v", target, err))
+			i18n.Tf("file.read_failed", target, err))
 	}
 
 	action := "created"
@@ -222,7 +222,7 @@ func Set(in SetInput) (*SetResult, error) {
 			}
 			if !in.Overwrite {
 				return nil, cliErrors.New(cliErrors.ENV_SET_OVERWRITE_REQUIRED,
-					"密钥 "+in.Key+" 已存在且值不同。加 --yes 确认覆盖。").
+					i18n.Tf("env.key_overwrite", in.Key)).
 					WithContext(map[string]any{
 						"source": target,
 						"env":    in.Env,
@@ -281,7 +281,7 @@ func loadOverlay(chain []string) (map[string]string, []string, error) {
 		vars, found, err := LoadDotenvFile(path)
 		if err != nil {
 			return nil, nil, cliErrors.New(cliErrors.RUN_DOTENV_MISSING,
-				fmt.Sprintf("读取 %s 失败：%v", path, err))
+				i18n.Tf("file.read_failed", path, err))
 		}
 		if !found {
 			continue

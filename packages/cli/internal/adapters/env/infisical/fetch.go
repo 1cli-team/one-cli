@@ -2,10 +2,10 @@ package infisical
 
 import (
 	"context"
-	"fmt"
 	"path/filepath"
 
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/core/workspace"
+	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/i18n"
 )
 
 // FetchSecretsForSubproject pulls every secret a subproject can see from
@@ -38,7 +38,7 @@ func FetchSecretsForSubproject(ctx context.Context, projectRoot, relativeDir, en
 		return nil, err
 	}
 	if cfg.SiteURL != "" && cfg.SiteURL != siteURL {
-		return nil, fmt.Errorf("工作区绑定了不同 Infisical 实例，请重新选择项目。")
+		return nil, i18n.Errorf("infisical.binding_instance_mismatch")
 	}
 	cfg.SiteURL = siteURL
 	client, err := NewClient(ctx, cfg, creds)

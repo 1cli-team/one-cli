@@ -2,6 +2,8 @@ package prompt
 
 import (
 	"charm.land/huh/v2"
+
+	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/i18n"
 )
 
 // Form is a fluent builder for multi-step prompts that share one
@@ -60,7 +62,7 @@ func (f *Form) Select(out *string, title string, options []Option[string]) *Form
 
 // Confirm adds a yes/no field bound to *out.
 func (f *Form) Confirm(out *bool, title string) *Form {
-	field := huh.NewConfirm().Title(title).Value(out)
+	field := huh.NewConfirm().Title(title).Value(out).Affirmative(i18n.T("common.yes")).Negative(i18n.T("common.no"))
 	f.fields = append(f.fields, field)
 	return f
 }
@@ -72,7 +74,7 @@ func (f *Form) Run() error {
 	if len(f.fields) == 0 {
 		return nil
 	}
-	form := huh.NewForm(huh.NewGroup(f.fields...)).WithTheme(defaultTheme())
+	form := huh.NewForm(huh.NewGroup(f.fields...)).WithTheme(defaultTheme()).WithKeyMap(defaultKeyMap())
 	if err := runHuh(form.Run); err != nil {
 		return mapErr(err)
 	}

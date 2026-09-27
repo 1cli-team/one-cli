@@ -14,7 +14,6 @@ package cli
 import (
 	"context"
 	"errors"
-	"fmt"
 	"os"
 	"strings"
 
@@ -78,6 +77,7 @@ func newRootCommand() *cobra.Command {
 	i18n.MarkShort(root, "root.short")
 	root.SetVersionTemplate("{{.Version}}\n")
 	root.SetHelpFunc(helpui.Render)
+	root.SetFlagErrorFunc(i18n.FlagError)
 	root.PersistentFlags().StringP("output", "o", "", i18n.T("common.flag.output"))
 	i18n.MarkFlagUsage(root, "output", "common.flag.output")
 	return root
@@ -193,7 +193,7 @@ func Execute(version string, args []string) (resultErr error) {
 	if first, ok := firstPositional(args); ok && !isKnownSubcommand(first) {
 		err := cliErrors.New(
 			cliErrors.UNKNOWN_COMMAND,
-			fmt.Sprintf("未知命令: %s", first),
+			i18n.Tf("command.unknown", first),
 		).WithContext(map[string]any{"command": "one " + first})
 		output.EmitError(err)
 		return err

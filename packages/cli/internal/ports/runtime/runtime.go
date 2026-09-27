@@ -3,9 +3,9 @@ package runtime
 
 import (
 	"context"
-	"fmt"
 
 	cliErrors "github.com/torchstellar-team/one-cli/packages/cli/internal/platform/errors"
+	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/i18n"
 )
 
 const (
@@ -32,5 +32,5 @@ func Validate(kind string) error {
 	if kind == "" || kind == Builtin || kind == Mise {
 		return nil
 	}
-	return cliErrors.New(cliErrors.RUNTIME_INVALID, fmt.Sprintf("Unknown runtime %q; use builtin or mise.", kind))
+	return cliErrors.New(cliErrors.RUNTIME_INVALID, i18n.Tf("runtime.unknown", kind))
 }

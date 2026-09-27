@@ -24,7 +24,7 @@ func Commands(deps Dependencies) []*cobra.Command {
 		Use:     "env",
 		Long:    i18n.T("env.tip"),
 		Example: "  one env\n  one env set DATABASE_URL\n  one env list",
-		Args:    cobra.NoArgs,
+		Args:    i18n.NoArgs,
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			summary, err := deps.Service.Summary(commandScope(cmd))
 			if err != nil {

@@ -30,7 +30,7 @@ func TestReadManifestRejectsRetiredDomainsWithoutRewritingFiles(t *testing.T) {
 					t.Fatal(err)
 				}
 				_, err := ReadManifest(root)
-				if err == nil || !strings.Contains(err.Error(), "已下线") {
+				if err == nil || !strings.Contains(err.Error(), "have been removed") {
 					t.Fatalf("error = %v", err)
 				}
 				coded, ok := err.(interface{ ErrorCode() string })

@@ -1,10 +1,13 @@
 package errors_test
 
 import (
+	"fmt"
 	"reflect"
 	"testing"
 
 	cliErrors "github.com/torchstellar-team/one-cli/packages/cli/internal/platform/errors"
+	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/i18n"
+	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/output"
 )
 
 // TestEveryCodeHasDefinition catches drift between the typed Code constants
@@ -90,13 +93,34 @@ func TestEveryCodeHasDefinition(t *testing.T) {
 // Remediation slice from the registry automatically — agents rely on the
 // remediation field being present for known codes.
 func TestNew_PopulatesDefaultRemediation(t *testing.T) {
-	err := cliErrors.New(cliErrors.UNKNOWN_COMMAND, "boom")
-	if err == nil {
-		t.Fatal("New returned nil")
-	}
-	got := err.Remediation
-	want := cliErrors.Codes[cliErrors.UNKNOWN_COMMAND].Remediation
-	if !reflect.DeepEqual(got, want) {
-		t.Errorf("default remediation not populated\n  want: %#v\n  got:  %#v", want, got)
+	t.Cleanup(func() { _ = i18n.Init(i18n.DefaultLocale) })
+	for _, locale := range []string{"en-US", "zh-CN"} {
+		_ = i18n.Init(locale)
+		for code, definition := range cliErrors.Codes {
+			original := append([]output.Remediation(nil), definition.Remediation...)
+			want := append([]output.Remediation(nil), original...)
+			for i := range want {
+				if want[i].Hint != "" {
+					key := fmt.Sprintf("error.%s.hint.%d", code, i)
+					want[i].Hint = i18n.T(key)
+					if want[i].Hint == key {
+						t.Errorf("missing %s translation for %s", locale, key)
+					}
+				}
+			}
+			got := cliErrors.New(code, "project web failed").Remediation
+			if len(got) != len(want) || (len(got) != 0 && !reflect.DeepEqual(got, want)) {
+				t.Errorf("%s %s remediation: want %#v, got %#v", locale, code, want, got)
+			}
+			if !reflect.DeepEqual(definition.Remediation, cliErrors.Codes[code].Remediation) {
+				t.Fatalf("registry was mutated for %s", code)
+			}
+			if len(got) > 0 {
+				got[0].Hint = "custom hint"
+				if !reflect.DeepEqual(original, cliErrors.Codes[code].Remediation) {
+					t.Fatalf("remediation shares registry storage")
+				}
+			}
+		}
 	}
 }

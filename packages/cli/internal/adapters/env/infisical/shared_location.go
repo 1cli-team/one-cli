@@ -2,7 +2,6 @@ package infisical
 
 import (
 	"context"
-	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -10,6 +9,8 @@ import (
 	"unicode"
 
 	"github.com/gofrs/flock"
+
+	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/i18n"
 	session "github.com/torchstellar-team/one-cli/packages/cli/internal/platform/infisicalsession"
 )
 
@@ -29,10 +30,10 @@ func CreateRemoteProject(ctx context.Context, name string) (*RemoteProject, erro
 func createProjectFor(ctx context.Context, s *session.Session, name string) (*RemoteProject, error) {
 	name = strings.TrimSpace(name)
 	if name == "" || len([]rune(name)) > 64 || strings.ContainsFunc(name, unicode.IsControl) {
-		return nil, fmt.Errorf("项目名称须为 1–64 个字符，不能包含控制字符")
+		return nil, i18n.Errorf("infisical.project_name_invalid")
 	}
 	if s.OrganizationID == "" {
-		return nil, fmt.Errorf("当前登录未选择组织，请在 Infisical 中选择组织后重新登录")
+		return nil, i18n.Errorf("infisical.organization_required")
 	}
 	c, err := NewClient(ctx, &WorkspaceConfig{SiteURL: s.SiteURL}, &Credentials{AccessToken: s.Token})
 	if err != nil {
@@ -59,12 +60,12 @@ func EnsureDefaultGlobal(ctx context.Context) (*GlobalLocation, error) {
 		}
 		if location != nil {
 			if location.SiteURL != s.SiteURL || location.UserID != s.UserID || (s.OrganizationID != "" && location.OrganizationID != s.OrganizationID) {
-				return nil, fmt.Errorf("已有共享凭据位置属于其他账号或组织，请手动选择存放项目")
+				return nil, i18n.Errorf("global.existing_location_mismatch")
 			}
 			return bindGlobalFor(ctx, s, location.ProjectID, location.DefaultEnvironment)
 		}
 		if s.OrganizationID == "" {
-			return nil, fmt.Errorf("当前登录未选择组织，请在 Infisical 中选择组织后重新登录")
+			return nil, i18n.Errorf("infisical.organization_required")
 		}
 		projects, err := projectsFor(ctx, s)
 		if err != nil {
@@ -74,7 +75,7 @@ func EnsureDefaultGlobal(ctx context.Context) (*GlobalLocation, error) {
 		for _, project := range projects {
 			if project.Name == DefaultSharedProject {
 				if selected != nil {
-					return nil, fmt.Errorf("存在多个同名共享凭据项目，请手动选择存放项目")
+					return nil, i18n.Errorf("global.duplicate_projects")
 				}
 				selected = &project
 			}
@@ -104,7 +105,7 @@ func withLocationLock(ctx context.Context, fn func() (*GlobalLocation, error)) (
 		return nil, err
 	}
 	if !ok {
-		return nil, fmt.Errorf("共享凭据位置正在配置，请重试")
+		return nil, i18n.Errorf("global.configuration_busy")
 	}
 	defer lock.Unlock()
 	return fn()

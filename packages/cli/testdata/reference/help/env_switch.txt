@@ -10,9 +10,9 @@ Switches between the local dotenv source and Infisical. Local values can be sync
 
 COMMON OPTIONS
   --dry-run                Print the plan without writing
-  --global                 管理 Infisical 共享凭据，可在工作区之外使用
+  --global                 Manage Infisical shared credentials, including outside a workspace
   --no-sync                Switch the source without synchronizing values
   -o, --output <value>     Output format: json | yaml | text (default: terminal-friendly text, JSON when piped)
   --overwrite              Overwrite conflicting values in the destination
-  --path <value>           共享凭据目录（仅当前层，不递归）
+  --path <value>           Shared credential folder (current level only, not recursive)
   -y, --yes                Confirm synchronization non-interactively

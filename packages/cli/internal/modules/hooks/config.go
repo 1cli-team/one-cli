@@ -14,6 +14,7 @@ import (
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/core/workspace"
 	cliErrors "github.com/torchstellar-team/one-cli/packages/cli/internal/platform/errors"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/fsutil"
+	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/i18n"
 )
 
 const configHeader = "// Managed by One CLI hooks/v1; sha256="
@@ -36,7 +37,7 @@ func PlanFiles(p *fsutil.FilePlan, m *workspace.Manifest) error {
 		return err
 	}
 	if rootConfig != nil && before == nil && !strings.Contains(string(rootConfig), `amends ".config/one/hk.pkl"`) {
-		return conflict("hk.pkl", "an existing hk configuration is present; integrate it with .config/one/hk.pkl before configuring One hooks")
+		return conflict("hk.pkl", i18n.T("hooks.existing_configuration"))
 	}
 	if rootConfig == nil {
 		if err := p.Set("hk.pkl", []byte(userConfig), 0o644); err != nil {
@@ -53,7 +54,7 @@ func PlanFiles(p *fsutil.FilePlan, m *workspace.Manifest) error {
 	for _, project := range projects {
 		dir := filepath.ToSlash(filepath.Clean(project.RelativeDir))
 		if !workspace.IsValidProjectName(project.Name) || dir == "." {
-			return conflict(project.Name, "invalid project name or directory")
+			return conflict(project.Name, i18n.T("hooks.project_invalid"))
 		}
 		if err := fsutil.SafeWritePath(p.Root, filepath.Join(p.Root, dir, "hk.pkl")); err != nil {
 			return err
@@ -140,14 +141,14 @@ func packageExec(manager string) ([]string, error) {
 	case "bun":
 		return []string{"bun", "run"}, nil
 	default:
-		return nil, fmt.Errorf("unsupported hook package manager %q", manager)
+		return nil, i18n.Errorf("hooks.package_manager_unsupported", manager)
 	}
 }
 
 func validateManaged(path string, raw []byte, header string) error {
 	lines := bytes.SplitN(raw, []byte("\n"), 3)
 	if len(lines) != 3 || string(lines[0]) != fmt.Sprintf("%s%x", header, sha256.Sum256(lines[2])) {
-		return conflict(path, "file is user-owned or has been modified; preserve it and resolve the conflict before regenerating")
+		return conflict(path, i18n.T("config.user_modified"))
 	}
 	return nil
 }

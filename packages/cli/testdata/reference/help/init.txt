@@ -1,6 +1,6 @@
 
 DESCRIPTION
-生成工作区工具配置
+Generate workspace tool configuration
 
 USAGE
   one init [flags]

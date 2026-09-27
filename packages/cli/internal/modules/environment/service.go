@@ -6,7 +6,6 @@ package environment
 
 import (
 	"context"
-	"fmt"
 	"strings"
 
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/adapters/env/infisical"
@@ -14,6 +13,7 @@ import (
 	catalog "github.com/torchstellar-team/one-cli/packages/cli/internal/core/backend"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/core/workspace"
 	cliErrors "github.com/torchstellar-team/one-cli/packages/cli/internal/platform/errors"
+	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/i18n"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/ports/secrets"
 )
 
@@ -28,7 +28,7 @@ func NewService(
 	backendCatalog *catalog.Catalog,
 ) (*Service, error) {
 	if backendCatalog == nil {
-		return nil, fmt.Errorf("modules: environment catalog is required")
+		return nil, i18n.Errorf("env.catalog_required")
 	}
 
 	return &Service{
@@ -66,14 +66,14 @@ func (s *Service) resolve(input resolveInput) (resolution, error) {
 	if !ok {
 		return resolution{}, cliErrors.New(
 			cliErrors.ENV_BACKEND_INVALID,
-			fmt.Sprintf("不支持的 env backend %q", backendName),
+			i18n.Tf("env.backend_unknown", backendName),
 		)
 	}
 	if input.Capability != "" && !backend.Has(input.Capability) {
 		verb := strings.TrimSpace(input.Verb)
 		return resolution{}, cliErrors.New(
 			cliErrors.BACKEND_VERB_NOT_SUPPORTED,
-			fmt.Sprintf("%s 后端不支持 `one env %s`。", backend.Pair, verb),
+			i18n.Tf("env.operation_unsupported", backend.Pair, verb),
 		).WithContext(map[string]any{
 			"domain": "env", "backend": backendName, "verb": verb,
 		})

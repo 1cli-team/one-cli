@@ -12,6 +12,7 @@ import (
 
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/core/workspace"
 	cliErrors "github.com/torchstellar-team/one-cli/packages/cli/internal/platform/errors"
+	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/i18n"
 )
 
 // DefaultSiteURL is the public Infisical SaaS instance. Workspaces using a
@@ -146,7 +147,7 @@ func resolveCfgAndCreds(projectRoot string, cfgOverride *WorkspaceConfig, credsO
 	if cfgOverride != nil {
 		if strings.TrimSpace(cfgOverride.SiteURL) != "" {
 			if cfg.SiteURL != "" && cfg.SiteURL != cfgOverride.SiteURL {
-				return nil, nil, cliErrors.New(cliErrors.INFISICAL_AUTH_FAILED, "工作区绑定了不同 Infisical 实例，请检查登录账号或重新选择项目。")
+				return nil, nil, cliErrors.New(cliErrors.INFISICAL_AUTH_FAILED, i18n.T("infisical.binding_account_mismatch"))
 			}
 			cfg.SiteURL = cfgOverride.SiteURL
 		}
@@ -161,7 +162,7 @@ func resolveCfgAndCreds(projectRoot string, cfgOverride *WorkspaceConfig, credsO
 		creds = c
 		if cfgOverride == nil && siteURL != "" {
 			if cfg.SiteURL != "" && cfg.SiteURL != siteURL {
-				return nil, nil, cliErrors.New(cliErrors.INFISICAL_AUTH_FAILED, "工作区绑定了不同 Infisical 实例，请重新选择项目。")
+				return nil, nil, cliErrors.New(cliErrors.INFISICAL_AUTH_FAILED, i18n.T("infisical.binding_instance_mismatch"))
 			}
 			cfg.SiteURL = siteURL
 		}
@@ -179,14 +180,11 @@ func RequireWorkspaceConfig(projectRoot string) (*WorkspaceConfig, error) {
 	}
 	if cfg == nil {
 		return nil, cliErrors.New(cliErrors.INFISICAL_NOT_CONFIGURED,
-			"未找到 Infisical 配置。请在 one.manifest.json#domains.env 中将 kind 设置为 \"infisical\"（请先运行 `one login` 登录）。")
+			i18n.T("infisical.config_missing"))
 	}
 	if strings.TrimSpace(cfg.ProjectID) == "" {
 		return nil, cliErrors.New(cliErrors.INFISICAL_NOT_CONFIGURED,
-			"当前工作区选择了 Infisical 但还没绑定项目（manifest.domains.env.config.projectId 为空）。"+
-				"\n→ 确认已配置 `one login`，"+
-				"\n  然后重新运行 `one env get/set/list/pull` 触发 lazy auto-bind。"+
-				"\n  （如果你只想用本地 .env，可以把 manifest.domains.env.kind 改成 \"dotenv\"。）")
+			i18n.T("infisical.binding_missing"))
 	}
 	return cfg, nil
 }

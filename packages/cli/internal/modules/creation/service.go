@@ -5,7 +5,6 @@ package creation
 import (
 	"context"
 	"errors"
-	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -17,6 +16,7 @@ import (
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/modules/preset"
 	cliErrors "github.com/torchstellar-team/one-cli/packages/cli/internal/platform/errors"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/fsutil"
+	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/i18n"
 )
 
 type Service struct {
@@ -34,7 +34,7 @@ func NewService(
 	observers ...WorkspaceObserver,
 ) (*Service, error) {
 	if environments == nil {
-		return nil, errors.New("creation: environment service is required")
+		return nil, errors.New(i18n.T("creation.environment_required"))
 	}
 	var observer WorkspaceObserver
 	if len(observers) > 0 {
@@ -89,13 +89,13 @@ func validateWorkspaceTarget(targetDir, displayPath string) error {
 	if !empty {
 		return cliErrors.New(
 			cliErrors.EXISTING_TARGET_NOT_EMPTY,
-			fmt.Sprintf("目标目录 %s 已存在且非空。请删除目录后重试，或换一个目标位置。", displayPath),
+			i18n.Tf("creation.target_not_empty", displayPath),
 		).WithContext(map[string]any{"target_path": targetDir, "display_path": displayPath})
 	}
 	if enclosing := enclosingWorkspace(targetDir); enclosing != "" {
 		return cliErrors.New(
 			cliErrors.WORKSPACE_NESTED_FORBIDDEN,
-			fmt.Sprintf("拒绝在已存在的工作区里创建新工作区：%s 已经是一个 one workspace。", enclosing),
+			i18n.Tf("creation.nested_workspace", enclosing),
 		).WithContext(map[string]any{
 			"target_path": targetDir, "enclosing_workspace": enclosing,
 		})
@@ -113,7 +113,7 @@ func (s *Service) CreateWorkspace(ctx context.Context, input WorkspaceInput) (Wo
 	if !workspace.IsValidProjectName(input.Name) {
 		return result, cliErrors.New(
 			cliErrors.INVALID_NAME,
-			fmt.Sprintf("工作区名称格式不合法: %q", input.Name),
+			i18n.Tf("creation.workspace_name_invalid", input.Name),
 		)
 	}
 	if result.EnvBackend == "" {
@@ -122,7 +122,7 @@ func (s *Service) CreateWorkspace(ctx context.Context, input WorkspaceInput) (Wo
 	if result.EnvBackend != workspace.EnvBackendDotenv && result.EnvBackend != workspace.EnvBackendInfisical {
 		return result, cliErrors.New(
 			cliErrors.BACKEND_ID_UNKNOWN,
-			fmt.Sprintf("--env-provider 值无效: %q（合法值: dotenv / infisical）", result.EnvBackend),
+			i18n.Tf("env.provider_invalid", result.EnvBackend),
 		)
 	}
 	displayPath := input.DisplayPath
@@ -191,14 +191,14 @@ func (s *Service) CreateWorkspace(ctx context.Context, input WorkspaceInput) (Wo
 	}
 	if err != nil {
 		return result, cliErrors.New(cliErrors.ONE_CLI_ERROR,
-			fmt.Sprintf("workspace was created but mise configuration is incomplete; fix the reported error and run one init mise: %v", err)).
+			i18n.Tf("creation.mise_warning", err)).
 			WithContext(map[string]any{"workspace": input.TargetDir, "partial_state": "mise_configuration_incomplete"})
 	}
 	if pkg, err := workspace.ReadPackageJSON(input.TargetDir); err == nil && pkg != nil {
 		result.PackageManager, _, _ = strings.Cut(pkg.PackageManager, "@")
 	}
 	if err := initGitRepo(input.TargetDir); err != nil {
-		result.HooksWarn = fmt.Errorf("Git initialization failed; initialize Git and run one init hooks: %w", err)
+		result.HooksWarn = i18n.Errorf("creation.git_failed", err)
 	} else {
 		install, err := hooks.PlanInstall(ctx, input.TargetDir, "", false)
 		if err == nil {

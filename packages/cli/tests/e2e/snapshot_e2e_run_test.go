@@ -53,13 +53,14 @@ func TestSnapshot_E2E_Run_NoArgs_PrintsHelp(t *testing.T) {
 	tmp := t.TempDir()
 	isolateHome(t, tmp)
 
+	t.Setenv("LC_ALL", "en_US.UTF-8")
 	stdout, stderr, code := runBinaryIn(t, tmp, "run")
 	if code != 0 {
 		t.Fatalf("expected exit code 0, got %d\n  stdout: %s\n  stderr: %s", code, stdout, stderr)
 	}
 	// Long help 的稳定锚点：第一行短描述里的关键短语。换文案时只需调一次。
-	if !strings.Contains(stdout, "注入") {
-		t.Errorf("expected help text on stdout (containing %q), got: %q", "注入", stdout)
+	if !strings.Contains(stdout, "Load environment variables") {
+		t.Errorf("expected help text on stdout (containing %q), got: %q", "Load environment variables", stdout)
 	}
 	if !strings.Contains(stdout, "USAGE") {
 		t.Errorf("expected cobra Usage block on stdout, got: %q", stdout)

@@ -6,6 +6,8 @@ import (
 	"io"
 	"sort"
 	"text/tabwriter"
+
+	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/i18n"
 )
 
 // ListResult is the JSON payload for `one templates`. Schema:
@@ -22,7 +24,7 @@ type ListResult struct {
 // stdout is non-TTY (output.Emit auto-dispatches based on mode).
 func (r *ListResult) RenderTTY(w io.Writer) {
 	if r == nil || len(r.Templates) == 0 {
-		fmt.Fprintln(w, "No templates registered.")
+		fmt.Fprintln(w, i18n.T("templates.empty"))
 		return
 	}
 	// Group by category, then sort by id within each category. The
@@ -47,14 +49,14 @@ func (r *ListResult) RenderTTY(w io.Writer) {
 	}
 
 	tw := tabwriter.NewWriter(w, 0, 0, 2, ' ', 0)
-	fmt.Fprintln(tw, "CATEGORY\tID\tTOOLCHAIN\tDESCRIPTION")
+	fmt.Fprintln(tw, i18n.T("templates.headings"))
 	for _, cat := range order {
 		for _, t := range grouped[cat] {
-			fmt.Fprintf(tw, "%s\t%s\t%s\t%s\n", cat, t.ID, t.Toolchain, t.Description)
+			fmt.Fprintf(tw, "%s\t%s\t%s\t%s\n", displayCategory(cat), t.ID, t.Toolchain, t.DisplayDescription())
 		}
 	}
 	tw.Flush()
-	fmt.Fprintf(w, "\n%d templates. JSON: `one templates -o json`\n", r.Total)
+	fmt.Fprintf(w, i18n.T("templates.count"), r.Total)
 }
 
 // List returns the registry payload ready to emit. It does not consult
@@ -69,4 +71,20 @@ func List(ctx context.Context) (*ListResult, error) {
 		Total:     len(registry.Templates),
 		Templates: registry.Templates,
 	}, nil
+}
+
+func (t Template) DisplayName() string {
+	return i18n.LocalizedValue("template."+t.ID+".name", t.Name)
+}
+
+func (t Template) DisplayDescription() string {
+	return i18n.LocalizedValue("template."+t.ID+".description", t.Description)
+}
+
+func displayCategory(category string) string {
+	key := "template.category." + category
+	if label := i18n.T(key); label != key {
+		return label
+	}
+	return category
 }

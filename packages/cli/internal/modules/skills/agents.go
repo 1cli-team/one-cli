@@ -2,11 +2,11 @@
 package skills
 
 import (
-	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
 
+	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/i18n"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/userdirs"
 )
 
@@ -107,7 +107,7 @@ func ResolveTargets(ids []string) ([]Agent, error) {
 		for _, id := range ids {
 			spec, ok := available[id]
 			if !ok {
-				return nil, fmt.Errorf("unknown agent %q; run one skills install --help", id)
+				return nil, i18n.Errorf("skills.agent_unknown", id)
 			}
 			if !seen[id] {
 				selected = append(selected, spec)
@@ -128,7 +128,7 @@ func ResolveTargets(ids []string) ([]Agent, error) {
 				continue
 			}
 			if err != nil {
-				return nil, fmt.Errorf("detect %s: %w", spec.id, err)
+				return nil, i18n.Errorf("skills.detect_failed", spec.id, err)
 			}
 			if info.IsDir() {
 				selected = append(selected, spec)
@@ -144,7 +144,7 @@ func ResolveTargets(ids []string) ([]Agent, error) {
 		out = append(out, Agent{ID: spec.id, DisplayName: spec.name, GlobalPath: dest})
 	}
 	if len(out) == 0 {
-		return nil, fmt.Errorf("no target agents found; specify --agent <id> (see one skills install --help)")
+		return nil, i18n.Errorf("skills.agents_missing")
 	}
 	return out, nil
 }
@@ -168,7 +168,7 @@ func agentPath(home, relative string) (string, error) {
 			root = filepath.Join(home, filepath.FromSlash(root[2:]))
 		}
 		if !filepath.IsAbs(root) {
-			return "", fmt.Errorf("%s must be an absolute directory", override.env)
+			return "", i18n.Errorf("path.absolute_directory_required", override.env)
 		}
 		suffix := strings.TrimPrefix(strings.TrimPrefix(relative, override.prefix), "/")
 		return filepath.Join(root, filepath.FromSlash(suffix)), nil

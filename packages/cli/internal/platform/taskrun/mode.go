@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/i18n"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/output"
 )
 
@@ -35,22 +36,22 @@ func ResolveMode(value string, count int) (Mode, error) {
 		if supportsPTY {
 			return TUI, nil
 		}
-		fmt.Fprintln(os.Stderr, "Interactive task terminals are unavailable on this platform; using streaming output.")
+		fmt.Fprintln(os.Stderr, i18n.T("task.stream_fallback"))
 		return Stream, nil
 	case Raw:
 		if count != 1 {
-			return "", fmt.Errorf("--ui=raw requires exactly one task")
+			return "", i18n.Errorf("task.raw_single")
 		}
 		if !interactive {
-			return "", fmt.Errorf("--ui=raw requires an interactive terminal and text output")
+			return "", i18n.Errorf("task.raw_terminal_required")
 		}
 	case TUI:
 		if !interactive || !supportsPTY {
-			return "", fmt.Errorf("--ui=tui requires a supported interactive terminal and text output")
+			return "", i18n.Errorf("task.tui_terminal_required")
 		}
 	case Stream:
 	default:
-		return "", fmt.Errorf("unknown UI %q; use auto, raw, tui, or stream", value)
+		return "", i18n.Errorf("task.ui_unknown", value)
 	}
 	return mode, nil
 }

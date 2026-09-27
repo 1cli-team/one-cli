@@ -4,11 +4,11 @@ package taskrun
 
 import (
 	"context"
-	"fmt"
 	"io"
 	"os"
 	"time"
 
+	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/i18n"
 	platformprocess "github.com/torchstellar-team/one-cli/packages/cli/internal/platform/process"
 )
 
@@ -17,7 +17,7 @@ const supportsPTY = false
 type childProcess struct{}
 
 func startPTY(Task, int, int) (*childProcess, error) {
-	return nil, fmt.Errorf("interactive task terminals are unavailable on this platform")
+	return nil, i18n.Errorf("task.terminal_unavailable")
 }
 func (*childProcess) Write([]byte) (int, error)            { return 0, io.ErrClosedPipe }
 func (*childProcess) Resize(int, int) error                { return nil }

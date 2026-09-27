@@ -37,7 +37,7 @@ func newCICmd(service *ciapp.Service) *cobra.Command {
 		Use:     "ci",
 		Long:    i18n.T("ci.tip"),
 		Example: "  one ci\n  one ci enable web\n  one ci sync\n  one ci disable web",
-		Args:    cobra.NoArgs,
+		Args:    i18n.NoArgs,
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			return runStatus(cmd.Context(), service)
 		},
@@ -54,7 +54,7 @@ func newEnableCmd(service *ciapp.Service) *cobra.Command {
 		Use:     "enable [project]",
 		Long:    i18n.T("ci.enable.tip"),
 		Example: "  one ci enable\n  one ci enable web\n  one ci enable web --provider ci/github-actions",
-		Args:    cobra.MaximumNArgs(1),
+		Args:    i18n.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			selector, err := resolveSelector(args, flags.project)
 			if err != nil {
@@ -79,7 +79,7 @@ func newSyncCmd(service *ciapp.Service) *cobra.Command {
 		Use:     "sync [project]",
 		Long:    i18n.T("ci.sync.tip"),
 		Example: "  one ci sync\n  one ci sync web",
-		Args:    cobra.MaximumNArgs(1),
+		Args:    i18n.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			selector, err := resolveSelector(args, flags.project)
 			if err != nil {
@@ -102,7 +102,7 @@ func newDisableCmd(service *ciapp.Service) *cobra.Command {
 		Use:     "disable [project]",
 		Long:    i18n.T("ci.disable.tip"),
 		Example: "  one ci disable web\n  one ci disable --yes",
-		Args:    cobra.MaximumNArgs(1),
+		Args:    i18n.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			selector, err := resolveSelector(args, flags.project)
 			if err != nil {

@@ -5,12 +5,12 @@ package updatecheck
 // short-circuit before doing any work — see shouldSkip for the full list.
 
 import (
-	"fmt"
 	"os"
 	"runtime"
 
 	"charm.land/lipgloss/v2"
 
+	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/i18n"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/output"
 )
 
@@ -60,7 +60,7 @@ func Notify(currentVersion string) {
 func printWarning(w *os.File, latest, current string) {
 	yellow := lipgloss.NewStyle().Foreground(lipgloss.Color("11")).Bold(true)
 	dim := lipgloss.NewStyle().Foreground(lipgloss.Color("8"))
-	headline := yellow.Render(fmt.Sprintf("⚠  one cli 有新版本可用：%s（当前 %s）", latest, current))
+	headline := yellow.Render(i18n.Tf("update.available", latest, current))
 	cmd := dim.Render("   " + installCommand(runtime.GOOS))
 	lipgloss.Fprintln(w, headline)
 	lipgloss.Fprintln(w, cmd)

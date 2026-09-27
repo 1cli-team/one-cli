@@ -46,19 +46,9 @@ func newServeCmd(deps Dependencies) *cobra.Command {
 		open bool
 	)
 	cmd := &cobra.Command{
-		Use: "serve",
-		Long: `启动一个本地 HTTP 服务，在浏览器里查看本机 Workspace、配置其中的
-Project、审阅后保存 Manifest 配置，并管理单一 Infisical 登录与共享凭据。
-变量列表只显示名称和说明，查看或复制时才读取明文。
-
-默认行为：绑定 127.0.0.1 + 内核分配空闲端口 + 自动用系统默认浏览器
-打开 URL。打印 URL 后阻塞，按 Ctrl-C 退出。
-
-安全模型：
-  - 仅绑定 127.0.0.1（loopback）
-  - Host header 校验，挡 DNS rebinding
-  - 全部 mutating 请求做 Origin 校验`,
-		Args: cobra.NoArgs,
+		Use:  "serve",
+		Long: i18n.T("serve.tip"),
+		Args: i18n.NoArgs,
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			parent := cmd.Context()
 			if parent == nil {
@@ -95,6 +85,7 @@ Project、审阅后保存 Manifest 配置，并管理单一 Infisical 登录与�
 			})
 		},
 	}
+	i18n.MarkLong(cmd, "serve.tip")
 	cmd.Flags().StringVar(&host, "host", "127.0.0.1", i18n.T("serve.flag.host"))
 	cmd.Flags().IntVar(&port, "port", 0, i18n.T("serve.flag.port"))
 	cmd.Flags().BoolVar(&open, "open", true, i18n.T("serve.flag.open"))

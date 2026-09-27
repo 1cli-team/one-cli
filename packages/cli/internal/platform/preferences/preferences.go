@@ -33,6 +33,7 @@ import (
 	"path/filepath"
 
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/fsutil"
+	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/i18n"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/userdirs"
 )
 
@@ -144,10 +145,10 @@ func Save(p *Preferences) error {
 // SaveAt is the testable variant.
 func SaveAt(p *Preferences, path string) error {
 	if p == nil {
-		return errors.New("preferences: nil")
+		return errors.New(i18n.T("preferences.missing"))
 	}
 	if !IsValidLocale(p.Locale) {
-		return errors.New("preferences: invalid locale; expected auto | zh-CN | en-US")
+		return errors.New(i18n.T("preferences.locale_invalid"))
 	}
 	p.Version = SchemaVersion
 

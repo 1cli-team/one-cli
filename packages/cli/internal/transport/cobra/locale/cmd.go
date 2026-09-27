@@ -3,13 +3,11 @@ package localecmd
 import (
 	"fmt"
 	"io"
-
 	"strings"
 
 	"github.com/spf13/cobra"
 
 	cliErrors "github.com/torchstellar-team/one-cli/packages/cli/internal/platform/errors"
-
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/i18n"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/output"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/preferences"
@@ -17,11 +15,8 @@ import (
 
 // ───────────────────── locale ─────────────────────
 //
-// `one locale` is the only user-global preference today
-// (everything else under `configure` is per-(domain, backend)
-// profile state). Lives here rather than as its own top-level
-// command because that's what the project plan settled on
-// ("用户可以通过 one configure 设置展示语言").
+// `one locale` reads or updates the user's global display-language preference.
+// Workspace configuration is stored separately in one.manifest.json.
 
 type localeResult struct {
 	Schema       string `json:"schema"`
@@ -50,25 +45,14 @@ func (r *localeResult) RenderTTY(w io.Writer) {
 
 func Command() *cobra.Command {
 	cmd := &cobra.Command{
-		Use: "locale [auto|zh-CN|en-US]",
-		Long: `查看或设置 one CLI 的显示语言。
-
-无参形式：打印当前生效的语言（preferences.json 中存储的值 + 实际解析结果）。
-带参形式：把 preferences.json 中的 locale 字段写为指定值。
-
-可选值：
-  auto    跟随机器语言（解析 LC_ALL / LC_MESSAGES / LANG，识别 zh* → zh-CN，其它 → en-US）
-  zh-CN   强制中文
-  en-US   强制英文
-
-dashboard（` + "`one serve`" + ` 起的本地 UI）共享这份 preferences.json，
-所以在 dashboard 里切换语言也会写到这里；反之亦然。`,
-		Args: cobra.MaximumNArgs(1),
+		Use:  "locale [auto|zh-CN|en-US]",
+		Long: i18n.T("locale.tip"),
+		Args: i18n.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			prefs, err := preferences.Load()
 			if err != nil {
 				return cliErrors.New(cliErrors.PREFERENCES_FILE_INVALID,
-					"~/.config/one/preferences.json 读取失败："+err.Error())
+					i18n.Tf("locale.read_failed", err.Error()))
 			}
 			path, _ := preferences.Path()
 
@@ -76,12 +60,14 @@ dashboard（` + "`one serve`" + ` 起的本地 UI）共享这份 preferences.jso
 				newLocale := strings.TrimSpace(args[0])
 				if !preferences.IsValidLocale(newLocale) {
 					return cliErrors.New(cliErrors.PREFERENCES_INVALID,
-						fmt.Sprintf("未知 locale %q；可选 auto / zh-CN / en-US。", newLocale))
+						i18n.Tf("locale.unknown", newLocale))
 				}
 				prefs.Locale = newLocale
 				if err := preferences.Save(prefs); err != nil {
 					return err
 				}
+				_ = i18n.Init(i18n.Resolve(newLocale))
+				i18n.RefreshTree(cmd.Root())
 				output.Emit(&localeResult{
 					Schema:       "one-cli/locale/v1",
 					StoredLocale: newLocale,
@@ -104,6 +90,7 @@ dashboard（` + "`one serve`" + ` 起的本地 UI）共享这份 preferences.jso
 			return nil
 		},
 	}
+	i18n.MarkLong(cmd, "locale.tip")
 	i18n.MarkShort(cmd, "locale.short")
 	return cmd
 }

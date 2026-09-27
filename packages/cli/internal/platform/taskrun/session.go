@@ -13,6 +13,8 @@ import (
 	"time"
 
 	vt "github.com/charmbracelet/x/vt"
+
+	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/i18n"
 	platformprocess "github.com/torchstellar-team/one-cli/packages/cli/internal/platform/process"
 )
 
@@ -75,7 +77,7 @@ func Run(ctx context.Context, tasks []Task, opts Options) ([]Result, error) {
 		return nil, err
 	}
 	if opts.Concurrency < 0 {
-		return nil, fmt.Errorf("concurrency must be positive")
+		return nil, i18n.Errorf("task.concurrency_positive")
 	}
 	if opts.Development {
 		opts.Concurrency = len(tasks)
@@ -89,7 +91,7 @@ func Run(ctx context.Context, tasks []Task, opts Options) ([]Result, error) {
 		opts.Mode = Stream
 	}
 	if opts.Mode == Raw && len(tasks) != 1 {
-		return nil, fmt.Errorf("raw output requires one task")
+		return nil, i18n.Errorf("task.raw_single_output")
 	}
 	ctx, stopSignals := SignalContext(ctx)
 	defer stopSignals()
@@ -131,10 +133,10 @@ func validateTasks(tasks []Task) error {
 	names := map[string]int{}
 	for i, t := range tasks {
 		if t.Name == "" {
-			return fmt.Errorf("task name is empty")
+			return i18n.Errorf("task.name_empty")
 		}
 		if _, ok := names[t.Name]; ok {
-			return fmt.Errorf("duplicate task %q", t.Name)
+			return i18n.Errorf("task.name_duplicate", t.Name)
 		}
 		names[t.Name] = i
 	}
@@ -142,7 +144,7 @@ func validateTasks(tasks []Task) error {
 	var visit func(int) error
 	visit = func(i int) error {
 		if state[i] == 1 {
-			return fmt.Errorf("task dependency cycle at %s", tasks[i].Name)
+			return i18n.Errorf("task.dependency_cycle", tasks[i].Name)
 		}
 		if state[i] == 2 {
 			return nil
@@ -226,7 +228,7 @@ func (s *Session) start(index int, finished chan<- completion) {
 }
 func (s *Session) execute(ctx context.Context, j *job) error {
 	if len(j.task.Argv) == 0 {
-		return fmt.Errorf("%s has no command", j.task.Name)
+		return i18n.Errorf("task.command_missing", j.task.Name)
 	}
 	if s.opts.Mode == TUI {
 		s.mu.Lock()

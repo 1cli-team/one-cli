@@ -9,11 +9,11 @@
     "remediation": [
       {
         "action": "use-different-dir",
-        "hint": "换一个空的目标目录"
+        "hint": "Choose an empty target directory"
       },
       {
         "action": "remove-target",
-        "hint": "手动删除已存在的目录后重试"
+        "hint": "Remove the existing directory manually, then retry"
       }
     ]
   },

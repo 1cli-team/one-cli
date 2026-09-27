@@ -15,6 +15,8 @@ import (
 	"time"
 
 	"github.com/gofrs/flock"
+
+	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/i18n"
 )
 
 type Attempt struct {
@@ -56,7 +58,7 @@ func Start(ctx context.Context, site string) (*Attempt, error) {
 		return nil, err
 	}
 	if old.LoggedIn {
-		return nil, fmt.Errorf("已经登录 %s；更换账号或实例请先运行 one logout", old.Email)
+		return nil, i18n.Errorf("auth.already_logged_in", old.Email)
 	}
 	lockPath, err := ConfigPath("login.lock")
 	if err != nil {
@@ -71,7 +73,7 @@ func Start(ctx context.Context, site string) (*Attempt, error) {
 		return nil, err
 	}
 	if !ok {
-		return nil, fmt.Errorf("已有登录正在进行，请完成或取消后重试")
+		return nil, i18n.Errorf("auth.login_pending")
 	}
 	listener, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
@@ -160,13 +162,13 @@ func Start(ctx context.Context, site string) (*Attempt, error) {
 		select {
 		case s = <-results:
 		case <-ctx.Done():
-			a.err = fmt.Errorf("登录已取消或超时，请重新运行 one login")
+			a.err = i18n.Errorf("auth.login_timeout")
 			return
 		}
 		a.err = sessionLock(func() error {
 			current, e := os.ReadFile(generation)
 			if e != nil || string(current) != attemptID || ctx.Err() != nil {
-				return fmt.Errorf("登录已取消")
+				return i18n.Errorf("auth.login_cancelled")
 			}
 			return save(s)
 		})

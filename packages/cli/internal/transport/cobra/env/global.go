@@ -1,28 +1,35 @@
 package envcmd
 
 import (
-	"fmt"
 	"io"
 	"strings"
 
 	"github.com/spf13/cobra"
+
 	environmentmodule "github.com/torchstellar-team/one-cli/packages/cli/internal/modules/environment"
 	remote "github.com/torchstellar-team/one-cli/packages/cli/internal/modules/environment"
+	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/i18n"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/output"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/prompt"
 )
 
 func configureGlobal(parent *cobra.Command, deps Dependencies) {
-	parent.PersistentFlags().Bool("global", false, "管理 Infisical 共享凭据，可在工作区之外使用")
-	parent.PersistentFlags().String("path", "/", "共享凭据目录（仅当前层，不递归）")
-	parent.Flags().String("env", "", "环境名")
-	bind := &cobra.Command{Use: "bind", Short: "选择共享凭据的存放项目和默认环境", Args: cobra.NoArgs}
-	bind.Flags().String("project-id", "", "已有 Infisical 项目 ID")
-	bind.Flags().String("env", "", "默认环境")
+	parent.PersistentFlags().Bool("global", false, i18n.T("env.flag.global"))
+	i18n.MarkFlagUsage(parent, "global", "env.flag.global")
+	parent.PersistentFlags().String("path", "/", i18n.T("env.flag.path"))
+	i18n.MarkFlagUsage(parent, "path", "env.flag.path")
+	parent.Flags().String("env", "", i18n.T("env.flag.environment_name"))
+	i18n.MarkFlagUsage(parent, "env", "env.flag.environment_name")
+	bind := &cobra.Command{Use: "bind", Short: i18n.T("env.bind.short"), Args: i18n.NoArgs}
+	i18n.MarkShort(bind, "env.bind.short")
+	bind.Flags().String("project-id", "", i18n.T("env.flag.project_id"))
+	i18n.MarkFlagUsage(bind, "project-id", "env.flag.project_id")
+	bind.Flags().String("env", "", i18n.T("env.flag.default_environment"))
+	i18n.MarkFlagUsage(bind, "env", "env.flag.default_environment")
 	bind.RunE = func(c *cobra.Command, _ []string) error {
 		global, _ := c.Flags().GetBool("global")
 		if !global {
-			return fmt.Errorf("请使用 one env bind --global")
+			return i18n.Errorf("env.bind.global_required")
 		}
 		id, _ := c.Flags().GetString("project-id")
 		env, _ := c.Flags().GetString("env")
@@ -32,13 +39,13 @@ func configureGlobal(parent *cobra.Command, deps Dependencies) {
 				return e
 			}
 			if len(ps) == 0 {
-				return fmt.Errorf("没有可用项目，请先在 Infisical 中创建项目")
+				return i18n.Errorf("env.bind.no_projects")
 			}
 			options := []prompt.Option[string]{}
 			for _, p := range ps {
 				options = append(options, prompt.Option[string]{Label: p.Name, Value: p.ID})
 			}
-			id, e = prompt.Select("选择存放共享凭据的项目", options)
+			id, e = prompt.Select(i18n.T("env.bind.select_project"), options)
 			if e != nil {
 				return e
 			}
@@ -53,9 +60,9 @@ func configureGlobal(parent *cobra.Command, deps Dependencies) {
 				options = append(options, prompt.Option[string]{Label: v.Name + " (" + v.Slug + ")", Value: v.Slug})
 			}
 			if len(options) == 0 {
-				return fmt.Errorf("项目没有可用环境")
+				return i18n.Errorf("env.bind.no_environments")
 			}
-			env, e = prompt.Select("默认浏览环境", options)
+			env, e = prompt.Select(i18n.T("env.bind.select_environment"), options)
 			if e != nil {
 				return e
 			}
@@ -67,7 +74,7 @@ func configureGlobal(parent *cobra.Command, deps Dependencies) {
 		output.Emit(l)
 		return nil
 	}
-	unset := &cobra.Command{Use: "unset <KEY>", Short: "删除一个 Infisical 环境变量", Args: cobra.ExactArgs(1), RunE: func(c *cobra.Command, args []string) error {
+	unset := &cobra.Command{Use: "unset <KEY>", Short: i18n.T("env.unset.short"), Args: i18n.ExactArgs(1), RunE: func(c *cobra.Command, args []string) error {
 		env, _ := c.Flags().GetString("env")
 		project, _ := c.Flags().GetString("project")
 		r, e := deps.Service.Delete(c.Context(), environmentmodule.DeleteInput{Scope: commandScope(c), Environment: env, Project: project, Key: args[0]})
@@ -77,18 +84,23 @@ func configureGlobal(parent *cobra.Command, deps Dependencies) {
 		output.Emit(r)
 		return nil
 	}}
-	unset.Flags().String("env", "", "环境名")
-	unset.Flags().StringP("project", "p", "", "项目名或路径")
+	i18n.MarkShort(unset, "env.unset.short")
+	unset.Flags().String("env", "", i18n.T("env.flag.environment_name"))
+	i18n.MarkFlagUsage(unset, "env", "env.flag.environment_name")
+	unset.Flags().StringP("project", "p", "", i18n.T("env.flag.project_selector"))
+	i18n.MarkFlagUsage(unset, "project", "env.flag.project_selector")
 	parent.AddCommand(unset, bind)
 	for _, c := range append([]*cobra.Command{parent}, parent.Commands()...) {
 		if c == bind {
 			continue
 		}
 		if c.Name() == "get" {
-			c.Flags().Bool("reveal", false, "显式输出明文；通常请通过 one run 使用变量")
+			c.Flags().Bool("reveal", false, i18n.T("env.flag.reveal"))
+			i18n.MarkFlagUsage(c, "reveal", "env.flag.reveal")
 		}
 		if c.Name() == "set" {
-			c.Flags().Bool("stdin", false, "从标准输入读取值，避免写入命令历史（共享凭据）")
+			c.Flags().Bool("stdin", false, i18n.T("env.flag.stdin"))
+			i18n.MarkFlagUsage(c, "stdin", "env.flag.stdin")
 		}
 		original := c.RunE
 		if original == nil {
@@ -99,19 +111,19 @@ func configureGlobal(parent *cobra.Command, deps Dependencies) {
 			if cmd.Name() == "get" {
 				reveal, _ := cmd.Flags().GetBool("reveal")
 				if !reveal {
-					return fmt.Errorf("读取明文必须指定 --reveal；执行任务请优先使用 one run")
+					return i18n.Errorf("env.reveal_required")
 				}
 			}
 			if !global {
 				if cmd.Flags().Changed("path") {
-					return fmt.Errorf("--path 仅用于 --global")
+					return i18n.Errorf("env.path_global_required")
 				}
 				return original(cmd, args)
 			}
 			env, _ := cmd.Flags().GetString("env")
 			folder, _ := cmd.Flags().GetString("path")
 			if cmd.Flags().Changed("project") {
-				return fmt.Errorf("--global 不能与 --project 同时使用")
+				return i18n.Errorf("env.global_project_conflict")
 			}
 			var result any
 			var e error
@@ -139,21 +151,21 @@ func configureGlobal(parent *cobra.Command, deps Dependencies) {
 				stdin, _ := cmd.Flags().GetBool("stdin")
 				if stdin {
 					if setValueProvided(args) {
-						return fmt.Errorf("--stdin 不能同时提供参数值")
+						return i18n.Errorf("env.stdin_value_conflict")
 					}
 					b, err := io.ReadAll(io.LimitReader(cmd.InOrStdin(), (1<<20)+1))
 					if err != nil {
 						return err
 					}
 					if len(b) > 1<<20 {
-						return fmt.Errorf("变量值过大")
+						return i18n.Errorf("env.value_too_large")
 					}
 					value = strings.TrimSuffix(strings.TrimSuffix(string(b), "\n"), "\r")
 				} else if !setValueProvided(args) {
 					if !output.CanPrompt() {
-						return fmt.Errorf("请通过 --stdin 提供值")
+						return i18n.Errorf("env.stdin_required")
 					}
-					value, e = prompt.Password("变量值", nil)
+					value, e = prompt.Password(i18n.T("env.prompt_secret"), nil)
 					if e != nil {
 						return e
 					}
@@ -167,7 +179,7 @@ func configureGlobal(parent *cobra.Command, deps Dependencies) {
 				for _, v := range listing.Variables {
 					if v.Key == key {
 						if !yes {
-							return fmt.Errorf("变量已存在；覆盖请指定 --yes")
+							return i18n.Errorf("env.overwrite_required")
 						}
 						action = "update"
 						break
@@ -175,7 +187,7 @@ func configureGlobal(parent *cobra.Command, deps Dependencies) {
 				}
 				result, e = remote.GlobalSecret(cmd.Context(), action, env, folder, key, value)
 			default:
-				return fmt.Errorf("one env %s 不支持 --global", cmd.Name())
+				return i18n.Errorf("env.global_unsupported", cmd.Name())
 			}
 			if e != nil {
 				return e

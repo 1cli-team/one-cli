@@ -12,6 +12,7 @@ import (
 
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/core/workspace"
 	cliErrors "github.com/torchstellar-team/one-cli/packages/cli/internal/platform/errors"
+	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/i18n"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/output"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/taskrun"
 	runtimeport "github.com/torchstellar-team/one-cli/packages/cli/internal/ports/runtime"
@@ -162,14 +163,12 @@ func buildEntriesFromManifest(m *workspace.Manifest, selector string) []ProcEntr
 // filter at all.
 func selectorErrorMessage(m *workspace.Manifest, selector string) string {
 	if selector != "" {
-		return fmt.Sprintf("项目 %q 在 one.manifest.json 里没有声明 dev 命令。"+
-			"重新 `one add %s` 让模板写入，或手工编辑 projects[].domains.dev.command。", selector, selector)
+		return i18n.Tf("dev.project_command_missing", selector, selector)
 	}
 	if m == nil || len(m.Projects) == 0 {
-		return "工作区里还没有任何项目。先 `one add <template>` 加一个再跑 one dev。"
+		return i18n.T("dev.no_projects")
 	}
-	return "工作区里没有项目声明 dev 命令。" +
-		"重新 `one add <template>` 让 dev 配置重建，或手工编辑 one.manifest.json 的 projects[].domains.dev.command。"
+	return i18n.T("dev.commands_missing")
 }
 
 // EntriesForProjects validates every explicit selection before any installation.

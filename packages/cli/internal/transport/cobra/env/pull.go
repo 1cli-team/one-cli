@@ -16,7 +16,7 @@ func newPullCmd(deps Dependencies) *cobra.Command {
 	)
 	cmd := &cobra.Command{
 		Use:   "pull",
-		Short: "从远端拉取环境变量写入本地 .env（仅 infisical）",
+		Short: i18n.T("env.pull.short"),
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			var result *environmentmodule.PullResult
 			if err := prompt.Spin(i18n.T("env.pull.running"), func() error {
@@ -36,9 +36,13 @@ func newPullCmd(deps Dependencies) *cobra.Command {
 		},
 	}
 	cmd.Flags().StringVar(&environment, "env", "", i18n.T("env.flag.environment"))
+	i18n.MarkFlagUsage(cmd, "env", "env.flag.environment")
 	cmd.Flags().StringVarP(&project, "project", "p", "", i18n.T("env.flag.pull_project"))
+	i18n.MarkFlagUsage(cmd, "project", "env.flag.pull_project")
 	cmd.Flags().BoolVar(&force, "force", false, i18n.T("env.flag.force"))
+	i18n.MarkFlagUsage(cmd, "force", "env.flag.force")
 	cmd.Flags().BoolVar(&dryRun, "dry-run", false, i18n.T("env.flag.dry_run"))
+	i18n.MarkFlagUsage(cmd, "dry-run", "env.flag.dry_run")
 	markEnvFlagUsage(cmd, "env", "project", "force", "dry-run")
 	i18n.MarkShort(cmd, "env.pull.short")
 	return cmd

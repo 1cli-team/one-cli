@@ -27,7 +27,7 @@ func startTaskTerminal(t *testing.T, root string, args ...string) *taskTerminal 
 	t.Helper()
 	cmd := exec.Command(binaryPath(t), args...)
 	cmd.Dir = root
-	cmd.Env = replaceEnvValues(prependPath(os.Environ(), filepath.Dir(binaryPath(t))), map[string]string{"TERM": "xterm-256color", "CI": "", "NO_COLOR": "", "ONE_LOCALE": "en-US"})
+	cmd.Env = replaceEnvValues(prependPath(os.Environ(), filepath.Dir(binaryPath(t))), map[string]string{"TERM": "xterm-256color", "CI": "", "NO_COLOR": ""})
 	pt, err := pty.StartWithSize(cmd, &pty.Winsize{Rows: 30, Cols: 110})
 	if err != nil {
 		t.Fatal(err)

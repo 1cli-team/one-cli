@@ -11,6 +11,7 @@ import (
 	"github.com/aymerick/raymond"
 
 	cliErrors "github.com/torchstellar-team/one-cli/packages/cli/internal/platform/errors"
+	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/i18n"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/resources/bundled"
 )
 
@@ -68,7 +69,7 @@ func Render(templateID string, targetDir string, vars Variables) error {
 	// Sanity check that the directory exists in the embed FS.
 	if _, err := fs.Stat(bundled.TemplatesFS, root); err != nil {
 		return cliErrors.New(cliErrors.TEMPLATE_NOT_FOUND,
-			fmt.Sprintf("本地模板不存在：%s。请确认 templates/%s 已存在。", templateID, templateID))
+			i18n.Tf("template.local_missing", templateID, templateID))
 	}
 	if err := os.MkdirAll(targetDir, 0o755); err != nil {
 		return err
@@ -131,7 +132,7 @@ func renderEmbeddedTree(srcRoot string, dstRoot string, vars Variables, isRoot b
 			rendered, rerr := renderHandlebars(string(raw), vars)
 			if rerr != nil {
 				return cliErrors.New(cliErrors.TEMPLATE_NOT_FOUND,
-					fmt.Sprintf("模板渲染失败 %s: %v", srcPath, rerr))
+					i18n.Tf("template.render_failed", srcPath, rerr))
 			}
 			body = []byte(rendered)
 		} else {

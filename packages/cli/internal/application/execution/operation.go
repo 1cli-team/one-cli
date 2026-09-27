@@ -2,21 +2,22 @@ package execution
 
 import (
 	"encoding/json"
-	"fmt"
 	"os"
 	"path/filepath"
 	"runtime"
 
+	"gopkg.in/yaml.v3"
+
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/core/workspace"
 	cliErrors "github.com/torchstellar-team/one-cli/packages/cli/internal/platform/errors"
-	"gopkg.in/yaml.v3"
+	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/i18n"
 )
 
 // OperationArgs resolves the live source command, never a copy in generated TOML.
 func OperationArgs(w Workspace, selector, operation string) ([]string, error) {
 	p, ok := w.Project(selector)
 	if !ok {
-		return nil, cliErrors.New(cliErrors.SUBPROJECT_NOT_FOUND, "Unknown project: "+selector)
+		return nil, cliErrors.New(cliErrors.SUBPROJECT_NOT_FOUND, i18n.Tf("workspace.unknown_project", selector))
 	}
 	if operation == "dev" {
 		command := workspace.ProjectDev(w.Manifest(), p.Name)
@@ -80,7 +81,7 @@ func ProjectOperationArgs(root string, p workspace.Project, operation string) ([
 		}
 		switch operation {
 		case "build":
-			return nil, fmt.Errorf("project %s requires Taskfile.yml with a build task", p.Name)
+			return nil, i18n.Errorf("build.taskfile_required", p.Name)
 		case "test":
 			return []string{"go", "test", "./..."}, nil
 		case "lint":
@@ -91,5 +92,5 @@ func ProjectOperationArgs(root string, p workspace.Project, operation string) ([
 }
 
 func missingOperation(project, operation string) error {
-	return cliErrors.New(cliErrors.RUNTIME_TASK_NOT_FOUND, fmt.Sprintf("Project %s has no %s task.", project, operation))
+	return cliErrors.New(cliErrors.RUNTIME_TASK_NOT_FOUND, i18n.Tf("task.operation_missing", project, operation))
 }

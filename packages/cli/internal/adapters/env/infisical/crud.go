@@ -60,7 +60,7 @@ func Set(ctx context.Context, projectRoot string, in SetInput) (*SetResult, erro
 	}
 	if strings.TrimSpace(in.Key) == "" {
 		return nil, cliErrors.New(cliErrors.ENV_SET_KEY_REQUIRED,
-			"必须提供 <KEY> 位置参数。")
+			i18n.T("env.key_required"))
 	}
 	if err := AssertValidKey(in.Key); err != nil {
 		return nil, err
@@ -108,7 +108,7 @@ func Set(ctx context.Context, projectRoot string, in SetInput) (*SetResult, erro
 	}
 	if !in.Overwrite {
 		return nil, cliErrors.New(cliErrors.ENV_SET_OVERWRITE_REQUIRED,
-			"密钥 "+in.Key+" 已存在且值不同。加 --yes 确认覆盖。").
+			i18n.Tf("env.key_overwrite", in.Key)).
 			WithContext(map[string]any{
 				"env": env, "path": path, "key": in.Key,
 			})
@@ -160,7 +160,7 @@ func Get(ctx context.Context, projectRoot string, in GetInput) (*GetResult, erro
 	}
 	if strings.TrimSpace(in.Key) == "" {
 		return nil, cliErrors.New(cliErrors.ENV_SET_KEY_REQUIRED,
-			"必须提供 <KEY> 位置参数。")
+			i18n.T("env.key_required"))
 	}
 	env, err := SanitizeEnvName(envOrDefault(in.Env, cfg.DefaultEnvOrFallback()))
 	if err != nil {
@@ -228,7 +228,7 @@ func Delete(ctx context.Context, projectRoot string, in DeleteInput) (*DeleteRes
 		return nil, err
 	}
 	if strings.TrimSpace(in.Key) == "" {
-		return nil, cliErrors.New(cliErrors.ENV_SET_KEY_REQUIRED, "必须提供密钥名。")
+		return nil, cliErrors.New(cliErrors.ENV_SET_KEY_REQUIRED, i18n.T("env.name_required"))
 	}
 	if err := AssertValidKey(in.Key); err != nil {
 		return nil, err

@@ -7,8 +7,9 @@
 package workspace
 
 import (
-	"fmt"
 	"strings"
+
+	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/i18n"
 )
 
 // ApplyBackendSelection writes a list of fully-qualified ids
@@ -26,11 +27,11 @@ func ApplyBackendSelection(projectRoot string, ids []string) error {
 	for _, raw := range ids {
 		idx := strings.IndexByte(raw, '/')
 		if idx <= 0 || idx == len(raw)-1 {
-			return fmt.Errorf("invalid id %q: expected <domain>/<backend>", raw)
+			return i18n.Errorf("backend.id_invalid", raw)
 		}
 		domain := raw[:idx]
 		if prev, dupe := seen[domain]; dupe && prev != raw {
-			return fmt.Errorf("two selections for domain %q: %q and %q", domain, prev, raw)
+			return i18n.Errorf("backend.selection_conflict", domain, prev, raw)
 		}
 		seen[domain] = raw
 		applyDomainSelection(m, domain, raw)
@@ -131,7 +132,7 @@ func projectIndex(m *Manifest, projectName string) (int, error) {
 			return i, nil
 		}
 	}
-	return -1, fmt.Errorf("project %q not found in manifest", projectName)
+	return -1, i18n.Errorf("workspace.project_missing", projectName)
 }
 
 func ensureProjectDomains(p *ManifestProject) {

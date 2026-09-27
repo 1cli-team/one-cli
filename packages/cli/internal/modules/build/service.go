@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-
 	"strings"
 
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/application/execution"
@@ -36,9 +35,12 @@ func (p *Plan) RenderTTY(w io.Writer) {
 		detail := strings.Join(task.Argv, " ")
 		if task.Reason != "" {
 			detail = task.Reason
+			if task.Reason == "no-build-task" {
+				detail = i18n.T("build.reason.no_task")
+			}
 		}
 		if task.Status == "failed" {
-			detail = fmt.Sprintf("%s (exit %d)", detail, task.ExitCode)
+			detail = i18n.Tf("build.exit_detail", detail, task.ExitCode)
 		}
 		fmt.Fprintf(w, "[%s] %s: %s\n", task.Project, i18n.T("build.status."+task.Status), detail)
 	}

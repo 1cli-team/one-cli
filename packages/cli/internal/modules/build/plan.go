@@ -11,6 +11,7 @@ import (
 
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/application/execution"
 	cliErrors "github.com/torchstellar-team/one-cli/packages/cli/internal/platform/errors"
+	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/i18n"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/output"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/ports/secrets"
 )
@@ -102,7 +103,7 @@ func NewPlanForProjects(w execution.Workspace, selectors []string, environment s
 			}
 			if pkg.Name != "" {
 				if previous, ok := names[pkg.Name]; ok {
-					return nil, fmt.Errorf("duplicate Node package name %q in %s and %s", pkg.Name, previous, p.Name)
+					return nil, i18n.Errorf("build.duplicate_package", pkg.Name, previous, p.Name)
 				}
 				names[pkg.Name] = p.Name
 			}
@@ -113,7 +114,7 @@ func NewPlanForProjects(w execution.Workspace, selectors []string, environment s
 		order = append(order, p.Name)
 	}
 	if ready == 0 {
-		return nil, cliErrors.New(cliErrors.RUNTIME_TASK_NOT_FOUND, "No projects have a build task.")
+		return nil, cliErrors.New(cliErrors.RUNTIME_TASK_NOT_FOUND, i18n.T("build.no_tasks"))
 	}
 	// Package names, not manifest aliases, identify local Node dependencies.
 	// Keep manifest order among otherwise independent projects.
@@ -155,7 +156,7 @@ func NewPlanForProjects(w execution.Workspace, selectors []string, environment s
 					break
 				}
 			}
-			return fmt.Errorf("local build dependency cycle: %s", strings.Join(append(append([]string{}, stack[start:]...), name), " -> "))
+			return i18n.Errorf("build.dependency_cycle", strings.Join(append(append([]string{}, stack[start:]...), name), " -> "))
 		}
 		state[name] = 1
 		stack = append(stack, name)

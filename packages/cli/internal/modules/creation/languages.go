@@ -3,15 +3,16 @@ package creation
 import (
 	"bytes"
 	"encoding/json"
-	"fmt"
 	"path"
 	"path/filepath"
 	"strings"
 
+	"gopkg.in/yaml.v3"
+
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/core/workspace"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/modules/gowork"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/fsutil"
-	"gopkg.in/yaml.v3"
+	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/i18n"
 )
 
 func planLanguages(p *fsutil.FilePlan, m *workspace.Manifest) error {
@@ -67,7 +68,7 @@ func nodePackageManager(p *fsutil.FilePlan) (string, error) {
 			continue
 		}
 		if manager != "" && manager != lock.manager {
-			return "", fmt.Errorf("%s conflicts with package manager %s", lock.file, manager)
+			return "", i18n.Errorf("creation.package_manager_conflict", lock.file, manager)
 		}
 		manager = lock.manager
 	}
@@ -78,7 +79,7 @@ func nodePackageManager(p *fsutil.FilePlan) (string, error) {
 	case "pnpm", "npm", "yarn", "bun":
 		return manager, nil
 	default:
-		return "", fmt.Errorf("unsupported package manager %q", manager)
+		return "", i18n.Errorf("workspace.package_manager_unsupported", manager)
 	}
 }
 
@@ -94,7 +95,7 @@ func configureNodePackage(p *fsutil.FilePlan, dir, name, manager string) error {
 		return err
 	}
 	if pkg == nil {
-		return fmt.Errorf("project package.json must be an object")
+		return i18n.Errorf("creation.project_package_object")
 	}
 	updates := make(map[string]json.RawMessage)
 	updates["name"], _ = marshalJSONValue(name)
@@ -173,7 +174,7 @@ func planNodeWorkspace(p *fsutil.FilePlan, m *workspace.Manifest, dirs []string)
 		return err
 	}
 	if pkg == nil {
-		return fmt.Errorf("root package.json must be an object")
+		return i18n.Errorf("creation.root_package_object")
 	}
 	updates := make(map[string]json.RawMessage)
 	if _, ok := pkg["private"]; !ok {
@@ -195,10 +196,10 @@ func planNodeWorkspace(p *fsutil.FilePlan, m *workspace.Manifest, dirs []string)
 		if b := pkg["workspaces"]; len(b) > 0 {
 			if err := json.Unmarshal(b, &patterns); err != nil {
 				if err := json.Unmarshal(b, &object); err != nil || object == nil {
-					return fmt.Errorf("invalid package.json workspaces")
+					return i18n.Errorf("creation.workspaces_invalid")
 				}
 				if err := json.Unmarshal(object["packages"], &patterns); err != nil {
-					return fmt.Errorf("invalid package.json workspaces.packages: %w", err)
+					return i18n.Errorf("creation.workspace_packages_invalid", err)
 				}
 			}
 		}
@@ -235,10 +236,10 @@ func includeProjects(patterns, dirs []string) ([]string, error) {
 			glob := strings.TrimPrefix(strings.TrimPrefix(pattern, "!"), "./")
 			match, err := path.Match(glob, dir)
 			if negative && (err != nil || strings.ContainsAny(glob, "{}()") || strings.Contains(glob, "**")) {
-				return nil, fmt.Errorf("cannot safely add %s with workspace exclusion %q; update that pattern first", dir, pattern)
+				return nil, i18n.Errorf("creation.workspace_exclusion", dir, pattern)
 			}
 			if match && negative {
-				return nil, fmt.Errorf("project %s is excluded by workspace pattern %q", dir, pattern)
+				return nil, i18n.Errorf("creation.project_excluded", dir, pattern)
 			}
 			covered = covered || match
 		}
@@ -263,14 +264,14 @@ func planPNPMWorkspace(p *fsutil.FilePlan, dirs []string) error {
 		return err
 	}
 	if len(doc.Content) != 1 || doc.Content[0].Kind != yaml.MappingNode {
-		return fmt.Errorf("pnpm-workspace.yaml must contain a mapping")
+		return i18n.Errorf("creation.pnpm_mapping")
 	}
 	root := doc.Content[0]
 	var packages *yaml.Node
 	for i := 0; i < len(root.Content); i += 2 {
 		if root.Content[i].Value == "packages" {
 			if packages != nil {
-				return fmt.Errorf("duplicate packages key in pnpm-workspace.yaml")
+				return i18n.Errorf("creation.pnpm_duplicate")
 			}
 			packages = root.Content[i+1]
 		}
@@ -281,7 +282,7 @@ func planPNPMWorkspace(p *fsutil.FilePlan, dirs []string) error {
 	}
 	var patterns []string
 	if packages.Kind != yaml.SequenceNode {
-		return fmt.Errorf("pnpm-workspace.yaml packages must be an explicit sequence")
+		return i18n.Errorf("creation.pnpm_sequence")
 	}
 	if err := packages.Decode(&patterns); err != nil {
 		return err

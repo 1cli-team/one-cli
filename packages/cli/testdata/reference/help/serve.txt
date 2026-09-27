@@ -6,17 +6,9 @@ USAGE
   one serve [flags]
 
 TIPS
-启动一个本地 HTTP 服务，在浏览器里查看本机 Workspace、配置其中的
-Project、审阅后保存 Manifest 配置，并管理单一 Infisical 登录与共享凭据。
-变量列表只显示名称和说明，查看或复制时才读取明文。
+Starts a local settings page for workspaces, project configuration, Infisical login, and shared credentials. Review manifest changes before saving. Variable lists show names and descriptions; plaintext is fetched only when viewed or copied.
 
-默认行为：绑定 127.0.0.1 + 内核分配空闲端口 + 自动用系统默认浏览器
-打开 URL。打印 URL 后阻塞，按 Ctrl-C 退出。
-
-安全模型：
-  - 仅绑定 127.0.0.1（loopback）
-  - Host header 校验，挡 DNS rebinding
-  - 全部 mutating 请求做 Origin 校验
+By default, binds to 127.0.0.1 on an available port and opens your browser. Press Ctrl-C to stop. Host and Origin checks protect the local interface.
 
 COMMON OPTIONS
   --host <value>           Loopback host for the local settings page

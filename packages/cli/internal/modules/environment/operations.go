@@ -10,6 +10,7 @@ import (
 	catalog "github.com/torchstellar-team/one-cli/packages/cli/internal/core/backend"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/core/workspace"
 	cliErrors "github.com/torchstellar-team/one-cli/packages/cli/internal/platform/errors"
+	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/i18n"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/ports/secrets"
 )
 
@@ -196,7 +197,7 @@ func (s *Service) Set(ctx context.Context, input SetInput) (*SetResult, error) {
 	}
 	resolution := input.Plan.resolution
 	if resolution.Workspace.Manifest() == nil {
-		return nil, cliErrors.New(cliErrors.ONE_CLI_ERROR, "environment set plan is required")
+		return nil, cliErrors.New(cliErrors.ONE_CLI_ERROR, i18n.T("env.set_plan_required"))
 	}
 	root := resolution.Workspace.Root()
 	environment := resolution.Scope.Environment()
@@ -204,7 +205,7 @@ func (s *Service) Set(ctx context.Context, input SetInput) (*SetResult, error) {
 	if environment != "" && !contains(resolution.Declared, environment) {
 		if input.RepositoryReadOnly {
 			return nil, cliErrors.New(cliErrors.ENV_UNKNOWN_ENVIRONMENT,
-				"Dashboard 只能管理 manifest 中已经声明的环境。")
+				i18n.T("env.dashboard_environment_required"))
 		}
 		_, err := workspace.EnsureEnvironment(root, environment)
 		if err != nil {

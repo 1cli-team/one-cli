@@ -1,12 +1,11 @@
 package createcmd
 
 import (
-	"fmt"
-
 	"path/filepath"
 	"strings"
 
 	cliErrors "github.com/torchstellar-team/one-cli/packages/cli/internal/platform/errors"
+	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/i18n"
 )
 
 // resolveCreateEnables resolves the list of backend ids to enable when
@@ -47,7 +46,7 @@ func resolveCreateEnables(envProvider string, interactive bool) ([]string, error
 		byDomain["env"] = "env/infisical"
 	default:
 		return nil, cliErrors.New(cliErrors.BACKEND_ID_UNKNOWN,
-			fmt.Sprintf("--env-provider 值无效: %q（合法值: dotenv / infisical）", envProvider))
+			i18n.Tf("env.provider_invalid", envProvider))
 	}
 
 	// Flatten deterministically by canonical domain order.

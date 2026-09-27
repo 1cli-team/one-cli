@@ -65,39 +65,9 @@ func newRunCmd(loaders *secrets.Registry, provider runtimeport.Provider) *cobra.
 	cmd := &cobra.Command{
 		Use:                   "run [project] [-p <name|path>] [--env-provider dotenv|infisical] [--env <name>] -- <cmd> [args...]",
 		DisableFlagsInUseLine: true,
-		Long: `把项目环境变量注入到任意命令，类似 infisical run。
-
-项目解析：
-  - 不传 project / -p：从当前目录推导（必须 cd 到某个项目目录里）
-  - 传位置参数：按 manifest.projects[].name 或相对路径选择（如 web、apps/web）
-  - 传 -p <name>：按 manifest.projects[].name 选（如 -p web）
-  - 传 -p <relativeDir>：按相对路径选（如 -p apps/web）
-  - 位置参数和 -p 是等价写法；同时使用时必须指向同一个项目
-
-命令分隔：
-  必须使用 -- 分隔 One CLI 参数和要执行的命令。
-
-密钥来源（--env-provider，默认取 workspace 在 one create 时选择的 provider）：
-  - dotenv    ：读 <project>/.env 文件
-  - infisical ：联网从 Infisical 拉
-
-环境名（--env）：
-  覆盖 manifest.environments.default，比如 --env staging。
-
-工作目录：
-  子进程总在解析出的项目目录里运行（不论你从哪里 cd 进来）。
-
-注入的密钥默认会覆盖已存在的 shell 环境变量。
-
-示例：
-  one run -- npm run dev                          # 用 workspace 默认 provider
-  one run web -- npm start                        # 用位置参数选择项目
-  one run apps/web -- npm start                   # 位置参数也接受相对路径
-  one run -p web -- npm start                     # 按 manifest 里的 name 选
-  one run --env-provider dotenv -- npm test       # 强制走 dotenv（离线场景）
-  one run --env staging -- npm run e2e            # 用 staging 环境的密钥`,
-		Args:               cobra.ArbitraryArgs,
-		DisableFlagParsing: false,
+		Long:                  i18n.T("run.tip"),
+		Args:                  cobra.ArbitraryArgs,
+		DisableFlagParsing:    false,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			flags.outputFormat, _ = cmd.Flags().GetString("output")
 			commandArgs, err := parseRunArgs(cmd, flags, args)
@@ -114,18 +84,26 @@ func newRunCmd(loaders *secrets.Registry, provider runtimeport.Provider) *cobra.
 				return runGlobal(cmd.Context(), flags, commandArgs)
 			}
 			if cmd.Flags().Changed("path") || cmd.Flags().Changed("keys") {
-				return fmt.Errorf("--path 和 --keys 仅用于 --global")
+				return i18n.Errorf("run.global_flags_required")
 			}
 			return runRun(cmd.Context(), loaders, flags, commandArgs)
 		},
 	}
-	cmd.Flags().StringVarP(&flags.project, "project", "p", "", "项目名（manifest.projects[].name）或相对路径；默认从 cwd 推导")
-	cmd.Flags().StringVar(&flags.envName, "env", "", "环境名（默认取 manifest.environments.default）")
-	cmd.Flags().StringVar(&flags.envProvider, "env-provider", "", "env provider: dotenv | infisical（默认取 workspace manifest 中已选的值）")
-	cmd.Flags().BoolVar(&flags.dryRun, "dry-run", false, "Print the execution plan without loading environment values or starting a command")
-	cmd.Flags().BoolVar(&flags.global, "global", false, "使用共享凭据，保留当前工作目录")
-	cmd.Flags().StringVar(&flags.globalPath, "path", "", "共享凭据目录（必须显式指定）")
-	cmd.Flags().StringSliceVar(&flags.globalKeys, "keys", nil, "只注入指定的变量名，逗号分隔")
+	i18n.MarkLong(cmd, "run.tip")
+	cmd.Flags().StringVarP(&flags.project, "project", "p", "", i18n.T("run.flag.project"))
+	i18n.MarkFlagUsage(cmd, "project", "run.flag.project")
+	cmd.Flags().StringVar(&flags.envName, "env", "", i18n.T("run.flag.env"))
+	i18n.MarkFlagUsage(cmd, "env", "run.flag.env")
+	cmd.Flags().StringVar(&flags.envProvider, "env-provider", "", i18n.T("run.flag.provider"))
+	i18n.MarkFlagUsage(cmd, "env-provider", "run.flag.provider")
+	cmd.Flags().BoolVar(&flags.dryRun, "dry-run", false, i18n.T("run.flag.dry_run"))
+	i18n.MarkFlagUsage(cmd, "dry-run", "run.flag.dry_run")
+	cmd.Flags().BoolVar(&flags.global, "global", false, i18n.T("run.flag.global"))
+	i18n.MarkFlagUsage(cmd, "global", "run.flag.global")
+	cmd.Flags().StringVar(&flags.globalPath, "path", "", i18n.T("run.flag.path"))
+	i18n.MarkFlagUsage(cmd, "path", "run.flag.path")
+	cmd.Flags().StringSliceVar(&flags.globalKeys, "keys", nil, i18n.T("run.flag.keys"))
+	i18n.MarkFlagUsage(cmd, "keys", "run.flag.keys")
 	i18n.MarkShort(cmd, "run.short")
 	return cmd
 }
@@ -221,7 +199,7 @@ func runRun(ctx context.Context, loaders *secrets.Registry, flags *runFlags, arg
 		}
 		childArgs = append(append(childArgs, "--"), args...)
 		if flags.provider == nil {
-			return cliErrors.New(cliErrors.ONE_CLI_ERROR, "mise runtime is not configured")
+			return cliErrors.New(cliErrors.ONE_CLI_ERROR, i18n.T("run.mise_missing"))
 		}
 		prepared, err := flags.provider.Prepare(ctx, runtimeport.Command{Directory: targetDir, Argv: childArgs, Env: os.Environ()})
 		if err != nil {
@@ -261,7 +239,7 @@ func runRun(ctx context.Context, loaders *secrets.Registry, flags *runFlags, arg
 	binary, err := lookPathFor(commandName, childEnv)
 	if err != nil {
 		return cliErrors.New(cliErrors.RUN_COMMAND_NOT_FOUND,
-			fmt.Sprintf("命令未找到：%s（已在 PATH 中查过：含 %s/node_modules/.bin 与 %s/node_modules/.bin）",
+			i18n.Tf("run.command_missing",
 				args[0], relativeDir, filepath.Base(projectRoot))).
 			WithContext(map[string]any{
 				"command": args[0],
@@ -278,7 +256,7 @@ func runRun(ctx context.Context, loaders *secrets.Registry, flags *runFlags, arg
 	err = platformprocess.RunForwarded(ctx, child)
 	var exit *platformprocess.ExitStatus
 	if err != nil && !errors.As(err, &exit) {
-		return cliErrors.New(cliErrors.RUN_COMMAND_NOT_FOUND, fmt.Sprintf("启动 %s 失败：%v", args[0], err))
+		return cliErrors.New(cliErrors.RUN_COMMAND_NOT_FOUND, i18n.Tf("run.start_failed", args[0], err))
 	}
 	return err
 }
@@ -316,13 +294,13 @@ func loadRunSecrets(
 
 	if providerID != loaderIDDotenv && providerID != loaderIDInfisical {
 		return nil, "", cliErrors.New(cliErrors.RUN_DOTENV_MISSING,
-			"--env-provider 取值非法："+providerID+"（合法值: dotenv | infisical）")
+			i18n.Tf("run.provider_invalid", providerID))
 	}
 
 	loader := loaders.Find(providerID)
 	if loader == nil {
 		return nil, "", cliErrors.New(cliErrors.ONE_CLI_ERROR,
-			"内部错误：env provider "+providerID+" 未注册到二进制。")
+			i18n.Tf("run.provider_unregistered", providerID))
 	}
 
 	vars, err := loader.Load(ctx, projectRoot, relativeDir, flags.envName)
@@ -347,16 +325,16 @@ func resolveRunSubproject(activeWorkspace execution.Workspace, selector string) 
 		}
 		hint := ""
 		if names := activeWorkspace.ProjectNames(); len(names) > 0 {
-			hint = "；可选：" + strings.Join(names, ", ")
+			hint = i18n.Tf("run.available_projects", strings.Join(names, ", "))
 		}
 		return "", "", cliErrors.New(cliErrors.SUBPROJECT_NOT_FOUND,
-			"找不到名字或路径匹配 "+selector+" 的项目"+hint)
+			i18n.Tf("run.project_missing", selector, hint))
 	}
 
 	project, ok := activeWorkspace.ProjectFromWorkingDirectory()
 	if !ok {
 		return "", "", cliErrors.New(cliErrors.RUN_DOTENV_MISSING,
-			"当前目录不在任何项目内；请 cd 进项目，或加 -p <name|path>。")
+			i18n.T("run.project_directory_required"))
 	}
 	return project.TargetDir, project.RelativeDir, nil
 }

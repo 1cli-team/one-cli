@@ -2,9 +2,10 @@
 package buildcmd
 
 import (
-	"fmt"
+	"strings"
 
 	"github.com/spf13/cobra"
+
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/application/execution"
 	buildmodule "github.com/torchstellar-team/one-cli/packages/cli/internal/modules/build"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/modules/dependencies"
@@ -13,7 +14,6 @@ import (
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/output"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/taskrun"
 	runtimeport "github.com/torchstellar-team/one-cli/packages/cli/internal/ports/runtime"
-	"strings"
 )
 
 func Commands(provider runtimeport.Provider) []*cobra.Command {
@@ -34,7 +34,7 @@ func Commands(provider runtimeport.Provider) []*cobra.Command {
 				return err
 			}
 			if concurrency < 1 {
-				return fmt.Errorf("--concurrency must be at least 1")
+				return i18n.Errorf("build.concurrency_invalid")
 			}
 			plan, err := buildmodule.NewPlanForProjects(w, selectors, environment)
 			if err != nil {
@@ -67,8 +67,11 @@ func Commands(provider runtimeport.Provider) []*cobra.Command {
 	i18n.MarkFlagUsage(cmd, "ui", "task.flag.ui")
 	i18n.MarkFlagUsage(cmd, "concurrency", "build.flag.concurrency")
 	cmd.Flags().StringVarP(&project, "project", "p", "", i18n.T("build.flag.project"))
+	i18n.MarkFlagUsage(cmd, "project", "build.flag.project")
 	cmd.Flags().StringVar(&environment, "env", "", i18n.T("build.flag.env"))
+	i18n.MarkFlagUsage(cmd, "env", "build.flag.env")
 	cmd.Flags().BoolVar(&dryRun, "dry-run", false, i18n.T("build.flag.dry_run"))
+	i18n.MarkFlagUsage(cmd, "dry-run", "build.flag.dry_run")
 	for _, flag := range []string{"project", "env", "dry-run"} {
 		key := strings.ReplaceAll(flag, "-", "_")
 		i18n.MarkFlagUsage(cmd, flag, "build.flag."+key)

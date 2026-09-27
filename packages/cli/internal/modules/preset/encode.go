@@ -1,8 +1,9 @@
 package preset
 
 import (
-	"fmt"
 	"strings"
+
+	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/i18n"
 )
 
 // Encode renders spec as the canonical v1 preset id string. The input
@@ -16,7 +17,7 @@ import (
 // registry data.
 func Encode(spec Spec) (string, error) {
 	if !spec.HasProjectSegment() {
-		return "", fmt.Errorf("preset must include at least one project segment (f / b / l)")
+		return "", i18n.Errorf("preset.project_required")
 	}
 
 	c := canonicalize(spec)
@@ -24,10 +25,10 @@ func Encode(spec Spec) (string, error) {
 	b.WriteByte(schemaVersionByte)
 	for _, it := range c.Items {
 		if !IsProjectKind(byte(it.Kind)) {
-			return "", fmt.Errorf("invalid item kind: %q", string(it.Kind))
+			return "", i18n.Errorf("preset.kind_invalid", string(it.Kind))
 		}
 		if !isValidTemplateCodeRaw(it.TemplateCode) {
-			return "", fmt.Errorf("invalid template code: %q", it.TemplateCode)
+			return "", i18n.Errorf("preset.template_code_invalid", it.TemplateCode)
 		}
 		b.WriteByte('.')
 		b.WriteByte(byte(it.Kind))
@@ -35,7 +36,7 @@ func Encode(spec Spec) (string, error) {
 	}
 	if c.EnvCode != "" {
 		if !isValidSingleCharCode(c.EnvCode) {
-			return "", fmt.Errorf("invalid env code: %q", c.EnvCode)
+			return "", i18n.Errorf("preset.env_code_invalid", c.EnvCode)
 		}
 		b.WriteByte('.')
 		b.WriteByte('e')

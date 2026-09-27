@@ -2,7 +2,6 @@ package ci
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/application/execution"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/core/workspace"
@@ -158,7 +157,7 @@ func (s *Service) PlanDisable(ctx context.Context, selector string) (DisablePlan
 
 func (s *Service) Disable(plan DisablePlan, confirmed bool) (*ActionResult, error) {
 	if plan.workspace.Manifest() == nil {
-		return nil, cliErrors.New(cliErrors.ONE_CLI_ERROR, "CI disable plan is required")
+		return nil, cliErrors.New(cliErrors.ONE_CLI_ERROR, i18n.T("ci.disable_plan_required"))
 	}
 	if !confirmed {
 		enabledCount, err := s.enabledCount(plan.workspace.Root(), plan.projects)
@@ -178,7 +177,7 @@ func (s *Service) Disable(plan DisablePlan, confirmed bool) (*ActionResult, erro
 		if err != nil {
 			return nil, cliErrors.New(
 				cliErrors.ONE_CLI_ERROR,
-				fmt.Sprintf("remove CI workflow for %s: %v", project.Name, err),
+				i18n.Tf("ci.remove_failed", project.Name, err),
 			).WithContext(map[string]any{
 				"project": project.Name, "workflow_path": relativeWorkflowPath(root, path),
 			})
@@ -236,7 +235,7 @@ func disableConfirmationError(selector string, enabledCount int) error {
 func renderError(project, provider string, err error) error {
 	return cliErrors.New(
 		cliErrors.CI_RENDER_FAILED,
-		fmt.Sprintf("render CI workflow for %s: %v", project, err),
+		i18n.Tf("ci.render_failed", project, err),
 	).WithContext(map[string]any{"project": project, "provider": provider})
 }
 

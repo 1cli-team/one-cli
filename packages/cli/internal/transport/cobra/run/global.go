@@ -2,7 +2,6 @@ package runcmd
 
 import (
 	"context"
-	"fmt"
 	"io"
 	"os"
 	"path/filepath"
@@ -11,6 +10,7 @@ import (
 	"sync"
 
 	remote "github.com/torchstellar-team/one-cli/packages/cli/internal/modules/environment"
+	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/i18n"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/output"
 	process "github.com/torchstellar-team/one-cli/packages/cli/internal/platform/process"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/ports/secrets"
@@ -18,10 +18,10 @@ import (
 
 func runGlobal(ctx context.Context, f *runFlags, args []string) error {
 	if f.project != "" || f.envProvider != "" {
-		return fmt.Errorf("--global 不能与项目或 --env-provider 同时使用")
+		return i18n.Errorf("run.global_conflict")
 	}
 	if f.envName == "" || f.globalPath == "" {
-		return fmt.Errorf("使用全局凭据必须显式指定 --env 和 --path")
+		return i18n.Errorf("global.scope_required")
 	}
 	folder, e := remote.ValidateGlobalPath(f.globalPath)
 	if e != nil {
@@ -35,7 +35,7 @@ func runGlobal(ctx context.Context, f *runFlags, args []string) error {
 	env := globalCommandEnv(os.Environ())
 	binary, e := lookPathFor(args[0], env)
 	if e != nil {
-		return fmt.Errorf("找不到命令 %s；请使用已安装的工具或显式指定可执行文件路径", args[0])
+		return i18n.Errorf("run.global_command_missing", args[0])
 	}
 	binary, e = filepath.Abs(binary)
 	if e != nil {
@@ -51,7 +51,7 @@ func runGlobal(ctx context.Context, f *runFlags, args []string) error {
 	}
 	for key := range vars {
 		if reservedGlobalKey(key) {
-			return fmt.Errorf("全局目录包含进程控制变量 %s，拒绝注入；请通过 --keys 选择业务凭据", key)
+			return i18n.Errorf("run.control_variable", key)
 		}
 	}
 	child := process.Command(binary, args[1:]...)

@@ -2,7 +2,6 @@ package infisical
 
 import (
 	"context"
-	"fmt"
 	"io"
 	"net"
 	"regexp"
@@ -12,6 +11,7 @@ import (
 	"github.com/infisical/go-sdk/packages/models"
 
 	cliErrors "github.com/torchstellar-team/one-cli/packages/cli/internal/platform/errors"
+	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/i18n"
 	session "github.com/torchstellar-team/one-cli/packages/cli/internal/platform/infisicalsession"
 )
 
@@ -73,7 +73,7 @@ func (c *Client) RetrieveSecret(env, secretPath, key string) (*models.Secret, er
 		mapped := mapAPIError(err)
 		if isNotFound(err) {
 			return nil, cliErrors.New(cliErrors.ENV_KEY_NOT_FOUND,
-				"密钥不存在: "+key)
+				i18n.Tf("env.key_missing", key))
 		}
 		return nil, mapped
 	}
@@ -178,7 +178,7 @@ func (c *Client) DeleteSecret(env, secretPath, key string) (*models.Secret, erro
 	})
 	if err != nil {
 		if isNotFound(err) {
-			return nil, cliErrors.New(cliErrors.ENV_KEY_NOT_FOUND, "密钥不存在: "+key)
+			return nil, cliErrors.New(cliErrors.ENV_KEY_NOT_FOUND, i18n.Tf("env.key_missing", key))
 		}
 		return nil, mapAPIError(err)
 	}
@@ -200,7 +200,7 @@ func (c *Client) VerifyProjectExists(env string) error {
 	}
 	if isNotFound(err) {
 		return cliErrors.New(cliErrors.INFISICAL_PROJECT_NOT_FOUND,
-			"找不到 Infisical 项目: "+c.cfg.ProjectID).
+			i18n.Tf("infisical.project_missing", c.cfg.ProjectID)).
 			WithContext(map[string]any{"project_id": c.cfg.ProjectID, "site_url": c.cfg.SiteURLOrDefault()})
 	}
 	return mapAPIError(err)
@@ -214,16 +214,16 @@ func mapAPIError(err error) error {
 		return nil
 	}
 	if isNetworkError(err) {
-		return cliErrors.New(cliErrors.INFISICAL_NETWORK_ERROR, "无法连接 Infisical，请检查网络。")
+		return cliErrors.New(cliErrors.INFISICAL_NETWORK_ERROR, i18n.T("infisical.network"))
 	}
 	lower := strings.ToLower(err.Error())
 	if strings.Contains(lower, "401") || strings.Contains(lower, "unauthorized") {
-		return cliErrors.New(cliErrors.INFISICAL_AUTH_FAILED, "Infisical 登录失效，请先运行 one logout，再运行 one login。")
+		return cliErrors.New(cliErrors.INFISICAL_AUTH_FAILED, i18n.T("infisical.relogin"))
 	}
 	if folder, env := parseFolderNotFound(err); folder != "" {
-		return cliErrors.New(cliErrors.INFISICAL_FOLDER_NOT_FOUND, fmt.Sprintf("Infisical 目录不存在（环境=%s，目录=%s）。", env, folder))
+		return cliErrors.New(cliErrors.INFISICAL_FOLDER_NOT_FOUND, i18n.Tf("infisical.folder_missing", env, folder))
 	}
-	return cliErrors.New(cliErrors.INFISICAL_API_ERROR, "Infisical 请求失败，请检查项目、环境、路径和访问权限。")
+	return cliErrors.New(cliErrors.INFISICAL_API_ERROR, i18n.T("infisical.request_failed"))
 }
 
 // folderNotFoundRE matches Infisical's folder-404 message shape:

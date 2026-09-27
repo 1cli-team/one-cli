@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/spf13/cobra"
+
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/application/execution"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/core/workspace"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/modules/hooks"
@@ -21,7 +22,7 @@ import (
 func ConfigureCommand() *cobra.Command {
 	var dryRun bool
 	cmd := &cobra.Command{
-		Use: "hooks", Args: cobra.NoArgs,
+		Use: "hooks", Args: i18n.NoArgs,
 		Example: "  one init hooks --dry-run -o json\n  one init hooks\n  one hk check --all",
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			w, err := execution.ResolveWorkspace(cmd.Context())
@@ -36,7 +37,8 @@ func ConfigureCommand() *cobra.Command {
 			return nil
 		},
 	}
-	cmd.Flags().BoolVar(&dryRun, "dry-run", false, "Preview configuration, migration, and local hook files without changing anything")
+	cmd.Flags().BoolVar(&dryRun, "dry-run", false, i18n.T("hooks.flag.dry_run"))
+	i18n.MarkFlagUsage(cmd, "dry-run", "hooks.flag.dry_run")
 	i18n.MarkShort(cmd, "hooks.configure_short")
 	return cmd
 }
@@ -50,7 +52,7 @@ func Commands(provider runtimeport.Provider) []*cobra.Command {
 				return cmd.Help()
 			}
 			if args[0] == "install" || args[0] == "init" || args[0] == "uninstall" {
-				return fmt.Errorf("One manages the Git launchers; use one init hooks to generate or reinstall them, and edit hk.pkl to customize checks")
+				return i18n.Errorf("hooks.launchers_managed")
 			}
 			dir, err := workspace.ResolveProjectRoot("")
 			if err != nil {
@@ -99,18 +101,18 @@ func commandEnv(env []string, binary string) []string {
 // read-only adapter. The enclosing mise step already supplies the project Go.
 func gofmtCommand() *cobra.Command {
 	return &cobra.Command{
-		Use: "__hook-gofmt", Hidden: true, Args: cobra.MinimumNArgs(1),
+		Use: "__hook-gofmt", Hidden: true, Args: i18n.MinimumNArgs(1),
 		RunE: func(cmd *cobra.Command, files []string) error {
 			args := append([]string{"-l", "--"}, files...)
 			child := exec.CommandContext(cmd.Context(), "gofmt", args...)
 			child.Stderr = cmd.ErrOrStderr()
 			out, err := child.Output()
 			if err != nil {
-				return fmt.Errorf("gofmt failed: %w", err)
+				return i18n.Errorf("hooks.gofmt_failed", err)
 			}
 			if len(out) != 0 {
 				fmt.Fprint(cmd.OutOrStdout(), string(out))
-				return fmt.Errorf("Go files need formatting; run one hk fix")
+				return i18n.Errorf("hooks.format_required")
 			}
 			return nil
 		},

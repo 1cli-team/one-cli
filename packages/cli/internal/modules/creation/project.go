@@ -2,7 +2,6 @@ package creation
 
 import (
 	"context"
-	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -13,6 +12,7 @@ import (
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/modules/miseconfig"
 	cliErrors "github.com/torchstellar-team/one-cli/packages/cli/internal/platform/errors"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/fsutil"
+	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/i18n"
 	"github.com/torchstellar-team/one-cli/packages/cli/pkg/toolchain"
 )
 
@@ -73,11 +73,11 @@ func materializeProject(ctx context.Context, projectRoot string, in ProjectInput
 		return ProjectResult{}, err
 	}
 	if in.Template == nil {
-		return ProjectResult{}, fmt.Errorf("creation: template is required")
+		return ProjectResult{}, i18n.Errorf("creation.template_required")
 	}
 	if !workspace.IsValidProjectName(in.Name) {
 		return ProjectResult{}, cliErrors.New(cliErrors.INVALID_NAME,
-			fmt.Sprintf("项目名称格式不合法: %q", in.Name))
+			i18n.Tf("add.name_invalid", in.Name))
 	}
 
 	entry := in.Template
@@ -95,7 +95,7 @@ func materializeProject(ctx context.Context, projectRoot string, in ProjectInput
 
 	if exists, _ := dirNonEmpty(targetDir); exists {
 		return ProjectResult{}, cliErrors.New(cliErrors.TARGET_EXISTS,
-			fmt.Sprintf("项目目录已存在: %s", targetDir)).
+			i18n.Tf("creation.directory_exists", targetDir)).
 			WithContext(map[string]any{
 				"subproject_name": in.Name,
 				"target_path":     targetDir,
@@ -154,7 +154,7 @@ func materializeProject(ctx context.Context, projectRoot string, in ProjectInput
 	}
 	for _, p := range manifest.Projects {
 		if p.RelativeDir == newProject.RelativeDir || p.Name == in.Name {
-			return ProjectResult{}, fmt.Errorf("project %s is already registered", in.Name)
+			return ProjectResult{}, i18n.Errorf("creation.project_registered", in.Name)
 		}
 	}
 	manifest.Projects = append(manifest.Projects, newProject)
@@ -251,18 +251,18 @@ func warningMessages(ws []template.Warning) []string {
 func parseLocalTemplateID(repo string) (string, error) {
 	if !strings.HasPrefix(repo, template.LocalTemplatePrefix) {
 		return "", cliErrors.New(cliErrors.TEMPLATE_NOT_FOUND,
-			fmt.Sprintf("Phase 4a 仅支持 local: 前缀模板；待 phase 5 支持远程下载: %s", repo))
+			i18n.Tf("creation.remote_template_unsupported", repo))
 	}
 	id := strings.TrimSpace(strings.TrimPrefix(repo, template.LocalTemplatePrefix))
 	id = strings.TrimLeft(id, "/")
 	if id == "" {
 		return "", cliErrors.New(cliErrors.TEMPLATE_NOT_FOUND,
-			fmt.Sprintf("本地模板配置无效：%s。请使用 local:<template-name> 格式。", repo))
+			i18n.Tf("creation.template_invalid", repo))
 	}
 	for _, seg := range strings.FieldsFunc(id, func(r rune) bool { return r == '/' || r == '\\' }) {
 		if seg == ".." {
 			return "", cliErrors.New(cliErrors.TEMPLATE_NOT_FOUND,
-				fmt.Sprintf("本地模板配置无效：%s。不允许使用 \"..\" 路径。", repo))
+				i18n.Tf("creation.template_parent_path", repo))
 		}
 	}
 	return id, nil
@@ -278,7 +278,7 @@ func categoryDirFor(category string) (string, error) {
 		return "packages", nil
 	default:
 		return "", cliErrors.New(cliErrors.TEMPLATE_NOT_FOUND,
-			fmt.Sprintf("未知模板分类: %s", category))
+			i18n.Tf("creation.category_unknown", category))
 	}
 }
 

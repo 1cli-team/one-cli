@@ -6,8 +6,6 @@ package devcmd
 import (
 	"context"
 	"fmt"
-	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/prompt"
-	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/taskrun"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -18,6 +16,8 @@ import (
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/helpui"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/i18n"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/output"
+	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/prompt"
+	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/taskrun"
 	runtimeport "github.com/torchstellar-team/one-cli/packages/cli/internal/ports/runtime"
 )
 
@@ -58,10 +58,10 @@ func newDevCmd(provider runtimeport.Provider) *cobra.Command {
 			}
 			if selectProjects {
 				if len(processNames) > 0 {
-					return fmt.Errorf("--select cannot be combined with project arguments")
+					return i18n.Errorf("dev.select_conflict")
 				}
 				if !output.CanPrompt() || dryRun {
-					return fmt.Errorf("--select requires an interactive terminal without --dry-run")
+					return i18n.Errorf("dev.select_terminal_required")
 				}
 				available, _ := processorch.EntriesForProjects(activeWorkspace.Manifest(), nil)
 				options := make([]prompt.Option[string], 0, len(available))
@@ -70,14 +70,14 @@ func newDevCmd(provider runtimeport.Provider) *cobra.Command {
 					options = append(options, prompt.Option[string]{Label: entry.Name, Description: p.RelativeDir, Value: entry.Name})
 				}
 				if len(options) == 0 {
-					return fmt.Errorf("no projects have a dev command")
+					return i18n.Errorf("dev.no_commands")
 				}
 				processNames, err = prompt.MultiSelect(i18n.T("dev.select_title"), options, nil)
 				if err != nil {
 					return err
 				}
 				if len(processNames) == 0 {
-					return fmt.Errorf("select at least one project")
+					return i18n.Errorf("dev.select_required")
 				}
 			}
 			entries, err := processorch.EntriesForProjects(activeWorkspace.Manifest(), processNames)
@@ -85,7 +85,7 @@ func newDevCmd(provider runtimeport.Provider) *cobra.Command {
 				return err
 			}
 			if len(entries) == 0 {
-				return fmt.Errorf("no projects have a dev command")
+				return i18n.Errorf("dev.no_commands")
 			}
 			mode, err := taskrun.ResolveMode(ui, len(entries))
 			if err != nil {

@@ -34,7 +34,7 @@ func TestSnapshot_E2E_CreateDailyText(t *testing.T) {
 	if code == 0 {
 		t.Fatal("non-interactive create without a directory should fail")
 	}
-	for _, want := range []string{"✗ 非交互创建需要指定工作区目录。", "错误代码：PROJECT_NAME_REQUIRED", "可尝试：", "one create <workspace-directory>"} {
+	for _, want := range []string{"✗ 非交互模式下必须提供 [dir] 位置参数", "错误代码：PROJECT_NAME_REQUIRED", "可尝试：", "one create <workspace-directory>"} {
 		if !strings.Contains(errorText, want) {
 			t.Errorf("localized error missing %q: %q", want, errorText)
 		}

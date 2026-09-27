@@ -10,9 +10,9 @@ Sets one environment variable. Use `one env set KEY` for hidden interactive inpu
 
 COMMON OPTIONS
   --env <value>            Environment name (default: workspace default)
-  --global                 管理 Infisical 共享凭据，可在工作区之外使用
+  --global                 Manage Infisical shared credentials, including outside a workspace
   -o, --output <value>     Output format: json | yaml | text (default: terminal-friendly text, JSON when piped)
-  --path <value>           共享凭据目录（仅当前层，不递归）
+  --path <value>           Shared credential folder (current level only, not recursive)
   -p, --project <value>    Project name or relative path; defaults to the current project
-  --stdin                  从标准输入读取值，避免写入命令历史（共享凭据）
+  --stdin                  Read the value from standard input to keep it out of shell history (shared credentials)
   -y, --yes                Confirm overwrites and new environments non-interactively

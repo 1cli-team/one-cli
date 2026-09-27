@@ -20,9 +20,9 @@ func newSetCmd(deps Dependencies) *cobra.Command {
 	)
 	cmd := &cobra.Command{
 		Use:   "set <KEY[=VALUE]> [VALUE]",
-		Short: "写一个环境变量值（dotenv 写到 .env / .env.<env>，infisical 写到对应环境）",
+		Short: i18n.T("env.set.short"),
 		Long:  i18n.T("env.set.tip"),
-		Args:  cobra.RangeArgs(1, 2),
+		Args:  i18n.RangeArgs(1, 2),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			plan, err := deps.Service.PlanSet(environmentmodule.PlanSetInput{
 				Scope: commandScope(cmd), Environment: environment, Project: project,
@@ -72,8 +72,11 @@ func newSetCmd(deps Dependencies) *cobra.Command {
 		},
 	}
 	cmd.Flags().StringVarP(&project, "project", "p", "", i18n.T("env.flag.project"))
+	i18n.MarkFlagUsage(cmd, "project", "env.flag.project")
 	cmd.Flags().StringVar(&environment, "env", "", i18n.T("env.flag.environment"))
+	i18n.MarkFlagUsage(cmd, "env", "env.flag.environment")
 	cmd.Flags().BoolVarP(&yes, "yes", "y", false, i18n.T("env.flag.yes"))
+	i18n.MarkFlagUsage(cmd, "yes", "env.flag.yes")
 	markEnvFlagUsage(cmd, "project", "env", "yes")
 	i18n.MarkShort(cmd, "env.set.short")
 	i18n.MarkLong(cmd, "env.set.tip")
@@ -145,13 +148,13 @@ func confirmCreateEnv(name string, yes bool) error {
 		return nil
 	}
 	ok, err := prompt.Confirm(
-		fmt.Sprintf("环境 %q 不在 manifest.environments.names 中。要创建并继续吗？", name),
+		i18n.Tf("env.create_environment_confirm", name),
 		false, "", "")
 	if err != nil {
 		return err
 	}
 	if !ok {
-		return cliErrors.New(cliErrors.PROMPT_CANCELLED, "已取消创建新环境。").WithExit0()
+		return cliErrors.New(cliErrors.PROMPT_CANCELLED, i18n.T("env.create_environment_cancelled")).WithExit0()
 	}
 	return nil
 }

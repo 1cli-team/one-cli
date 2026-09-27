@@ -4,6 +4,7 @@ import (
 	"regexp"
 
 	cliErrors "github.com/torchstellar-team/one-cli/packages/cli/internal/platform/errors"
+	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/i18n"
 )
 
 // secretKeyRE is the POSIX env-var pattern: must start with a letter or
@@ -29,9 +30,7 @@ var secretKeyRE = regexp.MustCompile(`^[A-Za-z_][A-Za-z0-9_]*$`)
 func AssertValidKey(s string) error {
 	if !secretKeyRE.MatchString(s) {
 		return cliErrors.New(cliErrors.ENV_INVALID_KEY,
-			"密钥名称非法："+s+"（必须匹配 ^[A-Za-z_][A-Za-z0-9_]*$，例如 DATABASE_URL）。"+
-				"如果配置框架（viper / NestJS @nestjs/config 等）需要嵌套路径如 database.url，"+
-				"请在 secret 端用 DATABASE_URL，框架运行时会按 a.b.c ↔ A_B_C 自动覆盖。")
+			i18n.Tf("env.key_naming", s))
 	}
 	return nil
 }

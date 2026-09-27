@@ -44,7 +44,7 @@ func newAddCmd(service *creationmodule.Service) *cobra.Command {
 		Use:     "add [template-id]",
 		Long:    i18n.T("add.tip"),
 		Example: "  one add\n  one add react-spa --name web --yes",
-		Args:    cobra.MaximumNArgs(1),
+		Args:    i18n.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			positional := ""
 			if len(args) > 0 {
@@ -77,13 +77,13 @@ func runAdd(cmd *cobra.Command, service *creationmodule.Service, positional stri
 		return err
 	}
 	if len(registry.Templates) == 0 {
-		return cliErrors.New(cliErrors.NO_TEMPLATES, "模板注册表为空。")
+		return cliErrors.New(cliErrors.NO_TEMPLATES, i18n.T("add.registry_empty"))
 	}
 
 	if templateID == "" {
 		if !interactive {
 			return cliErrors.New(cliErrors.TEMPLATE_REQUIRED,
-				"非交互模式下必须通过位置参数指定模板 ID。可执行 `one templates` 查看可用模板。")
+				i18n.T("add.template_required"))
 		}
 		picked, perr := selectTemplateInteractively(registry.Templates)
 		if perr != nil {
@@ -98,7 +98,7 @@ func runAdd(cmd *cobra.Command, service *creationmodule.Service, positional stri
 			ids = append(ids, t.ID)
 		}
 		return cliErrors.New(cliErrors.TEMPLATE_NOT_FOUND,
-			fmt.Sprintf("模板 %q 不存在，使用 `one templates` 查看可用模板。", templateID)).
+			i18n.Tf("add.template_missing", templateID)).
 			WithContext(map[string]any{
 				"requested_template":  templateID,
 				"available_templates": ids,
@@ -109,15 +109,15 @@ func runAdd(cmd *cobra.Command, service *creationmodule.Service, positional stri
 	if name == "" {
 		if !interactive {
 			return cliErrors.New(cliErrors.SUBPROJECT_NAME_REQUIRED,
-				"非交互模式下必须通过 --name 指定项目名称。")
+				i18n.T("add.name_required"))
 		}
 		got, perr := prompt.Text(i18n.T("add.prompt_name"), "user-service", func(v string) error {
 			v = strings.TrimSpace(v)
 			if v == "" {
-				return errors.New("请输入项目名称")
+				return errors.New(i18n.T("add.enter_name"))
 			}
 			if !workspace.IsValidProjectName(v) {
-				return errors.New("名称只能包含字母数字、下划线、连字符，且不能以连字符开头")
+				return errors.New(i18n.T("common.name_format"))
 			}
 			return nil
 		})
@@ -128,7 +128,7 @@ func runAdd(cmd *cobra.Command, service *creationmodule.Service, positional stri
 	}
 	if !workspace.IsValidProjectName(name) {
 		return cliErrors.New(cliErrors.INVALID_NAME,
-			fmt.Sprintf("项目名称格式不合法: %q", name))
+			i18n.Tf("add.name_invalid", name))
 	}
 
 	// All workspace mutation now lives in creation.Service (the same
@@ -251,7 +251,7 @@ func selectTemplateInteractively(items []template.Template) (string, error) {
 	}
 
 	if len(available) == 0 {
-		return "", cliErrors.New(cliErrors.NO_TEMPLATES, "注册表中没有可用模板。")
+		return "", cliErrors.New(cliErrors.NO_TEMPLATES, i18n.T("add.no_templates"))
 	}
 
 	var chosen projectKind
@@ -276,8 +276,8 @@ func selectTemplateInteractively(items []template.Template) (string, error) {
 	tplOpts := make([]prompt.Option[string], 0, len(templates))
 	for _, t := range templates {
 		tplOpts = append(tplOpts, prompt.Option[string]{
-			Label:       t.Name,
-			Description: t.Description,
+			Label:       t.DisplayName(),
+			Description: t.DisplayDescription(),
 			Value:       t.ID,
 		})
 	}

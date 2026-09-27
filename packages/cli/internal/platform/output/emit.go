@@ -7,8 +7,9 @@ import (
 	"io"
 	"os"
 
-	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/i18n"
 	"gopkg.in/yaml.v3"
+
+	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/i18n"
 )
 
 // TTYRenderer is implemented by result payloads that want a
@@ -66,13 +67,10 @@ func emitErrorTo(w io.Writer, err *Error) {
 		emitYAML(w, err.envelope())
 	default:
 		message := err.Error()
-		if translated := i18n.T("error." + err.Code + ".message"); translated != "error."+err.Code+".message" {
-			message = translated
-		}
 		fmt.Fprintf(w, "✗ %s\n", message)
 		fmt.Fprintf(w, "  %s%s\n", i18n.T("error.code_label"), err.Code)
 		printedHeader := false
-		for index, step := range err.Remediation {
+		for _, step := range err.Remediation {
 			if step.Hint == "" && step.Command == "" {
 				continue
 			}
@@ -83,10 +81,6 @@ func emitErrorTo(w io.Writer, err *Error) {
 			}
 			if step.Hint != "" {
 				hint := step.Hint
-				key := fmt.Sprintf("error.%s.hint.%d", err.Code, index)
-				if translated := i18n.T(key); translated != key {
-					hint = translated
-				}
 				fmt.Fprintf(w, "  %s\n", hint)
 			}
 			if step.Command != "" {

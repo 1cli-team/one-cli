@@ -3,7 +3,6 @@ package environment
 import (
 	"context"
 	"errors"
-	"fmt"
 	"os"
 	"path/filepath"
 	"sort"
@@ -14,6 +13,7 @@ import (
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/application/execution"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/core/workspace"
 	cliErrors "github.com/torchstellar-team/one-cli/packages/cli/internal/platform/errors"
+	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/i18n"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/output"
 )
 
@@ -31,7 +31,7 @@ func (s *Service) PlanSwitch(scope execution.Scope, target string) (SwitchPlan, 
 	target = strings.TrimSpace(target)
 	if target != workspace.EnvBackendDotenv && target != workspace.EnvBackendInfisical {
 		return SwitchPlan{}, cliErrors.New(cliErrors.ENV_BACKEND_INVALID,
-			fmt.Sprintf("不支持的 backend %q；合法值: dotenv / infisical", target))
+			i18n.Tf("env.backend_invalid", target))
 	}
 	resolution, err := s.resolve(resolveInput{Scope: scope, AllowUnknown: true})
 	if err != nil {
@@ -43,7 +43,7 @@ func (s *Service) PlanSwitch(scope execution.Scope, target string) (SwitchPlan, 
 	}
 	if current == target {
 		return SwitchPlan{}, cliErrors.New(cliErrors.ENV_BACKEND_UNCHANGED,
-			fmt.Sprintf("工作区已经是 %s 后端，无需切换。", target)).
+			i18n.Tf("env.backend_unchanged", target)).
 			WithContext(map[string]any{"backend": target})
 	}
 	plan := SwitchPlan{
@@ -124,7 +124,7 @@ func (s *Service) Switch(
 		}
 		if result.Conflicts > 0 {
 			return nil, cliErrors.New(cliErrors.ENV_MIGRATE_CONFLICT,
-				fmt.Sprintf("%d 个 key 在 Infisical 已存在且值不同；加 --overwrite 重跑以覆盖。", result.Conflicts)).
+				i18n.Tf("env.migrate_conflicts", result.Conflicts)).
 				WithContext(map[string]any{
 					"backend": plan.To, "conflicts": result.Conflicts, "synced": result.Synced,
 				})
@@ -190,7 +190,7 @@ func collectDotenvTuples(root string, manifest *workspace.Manifest) ([]dotenvTup
 					if os.IsNotExist(err) {
 						continue
 					}
-					return nil, fmt.Errorf("read %s: %w", file, err)
+					return nil, i18n.Errorf("file.read_error", file, err)
 				}
 				for key, value := range dotenv.Parse(string(content)) {
 					merged[key] = value

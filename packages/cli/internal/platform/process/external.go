@@ -2,11 +2,11 @@
 package process
 
 import (
-	"fmt"
 	"os"
 	"os/exec"
 
 	cliErrors "github.com/torchstellar-team/one-cli/packages/cli/internal/platform/errors"
+	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/i18n"
 )
 
 // RunExternal forwards stdin, stdout, and stderr to an external process.
@@ -14,10 +14,10 @@ import (
 // with a useful remediation hint.
 func RunExternal(workdir string, args []string, missingHint string) error {
 	if len(args) == 0 {
-		return cliErrors.New(cliErrors.ONE_CLI_ERROR, "RunExternal: empty argv")
+		return cliErrors.New(cliErrors.ONE_CLI_ERROR, i18n.T("process.command_empty"))
 	}
 	if _, err := exec.LookPath(args[0]); err != nil {
-		msg := fmt.Sprintf("%s 二进制不在 PATH 中", args[0])
+		msg := i18n.Tf("process.binary_missing", args[0])
 		if missingHint != "" {
 			msg += "；" + missingHint
 		}

@@ -11,6 +11,7 @@ import (
 
 	cliErrors "github.com/torchstellar-team/one-cli/packages/cli/internal/platform/errors"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/fsutil"
+	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/i18n"
 )
 
 // ManifestFilename is the on-disk location of the workspace manifest at the
@@ -193,24 +194,24 @@ func ReadManifestSnapshot(projectRoot string) (*Manifest, string, error) {
 		if errors.Is(err, os.ErrNotExist) {
 			return emptyManifest(), "", nil
 		}
-		return nil, "", cliErrors.New(cliErrors.MANIFEST_INVALID, "one.manifest.json 解析失败。")
+		return nil, "", cliErrors.New(cliErrors.MANIFEST_INVALID, i18n.T("manifest.parse_failed"))
 	}
 	var m Manifest
 	dec := json.NewDecoder(bytes.NewReader(raw))
 	dec.DisallowUnknownFields()
 	if err := dec.Decode(&m); err != nil {
 		if err.Error() == `json: unknown field "deploy"` || err.Error() == `json: unknown field "container"` {
-			return nil, "", cliErrors.New(cliErrors.MANIFEST_INVALID, "container 和 deploy 功能已下线，请手动删除 one.manifest.json 中对应的配置字段后重试。")
+			return nil, "", cliErrors.New(cliErrors.MANIFEST_INVALID, i18n.T("manifest.retired_fields"))
 		}
-		return nil, "", cliErrors.New(cliErrors.MANIFEST_INVALID, "one.manifest.json 解析失败。")
+		return nil, "", cliErrors.New(cliErrors.MANIFEST_INVALID, i18n.T("manifest.parse_failed"))
 	}
 	if m.Version != ManifestVersion {
-		msg := fmt.Sprintf("one.manifest.json 版本 %d 不支持，当前 CLI 仅认 v%d。", m.Version, ManifestVersion)
+		msg := i18n.Tf("manifest.version_unsupported", m.Version, ManifestVersion)
 		if m.Version > ManifestVersion {
-			msg += " 请升级 one CLI，或按当前 manifest schema 手动迁移后再重试。"
+			msg += i18n.T("manifest.upgrade_hint")
 		}
 		if m.Version == 0 {
-			msg += " 请按当前 schema 手动更新 workspace、environments、domains.env 和 projects，删除已下线的 deploy/container 字段，并将 version 设为 1。"
+			msg += i18n.T("manifest.migration_hint")
 		}
 		return nil, "", cliErrors.New(cliErrors.MANIFEST_INVALID, msg)
 	}

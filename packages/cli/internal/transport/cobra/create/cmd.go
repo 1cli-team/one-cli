@@ -51,7 +51,7 @@ func newCreateCmd(deps Dependencies) *cobra.Command {
 		Use:     "create [dir]",
 		Long:    i18n.T("create.tip"),
 		Example: "  one create demo\n  one create . --name demo\n  one create demo --yes",
-		Args:    cobra.MaximumNArgs(1),
+		Args:    i18n.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			dir := ""
 			if len(args) > 0 {

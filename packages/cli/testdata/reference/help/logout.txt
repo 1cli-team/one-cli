@@ -1,6 +1,6 @@
 
 DESCRIPTION
-退出本机 Infisical 会话，保留变量位置
+Sign out of Infisical on this machine, keeping variable locations
 
 USAGE
   one logout [flags]

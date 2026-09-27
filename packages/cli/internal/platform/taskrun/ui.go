@@ -9,6 +9,8 @@ import (
 	"charm.land/lipgloss/v2"
 	uv "github.com/charmbracelet/ultraviolet"
 	"github.com/charmbracelet/x/ansi"
+
+	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/i18n"
 	platformprocess "github.com/torchstellar-team/one-cli/packages/cli/internal/platform/process"
 )
 
@@ -200,28 +202,28 @@ func (m model) View() tea.View {
 			failed++
 		}
 	}
-	title := fmt.Sprintf("One %s · %d running · %d failed", s.opts.Title, running, failed)
+	title := i18n.Tf("task.ui.title", s.opts.Title, running, failed)
 	header := accent.Render(ansi.Truncate(title, width, "…"))
-	detail := fmt.Sprintf("%s · %s", j.task.Name, j.result.Status)
+	detail := fmt.Sprintf("%s · %s", j.task.Name, i18n.T("task.status."+j.result.Status))
 	if j.result.Status == "running" {
 		detail += fmt.Sprintf(" · %s", time.Since(j.started).Truncate(time.Second))
 	} else if j.result.ExitCode != 0 {
-		detail += fmt.Sprintf(" · exit %d", j.result.ExitCode)
+		detail += i18n.Tf("task.ui.exit", j.result.ExitCode)
 	}
 	if j.attempt > 1 {
-		detail += fmt.Sprintf(" · run %d", j.attempt)
+		detail += i18n.Tf("task.ui.attempt", j.attempt)
 	}
 	if j.terminal.ScrollbackLen() >= 3000 {
-		detail += " · latest 3000 history lines"
+		detail += i18n.T("task.ui.history_limit")
 	}
 	if j.offset > 0 {
-		detail += " · history (f: follow)"
+		detail += i18n.T("task.ui.history")
 	}
 	body := terminalView(j, panelHeight)
 	if m.help {
-		body = "↑/↓  Select project\nEnter  Send keyboard input to project\nCtrl+]  Return to navigation\nPgUp/PgDn  Scroll history\nf  Follow latest output\nh  Hide/show project list\n/  Search projects\nEsc  Clear search\nCtrl+C / q  Stop all tasks"
+		body = i18n.T("task.ui.help")
 		if s.opts.Development {
-			body += "\nr  Restart selected project\ns  Stop selected project"
+			body += i18n.T("task.ui.help_dev")
 		}
 	}
 	lw := m.listWidth()
@@ -237,9 +239,9 @@ func (m model) View() tea.View {
 		}
 		for _, i := range visible[start:] {
 			job := s.jobs[i]
-			label := "  " + job.task.Name + " · " + job.result.Status
+			label := "  " + job.task.Name + " · " + i18n.T("task.status."+job.result.Status)
 			if i == m.selected {
-				label = "> " + job.task.Name + " · " + job.result.Status
+				label = "> " + job.task.Name + " · " + i18n.T("task.status."+job.result.Status)
 			}
 			label = ansi.Truncate(label, lw-2, "…")
 			if i == m.selected {
@@ -253,15 +255,15 @@ func (m model) View() tea.View {
 		left := lipgloss.NewStyle().Width(lw).Height(panelHeight).Render(strings.Join(rows, "\n"))
 		body = lipgloss.JoinHorizontal(lipgloss.Top, left, " │ ", body)
 	}
-	hint := "↑↓ select · Enter input · PgUp/PgDn scroll · / search · ? help · Ctrl+C stop"
+	hint := i18n.T("task.ui.hint")
 	if s.opts.Development {
-		hint = "↑↓ select · Enter input · r restart · s stop · / search · ? help · Ctrl+C stop"
+		hint = i18n.T("task.ui.hint_dev")
 	}
 	if m.input {
-		hint = "INPUT → " + j.task.Name + " · Ctrl+] return · Ctrl+C interrupts this project"
+		hint = i18n.Tf("task.ui.input", j.task.Name)
 	}
 	if m.searching || m.query != "" {
-		hint = "Search: " + m.query + " · Enter apply · Esc clear"
+		hint = i18n.Tf("task.ui.search", m.query)
 	}
 	v := tea.NewView(header + "\n" + muted.Render(ansi.Truncate(detail, width, "…")) + "\n" + lipgloss.NewStyle().Height(panelHeight).MaxHeight(panelHeight).Render(body) + "\n" + muted.Render(ansi.Truncate(hint, width, "…")))
 	v.AltScreen = true
@@ -306,6 +308,6 @@ func (s *Session) printFailures() {
 		if j.result.Status != "failed" {
 			continue
 		}
-		fmt.Fprintf(s.opts.Output, "[%s] failed (exit %d)\n%s\n", j.task.Name, j.result.ExitCode, strings.TrimSpace(j.terminal.String()))
+		fmt.Fprintf(s.opts.Output, i18n.T("task.ui.failed_output"), j.task.Name, j.result.ExitCode, strings.TrimSpace(j.terminal.String()))
 	}
 }

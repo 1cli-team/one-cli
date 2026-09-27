@@ -6,6 +6,7 @@ import (
 
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/core/template"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/modules/preset"
+	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/i18n"
 )
 
 // PresetResult is what `one create --preset` reports back. The shape is
@@ -62,7 +63,7 @@ func ApplyPreset(ctx context.Context, projectRoot string, resolved preset.Resolv
 
 	id, err := preset.Encode(resolved.Spec)
 	if err != nil {
-		return out, fmt.Errorf("creation: encode canonical preset id: %w", err)
+		return out, i18n.Errorf("creation.preset_encode", err)
 	}
 	out.PresetID = id
 

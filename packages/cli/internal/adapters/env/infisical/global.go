@@ -3,7 +3,6 @@ package infisical
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"net/url"
 	"os"
@@ -14,7 +13,9 @@ import (
 
 	sdk "github.com/infisical/go-sdk"
 	"github.com/infisical/go-sdk/packages/models"
+
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/fsutil"
+	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/i18n"
 	session "github.com/torchstellar-team/one-cli/packages/cli/internal/platform/infisicalsession"
 )
 
@@ -67,7 +68,7 @@ func Project(ctx context.Context, id string) (*RemoteProject, error) {
 }
 func projectFor(ctx context.Context, s *session.Session, id string) (*RemoteProject, error) {
 	if strings.TrimSpace(id) == "" {
-		return nil, fmt.Errorf("必须选择 Infisical 项目")
+		return nil, i18n.Errorf("infisical.project_required")
 	}
 	var result struct {
 		Project RemoteProject `json:"workspace"`
@@ -81,13 +82,13 @@ func projectFor(ctx context.Context, s *session.Session, id string) (*RemoteProj
 	}
 	p.LegacyID = ""
 	if p.ID != id {
-		return nil, fmt.Errorf("Infisical 项目响应无效")
+		return nil, i18n.Errorf("infisical.project_response_invalid")
 	}
 	if s.OrganizationID != "" && p.OrganizationID != s.OrganizationID {
-		return nil, fmt.Errorf("项目不属于当前登录组织")
+		return nil, i18n.Errorf("infisical.organization_mismatch")
 	}
 	if p.Type != "secret-manager" {
-		return nil, fmt.Errorf("请选择 Secret Manager 项目，当前项目不能存放共享凭据")
+		return nil, i18n.Errorf("infisical.secret_manager_required")
 	}
 	return &p, nil
 }
@@ -115,7 +116,7 @@ func LoadGlobalLocation() (*GlobalLocation, error) {
 	}
 	var location GlobalLocation
 	if json.Unmarshal(data, &location) != nil {
-		return nil, fmt.Errorf("共享凭据位置配置损坏，请重新选择存放项目")
+		return nil, i18n.Errorf("global.location_invalid")
 	}
 	return &location, nil
 }
@@ -141,7 +142,7 @@ func bindGlobalFor(ctx context.Context, s *session.Session, projectID, env strin
 		return nil, e
 	}
 	if current.SiteURL != s.SiteURL || current.UserID != s.UserID || current.OrganizationID != s.OrganizationID || current.Token != s.Token {
-		return nil, fmt.Errorf("登录状态已改变，请重新选择共享凭据位置")
+		return nil, i18n.Errorf("global.session_changed")
 	}
 	location := &GlobalLocation{SiteURL: s.SiteURL, UserID: s.UserID, OrganizationID: p.OrganizationID, ProjectID: p.ID, ProjectName: p.Name, DefaultEnvironment: env}
 	file, e := session.ConfigPath("global-env.json")
@@ -160,18 +161,18 @@ func validateRemoteEnvironment(p *RemoteProject, env string) error {
 			return nil
 		}
 	}
-	return fmt.Errorf("项目 %s 中不存在环境 %q；不会自动回退到其他环境", p.Name, env)
+	return i18n.Errorf("global.environment_missing", p.Name, env)
 }
 func ValidateGlobalPath(raw string) (string, error) {
 	if raw == "" {
 		raw = "/"
 	}
 	if !strings.HasPrefix(raw, "/") || strings.ContainsAny(raw, "\\\x00\r\n") {
-		return "", fmt.Errorf("变量目录必须是以 / 开头的绝对路径")
+		return "", i18n.Errorf("global.path_absolute")
 	}
 	for _, part := range strings.Split(raw, "/") {
 		if part == ".." || part == "." {
-			return "", fmt.Errorf("变量目录不能包含 . 或 ..")
+			return "", i18n.Errorf("global.path_segments")
 		}
 	}
 	return path.Clean(raw), nil
@@ -186,17 +187,17 @@ func globalClient(ctx context.Context, env string) (*Client, *GlobalLocation, st
 		return nil, nil, "", e
 	}
 	if location == nil {
-		return nil, nil, "", fmt.Errorf("尚未选择共享凭据位置，请运行 one env bind --global")
+		return nil, nil, "", i18n.Errorf("global.location_required")
 	}
 	if location.SiteURL != s.SiteURL || location.UserID != s.UserID || (s.OrganizationID != "" && location.OrganizationID != s.OrganizationID) {
-		return nil, nil, "", fmt.Errorf("共享凭据位置与当前账号、实例或组织不匹配，请重新选择存放项目")
+		return nil, nil, "", i18n.Errorf("global.location_mismatch")
 	}
 	p, e := projectFor(ctx, s, location.ProjectID)
 	if e != nil {
 		return nil, nil, "", e
 	}
 	if p.OrganizationID != location.OrganizationID {
-		return nil, nil, "", fmt.Errorf("共享凭据项目组织已改变，请重新选择存放项目")
+		return nil, nil, "", i18n.Errorf("global.organization_changed")
 	}
 	if env == "" {
 		env = location.DefaultEnvironment
@@ -253,7 +254,7 @@ var envKey = regexp.MustCompile(`^[A-Za-z_][A-Za-z0-9_]*$`)
 
 func GlobalSecret(ctx context.Context, action, env, folder, key, value string) (any, error) {
 	if !envKey.MatchString(key) {
-		return nil, fmt.Errorf("变量名必须符合环境变量命名规则")
+		return nil, i18n.Errorf("global.key_format")
 	}
 	folder, e := ValidateGlobalPath(folder)
 	if e != nil {
@@ -277,7 +278,7 @@ func GlobalSecret(ctx context.Context, action, env, folder, key, value string) (
 	case "unset":
 		_, e = c.DeleteSecret(env, folder, key)
 	default:
-		return nil, fmt.Errorf("不支持的变量操作")
+		return nil, i18n.Errorf("global.operation_unsupported")
 	}
 	if e != nil {
 		return nil, e
@@ -286,7 +287,7 @@ func GlobalSecret(ctx context.Context, action, env, folder, key, value string) (
 }
 func CreateGlobalFolder(ctx context.Context, env, folder, name string) error {
 	if name == "" || name == "." || name == ".." || strings.ContainsAny(name, "/\\\x00\r\n") {
-		return fmt.Errorf("目录名无效")
+		return i18n.Errorf("global.folder_invalid")
 	}
 	folder, e := ValidateGlobalPath(folder)
 	if e != nil {
@@ -301,7 +302,7 @@ func CreateGlobalFolder(ctx context.Context, env, folder, name string) error {
 }
 func GlobalValues(ctx context.Context, env, folder string, keys []string) (map[string]string, error) {
 	if env == "" || folder == "" {
-		return nil, fmt.Errorf("使用全局凭据必须显式指定 --env 和 --path")
+		return nil, i18n.Errorf("global.scope_required")
 	}
 	folder, e := ValidateGlobalPath(folder)
 	if e != nil {
@@ -316,7 +317,7 @@ func GlobalValues(ctx context.Context, env, folder string, keys []string) (map[s
 	if len(keys) > 0 {
 		for _, k := range keys {
 			if !envKey.MatchString(k) {
-				return nil, fmt.Errorf("变量名无效")
+				return nil, i18n.Errorf("global.key_invalid")
 			}
 			v, e := c.retrieveGlobalSecret(env, folder, k)
 			if e != nil {

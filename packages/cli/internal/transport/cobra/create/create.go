@@ -2,8 +2,6 @@ package createcmd
 
 import (
 	"errors"
-	"fmt"
-
 	"os"
 	"path/filepath"
 	"strings"
@@ -11,12 +9,10 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/core/workspace"
+	creationmodule "github.com/torchstellar-team/one-cli/packages/cli/internal/modules/creation"
 	cliErrors "github.com/torchstellar-team/one-cli/packages/cli/internal/platform/errors"
-
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/i18n"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/output"
-
-	creationmodule "github.com/torchstellar-team/one-cli/packages/cli/internal/modules/creation"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/prompt"
 )
 
@@ -48,7 +44,7 @@ func runCreate(deps Dependencies, cmd *cobra.Command, rawDir string, flags *crea
 	validateDir := func(v string) error {
 		v = strings.TrimSpace(v)
 		if v == "" {
-			return errors.New("请输入目标目录")
+			return errors.New(i18n.T("create.enter_directory"))
 		}
 		abs := resolveTargetPath(cwd, v)
 		return deps.Creation.ValidateWorkspaceTarget(abs)
@@ -61,7 +57,7 @@ func runCreate(deps Dependencies, cmd *cobra.Command, rawDir string, flags *crea
 			return nil
 		}
 		if !workspace.IsValidProjectName(v) {
-			return errors.New("名称只能包含字母数字、下划线、连字符，且不能以连字符开头")
+			return errors.New(i18n.T("common.name_format"))
 		}
 		return nil
 	}
@@ -74,7 +70,7 @@ func runCreate(deps Dependencies, cmd *cobra.Command, rawDir string, flags *crea
 	if rawDir == "" && interactive {
 		if conflict := deps.Creation.EnclosingWorkspace(cwd); conflict != "" {
 			return cliErrors.New(cliErrors.WORKSPACE_NESTED_FORBIDDEN,
-				fmt.Sprintf("当前目录在已存在的工作区里：%s。请 cd 到工作区外再 one create，或用 one add 在现有工作区里加项目。", conflict)).
+				i18n.Tf("create.workspace_nested", conflict)).
 				WithContext(map[string]any{
 					"cwd":                 cwd,
 					"enclosing_workspace": conflict,
@@ -98,7 +94,7 @@ func runCreate(deps Dependencies, cmd *cobra.Command, rawDir string, flags *crea
 	} else if rawDir == "" {
 		if !interactive {
 			return cliErrors.New(cliErrors.PROJECT_NAME_REQUIRED,
-				"非交互模式下必须提供 [dir] 位置参数（使用 `.` 表示当前目录）。").
+				i18n.T("create.directory_required")).
 				WithContext(map[string]any{"interactive": false})
 		}
 		got, err := prompt.Text(i18n.T("create.prompt_dir"), "./my-app", validateDir)
@@ -118,7 +114,7 @@ func runCreate(deps Dependencies, cmd *cobra.Command, rawDir string, flags *crea
 	}
 	if !workspace.IsValidProjectName(projectName) {
 		return cliErrors.New(cliErrors.INVALID_NAME,
-			fmt.Sprintf("工作区名称格式不合法: %q（来自 --name 或 basename(dir)）", projectName))
+			i18n.Tf("create.name_invalid", projectName))
 	}
 
 	displayPath := relativeOrAbs(cwd, targetDir, useCurrentDir)
@@ -146,8 +142,8 @@ func runCreate(deps Dependencies, cmd *cobra.Command, rawDir string, flags *crea
 	}
 	prompt.Step(i18n.Tf("create.generated", displayPath))
 	if result.EnvironmentWarn != nil {
-		prompt.Step(fmt.Sprintf(
-			"Infisical 自动绑定未完成（%v）；首次运行 `one env set/get/list/pull` 时会再尝试一次",
+		prompt.Step(i18n.Tf(
+			"create.infisical_binding_warning",
 			result.EnvironmentWarn,
 		))
 	}

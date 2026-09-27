@@ -3,13 +3,14 @@
 package gowork
 
 import (
-	"fmt"
 	"go/version"
 	"path/filepath"
 	"sort"
 	"strings"
 
 	"golang.org/x/mod/modfile"
+
+	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/i18n"
 )
 
 type Reader func(string) ([]byte, error)
@@ -39,14 +40,14 @@ func moduleInfo(path string, read Reader) (*modfile.File, string, error) {
 		return nil, "", err
 	}
 	if b == nil {
-		return nil, "", fmt.Errorf("missing go.mod in workspace member %s (module moved or removed)", path)
+		return nil, "", i18n.Errorf("gowork.module_missing", path)
 	}
 	f, err := modfile.Parse(filepath.Join(path, "go.mod"), b, nil)
 	if err != nil {
 		return nil, "", err
 	}
 	if f.Module == nil {
-		return nil, "", fmt.Errorf("%s/go.mod has no module directive", path)
+		return nil, "", i18n.Errorf("gowork.directive_missing", path)
 	}
 	v := "1.18.0"
 	if f.Go != nil {
@@ -75,7 +76,7 @@ func inspect(root string, f *modfile.WorkFile, read Reader) (Info, error) {
 		}
 		dir = filepath.Clean(dir)
 		if dirs[dir] {
-			return Info{}, fmt.Errorf("duplicate go.work member %s", use.Path)
+			return Info{}, i18n.Errorf("gowork.member_duplicate", use.Path)
 		}
 		dirs[dir] = true
 		m, v, err := moduleInfo(dir, read)
@@ -83,7 +84,7 @@ func inspect(root string, f *modfile.WorkFile, read Reader) (Info, error) {
 			return Info{}, err
 		}
 		if previous, ok := modules[m.Module.Mod.Path]; ok {
-			return Info{}, fmt.Errorf("duplicate module path %s in %s and %s", m.Module.Mod.Path, previous, dir)
+			return Info{}, i18n.Errorf("gowork.module_duplicate", m.Module.Mod.Path, previous, dir)
 		}
 		modules[m.Module.Mod.Path] = dir
 		info.Modules = append(info.Modules, dir)

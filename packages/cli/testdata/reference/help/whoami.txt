@@ -1,6 +1,6 @@
 
 DESCRIPTION
-查看当前 Infisical 登录状态（不显示令牌）
+Show Infisical login status without displaying tokens
 
 USAGE
   one whoami [flags]

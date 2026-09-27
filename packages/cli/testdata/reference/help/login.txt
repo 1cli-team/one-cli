@@ -1,10 +1,10 @@
 
 DESCRIPTION
-在浏览器中登录 Infisical
+Sign in to Infisical in your browser
 
 USAGE
   one login [flags]
 
 COMMON OPTIONS
   -o, --output <value>     Output format: json | yaml | text (default: terminal-friendly text, JSON when piped)
-  --site-url <value>       Infisical 实例根地址
+  --site-url <value>       Infisical instance root URL

@@ -7,7 +7,6 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"io"
 	"net/http"
 	"net/url"
@@ -17,9 +16,11 @@ import (
 	"time"
 
 	"github.com/gofrs/flock"
-	cliErrors "github.com/torchstellar-team/one-cli/packages/cli/internal/platform/errors"
-	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/preferences"
 	"github.com/zalando/go-keyring"
+
+	cliErrors "github.com/torchstellar-team/one-cli/packages/cli/internal/platform/errors"
+	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/i18n"
+	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/preferences"
 )
 
 const DefaultSiteURL = "https://app.infisical.com"
@@ -46,7 +47,7 @@ var setSecret = keyring.Set
 var deleteSecret = keyring.Delete
 
 func Missing() error {
-	return cliErrors.New(cliErrors.INFISICAL_AUTH_MISSING, "尚未登录 Infisical，请运行 one login。")
+	return cliErrors.New(cliErrors.INFISICAL_AUTH_MISSING, i18n.T("auth.login_required"))
 }
 func Load() (*Session, error) {
 	raw, err := getSecret(service, account)
@@ -54,7 +55,7 @@ func Load() (*Session, error) {
 		return nil, Missing()
 	}
 	if err != nil {
-		return nil, fmt.Errorf("无法读取系统凭据存储，请解锁后重试：%w", err)
+		return nil, i18n.Errorf("auth.store_read_failed", err)
 	}
 	var s Session
 	if json.Unmarshal([]byte(raw), &s) != nil || s.Token == "" {
@@ -70,7 +71,7 @@ func Require() (*Session, error) {
 		return nil, err
 	}
 	if s.Expired {
-		return nil, cliErrors.New(cliErrors.INFISICAL_AUTH_FAILED, "Infisical 登录已过期，请重新运行 one login。")
+		return nil, cliErrors.New(cliErrors.INFISICAL_AUTH_FAILED, i18n.T("auth.session_expired"))
 	}
 	return s, nil
 }
@@ -91,7 +92,7 @@ func save(s *Session) error {
 		return err
 	}
 	if err = setSecret(service, account, string(raw)); err != nil {
-		return fmt.Errorf("无法保存登录：请启用并解锁系统凭据存储（Linux 需要 Secret Service）：%w", err)
+		return i18n.Errorf("auth.store_write_failed", err)
 	}
 	return nil
 }
@@ -138,11 +139,11 @@ func NormalizeSite(raw string) (string, error) {
 	}
 	u, e := url.Parse(strings.TrimRight(strings.TrimSpace(raw), "/"))
 	if e != nil || u.Host == "" || u.User != nil || u.RawQuery != "" || u.Fragment != "" || (u.Path != "" && u.Path != "/") {
-		return "", fmt.Errorf("Infisical 地址必须是实例根地址")
+		return "", i18n.Errorf("auth.site_root_required")
 	}
 	local := u.Hostname() == "127.0.0.1" || u.Hostname() == "localhost" || u.Hostname() == "::1"
 	if u.Scheme != "https" && !(u.Scheme == "http" && local) {
-		return "", fmt.Errorf("Infisical 地址必须使用 HTTPS（本机实例除外）")
+		return "", i18n.Errorf("auth.https_required")
 	}
 	u.Path = ""
 	return u.String(), nil
@@ -163,20 +164,20 @@ func Request(ctx context.Context, s *Session, method, path string, body io.Reade
 	client := &http.Client{Timeout: 30 * time.Second, CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}
 	resp, e := client.Do(req)
 	if e != nil {
-		return cliErrors.New(cliErrors.INFISICAL_NETWORK_ERROR, "无法连接 Infisical，请检查网络或实例地址。")
+		return cliErrors.New(cliErrors.INFISICAL_NETWORK_ERROR, i18n.T("auth.network_failed"))
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode == 401 {
-		return cliErrors.New(cliErrors.INFISICAL_AUTH_FAILED, "Infisical 登录失效，请先运行 one logout，再运行 one login。")
+		return cliErrors.New(cliErrors.INFISICAL_AUTH_FAILED, i18n.T("infisical.relogin"))
 	}
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return cliErrors.New(cliErrors.INFISICAL_API_ERROR, fmt.Sprintf("Infisical 请求失败（HTTP %d）；请检查权限及资源是否存在。", resp.StatusCode))
+		return cliErrors.New(cliErrors.INFISICAL_API_ERROR, i18n.Tf("auth.api_failed", resp.StatusCode))
 	}
 	if out == nil {
 		return nil
 	}
 	if json.NewDecoder(io.LimitReader(resp.Body, 8<<20)).Decode(out) != nil {
-		return cliErrors.New(cliErrors.INFISICAL_API_ERROR, "Infisical 返回了无效数据。")
+		return cliErrors.New(cliErrors.INFISICAL_API_ERROR, i18n.T("auth.response_invalid"))
 	}
 	return nil
 }
@@ -191,11 +192,11 @@ func verifiedSession(ctx context.Context, site, token, email string) (*Session, 
 	}
 	parts := strings.Split(token, ".")
 	if len(parts) != 3 {
-		return nil, fmt.Errorf("Infisical 登录令牌格式无效")
+		return nil, i18n.Errorf("auth.token_format_invalid")
 	}
 	raw, e := base64.RawURLEncoding.DecodeString(parts[1])
 	if e != nil {
-		return nil, fmt.Errorf("Infisical 登录令牌格式无效")
+		return nil, i18n.Errorf("auth.token_format_invalid")
 	}
 	var claims struct {
 		UserID            string `json:"userId"`
@@ -204,7 +205,7 @@ func verifiedSession(ctx context.Context, site, token, email string) (*Session, 
 		Exp               int64  `json:"exp"`
 	}
 	if json.Unmarshal(raw, &claims) != nil || claims.UserID == "" || claims.Exp <= time.Now().Unix() {
-		return nil, fmt.Errorf("Infisical 用户登录令牌无效或已过期")
+		return nil, i18n.Errorf("auth.token_expired")
 	}
 	s.UserID = claims.UserID
 	s.OrganizationID = claims.OrganizationID

@@ -9,6 +9,7 @@ import (
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/core/workspace"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/modules/miseconfig"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/fsutil"
+	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/i18n"
 )
 
 type Result struct {
@@ -24,21 +25,21 @@ type Result struct {
 
 func (r *Result) RenderTTY(w io.Writer) {
 	if r.DryRun {
-		fmt.Fprintln(w, "Proposed hk configuration and local Git hooks:")
+		fmt.Fprintln(w, i18n.T("hooks.preview"))
 	} else {
-		fmt.Fprintln(w, "hk configuration refreshed; Git hooks now run through One.")
+		fmt.Fprintln(w, i18n.T("hooks.updated"))
 	}
 	for _, change := range append(append([]fsutil.FileChange{}, r.Changes...), r.GitChanges...) {
-		action := "write"
+		action := i18n.T("hooks.write")
 		if change.Remove {
-			action = "remove"
+			action = i18n.T("hooks.remove")
 		}
 		fmt.Fprintf(w, "  %s %s\n", action, change.Path)
 	}
 	for _, warning := range r.Warnings {
 		fmt.Fprintf(w, "  %s\n", warning)
 	}
-	fmt.Fprintln(w, "Check: one hk check --all\nFix:   one hk fix")
+	fmt.Fprintln(w, i18n.T("hooks.next_steps"))
 }
 
 // Configure validates the complete migration before publishing any files. It
@@ -93,14 +94,14 @@ func Configure(ctx context.Context, root, binary string, dryRun bool) (*Result, 
 	}
 	result := &Result{Schema: "one-cli/hooks-config/v1", Root: root, DryRun: dryRun, Changes: p.Changes(), GitChanges: install.Files.Changes(), GitDirectory: install.Files.Root, HooksPath: install.nextPath}
 	if legacy {
-		result.Warnings = []string{"Husky/commitlint defaults were migrated. Run your package manager's install through one mise exec to refresh the dependency lockfile."}
+		result.Warnings = []string{i18n.T("hooks.migrated")}
 	}
 	if !dryRun {
 		if err := p.Apply(ctx); err != nil {
 			return nil, err
 		}
 		if err := install.Apply(ctx); err != nil {
-			return nil, fmt.Errorf("hk configuration was written but Git hook installation failed; resolve the conflict and rerun one init hooks: %w", err)
+			return nil, i18n.Errorf("hooks.install_failed", err)
 		}
 	}
 	return result, nil

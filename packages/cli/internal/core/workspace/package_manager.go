@@ -1,10 +1,11 @@
 package workspace
 
 import (
-	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/i18n"
 )
 
 // ResolvePackageManager shares one choice between dependency preparation and
@@ -37,6 +38,6 @@ func ResolvePackageManager(root, fallback string) (string, error) {
 	case "pnpm", "npm", "yarn", "bun":
 		return manager, nil
 	default:
-		return "", fmt.Errorf("unsupported package manager %q", manager)
+		return "", i18n.Errorf("workspace.package_manager_unsupported", manager)
 	}
 }

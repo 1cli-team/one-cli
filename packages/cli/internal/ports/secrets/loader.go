@@ -29,9 +29,10 @@ package secrets
 
 import (
 	"context"
-	"fmt"
 	"sort"
 	"strings"
+
+	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/i18n"
 )
 
 // Loader is the minimal contract every secrets backend implements
@@ -95,14 +96,14 @@ func NewRegistry(loaders ...Loader) (*Registry, error) {
 	copyOfLoaders := make([]Loader, 0, len(loaders))
 	for _, loader := range loaders {
 		if loader == nil {
-			return nil, fmt.Errorf("secrets: nil loader")
+			return nil, i18n.Errorf("secrets.loader_missing")
 		}
 		id := strings.TrimSpace(loader.ID())
 		if id == "" {
-			return nil, fmt.Errorf("secrets: loader with empty ID")
+			return nil, i18n.Errorf("secrets.loader_id_empty")
 		}
 		if _, exists := seen[id]; exists {
-			return nil, fmt.Errorf("secrets: loader %q already registered", id)
+			return nil, i18n.Errorf("secrets.loader_duplicate", id)
 		}
 		seen[id] = struct{}{}
 		copyOfLoaders = append(copyOfLoaders, loader)

@@ -183,25 +183,20 @@ func TestEmitError_TTYHasProblemCodeAndRecovery(t *testing.T) {
 	}
 }
 
-func TestEmitError_TTYLocalizesProblemAndRecovery(t *testing.T) {
-	t.Cleanup(func() {
-		SetMode(ModeAuto)
-		_ = i18n.Init(i18n.DefaultLocale)
-	})
+func TestEmitError_TTYPreservesLocalizedDetailsAndCustomRecovery(t *testing.T) {
+	t.Cleanup(func() { SetMode(ModeAuto); _ = i18n.Init(i18n.DefaultLocale) })
 	SetMode(ModeTTY)
-	_ = i18n.Init("zh-CN")
-	var buf bytes.Buffer
-	emitErrorTo(&buf, NewError("INVALID_NAME", "raw message").WithRemediation(Remediation{
-		Hint: "raw hint",
-	}))
-	got := buf.String()
-	for _, want := range []string{"✗ 名称格式不符合要求。", "错误代码：INVALID_NAME", "只使用字母、数字"} {
-		if !strings.Contains(got, want) {
-			t.Errorf("localized TTY error missing %q: %q", want, got)
+	for _, locale := range []string{"en-US", "zh-CN"} {
+		_ = i18n.Init(locale)
+		message := i18n.T("error.INVALID_NAME.message") + " web@invalid"
+		hint := i18n.T("error.INVALID_NAME.hint.0") + " apps/web"
+		var buf bytes.Buffer
+		emitErrorTo(&buf, NewError("INVALID_NAME", message).WithRemediation(Remediation{Hint: hint, Command: "one add --name web"}))
+		for _, want := range []string{message, hint, "INVALID_NAME", "one add --name web"} {
+			if !strings.Contains(buf.String(), want) {
+				t.Errorf("%s lost %q: %q", locale, want, buf.String())
+			}
 		}
-	}
-	if strings.Contains(got, "raw message") || strings.Contains(got, "raw hint") {
-		t.Errorf("localized TTY error leaked fallback prose: %q", got)
 	}
 }
 

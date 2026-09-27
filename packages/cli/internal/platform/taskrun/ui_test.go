@@ -1,9 +1,11 @@
 package taskrun
 
 import (
+	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/i18n"
 	"io"
 	"strings"
 	"testing"
+	"time"
 
 	tea "charm.land/bubbletea/v2"
 	"github.com/charmbracelet/x/ansi"
@@ -43,5 +45,40 @@ func TestSearchAndNavigationDoNotEnterChildInput(t *testing.T) {
 	m = next.(model)
 	if m.searching || m.input {
 		t.Fatalf("%+v", m)
+	}
+}
+
+func TestLocalizedUIKeepsChildOutputAndTerminalWidth(t *testing.T) {
+	t.Cleanup(func() { _ = i18n.Init(i18n.DefaultLocale) })
+	for _, locale := range []string{"en-US", "zh-CN"} {
+		_ = i18n.Init(locale)
+		for _, width := range []int{40, 80, 110} {
+			s := &Session{opts: Options{Title: "dev", Development: true}, width: width, height: 24}
+			j := &job{task: Task{Name: "web"}, result: Result{Status: "running"}, started: time.Now()}
+			s.jobs = []*job{j}
+			s.initTerminal(j)
+			m := model{s: s, width: width, height: 24}
+			m.resize()
+			_, _ = j.terminal.Write([]byte("\x1b[31m原始日志 RAW_LOG\x1b[0m"))
+			original := terminalView(j, 20)
+			content := m.View().Content
+			if !strings.Contains(content, strings.Split(original, "\n")[0]) || !strings.Contains(ansi.Strip(content), i18n.T("task.status.running")) {
+				t.Fatalf("%s missing original output or translated status: %q", locale, content)
+			}
+			for _, help := range []bool{false, true} {
+				m.help = help
+				for _, line := range strings.Split(m.View().Content, "\n") {
+					if ansi.StringWidth(line) > width {
+						t.Errorf("%s width %d help %t overflow: %q", locale, width, help, line)
+					}
+				}
+			}
+			if j.result.Status != "running" || terminalView(j, 20) != original {
+				t.Fatal("rendering mutated protocol or log")
+			}
+			_ = j.terminal.InputPipe().(io.Closer).Close()
+			<-j.inputDone
+			_ = j.terminal.Close()
+		}
 	}
 }

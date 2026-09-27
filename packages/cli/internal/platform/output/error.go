@@ -5,7 +5,7 @@ package output
 type Remediation struct {
 	// Action is a machine-readable identifier (e.g. "use-different-name").
 	Action string `json:"action"`
-	// Hint is a human-readable suggestion (Chinese OK).
+	// Hint is a human-readable suggestion in the active display language.
 	Hint string `json:"hint,omitempty"`
 	// Command is an optional concrete command the user/agent can run.
 	Command string `json:"command,omitempty"`

@@ -5,7 +5,6 @@ package ci
 import (
 	"encoding/json"
 	"errors"
-	"fmt"
 	"io/fs"
 	"os"
 	"path/filepath"
@@ -26,7 +25,7 @@ type Service struct {
 
 func NewService(providers *pkgci.Registry) (*Service, error) {
 	if providers == nil || len(providers.Providers()) == 0 {
-		return nil, errors.New("application: CI providers are required")
+		return nil, errors.New(i18n.T("ci.providers_required"))
 	}
 	return &Service{providers: providers}, nil
 }
@@ -97,7 +96,7 @@ func (s *Service) syncProject(
 	if provider == nil {
 		return syncResult{}, cliErrors.New(
 			cliErrors.CI_PROVIDER_UNKNOWN,
-			fmt.Sprintf("unknown CI provider %q", providerID),
+			i18n.Tf("ci.provider_unknown", providerID),
 		)
 	}
 	tc := toolchain.Toolchain(project.Toolchain)
@@ -160,7 +159,7 @@ func workflowExists(path string) (bool, error) {
 		if info.IsDir() {
 			return false, cliErrors.New(
 				cliErrors.CI_RENDER_FAILED,
-				fmt.Sprintf("CI workflow path is a directory: %s", path),
+				i18n.Tf("ci.workflow_is_directory", path),
 			)
 		}
 		return true, nil
