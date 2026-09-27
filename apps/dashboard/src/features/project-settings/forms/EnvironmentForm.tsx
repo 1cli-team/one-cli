@@ -1,3 +1,6 @@
+import { SecretsManager } from "@/features/secrets/SecretsManager";
+import { FileKey2 } from "lucide-react";
+import { SectionHeading } from "@/components/ui/page-layout";
 import type React from "react";
 import { useTranslation } from "react-i18next";
 import { Badge } from "@/components/ui/badge";
@@ -18,6 +21,7 @@ import type { ProjectEnvironmentPatch } from "@/types/api";
 export const EnvironmentForm: React.FC<ProjectSettingsFormProps> = ({
 	project,
 	revision,
+	environment,
 	workspaceEntryId,
 	readOnly,
 }) => {
@@ -55,18 +59,23 @@ export const EnvironmentForm: React.FC<ProjectSettingsFormProps> = ({
 			<div className="space-y-3">
 				<div
 					data-testid="environment-settings-grid"
-					className="@container/backend-config space-y-2.5 rounded-[5px] border border-border bg-card p-3"
+					className="@container/backend-config space-y-4 rounded-lg border border-border bg-card p-5"
 				>
+					<SectionHeading
+						icon={FileKey2}
+						title={t("projectInspector.environment.title")}
+						description={t("projectInspector.draftHint")}
+					/>
 					<ProjectField label={t("projectInspector.environment.path")} htmlFor="project-env-path">
 						<Input
 							id="project-env-path"
 							className="font-mono"
 							value={manifest.path}
 							onChange={(event) => updateManifest({ ...manifest, path: event.target.value })}
-							disabled={readOnly}
+							readOnly={readOnly}
 						/>
 					</ProjectField>
-					<div className="grid gap-3 sm:grid-cols-2">
+					<div className="grid gap-4 ud-lg:grid-cols-2">
 						<SwitchField
 							id="project-env-inherits"
 							label={t("projectInspector.environment.inherits")}
@@ -86,7 +95,7 @@ export const EnvironmentForm: React.FC<ProjectSettingsFormProps> = ({
 					</div>
 				</div>
 
-				{settings.backend !== "infisical" && (settings.keys?.length ?? 0) > 0 ? (
+				{(settings.keys?.length ?? 0) > 0 ? (
 					<div>
 						<Label>{t("projectInspector.environment.keys")}</Label>
 						<div className="mt-1.5 flex flex-wrap gap-1.5 rounded-[5px] border border-border bg-card p-2.5">
@@ -99,6 +108,15 @@ export const EnvironmentForm: React.FC<ProjectSettingsFormProps> = ({
 					</div>
 				) : null}
 			</div>
+			{settings.backend === "infisical" ? (
+				<SecretsManager
+					workspaceEntryId={workspaceEntryId}
+					environment={environment}
+					fixedProject={project.name}
+					variant="embedded"
+					readOnly={readOnly}
+				/>
+			) : null}
 		</ManifestDraftLayout>
 	);
 };

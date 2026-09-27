@@ -1,3 +1,7 @@
+import { DiscardDialog } from "@/components/ui/discard-dialog";
+import { Database, FolderPlus, RefreshCw, Save } from "lucide-react";
+import { ErrorNotice, SectionHeading } from "@/components/ui/page-layout";
+import { Spinner } from "@/components/ui/spinner";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import useSWR, { useSWRConfig } from "swr";
@@ -19,6 +23,7 @@ import {
 	Dialog,
 	DialogContent,
 	DialogDescription,
+	DialogFooter,
 	DialogHeader,
 	DialogTitle,
 } from "@/components/ui/dialog";
@@ -52,8 +57,15 @@ export function LocationPicker({
 	const [creating, setCreating] = useState(false);
 	const [name, setName] = useState("");
 	const [createError, setCreateError] = useState("");
+	const [discard, setDiscard] = useState(false);
+	function closeCreation() {
+		if (busy) return;
+		if (name.trim()) setDiscard(true);
+		else setCreating(false);
+	}
 
 	async function save(useDefault: boolean) {
+		if (busy) return;
 		setBusy(true);
 		setError("");
 		try {
@@ -69,6 +81,7 @@ export function LocationPicker({
 		}
 	}
 	async function create() {
+		if (busy || !name.trim()) return;
 		setBusy(true);
 		setCreateError("");
 		try {
@@ -95,8 +108,12 @@ export function LocationPicker({
 	return (
 		<>
 			<Card>
-				<CardContent className="space-y-5 p-5">
-					<h2 className="font-semibold">{t("global.location")}</h2>
+				<CardContent className="space-y-6 p-6">
+					<SectionHeading
+						icon={Database}
+						title={t("global.location")}
+						description={t("global.locationHint")}
+					/>
 					{!initial ? (
 						<div className="flex flex-wrap items-center justify-between gap-4 rounded-lg border bg-muted/40 p-4">
 							<div className="space-y-1">
@@ -109,8 +126,8 @@ export function LocationPicker({
 							</Button>
 						</div>
 					) : null}
-					<p className="text-sm text-muted-foreground">{t("global.locationHint")}</p>
-					<div className="grid gap-4 sm:grid-cols-2">
+
+					<div className="grid gap-6 ud-md:grid-cols-2">
 						<div className="space-y-2">
 							<Label>{t("global.project")}</Label>
 							<div className="flex gap-2">
@@ -142,6 +159,7 @@ export function LocationPicker({
 										setCreating(true);
 									}}
 								>
+									<FolderPlus />
 									{t("global.createProject")}
 								</Button>
 							</div>
@@ -170,15 +188,32 @@ export function LocationPicker({
 						<p className="text-sm text-muted-foreground">{t("global.noProjects")}</p>
 					) : null}
 					{error || projects.error || detail.error ? (
-						<p role="alert" className="text-sm text-error-foreground">
+						<ErrorNotice
+							action={
+								projects.error || detail.error ? (
+									<Button
+										variant="outline"
+										size="sm"
+										onClick={() => {
+											void projects.mutate();
+											void detail.mutate();
+										}}
+									>
+										<RefreshCw />
+										{t("secrets.retry")}
+									</Button>
+								) : undefined
+							}
+						>
 							{error || message(projects.error || detail.error)}
-						</p>
+						</ErrorNotice>
 					) : null}
-					<div className="flex gap-2">
+					<div className="flex flex-row-reverse justify-start gap-2 border-t border-border pt-5">
 						<Button
 							disabled={busy || !project || !environment || !detail.data || !!detail.error}
 							onClick={() => void save(false)}
 						>
+							{busy ? <Spinner /> : <Save />}
 							{busy ? t("global.saving") : t("global.saveLocation")}
 						</Button>
 						{onCancel ? (
@@ -192,7 +227,7 @@ export function LocationPicker({
 			<Dialog
 				open={creating}
 				onOpenChange={(open) => {
-					if (!busy) setCreating(open);
+					if (!open) closeCreation();
 				}}
 			>
 				<DialogContent>
@@ -224,22 +259,26 @@ export function LocationPicker({
 								{createError}
 							</p>
 						) : null}
-						<div className="flex justify-end gap-2">
-							<Button
-								type="button"
-								variant="outline"
-								disabled={busy}
-								onClick={() => setCreating(false)}
-							>
+						<DialogFooter>
+							<Button type="button" variant="outline" disabled={busy} onClick={closeCreation}>
 								{t("session.cancel")}
 							</Button>
 							<Button type="submit" disabled={busy || !name.trim()}>
 								{busy ? t("global.creatingProject") : t("global.createAndSelect")}
 							</Button>
-						</div>
+						</DialogFooter>
 					</form>
 				</DialogContent>
 			</Dialog>
+			<DiscardDialog
+				open={discard}
+				onOpenChange={setDiscard}
+				onDiscard={() => {
+					setCreating(false);
+					setDiscard(false);
+					setName("");
+				}}
+			/>
 		</>
 	);
 }

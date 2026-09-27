@@ -8,6 +8,7 @@ import { SWRConfig } from "swr";
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import i18n from "@/lib/i18n";
 import { App } from "@/App";
+import { TopBar } from "@/components/TopBar";
 import { AppRoutes } from "@/router/routes";
 import type {
 	BackendSpec,
@@ -100,6 +101,7 @@ function renderDashboard(path = "/") {
 	return render(
 		<SWRConfig value={{ provider: () => new Map(), dedupingInterval: 10_000 }}>
 			<MemoryRouter initialEntries={[path]}>
+				<TopBar />
 				<main data-testid="route-content">
 					<AppRoutes />
 				</main>

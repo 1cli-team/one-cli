@@ -1,3 +1,13 @@
+import { MoreHorizontal, SearchX } from "lucide-react";
+import { IconButton } from "@/components/ui/icon-button";
+import { ErrorNotice, SearchInput, StatePanel } from "@/components/ui/page-layout";
+import {
+	DropdownMenu,
+	DropdownMenuContent,
+	DropdownMenuItem,
+	DropdownMenuSeparator,
+	DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { getSession, sessionKey } from "@/api/session";
 import {
 	Copy,
@@ -70,6 +80,7 @@ interface SecretEditorState {
 	mode: "create" | "edit";
 	key: string;
 	value: string;
+	originalValue?: string;
 }
 
 const WORKSPACE_SECRET_SCOPE = "__workspace_secret_scope__";
@@ -95,6 +106,7 @@ export const SecretsManager: React.FC<{
 	const project = fixedProject ?? selectedProject;
 	const session = useSWR(sessionKey, getSession, { refreshInterval: 2000 });
 	const requestEpoch = useRef(0);
+	const actionTrigger = useRef<HTMLButtonElement | null>(null);
 	const [revealed, setRevealed] = useState<Record<string, string>>({});
 	const [loadingKey, setLoadingKey] = useState("");
 	const [editor, setEditor] = useState<SecretEditorState | null>(null);
@@ -103,6 +115,8 @@ export const SecretsManager: React.FC<{
 	const [saving, setSaving] = useState(false);
 	const [retrying, setRetrying] = useState(false);
 	const [recoveryError, setRecoveryError] = useState("");
+	const [search, setSearch] = useState("");
+	const [editorError, setEditorError] = useState("");
 	const key = secretsKey(workspaceEntryId, environment, project || undefined);
 	const result = useSWR(
 		key,
@@ -121,6 +135,8 @@ export const SecretsManager: React.FC<{
 		setDeleteKey("");
 		setDeleteConfirmation("");
 		setRecoveryError("");
+		setSearch("");
+		setEditorError("");
 		return () => {
 			requestEpoch.current++;
 		};
@@ -133,7 +149,7 @@ export const SecretsManager: React.FC<{
 	]);
 
 	async function retryList() {
-		if (retrying) return;
+		if (retrying || (readOnly && listError?.code === "INFISICAL_NOT_CONFIGURED")) return;
 		setRetrying(true);
 		setRecoveryError("");
 		try {
@@ -190,8 +206,15 @@ export const SecretsManager: React.FC<{
 				project || undefined,
 				secretKey,
 			);
-			if (epoch === requestEpoch.current)
-				setEditor({ mode: "edit", key: secretKey, value: secret.value });
+			if (epoch === requestEpoch.current) {
+				setEditorError("");
+				setEditor({
+					mode: "edit",
+					key: secretKey,
+					value: secret.value,
+					originalValue: secret.value,
+				});
+			}
 		} catch (error) {
 			showSecretError(toast, t("secrets.revealFailed"), error);
 		} finally {
@@ -202,6 +225,7 @@ export const SecretsManager: React.FC<{
 	async function saveEditor() {
 		if (!editor || !editor.key.trim() || saving) return;
 		setSaving(true);
+		setEditorError("");
 		try {
 			if (editor.mode === "create") {
 				await createSecret(
@@ -229,7 +253,7 @@ export const SecretsManager: React.FC<{
 			await result.mutate();
 			toast.success(t(editor.mode === "create" ? "secrets.created" : "secrets.updated"));
 		} catch (error) {
-			showSecretError(toast, t("secrets.saveFailed"), error);
+			setEditorError((error as HttpError).message || t("secrets.saveFailed"));
 		} finally {
 			setSaving(false);
 		}
@@ -259,7 +283,7 @@ export const SecretsManager: React.FC<{
 	return (
 		<Card
 			className={cn(
-				"overflow-hidden rounded-xl border-border shadow-sm",
+				"overflow-hidden rounded-lg border-border shadow-none",
 				variant === "embedded" && "rounded-lg",
 			)}
 		>
@@ -271,6 +295,7 @@ export const SecretsManager: React.FC<{
 						</div>
 						<div>
 							<CardTitle className="text-base">{t("secrets.title")}</CardTitle>
+							<p className="mt-1 text-xs text-muted-foreground">{t("secrets.scopeHint")}</p>
 						</div>
 					</div>
 					<div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
@@ -298,8 +323,12 @@ export const SecretsManager: React.FC<{
 						) : null}
 						<Button
 							size="sm"
-							onClick={() => setEditor({ mode: "create", key: "", value: "" })}
-							disabled={readOnly}
+							onClick={() => {
+								setEditorError("");
+								actionTrigger.current = null;
+								setEditor({ mode: "create", key: "", value: "" });
+							}}
+							disabled={readOnly || showError || showLoading}
 						>
 							<Plus />
 							{t("secrets.add")}
@@ -310,20 +339,35 @@ export const SecretsManager: React.FC<{
 			<CardContent className="p-0">
 				{showLoading ? <SecretListLoading /> : null}
 				{showError && listError ? (
-					<Empty className="min-h-36">
-						<EmptyHeader>
-							<EmptyDescription>{recoveryError || listError.message}</EmptyDescription>
-						</EmptyHeader>
+					<StatePanel
+						icon={KeyRound}
+						title={t(
+							listError.code === "INFISICAL_NOT_CONFIGURED"
+								? "secrets.notConfiguredTitle"
+								: "secrets.loadError",
+						)}
+						description={
+							listError.code === "INFISICAL_NOT_CONFIGURED"
+								? t("secrets.notConfiguredHint")
+								: recoveryError || listError.message
+						}
+					>
+						{recoveryError && listError.code === "INFISICAL_NOT_CONFIGURED" ? (
+							<ErrorNotice>{recoveryError}</ErrorNotice>
+						) : null}
 						<Button
 							variant="outline"
-							size="sm"
-							disabled={retrying}
+							disabled={retrying || (readOnly && listError.code === "INFISICAL_NOT_CONFIGURED")}
 							onClick={() => void retryList()}
 						>
 							{retrying ? <Spinner /> : <RefreshCw />}
-							{t("secrets.retry")}
+							{t(
+								listError.code === "INFISICAL_NOT_CONFIGURED"
+									? "secrets.connectAndLoad"
+									: "secrets.retry",
+							)}
 						</Button>
-					</Empty>
+					</StatePanel>
 				) : null}
 				{showEmpty ? (
 					<Empty className="min-h-36">
@@ -332,8 +376,12 @@ export const SecretsManager: React.FC<{
 						</EmptyHeader>
 						<Button
 							size="sm"
-							onClick={() => setEditor({ mode: "create", key: "", value: "" })}
-							disabled={readOnly}
+							onClick={() => {
+								setEditorError("");
+								actionTrigger.current = null;
+								setEditor({ mode: "create", key: "", value: "" });
+							}}
+							disabled={readOnly || showError || showLoading}
 						>
 							<Plus />
 							{t("secrets.add")}
@@ -341,80 +389,125 @@ export const SecretsManager: React.FC<{
 					</Empty>
 				) : null}
 				{!showLoading && !showError && result.data && result.data.keys.length > 0 ? (
-					<Table className="table-fixed">
-						<TableHeader>
-							<TableRow>
-								<TableHead>{t("secrets.key")}</TableHead>
-								<TableHead className="w-[60%]">{t("secrets.value")}</TableHead>
-								<TableHead className="w-44 text-right">{t("secrets.actions")}</TableHead>
-							</TableRow>
-						</TableHeader>
-						<TableBody>
-							{result.data.keys.map((secretKey) => {
-								const value = revealed[secretKey];
-								const busy = loadingKey === secretKey;
-								return (
-									<TableRow key={secretKey}>
-										<TableCell className="font-mono text-xs font-semibold">{secretKey}</TableCell>
-										<TableCell className="min-w-0">
-											<code className="block truncate rounded bg-muted/60 px-2 py-1 text-[11px]">
-												{value === undefined ? "••••••••••••" : value || t("secrets.emptyValue")}
-											</code>
-										</TableCell>
-										<TableCell>
-											<div className="flex justify-end gap-1">
-												<Button
-													variant="ghost"
-													size="icon-sm"
-													aria-label={value === undefined ? t("secrets.reveal") : t("secrets.hide")}
-													onClick={() => void toggleReveal(secretKey)}
-													disabled={busy}
-												>
-													{busy ? <Spinner /> : value === undefined ? <Eye /> : <EyeOff />}
-												</Button>
-												<Button
-													variant="ghost"
-													size="icon-sm"
-													aria-label={t("secrets.copy")}
-													disabled={value === undefined}
-													onClick={() => void navigator.clipboard.writeText(value ?? "")}
-												>
-													<Copy />
-												</Button>
-												<Button
-													variant="ghost"
-													size="icon-sm"
-													aria-label={t("secrets.edit")}
-													onClick={() => void editSecret(secretKey)}
-													disabled={readOnly || busy}
-												>
-													<Pencil />
-												</Button>
-												<Button
-													variant="ghost"
-													size="icon-sm"
-													className="text-error-foreground"
-													aria-label={t("secrets.delete")}
-													onClick={() => {
-														setDeleteConfirmation("");
-														setDeleteKey(secretKey);
-													}}
-													disabled={readOnly}
-												>
-													<Trash2 />
-												</Button>
-											</div>
-										</TableCell>
-									</TableRow>
-								);
-							})}
-						</TableBody>
-					</Table>
+					<>
+						<div className="p-4">
+							<SearchInput
+								value={search}
+								onChange={(e) => setSearch(e.target.value)}
+								aria-label={t("secrets.search")}
+								placeholder={t("secrets.search")}
+							/>
+						</div>
+						<Table className="min-w-[28rem]">
+							<TableHeader>
+								<TableRow>
+									<TableHead>{t("secrets.key")}</TableHead>
+									<TableHead className="w-1/3">{t("secrets.value")}</TableHead>
+									<TableHead className="w-28 text-right">{t("secrets.actions")}</TableHead>
+								</TableRow>
+							</TableHeader>
+							<TableBody>
+								{result.data.keys
+									.filter((secretKey) =>
+										secretKey.toLowerCase().includes(search.trim().toLowerCase()),
+									)
+									.map((secretKey) => {
+										const value = revealed[secretKey];
+										const busy = loadingKey === secretKey;
+										return (
+											<TableRow key={secretKey}>
+												<TableCell className="font-mono text-xs font-semibold">
+													{secretKey}
+												</TableCell>
+												<TableCell className="min-w-0">
+													<code className="block truncate rounded bg-muted/60 px-2 py-1 text-xs">
+														{value === undefined
+															? "••••••••••••"
+															: value || t("secrets.emptyValue")}
+													</code>
+												</TableCell>
+												<TableCell>
+													<div className="flex justify-end gap-1">
+														<IconButton
+															label={value === undefined ? t("secrets.reveal") : t("secrets.hide")}
+															onClick={() => void toggleReveal(secretKey)}
+															disabled={busy}
+														>
+															{busy ? <Spinner /> : value === undefined ? <Eye /> : <EyeOff />}
+														</IconButton>
+														<IconButton
+															label={t("secrets.copy")}
+															disabled={value === undefined}
+															onClick={() => {
+																void navigator.clipboard
+																	.writeText(value ?? "")
+																	.then(() => toast.success(t("global.copied")))
+																	.catch((error) =>
+																		showSecretError(toast, t("secrets.revealFailed"), error),
+																	);
+															}}
+														>
+															<Copy />
+														</IconButton>
+														<DropdownMenu>
+															<DropdownMenuTrigger asChild>
+																<Button
+																	variant="ghost"
+																	size="icon"
+																	aria-label={t("secrets.more", { key: secretKey })}
+																	onPointerDown={(event) => {
+																		actionTrigger.current = event.currentTarget;
+																	}}
+																	onFocus={(event) => {
+																		actionTrigger.current = event.currentTarget;
+																	}}
+																	disabled={readOnly || busy}
+																>
+																	<MoreHorizontal />
+																</Button>
+															</DropdownMenuTrigger>
+															<DropdownMenuContent align="end">
+																<DropdownMenuItem onSelect={() => void editSecret(secretKey)}>
+																	<Pencil />
+																	{t("secrets.edit")}
+																</DropdownMenuItem>
+																<DropdownMenuSeparator />
+																<DropdownMenuItem
+																	variant="destructive"
+																	onSelect={() => {
+																		setDeleteConfirmation("");
+																		setDeleteKey(secretKey);
+																	}}
+																>
+																	<Trash2 />
+																	{t("secrets.delete")}
+																</DropdownMenuItem>
+															</DropdownMenuContent>
+														</DropdownMenu>
+													</div>
+												</TableCell>
+											</TableRow>
+										);
+									})}
+							</TableBody>
+						</Table>
+						{result.data.keys.every(
+							(secretKey) => !secretKey.toLowerCase().includes(search.trim().toLowerCase()),
+						) ? (
+							<StatePanel icon={SearchX} title={t("secrets.noMatches")}>
+								<Button variant="outline" onClick={() => setSearch("")}>
+									{t("workspaces.home.clearSearch")}
+								</Button>
+							</StatePanel>
+						) : null}
+					</>
 				) : null}
 			</CardContent>
 
 			<SecretEditor
 				editor={editor}
+				error={editorError}
+				returnFocus={actionTrigger.current}
 				saving={saving}
 				onChange={setEditor}
 				onSave={() => void saveEditor()}
@@ -429,7 +522,15 @@ export const SecretsManager: React.FC<{
 					}
 				}}
 			>
-				<AlertDialogContent>
+				<AlertDialogContent
+					onCloseAutoFocus={(event) => {
+						if (actionTrigger.current?.isConnected) {
+							event.preventDefault();
+							actionTrigger.current.focus();
+							actionTrigger.current = null;
+						}
+					}}
+				>
 					<AlertDialogHeader>
 						<AlertDialogTitle>{t("secrets.deleteTitle", { key: deleteKey })}</AlertDialogTitle>
 						<AlertDialogDescription>{t("secrets.deleteDescription")}</AlertDialogDescription>
@@ -465,64 +566,133 @@ export const SecretsManager: React.FC<{
 const SecretEditor: React.FC<{
 	editor: SecretEditorState | null;
 	saving: boolean;
+	error: string;
+	returnFocus: HTMLButtonElement | null;
 	onChange(editor: SecretEditorState): void;
 	onSave(): void;
 	onClose(): void;
-}> = ({ editor, saving, onChange, onSave, onClose }) => {
+}> = ({ editor, saving, error, returnFocus, onChange, onSave, onClose }) => {
 	const { t } = useTranslation();
 	const [showValue, setShowValue] = useState(false);
-	useEffect(() => setShowValue(false), [editor?.key, editor?.mode]);
+	const [confirmClose, setConfirmClose] = useState(false);
+	const isOpen = Boolean(editor);
+	useEffect(() => {
+		setShowValue(false);
+		setConfirmClose(false);
+	}, [isOpen]);
+	const dirty =
+		editor &&
+		(editor.mode === "create"
+			? Boolean(editor.key || editor.value)
+			: editor.value !== editor.originalValue);
+	useEffect(() => {
+		if (!dirty) return;
+		const warn = (event: BeforeUnloadEvent) => event.preventDefault();
+		window.addEventListener("beforeunload", warn);
+		return () => window.removeEventListener("beforeunload", warn);
+	}, [dirty]);
+	function close() {
+		if (saving) return;
+		if (dirty) setConfirmClose(true);
+		else onClose();
+	}
 	return (
-		<Dialog open={Boolean(editor)} onOpenChange={(open) => !open && onClose()}>
-			<DialogContent>
+		<Dialog
+			open={isOpen}
+			onOpenChange={(open) => {
+				if (!open) close();
+			}}
+		>
+			<DialogContent
+				showCloseButton={!saving}
+				onCloseAutoFocus={(event) => {
+					if (returnFocus?.isConnected) {
+						event.preventDefault();
+						returnFocus.focus();
+					}
+				}}
+			>
 				<DialogHeader>
 					<DialogTitle>
 						{t(editor?.mode === "edit" ? "secrets.editTitle" : "secrets.createTitle")}
 					</DialogTitle>
 					<DialogDescription>{t("secrets.editorDescription")}</DialogDescription>
 				</DialogHeader>
-				{editor ? (
-					<div className="space-y-4">
-						<Field>
-							<FieldLabel htmlFor="secret-key">{t("secrets.key")}</FieldLabel>
-							<Input
-								id="secret-key"
-								className="font-mono uppercase"
-								value={editor.key}
-								onChange={(event) => onChange({ ...editor, key: event.target.value.toUpperCase() })}
-								disabled={editor.mode === "edit" || saving}
-								autoComplete="off"
-							/>
-						</Field>
-						<Field>
-							<div className="flex items-center justify-between">
-								<FieldLabel htmlFor="secret-value">{t("secrets.value")}</FieldLabel>
-								<Button variant="ghost" size="xs" onClick={() => setShowValue((value) => !value)}>
-									{showValue ? <EyeOff /> : <Eye />}
-									{t(showValue ? "secrets.hide" : "secrets.reveal")}
+				<form
+					className="space-y-5"
+					onSubmit={(event) => {
+						event.preventDefault();
+						if (!saving && editor?.key.trim() && !confirmClose) onSave();
+					}}
+				>
+					{editor ? (
+						<>
+							<Field>
+								<FieldLabel htmlFor="secret-key">{t("secrets.key")}</FieldLabel>
+								<Input
+									id="secret-key"
+									className="font-mono"
+									value={editor.key}
+									onChange={(event) =>
+										onChange({ ...editor, key: event.target.value.toUpperCase() })
+									}
+									readOnly={editor.mode === "edit"}
+									disabled={saving}
+									autoComplete="off"
+								/>
+							</Field>
+							<Field>
+								<div className="flex items-center justify-between">
+									<FieldLabel htmlFor="secret-value">{t("secrets.value")}</FieldLabel>
+									<IconButton
+										label={t(showValue ? "secrets.hide" : "secrets.reveal")}
+										onClick={() => setShowValue(!showValue)}
+									>
+										{showValue ? <EyeOff /> : <Eye />}
+									</IconButton>
+								</div>
+								<Input
+									id="secret-value"
+									type={showValue ? "text" : "password"}
+									className="font-mono"
+									value={editor.value}
+									onChange={(event) => onChange({ ...editor, value: event.target.value })}
+									disabled={saving}
+									autoComplete="new-password"
+								/>
+							</Field>
+						</>
+					) : null}
+					{error && <ErrorNotice>{error}</ErrorNotice>}
+					{confirmClose ? (
+						<>
+							<p
+								role="status"
+								className="rounded-md border border-warning-border bg-warning-surface p-3 text-sm text-warning-foreground"
+							>
+								{t("form.discardDescription")}
+							</p>
+							<DialogFooter>
+								<Button variant="outline" onClick={() => setConfirmClose(false)}>
+									{t("form.continueEditing")}
 								</Button>
-							</div>
-							<Input
-								id="secret-value"
-								type={showValue ? "text" : "password"}
-								className="font-mono"
-								value={editor.value}
-								onChange={(event) => onChange({ ...editor, value: event.target.value })}
-								disabled={saving}
-								autoComplete="new-password"
-							/>
-						</Field>
-					</div>
-				) : null}
-				<DialogFooter>
-					<Button variant="outline" onClick={onClose} disabled={saving}>
-						{t("form.cancel")}
-					</Button>
-					<Button onClick={onSave} disabled={saving || !editor?.key.trim()}>
-						{saving ? <Spinner /> : <ShieldCheck />}
-						{t("secrets.save")}
-					</Button>
-				</DialogFooter>
+								<Button variant="destructive" onClick={onClose}>
+									{t("global.discard")}
+								</Button>
+							</DialogFooter>
+						</>
+					) : (
+						<DialogFooter>
+							<Button variant="outline" onClick={close} disabled={saving}>
+								{t("form.cancel")}
+							</Button>
+							<Button type="submit" disabled={saving || !editor?.key.trim()}>
+								{saving ? <Spinner /> : <ShieldCheck />}
+								{t("secrets.save")}
+							</Button>
+						</DialogFooter>
+					)}
+				</form>
 			</DialogContent>
 		</Dialog>
 	);

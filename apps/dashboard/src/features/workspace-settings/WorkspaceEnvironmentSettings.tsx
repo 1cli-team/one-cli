@@ -1,3 +1,8 @@
+import { RefreshCw } from "lucide-react";
+import { Link } from "react-router-dom";
+import { Button } from "@/components/ui/button";
+import { ErrorNotice } from "@/components/ui/page-layout";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useTranslation } from "react-i18next";
 import useSWR from "swr";
 import { getWorkspaceEnvironment, workspaceEnvironmentKey } from "@/api/workspace";
@@ -69,17 +74,22 @@ export function WorkspaceEnvironmentSettings({
 		});
 	}
 	return (
-		<Card role="region" aria-labelledby="workspace-environment-title">
-			<CardContent className="space-y-4 p-4">
+		<Card
+			className="border-0 shadow-none"
+			role="region"
+			aria-labelledby="workspace-environment-title"
+		>
+			<CardContent className="space-y-5 p-0">
 				{staged ? (
-					<p className="text-xs text-warning-foreground">
+					<p className="rounded-md border border-warning-border bg-warning-surface p-3 text-sm text-warning-foreground">
 						{t("overview.workspaceEnv.backendPending")}
 					</p>
 				) : null}
 				<h2 id="workspace-environment-title" className="font-semibold">
 					{t("overview.workspaceEnv.title")}
 				</h2>
-				<div data-testid="workspace-backend-settings" className="grid gap-4 sm:grid-cols-2">
+				{settings.isLoading && <Skeleton className="h-8" />}
+				<div data-testid="workspace-backend-settings" className="grid gap-6 ud-sm:grid-cols-2">
 					<div className="space-y-2">
 						<Label>{t("overview.workspaceEnv.backend")}</Label>
 						<Select
@@ -103,7 +113,12 @@ export function WorkspaceEnvironmentSettings({
 							<Label>{t("global.project")}</Label>
 							<Select
 								value={value.projectId ?? ""}
-								disabled={readOnly || !session.data?.session.loggedIn}
+								disabled={
+									readOnly ||
+									!session.data?.session.loggedIn ||
+									projects.isLoading ||
+									!projects.data?.length
+								}
 								onValueChange={(id) => {
 									const p = projects.data?.find((p) => p.id === id);
 									if (p)
@@ -127,12 +142,40 @@ export function WorkspaceEnvironmentSettings({
 								</SelectContent>
 							</Select>
 							<SessionStatus />
+							{!session.isLoading && !session.data?.session.loggedIn ? (
+								<p className="text-xs text-muted-foreground">
+									{t("overview.workspaceEnv.signInHint")}{" "}
+									<Link className="text-primary-text underline underline-offset-4" to="/settings">
+										{t("topbar.settings")}
+									</Link>
+								</p>
+							) : projects.data?.length === 0 ? (
+								<p className="text-xs text-muted-foreground">
+									{t("overview.workspaceEnv.noProjects")}
+								</p>
+							) : null}
 						</div>
 					) : null}
 				</div>
 				<p className="text-xs text-muted-foreground">{t("overview.workspaceEnv.backendSource")}</p>
 				{settings.error || projects.error ? (
-					<p role="alert">{message(settings.error || projects.error)}</p>
+					<ErrorNotice
+						action={
+							<Button
+								variant="outline"
+								size="sm"
+								onClick={() => {
+									void settings.mutate();
+									void projects.mutate();
+								}}
+							>
+								<RefreshCw />
+								{t("secrets.retry")}
+							</Button>
+						}
+					>
+						{message(settings.error || projects.error)}
+					</ErrorNotice>
 				) : null}
 			</CardContent>
 		</Card>

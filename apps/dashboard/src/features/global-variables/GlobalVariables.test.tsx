@@ -1,4 +1,4 @@
-import { act, render, screen, waitFor } from "@testing-library/react";
+import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import { SWRConfig } from "swr";
@@ -19,6 +19,8 @@ vi.mock("@/api/session", async (original) => ({
 	getGlobalListing: vi.fn(),
 	readGlobalSecret: vi.fn(),
 	saveGlobalSecret: vi.fn(),
+	deleteGlobalSecret: vi.fn(),
+	createGlobalFolder: vi.fn(),
 }));
 const location: api.GlobalLocation = {
 	siteUrl: "https://app.infisical.com",
@@ -182,5 +184,89 @@ describe("shared credential setup", () => {
 		await screen.findByText("Default environment is missing");
 		expect(api.getGlobalListing).not.toHaveBeenCalled();
 		expect(screen.getByRole("button", { name: "New project" })).toBeTruthy();
+	});
+});
+
+describe("credential editor recovery", () => {
+	it("shows a recoverable search empty state without fetching secret values", async () => {
+		mount();
+		const user = userEvent.setup();
+		await screen.findByText("OSS_AK");
+		await user.type(screen.getByRole("textbox", { name: "Search variable names" }), "unmatched");
+		expect(screen.getByRole("heading", { name: "No matching variables" })).toBeDefined();
+		await user.click(screen.getByRole("button", { name: "Clear search" }));
+		expect(screen.getByText("OSS_AK")).toBeDefined();
+		expect(api.readGlobalSecret).not.toHaveBeenCalled();
+	});
+	it("submits with Enter, retains failed input, and retries the same value", async () => {
+		vi.mocked(api.saveGlobalSecret)
+			.mockRejectedValueOnce(new Error("Write denied"))
+			.mockResolvedValueOnce(undefined);
+		mount();
+		const user = userEvent.setup();
+		await screen.findByText("OSS_AK");
+		await user.click(screen.getByRole("button", { name: "Add variable" }));
+		await user.type(screen.getByLabelText("Name"), " NEW_KEY ");
+		await user.type(screen.getByLabelText("New value"), "test-only{Enter}");
+		const dialog = screen.getByRole("dialog");
+		expect(await within(dialog).findByText("Write denied")).toBeDefined();
+		expect((screen.getByLabelText("New value") as HTMLInputElement).value).toBe("test-only");
+		await user.click(within(dialog).getByRole("button", { name: "Save to Infisical" }));
+		await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+		expect(api.saveGlobalSecret).toHaveBeenNthCalledWith(
+			2,
+			"NEW_KEY",
+			"test-only",
+			"?env=dev&path=%2F",
+			false,
+		);
+	});
+	it("keeps edits when Escape is cancelled, then discards without a remote write", async () => {
+		mount();
+		const user = userEvent.setup();
+		await screen.findByText("OSS_AK");
+		await user.click(screen.getByRole("button", { name: "Add variable" }));
+		await user.type(screen.getByLabelText("Name"), "DRAFT_KEY");
+		await user.keyboard("{Escape}");
+		expect(screen.getByRole("alertdialog", { name: "Discard unsaved changes?" })).toBeDefined();
+		await user.click(screen.getByRole("button", { name: "Keep editing" }));
+		expect((screen.getByLabelText("Name") as HTMLInputElement).value).toBe("DRAFT_KEY");
+		await user.click(screen.getByRole("button", { name: "Cancel" }));
+		await user.click(screen.getByRole("button", { name: "Discard changes" }));
+		await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+		expect(api.saveGlobalSecret).not.toHaveBeenCalled();
+	});
+	it("opens edit and delete from the row menu and keeps delete cancel harmless", async () => {
+		mount();
+		const user = userEvent.setup();
+		await screen.findByText("OSS_AK");
+		await user.click(screen.getByRole("button", { name: "More actions for OSS_AK" }));
+		await user.click(screen.getByRole("menuitem", { name: "Edit" }));
+		expect((screen.getByLabelText("Name") as HTMLInputElement).readOnly).toBe(true);
+		await user.click(screen.getByRole("button", { name: "Cancel" }));
+		await waitFor(() =>
+			expect(document.activeElement).toBe(
+				screen.getByRole("button", { name: "More actions for OSS_AK" }),
+			),
+		);
+		await user.click(screen.getByRole("button", { name: "More actions for OSS_AK" }));
+		await user.click(screen.getByRole("menuitem", { name: "Delete" }));
+		const dialog = screen.getByRole("alertdialog");
+		expect(dialog.textContent).toContain("OSS_AK");
+		await user.click(within(dialog).getByRole("button", { name: "Cancel" }));
+		expect(api.deleteGlobalSecret).not.toHaveBeenCalled();
+	});
+	it("rejects whitespace-only folder names and allows cancelling an empty folder", async () => {
+		mount();
+		const user = userEvent.setup();
+		await screen.findByText("OSS_AK");
+		await user.click(screen.getByRole("button", { name: "New folder" }));
+		await user.type(screen.getByLabelText("Folder name"), "   ");
+		expect(
+			(screen.getByRole("button", { name: "Save to Infisical" }) as HTMLButtonElement).disabled,
+		).toBe(true);
+		await user.clear(screen.getByLabelText("Folder name"));
+		await user.click(screen.getByRole("button", { name: "Cancel" }));
+		expect(api.createGlobalFolder).not.toHaveBeenCalled();
 	});
 });

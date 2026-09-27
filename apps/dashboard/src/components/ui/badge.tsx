@@ -4,11 +4,15 @@ import * as React from "react";
 import { cn } from "@/lib/utils";
 
 const badgeVariants = cva(
-	"inline-flex w-fit shrink-0 items-center justify-center gap-1 overflow-hidden rounded-sm border border-transparent px-2 py-1 font-mono text-[10px] font-semibold leading-none tracking-[0.05em] whitespace-nowrap uppercase transition-[color,box-shadow] focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 aria-invalid:border-destructive aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 [&>svg]:pointer-events-none [&>svg]:size-3",
+	"inline-flex w-fit shrink-0 items-center justify-center gap-1 overflow-hidden rounded-sm border border-transparent px-2 py-0.5 text-xs font-medium leading-5 whitespace-nowrap transition-[color,box-shadow] focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 aria-invalid:border-destructive aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 [&>svg]:pointer-events-none [&>svg]:size-3",
 	{
 		variants: {
 			variant: {
-				default: "bg-primary text-primary-foreground [a&]:hover:bg-primary/90",
+				default: "bg-primary-action text-primary-foreground [a&]:hover:bg-primary-hover",
+				success: "bg-success-surface text-success-foreground",
+				warning: "bg-warning-surface text-warning-foreground",
+				error: "bg-error-surface text-error-foreground",
+				muted: "bg-muted text-muted-foreground",
 				secondary: "bg-secondary text-secondary-foreground [a&]:hover:bg-secondary/90",
 				destructive:
 					"bg-destructive text-destructive-foreground focus-visible:ring-destructive/20 dark:focus-visible:ring-destructive/40 [a&]:hover:bg-destructive/90",

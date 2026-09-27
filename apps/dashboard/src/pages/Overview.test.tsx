@@ -296,7 +296,7 @@ describe("workspace overview Profile-only configuration", () => {
 		expect(
 			within(settings).getByRole("button", { name: "web apps/web" }).getAttribute("aria-current"),
 		).toBe("page");
-		expect(await within(settings).findByText("Manifest draft")).toBeDefined();
+		expect(within(settings).queryByText("Manifest draft")).toBeNull();
 		expect(within(settings).getByRole("tab", { name: "Overview" })).toBeDefined();
 		expect(within(settings).getByRole("tab", { name: "Environment" })).toBeDefined();
 		expect(within(settings).queryByRole("tab", { name: "Deploy" })).toBeNull();
@@ -387,6 +387,11 @@ describe("workspace overview Profile-only configuration", () => {
 		});
 		expect(within(region).getByText("Pending review")).toBeDefined();
 		expect(backendWrites).toBe(0);
+		expect(
+			within(screen.getByRole("dialog", { name: "Workspace settings" })).getByRole("button", {
+				name: "Save changes · 1",
+			}),
+		).toBeDefined();
 	});
 
 	it("keeps identity fields read-only and stages editable General manifest fields", async () => {
@@ -400,7 +405,8 @@ describe("workspace overview Profile-only configuration", () => {
 		renderOverview();
 		const inspector = await openProjectSettings();
 
-		expect(await within(inspector).findByText("Manifest draft")).toBeDefined();
+		await within(inspector).findByLabelText("Build version");
+		expect(within(inspector).queryByText("Manifest draft")).toBeNull();
 		expect((within(inspector).getByLabelText("Build version") as HTMLInputElement).value).toBe(
 			"1.0.0",
 		);
@@ -455,7 +461,7 @@ describe("workspace overview Profile-only configuration", () => {
 		},
 	);
 
-	it("keeps project Environment settings manifest-only", async () => {
+	it("keeps project environment configuration separate from remote secret operations", async () => {
 		const user = userEvent.setup();
 		renderOverview();
 		const inspector = await openProjectSettingsTab(user, "Environment");
