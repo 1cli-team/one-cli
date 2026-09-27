@@ -9,7 +9,7 @@
 //
 // On first mount we ALSO read /api/preferences and, if no local
 // override was stored, adopt whatever the CLI thinks. This makes the
-// "first time the dashboard opens after a `one configure locale`"
+// "first time the dashboard opens after a `one locale`"
 // case work without the user noticing the round-trip.
 
 import { type ReactNode, useEffect, useRef } from "react";

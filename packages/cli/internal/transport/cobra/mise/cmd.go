@@ -13,7 +13,7 @@ func Commands() []*cobra.Command {
 	var dryRun bool
 	cmd := &cobra.Command{
 		Use: "mise", Short: "Generate or refresh optional mise tool and task configuration",
-		Example: "  one configure mise --dry-run -o json\n  one configure mise\n  one dev web",
+		Example: "  one init mise --dry-run -o json\n  one init mise\n  one dev web",
 		Args:    cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			w, err := execution.ResolveWorkspace(cmd.Context())

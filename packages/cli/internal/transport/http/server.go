@@ -1,14 +1,6 @@
-// Package serve implements `one serve` — a local HTTP server that exposes
-// observed Workspaces, safe Project settings, and machine-level Profiles
-// through a web UI. The server binds
-// to 127.0.0.1 by default and gates requests with two independent defenses:
-// Host header validation (defeats DNS rebinding), Origin validation on
-// mutations (defeats cross-origin form submits).
-//
-// Profile credentials are masked by default in GET responses. The `?reveal=1`
-// query param returns the unmasked value, so the UI can implement a "show
-// password" affordance without leaking the secret to anyone scrolling through
-// the response in DevTools.
+// Package serve exposes workspace metadata, the single Infisical session,
+// and scoped variable operations on loopback. Host and Origin checks protect
+// browser requests; values are retrieved explicitly with no-store responses.
 package serve
 
 import (
@@ -23,7 +15,6 @@ import (
 	"syscall"
 	"time"
 
-	configureapp "github.com/torchstellar-team/one-cli/packages/cli/internal/application/configure"
 	manifestapp "github.com/torchstellar-team/one-cli/packages/cli/internal/application/manifest"
 	workspaceapp "github.com/torchstellar-team/one-cli/packages/cli/internal/application/workspace"
 	catalog "github.com/torchstellar-team/one-cli/packages/cli/internal/core/backend"
@@ -52,7 +43,6 @@ type Opts struct {
 	UIDisabled         bool
 	WorkspaceRoot      string
 	Catalog            *catalog.Catalog
-	ProfileService     *configureapp.ProfileService
 	ManifestService    *manifestapp.Service
 	EnvironmentService *environmentmodule.Service
 	WorkspaceService   *workspaceapp.Service
@@ -80,9 +70,9 @@ func (r Result) RenderTTY(w io.Writer) {
 
 // Run binds a listener, calls ready with the Result so the cobra layer can
 // emit the envelope + open the browser, then serves until ctx is canceled.
-// Shutdown has a 5s deadline so an in-flight Save() of profile config gets
+// Shutdown has a 5s deadline so an in-flight configuration write gets
 // to finish (files are atomically renamed; mid-write means a temp file
-// lying around, not corrupted profile config).
+// lying around, not corrupted configuration).
 //
 // Errors before ready is called are bind failures (port busy, forbidden
 // host); errors after ready are server-runtime errors. ctx cancellation is
@@ -93,7 +83,7 @@ func Run(ctx context.Context, opts Opts, ready func(Result)) error {
 	}
 	if !isLoopback(opts.Host) {
 		return cliErrors.New(cliErrors.SERVE_BIND_FORBIDDEN,
-			fmt.Sprintf("拒绝绑定到非 loopback 地址 %q；profile 含敏感凭据，仅 127.0.0.1 / localhost 安全。", opts.Host)).
+			fmt.Sprintf("拒绝绑定到非 loopback 地址 %q；本地接口可操作敏感凭据，仅 127.0.0.1 / localhost 安全。", opts.Host)).
 			WithContext(map[string]any{"host": opts.Host})
 	}
 	addr := net.JoinHostPort(opts.Host, strconv.Itoa(opts.Port))
@@ -125,12 +115,12 @@ func Run(ctx context.Context, opts Opts, ready func(Result)) error {
 	}
 
 	mux := BuildMux(MuxOpts{
-		UIDisabled:         opts.UIDisabled,
-		ExpectedHosts:      expectedHosts(opts.Host, port),
-		SelfOrigin:         selfOrigin,
-		WorkspaceRoot:      opts.WorkspaceRoot,
-		Catalog:            opts.Catalog,
-		ProfileService:     opts.ProfileService,
+		UIDisabled:    opts.UIDisabled,
+		ExpectedHosts: expectedHosts(opts.Host, port),
+		SelfOrigin:    selfOrigin,
+		WorkspaceRoot: opts.WorkspaceRoot,
+		Catalog:       opts.Catalog,
+
 		ManifestService:    opts.ManifestService,
 		EnvironmentService: opts.EnvironmentService,
 		WorkspaceService:   opts.WorkspaceService,

@@ -12,7 +12,7 @@ EXAMPLES
   one hk validate
 
 TIPS
-Use one hk check for changed files, one hk check --all for CI, and one hk fix for explicit fixes. Git hook installation and migration are managed by one configure hooks. hk and its tool environment run through the mise selected by One (system first, otherwise downloaded and managed by One); application dependencies remain project-specific.
+Use one hk check for changed files, one hk check --all for CI, and one hk fix for explicit fixes. Git hook installation and migration are managed by one init hooks. hk and its tool environment run through the mise selected by One (system first, otherwise downloaded and managed by One); application dependencies remain project-specific.
 
 COMMON OPTIONS
   -o, --output <value>     Output format: json | yaml | text (default: terminal-friendly text, JSON when piped)

@@ -100,7 +100,7 @@ func Configure(ctx context.Context, root, binary string, dryRun bool) (*Result, 
 			return nil, err
 		}
 		if err := install.Apply(ctx); err != nil {
-			return nil, fmt.Errorf("hk configuration was written but Git hook installation failed; resolve the conflict and rerun one configure hooks: %w", err)
+			return nil, fmt.Errorf("hk configuration was written but Git hook installation failed; resolve the conflict and rerun one init hooks: %w", err)
 		}
 	}
 	return result, nil

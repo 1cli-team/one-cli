@@ -164,7 +164,7 @@ func TestIsKnownSubcommand(t *testing.T) {
 		"env", "dev", "build", "ci",
 		// configure owns the credential CRUD surface (renamed from
 		// `profile` to align with industry standard CLIs).
-		"configure",
+		"login", "whoami", "logout", "locale", "init",
 	} {
 		if !isKnownSubcommand(name) {
 			t.Errorf("isKnownSubcommand(%q) = false, want true", name)

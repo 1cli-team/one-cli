@@ -42,5 +42,8 @@ COMMON OPTIONS
   --dry-run                Print the execution plan without loading environment values or starting a command
   --env <value>            环境名（默认取 manifest.environments.default）
   --env-provider <value>   env provider: dotenv | infisical（默认取 workspace manifest 中已选的值）
+  --global                 使用全局变量，保留当前工作目录
+  --keys <value>           只注入指定的变量名，逗号分隔
   -o, --output <value>     Output format: json | yaml | text (default: terminal-friendly text, JSON when piped)
+  --path <value>           全局变量目录（必须显式指定）
   -p, --project <value>    项目名（manifest.projects[].name）或相对路径；默认从 cwd 推导

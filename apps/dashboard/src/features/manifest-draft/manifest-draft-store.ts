@@ -1,5 +1,5 @@
 import { createStore } from "@/lib/utils";
-import type { ProjectManifestPatch, ProfileValue, WorkspaceManifestPatch } from "@/types/api";
+import type { ProjectManifestPatch, JsonValue, WorkspaceManifestPatch } from "@/types/api";
 
 export type ManifestDraftSection = "general" | "environment";
 
@@ -216,5 +216,5 @@ export const useManifestDraftStore = createStore<ManifestDraftState>(
 export function displayDraftValue(value: DraftValue): string {
 	if (value === undefined || value === null || value === "") return "—";
 	if (typeof value === "boolean") return value ? "true" : "false";
-	return String(value satisfies ProfileValue);
+	return String(value satisfies JsonValue);
 }

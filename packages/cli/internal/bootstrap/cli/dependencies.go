@@ -10,7 +10,6 @@ import (
 	internaltoolchain "github.com/torchstellar-team/one-cli/packages/cli/internal/adapters/toolchain"
 	workspaceregistrylocal "github.com/torchstellar-team/one-cli/packages/cli/internal/adapters/workspaceregistry/local"
 	ciapp "github.com/torchstellar-team/one-cli/packages/cli/internal/application/ci"
-	configureapp "github.com/torchstellar-team/one-cli/packages/cli/internal/application/configure"
 	manifestapp "github.com/torchstellar-team/one-cli/packages/cli/internal/application/manifest"
 	workspaceapp "github.com/torchstellar-team/one-cli/packages/cli/internal/application/workspace"
 	catalog "github.com/torchstellar-team/one-cli/packages/cli/internal/core/backend"
@@ -27,7 +26,6 @@ import (
 type dependencies struct {
 	runtime      runtimeport.Provider
 	catalog      *catalog.Catalog
-	profiles     *configureapp.ProfileService
 	creation     *creationmodule.Service
 	environments *environmentmodule.Service
 	manifest     *manifestapp.Service
@@ -41,22 +39,22 @@ func composeDependencies() dependencies {
 	internaltoolchain.RegisterBundled()
 
 	backendCatalog := catalog.Builtin()
-	profiles := mustProfileService(backendCatalog)
-	environments := mustEnvironmentService(backendCatalog, profiles)
+
+	environments := mustEnvironmentService(backendCatalog)
 	manifest := mustManifestService(backendCatalog)
 	registry := mustWorkspaceRegistryService()
 	creation := mustCreationService(environments, registry)
 
 	return dependencies{
-		runtime:      miseruntime.Provider{},
-		catalog:      backendCatalog,
-		profiles:     profiles,
+		runtime: miseruntime.Provider{},
+		catalog: backendCatalog,
+
 		creation:     creation,
 		environments: environments,
 		manifest:     manifest,
 		loaders:      secrets.MustRegistry(infisical.Loader(), dotenv.Loader()),
 		ci:           mustCIService(pkgci.MustRegistry(githubactions.Provider{})),
-		workspaces:   mustWorkspaceService(backendCatalog, profiles),
+		workspaces:   mustWorkspaceService(backendCatalog),
 		registry:     registry,
 	}
 }
@@ -83,9 +81,8 @@ func mustWorkspaceRegistryService() *workspaceapp.RegistryService {
 
 func mustWorkspaceService(
 	backendCatalog *catalog.Catalog,
-	profiles *configureapp.ProfileService,
 ) *workspaceapp.Service {
-	service, err := workspaceapp.NewService(backendCatalog, profiles)
+	service, err := workspaceapp.NewService(backendCatalog)
 	if err != nil {
 		panic(err)
 	}
@@ -117,17 +114,8 @@ func mustCIService(providers *pkgci.Registry) *ciapp.Service {
 
 func mustEnvironmentService(
 	backendCatalog *catalog.Catalog,
-	profiles *configureapp.ProfileService,
 ) *environmentmodule.Service {
-	service, err := environmentmodule.NewService(backendCatalog, profiles)
-	if err != nil {
-		panic(err)
-	}
-	return service
-}
-
-func mustProfileService(backendCatalog *catalog.Catalog) *configureapp.ProfileService {
-	service, err := configureapp.NewProfileService(backendCatalog, configureapp.LocalProfileRepository{})
+	service, err := environmentmodule.NewService(backendCatalog)
 	if err != nil {
 		panic(err)
 	}

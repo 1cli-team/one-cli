@@ -232,3 +232,37 @@ func TestPreviewManifestDraftRejectsStaleRevisionWithoutWriting(t *testing.T) {
 		t.Fatal("stale preview changed the manifest")
 	}
 }
+
+func TestWorkspaceBindingAndProjectChangesPublishTogether(t *testing.T) {
+	root, service, revision := seedManifest(t)
+	id, name, site := "remote-project", "Shared", "https://app.infisical.com"
+	binding := &WorkspaceManifestPatch{Environment: &WorkspaceEnvironmentPatch{Backend: "infisical", ProjectID: &id, ProjectName: &name, SiteURL: &site}}
+	before, _ := os.ReadFile(workspacecore.ManifestPath(root))
+	_, err := service.ApplyManifestDraft(context.Background(), root, ApplyManifestInput{Revision: revision, Workspace: binding, Changes: []ProjectManifestPatch{{Project: "missing", General: &ProjectGeneralPatch{BuildVersion: "2.0.0"}}}})
+	if err == nil {
+		t.Fatal("invalid project accepted")
+	}
+	after, _ := os.ReadFile(workspacecore.ManifestPath(root))
+	if string(before) != string(after) {
+		t.Fatal("failed project patch partially wrote workspace binding")
+	}
+	_, err = service.PreviewManifestDraft(context.Background(), root, PreviewManifestInput{Revision: revision, Workspace: binding})
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = service.ApplyManifestDraft(context.Background(), root, ApplyManifestInput{Revision: revision, Workspace: binding})
+	if err != nil {
+		t.Fatal(err)
+	}
+	manifest, err := workspacecore.ReadManifest(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var config map[string]string
+	if err = json.Unmarshal(manifest.Domains.Env.Config, &config); err != nil {
+		t.Fatal(err)
+	}
+	if config["projectId"] != id || config["siteUrl"] != site || config["projectName"] != name {
+		t.Fatalf("binding: %#v", config)
+	}
+}

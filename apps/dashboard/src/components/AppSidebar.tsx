@@ -1,4 +1,6 @@
-import { House, MoonStar, Settings2, SunMedium } from "lucide-react";
+import { KeyRound, House, MoonStar, Settings2, SunMedium } from "lucide-react";
+import { NavLink, Link } from "react-router-dom";
+import { SessionStatus } from "@/features/infisical-session/AccountSettings";
 import type React from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
@@ -23,7 +25,7 @@ export const AppSidebar: React.FC = () => {
 
 	return (
 		<TooltipProvider delayDuration={300}>
-			<aside className="flex h-screen w-48 shrink-0 flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground">
+			<aside className="hidden h-dvh w-48 shrink-0 md:flex flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground">
 				<div className="flex h-12 items-center gap-2 border-b border-sidebar-border px-3">
 					<img src={logoSrc} alt="One CLI" className="h-7 w-7" />
 					<div>
@@ -39,10 +41,17 @@ export const AppSidebar: React.FC = () => {
 						<House className="h-4 w-4" />
 						<span>{t("sidebar.home")}</span>
 					</EnvironmentNavLink>
+					<NavLink to="/global" className={navItemClass}>
+						<KeyRound className="h-4 w-4" />
+						<span>{t("global.title")}</span>
+					</NavLink>
 				</nav>
 
 				<WorkspaceRail />
 
+				<Link to="/settings" className="px-3 py-2">
+					<SessionStatus />
+				</Link>
 				<div className="flex h-12 items-center gap-1 border-t border-sidebar-border px-2">
 					<EnvironmentNavLink
 						to="/settings"
@@ -76,3 +85,26 @@ export const AppSidebar: React.FC = () => {
 		</TooltipProvider>
 	);
 };
+
+export function MobileNavigation() {
+	const { t } = useTranslation();
+	return (
+		<nav
+			aria-label={t("sidebar.brand")}
+			className="flex shrink-0 flex-wrap gap-1 border-b border-border bg-card p-2 md:hidden"
+		>
+			<NavLink to="/" end className={navItemClass}>
+				<House className="size-4" />
+				{t("sidebar.home")}
+			</NavLink>
+			<NavLink to="/global" className={navItemClass}>
+				<KeyRound className="size-4" />
+				{t("global.title")}
+			</NavLink>
+			<NavLink to="/settings" className={navItemClass}>
+				<Settings2 className="size-4" />
+				{t("sidebar.settings")}
+			</NavLink>
+		</nav>
+	);
+}

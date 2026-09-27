@@ -109,24 +109,9 @@ Download, migration, or verification failures return `MISE_INSTALL_FAILED`. Chec
 
 Use `one mise --version`, `one mise doctor`, or `one mise trust <config-path>` to work with the same selected runtime. Review configuration before trusting it; `MISE_PARANOID=1` requires explicit trust. Arguments, IO, and exit codes are forwarded, without One project secrets; use `one run` when those secrets are needed.
 
-## Configure Provider Credentials
+## Infisical login
 
-Provider credentials are configured once with `one configure add <domain>/<backend> --profile <name>` and can be reused across workspaces. Current configurable pairs are:
-
-| pair | use when |
-|---|---|
-| `env/infisical` | Infisical machine identity |
-
-`env/dotenv` does not need remote credentials; it reads and writes local project `.env` files. The S3-compatible deploy backends share the same profile shape, but their backend IDs stay explicit (`deploy/aws-s3`, `deploy/aliyun-oss`, `deploy/r2`, etc.).
-
-Common examples:
-
-```bash
-one configure add env/infisical --profile work         # Infisical credentials
-one configure add deploy/aws-s3 --profile web-prod     # AWS S3 endpoint + AK/SK
-one configure add deploy/kustomize --profile prod-k8s  # kubeconfig context
-one configure add container/ghcr --profile ghcr        # GHCR username + PAT
-```
+Run `one login` to sign in with a browser. The session is saved in your system keyring. See [login and global variables](/en/docs/login/).
 
 ## Environment Variables
 
@@ -163,7 +148,7 @@ macOS / Linux:
 rm ~/.local/bin/one
 ```
 
-To remove local profile credentials and cache, delete `~/.config/one`.
+Run `one logout` to remove the active session from the system keyring.
 
 ## Local Repo Build For Contributors
 

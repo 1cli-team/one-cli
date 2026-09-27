@@ -30,7 +30,7 @@ The value is written to `services/api/.env` (or whichever directory matches the 
 ### 2. Read it back
 
 ```bash
-one env get DATABASE_URL -p api
+one env get DATABASE_URL -p api --reveal
 # postgres://localhost/dev
 
 one env list -p api
@@ -56,10 +56,10 @@ Use this when env vars live in one shared place — multiple machines, CI, multi
 
 In the Infisical UI: **Organization → Access Control → Identities → New** (use Universal Auth). Note the `client id` and `client secret`.
 
-### 2. Configure a profile on this machine
+### 2. Sign in with a browser
 
 ```bash
-one configure add env/infisical --profile default \
+one login
   --site-url https://app.infisical.com \
   --client-id <CLIENT_ID> \
   --client-secret <CLIENT_SECRET> \
@@ -78,7 +78,7 @@ one env switch infisical
 
 This does a few things:
 
-1. Verifies the default `env/infisical` profile exists on this machine
+1. Verifies the browser session is available
 2. Scans every project's `.env` files and asks: "found N keys, sync to Infisical?"
 3. Only after sync succeeds (or you opt out), flips `one.manifest.json#domains.env.kind` to `infisical`
 4. Lazily binds / creates the Infisical project for this workspace
@@ -127,8 +127,8 @@ Flips the manifest only. **Does not** delete Infisical data (safe). If you want 
 | `ENV_INVALID_KEY` | Key has unsupported characters | Use POSIX env-var names: `^[A-Z][A-Z0-9_]*$` (e.g. `DATABASE_URL`) |
 | `ENV_SET_KEY_REQUIRED` | Ran `one env set` without a key | Pass `KEY=VALUE` or `KEY VALUE` |
 | `INFISICAL_NOT_CONFIGURED` | Workspace isn't on `env/infisical`, or the manifest config is incomplete | Switch the manifest or re-run `one create --env-provider infisical` |
-| `INFISICAL_AUTH_MISSING` | No default `env/infisical` profile on this machine | Re-run `one configure add env/infisical ... --use` |
-| `INFISICAL_AUTH_FAILED` | Client id / secret is wrong or expired | Regenerate the secret in Infisical, update the profile |
+| `INFISICAL_AUTH_MISSING` | No browser session | Re-run `one login` |
+| `INFISICAL_AUTH_FAILED` | Session rejected or expired | Log out and sign in again |
 | `ENV_PULL_CONFLICT` | Local `.env` differs from Infisical contents | Inspect the diff; rerun with `--force` to overwrite |
 
 Full table: [error codes](/en/docs/error-codes/).
@@ -136,4 +136,4 @@ Full table: [error codes](/en/docs/error-codes/).
 ## Next
 
 - Multi-environment trees, layered `.env.local`, per-project path overrides → [Multi-env vars](/en/tutorials/env-multi-env/) (advanced)
-- All `one configure` backends, not just env → [Manage profiles](/en/tutorials/configure-profiles/) (advanced)
+- Shared credentials → [Browser login](/en/tutorials/infisical-login/) (advanced)

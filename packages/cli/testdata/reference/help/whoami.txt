@@ -1,0 +1,9 @@
+
+DESCRIPTION
+查看当前 Infisical 登录状态（不显示令牌）
+
+USAGE
+  one whoami [flags]
+
+COMMON OPTIONS
+  -o, --output <value>     Output format: json | yaml | text (default: terminal-friendly text, JSON when piped)

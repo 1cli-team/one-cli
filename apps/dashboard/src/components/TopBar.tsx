@@ -6,7 +6,6 @@ import { useLocation, useMatch } from "react-router-dom";
 import useSWR, { useSWRConfig } from "swr";
 import { humanizeBackendName, useBackendCatalog } from "@/api/catalog";
 import { applyManifestDraft, previewManifestDraft } from "@/api/manifest";
-import { switchWorkspaceEnvironmentBackend } from "@/api/workspace";
 import { getWorkspaces, workspacesKey } from "@/api/workspaces";
 import {
 	AlertDialog,
@@ -28,7 +27,6 @@ import {
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { EnvironmentLink } from "@/features/environment-context/EnvironmentLink";
-import { environmentFromSearch } from "@/features/environment-context/environment";
 import {
 	manifestDraftKey,
 	useManifestDraftStore,
@@ -54,6 +52,7 @@ export const TopBar: React.FC<TopBarProps> = () => {
 	const profileMatch = useMatch("/profile");
 	const settingsSectionMatch = useMatch("/settings/:domain/:backend");
 	const settingsMatch = useMatch("/settings");
+	const globalMatch = useMatch("/global");
 	const workspaceMatch = useMatch("/workspace/:entryId");
 	const { pathname } = useLocation();
 	const { mode } = useThemeStore();
@@ -82,6 +81,10 @@ export const TopBar: React.FC<TopBarProps> = () => {
 									match={detailMatch.params}
 									settingsRoute={Boolean(settingsSectionMatch)}
 								/>
+							) : globalMatch ? (
+								<BreadcrumbItem>
+									<BreadcrumbPage>{t("global.title")}</BreadcrumbPage>
+								</BreadcrumbItem>
 							) : settingsMatch ? (
 								<SettingsCrumb />
 							) : profileMatch ? (
@@ -111,11 +114,9 @@ const WorkspaceHeaderActions: React.FC<{ entryId: string }> = ({ entryId }) => {
 
 export const ManifestSaveControl: React.FC<{ entryId: string }> = ({ entryId }) => {
 	const { t } = useTranslation();
-	const { search } = useLocation();
 	const { mutate } = useSWRConfig();
 	const toast = useToast();
 	const draft = useManifestDraftStore((state) => state.drafts[manifestDraftKey(entryId)]);
-	const commitWorkspaceSection = useManifestDraftStore((state) => state.commitWorkspaceSection);
 	const clearWorkspace = useManifestDraftStore((state) => state.clearWorkspace);
 	const [open, setOpen] = useState(false);
 	const [saving, setSaving] = useState(false);
@@ -164,27 +165,12 @@ export const ManifestSaveControl: React.FC<{ entryId: string }> = ({ entryId }) 
 		setSaving(true);
 		setError("");
 		try {
-			let revision = draft.revision;
-			const workspaceEnvironment = draft.workspace?.environment;
-			if (workspaceEnvironment) {
-				const switched = await switchWorkspaceEnvironmentBackend(
-					workspaceEnvironment.backend,
-					revision,
-					entryId,
-					environmentFromSearch(search),
-				);
-				revision = switched.revision;
-				// The Backend switch and Project draft are separate revision-checked
-				// publications. Rebase any remaining Project changes immediately so
-				// a later failure can be retried without replaying the completed switch.
-				commitWorkspaceSection(entryId, "environment", revision);
-			}
-			const changes = Object.values(draft.changes);
 			const payload: ApplyManifestRequest = {
-				revision,
-				changes,
+				revision: draft.revision,
+				workspace: draft.workspace,
+				changes: Object.values(draft.changes),
 			};
-			if (changes.length > 0) await applyManifestDraft(payload, entryId);
+			await applyManifestDraft(payload, entryId);
 			clearWorkspace(entryId);
 			setOpen(false);
 			await mutate(

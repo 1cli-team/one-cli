@@ -91,7 +91,7 @@ Windows 归档名是 `one-cli_windows_amd64.zip`。
 
 每次需要 runtime 时重新检查：系统 mise 被删除、版本过旧或不可执行时，One 转用托管版本；托管程序缺失或损坏时自动恢复。系统版本重新可用后恢复系统优先。显式设置 `ONE_MISE_BINARY` 的路径或版本有误时直接报错，不自动回退。
 
-不需要激活 shell。配置信任遵循 mise 自身规则；设置 `MISE_PARANOID=1` 后需先显式审查并信任配置。旧 workspace 在显式启用前继续沿用已有工具，详见 [`one configure mise`](/zh/docs/configure/#mise-工作区工具配置)。
+不需要激活 shell。配置信任遵循 mise 自身规则；设置 `MISE_PARANOID=1` 后需先显式审查并信任配置。旧 workspace 在显式启用前继续沿用已有工具，详见 [`one init mise`](/zh/docs/login/#mise-工作区工具配置)。
 
 | 托管内容 | 默认目录 | 自定义根目录 |
 |---|---|---|
@@ -126,24 +126,9 @@ one mise exec -- pnpm install
 
 `trust` 请在审查对应配置后运行；自定义配置同样遵循 mise 的信任规则。安装依赖的例子应在 workspace 根目录执行。`one mise` 原样转发参数、IO 和退出码，不额外注入 One 项目密钥；需要项目密钥时继续使用 `one run`。`one mise --help` 展示 One 的入口说明，不探测或下载 mise。
 
-## 配置 Provider 凭据
+## Infisical 登录
 
-Provider 凭据用顶层 `one configure add <domain>/<backend> --profile <name>` 配（一次配全工作区都能用）。当前支持这些 pair：
-
-| pair | 什么时候用 |
-|---|---|
-| `env/infisical` | Infisical 机器身份，跨工作区共享 |
-
-`env/dotenv` 不需要远端凭据；它直接读写项目本地 `.env`。S3 兼容 deploy 后端共用同一组 profile 字段，但 backend ID 是显式拆开的（`deploy/aws-s3`、`deploy/aliyun-oss`、`deploy/r2` 等）。
-
-常用配置例子：
-
-```bash
-one configure add env/infisical --profile work         # Infisical 凭据
-one configure add deploy/aws-s3 --profile web-prod     # AWS S3 endpoint + ak/sk
-one configure add deploy/kustomize --profile prod-k8s  # kubeconfig context
-one configure add container/ghcr --profile ghcr        # GHCR username + PAT
-```
+运行 `one login` 在浏览器中登录，会话保存在系统钥匙串。参见[登录与全局变量](/zh/docs/login/)。
 
 ## 环境变量参考
 
@@ -180,7 +165,7 @@ macOS / Linux：
 rm ~/.local/bin/one
 ```
 
-如需清理本地 profile 凭据和缓存，可删除 `~/.config/one`。
+运行 `one logout` 删除系统钥匙串中的当前会话。
 
 ## 本地编译版（贡献开发用）
 

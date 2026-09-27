@@ -14,7 +14,6 @@ import (
 
 	registrylocal "github.com/torchstellar-team/one-cli/packages/cli/internal/adapters/workspaceregistry/local"
 	workspaceapp "github.com/torchstellar-team/one-cli/packages/cli/internal/application/workspace"
-	"github.com/torchstellar-team/one-cli/packages/cli/internal/core/profile"
 	workspacecore "github.com/torchstellar-team/one-cli/packages/cli/internal/core/workspace"
 )
 
@@ -159,114 +158,6 @@ func TestWorkspacesSelectedOverviewAndProject(t *testing.T) {
 	}
 }
 
-func TestWorkspacesProfileBindingUsesResolvedRootAndLeavesManifestsUnchanged(t *testing.T) {
-	registry := newRegistryService(t)
-	launchRoot := seedRegistryWorkspace(t, "launch-id", "Launch", "launch-web")
-	selectedRoot := seedRegistryWorkspace(t, "selected-id", "Selected", "selected-web")
-	for _, root := range []string{launchRoot, selectedRoot} {
-		manifest, err := workspacecore.ReadManifest(root)
-		if err != nil {
-			t.Fatal(err)
-		}
-		manifest.Domains = &workspacecore.WorkspaceDomains{
-			Env: &workspacecore.BackendRef{Kind: workspacecore.EnvBackendInfisical},
-		}
-		if err := workspacecore.WriteManifest(root, manifest); err != nil {
-			t.Fatal(err)
-		}
-	}
-	observeRegistryWorkspace(t, registry, launchRoot)
-	selected := observeRegistryWorkspace(t, registry, selectedRoot)
-	handler := newRegistryMux(t, launchRoot, registry)
-	if _, err := profile.Upsert(profile.DomainEnv, workspacecore.EnvBackendInfisical, "work", profile.Profile{
-		Backend: workspacecore.EnvBackendInfisical,
-		Infisical: &profile.InfisicalProfile{
-			Credentials: &profile.InfisicalCredentials{
-				ClientID: "client", ClientSecret: "scoped-secret-must-not-leak",
-			},
-		},
-	}, true); err != nil {
-		t.Fatal(err)
-	}
-	selectedTreeBefore := snapshotRepositoryTree(t, selectedRoot)
-	launchTreeBefore := snapshotRepositoryTree(t, launchRoot)
-	selectedBefore, err := os.ReadFile(filepath.Join(selectedRoot, workspacecore.ManifestFilename))
-	if err != nil {
-		t.Fatal(err)
-	}
-	launchBefore, err := os.ReadFile(filepath.Join(launchRoot, workspacecore.ManifestFilename))
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	path := "/api/workspaces/" + selected.EntryID + "/profile-bindings/env?root=" + launchRoot
-	recorder := registryRequest(t, handler, http.MethodPut, path,
-		strings.NewReader(`{"profile":"work"}`))
-	if recorder.Code != http.StatusOK {
-		t.Fatalf("status = %d; body = %s", recorder.Code, recorder.Body.String())
-	}
-	var settings workspaceProfileSettingsWire
-	if err := json.Unmarshal(recorder.Body.Bytes(), &settings); err != nil {
-		t.Fatal(err)
-	}
-	if settings.Root != selected.Root || settings.Profile == nil ||
-		settings.Profile.Name != "work" || settings.Profile.Source != "workspace" {
-		t.Fatalf("scoped settings = %#v", settings)
-	}
-	if strings.Contains(recorder.Body.String(), "scoped-secret-must-not-leak") ||
-		strings.Contains(recorder.Body.String(), "client") {
-		t.Fatalf("scoped response leaked credentials: %s", recorder.Body.String())
-	}
-	config, _, err := profile.Load()
-	if err != nil {
-		t.Fatal(err)
-	}
-	if got := config.Workspaces["selected-id"].Profiles["env/infisical"]; got != "work" {
-		t.Fatalf("selected workspace binding = %q", got)
-	}
-	if _, exists := config.Workspaces["launch-id"]; exists {
-		t.Fatal("query root injection bound the launch workspace")
-	}
-	selectedAfter, err := os.ReadFile(filepath.Join(selectedRoot, workspacecore.ManifestFilename))
-	if err != nil {
-		t.Fatal(err)
-	}
-	launchAfter, err := os.ReadFile(filepath.Join(launchRoot, workspacecore.ManifestFilename))
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !bytes.Equal(selectedAfter, selectedBefore) || !bytes.Equal(launchAfter, launchBefore) {
-		t.Fatal("scoped workspace profile binding changed a manifest")
-	}
-	assertRepositoryUnchanged(t, selectedRoot, selectedTreeBefore)
-	assertRepositoryUnchanged(t, launchRoot, launchTreeBefore)
-
-	readRecorder := registryRequest(t, handler, http.MethodGet,
-		"/api/workspaces/"+selected.EntryID+"/profile-bindings/env", nil)
-	if readRecorder.Code != http.StatusOK {
-		t.Fatalf("GET status = %d; body = %s", readRecorder.Code, readRecorder.Body.String())
-	}
-	unboundRecorder := registryRequest(t, handler, http.MethodPut,
-		"/api/workspaces/"+selected.EntryID+"/profile-bindings/env",
-		strings.NewReader(`{"profile":""}`))
-	if unboundRecorder.Code != http.StatusOK {
-		t.Fatalf("unbind status = %d; body = %s", unboundRecorder.Code, unboundRecorder.Body.String())
-	}
-	selectedAfterUnbind, err := os.ReadFile(filepath.Join(selectedRoot, workspacecore.ManifestFilename))
-	if err != nil {
-		t.Fatal(err)
-	}
-	launchAfterUnbind, err := os.ReadFile(filepath.Join(launchRoot, workspacecore.ManifestFilename))
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !bytes.Equal(selectedAfterUnbind, selectedBefore) || !bytes.Equal(launchAfterUnbind, launchBefore) {
-		t.Fatal("scoped workspace profile unbind changed a manifest")
-	}
-	assertRepositoryUnchanged(t, selectedRoot, selectedTreeBefore)
-	assertRepositoryUnchanged(t, launchRoot, launchTreeBefore)
-}
-
 func TestWorkspacesLegacyProjectMutationIsReadOnlyWithoutResolvingBodyRoot(t *testing.T) {
 	registry := newRegistryService(t)
 	launchRoot := seedRegistryWorkspace(t, "launch-id", "Launch", "launch-web")
@@ -296,68 +187,6 @@ func TestWorkspacesLegacyProjectMutationIsReadOnlyWithoutResolvingBodyRoot(t *te
 	if manifest.Projects[0].BuildVersion != beforeBuildVersion {
 		t.Fatal("rejected root injection changed the selected workspace")
 	}
-}
-
-func TestWorkspacesProjectProfileBindingUsesResolvedRootAndEnvironment(t *testing.T) {
-	registry := newRegistryService(t)
-	launchRoot := seedRegistryWorkspace(t, "launch-id", "Launch", "launch-web")
-	selectedRoot := seedRegistryWorkspace(t, "selected-id", "Selected", "selected-web")
-	manifest, err := workspacecore.ReadManifest(selectedRoot)
-	if err != nil {
-		t.Fatal(err)
-	}
-	manifest.Domains = &workspacecore.WorkspaceDomains{
-		Env: &workspacecore.BackendRef{Kind: workspacecore.EnvBackendInfisical},
-	}
-	if err := workspacecore.WriteManifest(selectedRoot, manifest); err != nil {
-		t.Fatal(err)
-	}
-	observeRegistryWorkspace(t, registry, launchRoot)
-	selected := observeRegistryWorkspace(t, registry, selectedRoot)
-	handler := newRegistryMux(t, launchRoot, registry)
-	if _, err := profile.Upsert(profile.DomainEnv, workspacecore.EnvBackendInfisical, "work", profile.Profile{
-		Backend: workspacecore.EnvBackendInfisical,
-		Infisical: &profile.InfisicalProfile{
-			Credentials: &profile.InfisicalCredentials{
-				ClientID: "client", ClientSecret: "plural-secret-must-not-leak",
-			},
-		},
-	}, true); err != nil {
-		t.Fatal(err)
-	}
-	beforeSelected := snapshotRepositoryTree(t, selectedRoot)
-	beforeLaunch := snapshotRepositoryTree(t, launchRoot)
-	path := "/api/workspaces/" + selected.EntryID +
-		"/projects/selected-web/profile-bindings/env?env=preview"
-
-	recorder := registryRequest(t, handler, http.MethodPut, path,
-		strings.NewReader(`{"profile":"work"}`))
-	if recorder.Code != http.StatusOK {
-		t.Fatalf("bind status = %d; body = %s", recorder.Code, recorder.Body.String())
-	}
-	var settings workspaceSettingsWire
-	if err := json.Unmarshal(recorder.Body.Bytes(), &settings); err != nil {
-		t.Fatal(err)
-	}
-	if settings.Root != selected.Root || settings.Environment != "preview" ||
-		settings.Project.Environment.SelectedProfile != "work" ||
-		settings.Project.Environment.Profile == nil ||
-		settings.Project.Environment.Profile.Source != "workspace-project-environment" {
-		t.Fatalf("settings = %#v", settings)
-	}
-	if strings.Contains(recorder.Body.String(), "plural-secret-must-not-leak") {
-		t.Fatalf("response leaked credentials: %s", recorder.Body.String())
-	}
-	assertRepositoryUnchanged(t, selectedRoot, beforeSelected)
-	assertRepositoryUnchanged(t, launchRoot, beforeLaunch)
-
-	recorder = registryRequest(t, handler, http.MethodPut, path,
-		strings.NewReader(`{"profile":""}`))
-	if recorder.Code != http.StatusOK {
-		t.Fatalf("unbind status = %d; body = %s", recorder.Code, recorder.Body.String())
-	}
-	assertRepositoryUnchanged(t, selectedRoot, beforeSelected)
-	assertRepositoryUnchanged(t, launchRoot, beforeLaunch)
 }
 
 func TestWorkspacesLegacyMutationPathsAreReadOnlyEvenForIdentityConflict(t *testing.T) {
@@ -429,14 +258,14 @@ func TestWorkspacesResolveErrorsHaveStableStatuses(t *testing.T) {
 			readRecorder.Code, readRecorder.Body.String())
 	}
 	profileReadRecorder := registryRequest(t, handler, http.MethodGet,
-		"/api/workspaces/"+conflict.EntryID+"/profile-bindings/env", nil)
+		"/api/workspaces/"+conflict.EntryID+"/environment", nil)
 	if profileReadRecorder.Code != http.StatusOK {
 		t.Fatalf("identity-conflict profile read status = %d; body = %s",
 			profileReadRecorder.Code, profileReadRecorder.Body.String())
 	}
 	writeRecorder := registryRequest(t, handler, http.MethodPut,
-		"/api/workspaces/"+conflict.EntryID+"/profile-bindings/env",
-		strings.NewReader(`{"profile":"work"}`))
+		"/api/workspaces/"+conflict.EntryID+"/manifest",
+		strings.NewReader(`{"revision":"test","workspace":{"environment":{"backend":"dotenv"}}}`))
 	if writeRecorder.Code != http.StatusConflict {
 		t.Fatalf("identity-conflict mutation status = %d; want 409; body = %s",
 			writeRecorder.Code, writeRecorder.Body.String())

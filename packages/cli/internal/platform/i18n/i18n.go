@@ -236,7 +236,7 @@ func RefreshTree(root *cobra.Command) {
 }
 
 // AvailableLocales returns the sorted list of locale tags we have
-// catalogs for. Used by `one configure locale` to print the choices.
+// catalogs for. Used by `one locale` to print the choices.
 func AvailableLocales() []string {
 	ensureLoaded()
 	mu.RLock()

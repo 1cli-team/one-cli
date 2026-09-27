@@ -50,11 +50,11 @@ one create my-app --yes --env-provider infisical
 | 工具环境 | mise | 自动生成根 `.mise/conf.d/one.toml`；后续 `one add` 自动生成项目配置 |
 | Git 检查 | hk | 创建共享检查配置并安装本地提交钩子；后续 `one add` 增量加入语言检查 |
 
-创建和添加项目只生成配置，不下载工具。首次运行时 One 优先使用兼容的系统 mise，否则按需下载并托管；本地没有可用版本时需要联网，正常命令保持不变。工具版本与已有 workspace 的启用方式见 [`one configure mise`](/zh/docs/configure/#mise-工作区工具配置)。
+创建和添加项目只生成配置，不下载工具。首次运行时 One 优先使用兼容的系统 mise，否则按需下载并托管；本地没有可用版本时需要联网，正常命令保持不变。工具版本与已有 workspace 的启用方式见 [`one init mise`](/zh/docs/login/#mise-工作区工具配置)。
 
 空工作区先保持语言无关：首次添加 Go 模块时创建根 `go.work` 并登记该模块；首次添加 JS/TS 项目时创建根 `package.json` 和 `pnpm-workspace.yaml`。后续项目增量加入，两套配置可以共存。Git hooks 从创建工作区时就由 hk 提供，纯 Go 工作区不生成 Node 配置；JS 工作区也不再依赖 Husky 或 commitlint。工作区不默认安装版本管理工具或生成 Changesets 配置，发布流程由项目按需配置。
 
-提交前默认只检查暂存内容，使用 `one hk fix` 显式修复。用法与自定义方式见 [`one hk`](/zh/docs/hk/)。Git 未安装或已有 hooks 配置发生冲突时，工作区仍会创建，输出的 `warnings` 会提示后续执行 `one configure hooks`。
+提交前默认只检查暂存内容，使用 `one hk fix` 显式修复。用法与自定义方式见 [`one hk`](/zh/docs/hk/)。Git 未安装或已有 hooks 配置发生冲突时，工作区仍会创建，输出的 `warnings` 会提示后续执行 `one init hooks`。
 
 持续集成默认不配置。创建工作区不会写入 `.github/workflows/`；添加项目后如有
 需要，再显式运行 `one ci enable <project>`。
@@ -67,16 +67,13 @@ one create my-app --yes --env-provider infisical
 one create my-app -y --env-provider infisical
 ```
 
-使用 Infisical 前建议先配置机器级 profile：
+使用 Infisical 前先通过浏览器登录：
 
 ```bash
-one configure add env/infisical --profile work \
-  --client-id $INFISICAL_UNIVERSAL_AUTH_CLIENT_ID \
-  --client-secret $INFISICAL_UNIVERSAL_AUTH_CLIENT_SECRET \
-  --use
+one login
 ```
 
-`one create --env-provider infisical` 会尽量自动绑定 / 创建 Infisical project；如果当时 profile、网络或权限没准备好，工作区仍会创建成功，首次 `one env set/get/list/pull` 会再尝试一次 lazy auto-bind。
+`one create --env-provider infisical` 会尽量自动绑定 / 创建 Infisical project；如果当时登录、网络或权限没准备好，工作区仍会创建成功，首次 `one env set/get/list/pull` 会再尝试一次 lazy auto-bind。
 
 ## 输出
 

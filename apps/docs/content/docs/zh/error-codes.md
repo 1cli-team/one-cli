@@ -257,67 +257,6 @@ Two projects requested the same dev port and the dev runner could not auto-alloc
 
 > 没有默认 remediation。具体恢复方式请看错误的 `context` 字段。
 
-### `PROFILE_ALREADY_EXISTS`
-
-A profile with this name already exists. Re-run `one configure add <domain>/<backend> --profile <name>` to update existing credentials, or pick a different name.
-
-> 没有默认 remediation。具体恢复方式请看错误的 `context` 字段。
-
-### `PROFILE_BACKEND_INVALID`
-
-Profile.backend value is not recognised, or it doesn't belong to the declared domain.
-
-> 没有默认 remediation。具体恢复方式请看错误的 `context` 字段。
-
-### `PROFILE_CREDENTIAL_SOURCE_UNSUPPORTED`
-
-Profile's credentialSource is set to a value this build does not implement (only `file` is wired up so far).
-
-**Remediation**:
-
-- `use-file-source` — 把 config.json 中该 profile 的 credentialSource 改回 "file"（或删除该字段），并确保对应密钥写在 credentials.json
-
-### `PROFILE_FILE_INVALID`
-
-One of config.json, credentials.json, or profile-bindings.json failed to parse as JSON.
-
-**Remediation**:
-
-- `edit-profile-file` — 根据 error.context.path 检查并修复对应的机器本地文件；删除 profile-bindings.json 只会清除本机选择，不会删除凭据或修改仓库
-
-### `PROFILE_IN_USE`
-
-The Profile is still selected by one or more environment-aware Workspace or Project bindings.
-
-**Remediation**:
-
-- `unbind-profile` — 先在 Dashboard 中把对应 Workspace / Project Profile 选择改为 Automatic，再删除
-
-### `PROFILE_NONE_CONFIGURED`
-
-No Profile resolved from --profile, environment-aware Project/Workspace bindings, legacy bindings, or the machine default.
-
-**Remediation**:
-
-- `add-profile` — 创建 Infisical profile<br />运行：`one configure add env/infisical --profile work`
-
-### `PROFILE_NOT_FOUND`
-
-Requested profile does not exist under the (domain/backend) section.
-
-**Remediation**:
-
-- `list-profiles` — <br />运行：`one configure list env/infisical`
-- `add-profile` — 创建新 profile<br />运行：`one configure add env/infisical --profile <name>`
-
-### `PROFILE_VERSION_UNSUPPORTED`
-
-A machine-local Profile file schema does not match this binary.
-
-**Remediation**:
-
-- `upgrade-cli` — 升级 one cli，或仅重建 error.context.path 指向的不兼容机器本地文件；无需升级 one.manifest.json
-
 ### `RELEASE_FLOW_MISMATCH`
 
 The release-flow backend's expected toolchain or repo state does not match the workspace.
@@ -431,20 +370,19 @@ Infisical API returned an unexpected error. See error.context for details.
 
 ### `INFISICAL_AUTH_FAILED`
 
-Universal Auth login was rejected by Infisical (bad client id / secret, or rate limited).
+The Infisical session was rejected or expired.
 
 **Remediation**:
 
-- `rotate-credentials` — 重新生成 client secret 或确认 client id 来自正确的 organization
+- `login` — <br />运行：`one login`
 
 ### `INFISICAL_AUTH_MISSING`
 
-No default env profile supplies Universal Auth credentials.
+No active Infisical browser session.
 
 **Remediation**:
 
-- `add-profile` — 在 Infisical → Organization → Access Control → Identities 创建 Universal Auth machine identity，再用 client-id / client-secret 配 profile<br />运行：`one configure add env/infisical --profile <name> --client-id <id> --client-secret <secret> --use`
-- `use-existing-profile` — 或切到已配置的 profile<br />运行：`one configure use env/infisical --profile <name>`
+- `login` — <br />运行：`one login`
 
 ### `INFISICAL_FOLDER_NOT_FOUND`
 
@@ -464,21 +402,17 @@ Network error reaching the Infisical API. Check siteUrl + connectivity.
 
 ### `INFISICAL_NOT_CONFIGURED`
 
-one.manifest.json#domains.env is missing, or the workspace is not using env/infisical.
+The workspace has no Infisical project binding.
 
 **Remediation**:
 
-- `create-with-infisical` — 新工作区在 create 时选择 Infisical<br />运行：`one create <dir> --env-provider infisical`
-- `configure-profile` — 已有工作区需确认 manifest.domains.env.kind=infisical，并配置 env/infisical profile<br />运行：`one configure add env/infisical --profile <name> --use`
+- `select-project` — 在 Dashboard 工作区设置中选择 Infisical 项目<br />运行：`one serve`
 
 ### `INFISICAL_PROJECT_CREATE_FORBIDDEN`
 
-机器身份没有 create-project 权限。
+当前账号没有创建项目权限，请选择一个已有且有权访问的项目。
 
-**Remediation**:
-
-- `grant-admin-role` — 在 Infisical 后台给该 machine identity 授予 organization-level 的 admin 角色，或先手动建项目并把 projectId 写入 manifest
-- `use-explicit-id` — 手动在 UI 创建项目后，把 ID 写进 one.manifest.json#domains.env.config.projectId
+> 没有默认 remediation。具体恢复方式请看错误的 `context` 字段。
 
 ### `INFISICAL_PROJECT_NAME_TAKEN`
 
@@ -490,7 +424,7 @@ Infisical 项目名已被占用；auto-bind 会自动加随机后缀重试，但
 
 ### `INFISICAL_PROJECT_NOT_FOUND`
 
-Infisical project id does not exist or the machine identity has no access to it.
+Infisical project id does not exist or the current account has no access to it.
 
 > 没有默认 remediation。具体恢复方式请看错误的 `context` 字段。
 
@@ -600,6 +534,18 @@ Two configuration fragments contributed conflicting patches to the same backend 
 
 > 没有默认 remediation。具体恢复方式请看错误的 `context` 字段。
 
+### `PREFERENCES_FILE_INVALID`
+
+The local preferences file could not be read or parsed.
+
+> 没有默认 remediation。具体恢复方式请看错误的 `context` 字段。
+
+### `PREFERENCES_INVALID`
+
+The requested preference value is not supported.
+
+> 没有默认 remediation。具体恢复方式请看错误的 `context` 字段。
+
 ### `PRESET_FLAG_CONFLICT`
 
 Preset id and explicit flag declared conflicting values for the same field.
@@ -657,7 +603,7 @@ one run arguments do not match `one run [project] -- <cmd> [args...]`.
 
 ### `SERVE_BIND_FORBIDDEN`
 
-one serve 拒绝绑定到非 loopback 地址（profile 文件含敏感凭据，仅 127.0.0.1 / localhost 才安全）。
+one serve 拒绝绑定到非 loopback 地址（本地接口可操作敏感凭据，仅 127.0.0.1 / localhost 才安全）。
 
 **Remediation**:
 

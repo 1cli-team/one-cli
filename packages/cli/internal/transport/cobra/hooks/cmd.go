@@ -22,7 +22,7 @@ func ConfigureCommand() *cobra.Command {
 	var dryRun bool
 	cmd := &cobra.Command{
 		Use: "hooks", Args: cobra.NoArgs,
-		Example: "  one configure hooks --dry-run -o json\n  one configure hooks\n  one hk check --all",
+		Example: "  one init hooks --dry-run -o json\n  one init hooks\n  one hk check --all",
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			w, err := execution.ResolveWorkspace(cmd.Context())
 			if err != nil {
@@ -50,7 +50,7 @@ func Commands(provider runtimeport.Provider) []*cobra.Command {
 				return cmd.Help()
 			}
 			if args[0] == "install" || args[0] == "init" || args[0] == "uninstall" {
-				return fmt.Errorf("One manages the Git launchers; use one configure hooks to generate or reinstall them, and edit hk.pkl to customize checks")
+				return fmt.Errorf("One manages the Git launchers; use one init hooks to generate or reinstall them, and edit hk.pkl to customize checks")
 			}
 			dir, err := workspace.ResolveProjectRoot("")
 			if err != nil {

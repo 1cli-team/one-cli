@@ -10,7 +10,7 @@ EVERYDAY COMMANDS
   dev           Start local development
   build         Build projects
   env           Manage environment variables
-  configure     Manage local connections and preferences
+  login         Sign in to Infisical in your browser
 
 COMMON OPTIONS
   -o, --output  Output format: json | yaml | text

@@ -8,12 +8,8 @@ package workspace
 // in".
 
 import (
-	"errors"
 	"sort"
 	"strings"
-
-	"github.com/torchstellar-team/one-cli/packages/cli/internal/core/profile"
-	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/output"
 )
 
 // OverviewSchema is the JSON envelope version stamp.
@@ -40,7 +36,6 @@ const (
 	IssueSeverityMissing = "missing"
 
 	IssueReasonBackend = "backend"
-	IssueReasonProfile = "profile"
 )
 
 // Overview is the response shape for GET /api/workspace/overview. Present is
@@ -93,7 +88,6 @@ type OverviewIssue struct {
 	Reason   string `json:"reason,omitempty"`
 	Backend  string `json:"backend,omitempty"`
 	Section  string `json:"section,omitempty"`
-	Profile  string `json:"profile,omitempty"`
 }
 
 // BuildOverview reads the manifest at root and produces the Overview
@@ -115,11 +109,6 @@ func BuildOverview(root string, environments ...string) (Overview, error) {
 	if m == nil || !HasManifest(root) {
 		return Overview{Schema: OverviewSchema, Present: false}, nil
 	}
-	profileEnvironment := ProfileBindingEnvironment(m, environment)
-	profiles, _, err := profile.Load()
-	if err != nil {
-		return Overview{Schema: OverviewSchema, Present: false}, err
-	}
 
 	ov := Overview{
 		Schema:      OverviewSchema,
@@ -137,12 +126,10 @@ func BuildOverview(root string, environments ...string) (Overview, error) {
 			Message:  "workspace env backend is not selected",
 			Reason:   IssueReasonBackend,
 		})
-	} else if issue := profileIssue(profiles, m, root, profileEnvironment, IssueDomainEnv, m.Domains.Env.Kind, ""); issue != nil {
-		ov.Issues = append(ov.Issues, *issue)
 	}
 
 	for i := range m.Projects {
-		ov.Projects = append(ov.Projects, buildProject(root, profileEnvironment, m, profiles, &m.Projects[i]))
+		ov.Projects = append(ov.Projects, buildProject(m, &m.Projects[i]))
 	}
 	return ov, nil
 }
@@ -171,12 +158,7 @@ func buildWorkspaceSummary(m *Manifest) *OverviewWorkspace {
 	return s
 }
 
-func buildProject(
-	root, environment string,
-	m *Manifest,
-	profiles *profile.Config,
-	p *ManifestProject,
-) OverviewProject {
+func buildProject(m *Manifest, p *ManifestProject) OverviewProject {
 	kind := projectKindFromDir(p.RelativeDir)
 	out := OverviewProject{
 		Name:        p.Name,
@@ -190,65 +172,6 @@ func buildProject(
 	return out
 }
 
-func profileIssue(
-	cfg *profile.Config,
-	m *Manifest,
-	root, environment, domain, backend, projectName string,
-) *OverviewIssue {
-	if cfg == nil || backend == "" {
-		return nil
-	}
-	if backend == EnvBackendDotenv {
-		return nil
-	}
-	section := profile.SectionKey(profile.Domain(domain), backend)
-	resolved, err := profile.Resolve(profile.ResolveInput{
-		Domain:        profile.Domain(domain),
-		Backend:       backend,
-		WorkspaceID:   manifestWorkspaceID(m),
-		WorkspaceRoot: root,
-		Environment:   environment,
-		ProjectName:   projectName,
-	})
-	if err != nil {
-		requestedProfile := profileNameFromResolveError(err)
-		return &OverviewIssue{
-			Domain:   domain,
-			Severity: IssueSeverityMissing,
-			Reason:   IssueReasonProfile,
-			Backend:  backend,
-			Section:  section,
-			Profile:  requestedProfile,
-			Message:  "no credential profile configured for " + section,
-		}
-	}
-	if !profileComplete(backend, resolved.Profile) {
-		return &OverviewIssue{
-			Domain:   domain,
-			Severity: IssueSeverityMissing,
-			Reason:   IssueReasonProfile,
-			Backend:  backend,
-			Section:  section,
-			Profile:  resolved.Name,
-			Message:  "credential profile " + resolved.Name + " for " + section + " is missing required credentials",
-		}
-	}
-	return nil
-}
-
-func profileNameFromResolveError(err error) string {
-	var cliErr *output.Error
-	if !errors.As(err, &cliErr) || cliErr.Context == nil {
-		return ""
-	}
-	for _, key := range []string{"requested", "profile"} {
-		if value, ok := cliErr.Context[key].(string); ok {
-			return strings.TrimSpace(value)
-		}
-	}
-	return ""
-}
-
 func manifestWorkspaceID(m *Manifest) string {
 	if m == nil || m.Workspace == nil {
 		return ""
@@ -256,24 +179,6 @@ func manifestWorkspaceID(m *Manifest) string {
 	return strings.TrimSpace(m.Workspace.ID)
 }
 
-func profileComplete(backend string, p profile.Profile) bool {
-	switch {
-	case p.Infisical != nil:
-		c := p.Infisical.Credentials
-		return c != nil && strings.TrimSpace(c.ClientID) != "" && strings.TrimSpace(c.ClientSecret) != ""
-	case p.Dotenv != nil:
-		return true
-	default:
-		_ = backend
-		return false
-	}
-}
-
-// projectResolvedDomains collapses workspace defaults + per-project
-// overrides into a single domain→kind map (same logic the UI would re-do).
-// "container" only appears when the project actually opted in via its own
-// override OR a workspace-level default exists; that matches what
-// container-related commands actually run.
 func projectResolvedDomains(m *Manifest, p *ManifestProject) map[string]string {
 	out := map[string]string{}
 	if env := EnvBackend(m); env != "" {

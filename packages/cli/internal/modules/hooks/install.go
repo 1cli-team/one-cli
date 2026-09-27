@@ -26,7 +26,7 @@ type InstallPlan struct {
 func PlanInstall(ctx context.Context, root, binary string, migrateHusky bool) (*InstallPlan, error) {
 	top, err := gitOutput(ctx, root, "rev-parse", "--show-toplevel")
 	if err != nil {
-		return nil, fmt.Errorf("initialize Git, then run one configure hooks: %w", err)
+		return nil, fmt.Errorf("initialize Git, then run one init hooks: %w", err)
 	}
 	canonicalRoot, err := filepath.EvalSymlinks(root)
 	if err != nil {

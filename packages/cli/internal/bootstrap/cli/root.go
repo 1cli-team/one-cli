@@ -30,13 +30,15 @@ import (
 	platformprocess "github.com/torchstellar-team/one-cli/packages/cli/internal/platform/process"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/updatecheck"
 	addcmd "github.com/torchstellar-team/one-cli/packages/cli/internal/transport/cobra/add"
+	authcmd "github.com/torchstellar-team/one-cli/packages/cli/internal/transport/cobra/auth"
 	buildcmd "github.com/torchstellar-team/one-cli/packages/cli/internal/transport/cobra/build"
 	cicmd "github.com/torchstellar-team/one-cli/packages/cli/internal/transport/cobra/ci"
-	configurecmd "github.com/torchstellar-team/one-cli/packages/cli/internal/transport/cobra/configure"
 	createcmd "github.com/torchstellar-team/one-cli/packages/cli/internal/transport/cobra/create"
 	devcmd "github.com/torchstellar-team/one-cli/packages/cli/internal/transport/cobra/dev"
 	envcmd "github.com/torchstellar-team/one-cli/packages/cli/internal/transport/cobra/env"
 	hookscmd "github.com/torchstellar-team/one-cli/packages/cli/internal/transport/cobra/hooks"
+	initcmd "github.com/torchstellar-team/one-cli/packages/cli/internal/transport/cobra/init"
+	localecmd "github.com/torchstellar-team/one-cli/packages/cli/internal/transport/cobra/locale"
 	misecmd "github.com/torchstellar-team/one-cli/packages/cli/internal/transport/cobra/mise"
 	runcmd "github.com/torchstellar-team/one-cli/packages/cli/internal/transport/cobra/run"
 	servecmd "github.com/torchstellar-team/one-cli/packages/cli/internal/transport/cobra/serve"
@@ -55,7 +57,8 @@ func newRootCommand() *cobra.Command {
 		addcmd.Commands(deps.creation),
 		buildcmd.Commands(deps.runtime),
 		cicmd.Commands(deps.ci),
-		configurecmd.Commands(deps.catalog, deps.profiles, deps.workspaces, deps.registry),
+		authcmd.Commands(),
+		{localecmd.Command(), initcmd.Command()},
 		createcmd.Commands(createcmd.Dependencies{Creation: deps.creation}),
 		devcmd.Commands(deps.runtime),
 		misecmd.RuntimeCommands(deps.runtime),
@@ -63,7 +66,7 @@ func newRootCommand() *cobra.Command {
 		envcmd.Commands(envcmd.Dependencies{Service: deps.environments}),
 		runcmd.Commands(deps.loaders, deps.runtime),
 		servecmd.Commands(servecmd.Dependencies{
-			Catalog: deps.catalog, Profiles: deps.profiles, Workspaces: deps.workspaces,
+			Catalog: deps.catalog, Workspaces: deps.workspaces,
 			Registry: deps.registry, Manifest: deps.manifest, Environments: deps.environments,
 		}),
 		templatescmd.Commands(),

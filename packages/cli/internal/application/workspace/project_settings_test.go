@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"errors"
 	"io/fs"
 	"os"
 	"path/filepath"
@@ -12,132 +11,8 @@ import (
 	"testing"
 
 	catalog "github.com/torchstellar-team/one-cli/packages/cli/internal/core/backend"
-	"github.com/torchstellar-team/one-cli/packages/cli/internal/core/profile"
 	workspacecore "github.com/torchstellar-team/one-cli/packages/cli/internal/core/workspace"
 )
-
-type projectProfileAccessStub struct {
-	available map[string]struct{}
-	bindings  map[string]string
-	defaults  map[string]string
-	bindErr   error
-	lastMode  string
-}
-
-func projectBindingKey(
-	root, projectName, environment string,
-	domain profile.Domain,
-	backend string,
-) string {
-	return strings.Join([]string{root, projectName, environment, profile.SectionKey(domain, backend)}, "|")
-}
-
-func (s *projectProfileAccessStub) Resolve(input profile.ResolveInput) (*profile.Resolved, error) {
-	section := profile.SectionKey(input.Domain, input.Backend)
-	name := strings.TrimSpace(input.FlagOverride)
-	source := "flag"
-	if name == "" && input.Environment != "" {
-		name = s.bindings[projectBindingKey(
-			input.WorkspaceRoot, input.ProjectName, input.Environment, input.Domain, input.Backend,
-		)]
-		if name != "" {
-			if input.ProjectName != "" {
-				source = "workspace-project-environment"
-			} else {
-				source = "workspace-environment"
-			}
-		}
-	}
-	if name == "" {
-		name = s.bindings[projectBindingKey(
-			input.WorkspaceID, input.ProjectName, "", input.Domain, input.Backend,
-		)]
-		if name != "" {
-			if input.ProjectName != "" {
-				source = "workspace-project"
-			} else {
-				source = "workspace"
-			}
-		}
-	}
-	if name == "" && !input.SkipDefault {
-		name = s.defaults[section]
-		source = "default"
-	}
-	if name == "" {
-		return nil, errors.New("profile not configured")
-	}
-	if _, ok := s.available[section+"/"+name]; !ok {
-		return nil, errors.New("profile not found")
-	}
-	return &profile.Resolved{
-		Name: name, Source: source,
-		Profile: profile.Profile{Infisical: &profile.InfisicalProfile{
-			Credentials: &profile.InfisicalCredentials{ClientSecret: "never-return-this-token"},
-		}},
-	}, nil
-}
-
-func (s *projectProfileAccessStub) BindWorkspaceProfile(
-	workspaceID, _, _ string,
-	projectName string,
-	domain profile.Domain,
-	backend, name string,
-) error {
-	if s.bindErr != nil {
-		return s.bindErr
-	}
-	s.lastMode = "legacy-bind"
-	s.bindings[projectBindingKey(workspaceID, projectName, "", domain, backend)] = name
-	return nil
-}
-
-func (s *projectProfileAccessStub) UnbindWorkspaceProfile(
-	workspaceID, projectName string,
-	domain profile.Domain,
-	backend string,
-) error {
-	if s.bindErr != nil {
-		return s.bindErr
-	}
-	s.lastMode = "legacy-unbind"
-	delete(s.bindings, projectBindingKey(workspaceID, projectName, "", domain, backend))
-	return nil
-}
-
-func (s *projectProfileAccessStub) BindEnvironmentProfile(
-	_, _, root, projectName, environment string,
-	domain profile.Domain,
-	backend, name string,
-) error {
-	if s.bindErr != nil {
-		return s.bindErr
-	}
-	s.lastMode = "environment-bind"
-	s.bindings[projectBindingKey(root, projectName, environment, domain, backend)] = name
-	return nil
-}
-
-func (s *projectProfileAccessStub) UnbindEnvironmentProfile(
-	root, projectName, environment string,
-	domain profile.Domain,
-	backend string,
-) error {
-	if s.bindErr != nil {
-		return s.bindErr
-	}
-	s.lastMode = "environment-unbind"
-	delete(s.bindings, projectBindingKey(root, projectName, environment, domain, backend))
-	return nil
-}
-
-func (s *projectProfileAccessStub) EnvironmentProfileBinding(
-	root, projectName, environment string,
-	domain profile.Domain,
-	backend string,
-) (string, error) {
-	return s.bindings[projectBindingKey(root, projectName, environment, domain, backend)], nil
-}
 
 func seedProjectSettingsWorkspace(t *testing.T) string {
 	t.Helper()
@@ -169,22 +44,6 @@ func seedProjectSettingsWorkspace(t *testing.T) string {
 		t.Fatal(err)
 	}
 	return root
-}
-
-func projectProfileStub() *projectProfileAccessStub {
-	available := map[string]struct{}{}
-	for _, pair := range [][2]string{
-		{profile.SectionKey(profile.DomainEnv, catalog.EnvInfisical), "work"},
-	} {
-		available[pair[0]+"/"+pair[1]] = struct{}{}
-	}
-	return &projectProfileAccessStub{
-		available: available,
-		bindings:  map[string]string{},
-		defaults: map[string]string{
-			profile.SectionKey(profile.DomainEnv, catalog.EnvInfisical): "work",
-		},
-	}
 }
 
 func snapshotWorkspaceTree(t *testing.T, root string) map[string][]byte {
@@ -228,11 +87,7 @@ func assertWorkspaceTreeEqual(t *testing.T, got, want map[string][]byte) {
 
 func TestProjectSettingsReturnsEnvironmentAwareSafeProjection(t *testing.T) {
 	root := seedProjectSettingsWorkspace(t)
-	profiles := projectProfileStub()
-	profiles.bindings[projectBindingKey(
-		root, "web", "staging", profile.DomainEnv, catalog.EnvInfisical,
-	)] = "work"
-	service, err := NewService(catalog.Builtin(), profiles)
+	service, err := NewService(catalog.Builtin())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -245,10 +100,7 @@ func TestProjectSettingsReturnsEnvironmentAwareSafeProjection(t *testing.T) {
 		project.Kind != workspacecore.ProjectKindApp {
 		t.Fatalf("unexpected envelope: %#v", settings)
 	}
-	if project.Environment.SelectedProfile != "work" || project.Environment.Profile == nil ||
-		project.Environment.Profile.Source != "workspace-project-environment" {
-		t.Fatalf("environment profile = %#v", project.Environment)
-	}
+
 	if got := strings.Join(project.Environment.Keys, ","); got != "A_KEY,Z_KEY" {
 		t.Fatalf("environment keys = %q", got)
 	}
@@ -258,167 +110,5 @@ func TestProjectSettingsReturnsEnvironmentAwareSafeProjection(t *testing.T) {
 	}
 	if strings.Contains(string(raw), "must-not-leak") || strings.Contains(string(raw), "never-return") {
 		t.Fatalf("settings leaked a credential: %s", raw)
-	}
-}
-
-func TestProjectSettingsSurfacesStaleDirectBindingAndAllowsAutomaticFallback(t *testing.T) {
-	root := seedProjectSettingsWorkspace(t)
-	before := snapshotWorkspaceTree(t, root)
-	profiles := projectProfileStub()
-	profiles.bindings[projectBindingKey(
-		root, "web", "staging", profile.DomainEnv, catalog.EnvInfisical,
-	)] = "deleted-profile"
-	service, err := NewService(catalog.Builtin(), profiles)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	settings, err := service.ProjectSettings(context.Background(), root, "web", "preview")
-	if err != nil {
-		t.Fatal(err)
-	}
-	if settings.Project.Environment.SelectedProfile != "deleted-profile" {
-		t.Fatalf("stale direct binding was hidden: %#v", settings.Project.Environment)
-	}
-	if settings.Project.Environment.Profile != nil {
-		t.Fatalf("stale direct binding was reported as effective: %#v", settings.Project.Environment)
-	}
-	assertWorkspaceTreeEqual(t, snapshotWorkspaceTree(t, root), before)
-
-	settings, err = service.UpdateProjectProfileBinding(
-		context.Background(), root, "web", "env", "preview", "",
-	)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if settings.Project.Environment.SelectedProfile != "" ||
-		settings.Project.Environment.Profile == nil ||
-		settings.Project.Environment.Profile.Name != "work" ||
-		settings.Project.Environment.Profile.Source != "default" {
-		t.Fatalf("automatic fallback = %#v", settings.Project.Environment)
-	}
-	assertWorkspaceTreeEqual(t, snapshotWorkspaceTree(t, root), before)
-}
-
-func TestProjectProfileBindingsOnlyChangeMachineLocalState(t *testing.T) {
-	root := seedProjectSettingsWorkspace(t)
-	before := snapshotWorkspaceTree(t, root)
-	profiles := projectProfileStub()
-	service, err := NewService(catalog.Builtin(), profiles)
-	if err != nil {
-		t.Fatal(err)
-	}
-	for _, domain := range []string{"env"} {
-		settings, err := service.UpdateProjectProfileBinding(
-			context.Background(), root, "web", domain, "preview", "work",
-		)
-		if err != nil {
-			t.Fatalf("bind %s: %v", domain, err)
-		}
-		if profiles.lastMode != "environment-bind" || settings.Environment != "preview" {
-			t.Fatalf("%s binding mode/settings = %q %#v", domain, profiles.lastMode, settings)
-		}
-		assertWorkspaceTreeEqual(t, snapshotWorkspaceTree(t, root), before)
-	}
-
-	settings, err := service.UpdateProjectProfileBinding(
-		context.Background(), root, "web", "env", "preview", "",
-	)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if profiles.lastMode != "environment-unbind" || settings.Project.Environment.SelectedProfile != "" {
-		t.Fatalf("unbind result = %q %#v", profiles.lastMode, settings.Project.Environment)
-	}
-	assertWorkspaceTreeEqual(t, snapshotWorkspaceTree(t, root), before)
-
-	settings, err = service.UpdateProjectProfileBinding(
-		context.Background(), root, "web", "env", "", "work",
-	)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if profiles.lastMode != "legacy-bind" || settings.Project.Environment.SelectedProfile != "work" ||
-		settings.Project.Environment.Profile == nil ||
-		settings.Project.Environment.Profile.Source != "workspace-project" {
-		t.Fatalf("legacy binding result = %q %#v", profiles.lastMode, settings.Project.Environment)
-	}
-	assertWorkspaceTreeEqual(t, snapshotWorkspaceTree(t, root), before)
-}
-
-func TestLegacyUnbindDoesNotUpgradeManifestMissingWorkspaceID(t *testing.T) {
-	root := seedProjectSettingsWorkspace(t)
-	manifest, err := workspacecore.ReadManifest(root)
-	if err != nil {
-		t.Fatal(err)
-	}
-	manifest.Workspace.ID = ""
-	if err := workspacecore.WriteManifest(root, manifest); err != nil {
-		t.Fatal(err)
-	}
-	before := snapshotWorkspaceTree(t, root)
-	service, err := NewService(catalog.Builtin(), projectProfileStub())
-	if err != nil {
-		t.Fatal(err)
-	}
-	if _, err := service.UpdateProjectProfileBinding(
-		context.Background(), root, "web", "env", "", "",
-	); err != nil {
-		t.Fatalf("legacy unbind: %v", err)
-	}
-	assertWorkspaceTreeEqual(t, snapshotWorkspaceTree(t, root), before)
-}
-
-func TestProjectProfileBindingRejectsInvalidInputWithoutChangingRepository(t *testing.T) {
-	for _, test := range []struct {
-		name        string
-		mutate      func(*workspacecore.Manifest)
-		project     string
-		domain      string
-		environment string
-		profileName string
-	}{
-		{name: "unknown domain", project: "web", domain: "ci", environment: "preview", profileName: "work"},
-		{name: "retired deploy domain", project: "web", domain: "deploy", environment: "preview", profileName: "work"},
-		{name: "retired container domain", project: "web", domain: "container", environment: "preview", profileName: "work"},
-		{name: "unknown project", project: "ghost", domain: "env", environment: "preview", profileName: "work"},
-		{name: "unsafe environment", project: "web", domain: "env", environment: "../prod", profileName: "work"},
-		{name: "padded environment", project: "web", domain: "env", environment: " preview ", profileName: "work"},
-		{name: "unknown profile", project: "web", domain: "env", environment: "preview", profileName: "ghost"},
-		{
-			name: "unknown manifest backend", project: "web", domain: "env", environment: "preview", profileName: "work",
-			mutate: func(manifest *workspacecore.Manifest) {
-				manifest.Domains.Env.Kind = "vault"
-			},
-		},
-	} {
-		t.Run(test.name, func(t *testing.T) {
-			root := seedProjectSettingsWorkspace(t)
-			if test.mutate != nil {
-				manifest, err := workspacecore.ReadManifest(root)
-				if err != nil {
-					t.Fatal(err)
-				}
-				test.mutate(manifest)
-				if err := workspacecore.WriteManifest(root, manifest); err != nil {
-					t.Fatal(err)
-				}
-			}
-			before := snapshotWorkspaceTree(t, root)
-			service, err := NewService(catalog.Builtin(), projectProfileStub())
-			if err != nil {
-				t.Fatal(err)
-			}
-			_, err = service.UpdateProjectProfileBinding(
-				context.Background(), root, test.project, test.domain, test.environment, test.profileName,
-			)
-			if err == nil {
-				t.Fatal("expected error")
-			}
-			if test.project != "ghost" && !errors.Is(err, ErrInvalidInput) {
-				t.Fatalf("error = %v; want ErrInvalidInput", err)
-			}
-			assertWorkspaceTreeEqual(t, snapshotWorkspaceTree(t, root), before)
-		})
 	}
 }

@@ -2,7 +2,7 @@
   "name": "one-serve-web",
   "version": "0.1.0",
   "private": true,
-  "description": "Embedded `one serve` Dashboard for Workspaces, Projects, and machine-level Profiles. Built into the Go binary via go:embed.",
+  "description": "Embedded `one serve` Dashboard for Workspaces, Projects, and single-account Infisical credentials. Built into the Go binary via go:embed.",
   "type": "module",
   "scripts": {
     "dev": "vite",

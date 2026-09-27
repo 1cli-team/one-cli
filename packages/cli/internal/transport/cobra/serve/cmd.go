@@ -17,7 +17,6 @@ import (
 	"github.com/pkg/browser"
 	"github.com/spf13/cobra"
 
-	configureapp "github.com/torchstellar-team/one-cli/packages/cli/internal/application/configure"
 	manifestapp "github.com/torchstellar-team/one-cli/packages/cli/internal/application/manifest"
 	workspaceapp "github.com/torchstellar-team/one-cli/packages/cli/internal/application/workspace"
 	catalog "github.com/torchstellar-team/one-cli/packages/cli/internal/core/backend"
@@ -30,7 +29,6 @@ import (
 
 type Dependencies struct {
 	Catalog      *catalog.Catalog
-	Profiles     *configureapp.ProfileService
 	Manifest     *manifestapp.Service
 	Environments *environmentmodule.Service
 	Workspaces   *workspaceapp.Service
@@ -50,9 +48,8 @@ func newServeCmd(deps Dependencies) *cobra.Command {
 	cmd := &cobra.Command{
 		Use: "serve",
 		Long: `启动一个本地 HTTP 服务，在浏览器里查看本机 Workspace、配置其中的
-Project、审阅后保存 Manifest 配置、管理 Infisical 密钥及其 profile。Profile
-含 Infisical 凭据等敏感字段，AI 不应读写；
-本命令是给你（人类）的入口。
+Project、审阅后保存 Manifest 配置，并管理单一 Infisical 登录与全局变量。
+变量列表只显示名称和说明，查看或复制时才读取明文。
 
 默认行为：绑定 127.0.0.1 + 内核分配空闲端口 + 自动用系统默认浏览器
 打开 URL。打印 URL 后阻塞，按 Ctrl-C 退出。
@@ -80,11 +77,11 @@ Project、审阅后保存 Manifest 配置、管理 Infisical 密钥及其 profil
 			}
 
 			return serve.Run(ctx, serve.Opts{
-				Host:               host,
-				Port:               port,
-				WorkspaceRoot:      target.Root,
-				Catalog:            deps.Catalog,
-				ProfileService:     deps.Profiles,
+				Host:          host,
+				Port:          port,
+				WorkspaceRoot: target.Root,
+				Catalog:       deps.Catalog,
+
 				ManifestService:    deps.Manifest,
 				EnvironmentService: deps.Environments,
 				WorkspaceService:   deps.Workspaces,
@@ -151,17 +148,6 @@ func workspaceDashboardURL(baseURL, entryID string) string {
 		return baseURL
 	}
 	return strings.TrimRight(baseURL, "/") + "/workspace/" + url.PathEscape(entryID)
-}
-
-// NewOpenCmd exposes the same local settings server under the user-facing
-// `one configure open` path while keeping `one serve` compatible.
-func NewOpenCmd(deps Dependencies) *cobra.Command {
-	cmd := newServeCmd(deps)
-	cmd.Use = "open"
-	cmd.Example = "  one configure open"
-	i18n.MarkShort(cmd, "configure.open.short")
-	i18n.MarkLong(cmd, "configure.open.tip")
-	return cmd
 }
 
 // maybeOpenBrowser fires `pkg/browser`'s OpenURL when it makes sense.

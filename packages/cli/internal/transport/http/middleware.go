@@ -19,7 +19,6 @@ import (
 	"net/http"
 	"strings"
 
-	configureapp "github.com/torchstellar-team/one-cli/packages/cli/internal/application/configure"
 	manifestapp "github.com/torchstellar-team/one-cli/packages/cli/internal/application/manifest"
 	workspaceapp "github.com/torchstellar-team/one-cli/packages/cli/internal/application/workspace"
 	catalog "github.com/torchstellar-team/one-cli/packages/cli/internal/core/backend"
@@ -43,17 +42,13 @@ type MuxOpts struct {
 	// Catalog is the backend descriptor source for this application. Nil uses
 	// the immutable built-in catalog for compatibility with existing callers.
 	Catalog *catalog.Catalog
-	// ProfileService is the profile use-case boundary shared with Cobra. Nil is
-	// filled with the local v1 repository for compatibility with existing tests.
-	ProfileService *configureapp.ProfileService
 	// ManifestService is the explicit repository-publication boundary. It only
 	// accepts typed, revision-checked project setting patches.
 	ManifestService *manifestapp.Service
 	// EnvironmentService powers Infisical secret operations through the same
-	// workspace/profile/path resolution used by the CLI.
+	// workspace/session/path resolution used by the CLI.
 	EnvironmentService *environmentmodule.Service
-	// WorkspaceService owns read-only manifest projections and machine-local
-	// Profile bindings. It has no repository-publication capability. Nil is
+	// WorkspaceService owns read-only manifest projections. It has no repository-publication capability. Nil is
 	// filled from Catalog for compatibility with direct BuildMux tests.
 	WorkspaceService *workspaceapp.Service
 	// RegistryService owns the persisted machine-local Workspace index. It is
@@ -70,18 +65,8 @@ func BuildMux(opts MuxOpts) http.Handler {
 	if opts.Catalog == nil {
 		opts.Catalog = catalog.Builtin()
 	}
-	if opts.ProfileService == nil {
-		service, err := configureapp.NewProfileService(
-			opts.Catalog,
-			configureapp.LocalProfileRepository{},
-		)
-		if err != nil {
-			panic(err)
-		}
-		opts.ProfileService = service
-	}
 	if opts.WorkspaceService == nil {
-		service, err := workspaceapp.NewService(opts.Catalog, opts.ProfileService)
+		service, err := workspaceapp.NewService(opts.Catalog)
 		if err != nil {
 			panic(err)
 		}
@@ -95,14 +80,15 @@ func BuildMux(opts MuxOpts) http.Handler {
 		opts.ManifestService = service
 	}
 	if opts.EnvironmentService == nil {
-		service, err := environmentmodule.NewService(opts.Catalog, opts.ProfileService)
+		service, err := environmentmodule.NewService(opts.Catalog)
 		if err != nil {
 			panic(err)
 		}
 		opts.EnvironmentService = service
 	}
 	api := http.NewServeMux()
-	registerConfigureRoutes(api, opts)
+	registerSessionRoutes(api)
+	registerGlobalRoutes(api)
 	registerCatalogRoutes(api, opts)
 	registerPreferencesRoutes(api, opts)
 	registerWorkspaceRoutes(api, opts)
@@ -263,7 +249,7 @@ const devLandingHTML = `<!doctype html>
   <p><span class="pill">--no-ui</span> 模式：未挂载 SPA。</p>
   <p>本地开发场景：在 <code>web/</code> 目录跑 <code>pnpm dev</code>，
      Vite 会把 <code>/api/*</code> 反向代理到本服务。</p>
-  <pre><code>curl http://HOST:PORT/api/configure</code></pre>
+  <pre><code>curl http://HOST:PORT/api/session</code></pre>
 </body>
 </html>
 `

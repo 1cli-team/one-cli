@@ -15,8 +15,9 @@ import {
 	preserveEnvironment,
 } from "@/features/environment-context/environment";
 import { Overview } from "@/pages/Overview";
-import { SectionDetail } from "@/pages/SectionDetail";
-import { SectionsHome } from "@/pages/SectionsHome";
+import { AccountSettings } from "@/features/infisical-session/AccountSettings";
+import { GlobalVariables } from "@/features/global-variables/GlobalVariables";
+
 import { WorkspaceHome } from "@/pages/WorkspaceHome";
 import type { WorkspaceRegistryEntry } from "@/types/api";
 
@@ -200,8 +201,9 @@ const UnknownWorkspace: React.FC = () => {
 const routes: RouteObject[] = [
 	{ path: "/", element: <WorkspaceHome /> },
 	{ path: "/workspace/:entryId", element: <WorkspaceRoute /> },
-	{ path: "/settings", element: <SectionsHome /> },
-	{ path: "/settings/:domain/:backend", element: <SectionDetail /> },
+	{ path: "/settings", element: <AccountSettings /> },
+	{ path: "/global", element: <GlobalVariables /> },
+	{ path: "/settings/:domain/:backend", element: <LegacyProfileRedirect /> },
 	{ path: "/profile", element: <LegacyProfileRedirect /> },
 	{ path: "/section/:domain/:backend", element: <LegacySectionRedirect /> },
 	{ path: "*", element: <NotFoundRoute /> },

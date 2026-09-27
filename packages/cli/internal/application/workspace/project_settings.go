@@ -9,7 +9,6 @@ import (
 	"strings"
 
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/application/execution"
-	"github.com/torchstellar-team/one-cli/packages/cli/internal/core/profile"
 	workspacecore "github.com/torchstellar-team/one-cli/packages/cli/internal/core/workspace"
 	cliErrors "github.com/torchstellar-team/one-cli/packages/cli/internal/platform/errors"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/output"
@@ -50,23 +49,16 @@ type ProjectBuildSettings struct {
 	Status  string `json:"status"`
 }
 
-type ProjectProfileRef struct {
-	Name   string `json:"name"`
-	Source string `json:"source"`
-}
-
 type ProjectEnvironmentSettings struct {
-	Backend         string             `json:"backend,omitempty"`
-	Path            string             `json:"path,omitempty"`
-	Inherits        bool               `json:"inherits"`
-	Disabled        bool               `json:"disabled"`
-	Keys            []string           `json:"keys"`
-	SelectedProfile string             `json:"selectedProfile"`
-	Profile         *ProjectProfileRef `json:"profile,omitempty"`
+	Backend  string   `json:"backend,omitempty"`
+	Path     string   `json:"path,omitempty"`
+	Inherits bool     `json:"inherits"`
+	Disabled bool     `json:"disabled"`
+	Keys     []string `json:"keys"`
 }
 
 // ProjectSettings returns manifest-owned settings, the live build command,
-// and safe machine-profile references. Profile values never enter the response.
+// and environment metadata. Credential values never enter the response.
 func (s *Service) ProjectSettings(
 	ctx context.Context,
 	root, projectName, environment string,
@@ -93,7 +85,6 @@ func (s *Service) projectSettings(
 		return ProjectSettings{}, err
 	}
 	environments, defaultEnvironment := projectEnvironments(manifest)
-	profileEnvironment := workspacecore.ProfileBindingEnvironment(manifest, environment)
 
 	env := ProjectEnvironmentSettings{
 		Backend:  strings.TrimSpace(workspacecore.EnvBackend(manifest)),
@@ -108,17 +99,6 @@ func (s *Service) projectSettings(
 		}
 		env.Keys = append([]string(nil), override.Keys...)
 		sort.Strings(env.Keys)
-	}
-	if env.Backend != "" {
-		env.Profile = s.resolveProfileRef(
-			manifest, root, profileEnvironment, project.Name, profile.DomainEnv, env.Backend,
-		)
-		env.SelectedProfile, err = s.directProfileSelection(
-			root, project.Name, profileEnvironment, profile.DomainEnv, env.Backend, env.Profile,
-		)
-		if err != nil {
-			return ProjectSettings{}, err
-		}
 	}
 
 	return ProjectSettings{
@@ -167,64 +147,6 @@ func projectBuildSettings(root string, project workspacecore.ManifestProject) Pr
 	build.Command = strings.Join(args, " ")
 	build.Status = "ready"
 	return build
-}
-
-func (s *Service) resolveProfileRef(
-	manifest *workspacecore.Manifest,
-	root, environment, projectName string,
-	domain profile.Domain,
-	backend string,
-) *ProjectProfileRef {
-	if s.profiles == nil || strings.TrimSpace(backend) == "" {
-		return nil
-	}
-	resolved, err := s.profiles.Resolve(profile.ResolveInput{
-		Domain:        domain,
-		Backend:       backend,
-		WorkspaceID:   workspacecore.WorkspaceID(manifest),
-		WorkspaceRoot: root,
-		ProjectName:   projectName,
-		Environment:   environment,
-	})
-	if err != nil || resolved == nil || strings.TrimSpace(resolved.Name) == "" {
-		return nil
-	}
-	return &ProjectProfileRef{Name: resolved.Name, Source: resolved.Source}
-}
-
-func (s *Service) directProfileSelection(
-	root, projectName, environment string,
-	domain profile.Domain,
-	backend string,
-	effective *ProjectProfileRef,
-) (string, error) {
-	if environment == "" {
-		directSource := workspaceDirectSource(environment)
-		if projectName != "" {
-			directSource = projectDirectSource(environment)
-		}
-		return directProfileName(effective, directSource), nil
-	}
-	if s.profiles == nil {
-		return "", nil
-	}
-	return s.profiles.EnvironmentProfileBinding(
-		root, projectName, environment, domain, backend,
-	)
-}
-
-func projectDirectSource(environment string) string {
-	if environment != "" {
-		return "workspace-project-environment"
-	}
-	return "workspace-project"
-}
-
-func directProfileName(resolved *ProjectProfileRef, directSource string) string {
-	if resolved == nil || resolved.Source != directSource {
-		return ""
-	}
-	return resolved.Name
 }
 
 func projectKind(relativeDir string) string {

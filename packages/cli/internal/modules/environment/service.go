@@ -10,7 +10,6 @@ import (
 	"strings"
 
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/adapters/env/infisical"
-	configureapp "github.com/torchstellar-team/one-cli/packages/cli/internal/application/configure"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/application/execution"
 	catalog "github.com/torchstellar-team/one-cli/packages/cli/internal/core/backend"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/core/workspace"
@@ -20,7 +19,6 @@ import (
 
 type Service struct {
 	catalog       *catalog.Catalog
-	profiles      *configureapp.ProfileService
 	initInfisical func(context.Context, string, infisical.InitInput) (*infisical.InitResult, error)
 	setInfisical  func(context.Context, string, infisical.SetInput) (*infisical.SetResult, error)
 	pullInfisical func(context.Context, string, infisical.PullInput) (*infisical.PullResult, error)
@@ -28,16 +26,13 @@ type Service struct {
 
 func NewService(
 	backendCatalog *catalog.Catalog,
-	profiles *configureapp.ProfileService,
 ) (*Service, error) {
 	if backendCatalog == nil {
 		return nil, fmt.Errorf("modules: environment catalog is required")
 	}
-	if profiles == nil {
-		return nil, fmt.Errorf("modules: environment profile service is required")
-	}
+
 	return &Service{
-		catalog: backendCatalog, profiles: profiles,
+		catalog:       backendCatalog,
 		initInfisical: infisical.Init, setInfisical: infisical.Set, pullInfisical: infisical.Pull,
 	}, nil
 }

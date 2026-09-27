@@ -1,28 +1,16 @@
 // types/api.ts mirrors the transport-neutral shapes exposed by the Go
-// application layer. Backend identities and profile fields intentionally come
+// application layer. Backend identities and project fields intentionally come
 // from GET /api/catalog instead of a second hard-coded frontend registry.
 
 export type BackendDomain = "env";
 export type SectionKey = `${BackendDomain}/${string}`;
-export type ProfileValue = string | number | boolean | null | AnyProfile | ProfileValue[];
-export interface AnyProfile {
-	[key: string]: ProfileValue | undefined;
-}
-
-export type BackendFieldType = "string" | "secret" | "boolean";
-
-export interface BackendFieldSpec {
-	path: string;
-	input_name: string;
-	type: BackendFieldType;
-	label_key: string;
-	required?: boolean;
-	placeholder?: string;
-	default?: ProfileValue;
+export type JsonValue = string | number | boolean | null | JsonObject | JsonValue[];
+export interface JsonObject {
+	[key: string]: JsonValue | undefined;
 }
 
 export interface BackendRequirement {
-	kind: "binary" | "capability" | "profile";
+	kind: "binary" | "capability";
 	name: string;
 	optional?: boolean;
 }
@@ -34,10 +22,6 @@ export interface BackendSpec {
 	capabilities: string[];
 	traits?: string[];
 	requirements?: BackendRequirement[];
-	profile: {
-		configurable: boolean;
-		fields?: BackendFieldSpec[];
-	};
 	project?: {
 		configurable: boolean;
 		fields?: ProjectFieldSpec[];
@@ -58,57 +42,6 @@ export interface ProjectFieldSpec {
 export interface CatalogResponse {
 	schema: "one-cli/catalog/v1";
 	backends: BackendSpec[];
-}
-
-// ──────────────────────────── per-section payload shape ─────────────────
-
-export interface Section<T> {
-	default?: string;
-	profiles?: Record<string, T>;
-}
-
-export type Config = { version: number } & Partial<Record<SectionKey, Section<AnyProfile>>>;
-
-// ──────────────────────────── server response envelopes ─────────────────
-
-export interface ConfigResponse {
-	schema: "one-cli/serve-configure-config/v1";
-	config_path: string;
-	credentials_path: string;
-	reveal: boolean;
-	config: Config;
-}
-
-export interface SectionResponse<T = unknown> {
-	schema: "one-cli/serve-configure-section/v1";
-	domain: string;
-	backend: string;
-	reveal: boolean;
-	section: Section<T>;
-}
-
-export interface UpsertResponse {
-	schema: "one-cli/serve-configure-upsert/v1";
-	status: "completed" | "updated";
-	domain: string;
-	backend: string;
-	name: string;
-	default: boolean;
-}
-
-export interface UseResponse {
-	schema: "one-cli/serve-configure-use/v1";
-	domain: string;
-	backend: string;
-	name: string;
-}
-
-export interface RemoveResponse {
-	schema: "one-cli/serve-configure-remove/v1";
-	status: "removed";
-	domain: string;
-	backend: string;
-	name: string;
 }
 
 // ──────────────────────────── error envelope ────────────────────────────
@@ -219,33 +152,12 @@ export interface WorkspacesResponse {
 
 // ─────────────────────────── project configuration ─────────────────────
 
-export interface ProfileBinding {
-	name: string;
-	source: "workspace-project" | "workspace" | "default" | string;
-}
-
-export type ProjectProfileBinding = ProfileBinding;
-
-export interface WorkspaceProfileSettings {
-	schema: "one-cli/workspace-profile/v1";
-	root: string;
-	environment?: string;
-	revision: string;
-	domain: "env";
-	backend?: string;
-	configurable: boolean;
-	selectedProfile?: string;
-	profile?: ProfileBinding;
-}
-
 export interface ProjectEnvironmentSettings {
 	backend?: string;
 	path?: string;
 	inherits: boolean;
 	disabled: boolean;
 	keys?: string[];
-	selectedProfile?: string;
-	profile?: ProjectProfileBinding;
 }
 
 export interface ProjectSettings {
@@ -290,6 +202,9 @@ export interface ProjectEnvironmentPatch {
 
 export interface WorkspaceEnvironmentPatch {
 	backend: string;
+	projectId?: string;
+	projectName?: string;
+	siteUrl?: string;
 }
 
 export interface WorkspaceManifestPatch {
@@ -303,6 +218,7 @@ export interface ProjectManifestPatch {
 }
 
 export interface ApplyManifestRequest {
+	workspace?: WorkspaceManifestPatch;
 	revision: string;
 	changes: ProjectManifestPatch[];
 }
@@ -349,4 +265,13 @@ export interface SecretMutationResponse {
 	key: string;
 	action?: "created" | "updated" | "unchanged";
 	status?: "deleted";
+}
+
+export interface WorkspaceEnvironmentSettings {
+	schema: string;
+	revision: string;
+	backend: string;
+	projectId: string;
+	projectName: string;
+	siteUrl: string;
 }

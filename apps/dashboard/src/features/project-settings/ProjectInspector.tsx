@@ -394,7 +394,7 @@ const ProjectSettingsPanel: React.FC<ProjectSettingsPanelProps> = ({
 	if (activeTab === "environment") {
 		return (
 			<EnvironmentForm
-				key={project.environment.selectedProfile ?? ""}
+				key={project.name}
 				project={project}
 				revision={data.revision}
 				environment={environment}

@@ -191,14 +191,14 @@ func (s *Service) CreateWorkspace(ctx context.Context, input WorkspaceInput) (Wo
 	}
 	if err != nil {
 		return result, cliErrors.New(cliErrors.ONE_CLI_ERROR,
-			fmt.Sprintf("workspace was created but mise configuration is incomplete; fix the reported error and run one configure mise: %v", err)).
+			fmt.Sprintf("workspace was created but mise configuration is incomplete; fix the reported error and run one init mise: %v", err)).
 			WithContext(map[string]any{"workspace": input.TargetDir, "partial_state": "mise_configuration_incomplete"})
 	}
 	if pkg, err := workspace.ReadPackageJSON(input.TargetDir); err == nil && pkg != nil {
 		result.PackageManager, _, _ = strings.Cut(pkg.PackageManager, "@")
 	}
 	if err := initGitRepo(input.TargetDir); err != nil {
-		result.HooksWarn = fmt.Errorf("Git initialization failed; initialize Git and run one configure hooks: %w", err)
+		result.HooksWarn = fmt.Errorf("Git initialization failed; initialize Git and run one init hooks: %w", err)
 	} else {
 		install, err := hooks.PlanInstall(ctx, input.TargetDir, "", false)
 		if err == nil {

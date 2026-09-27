@@ -156,9 +156,9 @@ Failures after manifest write, usually from per-domain backend sync during `crea
 A backend sync failed or rolled back after manifest write. Re-run the command after fixing the surfaced cause.
 
 
-## Plugin / Profile / Deploy
+## Backends and workspace configuration
 
-Backend selection, profile resolution, deployment, and generated delivery artifacts.
+Backend selection and generated workspace configuration.
 
 ### `CI_DISABLE_CONFIRMATION_REQUIRED`
 
@@ -183,37 +183,13 @@ CI backend failed while rendering workflow files.
 
 Two projects requested the same dev port and the runner could not auto-allocate another.
 
-### `PROFILE_ALREADY_EXISTS`
+### `PREFERENCES_INVALID`
 
-Profile name already exists. Re-run `one configure add ... <name>` to update or choose another name.
+The requested local preference value is not supported.
 
-### `PROFILE_BACKEND_INVALID`
+### `PREFERENCES_FILE_INVALID`
 
-Profile backend is not recognized or does not belong to the declared domain.
-
-### `PROFILE_CREDENTIAL_SOURCE_UNSUPPORTED`
-
-Profile uses a credential source this build cannot read. Use `file` source.
-
-### `PROFILE_FILE_INVALID`
-
-One of `~/.config/one/config.json`, `credentials.json`, or `profile-bindings.json` is invalid JSON. Repair the exact path in `error.context`; deleting `profile-bindings.json` removes local selections, not Profile credentials or repository files.
-
-### `PROFILE_IN_USE`
-
-The Profile is still selected by an environment-aware Workspace or Project binding. Choose **Automatic** for every referencing binding in the Dashboard, then delete the Profile.
-
-### `PROFILE_NONE_CONFIGURED`
-
-No Profile resolved from `--profile`, environment-aware Project/Workspace bindings, legacy bindings, or machine default. Run `one configure add <domain>/<backend> --profile work`.
-
-### `PROFILE_NOT_FOUND`
-
-Requested profile does not exist. Run `one configure list <pair>` or add the profile.
-
-### `PROFILE_VERSION_UNSUPPORTED`
-
-One machine-local Profile file schema does not match this binary. Upgrade CLI or recreate only the incompatible file; this never requires a Manifest upgrade.
+The local preferences file could not be read or parsed.
 
 ### `RELEASE_FLOW_MISMATCH`
 
@@ -287,11 +263,11 @@ Infisical returned an API error. Check status and context.
 
 ### `INFISICAL_AUTH_FAILED`
 
-Universal Auth login failed. Rotate or verify credentials.
+The browser session was rejected or expired. Run `one logout`, then `one login`.
 
 ### `INFISICAL_AUTH_MISSING`
 
-No default Infisical credentials. Configure `env/infisical`.
+There is no active browser session. Run `one login`.
 
 ### `INFISICAL_FOLDER_NOT_FOUND`
 
@@ -384,7 +360,7 @@ Requested serve port is busy. Choose another or use `--port 0`.
 
 ### `SERVE_REPOSITORY_READ_ONLY`
 
-The Dashboard rejected a repository or `one.manifest.json` mutation with HTTP 409. Make that configuration change through source control/code review; only machine Profiles and environment-aware Profile bindings are writable in `one serve`.
+The requested repository mutation is not allowlisted. Use the reviewed Manifest draft for supported fields; edit source files through your normal development workflow.
 
 ### `SUBPROJECT_NOT_FOUND`
 

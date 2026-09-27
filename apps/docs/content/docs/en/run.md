@@ -57,7 +57,7 @@ This lets pnpm / turbo workspaces invoke `vite`, `next`, `astro`, and similar bi
 | `infisical` | fetch env vars from Infisical |
 | empty | use the provider recorded in the workspace manifest |
 
-`--env-provider infisical` requires an `env/infisical` profile. Use `--env-provider dotenv` for offline local runs.
+`--env-provider infisical` requires browser login with `one login`. Use `--env-provider dotenv` for offline local runs.
 
 ## Common errors
 
@@ -67,10 +67,20 @@ This lets pnpm / turbo workspaces invoke `vite`, `next`, `astro`, and similar bi
 | `SUBPROJECT_NOT_FOUND` | pass a manifest `name` or `relativeDir` to `-p` |
 | `RUN_COMMAND_NOT_FOUND` | check PATH, project `node_modules/.bin`, and workspace `node_modules/.bin` |
 | `ENV_FILE_NOT_FOUND` | create a project `.env` or use `--env-provider infisical` |
-| `INFISICAL_AUTH_MISSING` | run `one configure add env/infisical --profile <name> --use` |
+| `INFISICAL_AUTH_MISSING` | run `one login` |
 
 ## Next
 
 - [Run with env vars](/en/tutorials/run-passthrough/)
 - [one env](/en/docs/env-vars/)
 - [one dev](/en/docs/dev/)
+
+
+## Global credentials
+
+```bash
+one run --global --env dev --path /oss --keys OSS_ACCESS_KEY_ID,OSS_ACCESS_KEY_SECRET -- upload-assets
+one run --global --env dev --path /oss --dry-run -- upload-assets
+```
+
+Environment and folder must be explicit. Only that folder is read; `--keys` fetches only selected variables. Dry-run does not read credentials. Global mode does not load project environments or implicitly resolve repository binaries. It preserves the current directory. Exact-value output masking is best effort, not a sandbox.

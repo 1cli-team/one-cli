@@ -92,8 +92,8 @@ one add nestjs-api --name api
 | `one dev [project]` | Run every project, or one selected project, locally |
 | `one build [project]` | Build every buildable project, or one selected project |
 | `one env` | Review and manage environment variables |
-| `one configure` | Manage local connections and preferences |
-| `one serve` | Inspect Workspaces and Projects; manage local Profiles and bindings |
+| `one login` | Sign in to Infisical with your browser |
+| `one serve` | Inspect workspaces, manage the current account and global variables |
 | `one ci [enable\|sync\|disable]` | Optionally manage generated GitHub Actions workflows |
 
 Full command docs live at [1cli.dev](https://1cli.dev).
@@ -122,17 +122,11 @@ The assistant can read `one.manifest.json` and project README files, then use On
 
 ## Local Settings
 
-One CLI manages local dotenv files and Infisical environment configuration. Infisical credentials stay in your local user config, outside the project files you share with the team.
+One CLI manages local dotenv and Infisical variables. Run `one login` to sign in with your browser; the single session is stored in the OS keyring, with no plaintext fallback. Use `one whoami` to inspect status and `one logout` to remove the local session.
 
-For a guided browser-based setup:
+Run `one serve` for account settings, workspaces, and global variables. Workspace and project configuration changes share one reviewed, revision-checked Manifest draft. Remote variable edits take effect immediately; lists omit values and reveal/copy fetch plaintext only on demand.
 
-```bash
-one configure open
-```
-
-The page only binds to your local machine by default, so it is a better place for sensitive values than a chat window or a shared document. Workspace environment Backend and Project configuration edits remain browser drafts until the top-bar save action shows an exact diff. Project changes use atomic revision-checked Manifest patches; Backend changes use the revision-checked env switch workflow, including Infisical project binding initialization. Source files and non-allowlisted Manifest fields remain read-only. Backend changes do not migrate secret values between providers. Infisical workspaces also expose scoped secret CRUD: lists omit values, and cleartext is fetched one key at a time with no-store responses.
-
-Profile definitions and credentials live in `~/.config/one/config.json` and `credentials.json`. They are machine-global, so Profile CRUD in Settings is not environment-scoped. The Dashboard UI offers Development, Preview, and Production binding contexts; those selections live separately in `~/.config/one/profile-bindings.json`, keyed by canonical Workspace root and environment. These local files never modify the repository manifest; only the explicit reviewed Project draft and environment Backend switch endpoints can do that.
+Choose shared credential storage with `one env bind --global`. Agents discover environments and folders through `one env --global` and `one env list --global`, then execute with `one run --global --env dev --path /folder --keys KEY -- command`. Explicit scope and best-effort masking reduce accidental exposure; they do not isolate arbitrary programs running as the same OS user. Use least-privilege remote permissions.
 
 ## Project Map
 
@@ -150,7 +144,7 @@ If you want to work on One CLI itself, the repository is organized like this:
 | `packages/templates` | Starters used by `one add` |
 | `skills/one-cli` | Minimal workspace guidance installed by `one skills install` |
 | `apps/docs` | Documentation website |
-| `apps/dashboard` | Local Workspace, Project, and Profile Dashboard opened by `one serve` |
+| `apps/dashboard` | Local workspace, account, and global-variable Dashboard opened by `one serve` |
 | `assets` | Brand assets, including the logo |
 
 Common contributor commands:

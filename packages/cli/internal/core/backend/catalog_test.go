@@ -19,27 +19,12 @@ func TestBuiltinPairs(t *testing.T) {
 	}
 }
 
-func TestBuiltinProfileBackendsExcludeDotenv(t *testing.T) {
-	t.Parallel()
-
-	got := Builtin().ProfileBackends()
-	if len(got) != 1 {
-		t.Fatalf("len(ProfileBackends()) = %d, want 1", len(got))
-	}
-	for _, spec := range got {
-		if spec.Pair == "env/dotenv" {
-			t.Fatal("env/dotenv must not expose a configure profile")
-		}
-	}
-}
-
 func TestNewRejectsDuplicateAndMalformedSpecs(t *testing.T) {
 	t.Parallel()
 
 	valid := spec(
 		BackendID{Domain: DomainEnv, Name: "test"},
 		[]Capability{CapabilityEnvGet},
-		ProfileSpec{},
 	)
 	if _, err := New(valid, valid); err == nil {
 		t.Fatal("New() accepted duplicate backend")
@@ -52,44 +37,6 @@ func TestNewRejectsDuplicateAndMalformedSpecs(t *testing.T) {
 	}
 }
 
-func TestNewRejectsConfigurableBackendWithoutProfileType(t *testing.T) {
-	t.Parallel()
-
-	_, err := New(spec(
-		BackendID{Domain: DomainEnv, Name: "test"},
-		[]Capability{CapabilityEnvGet},
-		ProfileSpec{Configurable: true},
-	))
-	if err == nil {
-		t.Fatal("New() accepted configurable backend without profile type")
-	}
-}
-
-func TestNewRejectsInvalidProfileFieldMetadata(t *testing.T) {
-	t.Parallel()
-
-	base := spec(
-		BackendID{Domain: DomainEnv, Name: "test"},
-		[]Capability{CapabilityEnvGet},
-		ProfileSpec{Configurable: true, Type: ProfileTypeInfisical},
-	)
-	base.Profile.Fields = []FieldSpec{
-		{Path: "siteUrl", InputName: "site-url", Type: FieldString, LabelKey: "site"},
-		{Path: "credentials/clientId", InputName: "site-url", Type: FieldString, LabelKey: "client"},
-	}
-	if _, err := New(base); err == nil {
-		t.Fatal("New() accepted duplicate profile input names")
-	}
-
-	base.Profile.Fields = []FieldSpec{{
-		Path: "credentials/clientSecret", InputName: "client-secret", Type: FieldSecret,
-		LabelKey: "secret", Default: "must-not-be-stored",
-	}}
-	if _, err := New(base); err == nil {
-		t.Fatal("New() accepted a default secret")
-	}
-}
-
 func TestCatalogReturnsDefensiveCopies(t *testing.T) {
 	t.Parallel()
 
@@ -97,7 +44,7 @@ func TestCatalogReturnsDefensiveCopies(t *testing.T) {
 	specs := c.All()
 	specs[0].Capabilities[0] = "mutated"
 	envSpecs := c.ForDomain(DomainEnv)
-	envSpecs[1].Profile.Fields[0].Path = "mutated"
+	envSpecs[1].Capabilities[0] = "mutated"
 
 	got, ok := c.LookupPair("env/dotenv")
 	if !ok {
@@ -110,7 +57,7 @@ func TestCatalogReturnsDefensiveCopies(t *testing.T) {
 	if !ok {
 		t.Fatal("env/infisical not found")
 	}
-	if env.Profile.Fields[0].Path == "mutated" {
+	if env.Capabilities[0] == "mutated" {
 		t.Fatal("ForDomain() leaked mutable profile field storage")
 	}
 }
@@ -121,7 +68,6 @@ func TestNewRejectsInvalidProjectFieldMetadata(t *testing.T) {
 	valid := spec(
 		BackendID{Domain: DomainEnv, Name: "test"},
 		[]Capability{CapabilityEnvGet},
-		ProfileSpec{},
 	)
 	valid.Project = ProjectSpec{Configurable: true, Fields: []ProjectFieldSpec{{
 		Path: "env", InputName: "environment", Type: ProjectFieldEnvironment,
@@ -194,31 +140,6 @@ func TestNewRejectsInvalidProjectFieldMetadata(t *testing.T) {
 	}
 }
 
-func TestProfileFieldsNeverExposeCredentialValues(t *testing.T) {
-	t.Parallel()
-
-	for _, backend := range Builtin().ProfileBackends() {
-		for _, field := range backend.Profile.Fields {
-			if field.Path == "" || field.InputName == "" || field.LabelKey == "" {
-				t.Fatalf("%s has incomplete field metadata: %#v", backend.Pair, field)
-			}
-			if field.Type == FieldSecret && field.Default != nil {
-				t.Fatalf("%s secret %s must not declare a default", backend.Pair, field.Path)
-			}
-		}
-	}
-}
-
-func TestBuiltinBackendsDeclareProfileType(t *testing.T) {
-	t.Parallel()
-
-	for _, backend := range Builtin().All() {
-		if backend.Profile.Type == "" {
-			t.Fatalf("%s has no profile type", backend.Pair)
-		}
-	}
-}
-
 func TestBackendSpecJSONIncludesNormalizedIdentity(t *testing.T) {
 	t.Parallel()
 
@@ -231,10 +152,9 @@ func TestBackendSpecJSONIncludesNormalizedIdentity(t *testing.T) {
 		t.Fatal(err)
 	}
 	var got struct {
-		ID      string      `json:"id"`
-		Domain  Domain      `json:"domain"`
-		Name    string      `json:"name"`
-		Profile ProfileSpec `json:"profile"`
+		ID     string `json:"id"`
+		Domain Domain `json:"domain"`
+		Name   string `json:"name"`
 	}
 	if err := json.Unmarshal(raw, &got); err != nil {
 		t.Fatal(err)
@@ -242,10 +162,5 @@ func TestBackendSpecJSONIncludesNormalizedIdentity(t *testing.T) {
 	if got.ID != "env/infisical" || got.Domain != DomainEnv || got.Name != "infisical" {
 		t.Fatalf("identity = %#v", got)
 	}
-	if !got.Profile.Configurable || len(got.Profile.Fields) != 3 {
-		t.Fatalf("profile schema = %#v", got.Profile)
-	}
-	if got.Profile.Fields[0].Path != "siteUrl" || got.Profile.Fields[2].Type != FieldSecret {
-		t.Fatalf("profile fields = %#v", got.Profile.Fields)
-	}
+
 }

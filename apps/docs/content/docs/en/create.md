@@ -60,16 +60,13 @@ it explicitly with `one ci enable <project>` if needed.
 one create my-app -y --env-provider infisical
 ```
 
-Configure a machine-level Infisical profile first:
+Sign in to Infisical in your browser first:
 
 ```bash
-one configure add env/infisical --profile work \
-  --client-id $INFISICAL_UNIVERSAL_AUTH_CLIENT_ID \
-  --client-secret $INFISICAL_UNIVERSAL_AUTH_CLIENT_SECRET \
-  --use
+one login
 ```
 
-`one create --env-provider infisical` tries to auto-bind or create an Infisical project. If the profile, network, or permission is not ready, workspace creation still succeeds; the first `one env set/get/list/pull` retries lazy auto-bind.
+`one create --env-provider infisical` tries to auto-bind or create an Infisical project. If login, network, or permission is not ready, workspace creation still succeeds; the first `one env set/get/list/pull` retries lazy auto-bind.
 
 ## Output
 

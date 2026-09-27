@@ -47,6 +47,9 @@ func Commands(loaders *secrets.Registry, provider runtimeport.Provider) []*cobra
 // SIGINT/SIGTERM are forwarded so Ctrl-C kills the child first; we exit with
 // the child's exit code so scripts and CI can branch normally.
 type runFlags struct {
+	global       bool
+	globalPath   string
+	globalKeys   []string
 	project      string
 	envName      string
 	envProvider  string
@@ -107,6 +110,12 @@ func newRunCmd(loaders *secrets.Registry, provider runtimeport.Provider) *cobra.
 				cmd.SetOut(os.Stdout)
 				return cmd.Help()
 			}
+			if flags.global {
+				return runGlobal(cmd.Context(), flags, commandArgs)
+			}
+			if cmd.Flags().Changed("path") || cmd.Flags().Changed("keys") {
+				return fmt.Errorf("--path 和 --keys 仅用于 --global")
+			}
 			return runRun(cmd.Context(), loaders, flags, commandArgs)
 		},
 	}
@@ -114,6 +123,9 @@ func newRunCmd(loaders *secrets.Registry, provider runtimeport.Provider) *cobra.
 	cmd.Flags().StringVar(&flags.envName, "env", "", "环境名（默认取 manifest.environments.default）")
 	cmd.Flags().StringVar(&flags.envProvider, "env-provider", "", "env provider: dotenv | infisical（默认取 workspace manifest 中已选的值）")
 	cmd.Flags().BoolVar(&flags.dryRun, "dry-run", false, "Print the execution plan without loading environment values or starting a command")
+	cmd.Flags().BoolVar(&flags.global, "global", false, "使用全局变量，保留当前工作目录")
+	cmd.Flags().StringVar(&flags.globalPath, "path", "", "全局变量目录（必须显式指定）")
+	cmd.Flags().StringSliceVar(&flags.globalKeys, "keys", nil, "只注入指定的变量名，逗号分隔")
 	i18n.MarkShort(cmd, "run.short")
 	return cmd
 }

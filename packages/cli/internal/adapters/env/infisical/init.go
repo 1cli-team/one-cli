@@ -25,22 +25,14 @@ import (
 // project), and --project-name overrides the desired name when
 // auto-creating.
 //
-// Scope split (post-profile refactor):
-//   - This path writes WORKSPACE-level fields to manifest.domains.env.config
-//     and manifest.environments (projectId, projectName, environments,
-//     defaultEnv, rootPath).
-//   - SiteURL + credentials are MACHINE-level — they come from a
-//     profile (`one configure add env/infisical --profile <name>`), not from flags here.
+// Authentication uses the single browser session stored in the system keyring.
+// Only project metadata is persisted in the workspace manifest.
 type InitInput struct {
 	ProjectID    string
 	ProjectName  string
 	Environments []string
 	DefaultEnv   string
 	RootPath     string
-	// ProfileName one-shot overrides the default env profile (for the
-	// network call that creates / verifies the project). Doesn't change
-	// machine default.
-	ProfileName string
 	// SkipVerify lets `init` write the config without contacting Infisical
 	// (useful for offline workflows / generation tooling). Default off:
 	// the CLI's value is in catching configuration mistakes early.
@@ -158,12 +150,11 @@ func Init(ctx context.Context, projectRoot string, in InitInput) (*InitResult, e
 		if err != nil {
 			return nil, err
 		}
-		profileName, creds, siteURL, err := loadInitCreds(projectRoot, in.ProfileName)
+		creds, siteURL, err := sessionCredentials()
 		if err != nil {
 			return nil, err
 		}
 		cfg.SiteURL = siteURL
-		cfg.ProfileName = profileName
 		client, err := NewClient(ctx, cfg, creds)
 		if err != nil {
 			return nil, err
@@ -186,12 +177,11 @@ func Init(ctx context.Context, projectRoot string, in InitInput) (*InitResult, e
 		}
 	} else if !in.SkipVerify {
 		// Branch 1 / Branch-2-rewrite: validate the explicit / cached id.
-		profileName, creds, siteURL, err := loadInitCreds(projectRoot, in.ProfileName)
+		creds, siteURL, err := sessionCredentials()
 		if err != nil {
 			return nil, err
 		}
 		cfg.SiteURL = siteURL
-		cfg.ProfileName = profileName
 		client, err := NewClient(ctx, cfg, creds)
 		if err != nil {
 			return nil, err
@@ -227,13 +217,6 @@ func Init(ctx context.Context, projectRoot string, in InitInput) (*InitResult, e
 		Created:      created,
 		WrittenTo:    workspace.ManifestPath(projectRoot),
 	}, nil
-}
-
-// loadInitCreds is a thin alias around requireProfileCreds, kept so the
-// two call sites in Init read locally rather than spelling out the
-// shared helper name. Profile-only — env vars retired.
-func loadInitCreds(projectRoot, profileFlag string) (string, *Credentials, string, error) {
-	return requireProfileCreds(projectRoot, profileFlag)
 }
 
 // resolveProjectName picks the Infisical project name when env init is

@@ -53,9 +53,7 @@ func (s *Service) PlanSwitch(scope execution.Scope, target string) (SwitchPlan, 
 	if target == workspace.EnvBackendDotenv {
 		return plan, nil
 	}
-	// Resolve credentials during Switch, not while planning: every dotenv
-	// tuple can select a different machine-local Profile by project and
-	// environment, and PlanSwitch does not yet know whether sync will run.
+	// Planning only reads local metadata; authentication occurs during execution.
 	plan.tuples, err = collectDotenvTuples(
 		resolution.Workspace.Root(), resolution.Workspace.Manifest(),
 	)
@@ -66,12 +64,9 @@ func (s *Service) PlanSwitch(scope execution.Scope, target string) (SwitchPlan, 
 }
 
 type SwitchOptions struct {
-	Sync      bool
-	Overwrite bool
-	DryRun    bool
-	// Environment selects the machine-local Profile context used to initialize
-	// an Infisical binding when the caller is not migrating dotenv tuples. CLI
-	// migrations leave this empty and keep using the first tuple's context.
+	Sync        bool
+	Overwrite   bool
+	DryRun      bool
 	Environment string
 }
 
@@ -103,22 +98,12 @@ func (s *Service) Switch(
 	// must have a remote project binding before any env operation can work.
 	// Initialize that binding even when the caller deliberately skips data
 	// migration (the Dashboard switch flow does exactly that).
-	bindEnvironment := strings.TrimSpace(options.Environment)
-	bindProject := ""
-	if bindEnvironment == "" && len(plan.tuples) > 0 {
-		bindEnvironment = plan.tuples[0].environment
-		bindProject = plan.tuples[0].project
-	}
-	if err := s.ensureInfisicalBound(
-		ctx, plan.Workspace, "", bindEnvironment, bindProject,
-	); err != nil {
+	if err := s.ensureInfisicalBound(ctx, plan.Workspace); err != nil {
 		return nil, err
 	}
 	if options.Sync && len(plan.tuples) > 0 {
 		for _, tuple := range plan.tuples {
-			config, credentials, err := s.resolveInfisical(
-				plan.Workspace, "", tuple.environment, tuple.project,
-			)
+			config, credentials, err := s.resolveInfisical()
 			if err != nil {
 				return nil, err
 			}

@@ -6,7 +6,6 @@ import (
 	"path/filepath"
 	"testing"
 
-	configureapp "github.com/torchstellar-team/one-cli/packages/cli/internal/application/configure"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/application/execution"
 	catalog "github.com/torchstellar-team/one-cli/packages/cli/internal/core/backend"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/core/workspace"
@@ -114,13 +113,7 @@ func TestServiceRejectsMissingCapability(t *testing.T) {
 func newTestService(t *testing.T) *Service {
 	t.Helper()
 	backendCatalog := catalog.Builtin()
-	profiles, err := configureapp.NewProfileService(
-		backendCatalog, configureapp.LocalProfileRepository{},
-	)
-	if err != nil {
-		t.Fatal(err)
-	}
-	service, err := NewService(backendCatalog, profiles)
+	service, err := NewService(backendCatalog)
 	if err != nil {
 		t.Fatal(err)
 	}

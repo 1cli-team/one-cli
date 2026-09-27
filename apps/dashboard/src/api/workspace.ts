@@ -1,15 +1,10 @@
 // api/workspace.ts exposes Manifest projections, env Backend workflows, and
-// machine-local Profile binding mutations. Reviewed Project publication lives
+// single-account environment configuration. Reviewed Manifest publication lives
 // in api/manifest.ts; remote secret operations live in api/secrets.ts.
 
 import { workspaceBasePath } from "@/api/workspaces";
 import http from "@/lib/http";
-import type {
-	BackendDomain,
-	Overview,
-	ProjectSettingsResponse,
-	WorkspaceProfileSettings,
-} from "@/types/api";
+import type { Overview, ProjectSettingsResponse, WorkspaceEnvironmentSettings } from "@/types/api";
 
 export const overviewKey = "/workspace/overview";
 
@@ -28,25 +23,15 @@ export async function getOverview(entryId?: string, environment?: string): Promi
 	return http.get<Overview>(overviewKeyFor(entryId, environment));
 }
 
-export function workspaceProfileBindingKey(entryId?: string, environment?: string): string {
-	return withEnvironment(`${workspaceBasePath(entryId)}/profile-bindings/env`, environment);
+export function workspaceEnvironmentKey(entryId?: string, environment?: string): string {
+	return withEnvironment(`${workspaceBasePath(entryId)}/environment`, environment);
 }
 
-export async function getWorkspaceProfileBinding(
+export async function getWorkspaceEnvironment(
 	entryId?: string,
 	environment?: string,
-): Promise<WorkspaceProfileSettings> {
-	return http.get<WorkspaceProfileSettings>(workspaceProfileBindingKey(entryId, environment));
-}
-
-export async function updateWorkspaceProfileBinding(
-	profile: string,
-	entryId?: string,
-	environment?: string,
-): Promise<WorkspaceProfileSettings> {
-	return http.put<WorkspaceProfileSettings>(workspaceProfileBindingKey(entryId, environment), {
-		profile,
-	});
+): Promise<WorkspaceEnvironmentSettings> {
+	return http.get<WorkspaceEnvironmentSettings>(workspaceEnvironmentKey(entryId, environment));
 }
 
 export function workspaceEnvironmentBackendKey(entryId?: string, environment?: string): string {
@@ -58,21 +43,24 @@ export async function switchWorkspaceEnvironmentBackend(
 	revision: string,
 	entryId?: string,
 	environment?: string,
-): Promise<WorkspaceProfileSettings> {
-	return http.put<WorkspaceProfileSettings>(workspaceEnvironmentBackendKey(entryId, environment), {
-		backend,
-		revision,
-	});
+): Promise<WorkspaceEnvironmentSettings> {
+	return http.put<WorkspaceEnvironmentSettings>(
+		workspaceEnvironmentBackendKey(entryId, environment),
+		{
+			backend,
+			revision,
+		},
+	);
 }
 
 export async function initializeWorkspaceEnvironmentBackend(
 	entryId: string | undefined,
 	environment: string,
 	project?: string,
-): Promise<WorkspaceProfileSettings> {
+): Promise<WorkspaceEnvironmentSettings> {
 	const search = new URLSearchParams({ env: environment });
 	if (project) search.set("project", project);
-	return http.post<WorkspaceProfileSettings>(
+	return http.post<WorkspaceEnvironmentSettings>(
 		`${workspaceBasePath(entryId)}/environment/backend/initialize?${search.toString()}`,
 	);
 }
@@ -95,29 +83,4 @@ export async function getProjectSettings(
 	environment?: string,
 ): Promise<ProjectSettingsResponse> {
 	return http.get<ProjectSettingsResponse>(projectSettingsKey(project, entryId, environment));
-}
-
-export function projectProfileBindingKey(
-	project: string,
-	domain: BackendDomain,
-	entryId?: string,
-	environment?: string,
-): string {
-	return withEnvironment(
-		`${projectBasePath(project, entryId)}/profile-bindings/${domain}`,
-		environment,
-	);
-}
-
-export async function updateProjectProfileBinding(
-	project: string,
-	domain: BackendDomain,
-	profile: string,
-	entryId?: string,
-	environment?: string,
-): Promise<ProjectSettingsResponse> {
-	return http.put<ProjectSettingsResponse>(
-		projectProfileBindingKey(project, domain, entryId, environment),
-		{ profile },
-	);
 }

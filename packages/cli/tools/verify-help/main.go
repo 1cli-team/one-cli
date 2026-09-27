@@ -125,7 +125,7 @@ func checkRootHelp(root *cobra.Command) []string {
 
 	want := map[string]bool{
 		"create": true, "add": true, "dev": true, "build": true,
-		"env": true, "configure": true,
+		"env": true, "login": true,
 	}
 
 	var problems []string

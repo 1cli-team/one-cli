@@ -87,7 +87,7 @@ func configRoot() (string, error) {
 }
 
 // Path returns the absolute path of preferences.json. Useful for
-// `one configure locale` to print where the value lives.
+// `one locale` to print where the value lives.
 func Path() (string, error) {
 	root, err := configRoot()
 	if err != nil {

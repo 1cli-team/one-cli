@@ -11,7 +11,7 @@
     "create",
     "add",
     "env-vars",
-    "configure",
+    "login",
     "hk",
     "templates-cmd",
     "dev",

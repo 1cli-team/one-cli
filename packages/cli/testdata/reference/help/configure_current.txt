@@ -1,9 +1,0 @@
-
-DESCRIPTION
-Show the current local connection
-
-USAGE
-  one configure current [pair] [flags]
-
-COMMON OPTIONS
-  -o, --output <value>     Output format: json | yaml | text (default: terminal-friendly text, JSON when piped)

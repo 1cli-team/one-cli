@@ -1,4 +1,4 @@
-import { render, screen, waitFor, within } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { HttpResponse, http } from "msw";
 import { setupServer } from "msw/node";
@@ -8,9 +8,8 @@ import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } 
 import {
 	getOverview,
 	overviewKeyFor,
-	projectProfileBindingKey,
 	projectSettingsKey,
-	workspaceProfileBindingKey,
+	workspaceEnvironmentKey,
 } from "@/api/workspace";
 import { environmentFromSearch } from "@/features/environment-context/environment";
 import {
@@ -34,7 +33,6 @@ const catalogBackends: BackendSpec[] = [
 		domain: "env",
 		name: "dotenv",
 		capabilities: ["env-load"],
-		profile: { configurable: false },
 		project: { configurable: false },
 	},
 	{
@@ -42,7 +40,6 @@ const catalogBackends: BackendSpec[] = [
 		domain: "env",
 		name: "infisical",
 		capabilities: ["env-load"],
-		profile: { configurable: true, fields: [] },
 		project: { configurable: false },
 	},
 ];
@@ -113,8 +110,6 @@ const webSettings: ProjectSettingsResponse = {
 			inherits: true,
 			disabled: false,
 			keys: ["API_URL"],
-			selectedProfile: "work",
-			profile: { name: "work", source: "workspace-project-environment" },
 		},
 	},
 };
@@ -178,10 +173,6 @@ async function chooseSelect(
 	await user.click(await screen.findByRole("option", { name: optionName }));
 }
 
-function expectSelectText(trigger: HTMLElement, value: string) {
-	expect(trigger.textContent).toContain(value);
-}
-
 async function openProjectSettings() {
 	return screen.findByRole("region", { name: "Project settings" });
 }
@@ -204,16 +195,6 @@ async function openWorkspaceSettingsDialog(user: ReturnType<typeof userEvent.set
 async function openWorkspaceEnvironmentSettings(user: ReturnType<typeof userEvent.setup>) {
 	const dialog = await openWorkspaceSettingsDialog(user);
 	return within(dialog).findByRole("region", { name: "Workspace environment" });
-}
-
-async function selectEnvironment(
-	user: ReturnType<typeof userEvent.setup>,
-	currentName: string,
-	nextName: string,
-) {
-	const selector = screen.getByRole("combobox", { name: `Environment: ${currentName}` });
-	await user.click(selector);
-	await user.click(await screen.findByRole("option", { name: nextName }));
 }
 
 function sectionResponse(domain: BackendDomain, backend: string, profiles: string[]) {
@@ -239,7 +220,7 @@ describe("workspace overview Profile-only configuration", () => {
 			http.get("http://localhost/api/catalog", () =>
 				HttpResponse.json({ schema: "one-cli/catalog/v1", backends: catalogBackends }),
 			),
-			http.get("http://localhost/api/workspace/profile-bindings/env", ({ request }) =>
+			http.get("http://localhost/api/workspace/environment", ({ request }) =>
 				HttpResponse.json({
 					schema: "one-cli/workspace-profile/v1",
 					root: "/workspace/demo",
@@ -247,10 +228,9 @@ describe("workspace overview Profile-only configuration", () => {
 					domain: "env",
 					backend: "dotenv",
 					configurable: false,
-					selectedProfile: "",
 				}),
 			),
-			http.get("http://localhost/api/workspaces/:entryId/profile-bindings/env", ({ request }) =>
+			http.get("http://localhost/api/workspaces/:entryId/environment", ({ request }) =>
 				HttpResponse.json({
 					schema: "one-cli/workspace-profile/v1",
 					root: "/workspace/demo",
@@ -258,7 +238,6 @@ describe("workspace overview Profile-only configuration", () => {
 					domain: "env",
 					backend: "dotenv",
 					configurable: false,
-					selectedProfile: "",
 				}),
 			),
 			http.get("http://localhost/api/workspace/secrets", () =>
@@ -352,99 +331,15 @@ describe("workspace overview Profile-only configuration", () => {
 
 	it("uses environment-specific SWR keys for every workspace projection", () => {
 		expect(overviewKeyFor("demo-entry", "dev")).toBe("/workspaces/demo-entry/overview?env=dev");
-		expect(workspaceProfileBindingKey("demo-entry", "preview")).toBe(
-			"/workspaces/demo-entry/profile-bindings/env?env=preview",
+		expect(workspaceEnvironmentKey("demo-entry", "preview")).toBe(
+			"/workspaces/demo-entry/environment?env=preview",
 		);
 		expect(projectSettingsKey("web app", "demo-entry", "prod")).toBe(
 			"/workspaces/demo-entry/projects/web%20app?env=prod",
 		);
-		expect(projectProfileBindingKey("web", "env", undefined, "dev")).toBe(
-			"/workspace/projects/web/profile-bindings/env?env=dev",
-		);
 		expect(projectSettingsKey("web", undefined, "dev")).not.toBe(
 			projectSettingsKey("web", undefined, "prod"),
 		);
-	});
-
-	it("exposes the workspace backend selector and saves Profile bindings separately", async () => {
-		let requestBody: unknown;
-		let receivedEnvironment = "";
-		let legacyWrites = 0;
-		let overviewRequests = 0;
-		const configurableOverview: OverviewPayload = {
-			...overview,
-			workspace: {
-				...overview.workspace!,
-				domains: { ...overview.workspace?.domains, env: "infisical" },
-			},
-			issues: [
-				{
-					domain: "env",
-					severity: "missing",
-					reason: "profile",
-					backend: "infisical",
-					section: "env/infisical",
-					message: "Infisical credentials are missing",
-				},
-			],
-		};
-		server.use(
-			http.get("http://localhost/api/workspaces/demo-entry/overview", ({ request }) => {
-				overviewRequests += 1;
-				expect(new URL(request.url).searchParams.get("env")).toBe("dev");
-				return HttpResponse.json({ ...configurableOverview, issues: [] });
-			}),
-			http.get("http://localhost/api/workspaces/demo-entry/profile-bindings/env", () =>
-				HttpResponse.json({
-					schema: "one-cli/workspace-profile/v1",
-					root: "/workspace/demo",
-					environment: "dev",
-					domain: "env",
-					backend: "infisical",
-					configurable: true,
-					selectedProfile: "",
-					profile: { name: "work", source: "default" },
-				}),
-			),
-			http.get("http://localhost/api/configure/env/infisical", () =>
-				HttpResponse.json(sectionResponse("env", "infisical", ["work", "personal"])),
-			),
-			http.put(
-				"http://localhost/api/workspaces/demo-entry/profile-bindings/env",
-				async ({ request }) => {
-					requestBody = await request.json();
-					const url = new URL(request.url);
-					receivedEnvironment = url.searchParams.get("env") ?? "";
-					return HttpResponse.json({
-						schema: "one-cli/workspace-profile/v1",
-						root: "/workspace/demo",
-						environment: "dev",
-						domain: "env",
-						backend: "infisical",
-						configurable: true,
-						selectedProfile: "personal",
-						profile: { name: "personal", source: "workspace-environment" },
-					});
-				},
-			),
-			http.put("http://localhost/api/workspaces/demo-entry/domains/env", () => {
-				legacyWrites += 1;
-				return HttpResponse.json(configurableOverview);
-			}),
-		);
-		const user = userEvent.setup();
-		renderOverview(configurableOverview, "demo-entry", false, true);
-
-		const region = await openWorkspaceEnvironmentSettings(user);
-		const backendSettings = within(region).getByTestId("workspace-backend-settings");
-		expect(within(backendSettings).getByRole("combobox", { name: "Backend" })).toBeDefined();
-		const profile = await within(backendSettings).findByRole("combobox", { name: "Profile" });
-		await chooseSelect(user, profile, "personal");
-
-		await waitFor(() => expect(requestBody).toEqual({ profile: "personal" }));
-		expect(receivedEnvironment).toBe("dev");
-		expect(legacyWrites).toBe(0);
-		await waitFor(() => expect(overviewRequests).toBe(1));
 	});
 
 	it("stages a Workspace env backend change for Manifest review", async () => {
@@ -457,7 +352,7 @@ describe("workspace overview Profile-only configuration", () => {
 			},
 		};
 		server.use(
-			http.get("http://localhost/api/workspaces/demo-entry/profile-bindings/env", () =>
+			http.get("http://localhost/api/workspaces/demo-entry/environment", () =>
 				HttpResponse.json({
 					schema: "one-cli/workspace-profile/v1",
 					root: "/workspace/demo",
@@ -466,8 +361,6 @@ describe("workspace overview Profile-only configuration", () => {
 					domain: "env",
 					backend: "infisical",
 					configurable: true,
-					selectedProfile: "",
-					profile: { name: "work", source: "default" },
 				}),
 			),
 			http.get("http://localhost/api/configure/env/infisical", () =>
@@ -486,7 +379,7 @@ describe("workspace overview Profile-only configuration", () => {
 		renderOverview(configurableOverview, "demo-entry");
 
 		const region = await openWorkspaceEnvironmentSettings(user);
-		await chooseSelect(user, within(region).getByRole("combobox", { name: "Backend" }), "Dotenv");
+		await chooseSelect(user, within(region).getByRole("combobox", { name: "Backend" }), "dotenv");
 
 		expect(useManifestDraftStore.getState().drafts[manifestDraftKey("demo-entry")]).toMatchObject({
 			revision: "sha256:test-revision",
@@ -494,173 +387,6 @@ describe("workspace overview Profile-only configuration", () => {
 		});
 		expect(within(region).getByText("Pending review")).toBeDefined();
 		expect(backendWrites).toBe(0);
-	});
-
-	it("unbinds a direct workspace Profile with an explicit empty value", async () => {
-		let requestBody: unknown;
-		const configurableOverview: OverviewPayload = {
-			...overview,
-			workspace: {
-				...overview.workspace!,
-				domains: { ...overview.workspace?.domains, env: "infisical" },
-			},
-		};
-		server.use(
-			http.get("http://localhost/api/workspace/profile-bindings/env", () =>
-				HttpResponse.json({
-					schema: "one-cli/workspace-profile/v1",
-					root: "/workspace/demo",
-					environment: "dev",
-					domain: "env",
-					backend: "infisical",
-					configurable: true,
-					selectedProfile: "personal",
-					profile: { name: "personal", source: "workspace-environment" },
-				}),
-			),
-			http.get("http://localhost/api/configure/env/infisical", () =>
-				HttpResponse.json(sectionResponse("env", "infisical", ["work", "personal"])),
-			),
-			http.put("http://localhost/api/workspace/profile-bindings/env", async ({ request }) => {
-				requestBody = await request.json();
-				return HttpResponse.json({
-					schema: "one-cli/workspace-profile/v1",
-					root: "/workspace/demo",
-					environment: "dev",
-					domain: "env",
-					backend: "infisical",
-					configurable: true,
-					selectedProfile: "",
-					profile: { name: "work", source: "default" },
-				});
-			}),
-		);
-		const user = userEvent.setup();
-		renderOverview(configurableOverview);
-
-		const region = await openWorkspaceEnvironmentSettings(user);
-		const profile = await within(region).findByRole("combobox", { name: "Profile" });
-		await waitFor(() => expectSelectText(profile, "personal"));
-		await chooseSelect(user, profile, "Resolve automatically (machine default)");
-		await waitFor(() => expect(requestBody).toEqual({ profile: "" }));
-	});
-
-	it("auto-saves a Workspace Profile before changing environment", async () => {
-		const requestedEnvironments: string[] = [];
-		let requestBody: unknown;
-		const configurableOverview: OverviewPayload = {
-			...overview,
-			workspace: {
-				...overview.workspace!,
-				domains: { ...overview.workspace?.domains, env: "infisical" },
-			},
-		};
-		server.use(
-			http.get("http://localhost/api/workspace/profile-bindings/env", ({ request }) => {
-				const selectedEnvironment = new URL(request.url).searchParams.get("env") ?? "";
-				requestedEnvironments.push(selectedEnvironment);
-				const selectedProfile = selectedEnvironment === "preview" ? "preview-base" : "work";
-				return HttpResponse.json({
-					schema: "one-cli/workspace-profile/v1",
-					root: "/workspace/demo",
-					environment: selectedEnvironment,
-					domain: "env",
-					backend: "infisical",
-					configurable: true,
-					selectedProfile,
-					profile: { name: selectedProfile, source: "workspace-environment" },
-				});
-			}),
-			http.get("http://localhost/api/configure/env/infisical", () =>
-				HttpResponse.json(
-					sectionResponse("env", "infisical", ["work", "personal", "preview-base"]),
-				),
-			),
-			http.put("http://localhost/api/workspace/profile-bindings/env", async ({ request }) => {
-				requestBody = await request.json();
-				return HttpResponse.json({
-					schema: "one-cli/workspace-profile/v1",
-					root: "/workspace/demo",
-					environment: "dev",
-					domain: "env",
-					backend: "infisical",
-					configurable: true,
-					selectedProfile: "personal",
-					profile: { name: "personal", source: "workspace-environment" },
-				});
-			}),
-		);
-		const user = userEvent.setup();
-		renderOverview(configurableOverview);
-		const region = await openWorkspaceEnvironmentSettings(user);
-		const profile = await within(region).findByRole("combobox", { name: "Profile" });
-		await chooseSelect(user, profile, "personal");
-		await waitFor(() => expect(requestBody).toEqual({ profile: "personal" }));
-		expectSelectText(profile, "personal");
-
-		const dialog = screen.getByRole("dialog", { name: "Workspace settings" });
-		await user.click(within(dialog).getByRole("button", { name: "Close" }));
-		await selectEnvironment(user, "Development", "Preview");
-
-		await waitFor(() =>
-			expect(screen.getByTestId("environment-search").textContent).toBe("?env=preview"),
-		);
-		const previewRegion = await openWorkspaceEnvironmentSettings(user);
-		await waitFor(() => expect(requestedEnvironments).toContain("preview"));
-		await waitFor(() =>
-			expectSelectText(
-				within(previewRegion).getByRole("combobox", { name: "Profile" }),
-				"preview-base",
-			),
-		);
-	});
-
-	it("keeps workspace Profile selection disabled for an identity conflict", async () => {
-		const configurableOverview: OverviewPayload = {
-			...overview,
-			workspace: {
-				...overview.workspace!,
-				domains: { ...overview.workspace?.domains, env: "infisical" },
-			},
-		};
-		server.use(
-			http.get("http://localhost/api/workspaces/demo-entry/profile-bindings/env", () =>
-				HttpResponse.json({
-					schema: "one-cli/workspace-profile/v1",
-					root: "/workspace/demo",
-					environment: "dev",
-					domain: "env",
-					backend: "infisical",
-					configurable: true,
-					selectedProfile: "",
-					profile: { name: "work", source: "default" },
-				}),
-			),
-			http.get("http://localhost/api/configure/env/infisical", () =>
-				HttpResponse.json(sectionResponse("env", "infisical", ["work"])),
-			),
-		);
-		const user = userEvent.setup();
-		renderOverview(configurableOverview, "demo-entry", true);
-
-		const region = await openWorkspaceEnvironmentSettings(user);
-		expect(
-			(within(region).getByRole("combobox", { name: "Profile" }) as HTMLButtonElement).disabled,
-		).toBe(true);
-		expect(
-			(within(region).getByRole("combobox", { name: "Backend" }) as HTMLButtonElement).disabled,
-		).toBe(true);
-		expect(within(region).queryByRole("button", { name: "Save local binding" })).toBeNull();
-	});
-
-	it("explains when the workspace backend does not use Profiles", async () => {
-		const user = userEvent.setup();
-		renderOverview();
-		const region = await openWorkspaceEnvironmentSettings(user);
-		expect(
-			within(region).getByText("This backend does not require a credential profile."),
-		).toBeDefined();
-		expect(within(region).queryByRole("combobox", { name: "Profile" })).toBeNull();
 	});
 
 	it("keeps identity fields read-only and stages editable General manifest fields", async () => {

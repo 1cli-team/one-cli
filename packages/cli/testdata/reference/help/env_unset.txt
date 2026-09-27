@@ -1,0 +1,13 @@
+
+DESCRIPTION
+删除一个 Infisical 环境变量
+
+USAGE
+  one env unset <KEY> [flags]
+
+COMMON OPTIONS
+  --env <value>            环境名
+  --global                 管理 Infisical 全局变量，可在工作区之外使用
+  -o, --output <value>     Output format: json | yaml | text (default: terminal-friendly text, JSON when piped)
+  --path <value>           全局变量目录（仅当前层，不递归）
+  -p, --project <value>    项目名或路径

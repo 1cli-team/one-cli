@@ -1,0 +1,9 @@
+
+DESCRIPTION
+退出本机 Infisical 会话，保留变量位置
+
+USAGE
+  one logout [flags]
+
+COMMON OPTIONS
+  -o, --output <value>     Output format: json | yaml | text (default: terminal-friendly text, JSON when piped)

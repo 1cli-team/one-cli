@@ -15,8 +15,8 @@ import (
 
 func newSetCmd(deps Dependencies) *cobra.Command {
 	var (
-		project, environment, profile string
-		yes                           bool
+		project, environment string
+		yes                  bool
 	)
 	cmd := &cobra.Command{
 		Use:   "set <KEY[=VALUE]> [VALUE]",
@@ -55,7 +55,7 @@ func newSetCmd(deps Dependencies) *cobra.Command {
 				return err
 			}
 			input := environmentmodule.SetInput{
-				Plan: plan, Key: key, Value: value, Profile: profile, Overwrite: yes,
+				Plan: plan, Key: key, Value: value, Overwrite: yes,
 			}
 			result, err := deps.Service.Set(cmd.Context(), input)
 			if retry, confirmErr := confirmOverwrite(err, key, yes); confirmErr != nil {
@@ -73,9 +73,8 @@ func newSetCmd(deps Dependencies) *cobra.Command {
 	}
 	cmd.Flags().StringVarP(&project, "project", "p", "", i18n.T("env.flag.project"))
 	cmd.Flags().StringVar(&environment, "env", "", i18n.T("env.flag.environment"))
-	cmd.Flags().StringVar(&profile, "profile", "", i18n.T("env.flag.profile"))
 	cmd.Flags().BoolVarP(&yes, "yes", "y", false, i18n.T("env.flag.yes"))
-	markEnvFlagUsage(cmd, "project", "env", "profile", "yes")
+	markEnvFlagUsage(cmd, "project", "env", "yes")
 	i18n.MarkShort(cmd, "env.set.short")
 	i18n.MarkLong(cmd, "env.set.tip")
 	return cmd

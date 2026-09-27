@@ -2,7 +2,7 @@ package serve
 
 // handlers_preferences.go is the REST surface for the user-global
 // preference file (~/.config/one/preferences.json). Mirrors
-// `one configure locale` so the dashboard and the CLI share one
+// `one locale` so the dashboard and the CLI share one
 // source of truth — switch the language in the UI and `one --help`
 // picks it up on the next run, and vice versa.
 //
@@ -82,20 +82,20 @@ func handlePutPreferences(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if !preferences.IsValidLocale(body.Locale) {
-		writeError(w, http.StatusBadRequest, cliErrors.PROFILE_BACKEND_INVALID,
+		writeError(w, http.StatusBadRequest, cliErrors.PREFERENCES_INVALID,
 			"unknown locale; expected one of: auto, zh-CN, en-US",
 			map[string]any{"got": body.Locale})
 		return
 	}
 	prefs, err := preferences.Load()
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, cliErrors.PROFILE_FILE_INVALID,
+		writeError(w, http.StatusInternalServerError, cliErrors.PREFERENCES_FILE_INVALID,
 			err.Error(), nil)
 		return
 	}
 	prefs.Locale = body.Locale
 	if err := preferences.Save(prefs); err != nil {
-		writeError(w, http.StatusInternalServerError, cliErrors.PROFILE_FILE_INVALID,
+		writeError(w, http.StatusInternalServerError, cliErrors.PREFERENCES_FILE_INVALID,
 			err.Error(), nil)
 		return
 	}

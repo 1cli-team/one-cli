@@ -15,7 +15,7 @@ import (
 )
 
 // DefaultSiteURL is the public Infisical SaaS instance. Workspaces using a
-// self-hosted instance must set siteUrl explicitly via `one configure add env/infisical --site-url`.
+// self-hosted instance must set siteUrl explicitly via `one login --site-url`.
 const DefaultSiteURL = "https://app.infisical.com"
 
 // DefaultEnvironment is the canonical first environment every workspace
@@ -42,12 +42,6 @@ type WorkspaceConfig struct {
 	DefaultEnv   string
 	RootPath     string
 	Keys         []string
-
-	// ProfileName is the resolved env/infisical profile name powering
-	// this config. Runtime-only (never persisted to manifest); set by
-	// the resolver path so the SDK client can key its short-lived
-	// access-token cache by (env, infisical, ProfileName).
-	ProfileName string
 }
 
 // SubprojectConfig is the (optional) per-subproject override stored on the
@@ -69,6 +63,7 @@ type SubprojectConfig struct {
 // `manifest.domains.env.config` when kind == "infisical". Backend-specific
 // fields plus the shared workspace-tracked variable-name list.
 type manifestEnvConfig struct {
+	SiteURL     string   `json:"siteUrl,omitempty"`
 	ProjectID   string   `json:"projectId,omitempty"`
 	ProjectName string   `json:"projectName,omitempty"`
 	RootPath    string   `json:"rootPath,omitempty"`
@@ -129,6 +124,7 @@ func LoadWorkspaceConfig(projectRoot string) (*WorkspaceConfig, error) {
 		if err := json.Unmarshal(m.Domains.Env.Config, &raw); err != nil {
 			return nil, err
 		}
+		cfg.SiteURL = raw.SiteURL
 		cfg.ProjectID = raw.ProjectID
 		cfg.ProjectName = raw.ProjectName
 		cfg.RootPath = raw.RootPath
@@ -141,23 +137,7 @@ func LoadWorkspaceConfig(projectRoot string) (*WorkspaceConfig, error) {
 	return cfg, nil
 }
 
-// resolveCfgAndCreds is the v0.5+ adapter helper. Profile-level and
-// manifest-level concerns are merged here:
-//
-//   - Manifest (one.manifest.json) is the source of truth for project-level
-//     fields: ProjectID, ProjectName, Environments, DefaultEnv, RootPath.
-//     Always read.
-//   - Profile (~/.config/one/config.json + credentials.json) contributes
-//     machine-level fields: SiteURL + credentials. When the cobra layer already
-//     resolved a profile (cfgOverride / credsOverride non-nil),
-//     they're applied directly. Otherwise we resolve here so the same
-//     "profile is the only source" rule holds for callers (e.g. some
-//     internal helpers) that don't go through envcmd.
-//
-// Splitting the scopes this way means a single profile drives many
-// workspaces — each workspace pins its own projectId in its manifest;
-// switching profile only switches "which Infisical instance + as
-// whom", not "which project".
+// resolveCfgAndCreds combines manifest project metadata with the active session.
 func resolveCfgAndCreds(projectRoot string, cfgOverride *WorkspaceConfig, credsOverride *Credentials) (*WorkspaceConfig, *Credentials, error) {
 	cfg, err := RequireWorkspaceConfig(projectRoot)
 	if err != nil {
@@ -165,24 +145,26 @@ func resolveCfgAndCreds(projectRoot string, cfgOverride *WorkspaceConfig, credsO
 	}
 	if cfgOverride != nil {
 		if strings.TrimSpace(cfgOverride.SiteURL) != "" {
+			if cfg.SiteURL != "" && cfg.SiteURL != cfgOverride.SiteURL {
+				return nil, nil, cliErrors.New(cliErrors.INFISICAL_AUTH_FAILED, "工作区绑定了不同 Infisical 实例，请检查登录账号或重新选择项目。")
+			}
 			cfg.SiteURL = cfgOverride.SiteURL
 		}
 	}
 	creds := credsOverride
 	if creds == nil {
-		// No upstream profile resolution — do it here. Errors with
-		// INFISICAL_AUTH_MISSING when no profile is configured.
-		profileName, c, siteURL, err := requireProfileCreds(projectRoot, "")
+		// Resolve the browser session when the caller did not provide credentials.
+		c, siteURL, err := sessionCredentials()
 		if err != nil {
 			return nil, nil, err
 		}
 		creds = c
-		cfg.ProfileName = profileName
 		if cfgOverride == nil && siteURL != "" {
+			if cfg.SiteURL != "" && cfg.SiteURL != siteURL {
+				return nil, nil, cliErrors.New(cliErrors.INFISICAL_AUTH_FAILED, "工作区绑定了不同 Infisical 实例，请重新选择项目。")
+			}
 			cfg.SiteURL = siteURL
 		}
-	} else if cfgOverride != nil && cfgOverride.ProfileName != "" {
-		cfg.ProfileName = cfgOverride.ProfileName
 	}
 	return cfg, creds, nil
 }
@@ -197,12 +179,12 @@ func RequireWorkspaceConfig(projectRoot string) (*WorkspaceConfig, error) {
 	}
 	if cfg == nil {
 		return nil, cliErrors.New(cliErrors.INFISICAL_NOT_CONFIGURED,
-			"未找到 Infisical 配置。请在 one.manifest.json#domains.env 中将 kind 设置为 \"infisical\"（机器级凭据通过 `one configure add env/infisical` 配置）。")
+			"未找到 Infisical 配置。请在 one.manifest.json#domains.env 中将 kind 设置为 \"infisical\"（请先运行 `one login` 登录）。")
 	}
 	if strings.TrimSpace(cfg.ProjectID) == "" {
 		return nil, cliErrors.New(cliErrors.INFISICAL_NOT_CONFIGURED,
 			"当前工作区选择了 Infisical 但还没绑定项目（manifest.domains.env.config.projectId 为空）。"+
-				"\n→ 确认已配置 `one configure add env/infisical --profile <name> --use`，"+
+				"\n→ 确认已配置 `one login`，"+
 				"\n  然后重新运行 `one env get/set/list/pull` 触发 lazy auto-bind。"+
 				"\n  （如果你只想用本地 .env，可以把 manifest.domains.env.kind 改成 \"dotenv\"。）")
 	}
@@ -243,6 +225,7 @@ func LoadSubprojectConfig(projectRoot, relativeDir string) (*SubprojectConfig, e
 // a freshly-resolved workspace setup back to disk.
 func EncodeManifestConfig(cfg *WorkspaceConfig) (json.RawMessage, error) {
 	raw := manifestEnvConfig{
+		SiteURL:     cfg.SiteURL,
 		ProjectID:   cfg.ProjectID,
 		ProjectName: cfg.ProjectName,
 		RootPath:    cfg.RootPath,

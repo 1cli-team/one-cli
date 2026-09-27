@@ -26,7 +26,7 @@ For the full workflow and mental model, read [Environment variables guide](/en/t
 
 ```bash
 one env set  <KEY[=VALUE]> [VALUE] [--env <env>] [-p <name|path>] [--yes]
-one env get  <KEY>                 [--env <env>] [-p <name|path>]
+one env get  <KEY>                 [--env <env>] [-p <name|path>] --reveal
 one env list                       [--env <env>] [-p <name|path>]
 one env pull                       [--env <env>] [-p <name|path>] [--force] [--dry-run]
 ```
@@ -43,9 +43,9 @@ one env pull --env staging       # pull staging vars for all projects
 
 The global output flag is `-o / --output`, with `json`, `yaml`, or `text`.
 
-> There is no `one env init` subcommand today. Infisical project binding is attempted by `one create --env-provider infisical`. If profile, network, or permissions were not ready during create, the first `set/get/list/pull` retries lazy auto-bind.
+> There is no `one env init` subcommand today. Infisical project binding is attempted by `one create --env-provider infisical`. If login, network, or permissions were not ready during create, the first `set/get/list/pull` retries lazy auto-bind.
 
-Machine-level Infisical credentials are configured with [`one configure add env/infisical`](/en/docs/cli-overview/#machine-profiles). They do not go into the manifest.
+Machine-level Infisical credentials are configured with [`one login`](/en/docs/login/). They do not go into the manifest.
 
 ## Interactive Mode
 
@@ -108,8 +108,8 @@ Output schema: `one-cli/env-set/v1`
 Read one key:
 
 ```bash
-one env get DATABASE_URL --env dev -p api
-DB_URL=$(one env get DATABASE_URL --env dev -p api -o json | jq -r .value)
+one env get DATABASE_URL --env dev -p api --reveal
+DB_URL=$(one env get DATABASE_URL --env dev -p api -o json | jq -r .value) --reveal
 ```
 
 Output schema: `one-cli/env-get/v1`
@@ -188,8 +188,8 @@ Workspace env backend lives in `one.manifest.json#domains.env`; environments liv
   "domains": {
     "env": {
       "kind": "infisical",
-      "profile": "work",
       "config": {
+        "siteUrl": "https://app.infisical.com",
         "projectId": "...",
         "projectName": "my-workspace",
         "rootPath": "/"
@@ -218,18 +218,18 @@ Project path overrides live in `projects[].domains.env`:
 }
 ```
 
-Values and local Profile names never go into the Manifest. The Manifest records the Backend, folder path, and key names; machine Profile definitions and environment-aware bindings stay under `~/.config/one/`.
+Values never enter the Manifest. It records project identity, instance URL, folder paths, and key names. Authentication uses the single browser session in the system keyring.
 
 ## Credential Safety
 
-`one configure add env/infisical` writes `~/.config/one/config.json` and `~/.config/one/credentials.json` with mode `0600`. Do not put client id or client secret in the repo; inject them through your CI secret store.
+Use `one login`; the token lives only in the system keyring, outside project and ordinary configuration files.
 
 ## Common Errors
 
 | Code | Recovery |
 |---|---|
-| `INFISICAL_NOT_CONFIGURED` | Confirm the workspace uses `--env-provider infisical` and has a default `env/infisical` profile |
-| `INFISICAL_AUTH_MISSING` | Re-run `one configure add env/infisical --profile work ... --use` |
+| `INFISICAL_NOT_CONFIGURED` | Confirm the workspace uses `--env-provider infisical` and you have signed in with `one login` |
+| `INFISICAL_AUTH_MISSING` | Re-run `one login` |
 | `INFISICAL_AUTH_FAILED` | Regenerate the client secret in Infisical |
 | `INFISICAL_PROJECT_NAME_TAKEN` | Change `domains.env.config.projectName` and rerun an env command to trigger lazy bind |
 | `INFISICAL_PROJECT_CREATE_FORBIDDEN` | Grant admin role to the machine identity, or manually create the project and fill `domains.env.config.projectId` |
@@ -245,3 +245,8 @@ Full table: [Error codes](/en/docs/error-codes/).
 
 - [Environment variables guide](/en/tutorials/env-vars/) — mental model and complete workflow
 - [`one create`](/en/docs/create/) — use `--env-provider infisical` during workspace creation
+
+
+## Global variables
+
+Global variables are independent of workspaces. Select storage with `one env bind --global`, browse metadata with `one env list --global --env dev --path /`, and inject an explicit scope with `one run --global --env dev --path /folder -- command`. See [login and global variables](/en/docs/login/) for commands and security boundaries.

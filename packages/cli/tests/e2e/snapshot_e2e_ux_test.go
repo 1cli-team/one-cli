@@ -49,7 +49,7 @@ func TestSnapshot_E2E_HelpDailyAndCompleteCatalogues(t *testing.T) {
 	if code != 0 || stderr != "" {
 		t.Fatalf("one --help failed: exit=%d stderr=%q", code, stderr)
 	}
-	for _, command := range []string{"create", "add", "dev", "build", "env", "configure"} {
+	for _, command := range []string{"create", "add", "dev", "build", "env", "login"} {
 		if !strings.Contains(daily, "  "+command) {
 			t.Errorf("daily help missing %q:\n%s", command, daily)
 		}
@@ -64,7 +64,7 @@ func TestSnapshot_E2E_HelpDailyAndCompleteCatalogues(t *testing.T) {
 	if code != 0 || stderr != "" {
 		t.Fatalf("one help --all failed: exit=%d stderr=%q", code, stderr)
 	}
-	for _, command := range []string{"create", "add", "dev", "build", "env", "configure", "ci", "templates", "run", "serve"} {
+	for _, command := range []string{"create", "add", "dev", "build", "env", "login", "ci", "templates", "run", "serve"} {
 		if !strings.Contains(all, "  "+command) {
 			t.Errorf("complete help missing %q:\n%s", command, all)
 		}
@@ -197,17 +197,13 @@ func TestSnapshot_E2E_EnvSummaryYAMLKeepsStableProtocolFields(t *testing.T) {
 	}
 }
 
-func TestSnapshot_E2E_ConfigureSummaryAndBilingualHelp(t *testing.T) {
+func TestSnapshot_E2E_RemovedConfigureAndBilingualHelp(t *testing.T) {
 	tmp := t.TempDir()
 	isolateHome(t, tmp)
 
-	stdout, stderr, code := runBinaryIn(t, tmp, "configure", "-o", "json")
-	if code != 0 || stderr != "" {
-		t.Fatalf("configure summary failed: exit=%d stderr=%q", code, stderr)
-	}
-	summary := mustParseJSON(t, stdout)
-	if summary["schema"] != "one-cli/configure-summary/v1" || len(summary["connections"].([]any)) != 0 {
-		t.Fatalf("unexpected configure summary: %v", summary)
+	_, _, code := runBinaryIn(t, tmp, "configure", "-o", "json")
+	if code == 0 {
+		t.Fatal("removed configure command still accepted")
 	}
 
 	t.Setenv("LC_ALL", "zh_CN.UTF-8")

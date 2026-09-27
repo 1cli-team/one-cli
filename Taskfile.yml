@@ -314,8 +314,8 @@ tasks:
       Dashboard on http://localhost:5173. Open that Vite URL directly.
 
       Workspace and Project data comes from the checked-in Dashboard fixture.
-      Profile CRUD still reads and writes this machine's real One config;
-      Profile bindings are real and scoped to the fixture Workspace root.
+      Login and global-variable operations use the real local Infisical session.
+      Workspace configuration is scoped to the fixture Workspace root.
 
       Both processes stop together when you press Ctrl-C.
     deps: [sync-bundled, sync-web]
@@ -330,7 +330,7 @@ tasks:
   dev:dashboard:
     env:
       VITE_DEV_API_TARGET: http://127.0.0.1:5174
-      VITE_DEV_DATA_MODE: fixture-live-profiles
+      VITE_DEV_DATA_MODE: fixture-live-session
     cmds:
       - pnpm --filter one-serve-web dev
 

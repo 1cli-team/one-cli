@@ -5,7 +5,7 @@ description: 启动全部可开发项目，或只启动一个项目。
 
 `one dev` 从 manifest 读取每个项目的开发命令，并用 One CLI 内置 supervisor 运行。
 
-启用 mise 的 workspace 会自动在每个项目的 mise 工具环境中运行开发命令，仍然使用 `one dev` / `one dev web`，无需增加 runtime 参数。日志前缀、项目选择和整组服务的停止行为继续由原有 supervisor 负责。mise 的安装与旧项目启用见 [`one configure mise`](/zh/docs/configure/#mise-工作区工具配置)。
+启用 mise 的 workspace 会自动在每个项目的 mise 工具环境中运行开发命令，仍然使用 `one dev` / `one dev web`，无需增加 runtime 参数。日志前缀、项目选择和整组服务的停止行为继续由原有 supervisor 负责。mise 的安装与旧项目启用见 [`one init mise`](/zh/docs/login/#mise-工作区工具配置)。
 
 ## 用法
 

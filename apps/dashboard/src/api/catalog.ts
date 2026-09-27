@@ -37,7 +37,6 @@ export function useBackendCatalog() {
 		return {
 			byID,
 			byDomain,
-			configurable: backends.filter((backend) => backend.profile.configurable),
 		};
 	}, [backends]);
 

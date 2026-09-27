@@ -1,3 +1,4 @@
+import { getSession, sessionKey } from "@/api/session";
 import {
 	Copy,
 	Eye,
@@ -10,7 +11,7 @@ import {
 	Trash2,
 } from "lucide-react";
 import type React from "react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import useSWR from "swr";
 import {
@@ -92,6 +93,8 @@ export const SecretsManager: React.FC<{
 	const toast = useToast();
 	const [selectedProject, setSelectedProject] = useState("");
 	const project = fixedProject ?? selectedProject;
+	const session = useSWR(sessionKey, getSession, { refreshInterval: 2000 });
+	const requestEpoch = useRef(0);
 	const [revealed, setRevealed] = useState<Record<string, string>>({});
 	const [loadingKey, setLoadingKey] = useState("");
 	const [editor, setEditor] = useState<SecretEditorState | null>(null);
@@ -112,12 +115,22 @@ export const SecretsManager: React.FC<{
 	const showEmpty = !showLoading && !showError && result.data?.keys.length === 0;
 
 	useEffect(() => {
+		requestEpoch.current++;
 		setRevealed({});
 		setEditor(null);
 		setDeleteKey("");
 		setDeleteConfirmation("");
 		setRecoveryError("");
-	}, [environment, project]);
+		return () => {
+			requestEpoch.current++;
+		};
+	}, [
+		environment,
+		project,
+		workspaceEntryId,
+		session.data?.session.userId,
+		session.data?.session.loggedIn,
+	]);
 
 	async function retryList() {
 		if (retrying) return;
@@ -141,6 +154,7 @@ export const SecretsManager: React.FC<{
 	}
 
 	async function toggleReveal(secretKey: string) {
+		const epoch = requestEpoch.current;
 		if (revealed[secretKey] !== undefined) {
 			setRevealed((current) => {
 				const next = { ...current };
@@ -157,7 +171,8 @@ export const SecretsManager: React.FC<{
 				project || undefined,
 				secretKey,
 			);
-			setRevealed((current) => ({ ...current, [secretKey]: secret.value }));
+			if (epoch === requestEpoch.current)
+				setRevealed((current) => ({ ...current, [secretKey]: secret.value }));
 		} catch (error) {
 			showSecretError(toast, t("secrets.revealFailed"), error);
 		} finally {
@@ -166,6 +181,7 @@ export const SecretsManager: React.FC<{
 	}
 
 	async function editSecret(secretKey: string) {
+		const epoch = requestEpoch.current;
 		setLoadingKey(secretKey);
 		try {
 			const secret = await revealSecret(
@@ -174,7 +190,8 @@ export const SecretsManager: React.FC<{
 				project || undefined,
 				secretKey,
 			);
-			setEditor({ mode: "edit", key: secretKey, value: secret.value });
+			if (epoch === requestEpoch.current)
+				setEditor({ mode: "edit", key: secretKey, value: secret.value });
 		} catch (error) {
 			showSecretError(toast, t("secrets.revealFailed"), error);
 		} finally {

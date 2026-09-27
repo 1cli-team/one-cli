@@ -31,10 +31,10 @@ one mise exec -- pnpm exec oxfmt --write package.json
 新工作区自动安装本地 `pre-commit` 和 `commit-msg` 启动器，继续正常使用 `git commit`。克隆已有工作区后，运行一次：
 
 ```bash
-one configure hooks
+one init hooks
 ```
 
-Git 启动器记录本次 One 可执行文件的位置，并通过它解析和运行 mise；不依赖终端的 mise 激活状态。移动或更换 One 安装位置后，可以重新执行 `one configure hooks`。
+Git 启动器记录本次 One 可执行文件的位置，并通过它解析和运行 mise；不依赖终端的 mise 激活状态。移动或更换 One 安装位置后，可以重新执行 `one init hooks`。
 
 ## 默认检查
 
@@ -62,8 +62,8 @@ Git 启动器记录本次 One 可执行文件的位置，并通过它解析和�
 ## 迁移旧工作区
 
 ```bash
-one configure hooks --dry-run -o json
-one configure hooks
+one init hooks --dry-run -o json
+one init hooks
 one mise exec -- pnpm install
 ```
 

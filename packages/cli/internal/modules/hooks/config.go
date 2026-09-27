@@ -113,7 +113,7 @@ func PlanFiles(p *fsutil.FilePlan, m *workspace.Manifest) error {
 	}
 	b.WriteString("}\n\nhooks {\n  [\"pre-commit\"] {\n    fix = false\n    stage = false\n    stash = \"git\"\n  }\n  [\"commit-msg\"] {\n    steps {\n      [\"conventional-commit\"] {\n        check = new Command { argv = List(\"hk\", \"util\", \"check-conventional-commit\", \"{{commit_msg_file}}\") }\n      }\n    }\n  }\n}\n")
 	body := []byte(b.String())
-	after := []byte(fmt.Sprintf("%s%x\n// Customize hk.pkl; refresh generated defaults with one configure hooks.\n%s", configHeader, sha256.Sum256(body), body))
+	after := []byte(fmt.Sprintf("%s%x\n// Customize hk.pkl; refresh generated defaults with one init hooks.\n%s", configHeader, sha256.Sum256(body), body))
 	return p.Set(workspace.HooksConfigFilename, after, 0o644)
 }
 

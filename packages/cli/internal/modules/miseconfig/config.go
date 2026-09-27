@@ -342,7 +342,7 @@ func (p *Plan) add(rel string, value config) error {
 	if err != nil {
 		return err
 	}
-	after := []byte(fmt.Sprintf("%s%x\n# Edit user overrides in mise.toml; refresh with one configure mise.\n%s", header, sha256.Sum256(body), body))
+	after := []byte(fmt.Sprintf("%s%x\n# Edit user overrides in mise.toml; refresh with one init mise.\n%s", header, sha256.Sum256(body), body))
 	if !bytes.Equal(before, after) {
 		p.Changes = append(p.Changes, Change{Path: rel, Before: string(before), After: string(after)})
 	}

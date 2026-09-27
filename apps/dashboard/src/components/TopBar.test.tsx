@@ -4,7 +4,6 @@ import { MemoryRouter } from "react-router-dom";
 import { SWRConfig } from "swr";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { applyManifestDraft, previewManifestDraft } from "@/api/manifest";
-import { switchWorkspaceEnvironmentBackend } from "@/api/workspace";
 import { workspacesKey } from "@/api/workspaces";
 import { ManifestSaveControl, TopBar } from "@/components/TopBar";
 import { useManifestDraftStore } from "@/features/manifest-draft/manifest-draft-store";
@@ -15,7 +14,6 @@ vi.mock("@/api/manifest", () => ({
 	applyManifestDraft: vi.fn(),
 	previewManifestDraft: vi.fn(),
 }));
-vi.mock("@/api/workspace", () => ({ switchWorkspaceEnvironmentBackend: vi.fn() }));
 
 const emptyRegistry: WorkspacesResponse = {
 	schema: "one-cli/workspaces/v1",
@@ -145,16 +143,6 @@ describe("TopBar and manifest review", () => {
 	});
 
 	it("reviews and publishes a Workspace environment backend draft", async () => {
-		vi.mocked(switchWorkspaceEnvironmentBackend).mockResolvedValue({
-			schema: "one-cli/workspace-profile/v1",
-			root: "/workspace/demo",
-			environment: "dev",
-			revision: "sha256:next",
-			domain: "env",
-			backend: "dotenv",
-			configurable: false,
-			selectedProfile: "",
-		});
 		useManifestDraftStore.getState().stageWorkspaceSection({
 			entryId: "demo-entry",
 			revision: "sha256:base",
@@ -181,26 +169,14 @@ describe("TopBar and manifest review", () => {
 
 		await user.click(within(dialog).getByRole("button", { name: "Save to manifest" }));
 		await waitFor(() =>
-			expect(switchWorkspaceEnvironmentBackend).toHaveBeenCalledWith(
-				"dotenv",
-				"sha256:base",
+			expect(applyManifestDraft).toHaveBeenCalledWith(
+				{ revision: "sha256:base", workspace: { environment: { backend: "dotenv" } }, changes: [] },
 				"demo-entry",
-				"dev",
 			),
 		);
-		expect(applyManifestDraft).not.toHaveBeenCalled();
 	});
 
-	it("rebases remaining Project changes after a successful Backend switch", async () => {
-		vi.mocked(switchWorkspaceEnvironmentBackend).mockResolvedValue({
-			schema: "one-cli/workspace-profile/v1",
-			root: "/workspace/demo",
-			environment: "dev",
-			revision: "sha256:after-switch",
-			domain: "env",
-			backend: "dotenv",
-			configurable: false,
-		});
+	it("retains the entire draft when atomic publication fails", async () => {
 		vi.mocked(applyManifestDraft).mockRejectedValue({
 			status: 500,
 			code: "ONE_CLI_ERROR",
@@ -236,7 +212,8 @@ describe("TopBar and manifest review", () => {
 		expect(await screen.findByText("Project publication failed.")).toBeDefined();
 		expect(applyManifestDraft).toHaveBeenCalledWith(
 			{
-				revision: "sha256:after-switch",
+				revision: "sha256:base",
+				workspace: { environment: { backend: "dotenv" } },
 				changes: [
 					{
 						project: "web",
@@ -247,8 +224,8 @@ describe("TopBar and manifest review", () => {
 			"demo-entry",
 		);
 		const remaining = useManifestDraftStore.getState().drafts["demo-entry"];
-		expect(remaining.revision).toBe("sha256:after-switch");
-		expect(remaining.workspace).toBeUndefined();
+		expect(remaining.revision).toBe("sha256:base");
+		expect(remaining.workspace).toEqual({ environment: { backend: "dotenv" } });
 		expect(Object.keys(remaining.changes)).toEqual(["web"]);
 	});
 });

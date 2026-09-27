@@ -4,7 +4,9 @@ package manifest
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"net/url"
 	"strings"
 	"sync"
 
@@ -68,7 +70,10 @@ type ProjectManifestPatch struct {
 }
 
 type WorkspaceEnvironmentPatch struct {
-	Backend string `json:"backend"`
+	Backend     string  `json:"backend"`
+	ProjectID   *string `json:"projectId,omitempty"`
+	ProjectName *string `json:"projectName,omitempty"`
+	SiteURL     *string `json:"siteUrl,omitempty"`
 }
 
 type WorkspaceManifestPatch struct {
@@ -76,8 +81,9 @@ type WorkspaceManifestPatch struct {
 }
 
 type ApplyManifestInput struct {
-	Revision string                 `json:"revision"`
-	Changes  []ProjectManifestPatch `json:"changes"`
+	Workspace *WorkspaceManifestPatch `json:"workspace,omitempty"`
+	Revision  string                  `json:"revision"`
+	Changes   []ProjectManifestPatch  `json:"changes"`
 }
 
 type ApplyManifestResult struct {
@@ -110,7 +116,8 @@ func (s *Service) ApplyManifestDraft(
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	if strings.TrimSpace(input.Revision) == "" || len(input.Changes) == 0 {
+	hasWorkspaceChange := input.Workspace != nil && input.Workspace.Environment != nil
+	if strings.TrimSpace(input.Revision) == "" || (!hasWorkspaceChange && len(input.Changes) == 0) {
 		return ApplyManifestResult{}, fmt.Errorf("%w: revision and at least one change are required", ErrInvalidInput)
 	}
 	manifest, currentRevision, err := workspacecore.ReadManifestSnapshot(root)
@@ -121,11 +128,19 @@ func (s *Service) ApplyManifestDraft(
 		return ApplyManifestResult{}, &ManifestConflict{Expected: input.Revision, Current: currentRevision}
 	}
 
+	if hasWorkspaceChange {
+		if err := applyWorkspaceEnvironmentPatch(manifest, input.Workspace.Environment); err != nil {
+			return ApplyManifestResult{}, err
+		}
+	}
 	applied, err := s.applyProjectChanges(ctx, manifest, input.Changes)
 	if err != nil {
 		return ApplyManifestResult{}, err
 	}
 
+	if hasWorkspaceChange {
+		applied++
+	}
 	if err := workspacecore.WriteManifest(root, manifest); err != nil {
 		return ApplyManifestResult{}, err
 	}
@@ -193,6 +208,36 @@ func applyWorkspaceEnvironmentPatch(
 	}
 	if manifest.Domains.Env == nil {
 		manifest.Domains.Env = &workspacecore.BackendRef{}
+	}
+	if patch.ProjectID != nil {
+		if backend != workspacecore.EnvBackendInfisical {
+			return fmt.Errorf("%w: project binding requires Infisical", ErrInvalidInput)
+		}
+		if strings.TrimSpace(*patch.ProjectID) == "" {
+			return fmt.Errorf("%w: projectId is required", ErrInvalidInput)
+		}
+		config := map[string]any{}
+		if len(manifest.Domains.Env.Config) > 0 {
+			if err := json.Unmarshal(manifest.Domains.Env.Config, &config); err != nil {
+				return err
+			}
+		}
+		config["projectId"] = *patch.ProjectID
+		if patch.ProjectName != nil {
+			config["projectName"] = *patch.ProjectName
+		}
+		if patch.SiteURL != nil {
+			u, err := url.Parse(*patch.SiteURL)
+			if err != nil || u.Host == "" || u.User != nil || u.RawQuery != "" || u.Fragment != "" || u.Path != "" || (u.Scheme != "https" && !(u.Scheme == "http" && (u.Hostname() == "localhost" || u.Hostname() == "127.0.0.1" || u.Hostname() == "::1"))) {
+				return fmt.Errorf("%w: invalid Infisical instance URL", ErrInvalidInput)
+			}
+			config["siteUrl"] = u.String()
+		}
+		data, err := json.Marshal(config)
+		if err != nil {
+			return err
+		}
+		manifest.Domains.Env.Config = data
 	}
 	manifest.Domains.Env.Kind = backend
 	return nil

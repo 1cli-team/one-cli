@@ -31,7 +31,7 @@ func Domains() []Domain {
 }
 
 // BackendID is the canonical identity of one backend. String renders the
-// compatibility pair used by profile storage and configure routes.
+// transport identity used by the backend catalog.
 type BackendID struct {
 	Domain Domain `json:"domain"`
 	Name   string `json:"name"`
@@ -83,7 +83,6 @@ type RequirementKind string
 const (
 	RequirementBinary     RequirementKind = "binary"
 	RequirementCapability RequirementKind = "capability"
-	RequirementProfile    RequirementKind = "profile"
 )
 
 // Requirement is a declarative coeffect. The first implementation validates
@@ -94,52 +93,7 @@ type Requirement struct {
 	Optional bool            `json:"optional,omitempty"`
 }
 
-// FieldType is the transport-neutral form control for a profile field.
-type FieldType string
-
-const (
-	FieldString  FieldType = "string"
-	FieldSecret  FieldType = "secret"
-	FieldBoolean FieldType = "boolean"
-)
-
-// FieldSpec describes a leaf in the existing typed profile JSON shape. Path
-// uses slash-separated JSON keys so credentials remain nested on the wire;
-// InputName is the stable transport input name used by CLI flags and other
-// clients that need a non-localized field identifier.
-type FieldSpec struct {
-	Path        string    `json:"path"`
-	InputName   string    `json:"input_name"`
-	Type        FieldType `json:"type"`
-	LabelKey    string    `json:"label_key"`
-	Required    bool      `json:"required,omitempty"`
-	Placeholder string    `json:"placeholder,omitempty"`
-	Default     any       `json:"default,omitempty"`
-}
-
-// ProfileType identifies the typed profile shape used by a backend. It is an
-// internal schema discriminator, not a user-facing backend identity. Multiple
-// backends can share one type (for example every S3-compatible backend), which
-// lets profile workflows dispatch once per shape instead of once per backend.
-type ProfileType string
-
-const (
-	ProfileTypeDotenv    ProfileType = "dotenv"
-	ProfileTypeInfisical ProfileType = "infisical"
-)
-
-// ProfileSpec describes whether and how a machine profile is configured for
-// a backend. It contains schema metadata only, never profile values.
-type ProfileSpec struct {
-	Configurable bool        `json:"configurable"`
-	Type         ProfileType `json:"-"`
-	Fields       []FieldSpec `json:"fields,omitempty"`
-}
-
-// ProjectFieldType is the transport-neutral control used to edit one
-// backend-owned value in projects[i].domains.<domain>.config. It is separate
-// from FieldType because project settings are safe workspace metadata, while
-// profile fields may contain machine-local credentials.
+// ProjectFieldType describes safe workspace metadata.
 type ProjectFieldType string
 
 const (
@@ -176,13 +130,12 @@ type BackendSpec struct {
 	Capabilities []Capability  `json:"capabilities"`
 	Traits       []Trait       `json:"traits,omitempty"`
 	Requirements []Requirement `json:"requirements,omitempty"`
-	Profile      ProfileSpec   `json:"profile"`
 	Project      ProjectSpec   `json:"project"`
 }
 
 // MarshalJSON exposes the normalized ID components without storing a second,
 // potentially inconsistent copy on BackendSpec. Pair remains the compatibility
-// identity used by profile storage; domain and name make the catalog directly
+// identity used by the backend catalog; domain and name make the catalog directly
 // consumable by transports such as the Dashboard.
 func (s BackendSpec) MarshalJSON() ([]byte, error) {
 	type wireBackendSpec struct {
@@ -192,7 +145,6 @@ func (s BackendSpec) MarshalJSON() ([]byte, error) {
 		Capabilities []Capability  `json:"capabilities"`
 		Traits       []Trait       `json:"traits,omitempty"`
 		Requirements []Requirement `json:"requirements,omitempty"`
-		Profile      ProfileSpec   `json:"profile"`
 		Project      ProjectSpec   `json:"project"`
 	}
 	return json.Marshal(wireBackendSpec{
@@ -202,7 +154,6 @@ func (s BackendSpec) MarshalJSON() ([]byte, error) {
 		Capabilities: s.Capabilities,
 		Traits:       s.Traits,
 		Requirements: s.Requirements,
-		Profile:      s.Profile,
 		Project:      s.Project,
 	})
 }
