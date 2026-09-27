@@ -52,7 +52,7 @@ One CLI is useful when you want to:
 
 - start from a clean project foundation
 - add a frontend, backend, docs site, mobile app, desktop app, or library later
-- keep local settings and deployment choices out of random notes
+- keep environment configuration and local settings organized
 - let an AI assistant help without guessing how the project is arranged
 - use the same simple commands across different kinds of projects
 
@@ -91,7 +91,6 @@ one add nestjs-api --name api
 | `one add <starter>` | Add another app, service, docs site, or library |
 | `one dev [project]` | Run every project, or one selected project, locally |
 | `one build [project]` | Build every buildable project, or one selected project |
-| `one deploy [project]` | Choose a target on first deploy, then deploy |
 | `one env` | Review and manage environment variables |
 | `one configure` | Manage local connections and preferences |
 | `one serve` | Inspect Workspaces and Projects; manage local Profiles and bindings |
@@ -123,7 +122,7 @@ The assistant can read `one.manifest.json` and project README files, then use On
 
 ## Local Settings
 
-Some projects need environment values, deployment accounts, or image registry settings. One CLI keeps those in your local user config, not inside the project files you share with the team.
+One CLI manages local dotenv files and Infisical environment configuration. Infisical credentials stay in your local user config, outside the project files you share with the team.
 
 For a guided browser-based setup:
 
@@ -139,7 +138,7 @@ Profile definitions and credentials live in `~/.config/one/config.json` and `cre
 
 Every One CLI project has a `one.manifest.json` file at the root. Most users do not need to edit it by hand.
 
-Think of it as the project map. It records which parts exist, where they live, and which starter created them. One CLI reads it when you add, run, deploy, or inspect parts of the project. `one serve` writes it only after an explicit reviewed, revision-checked Dashboard action; other repository changes stay in the normal code-review workflow.
+Think of it as the project map. It records which parts exist, where they live, and which starter created them. One CLI reads it when you add, run, build, or inspect parts of the project. `one serve` writes it only after an explicit reviewed, revision-checked Dashboard action; other repository changes stay in the normal code-review workflow.
 
 ## Repository Layout
 

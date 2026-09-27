@@ -39,12 +39,12 @@ func cfgPaths(tmp string) (cfg, creds string) {
 // the setDefault flag.
 func TestUpsert_FreshEntry(t *testing.T) {
 	withIsolatedConfig(t)
-	updated, err := Upsert(DomainContainer, "docker", "acr-prod", Profile{
-		Backend: "docker",
-		Container: &ContainerProfile{
-			Registry: "registry.example.com",
-			Credentials: &ContainerCredentials{
-				Username: "u", Password: "p",
+	updated, err := Upsert(DomainEnv, "infisical", "work", Profile{
+		Backend: "infisical",
+		Infisical: &InfisicalProfile{
+			SiteURL: "https://infisical.example.test",
+			Credentials: &InfisicalCredentials{
+				ClientID: "u", ClientSecret: "p",
 			},
 		},
 	}, false)
@@ -58,15 +58,15 @@ func TestUpsert_FreshEntry(t *testing.T) {
 	if err != nil {
 		t.Fatalf("load: %v", err)
 	}
-	if cfg.ContainerDocker.Default != "acr-prod" {
-		t.Errorf("auto-default rule failed: default=%q", cfg.ContainerDocker.Default)
+	if cfg.EnvInfisical.Default != "work" {
+		t.Errorf("auto-default rule failed: default=%q", cfg.EnvInfisical.Default)
 	}
-	if cfg.ContainerDocker.Profiles["acr-prod"].Registry != "registry.example.com" {
-		t.Errorf("registry not persisted: %#v", cfg.ContainerDocker.Profiles["acr-prod"])
+	if cfg.EnvInfisical.Profiles["work"].SiteURL != "https://infisical.example.test" {
+		t.Errorf("registry not persisted: %#v", cfg.EnvInfisical.Profiles["work"])
 	}
 	// Credentials must come back via Load → mergeCredentials.
-	if cred := cfg.ContainerDocker.Profiles["acr-prod"].Credentials; cred == nil ||
-		cred.Username != "u" || cred.Password != "p" {
+	if cred := cfg.EnvInfisical.Profiles["work"].Credentials; cred == nil ||
+		cred.ClientID != "u" || cred.ClientSecret != "p" {
 		t.Errorf("credentials not merged from credentials.json: %+v", cred)
 	}
 }
@@ -120,40 +120,36 @@ func TestUpsert_NameAcrossBackendsDoesNotCollide(t *testing.T) {
 	}, false); err != nil {
 		t.Fatalf("infisical: %v", err)
 	}
-	if _, err := Upsert(DomainContainer, "docker", "work", Profile{
-		Backend: "docker",
-		Container: &ContainerProfile{
-			Registry:    "registry.example.com",
-			Credentials: &ContainerCredentials{Username: "u", Password: "p"},
-		},
+	if _, err := Upsert(DomainEnv, "dotenv", "work", Profile{
+		Backend: "dotenv", Dotenv: &DotenvProfile{},
 	}, false); err != nil {
-		t.Fatalf("docker: %v", err)
+		t.Fatalf("dotenv: %v", err)
 	}
 	cfg, _, _ := Load()
 	if cfg.EnvInfisical.Profiles["work"].SiteURL != "https://app.infisical.com" {
 		t.Errorf("infisical work lost")
 	}
-	if cfg.ContainerDocker.Profiles["work"].Registry != "registry.example.com" {
-		t.Errorf("docker work lost")
+	if _, exists := cfg.EnvDotenv.Profiles["work"]; !exists {
+		t.Errorf("dotenv work lost")
 	}
 }
 
 // SaveAt + LoadAt round-trip Container profile shape, including the
 // AWS-style file split.
-func TestContainerProfile_Roundtrip(t *testing.T) {
+func TestInfisicalProfile_Roundtrip(t *testing.T) {
 	tmp := withIsolatedConfig(t)
 	cfgPath, credPath := cfgPaths(tmp)
 	cfg := &Config{Version: SchemaVersion}
-	cfg.ContainerDocker.Profiles = map[string]ContainerProfile{
-		"acr-prod": {
-			Registry: "registry.example.com",
-			Credentials: &ContainerCredentials{
-				Username: "ram-ak",
-				Password: "ram-secret",
+	cfg.EnvInfisical.Profiles = map[string]InfisicalProfile{
+		"work": {
+			SiteURL: "https://infisical.example.test",
+			Credentials: &InfisicalCredentials{
+				ClientID:     "ram-ak",
+				ClientSecret: "ram-secret",
 			},
 		},
 	}
-	cfg.ContainerDocker.Default = "acr-prod"
+	cfg.EnvInfisical.Default = "work"
 	if err := SaveAt(cfg, cfgPath, credPath); err != nil {
 		t.Fatalf("save: %v", err)
 	}
@@ -161,11 +157,11 @@ func TestContainerProfile_Roundtrip(t *testing.T) {
 	if err != nil {
 		t.Fatalf("load: %v", err)
 	}
-	cp := got.ContainerDocker.Profiles["acr-prod"]
-	if cp.Registry != "registry.example.com" {
+	cp := got.EnvInfisical.Profiles["work"]
+	if cp.SiteURL != "https://infisical.example.test" {
 		t.Errorf("fields lost: %#v", cp)
 	}
-	if cp.Credentials == nil || cp.Credentials.Username != "ram-ak" || cp.Credentials.Password != "ram-secret" {
+	if cp.Credentials == nil || cp.Credentials.ClientID != "ram-ak" || cp.Credentials.ClientSecret != "ram-secret" {
 		t.Errorf("credentials lost: %#v", cp.Credentials)
 	}
 	for _, p := range []string{cfgPath, credPath} {
@@ -372,11 +368,8 @@ func TestRemove_RejectsEnvironmentBindingsThenCleansLegacyAfterUnbind(t *testing
 		}
 	}
 	seedInfisicalProfiles(t, "removed", "kept")
-	if _, err := Upsert(DomainDeploy, "vercel", "removed", Profile{
-		Backend: "vercel",
-		Vercel: &VercelProfile{Credentials: &VercelCredentials{
-			APIToken: "same-name-other-section",
-		}},
+	if _, err := Upsert(DomainEnv, "dotenv", "removed", Profile{
+		Backend: "dotenv", Dotenv: &DotenvProfile{},
 	}, false); err != nil {
 		t.Fatal(err)
 	}
@@ -405,7 +398,7 @@ func TestRemove_RejectsEnvironmentBindingsThenCleansLegacyAfterUnbind(t *testing
 	}
 	if err := BindEnvironmentProfile(
 		"first", "first", firstRoot, "web", "preview",
-		DomainDeploy, "vercel", "removed",
+		DomainEnv, "dotenv", "removed",
 	); err != nil {
 		t.Fatal(err)
 	}
@@ -428,7 +421,7 @@ func TestRemove_RejectsEnvironmentBindingsThenCleansLegacyAfterUnbind(t *testing
 		}
 	}
 	if err := BindWorkspaceProfile(
-		"first", "first", firstRoot, "web", DomainDeploy, "vercel", "removed",
+		"first", "first", firstRoot, "web", DomainEnv, "dotenv", "removed",
 	); err != nil {
 		t.Fatal(err)
 	}
@@ -533,7 +526,7 @@ func TestRemove_RejectsEnvironmentBindingsThenCleansLegacyAfterUnbind(t *testing
 		t.Fatalf("unrelated environment binding = %q, err = %v", kept, err)
 	}
 	otherSection, err := EnvironmentProfileBinding(
-		firstRoot, "web", "preview", DomainDeploy, "vercel",
+		firstRoot, "web", "preview", DomainEnv, "dotenv",
 	)
 	if err != nil || otherSection != "removed" {
 		t.Fatalf("same name in another typed section = %q, err = %v", otherSection, err)
@@ -546,7 +539,7 @@ func TestRemove_RejectsEnvironmentBindingsThenCleansLegacyAfterUnbind(t *testing
 	if _, exists := cfg.EnvInfisical.Profiles["removed"]; exists {
 		t.Fatal("removed Profile definition remains")
 	}
-	if _, exists := cfg.DeployVercel.Profiles["removed"]; !exists {
+	if _, exists := cfg.EnvDotenv.Profiles["removed"]; !exists {
 		t.Fatal("same Profile name in another typed section was removed")
 	}
 	sectionKey := SectionKey(DomainEnv, "infisical")
@@ -563,7 +556,7 @@ func TestRemove_RejectsEnvironmentBindingsThenCleansLegacyAfterUnbind(t *testing
 	if cfg.Workspaces["first"].Projects["api"].Profiles[sectionKey] != "kept" {
 		t.Fatalf("unrelated legacy binding was removed: %#v", cfg.Workspaces["first"])
 	}
-	if cfg.Workspaces["first"].Projects["web"].Profiles[SectionKey(DomainDeploy, "vercel")] != "removed" {
+	if cfg.Workspaces["first"].Projects["web"].Profiles[SectionKey(DomainEnv, "dotenv")] != "removed" {
 		t.Fatalf("same-name legacy binding in another section was removed: %#v", cfg.Workspaces["first"])
 	}
 	if cfg.Workspaces["second"].Root != secondRoot {

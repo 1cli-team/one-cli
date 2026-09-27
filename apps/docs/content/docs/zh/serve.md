@@ -26,7 +26,7 @@ one serve [options]
 
 ## 交互模式
 
-`one serve` 没有终端交互式向导。浏览器可以把 Workspace 环境变量 Backend，以及白名单内的 Project 运行、环境、容器和部署配置加入草稿，再统一确认写入 Manifest。Profile 绑定仍是独立的机器本地保存。Workspace 使用 `env/infisical` 时，还可以列出 key，并逐条新增、显示、修改或删除远端值。
+`one serve` 没有终端交互式向导。浏览器可以把 Workspace 环境变量 Backend，以及白名单内的 Project 运行和环境配置加入草稿，再统一确认写入 Manifest。Profile 绑定仍是独立的机器本地保存。Workspace 使用 `env/infisical` 时，还可以列出 key，并逐条新增、显示、修改或删除远端值。
 
 本地人工配置直接运行 `one serve`；脚本、CI、agent 可以用 `--open=false` 获取普通的 loopback URL 并直接调用 API。由于 API 能读取和修改敏感配置，不要在存在不可信本地进程的共享机器上运行它。
 
@@ -170,9 +170,9 @@ UI 用什么，你就能用什么。所有路由都需要 Host 头匹配；mutat
 
 复数 Workspace API 只接受不透明的 `entryId`。服务端从注册表解析路径，并在每次读取或 mutation 前重新校验 Manifest；客户端提交的任意 `root` 不会参与路径选择。Manifest 发布接收类型化 patch，而不是整份替换文档。密钥 folder 由服务端根据 Workspace/Project 推导，浏览器不能提交任意 path。空 Profile 字符串会删除该层直接绑定，恢复 fallback 解析。
 
-旧的 Project/Environment/Deploy/Container settings PUT 路径（包括 `/api/workspace/...` 和 `/api/workspaces/{entryId}/...`）仍为旧客户端保留，但始终返回 `409 SERVE_REPOSITORY_READ_ONLY`；代码库写入使用带 revision 校验的 `/manifest` 与 `/environment/backend` 路由。复制 Workspace 导致两个有效路径共用一个 Manifest ID 时，两条记录都会保留并标记冲突：允许只读检查，所有 mutation 在冲突解决前返回 `409 Conflict`。
+旧的 Project/Environment settings PUT 路径（包括 `/api/workspace/...` 和 `/api/workspaces/{entryId}/...`）返回 `409 SERVE_REPOSITORY_READ_ONLY`；代码库写入使用带 revision 校验的 `/manifest` 与 `/environment/backend` 路由。Deploy/Container settings 路由已移除。复制 Workspace 导致两个有效路径共用一个 Manifest ID 时，允许只读检查，所有 mutation 在冲突解决前返回 `409 Conflict`。
 
-合法 `(domain, backend)` 包括：`env/infisical`、`env/dotenv`、`deploy/aws-s3`、`deploy/aliyun-oss`、`deploy/tencent-cos`、`deploy/minio`、`deploy/rustfs`、`deploy/r2`、`deploy/kustomize`、`deploy/vercel`、`deploy/cloudflare`、`deploy/edgeone`、`container/docker`。其它组合返回 404。
+Catalog 包含 `env/infisical` 和 `env/dotenv`，其中只有 Infisical 使用凭据 Profile。其它 backend 组合返回 404。
 
 curl 探活示例（替换 `<port>` 为 stdout 信封里的端口）：
 

@@ -11,7 +11,7 @@ EXAMPLES
   one create demo --yes
 
 TIPS
-Creates an empty workspace only. Run one add when you need a project, then choose a deployment target on the first deployment.
+Creates an empty workspace. Run one add to add a project.
 
 COMMON OPTIONS
   -n, --name <value>       Workspace name (default: target directory name)

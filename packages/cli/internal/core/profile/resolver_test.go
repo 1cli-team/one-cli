@@ -80,45 +80,6 @@ func TestResolve_UnsupportedSource(t *testing.T) {
 	}
 }
 
-func TestResolve_UnsupportedSourceUsesSchemaPolicyForEveryTypedBackend(t *testing.T) {
-	tests := []struct {
-		backend string
-		profile Profile
-	}{
-		{
-			backend: "cloudflare",
-			profile: Profile{
-				Backend:    "cloudflare",
-				Cloudflare: &CloudflareProfile{CredentialSource: SourceKeyring},
-			},
-		},
-		{
-			backend: "edgeone",
-			profile: Profile{
-				Backend: "edgeone",
-				EdgeOne: &EdgeOneProfile{CredentialSource: SourceKeyring},
-			},
-		},
-	}
-
-	for _, test := range tests {
-		t.Run(test.backend, func(t *testing.T) {
-			withIsolatedConfig(t)
-			if _, err := Upsert(DomainDeploy, test.backend, "work", test.profile, false); err != nil {
-				t.Fatalf("seed: %v", err)
-			}
-			_, err := Resolve(ResolveInput{Domain: DomainDeploy, Backend: test.backend})
-			if err == nil {
-				t.Fatal("expected unsupported credential source error")
-			}
-			if cliErr, ok := err.(interface{ ErrorCode() string }); !ok ||
-				cliErr.ErrorCode() != "PROFILE_CREDENTIAL_SOURCE_UNSUPPORTED" {
-				t.Fatalf("expected PROFILE_CREDENTIAL_SOURCE_UNSUPPORTED, got %T %v", err, err)
-			}
-		})
-	}
-}
-
 // PROFILE_NONE_CONFIGURED when no profile / flag / env / manifest provides anything.
 func TestResolve_NoneConfigured(t *testing.T) {
 	withIsolatedConfig(t)
@@ -192,25 +153,25 @@ func TestResolve_WorkspaceBindingOverridesDefault(t *testing.T) {
 func TestResolve_ProjectBindingOverridesWorkspaceBinding(t *testing.T) {
 	withIsolatedConfig(t)
 	for _, n := range []string{"default", "workspace", "project"} {
-		if _, err := Upsert(DomainDeploy, "vercel", n, Profile{
-			Backend: "vercel",
-			Vercel: &VercelProfile{
-				Team:        n,
-				Credentials: &VercelCredentials{APIToken: n},
+		if _, err := Upsert(DomainEnv, "infisical", n, Profile{
+			Backend: "infisical",
+			Infisical: &InfisicalProfile{
+				SiteURL:     n,
+				Credentials: &InfisicalCredentials{ClientID: "fixture-client", ClientSecret: n},
 			},
 		}, n == "default"); err != nil {
 			t.Fatalf("seed %s: %v", n, err)
 		}
 	}
-	if err := BindWorkspaceProfile("ws-demo", "demo", "/tmp/demo", "", DomainDeploy, "vercel", "workspace"); err != nil {
+	if err := BindWorkspaceProfile("ws-demo", "demo", "/tmp/demo", "", DomainEnv, "infisical", "workspace"); err != nil {
 		t.Fatalf("bind workspace: %v", err)
 	}
-	if err := BindWorkspaceProfile("ws-demo", "demo", "/tmp/demo", "web", DomainDeploy, "vercel", "project"); err != nil {
+	if err := BindWorkspaceProfile("ws-demo", "demo", "/tmp/demo", "web", DomainEnv, "infisical", "project"); err != nil {
 		t.Fatalf("bind project: %v", err)
 	}
 	resolved, err := Resolve(ResolveInput{
-		Domain:      DomainDeploy,
-		Backend:     "vercel",
+		Domain:      DomainEnv,
+		Backend:     "infisical",
 		WorkspaceID: "ws-demo",
 		ProjectName: "web",
 	})
@@ -225,32 +186,32 @@ func TestResolve_ProjectBindingOverridesWorkspaceBinding(t *testing.T) {
 func TestUnbindWorkspaceProfileRestoresPrecedenceAndCleansProjectOverride(t *testing.T) {
 	withIsolatedConfig(t)
 	for _, name := range []string{"default", "workspace", "project"} {
-		if _, err := Upsert(DomainDeploy, "vercel", name, Profile{
-			Backend: "vercel",
-			Vercel: &VercelProfile{
-				Team:        name,
-				Credentials: &VercelCredentials{APIToken: "token-" + name},
+		if _, err := Upsert(DomainEnv, "infisical", name, Profile{
+			Backend: "infisical",
+			Infisical: &InfisicalProfile{
+				SiteURL:     name,
+				Credentials: &InfisicalCredentials{ClientID: "fixture-client", ClientSecret: "token-" + name},
 			},
 		}, name == "default"); err != nil {
 			t.Fatalf("seed %s: %v", name, err)
 		}
 	}
 	if err := BindWorkspaceProfile(
-		"ws-demo", "demo", "/tmp/demo", "", DomainDeploy, "vercel", "workspace",
+		"ws-demo", "demo", "/tmp/demo", "", DomainEnv, "infisical", "workspace",
 	); err != nil {
 		t.Fatalf("bind workspace: %v", err)
 	}
 	if err := BindWorkspaceProfile(
-		"ws-demo", "demo", "/tmp/demo", "web", DomainDeploy, "vercel", "project",
+		"ws-demo", "demo", "/tmp/demo", "web", DomainEnv, "infisical", "project",
 	); err != nil {
 		t.Fatalf("bind project: %v", err)
 	}
 
-	if err := UnbindWorkspaceProfile("ws-demo", "web", DomainDeploy, "vercel"); err != nil {
+	if err := UnbindWorkspaceProfile("ws-demo", "web", DomainEnv, "infisical"); err != nil {
 		t.Fatalf("unbind project: %v", err)
 	}
 	resolved, err := Resolve(ResolveInput{
-		Domain: DomainDeploy, Backend: "vercel", WorkspaceID: "ws-demo", ProjectName: "web",
+		Domain: DomainEnv, Backend: "infisical", WorkspaceID: "ws-demo", ProjectName: "web",
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -265,15 +226,15 @@ func TestUnbindWorkspaceProfileRestoresPrecedenceAndCleansProjectOverride(t *tes
 	if _, exists := config.Workspaces["ws-demo"].Projects["web"]; exists {
 		t.Fatal("empty project binding entry was not removed")
 	}
-	if got := config.DeployVercel.Profiles["project"].Credentials; got == nil || got.APIToken != "token-project" {
+	if got := config.EnvInfisical.Profiles["project"].Credentials; got == nil || got.ClientSecret != "token-project" {
 		t.Fatalf("unbind changed profile credentials: %#v", got)
 	}
 
-	if err := UnbindWorkspaceProfile("ws-demo", "", DomainDeploy, "vercel"); err != nil {
+	if err := UnbindWorkspaceProfile("ws-demo", "", DomainEnv, "infisical"); err != nil {
 		t.Fatalf("unbind workspace: %v", err)
 	}
 	resolved, err = Resolve(ResolveInput{
-		Domain: DomainDeploy, Backend: "vercel", WorkspaceID: "ws-demo", ProjectName: "web",
+		Domain: DomainEnv, Backend: "infisical", WorkspaceID: "ws-demo", ProjectName: "web",
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -282,7 +243,7 @@ func TestUnbindWorkspaceProfileRestoresPrecedenceAndCleansProjectOverride(t *tes
 		t.Fatalf("after workspace unbind = %#v, want machine default", resolved)
 	}
 	// Removing the same binding twice is a no-op.
-	if err := UnbindWorkspaceProfile("ws-demo", "", DomainDeploy, "vercel"); err != nil {
+	if err := UnbindWorkspaceProfile("ws-demo", "", DomainEnv, "infisical"); err != nil {
 		t.Fatalf("idempotent unbind: %v", err)
 	}
 }

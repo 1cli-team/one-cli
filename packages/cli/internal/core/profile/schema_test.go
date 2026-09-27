@@ -11,14 +11,14 @@ import (
 func TestSchemaAPIUsesCatalogSpecForTypedAccess(t *testing.T) {
 	t.Parallel()
 
-	spec, ok := catalog.Builtin().Lookup(catalog.DomainContainer, "ghcr")
+	spec, ok := catalog.Builtin().Lookup(catalog.DomainEnv, "infisical")
 	if !ok {
-		t.Fatal("container/ghcr is absent from Catalog")
+		t.Fatal("env/infisical is absent from Catalog")
 	}
-	config := &Config{ContainerGHCR: Section[ContainerProfile]{
+	config := &Config{EnvInfisical: Section[InfisicalProfile]{
 		Default: "work",
-		Profiles: map[string]ContainerProfile{
-			"work": {Namespace: "team", CredentialSource: SourceFile},
+		Profiles: map[string]InfisicalProfile{
+			"work": {SiteURL: "https://example.test", CredentialSource: SourceFile},
 		},
 	}}
 	snapshot, ok := InspectSection(config, spec)
@@ -26,25 +26,25 @@ func TestSchemaAPIUsesCatalogSpecForTypedAccess(t *testing.T) {
 		t.Fatalf("InspectSection() = (%+v, %v)", snapshot, ok)
 	}
 	stored, ok := LookupStored(config, spec, "work")
-	if !ok || stored.Container == nil || stored.Container.Namespace != "team" {
+	if !ok || stored.Infisical == nil || stored.Infisical.SiteURL != "https://example.test" {
 		t.Fatalf("LookupStored() = (%+v, %v)", stored, ok)
 	}
 	if got := CredentialSource(spec, stored); got != SourceFile {
 		t.Fatalf("CredentialSource() = %q, want %q", got, SourceFile)
 	}
 
-	decoded, err := Decode(spec, json.RawMessage(`{"namespace":"next"}`))
+	decoded, err := Decode(spec, json.RawMessage(`{"siteUrl":"https://next.test"}`))
 	if err != nil {
 		t.Fatal(err)
 	}
-	if decoded.Backend != "ghcr" || decoded.Container == nil || decoded.Container.Namespace != "next" {
+	if decoded.Backend != "infisical" || decoded.Infisical == nil || decoded.Infisical.SiteURL != "https://next.test" {
 		t.Fatalf("Decode() = %+v", decoded)
 	}
 	decoded.Backend = "preserved"
-	if err := ReplacePayload(spec, &decoded, json.RawMessage(`{"namespace":"final"}`)); err != nil {
+	if err := ReplacePayload(spec, &decoded, json.RawMessage(`{"siteUrl":"https://final.test"}`)); err != nil {
 		t.Fatal(err)
 	}
-	if decoded.Backend != "preserved" || decoded.Container.Namespace != "final" {
+	if decoded.Backend != "preserved" || decoded.Infisical.SiteURL != "https://final.test" {
 		t.Fatalf("ReplacePayload() = %+v", decoded)
 	}
 }
@@ -137,18 +137,6 @@ func profileForSchemaTest(t *testing.T, spec catalog.BackendSpec) Profile {
 		value.Dotenv = &DotenvProfile{}
 	case catalog.ProfileTypeInfisical:
 		value.Infisical = &InfisicalProfile{}
-	case catalog.ProfileTypeS3:
-		value.S3 = &S3Profile{}
-	case catalog.ProfileTypeKustomize:
-		value.Kustomize = &KustomizeProfile{}
-	case catalog.ProfileTypeVercel:
-		value.Vercel = &VercelProfile{}
-	case catalog.ProfileTypeCloudflare:
-		value.Cloudflare = &CloudflareProfile{}
-	case catalog.ProfileTypeEdgeOne:
-		value.EdgeOne = &EdgeOneProfile{}
-	case catalog.ProfileTypeContainer:
-		value.Container = &ContainerProfile{}
 	default:
 		t.Fatalf("unsupported profile type %q", spec.Profile.Type)
 	}

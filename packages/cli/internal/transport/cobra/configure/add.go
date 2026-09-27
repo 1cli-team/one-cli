@@ -112,12 +112,6 @@ func newAddBackendCmd(profiles *configureapp.ProfileService, spec catalog.Backen
 
 func addLong(spec catalog.BackendSpec) string {
 	profileName := "work"
-	switch spec.Profile.Type {
-	case catalog.ProfileTypeS3, catalog.ProfileTypeContainer:
-		profileName = "prod"
-	case catalog.ProfileTypeKustomize:
-		profileName = "prod-k8s"
-	}
 
 	fields := make([]string, 0, len(spec.Profile.Fields))
 	example := []string{"one configure add " + spec.Pair + " --profile " + profileName}

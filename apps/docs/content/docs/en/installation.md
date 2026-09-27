@@ -116,20 +116,6 @@ Provider credentials are configured once with `one configure add <domain>/<backe
 | pair | use when |
 |---|---|
 | `env/infisical` | Infisical machine identity |
-| `deploy/aliyun-oss` | Aliyun OSS, S3 protocol object storage |
-| `deploy/tencent-cos` | Tencent COS, S3 protocol object storage |
-| `deploy/aws-s3` | AWS S3 |
-| `deploy/minio` | self-hosted MinIO |
-| `deploy/rustfs` | self-hosted RustFS |
-| `deploy/r2` | Cloudflare R2 |
-| `deploy/kustomize` | Kubernetes kubeconfig + context |
-| `deploy/vercel` | Vercel API token |
-| `deploy/cloudflare` | Cloudflare API token |
-| `deploy/edgeone` | Tencent EdgeOne Pages API token |
-| `container/docker` | Generic Docker registry login |
-| `container/dockerhub` | Docker Hub login |
-| `container/ghcr` | GitHub Container Registry login |
-| `container/acr` | Aliyun ACR login |
 
 `env/dotenv` does not need remote credentials; it reads and writes local project `.env` files. The S3-compatible deploy backends share the same profile shape, but their backend IDs stay explicit (`deploy/aws-s3`, `deploy/aliyun-oss`, `deploy/r2`, etc.).
 

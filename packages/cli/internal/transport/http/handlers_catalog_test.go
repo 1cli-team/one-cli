@@ -62,8 +62,8 @@ func TestCatalogEndpointContainsNoCredentialValues(t *testing.T) {
 	if err := json.Unmarshal(raw, &payload); err != nil {
 		t.Fatal(err)
 	}
-	if len(payload.Backends) != 16 {
-		t.Fatalf("len(backends) = %d, want 16", len(payload.Backends))
+	if len(payload.Backends) != 2 {
+		t.Fatalf("len(backends) = %d, want 2", len(payload.Backends))
 	}
 	for _, backend := range payload.Backends {
 		for _, field := range backend.Profile.Fields {

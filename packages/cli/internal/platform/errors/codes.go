@@ -93,36 +93,13 @@ const (
 	PROFILE_BACKEND_INVALID               Code = "PROFILE_BACKEND_INVALID"
 	PROFILE_CREDENTIAL_SOURCE_UNSUPPORTED Code = "PROFILE_CREDENTIAL_SOURCE_UNSUPPORTED"
 
-	IMAGE_REF_INCOMPLETE             Code = "IMAGE_REF_INCOMPLETE"
-	IMAGE_TAG_NOT_FOUND              Code = "IMAGE_TAG_NOT_FOUND"
-	IMAGE_TAG_REQUIRED               Code = "IMAGE_TAG_REQUIRED"
 	CI_DISABLE_CONFIRMATION_REQUIRED Code = "CI_DISABLE_CONFIRMATION_REQUIRED"
 	CI_NOT_ENABLED                   Code = "CI_NOT_ENABLED"
 	CI_PROVIDER_UNKNOWN              Code = "CI_PROVIDER_UNKNOWN"
 	CI_RENDER_FAILED                 Code = "CI_RENDER_FAILED"
-	K8S_PLATFORM_UNDETECTED          Code = "K8S_PLATFORM_UNDETECTED"
-	K8S_PACKAGE_UNSUPPORTED          Code = "K8S_PACKAGE_UNSUPPORTED"
-	REGISTRY_CREDENTIAL_MISSING      Code = "REGISTRY_CREDENTIAL_MISSING"
-	CONTAINER_KIND_UNKNOWN           Code = "CONTAINER_KIND_UNKNOWN"
-	CONTAINER_PROFILE_INVALID        Code = "CONTAINER_PROFILE_INVALID"
 	RELEASE_FLOW_MISMATCH            Code = "RELEASE_FLOW_MISMATCH"
 	ENV_PROFILE_NOT_FOUND            Code = "ENV_PROFILE_NOT_FOUND"
 	LOCAL_ORCH_PORT_CONFLICT         Code = "LOCAL_ORCH_PORT_CONFLICT"
-
-	// Vercel deploy backend.
-	VERCEL_CLI_MISSING     Code = "VERCEL_CLI_MISSING"
-	VERCEL_PROFILE_INVALID Code = "VERCEL_PROFILE_INVALID"
-	VERCEL_DEPLOY_FAILED   Code = "VERCEL_DEPLOY_FAILED"
-
-	// Cloudflare deploy backend.
-	CLOUDFLARE_CLI_MISSING     Code = "CLOUDFLARE_CLI_MISSING"
-	CLOUDFLARE_PROFILE_INVALID Code = "CLOUDFLARE_PROFILE_INVALID"
-	CLOUDFLARE_DEPLOY_FAILED   Code = "CLOUDFLARE_DEPLOY_FAILED"
-
-	// EdgeOne (Tencent) deploy backend.
-	EDGEONE_CLI_MISSING     Code = "EDGEONE_CLI_MISSING"
-	EDGEONE_PROFILE_INVALID Code = "EDGEONE_PROFILE_INVALID"
-	EDGEONE_DEPLOY_FAILED   Code = "EDGEONE_DEPLOY_FAILED"
 
 	// Env vars — input validation (provider-agnostic).
 	ENV_INVALID_ENV_NAME       Code = "ENV_INVALID_ENV_NAME"
@@ -238,36 +215,16 @@ var Codes = map[Code]Definition{
 	PROFILE_NOT_FOUND:                     {Summary: "Requested profile does not exist under the (domain/backend) section.", Remediation: []output.Remediation{{Action: "list-profiles", Command: "one configure list env/infisical"}, {Action: "add-profile", Hint: "创建新 profile", Command: "one configure add env/infisical --profile <name>"}}},
 	PROFILE_ALREADY_EXISTS:                {Summary: "A profile with this name already exists. Re-run `one configure add <domain>/<backend> --profile <name>` to update existing credentials, or pick a different name."},
 	PROFILE_IN_USE:                        {Summary: "The Profile is still selected by one or more environment-aware Workspace or Project bindings.", Remediation: []output.Remediation{{Action: "unbind-profile", Hint: "先在 Dashboard 中把对应 Workspace / Project Profile 选择改为 Automatic，再删除"}}},
-	PROFILE_NONE_CONFIGURED:               {Summary: "No Profile resolved from --profile, environment-aware Project/Workspace bindings, legacy bindings, or the machine default.", Remediation: []output.Remediation{{Action: "add-profile", Hint: "创建第一个 profile（替换 <domain>/<backend> 为对应 pair，如 env/infisical / deploy/aws-s3 / container/docker）", Command: "one configure add <domain>/<backend> --profile work"}}},
+	PROFILE_NONE_CONFIGURED:               {Summary: "No Profile resolved from --profile, environment-aware Project/Workspace bindings, legacy bindings, or the machine default.", Remediation: []output.Remediation{{Action: "add-profile", Hint: "创建 Infisical profile", Command: "one configure add env/infisical --profile work"}}},
 	PROFILE_BACKEND_INVALID:               {Summary: "Profile.backend value is not recognised, or it doesn't belong to the declared domain."},
 	PROFILE_CREDENTIAL_SOURCE_UNSUPPORTED: {Summary: "Profile's credentialSource is set to a value this build does not implement (only `file` is wired up so far).", Remediation: []output.Remediation{{Action: "use-file-source", Hint: "把 config.json 中该 profile 的 credentialSource 改回 \"file\"（或删除该字段），并确保对应密钥写在 credentials.json"}}},
-	IMAGE_REF_INCOMPLETE:                  {Summary: "Deploy / CI backend needs the container image ref but it is missing or incomplete (registry / name / tag)."},
-	IMAGE_TAG_NOT_FOUND:                   {Summary: "Container push target image tag does not exist in the local Docker daemon.", Remediation: []output.Remediation{{Action: "build-image", Hint: "先构建要推送的镜像", Command: "one container build <subproject>"}}},
-	IMAGE_TAG_REQUIRED:                    {Summary: "Container build needs a version tag but no subproject buildVersion, Git tag, or package version was available.", Remediation: []output.Remediation{{Action: "provide-tag", Hint: "显式指定镜像版本 tag", Command: "one container build <subproject> --build-version v0.1.0"}, {Action: "set-build-version", Hint: "或在 one.manifest.json 里设置 projects[].buildVersion"}, {Action: "create-git-tag", Hint: "或在当前提交上创建 Git tag", Command: "git tag v0.1.0"}}},
 	CI_DISABLE_CONFIRMATION_REQUIRED:      {Summary: "A non-interactive CI disable requires explicit --yes confirmation."},
 	CI_NOT_ENABLED:                        {Summary: "The selected project does not have a generated CI workflow."},
 	CI_PROVIDER_UNKNOWN:                   {Summary: "The requested CI provider is not implemented by this build."},
 	CI_RENDER_FAILED:                      {Summary: "The selected CI provider returned an error while rendering the workflow."},
-	K8S_PLATFORM_UNDETECTED:               {Summary: "Kubernetes node architecture could not be detected before building an image for deploy.", Remediation: []output.Remediation{{Action: "check-k8s", Hint: "确认 kubeconfig/context 可访问并能列出节点", Command: "kubectl get nodes -o wide"}}},
-	K8S_PACKAGE_UNSUPPORTED:               {Summary: "A deploy backend selected a Kubernetes packaging form this build does not bundle."},
-	REGISTRY_CREDENTIAL_MISSING:           {Summary: "Container push needs a registry, but none is configured.", Remediation: []output.Remediation{{Action: "build-local", Hint: "只需要本地镜像时，使用 build，不需要 push", Command: "one container build <subproject>"}, {Action: "setup-registry", Hint: "需要推送到镜像仓库时，先配置 registry", Command: "one configure add container/docker --profile <name> --use"}}},
-	CONTAINER_KIND_UNKNOWN:                {Summary: "manifest declares an unrecognised container kind. Supported kinds: docker / dockerhub / ghcr / acr.", Remediation: []output.Remediation{{Action: "fix-manifest-kind", Hint: "把 projects[i].domains.container.kind 改成支持的 kind"}}},
-	CONTAINER_PROFILE_INVALID:             {Summary: "Container profile is missing required fields for its kind (e.g. acr needs region, docker needs registry).", Remediation: []output.Remediation{{Action: "reconfigure-container", Hint: "重新配置 container profile", Command: "one configure add container/<kind> --profile <name> --use"}}},
 	RELEASE_FLOW_MISMATCH:                 {Summary: "The release-flow backend's expected toolchain or repo state does not match the workspace."},
 	ENV_PROFILE_NOT_FOUND:                 {Summary: "manifest.environments[<env>] was requested by a backend but is missing or empty."},
 	LOCAL_ORCH_PORT_CONFLICT:              {Summary: "Two projects requested the same dev port and the dev runner could not auto-allocate a free one."},
-
-	VERCEL_CLI_MISSING:     {Summary: "deploy/vercel 找不到 vercel CLI。", Remediation: []output.Remediation{{Action: "install-vercel-cli", Hint: "全局安装 vercel CLI（推荐用 pnpm/npm 全局）", Command: "npm i -g vercel"}, {Action: "install-vercel-cli-via-pnpm", Hint: "或使用 pnpm 全局安装", Command: "pnpm add -g vercel"}}},
-	VERCEL_PROFILE_INVALID: {Summary: "deploy/vercel profile 缺少 API token。", Remediation: []output.Remediation{{Action: "configure-vercel", Hint: "在 vercel.com → Account Settings → Tokens 创建 API token，然后写入 profile", Command: "one configure add deploy/vercel --profile <name> --use --token $VERCEL_TOKEN"}}},
-	VERCEL_DEPLOY_FAILED:   {Summary: "vercel CLI 退出码非 0；查看上游日志获取详情。", Remediation: []output.Remediation{{Action: "verify-token", Hint: "确认 API token 仍然有效，且对目标 team / project 有 deploy 权限"}, {Action: "verify-project-link", Hint: "首次部署需要 vercel link：cd 到项目目录手动跑一次 `vercel link --token $TOKEN`"}}},
-
-	CLOUDFLARE_CLI_MISSING:     {Summary: "deploy/cloudflare 找不到 wrangler CLI。", Remediation: []output.Remediation{{Action: "install-project-wrangler", Hint: "在当前 subproject 目录安装 wrangler", Command: "pnpm add -D wrangler"}, {Action: "install-wrangler", Hint: "或全局安装 wrangler CLI", Command: "npm i -g wrangler"}}},
-	CLOUDFLARE_PROFILE_INVALID: {Summary: "deploy/cloudflare profile 缺少 API token。", Remediation: []output.Remediation{{Action: "configure-cloudflare", Hint: "在 dash.cloudflare.com → My Profile → API Tokens 创建 API token，然后写入 profile", Command: "one configure add deploy/cloudflare --profile <name> --use --token $CLOUDFLARE_API_TOKEN"}}},
-	CLOUDFLARE_DEPLOY_FAILED:   {Summary: "wrangler CLI 退出码非 0；查看上游日志获取详情。", Remediation: []output.Remediation{{Action: "verify-token", Hint: "确认 API token 仍然有效，且对目标 account / Worker 有 Edit Workers 权限"}, {Action: "verify-account-id", Hint: "多账号场景下 wrangler 需要 CLOUDFLARE_ACCOUNT_ID；在 profile 里设置 --account-id 或在 dash 里复制 Account ID"}}},
-
-	EDGEONE_CLI_MISSING:     {Summary: "deploy/edgeone 找不到 edgeone CLI。", Remediation: []output.Remediation{{Action: "install-edgeone", Hint: "全局安装腾讯云 EdgeOne CLI", Command: "npm i -g edgeone"}, {Action: "install-edgeone-via-pnpm", Hint: "或使用 pnpm 全局安装", Command: "pnpm add -g edgeone"}}},
-	EDGEONE_PROFILE_INVALID: {Summary: "deploy/edgeone profile 缺少 EdgeOne API token。", Remediation: []output.Remediation{{Action: "configure-edgeone", Hint: "创建 EdgeOne Pages API token 后写入 profile", Command: "one configure add deploy/edgeone --profile <name> --use --token $EDGEONE_API_TOKEN"}}},
-	EDGEONE_DEPLOY_FAILED:   {Summary: "edgeone CLI 退出码非 0；查看上游日志获取详情。", Remediation: []output.Remediation{{Action: "verify-token", Hint: "确认 EdgeOne API token 仍然有效，且对目标 EdgeOne Pages 项目有部署权限"}, {Action: "verify-project", Hint: "首次部署需要先在 EdgeOne 控制台创建 Pages 项目；project name 写在 manifest.projects[i].domains.deploy.config.projectName"}}},
 
 	ENV_INVALID_ENV_NAME:       {Summary: "Environment name fails ^[a-zA-Z0-9][a-zA-Z0-9-_]*$ (e.g. dev, staging, prod)."},
 	ENV_INVALID_KEY:            {Summary: "Variable name fails POSIX env-var pattern (uppercase + underscore + digits, must not start with digit)."},

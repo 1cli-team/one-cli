@@ -4,20 +4,6 @@ func builtinSpecs() []BackendSpec {
 	return []BackendSpec{
 		envDotenvSpec(),
 		envInfisicalSpec(),
-		s3Spec(DeployAliyunOSS, "https://oss-<region>.aliyuncs.com", "cn-hangzhou", false),
-		s3Spec(DeployTencentCOS, "https://cos.<region>.myqcloud.com", "ap-guangzhou", false),
-		s3Spec(DeployAWSS3, "", "us-east-1", false),
-		s3Spec(DeployMinIO, "http://<your-minio-host>:9000", "us-east-1", true),
-		s3Spec(DeployRustFS, "http://<your-rustfs-host>:9000", "us-east-1", true),
-		s3Spec(DeployR2, "https://<account-id>.r2.cloudflarestorage.com", "auto", false),
-		deployKustomizeSpec(),
-		deployVercelSpec(),
-		deployCloudflareSpec(),
-		deployEdgeOneSpec(),
-		containerSpec(ContainerDocker),
-		containerSpec(ContainerDockerHub),
-		containerSpec(ContainerGHCR),
-		containerSpec(ContainerACR),
 	}
 }
 
@@ -33,21 +19,6 @@ func spec(id BackendID, capabilities []Capability, profile ProfileSpec, requirem
 
 func field(path, inputName string, kind FieldType, label string, required bool) FieldSpec {
 	return FieldSpec{Path: path, InputName: inputName, Type: kind, LabelKey: label, Required: required}
-}
-
-func projectField(path, inputName string, kind ProjectFieldType, label, placeholder string, required bool) ProjectFieldSpec {
-	return ProjectFieldSpec{
-		Path: path, InputName: inputName, Type: kind, LabelKey: label,
-		Placeholder: placeholder, Required: required,
-	}
-}
-
-func deployProjectSpec(fields ...ProjectFieldSpec) ProjectSpec {
-	return ProjectSpec{Configurable: true, Fields: fields}
-}
-
-func deployEnvironmentField() ProjectFieldSpec {
-	return projectField("env", "environment", ProjectFieldEnvironment, "project.fields.environment", "", false)
 }
 
 func envDotenvSpec() BackendSpec {
@@ -72,132 +43,4 @@ func envInfisicalSpec() BackendSpec {
 		ProfileSpec{Configurable: true, Type: ProfileTypeInfisical, Fields: fields},
 		Requirement{Kind: RequirementProfile, Name: "env/infisical"},
 	)
-}
-
-func deployKustomizeSpec() BackendSpec {
-	fields := []FieldSpec{
-		field("kubeconfigPath", "kubeconfig", FieldString, "form.fields.kubeconfigPath", false),
-		field("kubeconfigContext", "kubeconfig-context", FieldString, "form.fields.kubeconfigContext", false),
-	}
-	fields[0].Placeholder = "~/.kube/config"
-	result := spec(
-		BackendID{Domain: DomainDeploy, Name: DeployKustomize},
-		[]Capability{CapabilityDeploy, CapabilityScaffold},
-		ProfileSpec{Configurable: true, Type: ProfileTypeKustomize, Fields: fields},
-		Requirement{Kind: RequirementBinary, Name: "kubectl"},
-		Requirement{Kind: RequirementCapability, Name: string(CapabilityContainerBuild)},
-		Requirement{Kind: RequirementCapability, Name: string(CapabilityContainerPush)},
-	)
-	result.Project = deployProjectSpec(deployEnvironmentField())
-	return result
-}
-
-func s3Spec(name, endpoint, region string, pathStyle bool) BackendSpec {
-	fields := []FieldSpec{
-		field("endpoint", "endpoint", FieldString, "form.fields.endpoint", false),
-		field("region", "region", FieldString, "form.fields.region", false),
-		field("forcePathStyle", "force-path-style", FieldBoolean, "form.fields.forcePathStyle", false),
-		field("credentials/accessKeyId", "access-key-id", FieldString, "form.fields.accessKeyId", true),
-		field("credentials/accessKeySecret", "access-key-secret", FieldSecret, "form.fields.accessKeySecret", true),
-	}
-	fields[0].Placeholder = endpoint
-	fields[1].Default = region
-	fields[1].Placeholder = region
-	fields[2].Default = pathStyle
-	result := spec(
-		BackendID{Domain: DomainDeploy, Name: name},
-		[]Capability{CapabilityDeploy},
-		ProfileSpec{Configurable: true, Type: ProfileTypeS3, Fields: fields},
-		Requirement{Kind: RequirementProfile, Name: "deploy/" + name},
-	)
-	result.Traits = []Trait{TraitS3Compatible}
-	result.Project = deployProjectSpec(
-		projectField("bucket", "bucket", ProjectFieldString, "project.fields.bucket", "my-static-site", false),
-		deployEnvironmentField(),
-	)
-	return result
-}
-
-func deployVercelSpec() BackendSpec {
-	result := spec(
-		BackendID{Domain: DomainDeploy, Name: DeployVercel},
-		[]Capability{CapabilityDeploy, CapabilityScaffold},
-		ProfileSpec{Configurable: true, Type: ProfileTypeVercel, Fields: []FieldSpec{
-			field("team", "team", FieldString, "form.fields.teamSlug", false),
-			field("credentials/apiToken", "token", FieldSecret, "form.fields.apiToken", true),
-		}},
-		Requirement{Kind: RequirementProfile, Name: "deploy/vercel"},
-		Requirement{Kind: RequirementBinary, Name: "vercel"},
-	)
-	result.Project = deployProjectSpec(
-		projectField("projectId", "project-id", ProjectFieldString, "project.fields.projectId", "prj_...", false),
-		projectField("projectName", "project-name", ProjectFieldString, "project.fields.projectName", "my-project", false),
-		deployEnvironmentField(),
-	)
-	return result
-}
-
-func deployCloudflareSpec() BackendSpec {
-	result := spec(
-		BackendID{Domain: DomainDeploy, Name: DeployCloudflare},
-		[]Capability{CapabilityDeploy, CapabilityScaffold},
-		ProfileSpec{Configurable: true, Type: ProfileTypeCloudflare, Fields: []FieldSpec{
-			field("accountId", "account-id", FieldString, "form.fields.accountId", false),
-			field("credentials/apiToken", "token", FieldSecret, "form.fields.apiToken", true),
-		}},
-		Requirement{Kind: RequirementProfile, Name: "deploy/cloudflare"},
-		Requirement{Kind: RequirementBinary, Name: "wrangler"},
-	)
-	result.Project = deployProjectSpec(
-		projectField("workerName", "worker-name", ProjectFieldString, "project.fields.workerName", "my-worker", false),
-		deployEnvironmentField(),
-	)
-	return result
-}
-
-func deployEdgeOneSpec() BackendSpec {
-	result := spec(
-		BackendID{Domain: DomainDeploy, Name: DeployEdgeOne},
-		[]Capability{CapabilityDeploy, CapabilityScaffold},
-		ProfileSpec{Configurable: true, Type: ProfileTypeEdgeOne, Fields: []FieldSpec{
-			field("region", "region", FieldString, "form.fields.regionEdgeOne", false),
-			field("credentials/apiToken", "token", FieldSecret, "form.fields.apiToken", false),
-		}},
-		Requirement{Kind: RequirementProfile, Name: "deploy/edgeone"},
-		Requirement{Kind: RequirementBinary, Name: "edgeone"},
-	)
-	result.Project = deployProjectSpec(
-		projectField("projectName", "project-name", ProjectFieldString, "project.fields.projectName", "my-project", false),
-		deployEnvironmentField(),
-	)
-	return result
-}
-
-func containerSpec(name string) BackendSpec {
-	fields := make([]FieldSpec, 0, 5)
-	if name == ContainerDocker {
-		entry := field("registry", "registry", FieldString, "form.fields.registry", true)
-		entry.Placeholder = "your-registry-host"
-		fields = append(fields, entry)
-	}
-	if name == ContainerACR {
-		entry := field("region", "region", FieldString, "form.fields.acrRegion", true)
-		entry.Default = "cn-hangzhou"
-		entry.Placeholder = "cn-hangzhou"
-		fields = append(fields, entry)
-	}
-	fields = append(fields,
-		field("credentials/username", "username", FieldString, "form.fields.username", true),
-		field("namespace", "namespace", FieldString, "form.fields.namespace", false),
-		field("credentials/password", "password", FieldSecret, "form.fields.password", true),
-	)
-	result := spec(
-		BackendID{Domain: DomainContainer, Name: name},
-		[]Capability{CapabilityContainerInfo, CapabilityContainerBuild, CapabilityContainerPush, CapabilityScaffold},
-		ProfileSpec{Configurable: true, Type: ProfileTypeContainer, Fields: fields},
-		Requirement{Kind: RequirementProfile, Name: "container/" + name, Optional: true},
-		Requirement{Kind: RequirementBinary, Name: "docker"},
-	)
-	result.Traits = []Trait{TraitOCIRegistry}
-	return result
 }

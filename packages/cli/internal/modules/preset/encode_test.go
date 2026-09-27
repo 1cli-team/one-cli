@@ -15,10 +15,8 @@ type goldenVector struct {
 	ID   string `json:"id"`
 	Spec struct {
 		Items []struct {
-			Kind          string `json:"kind"`
-			TemplateCode  string `json:"template_code"`
-			DeployCode    string `json:"deploy_code,omitempty"`
-			ContainerCode string `json:"container_code,omitempty"`
+			Kind         string `json:"kind"`
+			TemplateCode string `json:"template_code"`
 		} `json:"items"`
 		EnvCode string `json:"env_code"`
 	} `json:"spec"`
@@ -44,10 +42,8 @@ func toSpec(v goldenVector) preset.Spec {
 	spec := preset.Spec{EnvCode: v.Spec.EnvCode}
 	for _, it := range v.Spec.Items {
 		spec.Items = append(spec.Items, preset.Item{
-			Kind:          preset.Kind(it.Kind[0]),
-			TemplateCode:  it.TemplateCode,
-			DeployCode:    it.DeployCode,
-			ContainerCode: it.ContainerCode,
+			Kind:         preset.Kind(it.Kind[0]),
+			TemplateCode: it.TemplateCode,
 		})
 	}
 	return spec
@@ -96,16 +92,14 @@ func TestParseEncodeRoundTrip(t *testing.T) {
 // order; canonicalize sorts it on the way out.
 func TestEncodeOrderIndependent(t *testing.T) {
 	v := goldenVector{}
-	v.ID = "1.bnek.fnav.ei"
+	v.ID = "1.bne.fna.ei"
 	v.Spec.EnvCode = "i"
 	v.Spec.Items = []struct {
-		Kind          string `json:"kind"`
-		TemplateCode  string `json:"template_code"`
-		DeployCode    string `json:"deploy_code,omitempty"`
-		ContainerCode string `json:"container_code,omitempty"`
+		Kind         string `json:"kind"`
+		TemplateCode string `json:"template_code"`
 	}{
-		{Kind: "b", TemplateCode: "ne", DeployCode: "k"},
-		{Kind: "f", TemplateCode: "na", DeployCode: "v"},
+		{Kind: "b", TemplateCode: "ne"},
+		{Kind: "f", TemplateCode: "na"},
 	}
 	forward, err := preset.Encode(toSpec(v))
 	if err != nil {

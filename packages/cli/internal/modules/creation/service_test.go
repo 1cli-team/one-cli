@@ -81,7 +81,7 @@ func TestServiceOwnsWorkspaceAndProjectCreation(t *testing.T) {
 		t.Fatal("react-spa template is absent")
 	}
 	added, err := service.AddProject(context.Background(), target, ProjectInput{
-		Template: selected, Name: "web", DeferDeployment: true,
+		Template: selected, Name: "web",
 	})
 	if err != nil {
 		t.Fatal(err)

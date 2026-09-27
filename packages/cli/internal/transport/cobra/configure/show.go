@@ -44,64 +44,6 @@ func (r showResult) RenderTTY(w io.Writer) {
 			fmt.Fprintf(w, "  clientSecret: %s\n", i.Credentials.ClientSecret)
 		}
 	}
-	if r.Profile.Kustomize != nil {
-		k := r.Profile.Kustomize
-		fmt.Fprintln(w, "kustomize:")
-		if k.KubeconfigPath != "" {
-			fmt.Fprintf(w, "  kubeconfig: %s\n", k.KubeconfigPath)
-		}
-		if k.KubeconfigContext != "" {
-			fmt.Fprintf(w, "  context:    %s\n", k.KubeconfigContext)
-		}
-	}
-	if r.Profile.S3 != nil {
-		o := r.Profile.S3
-		fmt.Fprintln(w, "s3:")
-		if o.Endpoint != "" {
-			fmt.Fprintf(w, "  endpoint:       %s\n", o.Endpoint)
-		} else {
-			fmt.Fprintf(w, "  endpoint:       (AWS S3 default)\n")
-		}
-		if o.Region != "" {
-			fmt.Fprintf(w, "  region:         %s\n", o.Region)
-		}
-		if o.ForcePathStyle {
-			fmt.Fprintln(w, "  forcePathStyle: true (MinIO / RustFS)")
-		}
-		if o.Credentials != nil {
-			fmt.Fprintf(w, "  accessKeyId:     %s\n", o.Credentials.AccessKeyID)
-			fmt.Fprintf(w, "  accessKeySecret: %s\n", o.Credentials.AccessKeySecret)
-		}
-	}
-	if r.Profile.Vercel != nil {
-		v := r.Profile.Vercel
-		fmt.Fprintln(w, "vercel:")
-		if v.Team != "" {
-			fmt.Fprintf(w, "  team:     %s\n", v.Team)
-		} else {
-			fmt.Fprintf(w, "  team:     (personal scope)\n")
-		}
-		if v.Credentials != nil {
-			fmt.Fprintf(w, "  apiToken: %s\n", v.Credentials.APIToken)
-		}
-	}
-	if r.Profile.Container != nil {
-		c := r.Profile.Container
-		fmt.Fprintln(w, "container:")
-		if c.Registry != "" {
-			fmt.Fprintf(w, "  registry:  %s\n", c.Registry)
-		}
-		if c.Region != "" {
-			fmt.Fprintf(w, "  region:    %s\n", c.Region)
-		}
-		if c.Namespace != "" {
-			fmt.Fprintf(w, "  namespace: %s\n", c.Namespace)
-		}
-		if c.Credentials != nil {
-			fmt.Fprintf(w, "  username:  %s\n", c.Credentials.Username)
-			fmt.Fprintf(w, "  password:  %s\n", c.Credentials.Password)
-		}
-	}
 	if !r.Reveal {
 		fmt.Fprintln(w, "")
 		fmt.Fprintln(w, i18n.T("configure.show_masked"))

@@ -32,13 +32,13 @@ func (r *profileRepositoryStub) Upsert(
 	setDefault bool,
 ) (bool, error) {
 	r.upsert = value
-	if domain == profile.DomainDeploy && backend == "vercel" && value.Vercel != nil {
-		if r.config.DeployVercel.Profiles == nil {
-			r.config.DeployVercel.Profiles = map[string]profile.VercelProfile{}
+	if domain == profile.DomainEnv && backend == "infisical" && value.Infisical != nil {
+		if r.config.EnvInfisical.Profiles == nil {
+			r.config.EnvInfisical.Profiles = map[string]profile.InfisicalProfile{}
 		}
-		r.config.DeployVercel.Profiles[name] = *value.Vercel
-		if setDefault || r.config.DeployVercel.Default == "" {
-			r.config.DeployVercel.Default = name
+		r.config.EnvInfisical.Profiles[name] = *value.Infisical
+		if setDefault || r.config.EnvInfisical.Default == "" {
+			r.config.EnvInfisical.Default = name
 		}
 	}
 	return r.updated, nil
@@ -102,20 +102,6 @@ func TestProfileServiceUsesCatalogOrder(t *testing.T) {
 	}
 	want := []string{
 		"env/infisical",
-		"deploy/aliyun-oss",
-		"deploy/tencent-cos",
-		"deploy/aws-s3",
-		"deploy/minio",
-		"deploy/rustfs",
-		"deploy/r2",
-		"deploy/kustomize",
-		"deploy/vercel",
-		"deploy/cloudflare",
-		"deploy/edgeone",
-		"container/docker",
-		"container/dockerhub",
-		"container/ghcr",
-		"container/acr",
 	}
 	if !reflect.DeepEqual(got, want) {
 		t.Fatalf("ProfileBackends() = %#v, want %#v", got, want)
@@ -127,14 +113,14 @@ func TestProfileServiceUnbindsProjectProfileThroughRepository(t *testing.T) {
 	repository := &profileRepositoryStub{config: &profile.Config{}}
 	service := testProfileService(t, repository)
 	if err := service.UnbindWorkspaceProfile(
-		"ws-demo", "web", profile.DomainDeploy, catalog.DeployVercel,
+		"ws-demo", "web", profile.DomainEnv, catalog.EnvInfisical,
 	); err != nil {
 		t.Fatal(err)
 	}
 	if repository.unbound.workspaceID != "ws-demo" ||
 		repository.unbound.projectName != "web" ||
-		repository.unbound.domain != profile.DomainDeploy ||
-		repository.unbound.backend != catalog.DeployVercel {
+		repository.unbound.domain != profile.DomainEnv ||
+		repository.unbound.backend != catalog.EnvInfisical {
 		t.Fatalf("unbind input = %#v", repository.unbound)
 	}
 }
@@ -144,15 +130,15 @@ func TestProfileServiceDecodesTypedProfile(t *testing.T) {
 
 	service := testProfileService(t, &profileRepositoryStub{config: &profile.Config{}})
 	value, err := service.DecodeProfile(
-		profile.DomainContainer,
-		"ghcr",
-		json.RawMessage(`{"namespace":"team","credentials":{"username":"octo","password":"token"}}`),
+		profile.DomainEnv,
+		"infisical",
+		json.RawMessage(`{"siteUrl":"https://app.infisical.com","credentials":{"clientId":"octo","clientSecret":"token"}}`),
 	)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if value.Container == nil || value.Container.Namespace != "team" ||
-		value.Container.Credentials == nil || value.Container.Credentials.Password != "token" {
+	if value.Infisical == nil || value.Infisical.SiteURL != "https://app.infisical.com" ||
+		value.Infisical.Credentials == nil || value.Infisical.Credentials.ClientSecret != "token" {
 		t.Fatalf("decoded profile = %#v", value)
 	}
 }
@@ -225,26 +211,26 @@ func TestProfileServicePreservesMaskedCredential(t *testing.T) {
 	t.Parallel()
 
 	repository := &profileRepositoryStub{config: &profile.Config{
-		DeployVercel: profile.Section[profile.VercelProfile]{
+		EnvInfisical: profile.Section[profile.InfisicalProfile]{
 			Default: "production",
-			Profiles: map[string]profile.VercelProfile{
+			Profiles: map[string]profile.InfisicalProfile{
 				"production": {
-					Team:        "old-team",
-					Credentials: &profile.VercelCredentials{APIToken: "real-token"},
+					SiteURL:     "https://old.example.com",
+					Credentials: &profile.InfisicalCredentials{ClientID: "client", ClientSecret: "real-token"},
 				},
 			},
 		},
 	}}
 	service := testProfileService(t, repository)
 	result, err := service.Upsert(UpsertProfileInput{
-		Domain:  profile.DomainDeploy,
-		Backend: "vercel",
+		Domain:  profile.DomainEnv,
+		Backend: "infisical",
 		Name:    "production",
 		Profile: profile.Profile{
-			Backend: "vercel",
-			Vercel: &profile.VercelProfile{
-				Team:        "new-team",
-				Credentials: &profile.VercelCredentials{APIToken: MaskedCredential},
+			Backend: "infisical",
+			Infisical: &profile.InfisicalProfile{
+				SiteURL:     "https://new.example.com",
+				Credentials: &profile.InfisicalCredentials{ClientID: "client", ClientSecret: MaskedCredential},
 			},
 		},
 		PreserveMasked: true,
@@ -255,7 +241,7 @@ func TestProfileServicePreservesMaskedCredential(t *testing.T) {
 	if !result.Default {
 		t.Fatal("updated default profile no longer reported as default")
 	}
-	if got := repository.upsert.Vercel.Credentials.APIToken; got != "real-token" {
+	if got := repository.upsert.Infisical.Credentials.ClientSecret; got != "real-token" {
 		t.Fatalf("saved token = %q, want preserved real token", got)
 	}
 }
@@ -264,10 +250,10 @@ func TestProfileServiceMaskPolicies(t *testing.T) {
 	t.Parallel()
 
 	service := testProfileService(t, &profileRepositoryStub{config: &profile.Config{}})
-	config := profile.Config{DeployAWSS3: profile.Section[profile.S3Profile]{
-		Profiles: map[string]profile.S3Profile{
-			"work": {Credentials: &profile.S3Credentials{
-				AccessKeyID: "visible-id", AccessKeySecret: "secret",
+	config := profile.Config{EnvInfisical: profile.Section[profile.InfisicalProfile]{
+		Profiles: map[string]profile.InfisicalProfile{
+			"work": {Credentials: &profile.InfisicalCredentials{
+				ClientID: "visible-id", ClientSecret: "secret",
 			}},
 		},
 	}}
@@ -275,19 +261,19 @@ func TestProfileServiceMaskPolicies(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	credentials := maskedConfig.DeployAWSS3.Profiles["work"].Credentials
-	if credentials.AccessKeyID != "visible-id" || credentials.AccessKeySecret != MaskedCredential {
+	credentials := maskedConfig.EnvInfisical.Profiles["work"].Credentials
+	if credentials.ClientID != "visible-id" || credentials.ClientSecret != MaskedCredential {
 		t.Fatalf("HTTP mask = %#v", credentials)
 	}
 	maskedProfile, err := service.MaskProfile(profile.Profile{
-		S3: &profile.S3Profile{Credentials: &profile.S3Credentials{
-			AccessKeyID: "id", AccessKeySecret: "secret",
+		Infisical: &profile.InfisicalProfile{Credentials: &profile.InfisicalCredentials{
+			ClientID: "id", ClientSecret: "secret",
 		}},
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got := maskedProfile.S3.Credentials; got.AccessKeyID != MaskedCredential || got.AccessKeySecret != MaskedCredential {
+	if got := maskedProfile.Infisical.Credentials; got.ClientID != MaskedCredential || got.ClientSecret != MaskedCredential {
 		t.Fatalf("CLI mask = %#v", got)
 	}
 }

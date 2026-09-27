@@ -93,10 +93,8 @@ func ApplyPreset(ctx context.Context, projectRoot string, resolved preset.Resolv
 			}
 
 			res, applyErr := materializeProject(ctx, projectRoot, ProjectInput{
-				Template:  it.Template,
-				Name:      name,
-				Deploy:    it.Deploy,
-				Container: it.Container,
+				Template: it.Template,
+				Name:     name,
 			})
 			if applyErr != nil {
 				return out, applyErr
@@ -126,19 +124,6 @@ func projectNameFor(tpl *template.Template, occurrence int) string {
 		return base
 	}
 	return fmt.Sprintf("%s-%d", base, occurrence+1)
-}
-
-// SummarizeDeploys flattens the result's project deploy backends into a
-// {"kustomize": N, "vercel": M, ...} count map for the envelope. Empty
-// deploy backends (templates with no deploy domain) are excluded.
-func (r PresetResult) SummarizeDeploys() map[string]int {
-	out := map[string]int{}
-	for _, p := range r.Projects {
-		if p.DeployBackend != "" {
-			out[p.DeployBackend]++
-		}
-	}
-	return out
 }
 
 // EffectiveEnvProvider returns the workspace env provider that should

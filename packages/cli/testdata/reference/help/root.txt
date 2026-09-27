@@ -1,5 +1,5 @@
 
-one — workspace development and deployment
+one — workspace development
 
 USAGE
   one <command> [options]
@@ -9,7 +9,6 @@ EVERYDAY COMMANDS
   add           Add a project
   dev           Start local development
   build         Build projects
-  deploy        Deploy a project
   env           Manage environment variables
   configure     Manage local connections and preferences
 
@@ -22,7 +21,7 @@ EXAMPLES
   one create demo
   one add
   one dev
-  one deploy
+  one build
 
 All commands: one help --all
 Command help: one <command> --help

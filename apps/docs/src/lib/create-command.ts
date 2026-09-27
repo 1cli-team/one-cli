@@ -35,8 +35,7 @@ export function projectsFromPresetId(presetId: string): CommandProject[] {
     const kind = segment[0] as PresetKind | "e";
     if (kind !== "b" && kind !== "f" && kind !== "l") continue;
     const templateCode = segment.slice(1, 3);
-    const deployCode = kind === "l" ? undefined : segment[3];
-    const containerCode = kind === "l" ? undefined : segment[4];
+    if (segment.length !== 3) return [];
     const template = templates.find(
       (t) => t.presetKind === kind && t.code === templateCode,
     );
@@ -53,8 +52,6 @@ export function projectsFromPresetId(presetId: string): CommandProject[] {
     projects.push({
       kind,
       tcode: template.code,
-      dcode: deployCode,
-      ccode: containerCode,
       templateId: template.id,
       title: template.title,
       defaultName,
@@ -82,8 +79,6 @@ export function buildCustomPresetCommand(input: {
     sorted.map((project) => ({
       kind: project.kind,
       tcode: project.tcode,
-      dcode: project.dcode,
-      ccode: project.ccode,
     })),
     envCode,
   );
@@ -99,10 +94,7 @@ export function sortCommandProjects<T extends PresetItem>(projects: T[]): T[] {
     const kindDelta = KIND_ORDER.indexOf(a.kind) - KIND_ORDER.indexOf(b.kind);
     if (kindDelta !== 0) return kindDelta;
     if (a.tcode !== b.tcode) return compareAscii(a.tcode, b.tcode);
-    if ((a.dcode ?? "") !== (b.dcode ?? "")) {
-      return compareAscii(a.dcode ?? "", b.dcode ?? "");
-    }
-    return compareAscii(a.ccode ?? "", b.ccode ?? "");
+    return 0;
   });
 }
 

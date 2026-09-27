@@ -57,7 +57,6 @@ func TestOverview_NoWorkspace_ReturnsPresentFalse(t *testing.T) {
 
 func TestOverview_PopulatedWorkspace(t *testing.T) {
 	tmp := t.TempDir()
-	deployCfg, _ := json.Marshal(map[string]any{"projectId": "x"})
 	m := &workspace.Manifest{
 		Version:      workspace.ManifestVersion,
 		Workspace:    &workspace.ManifestWorkspace{ID: "demo", Name: "demo"},
@@ -69,8 +68,7 @@ func TestOverview_PopulatedWorkspace(t *testing.T) {
 			{
 				Name: "web", RelativeDir: "apps/web", TemplateID: "react-spa", Toolchain: "node",
 				Domains: &workspace.ProjectDomains{
-					Deploy: &workspace.ProjectDeployBackend{Kind: workspace.DeployBackendVercel, Config: deployCfg},
-					Dev:    &workspace.ProjectDevOverride{Command: "pnpm dev"},
+					Dev: &workspace.ProjectDevOverride{Command: "pnpm dev"},
 				},
 			},
 		},
@@ -94,10 +92,8 @@ func TestOverview_PopulatedWorkspace(t *testing.T) {
 	if len(got.Projects) != 1 || got.Projects[0].Name != "web" {
 		t.Errorf("projects = %+v", got.Projects)
 	}
-	// Vercel deploy does not need container; the only remaining project
-	// issue is the missing Vercel credential profile.
-	if len(got.Projects[0].Issues) != 1 || got.Projects[0].Issues[0].Domain != workspace.IssueDomainDeploy || got.Projects[0].Issues[0].Reason != workspace.IssueReasonProfile {
-		t.Errorf("project issues = %+v; want one deploy profile issue", got.Projects[0].Issues)
+	if len(got.Projects[0].Issues) != 0 {
+		t.Errorf("project issues = %+v; want none", got.Projects[0].Issues)
 	}
 }
 

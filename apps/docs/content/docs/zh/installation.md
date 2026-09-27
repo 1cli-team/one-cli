@@ -133,20 +133,6 @@ Provider 凭据用顶层 `one configure add <domain>/<backend> --profile <name>`
 | pair | 什么时候用 |
 |---|---|
 | `env/infisical` | Infisical 机器身份，跨工作区共享 |
-| `deploy/aliyun-oss` | 阿里云 OSS，S3 协议对象存储 |
-| `deploy/tencent-cos` | 腾讯云 COS，S3 协议对象存储 |
-| `deploy/aws-s3` | AWS S3 |
-| `deploy/minio` | 自部署 MinIO |
-| `deploy/rustfs` | 自部署 RustFS |
-| `deploy/r2` | Cloudflare R2 |
-| `deploy/kustomize` | Kubernetes kubeconfig + context |
-| `deploy/vercel` | Vercel API token |
-| `deploy/cloudflare` | Cloudflare API token |
-| `deploy/edgeone` | Tencent EdgeOne Pages API token |
-| `container/docker` | 通用 Docker registry 登录信息 |
-| `container/dockerhub` | Docker Hub 登录信息 |
-| `container/ghcr` | GitHub Container Registry 登录信息 |
-| `container/acr` | 阿里云 ACR 登录信息 |
 
 `env/dotenv` 不需要远端凭据；它直接读写项目本地 `.env`。S3 兼容 deploy 后端共用同一组 profile 字段，但 backend ID 是显式拆开的（`deploy/aws-s3`、`deploy/aliyun-oss`、`deploy/r2` 等）。
 

@@ -77,23 +77,17 @@ func Parse(s string) (Spec, error) {
 
 		switch {
 		case kind == byte(KindFrontend), kind == byte(KindBackend):
-			if len(payload) != 2 && len(payload) != 3 && len(payload) != 4 {
-				return Spec{}, newSegmentError(seg, i, "project segment payload must be 2 chars (template code), 3 chars (template+deploy code), or 4 chars (template+deploy+container code)")
+			if len(payload) != 2 {
+				return Spec{}, newSegmentError(seg, i, "project segment payload must be exactly 2 chars (template code); deployment and container suffixes are no longer supported")
 			}
 			it := Item{
 				Kind:         Kind(kind),
 				TemplateCode: payload[:2],
 			}
-			if len(payload) >= 3 {
-				it.DeployCode = payload[2:3]
-			}
-			if len(payload) == 4 {
-				it.ContainerCode = payload[3:4]
-			}
 			spec.Items = append(spec.Items, it)
 		case kind == byte(KindLibrary):
 			if len(payload) != 2 {
-				return Spec{}, newSegmentError(seg, i, "library segment payload must be exactly 2 chars (no deploy code allowed)")
+				return Spec{}, newSegmentError(seg, i, "library segment payload must be exactly 2 chars")
 			}
 			spec.Items = append(spec.Items, Item{
 				Kind:         Kind(kind),

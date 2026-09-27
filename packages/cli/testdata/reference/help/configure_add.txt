@@ -6,20 +6,6 @@ USAGE
   one configure add [service-id] [--profile <name>] [flags]
 
 SUBCOMMANDS
-  container/acr  container/acr
-  container/docker container/docker
-  container/dockerhub container/dockerhub
-  container/ghcr container/ghcr
-  deploy/aliyun-oss deploy/aliyun-oss
-  deploy/aws-s3  deploy/aws-s3
-  deploy/cloudflare deploy/cloudflare
-  deploy/edgeone deploy/edgeone
-  deploy/kustomize deploy/kustomize
-  deploy/minio   deploy/minio
-  deploy/r2      deploy/r2
-  deploy/rustfs  deploy/rustfs
-  deploy/tencent-cos deploy/tencent-cos
-  deploy/vercel  deploy/vercel
   env/infisical  env/infisical
 
 TIPS

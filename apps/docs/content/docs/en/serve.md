@@ -26,7 +26,7 @@ The process blocks in the foreground. Press Ctrl-C to stop. Workspace environmen
 
 ## Interactive Mode
 
-`one serve` has no terminal wizard. Browser forms can stage the Workspace environment Backend plus allowlisted Project runtime, environment, container, and deployment settings. A single confirmation publishes the collected Manifest draft. Profile bindings remain separate machine-local saves. When the Workspace uses `env/infisical`, the Dashboard can list key names and create, reveal, update, or delete one remote value at a time.
+`one serve` has no terminal wizard. Browser forms can stage the Workspace environment Backend plus allowlisted Project runtime and environment settings. A single confirmation publishes the collected Manifest draft. Profile bindings remain separate machine-local saves. When the Workspace uses `env/infisical`, the Dashboard can list key names and create, reveal, update, or delete one remote value at a time.
 
 For local human setup, run `one serve`. Scripts, CI, and agents can use `--open=false` to receive the plain loopback URL and call the API directly. Because the API can read and mutate sensitive configuration, do not run it on a shared machine with untrusted local processes.
 
@@ -169,9 +169,9 @@ The web UI uses these same routes. All routes require a matching Host header; mu
 
 Plural Workspace routes accept only the opaque `entryId`. The server resolves its root from the registry and revalidates the Manifest before every read or mutation; a client-supplied `root` never selects a filesystem path. Manifest publication is a typed patch, not a replacement document. Secret folder paths are derived from the selected Workspace/Project; the browser cannot submit an arbitrary path. Sending an empty Profile string removes that direct binding and restores fallback resolution.
 
-Former Project/Environment/Deploy/Container settings PUT paths under both `/api/workspace/...` and `/api/workspaces/{entryId}/...` remain registered for stale clients, but always return `409 SERVE_REPOSITORY_READ_ONLY`; repository writes use the revision-checked `/manifest` and `/environment/backend` routes. If copied Workspaces leave two live roots with one Manifest ID, both remain listed as conflicts: inspection is allowed and mutations return `409 Conflict` until the registry conflict is resolved.
+Former Project/Environment settings PUT paths under both `/api/workspace/...` and `/api/workspaces/{entryId}/...` return `409 SERVE_REPOSITORY_READ_ONLY`; repository writes use the revision-checked `/manifest` and `/environment/backend` routes. Deploy/Container settings routes have been removed. If copied Workspaces leave two live roots with one Manifest ID, inspection is allowed and mutations return `409 Conflict` until the identity conflict is resolved.
 
-Legal `(domain, backend)` values include `env/infisical`, `env/dotenv`, `deploy/aws-s3`, `deploy/aliyun-oss`, `deploy/tencent-cos`, `deploy/minio`, `deploy/rustfs`, `deploy/r2`, `deploy/kustomize`, `deploy/vercel`, `deploy/cloudflare`, `deploy/edgeone`, and `container/docker`. Other combinations return 404.
+The catalog contains `env/infisical` and `env/dotenv`. Only Infisical uses credential Profiles. Other backend combinations return 404.
 
 Probe example:
 

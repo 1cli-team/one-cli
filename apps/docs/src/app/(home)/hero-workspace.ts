@@ -21,7 +21,7 @@ export type ModuleId =
   | "docs"
   | "packages"
   | "env"
-  | "deploy"
+  | "build"
   | "manifest"
   | "cli-interface";
 
@@ -107,11 +107,11 @@ const moduleConfigs: ModuleConfig[] = [
     delay: 360,
   },
   {
-    id: "deploy",
+    id: "build",
     labels: { zh: "Deploy", en: "Deploy" },
     spotlight: {
-      zh: { title: "Deploy", subtitle: "K8s / S3 / Vercel 部署" },
-      en: { title: "Deploy", subtitle: "K8s, S3, Vercel deploy" },
+      zh: { title: "Build", subtitle: "统一项目构建" },
+      en: { title: "Build", subtitle: "Build workspace projects" },
     },
     x: 1.0,
     y: 0.48,

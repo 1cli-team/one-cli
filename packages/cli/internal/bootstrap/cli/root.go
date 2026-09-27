@@ -29,21 +29,19 @@ import (
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/preferences"
 	platformprocess "github.com/torchstellar-team/one-cli/packages/cli/internal/platform/process"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/updatecheck"
-	"github.com/torchstellar-team/one-cli/packages/cli/internal/transport/cobra/add"
-	"github.com/torchstellar-team/one-cli/packages/cli/internal/transport/cobra/build"
-	"github.com/torchstellar-team/one-cli/packages/cli/internal/transport/cobra/ci"
-	"github.com/torchstellar-team/one-cli/packages/cli/internal/transport/cobra/configure"
-	"github.com/torchstellar-team/one-cli/packages/cli/internal/transport/cobra/container"
-	"github.com/torchstellar-team/one-cli/packages/cli/internal/transport/cobra/create"
-	"github.com/torchstellar-team/one-cli/packages/cli/internal/transport/cobra/deploy"
-	"github.com/torchstellar-team/one-cli/packages/cli/internal/transport/cobra/dev"
-	"github.com/torchstellar-team/one-cli/packages/cli/internal/transport/cobra/env"
-	"github.com/torchstellar-team/one-cli/packages/cli/internal/transport/cobra/hooks"
-	"github.com/torchstellar-team/one-cli/packages/cli/internal/transport/cobra/mise"
-	"github.com/torchstellar-team/one-cli/packages/cli/internal/transport/cobra/run"
-	"github.com/torchstellar-team/one-cli/packages/cli/internal/transport/cobra/serve"
-	"github.com/torchstellar-team/one-cli/packages/cli/internal/transport/cobra/skills"
-	"github.com/torchstellar-team/one-cli/packages/cli/internal/transport/cobra/templates"
+	addcmd "github.com/torchstellar-team/one-cli/packages/cli/internal/transport/cobra/add"
+	buildcmd "github.com/torchstellar-team/one-cli/packages/cli/internal/transport/cobra/build"
+	cicmd "github.com/torchstellar-team/one-cli/packages/cli/internal/transport/cobra/ci"
+	configurecmd "github.com/torchstellar-team/one-cli/packages/cli/internal/transport/cobra/configure"
+	createcmd "github.com/torchstellar-team/one-cli/packages/cli/internal/transport/cobra/create"
+	devcmd "github.com/torchstellar-team/one-cli/packages/cli/internal/transport/cobra/dev"
+	envcmd "github.com/torchstellar-team/one-cli/packages/cli/internal/transport/cobra/env"
+	hookscmd "github.com/torchstellar-team/one-cli/packages/cli/internal/transport/cobra/hooks"
+	misecmd "github.com/torchstellar-team/one-cli/packages/cli/internal/transport/cobra/mise"
+	runcmd "github.com/torchstellar-team/one-cli/packages/cli/internal/transport/cobra/run"
+	servecmd "github.com/torchstellar-team/one-cli/packages/cli/internal/transport/cobra/serve"
+	skillscmd "github.com/torchstellar-team/one-cli/packages/cli/internal/transport/cobra/skills"
+	templatescmd "github.com/torchstellar-team/one-cli/packages/cli/internal/transport/cobra/templates"
 )
 
 func newRootCommand() *cobra.Command {
@@ -58,16 +56,7 @@ func newRootCommand() *cobra.Command {
 		buildcmd.Commands(deps.runtime),
 		cicmd.Commands(deps.ci),
 		configurecmd.Commands(deps.catalog, deps.profiles, deps.workspaces, deps.registry),
-		containercmd.Commands(containercmd.Dependencies{
-			Service: deps.containers,
-		}),
 		createcmd.Commands(createcmd.Dependencies{Creation: deps.creation}),
-		deploycmd.Commands(deploycmd.Dependencies{
-			Catalog:    deps.catalog,
-			Profiles:   deps.profiles,
-			Creation:   deps.creation,
-			NewService: deps.newDeploymentService,
-		}),
 		devcmd.Commands(deps.runtime),
 		misecmd.RuntimeCommands(deps.runtime),
 		hookscmd.Commands(deps.runtime),

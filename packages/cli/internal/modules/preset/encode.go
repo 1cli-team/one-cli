@@ -29,23 +29,9 @@ func Encode(spec Spec) (string, error) {
 		if !isValidTemplateCodeRaw(it.TemplateCode) {
 			return "", fmt.Errorf("invalid template code: %q", it.TemplateCode)
 		}
-		if it.Kind == KindLibrary && it.DeployCode != "" {
-			return "", fmt.Errorf("library segment %q must not carry a deploy code", it.TemplateCode)
-		}
-		if it.DeployCode != "" && !isValidSingleCharCode(it.DeployCode) {
-			return "", fmt.Errorf("invalid deploy code: %q", it.DeployCode)
-		}
-		if it.ContainerCode != "" && it.DeployCode == "" {
-			return "", fmt.Errorf("container code %q requires an explicit deploy code", it.ContainerCode)
-		}
-		if it.ContainerCode != "" && !isValidSingleCharCode(it.ContainerCode) {
-			return "", fmt.Errorf("invalid container code: %q", it.ContainerCode)
-		}
 		b.WriteByte('.')
 		b.WriteByte(byte(it.Kind))
 		b.WriteString(it.TemplateCode)
-		b.WriteString(it.DeployCode)
-		b.WriteString(it.ContainerCode)
 	}
 	if c.EnvCode != "" {
 		if !isValidSingleCharCode(c.EnvCode) {

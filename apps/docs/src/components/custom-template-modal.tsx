@@ -20,7 +20,6 @@ import {
 } from "@/components/ui/dialog";
 import {
   templates,
-  type DeployOption,
   type TemplateKind,
   type TemplateMeta,
 } from "@/data/templates";
@@ -32,14 +31,11 @@ import {
 type ModalLocale = "zh" | "en";
 type EnvProvider = "dotenv" | "infisical";
 type KindFilter = "all" | TemplateKind;
-type ContainerKind = "docker" | "dockerhub" | "ghcr" | "acr";
 
 type Selection = {
   uid: string;
   templateId: string;
   name: string;
-  deployCode: string | null;
-  containerCode: string | null;
 };
 
 const kindOrder: KindFilter[] = ["all", "frontend", "backend", "library"];
@@ -51,26 +47,11 @@ const kindIcons: Record<KindFilter, typeof Layers3> = {
   library: Library,
 };
 
-const containerOptions: {
-  id: ContainerKind;
-  code: string;
-  name: Record<ModalLocale, string>;
-}[] = [
-  { id: "dockerhub", code: "h", name: { zh: "Docker Hub", en: "Docker Hub" } },
-  { id: "ghcr", code: "g", name: { zh: "GHCR", en: "GHCR" } },
-  { id: "acr", code: "a", name: { zh: "阿里云 ACR", en: "Aliyun ACR" } },
-  {
-    id: "docker",
-    code: "d",
-    name: { zh: "通用 Docker Registry", en: "Generic Docker Registry" },
-  },
-];
-
 const copy = {
   zh: {
     title: "自定义模板",
     subtitle:
-      "选择需要的模板与部署目标，右侧会实时生成单条 one create 命令。",
+      "选择需要的模板与环境来源，右侧会实时生成单条 one create 命令。",
     close: "关闭",
     kinds: {
       all: "全部",
@@ -88,17 +69,11 @@ const copy = {
     copy: "复制",
     copied: "已复制",
     nameHelp: "决定 workspace 目录；子项目名可在下方分别设置",
-    deployModal: {
-      title: "选择部署目标",
-      containerTitle: "Container 类型",
-      cancel: "取消",
-      confirm: "添加",
-    },
   },
   en: {
     title: "Build your own",
     subtitle:
-      "Pick templates and deploy targets; a single one create command appears live on the right.",
+      "Pick templates and an environment source; a single one create command appears live on the right.",
     close: "Close",
     kinds: {
       all: "All",
@@ -116,12 +91,6 @@ const copy = {
     copy: "Copy",
     copied: "Copied",
     nameHelp: "Used for the workspace directory; subprojects can be named below",
-    deployModal: {
-      title: "Choose a deploy target",
-      containerTitle: "Container type",
-      cancel: "Cancel",
-      confirm: "Add",
-    },
   },
 } satisfies Record<ModalLocale, unknown>;
 
@@ -140,9 +109,6 @@ export function CustomTemplateModal({
   const [workspaceName, setWorkspaceName] = useState("my-workspace");
   const [env, setEnv] = useState<EnvProvider>("dotenv");
   const [copied, setCopied] = useState(false);
-  const [pendingTemplate, setPendingTemplate] = useState<TemplateMeta | null>(
-    null,
-  );
 
   const visibleTemplates = useMemo<TemplateMeta[]>(() => {
     if (activeKind === "all") return templates;
@@ -158,8 +124,6 @@ export function CustomTemplateModal({
         uid: s.uid,
         kind: t.presetKind,
         tcode: t.code,
-        dcode: s.deployCode ?? undefined,
-        ccode: s.containerCode ?? undefined,
         templateId: t.id,
         title: t.title,
         defaultName: t.defaultName,
@@ -174,17 +138,11 @@ export function CustomTemplateModal({
   }, [selection, env, workspaceName]);
 
   function attemptAdd(template: TemplateMeta) {
-    if (template.deployOptions.length === 0) {
-      addToSelection(template, null, null);
-      return;
-    }
-    setPendingTemplate(template);
+    addToSelection(template);
   }
 
   function addToSelection(
     template: TemplateMeta,
-    deployCode: string | null,
-    containerCode: string | null,
   ) {
     setSelection((prev) => [
       ...prev,
@@ -192,8 +150,6 @@ export function CustomTemplateModal({
         uid: `${template.id}-${Date.now()}-${prev.length}`,
         templateId: template.id,
         name: nextProjectName(template, prev),
-        deployCode,
-        containerCode,
       },
     ]);
   }
@@ -382,16 +338,6 @@ export function CustomTemplateModal({
                       {selection.map((s) => {
                         const t = templates.find((x) => x.id === s.templateId);
                         if (!t) return null;
-                        const deployName = s.deployCode
-                          ? t.deployOptions.find(
-                              (o) => o.code === s.deployCode,
-                            )?.name[lang] ?? s.deployCode
-                          : null;
-                        const containerName = s.containerCode
-                          ? containerOptions.find(
-                              (o) => o.code === s.containerCode,
-                            )?.name[lang] ?? s.containerCode
-                          : null;
                         return (
                           <li
                             key={s.uid}
@@ -409,17 +355,8 @@ export function CustomTemplateModal({
                                 }
                                 spellCheck={false}
                               />
-                              {deployName && (
-                                <div className="mt-1 inline-flex items-center gap-1 rounded bg-orange-50 px-1.5 py-0.5 text-[10px] text-[#ea580c]">
-                                  <Rocket className="size-3" />
-                                  {deployName}
-                                </div>
-                              )}
-                              {containerName && (
-                                <div className="mt-1 ml-1 inline-flex items-center gap-1 rounded bg-stone-100 px-1.5 py-0.5 text-[10px] text-stone-600">
-                                  {containerName}
-                                </div>
-                              )}
+
+
                             </div>
                             <button
                               type="button"
@@ -475,18 +412,7 @@ export function CustomTemplateModal({
         </DialogContent>
       </Dialog>
 
-      <DeployPickerDialog
-        lang={lang}
-        template={pendingTemplate}
-        text={text}
-        onCancel={() => setPendingTemplate(null)}
-        onConfirm={({ deployCode, containerCode }) => {
-          if (pendingTemplate) {
-            addToSelection(pendingTemplate, deployCode, containerCode);
-          }
-          setPendingTemplate(null);
-        }}
-      />
+
     </>
   );
 }
@@ -576,206 +502,6 @@ function TemplateChip({
         </div>
       </div>
     </div>
-  );
-}
-
-function DeployPickerDialog({
-  lang,
-  template,
-  text,
-  onCancel,
-  onConfirm,
-}: {
-  lang: ModalLocale;
-  template: TemplateMeta | null;
-  text: (typeof copy)[ModalLocale];
-  onCancel: () => void;
-  onConfirm: (value: {
-    deployCode: string | null;
-    containerCode: string | null;
-  }) => void;
-}) {
-  const [chosen, setChosen] = useState<string | null>(null);
-  const [container, setContainer] = useState<string>("h");
-
-  // Initialize chosen when template changes.
-  useMemoChosenInit(template, setChosen, setContainer);
-
-  function handleOpenChange(nextOpen: boolean) {
-    if (nextOpen) return;
-    onCancel();
-  }
-
-  return (
-    <Dialog
-      open={template !== null}
-      onOpenChange={handleOpenChange}
-      disablePointerDismissal
-    >
-      <DialogContent
-        showCloseButton={false}
-        className="!w-[calc(100%-2rem)] !max-w-md !p-0 !gap-0 max-h-[min(640px,calc(100vh-2rem))] flex flex-col overflow-hidden !rounded-xl border border-stone-200 bg-white !text-stone-900"
-      >
-        {template && (
-          <>
-            <header className="flex items-start justify-between gap-3 px-5 pb-3 pt-5">
-              <div className="min-w-0">
-                <div className="flex items-center gap-2">
-                  <Rocket className="size-4 shrink-0 text-[#ea580c]" />
-                  <DialogTitle className="!font-sans !text-base !font-semibold !leading-tight text-stone-900 truncate">
-                    {text.deployModal.title}
-                  </DialogTitle>
-                </div>
-                <p className="mt-1 text-xs leading-5 text-stone-500">
-                  {template.title[lang]}
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={onCancel}
-                aria-label={text.close}
-                className="-mr-1 inline-flex size-8 shrink-0 items-center justify-center rounded-md text-stone-400 hover:bg-stone-100 hover:text-stone-700"
-              >
-                <X className="size-4" />
-              </button>
-            </header>
-
-            <ul className="flex min-h-0 flex-1 flex-col gap-1 overflow-auto px-3 pb-3">
-              {template.deployOptions.map((opt) => (
-                <DeployOptionRow
-                  key={opt.code}
-                  option={opt}
-                  lang={lang}
-                  isDefault={opt.code === template.defaultDeployCode}
-                  checked={chosen === opt.code}
-                  onChoose={() => setChosen(opt.code)}
-                />
-              ))}
-            </ul>
-
-            {chosen === "k" && (
-              <div className="border-t border-stone-100 px-5 py-3">
-                <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-stone-500">
-                  {text.deployModal.containerTitle}
-                </p>
-                <div className="grid grid-cols-2 gap-1">
-                  {containerOptions.map((opt) => (
-                    <button
-                      key={opt.id}
-                      type="button"
-                      onClick={() => setContainer(opt.code)}
-                      className={[
-                        "rounded-md border px-2.5 py-2 text-left text-xs transition",
-                        container === opt.code
-                          ? "border-orange-200 bg-orange-50 text-stone-900"
-                          : "border-stone-200 bg-white text-stone-600 hover:border-stone-300 hover:text-stone-900",
-                      ].join(" ")}
-                    >
-                      {opt.name[lang]}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            <footer className="flex items-center justify-end gap-2 border-t border-stone-100 px-5 py-3">
-              <button
-                type="button"
-                onClick={onCancel}
-                className="inline-flex h-8 items-center rounded-md px-3 text-sm font-medium text-stone-600 hover:bg-stone-100 hover:text-stone-900"
-              >
-                {text.deployModal.cancel}
-              </button>
-              <button
-                type="button"
-                onClick={() =>
-                  onConfirm({
-                    deployCode: chosen,
-                    containerCode: chosen === "k" ? container : null,
-                  })
-                }
-                className="inline-flex h-8 items-center gap-1.5 rounded-md bg-[#ea580c] px-3.5 text-sm font-semibold text-white hover:bg-[#c2410c]"
-              >
-                {text.deployModal.confirm}
-              </button>
-            </footer>
-          </>
-        )}
-      </DialogContent>
-    </Dialog>
-  );
-}
-
-function useMemoChosenInit(
-  template: TemplateMeta | null,
-  setChosen: (v: string | null) => void,
-  setContainer: (v: string) => void,
-) {
-  // Reset chosen when template opens; runs only when template identity changes.
-  useMemo(() => {
-    if (template) {
-      setChosen(template.defaultDeployCode);
-      setContainer("h");
-    }
-  }, [template]);
-}
-
-function DeployOptionRow({
-  option,
-  lang,
-  isDefault,
-  checked,
-  onChoose,
-}: {
-  option: DeployOption;
-  lang: ModalLocale;
-  isDefault: boolean;
-  checked: boolean;
-  onChoose: () => void;
-}) {
-  return (
-    <li>
-      <button
-        type="button"
-        onClick={onChoose}
-        className={[
-          "flex w-full items-center gap-3 rounded-md px-3 py-2 text-left transition",
-          checked
-            ? "bg-orange-50 text-stone-900"
-            : "text-stone-700 hover:bg-stone-50",
-        ].join(" ")}
-      >
-        <span
-          className={[
-            "inline-flex size-4 shrink-0 items-center justify-center rounded-full border-2 transition",
-            checked
-              ? "border-[#ea580c] bg-[#ea580c]"
-              : "border-stone-300 bg-white",
-          ].join(" ")}
-          aria-hidden
-        >
-          {checked && <Check className="size-2.5 text-white" strokeWidth={3} />}
-        </span>
-        <span className="min-w-0 flex-1 truncate text-sm font-medium">
-          {option.name[lang]}
-        </span>
-        <code
-          className={[
-            "shrink-0 rounded px-1.5 py-0.5 font-mono text-[10px] transition",
-            checked
-              ? "bg-orange-100 text-[#c2410c]"
-              : "bg-stone-100 text-stone-500",
-          ].join(" ")}
-        >
-          {option.code}
-        </code>
-        {isDefault && (
-          <span className="shrink-0 text-[10px] text-stone-400">
-            {lang === "zh" ? "默认" : "default"}
-          </span>
-        )}
-      </button>
-    </li>
   );
 }
 

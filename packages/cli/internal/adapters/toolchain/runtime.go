@@ -7,73 +7,6 @@ import (
 	"github.com/torchstellar-team/one-cli/packages/cli/pkg/toolchain"
 )
 
-// runtimeCandidate is one candidate npm/pnpm script the runtime resolver
-// will probe in priority order. args is appended verbatim after the script
-// name (e.g. " -- --host 0.0.0.0").
-type runtimeCandidate struct {
-	Script string
-	Args   string
-}
-
-type runtimePreset struct {
-	ContainerPort int
-	Candidates    []runtimeCandidate
-}
-
-// defaultRuntimePreset is the fallback when a templateId has no entry in
-// templateRuntimePresets. Mirrors DEFAULT_RUNTIME_PRESET in TS.
-var defaultRuntimePreset = runtimePreset{
-	ContainerPort: 3000,
-	Candidates: []runtimeCandidate{
-		{Script: "dev"},
-		{Script: "start:dev"},
-		{Script: "start"},
-		{Script: "preview"},
-		{Script: "web"},
-	},
-}
-
-// templateRuntimePresets is the per-template port + run-command policy.
-// Order matters: the first script that's present in package.json wins.
-var templateRuntimePresets = map[string]runtimePreset{
-	"nestjs-api": {
-		ContainerPort: 3000,
-		Candidates:    []runtimeCandidate{{Script: "start:dev"}, {Script: "start"}},
-	},
-	"nextjs-app": {
-		ContainerPort: 3000,
-		Candidates: []runtimeCandidate{
-			{Script: "dev", Args: " -- --hostname 0.0.0.0 --port 3000"},
-			{Script: "start"},
-		},
-	},
-	"react-spa": {
-		ContainerPort: 5173,
-		Candidates: []runtimeCandidate{
-			{Script: "dev", Args: " -- --host 0.0.0.0 --port 5173"},
-			{Script: "preview", Args: " -- --host 0.0.0.0 --port 5173"},
-		},
-	},
-	"astro-site": {
-		ContainerPort: 4321,
-		Candidates: []runtimeCandidate{
-			{Script: "dev", Args: " -- --host 0.0.0.0 --port 4321"},
-			{Script: "preview", Args: " -- --host 0.0.0.0 --port 4321"},
-		},
-	},
-	"starlight-docs": {
-		ContainerPort: 4321,
-		Candidates: []runtimeCandidate{
-			{Script: "dev", Args: " -- --host 0.0.0.0 --port 4321"},
-			{Script: "preview", Args: " -- --host 0.0.0.0 --port 4321"},
-		},
-	},
-	"expo-mobile": {
-		ContainerPort: 19006,
-		Candidates:    []runtimeCandidate{{Script: "web"}, {Script: "start"}},
-	},
-}
-
 func resolvePackageManager(pm toolchain.PackageManager) toolchain.PackageManager {
 	if pm == "" {
 		return toolchain.PMpnpm
@@ -183,32 +116,4 @@ func resolveNodeCiCommands(scripts map[string]string, pm toolchain.PackageManage
 		cmds = append(cmds, `echo "No CI scripts configured for this subproject."`)
 	}
 	return cmds
-}
-
-// pickRuntimeCandidate returns the first candidate whose script is present
-// in the subproject's package.json. The container port is taken from the
-// preset associated with the templateID, regardless of which candidate
-// matched (matches the TS behaviour).
-func pickRuntimeCandidate(scripts map[string]string, templateID string) (runtimeCandidate, int, bool) {
-	preset, ok := templateRuntimePresets[templateID]
-	if !ok {
-		preset = defaultRuntimePreset
-	}
-	for _, c := range preset.Candidates {
-		if _, present := scripts[c.Script]; present {
-			return c, preset.ContainerPort, true
-		}
-	}
-	for _, c := range defaultRuntimePreset.Candidates {
-		if _, present := scripts[c.Script]; present {
-			return c, preset.ContainerPort, true
-		}
-	}
-	return runtimeCandidate{}, 0, false
-}
-
-func escapeForDoubleQuotedValue(s string) string {
-	s = strings.ReplaceAll(s, `\`, `\\`)
-	s = strings.ReplaceAll(s, `"`, `\"`)
-	return s
 }

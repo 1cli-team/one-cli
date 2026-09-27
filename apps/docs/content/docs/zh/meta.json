@@ -14,11 +14,9 @@
     "configure",
     "hk",
     "templates-cmd",
-    "container",
     "dev",
     "build",
     "ci",
-    "deploy",
     "run",
     "serve",
     "error-codes"

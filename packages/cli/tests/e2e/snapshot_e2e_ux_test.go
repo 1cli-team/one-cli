@@ -49,12 +49,12 @@ func TestSnapshot_E2E_HelpDailyAndCompleteCatalogues(t *testing.T) {
 	if code != 0 || stderr != "" {
 		t.Fatalf("one --help failed: exit=%d stderr=%q", code, stderr)
 	}
-	for _, command := range []string{"create", "add", "dev", "build", "deploy", "env", "configure"} {
+	for _, command := range []string{"create", "add", "dev", "build", "env", "configure"} {
 		if !strings.Contains(daily, "  "+command) {
 			t.Errorf("daily help missing %q:\n%s", command, daily)
 		}
 	}
-	for _, command := range []string{"ci", "templates", "container", "run", "serve"} {
+	for _, command := range []string{"ci", "templates", "run", "serve"} {
 		if strings.Contains(daily, "\n  "+command) {
 			t.Errorf("daily help should not advertise advanced command %q:\n%s", command, daily)
 		}
@@ -64,7 +64,7 @@ func TestSnapshot_E2E_HelpDailyAndCompleteCatalogues(t *testing.T) {
 	if code != 0 || stderr != "" {
 		t.Fatalf("one help --all failed: exit=%d stderr=%q", code, stderr)
 	}
-	for _, command := range []string{"create", "add", "dev", "build", "deploy", "env", "configure", "ci", "templates", "container", "run", "serve"} {
+	for _, command := range []string{"create", "add", "dev", "build", "env", "configure", "ci", "templates", "run", "serve"} {
 		if !strings.Contains(all, "  "+command) {
 			t.Errorf("complete help missing %q:\n%s", command, all)
 		}
@@ -111,7 +111,7 @@ func TestSnapshot_E2E_WorkspaceOverviewAndDeferredDeployment(t *testing.T) {
 	}
 	summary := mustParseJSON(t, stdout)
 	project := summary["projects"].([]any)[0].(map[string]any)
-	if project["deployment_configured"] != false || summary["next_command"] != "one dev web" {
+	if project["deployment_configured"] != nil || summary["next_command"] != "one dev web" {
 		t.Fatalf("unexpected project summary: %v", summary)
 	}
 
@@ -127,13 +127,13 @@ func TestSnapshot_E2E_WorkspaceOverviewAndDeferredDeployment(t *testing.T) {
 		t.Fatalf("unexpected missing-tool error: %v", devErr)
 	}
 
-	_, stderr, code = runBinaryIn(t, ws, "deploy", "web", "--provider", "aws-s3", "-o", "json")
+	_, stderr, code = runBinaryIn(t, ws, "deploy", "-o", "json")
 	if code == 0 {
-		t.Fatal("non-interactive first deploy without a local connection should fail")
+		t.Fatal("removed deploy command should fail")
 	}
 	deployErr := mustParseJSON(t, firstJSONLine(stderr))
-	if deployErr["error"].(map[string]any)["code"] != "PROFILE_NONE_CONFIGURED" {
-		t.Fatalf("unexpected first-deploy error: %v", deployErr)
+	if deployErr["error"].(map[string]any)["code"] != "UNKNOWN_COMMAND" {
+		t.Fatalf("unexpected removed-command error: %v", deployErr)
 	}
 	manifestAfter, err := os.ReadFile(filepath.Join(ws, "one.manifest.json"))
 	if err != nil {

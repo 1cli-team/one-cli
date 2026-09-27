@@ -27,19 +27,11 @@ const ManifestVersion = 1
 //
 // Current layout:
 //   - workspace: identity only (id, name)
-//   - environments: top-level environment-name list + default name; consumed
-//     by secrets backends, deploy --env validation, and per-project
-//     deploy.config.env validation alike
-//   - domains: workspace-level backend selections, keyed by domain name
-//     ("env", "deploy", "container"). Each value carries kind +
-//     a kind-specific config blob (json.RawMessage, decoded by callers via
-//     typed accessors).
+//   - environments: environment-name list and default for secrets backends
+//   - domains: workspace environment backend and its config
 //   - projects[]: each project carries identity (name, relativeDir,
 //     templateId, toolchain, buildVersion, packageManager) plus an optional
-//     domains override block. Project-scope env / container override carry
-//     no kind (always inherited from workspace); project-scope deploy
-//     carries full kind+config because deploy is genuinely
-//     per-project polymorphic.
+//     domains block with environment overrides and a development command.
 type Manifest struct {
 	Version      int                `json:"version"`
 	Workspace    *ManifestWorkspace `json:"workspace,omitempty"`
@@ -57,13 +49,8 @@ type ManifestWorkspace struct {
 	Name string `json:"name"`
 }
 
-// Environments is the workspace-level environment-name registry. Names are
-// the deployment target names ("dev" / "preview" / "prod" by default), used
-// in three independent places:
-//   - secrets backends enumerate `Names` to know which env files / Infisical
-//     environments exist
-//   - `one deploy --env <name>` validates against `Names`
-//   - projects[].domains.deploy.config.env validates against `Names`
+// Environments names the dotenv files or Infisical environments available
+// to the workspace ("dev" / "preview" / "prod" by default).
 //
 // Default is the env name used when --env is omitted; it must appear in
 // Names. New workspaces seed `["dev","preview","prod"]` with default "dev".
@@ -78,20 +65,14 @@ type Environments struct {
 // independent of any specific secrets backend.
 var DefaultEnvironments = []string{"dev", "preview", "prod"}
 
-// WorkspaceDomains is the workspace-level backend selection block. Each
-// field is optional and represents the selected backend for that domain.
-// Marshalled as {"env": {...}, "deploy": {...}, "container": {...}} so the
-// JSON shape mirrors per-project ProjectDomains.
+// WorkspaceDomains selects the optional workspace environment backend.
 type WorkspaceDomains struct {
-	Env       *BackendRef `json:"env,omitempty"`
-	Deploy    *BackendRef `json:"deploy,omitempty"`
-	Container *BackendRef `json:"container,omitempty"`
+	Env *BackendRef `json:"env,omitempty"`
 }
 
 // BackendRef is the workspace-level "selected backend" for a single domain.
-// `Kind` is the bare backend name (e.g. "infisical", "kustomize", "docker").
-// `Config` is a kind-specific JSON blob; callers decode via typed accessors per domain
-// (see internal/core/workspace/domains/{env,deploy,container}.go).
+// `Kind` is the bare backend name ("infisical" or "dotenv").
+// `Config` is decoded via the environment backend's typed accessors.
 type BackendRef struct {
 	Kind   string          `json:"kind,omitempty"`
 	Config json.RawMessage `json:"config,omitempty"`
@@ -110,20 +91,11 @@ type ManifestProject struct {
 	Domains        *ProjectDomains `json:"domains,omitempty"`
 }
 
-// ProjectDomains is the per-project override block. Keys mirror
-// WorkspaceDomains. The shape of each value differs by domain because the
-// scopes carry different state:
-//   - env: an override (path / inherits / disabled / keys); kind is
-//     always inherited from workspace
-//   - container: an override (image / namespace / optional kind); all current
-//     kinds share the compiled Docker/OCI execution module
-//   - deploy: a full BackendRef (kind + config) because the
-//     workspace may host one project on Vercel and another on kustomize
+// ProjectDomains holds environment overrides and the development command.
+// The environment backend is always inherited from the workspace.
 type ProjectDomains struct {
-	Env       *ProjectEnvOverride       `json:"env,omitempty"`
-	Container *ProjectContainerOverride `json:"container,omitempty"`
-	Deploy    *ProjectDeployBackend     `json:"deploy,omitempty"`
-	Dev       *ProjectDevOverride       `json:"dev,omitempty"`
+	Env *ProjectEnvOverride `json:"env,omitempty"`
+	Dev *ProjectDevOverride `json:"dev,omitempty"`
 }
 
 // ProjectDevOverride is the per-project dev command for `one dev`.
@@ -153,42 +125,6 @@ type ProjectEnvOverride struct {
 	Inherits *bool    `json:"inherits,omitempty"`
 	Disabled bool     `json:"disabled,omitempty"`
 	Keys     []string `json:"keys,omitempty"`
-}
-
-// ProjectContainerOverride marks a project as having an owned Dockerfile
-// (presence of the section means "build this project with `one container
-// build`") and carries optional per-project image / registry overrides.
-type ProjectContainerOverride struct {
-	// Kind selects the container backend implementation. Empty means
-	// "docker" (generic Docker registry protocol). Other recognised
-	// values: "dockerhub" / "ghcr" / "acr" (Aliyun ACR). Mirrors
-	// ProjectDeployBackend.Kind. The resolver falls back to the
-	// workspace-level manifest.domains.container.kind, then to
-	// "docker".
-	Kind string `json:"kind,omitempty"`
-
-	// Image records or overrides the
-	// `<registry>/[<namespace>/]<workload>:<version>` tag used by
-	// `one container build` / `one deploy`. Optional.
-	Image string `json:"image,omitempty"`
-
-	// Namespace is the registry namespace (org / team prefix). Lives
-	// per-project because the same registry credential frequently hosts
-	// multiple workloads under different namespaces. Empty means "use the
-	// container profile default namespace".
-	Namespace string `json:"namespace,omitempty"`
-}
-
-// ProjectDeployBackend is the per-project deploy backend selection.
-// Mirrors BackendRef shape because deploy is the only domain where
-// projects in the same workspace genuinely choose different
-// implementations (web → s3, api → kustomize). `Config` carries
-// kind-specific fields (e.g. the Vercel projectId, the S3 bucket, the
-// per-deploy env name); decoded via accessors in
-// internal/core/workspace/domains/deploy/.
-type ProjectDeployBackend struct {
-	Kind   string          `json:"kind,omitempty"`
-	Config json.RawMessage `json:"config,omitempty"`
 }
 
 // ManifestPath returns the absolute path to one.manifest.json under
@@ -263,6 +199,9 @@ func ReadManifestSnapshot(projectRoot string) (*Manifest, string, error) {
 	dec := json.NewDecoder(bytes.NewReader(raw))
 	dec.DisallowUnknownFields()
 	if err := dec.Decode(&m); err != nil {
+		if err.Error() == `json: unknown field "deploy"` || err.Error() == `json: unknown field "container"` {
+			return nil, "", cliErrors.New(cliErrors.MANIFEST_INVALID, "container 和 deploy 功能已下线，请手动删除 one.manifest.json 中对应的配置字段后重试。")
+		}
 		return nil, "", cliErrors.New(cliErrors.MANIFEST_INVALID, "one.manifest.json 解析失败。")
 	}
 	if m.Version != ManifestVersion {
@@ -271,22 +210,7 @@ func ReadManifestSnapshot(projectRoot string) (*Manifest, string, error) {
 			msg += " 请升级 one CLI，或按当前 manifest schema 手动迁移后再重试。"
 		}
 		if m.Version == 0 {
-			msg += " 旧 manifest 需要手动迁移：" +
-				"(1) 顶层 env / deploy / container 三个 section 合并到 domains: " +
-				"`env.backend → domains.env.kind`，" +
-				"`env.{projectId,projectName,rootPath,keys} → domains.env.config.{...}`；" +
-				"`deploy.{namespace,kustomizationPath} → domains.deploy.config.{...}`；" +
-				"`container.platform → domains.container.config.platform`；" +
-				"`preferredProfile` 不进 manifest，改写 ~/.config/one/config.json#workspaces。" +
-				"(2) 顶层 env.environments / env.defaultEnv 提到顶层 environments: " +
-				"`env.environments → environments.names`，`env.defaultEnv → environments.default`。" +
-				"(3) 每个 project 的 env/container/deploy 包到 domains 下: " +
-				"`projects[].env → projects[].domains.env`，`projects[].container → projects[].domains.container`，" +
-				"`projects[].deploy.target → projects[].domains.deploy.kind`，" +
-				"`projects[].deploy.{vercel,cloudflare,edgeone,kustomize}.* → projects[].domains.deploy.config.*`。" +
-				"(4) 删除字段：ci / dev（不再由 manifest 控制）、ai（默认全启用所有 provider）、" +
-				"顶层 packageManager、workspace.roots、environments（旧的 dead map）、所有 profile 字段。" +
-				"(5) 顶层 \"version\" 字段改为 1。"
+			msg += " 请按当前 schema 手动更新 workspace、environments、domains.env 和 projects，删除已下线的 deploy/container 字段，并将 version 设为 1。"
 		}
 		return nil, "", cliErrors.New(cliErrors.MANIFEST_INVALID, msg)
 	}

@@ -69,7 +69,7 @@ func TestGeneratedNodeProjectsPassFormatting(t *testing.T) {
 			if _, err := s.CreateWorkspace(context.Background(), WorkspaceInput{TargetDir: root, Name: "format-check"}); err != nil {
 				t.Fatal(err)
 			}
-			result, err := s.AddProject(context.Background(), root, ProjectInput{Template: &entry, Name: "sample", DeferDeployment: true})
+			result, err := s.AddProject(context.Background(), root, ProjectInput{Template: &entry, Name: "sample"})
 			if err != nil {
 				t.Fatal(err)
 			}

@@ -2,7 +2,7 @@
 // application layer. Backend identities and profile fields intentionally come
 // from GET /api/catalog instead of a second hard-coded frontend registry.
 
-export type BackendDomain = "env" | "deploy" | "container";
+export type BackendDomain = "env";
 export type SectionKey = `${BackendDomain}/${string}`;
 export type ProfileValue = string | number | boolean | null | AnyProfile | ProfileValue[];
 export interface AnyProfile {
@@ -147,7 +147,7 @@ export interface HttpError {
 // Returned by singular or registry-scoped Workspace overview routes.
 // `present: false` is retained for the legacy launch-root route.
 
-export type OverviewIssueDomain = "container" | "deploy" | "env";
+export type OverviewIssueDomain = "env";
 export type OverviewIssueSeverity = "missing";
 export type OverviewIssueReason = "backend" | "profile";
 
@@ -169,7 +169,6 @@ export interface OverviewProject {
 	kind: OverviewProjectKind;
 	templateId?: string;
 	toolchain?: string;
-	compatibleDeployTargets?: string[];
 	domains?: Partial<Record<OverviewIssueDomain, string>>;
 	issues?: OverviewIssue[];
 }
@@ -249,23 +248,6 @@ export interface ProjectEnvironmentSettings {
 	profile?: ProjectProfileBinding;
 }
 
-export interface ProjectContainerSettings {
-	enabled: boolean;
-	backend?: string;
-	image?: string;
-	namespace?: string;
-	selectedProfile?: string;
-	profile?: ProjectProfileBinding;
-}
-
-export interface ProjectDeploySettings {
-	backend?: string;
-	compatibleTargets?: string[];
-	config?: Record<string, ProfileValue>;
-	selectedProfile?: string;
-	profile?: ProjectProfileBinding;
-}
-
 export interface ProjectSettings {
 	name: string;
 	relativeDir: string;
@@ -275,11 +257,14 @@ export interface ProjectSettings {
 	packageManager?: string;
 	buildVersion?: string;
 	devCommand?: string;
+	build?: {
+		command?: string;
+		source?: string;
+		status: "ready" | "missing" | "invalid";
+	};
 	defaultEnvironment?: string;
 	availableEnvironments?: string[];
 	environment: ProjectEnvironmentSettings;
-	container: ProjectContainerSettings;
-	deploy: ProjectDeploySettings;
 }
 
 export interface ProjectSettingsResponse {
@@ -303,18 +288,6 @@ export interface ProjectEnvironmentPatch {
 	disabled: boolean;
 }
 
-export interface ProjectContainerPatch {
-	enabled: boolean;
-	backend: string;
-	image: string;
-	namespace: string;
-}
-
-export interface ProjectDeployPatch {
-	backend: string;
-	config: Record<string, ProfileValue>;
-}
-
 export interface WorkspaceEnvironmentPatch {
 	backend: string;
 }
@@ -327,8 +300,6 @@ export interface ProjectManifestPatch {
 	project: string;
 	general?: ProjectGeneralPatch;
 	environment?: ProjectEnvironmentPatch;
-	container?: ProjectContainerPatch;
-	deploy?: ProjectDeployPatch;
 }
 
 export interface ApplyManifestRequest {

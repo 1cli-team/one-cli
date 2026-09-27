@@ -72,8 +72,8 @@ func (s *projectProfileAccessStub) Resolve(input profile.ResolveInput) (*profile
 	}
 	return &profile.Resolved{
 		Name: name, Source: source,
-		Profile: profile.Profile{Vercel: &profile.VercelProfile{
-			Credentials: &profile.VercelCredentials{APIToken: "never-return-this-token"},
+		Profile: profile.Profile{Infisical: &profile.InfisicalProfile{
+			Credentials: &profile.InfisicalCredentials{ClientSecret: "never-return-this-token"},
 		}},
 	}, nil
 }
@@ -142,14 +142,6 @@ func (s *projectProfileAccessStub) EnvironmentProfileBinding(
 func seedProjectSettingsWorkspace(t *testing.T) string {
 	t.Helper()
 	root := t.TempDir()
-	deployConfig, err := json.Marshal(map[string]any{
-		"projectId": "prj_demo",
-		"env":       "prod",
-		"apiToken":  "must-not-leak",
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
 	inherits := false
 	manifest := &workspacecore.Manifest{
 		Version:      workspacecore.ManifestVersion,
@@ -165,11 +157,8 @@ func seedProjectSettingsWorkspace(t *testing.T) string {
 				Env: &workspacecore.ProjectEnvOverride{
 					Path: "/apps/web", Inherits: &inherits, Keys: []string{"Z_KEY", "A_KEY"},
 				},
-				Container: &workspacecore.ProjectContainerOverride{
-					Kind: catalog.ContainerGHCR, Image: "ghcr.io/acme/web:1.2.3", Namespace: "acme",
-				},
-				Deploy: &workspacecore.ProjectDeployBackend{Kind: catalog.DeployVercel, Config: deployConfig},
-				Dev:    &workspacecore.ProjectDevOverride{Command: "pnpm dev"},
+
+				Dev: &workspacecore.ProjectDevOverride{Command: "pnpm dev"},
 			},
 		}},
 	}
@@ -186,8 +175,6 @@ func projectProfileStub() *projectProfileAccessStub {
 	available := map[string]struct{}{}
 	for _, pair := range [][2]string{
 		{profile.SectionKey(profile.DomainEnv, catalog.EnvInfisical), "work"},
-		{profile.SectionKey(profile.DomainContainer, catalog.ContainerGHCR), "work"},
-		{profile.SectionKey(profile.DomainDeploy, catalog.DeployVercel), "work"},
 	} {
 		available[pair[0]+"/"+pair[1]] = struct{}{}
 	}
@@ -262,17 +249,8 @@ func TestProjectSettingsReturnsEnvironmentAwareSafeProjection(t *testing.T) {
 		project.Environment.Profile.Source != "workspace-project-environment" {
 		t.Fatalf("environment profile = %#v", project.Environment)
 	}
-	if project.Container.SelectedProfile != "" || project.Deploy.SelectedProfile != "" {
-		t.Fatalf("inherited profiles reported as direct: %#v %#v", project.Container, project.Deploy)
-	}
 	if got := strings.Join(project.Environment.Keys, ","); got != "A_KEY,Z_KEY" {
 		t.Fatalf("environment keys = %q", got)
-	}
-	if project.Deploy.Config["projectId"] != "prj_demo" {
-		t.Fatalf("deploy config = %#v", project.Deploy.Config)
-	}
-	if _, leaked := project.Deploy.Config["apiToken"]; leaked {
-		t.Fatal("unknown token-like manifest field was reflected")
 	}
 	raw, err := json.Marshal(settings)
 	if err != nil {
@@ -330,7 +308,7 @@ func TestProjectProfileBindingsOnlyChangeMachineLocalState(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, domain := range []string{"env", "container", "deploy"} {
+	for _, domain := range []string{"env"} {
 		settings, err := service.UpdateProjectProfileBinding(
 			context.Background(), root, "web", domain, "preview", "work",
 		)
@@ -344,26 +322,26 @@ func TestProjectProfileBindingsOnlyChangeMachineLocalState(t *testing.T) {
 	}
 
 	settings, err := service.UpdateProjectProfileBinding(
-		context.Background(), root, "web", "container", "preview", "",
+		context.Background(), root, "web", "env", "preview", "",
 	)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if profiles.lastMode != "environment-unbind" || settings.Project.Container.SelectedProfile != "" {
-		t.Fatalf("unbind result = %q %#v", profiles.lastMode, settings.Project.Container)
+	if profiles.lastMode != "environment-unbind" || settings.Project.Environment.SelectedProfile != "" {
+		t.Fatalf("unbind result = %q %#v", profiles.lastMode, settings.Project.Environment)
 	}
 	assertWorkspaceTreeEqual(t, snapshotWorkspaceTree(t, root), before)
 
 	settings, err = service.UpdateProjectProfileBinding(
-		context.Background(), root, "web", "container", "", "work",
+		context.Background(), root, "web", "env", "", "work",
 	)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if profiles.lastMode != "legacy-bind" || settings.Project.Container.SelectedProfile != "work" ||
-		settings.Project.Container.Profile == nil ||
-		settings.Project.Container.Profile.Source != "workspace-project" {
-		t.Fatalf("legacy binding result = %q %#v", profiles.lastMode, settings.Project.Container)
+	if profiles.lastMode != "legacy-bind" || settings.Project.Environment.SelectedProfile != "work" ||
+		settings.Project.Environment.Profile == nil ||
+		settings.Project.Environment.Profile.Source != "workspace-project" {
+		t.Fatalf("legacy binding result = %q %#v", profiles.lastMode, settings.Project.Environment)
 	}
 	assertWorkspaceTreeEqual(t, snapshotWorkspaceTree(t, root), before)
 }
@@ -401,6 +379,8 @@ func TestProjectProfileBindingRejectsInvalidInputWithoutChangingRepository(t *te
 		profileName string
 	}{
 		{name: "unknown domain", project: "web", domain: "ci", environment: "preview", profileName: "work"},
+		{name: "retired deploy domain", project: "web", domain: "deploy", environment: "preview", profileName: "work"},
+		{name: "retired container domain", project: "web", domain: "container", environment: "preview", profileName: "work"},
 		{name: "unknown project", project: "ghost", domain: "env", environment: "preview", profileName: "work"},
 		{name: "unsafe environment", project: "web", domain: "env", environment: "../prod", profileName: "work"},
 		{name: "padded environment", project: "web", domain: "env", environment: " preview ", profileName: "work"},

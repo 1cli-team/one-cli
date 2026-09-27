@@ -84,21 +84,7 @@ func TestBuildContributionsTreeShape(t *testing.T) {
 	// Only `add` should carry per-backend sub-subcommands; the other
 	// verbs take pair as a positional and have no children.
 	wantAddPairs := map[string]bool{
-		"env/infisical [--profile <name>]":       true,
-		"deploy/aliyun-oss [--profile <name>]":   true,
-		"deploy/tencent-cos [--profile <name>]":  true,
-		"deploy/aws-s3 [--profile <name>]":       true,
-		"deploy/minio [--profile <name>]":        true,
-		"deploy/rustfs [--profile <name>]":       true,
-		"deploy/r2 [--profile <name>]":           true,
-		"deploy/kustomize [--profile <name>]":    true,
-		"deploy/vercel [--profile <name>]":       true,
-		"deploy/cloudflare [--profile <name>]":   true,
-		"deploy/edgeone [--profile <name>]":      true,
-		"container/docker [--profile <name>]":    true,
-		"container/dockerhub [--profile <name>]": true,
-		"container/ghcr [--profile <name>]":      true,
-		"container/acr [--profile <name>]":       true,
+		"env/infisical [--profile <name>]": true,
 	}
 	for _, sub := range gotVerbs["add"] {
 		if !wantAddPairs[sub] {
@@ -140,100 +126,6 @@ func TestAddHelpExamplesAreBackendSpecific(t *testing.T) {
 			doesntWant: []string{
 				"--access-key-id",
 				"--registry",
-				"--kubeconfig-context",
-			},
-		},
-		{
-			path: []string{"add", "deploy/aws-s3", "--help"},
-			want: []string{
-				"one configure add deploy/aws-s3 --profile prod",
-				"--endpoint",
-				"--access-key-id",
-			},
-			doesntWant: []string{
-				"--client-id",
-				"--registry",
-				"--kubeconfig-context",
-			},
-		},
-		{
-			path: []string{"add", "deploy/aliyun-oss", "--help"},
-			want: []string{
-				"one configure add deploy/aliyun-oss --profile prod",
-				"--endpoint",
-				"--access-key-id",
-			},
-			doesntWant: []string{
-				"--client-id",
-				"--registry",
-				"--kubeconfig-context",
-				"registry.cn-hangzhou.aliyuncs.com",
-			},
-		},
-		{
-			path: []string{"add", "deploy/minio", "--help"},
-			want: []string{
-				"one configure add deploy/minio --profile prod",
-				"--endpoint",
-				"--force-path-style",
-			},
-			doesntWant: []string{
-				"--client-id",
-				"--registry",
-				"--kubeconfig-context",
-			},
-		},
-		{
-			path: []string{"add", "deploy/kustomize", "--help"},
-			want: []string{
-				"one configure add deploy/kustomize --profile prod-k8s",
-				"--kubeconfig-context",
-			},
-			doesntWant: []string{
-				"--client-id",
-				"--access-key-id",
-				"--registry",
-			},
-		},
-		{
-			path: []string{"add", "deploy/cloudflare", "--help"},
-			want: []string{
-				"one configure add deploy/cloudflare --profile work",
-				"--token",
-				"--account-id",
-			},
-			doesntWant: []string{
-				"--client-id",
-				"--access-key-id",
-				"--registry",
-				"--kubeconfig-context",
-			},
-		},
-		{
-			path: []string{"add", "deploy/edgeone", "--help"},
-			want: []string{
-				"one configure add deploy/edgeone --profile work",
-				"--token",
-			},
-			doesntWant: []string{
-				"--client-id",
-				"--registry",
-				"--kubeconfig-context",
-				"--secret-id",
-				"--secret-key",
-			},
-		},
-		{
-			path: []string{"add", "container/docker", "--help"},
-			want: []string{
-				"one configure add container/docker",
-				"--registry",
-				"--username",
-				"--password",
-			},
-			doesntWant: []string{
-				"--client-id",
-				"--access-key-id",
 				"--kubeconfig-context",
 			},
 		},
@@ -304,40 +196,14 @@ func TestParsePairValidatesInput(t *testing.T) {
 	_, profiles, _ := testServices(t)
 	for _, ok := range []string{
 		"env/infisical",
-		"deploy/aliyun-oss", "deploy/tencent-cos", "deploy/aws-s3",
-		"deploy/minio", "deploy/rustfs", "deploy/r2",
-		"deploy/kustomize", "deploy/vercel", "deploy/cloudflare", "deploy/edgeone",
-		"container/docker",
 	} {
 		if _, _, err := parsePair(profiles, ok); err != nil {
 			t.Errorf("parsePair(%q) unexpected error: %v", ok, err)
 		}
 	}
-	for _, bad := range []string{"", "infisical", "env", "env/", "/infisical", "envinfisical", "env/typo", "env/dotenv"} {
+	for _, bad := range []string{"", "infisical", "env", "env/", "/infisical", "envinfisical", "env/typo", "env/dotenv", "deploy/vercel", "container/docker"} {
 		if _, _, err := parsePair(profiles, bad); err == nil {
 			t.Errorf("parsePair(%q) want error, got nil", bad)
 		}
-	}
-}
-
-func TestMaskCredentialsMasksTokenDeployBackends(t *testing.T) {
-	_, profiles, _ := testServices(t)
-	got, err := maskCredentials(profiles, profile.Profile{
-		Cloudflare: &profile.CloudflareProfile{
-			Credentials: &profile.CloudflareCredentials{APIToken: "cloudflare-token"},
-		},
-		EdgeOne: &profile.EdgeOneProfile{
-			Credentials: &profile.EdgeOneCredentials{APIToken: "edgeone-token"},
-		},
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if got.Cloudflare == nil || got.Cloudflare.Credentials == nil || got.Cloudflare.Credentials.APIToken != "********" {
-		t.Fatalf("cloudflare token was not masked: %#v", got.Cloudflare)
-	}
-	if got.EdgeOne == nil || got.EdgeOne.Credentials == nil || got.EdgeOne.Credentials.APIToken != "********" {
-		t.Fatalf("edgeone token was not masked: %#v", got.EdgeOne)
 	}
 }

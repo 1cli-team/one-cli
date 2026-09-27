@@ -8,13 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/torchstellar-team/one-cli/packages/cli/internal/adapters/container/docker"
-	"github.com/torchstellar-team/one-cli/packages/cli/internal/adapters/deploy/cloudflare"
-	"github.com/torchstellar-team/one-cli/packages/cli/internal/adapters/deploy/edgeone"
-	"github.com/torchstellar-team/one-cli/packages/cli/internal/adapters/deploy/kustomize"
-	"github.com/torchstellar-team/one-cli/packages/cli/internal/adapters/deploy/vercel"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/adapters/env/dotenv"
-	"github.com/torchstellar-team/one-cli/packages/cli/internal/core/profile"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/core/workspace"
 	"github.com/torchstellar-team/one-cli/packages/cli/pkg/toolchain"
 )
@@ -25,15 +19,12 @@ import (
 type syncProjectOptions struct {
 	ProjectRoot    string
 	TargetDir      string
-	ProjectName    string
-	TemplateID     string
 	Toolchain      toolchain.Toolchain
 	PackageManager toolchain.PackageManager
 	Selected       map[string]string
 }
 
-// syncProject materialises compiled-in project artifacts in dependency order:
-// container, dev command, deploy configuration, then environment safety rules.
+// syncProject writes the development command and environment safety rules.
 func syncProject(opts syncProjectOptions) error {
 	tc := opts.Toolchain
 	if tc == "" {
@@ -44,68 +35,21 @@ func syncProject(opts syncProjectOptions) error {
 		pm = toolchain.PMpnpm
 	}
 
-	adapter := toolchain.Get(tc)
 	scripts, err := loadProjectScripts(opts.TargetDir)
 	if err != nil {
 		return err
 	}
-	runtime := adapter.ResolveRuntime(toolchain.PlanInput{
-		Scripts:        scripts,
-		PackageManager: pm,
-		TemplateID:     opts.TemplateID,
-	})
-
 	relDir, err := filepath.Rel(opts.ProjectRoot, opts.TargetDir)
 	if err != nil {
 		return err
 	}
 	relDir = filepath.ToSlash(relDir)
-	workloadName := workspace.ResolveWorkloadName(opts.ProjectName, opts.TargetDir)
-
-	if id := opts.Selected["container"]; id != "" && profile.IsContainerKind(backendName(id)) {
-		if docker.ShouldSync(opts.TargetDir, adapter) {
-			if err := docker.Sync(opts.TargetDir, adapter, pm, runtime); err != nil {
-				return err
-			}
-		}
-	}
-
 	if command := workspace.ResolveScaffoldDevCommand(scripts, string(tc), opts.TargetDir); command != "" {
 		if tc == toolchain.Node && pm != toolchain.PMpnpm {
 			command = strings.Replace(command, "pnpm run ", string(pm)+" run ", 1)
 		}
 		if err := workspace.UpdateProjectDev(opts.ProjectRoot, relDir, command); err != nil {
 			return err
-		}
-	}
-
-	if id := opts.Selected["deploy"]; id != "" {
-		backend := backendName(id)
-		switch {
-		case backend == "kustomize":
-			if err := kustomize.Sync(opts.ProjectRoot, workloadName, runtime.ContainerPort); err != nil {
-				return err
-			}
-		case workspace.IsS3CompatibleDeploy(backend):
-			// S3-compatible backends have no sync-time artifact.
-		case backend == "vercel":
-			if vercel.ShouldSync(opts.TargetDir) {
-				if err := vercel.Sync(opts.TargetDir, opts.TemplateID); err != nil {
-					return err
-				}
-			}
-		case backend == "cloudflare":
-			if cloudflare.ShouldSync(opts.TargetDir) {
-				if err := cloudflare.Sync(opts.TargetDir, opts.TemplateID, workloadName); err != nil {
-					return err
-				}
-			}
-		case backend == "edgeone":
-			if edgeone.ShouldSync(opts.TargetDir) {
-				if err := edgeone.Sync(opts.TargetDir, opts.TemplateID, workloadName); err != nil {
-					return err
-				}
-			}
 		}
 	}
 

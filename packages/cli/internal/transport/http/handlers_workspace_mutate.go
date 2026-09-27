@@ -36,10 +36,6 @@ func registerWorkspaceMutateRoutes(mux *http.ServeMux, opts MuxOpts) {
 	for _, pattern := range []string{
 		"PUT /workspace/projects/{name}",
 		"PUT /workspace/projects/{name}/environment",
-		"PUT /workspace/projects/{name}/deploy",
-		"PUT /workspace/projects/{name}/container",
-		"PUT /workspace/projects/{name}/settings/deploy",
-		"PUT /workspace/projects/{name}/settings/container",
 	} {
 		mux.HandleFunc(pattern, handleRepositoryReadOnly())
 	}

@@ -13,11 +13,9 @@
     "env-vars",
     "configure",
     "templates-cmd",
-    "container",
     "dev",
     "build",
     "ci",
-    "deploy",
     "run",
     "serve",
     "error-codes"

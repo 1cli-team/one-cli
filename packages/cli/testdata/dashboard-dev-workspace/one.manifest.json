@@ -5,15 +5,16 @@
     "name": "Dashboard Development"
   },
   "environments": {
-    "names": ["dev", "preview", "prod"],
+    "names": [
+      "dev",
+      "preview",
+      "prod"
+    ],
     "default": "dev"
   },
   "domains": {
     "env": {
       "kind": "infisical"
-    },
-    "container": {
-      "kind": "docker"
     }
   },
   "projects": [
@@ -28,18 +29,10 @@
         "env": {
           "path": ".env",
           "inherits": true,
-          "keys": ["API_URL", "PUBLIC_APP_NAME"]
-        },
-        "container": {
-          "image": "dashboard-dev/web",
-          "namespace": "dashboard-dev"
-        },
-        "deploy": {
-          "kind": "vercel",
-          "config": {
-            "projectId": "dashboard-dev-web",
-            "env": "preview"
-          }
+          "keys": [
+            "API_URL",
+            "PUBLIC_APP_NAME"
+          ]
         },
         "dev": {
           "command": "pnpm dev"
@@ -56,17 +49,10 @@
         "env": {
           "path": ".env",
           "inherits": true,
-          "keys": ["DATABASE_URL", "PORT"]
-        },
-        "container": {
-          "image": "dashboard-dev/api",
-          "namespace": "dashboard-dev"
-        },
-        "deploy": {
-          "kind": "kustomize",
-          "config": {
-            "env": "dev"
-          }
+          "keys": [
+            "DATABASE_URL",
+            "PORT"
+          ]
         },
         "dev": {
           "command": "go run ./cmd/server"
@@ -83,14 +69,9 @@
       "domains": {
         "env": {
           "inherits": true,
-          "keys": ["PUBLIC_DOCS_URL"]
-        },
-        "deploy": {
-          "kind": "aws-s3",
-          "config": {
-            "bucket": "one-dashboard-dev-docs",
-            "env": "preview"
-          }
+          "keys": [
+            "PUBLIC_DOCS_URL"
+          ]
         },
         "dev": {
           "command": "pnpm dev"
@@ -107,7 +88,9 @@
       "domains": {
         "env": {
           "inherits": true,
-          "keys": ["LOG_LEVEL"]
+          "keys": [
+            "LOG_LEVEL"
+          ]
         },
         "dev": {
           "command": "pnpm build --watch"

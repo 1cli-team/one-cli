@@ -52,12 +52,6 @@ Continuous integration is not configured automatically. Creating a workspace
 does not write files under `.github/workflows/`. After adding a project, enable
 it explicitly with `one ci enable <project>` if needed.
 
-**Deployment is delayed**
-
-Create does not write deployment or container configuration. Ordinary `one add`
-also leaves it unset. The first `one deploy <project>` asks for a compatible
-deployment target and local connection.
-
 ## `--env-provider` Semantics
 
 `--env-provider <dotenv|infisical>` explicitly selects the env backend:

@@ -122,10 +122,6 @@ Template registry download, parsing, and lookup.
 
 Registry is empty. This is usually a registry packaging issue.
 
-### `REGISTRY_CREDENTIAL_MISSING`
-
-Container push needs registry credentials. Use local build or configure `container/docker`.
-
 ### `REGISTRY_FETCH_FAILED`
 
 Registry download failed. Check network and registry URL from `context`.
@@ -182,26 +178,6 @@ The selected project has no generated CI workflow. Run the command in
 ### `CI_RENDER_FAILED`
 
 CI backend failed while rendering workflow files.
-
-### `IMAGE_REF_INCOMPLETE`
-
-Deploy / CI needs a complete image reference but registry/name/tag is missing.
-
-### `IMAGE_TAG_NOT_FOUND`
-
-Push target tag does not exist locally. Build first with `one container build <subproject>`.
-
-### `IMAGE_TAG_REQUIRED`
-
-Container build could not infer a version tag. Pass `--build-version`, set `projects[].buildVersion`, or create a Git tag.
-
-### `K8S_PACKAGE_UNSUPPORTED`
-
-Selected Kubernetes packaging form is not bundled in this build.
-
-### `K8S_PLATFORM_UNDETECTED`
-
-Kubernetes node architecture could not be detected. Check kubeconfig/context and `kubectl get nodes -o wide`.
 
 ### `LOCAL_ORCH_PORT_CONFLICT`
 
@@ -366,18 +342,6 @@ Domain command was invoked where that domain is not configured. Add a template o
 
 Active backend does not implement this verb. Switch to a compatible backend.
 
-### `CLOUDFLARE_CLI_MISSING`
-
-`wrangler` is missing. Install it locally or globally.
-
-### `CLOUDFLARE_DEPLOY_FAILED`
-
-`wrangler` failed. Check upstream logs, token, and account id.
-
-### `CLOUDFLARE_PROFILE_INVALID`
-
-Cloudflare profile is missing API token or required account data.
-
 ### `DOMAIN_INVALID`
 
 Domain name is not recognized.
@@ -393,18 +357,6 @@ Domain is recognized but no backend implementation is registered.
 ### `DOMAIN_REQUIRED`
 
 Required domain section is missing from the manifest.
-
-### `EDGEONE_CLI_MISSING`
-
-EdgeOne CLI is missing. Install it with npm or pnpm.
-
-### `EDGEONE_DEPLOY_FAILED`
-
-EdgeOne CLI failed. Check token and project configuration.
-
-### `EDGEONE_PROFILE_INVALID`
-
-EdgeOne profile is missing API token or required fields.
 
 ### `PATCH_CONFLICT`
 
@@ -437,15 +389,3 @@ The Dashboard rejected a repository or `one.manifest.json` mutation with HTTP 40
 ### `SUBPROJECT_NOT_FOUND`
 
 `-p / --project` references a project not in `manifest.projects`.
-
-### `VERCEL_CLI_MISSING`
-
-Vercel CLI is missing. Install `vercel`.
-
-### `VERCEL_DEPLOY_FAILED`
-
-Vercel CLI failed. Check upstream logs, token, and project link.
-
-### `VERCEL_PROFILE_INVALID`
-
-Vercel profile is missing API token or team/project data.

@@ -1,18 +1,8 @@
-import {
-	Boxes,
-	CloudUpload,
-	Code2,
-	KeyRound,
-	Library,
-	MoonStar,
-	Settings2,
-	SunMedium,
-} from "lucide-react";
+import { Boxes, Code2, KeyRound, Library, MoonStar, Settings2, SunMedium } from "lucide-react";
 import type React from "react";
-import { useEffect, useId, useRef, useState } from "react";
+import { useEffect, useId, useState } from "react";
 import { useTranslation } from "react-i18next";
 import useSWR from "swr";
-import { backendRequiresContainerArtifact, useBackendCatalog } from "@/api/catalog";
 import { getProjectSettings, projectSettingsKey } from "@/api/workspace";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { ManifestSaveControl } from "@/components/TopBar";
@@ -34,12 +24,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { EnvironmentLink } from "@/features/environment-context/EnvironmentLink";
 import { EnvironmentSelector } from "@/features/environment-context/EnvironmentSelector";
 import { useEnvironmentDirtyStore } from "@/features/environment-context/environment-dirty-store";
-import {
-	manifestDraftKey,
-	useManifestDraftStore,
-} from "@/features/manifest-draft/manifest-draft-store";
-import { ContainerForm } from "@/features/project-settings/forms/ContainerForm";
-import { DeployForm } from "@/features/project-settings/forms/DeployForm";
 import { EnvironmentForm } from "@/features/project-settings/forms/EnvironmentForm";
 import { GeneralForm } from "@/features/project-settings/forms/GeneralForm";
 import type { ProjectInspectorTab } from "@/features/project-settings/ProjectMatrix";
@@ -62,7 +46,6 @@ const TAB_ITEMS: ReadonlyArray<{
 }> = [
 	{ id: "overview", icon: Settings2 },
 	{ id: "environment", icon: KeyRound },
-	{ id: "deploy", icon: CloudUpload },
 ];
 
 export const ProjectInspector: React.FC<ProjectInspectorProps> = ({
@@ -283,7 +266,6 @@ const InspectorBody: React.FC<{
 	const sectionTitle = t(
 		`projectInspector.${activeTab === "overview" ? "general" : activeTab}.title`,
 	);
-	const isManifestDraftSection = activeTab !== "deploy";
 
 	return (
 		<Tabs
@@ -302,11 +284,9 @@ const InspectorBody: React.FC<{
 				<div className="min-w-0">
 					<div className="flex items-center gap-2">
 						<h2 className="font-heading text-lg font-semibold tracking-tight">{sectionTitle}</h2>
-						{isManifestDraftSection ? (
-							<Badge variant="secondary" className="font-mono text-[10px]">
-								{t("projectInspector.manifestDraft")}
-							</Badge>
-						) : null}
+						<Badge variant="secondary" className="font-mono text-[10px]">
+							{t("projectInspector.manifestDraft")}
+						</Badge>
 					</div>
 				</div>
 				<div className="flex items-center gap-2">
@@ -428,73 +408,5 @@ const ProjectSettingsPanel: React.FC<ProjectSettingsPanelProps> = ({
 			/>
 		);
 	}
-	return (
-		<DeploymentSettingsPanel
-			project={project}
-			revision={data.revision}
-			environment={environment}
-			workspaceEntryId={workspaceEntryId}
-			readOnly={readOnly}
-			onUpdated={onUpdated}
-			onDirtyChange={onDirtyChange}
-		/>
-	);
-};
-
-type ProfileSection = "deploy" | "container";
-
-const DeploymentSettingsPanel: React.FC<
-	Omit<ProjectSettingsPanelProps, "data" | "activeTab"> & {
-		project: ProjectSettingsResponse["project"];
-		revision: string;
-	}
-> = ({ project, revision, environment, workspaceEntryId, readOnly, onUpdated, onDirtyChange }) => {
-	const catalog = useBackendCatalog();
-	const dirtySections = useRef<Record<ProfileSection, boolean>>({
-		deploy: false,
-		container: false,
-	});
-	const [containerProfileDirty, setContainerProfileDirty] = useState(false);
-	const stagedDeploy = useManifestDraftStore(
-		(state) => state.drafts[manifestDraftKey(workspaceEntryId)]?.changes[project.name]?.deploy,
-	);
-	const deployBackend = stagedDeploy?.backend ?? project.deploy.backend;
-	const requiresImage = backendRequiresContainerArtifact(
-		deployBackend ? catalog.byID.get(`deploy/${deployBackend}`) : undefined,
-	);
-
-	function setSectionDirty(section: ProfileSection, dirty: boolean) {
-		dirtySections.current[section] = dirty;
-		if (section === "container") setContainerProfileDirty(dirty);
-		onDirtyChange(dirtySections.current.deploy || dirtySections.current.container);
-	}
-
-	function sectionUpdated(section: ProfileSection, next: ProjectSettingsResponse) {
-		setSectionDirty(section, false);
-		onUpdated(next);
-	}
-
-	return (
-		<DeployForm
-			project={project}
-			revision={revision}
-			environment={environment}
-			workspaceEntryId={workspaceEntryId}
-			readOnly={readOnly}
-			onUpdated={(next) => sectionUpdated("deploy", next)}
-			onDirtyChange={(dirty) => setSectionDirty("deploy", dirty)}
-		>
-			{requiresImage || containerProfileDirty ? (
-				<ContainerForm
-					project={project}
-					revision={revision}
-					environment={environment}
-					workspaceEntryId={workspaceEntryId}
-					readOnly={readOnly}
-					onUpdated={(next) => sectionUpdated("container", next)}
-					onDirtyChange={(dirty) => setSectionDirty("container", dirty)}
-				/>
-			) : null}
-		</DeployForm>
-	);
+	return null;
 };

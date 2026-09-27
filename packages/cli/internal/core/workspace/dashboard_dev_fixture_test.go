@@ -43,16 +43,4 @@ func TestDashboardDevelopmentFixture(t *testing.T) {
 			t.Fatalf("project %q is missing from fixture", name)
 		}
 	}
-	if got := ContainerKindForProject(manifest, "web"); got != "docker" {
-		t.Fatalf("web container backend = %q, want docker", got)
-	}
-	if got := DeployForProject(manifest, "web").Backend; got != "vercel" {
-		t.Fatalf("web deploy backend = %q, want vercel", got)
-	}
-	if got := DeployForProject(manifest, "api").Backend; got != "kustomize" {
-		t.Fatalf("api deploy backend = %q, want kustomize", got)
-	}
-	if got := DeployForProject(manifest, "docs").Backend; got != "aws-s3" {
-		t.Fatalf("docs deploy backend = %q, want aws-s3", got)
-	}
 }

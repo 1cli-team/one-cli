@@ -14,9 +14,7 @@ import (
 type Domain string
 
 const (
-	DomainEnv       Domain = "env"
-	DomainDeploy    Domain = "deploy"
-	DomainContainer Domain = "container"
+	DomainEnv Domain = "env"
 )
 
 // Built-in backend names are declared beside the Catalog so other packages do
@@ -25,27 +23,11 @@ const (
 const (
 	EnvDotenv    = "dotenv"
 	EnvInfisical = "infisical"
-
-	DeployAliyunOSS  = "aliyun-oss"
-	DeployTencentCOS = "tencent-cos"
-	DeployAWSS3      = "aws-s3"
-	DeployMinIO      = "minio"
-	DeployRustFS     = "rustfs"
-	DeployR2         = "r2"
-	DeployKustomize  = "kustomize"
-	DeployVercel     = "vercel"
-	DeployCloudflare = "cloudflare"
-	DeployEdgeOne    = "edgeone"
-
-	ContainerDocker    = "docker"
-	ContainerDockerHub = "dockerhub"
-	ContainerGHCR      = "ghcr"
-	ContainerACR       = "acr"
 )
 
 // Domains is the stable product display order.
 func Domains() []Domain {
-	return []Domain{DomainEnv, DomainDeploy, DomainContainer}
+	return []Domain{DomainEnv}
 }
 
 // BackendID is the canonical identity of one backend. String renders the
@@ -78,17 +60,13 @@ func ParseBackendID(pair string) (BackendID, bool) {
 type Capability string
 
 const (
-	CapabilityEnvGet         Capability = "env/get"
-	CapabilityEnvSet         Capability = "env/set"
-	CapabilityEnvDelete      Capability = "env/delete"
-	CapabilityEnvList        Capability = "env/list"
-	CapabilityEnvPull        Capability = "env/pull"
-	CapabilityEnvInject      Capability = "env/inject"
-	CapabilityScaffold       Capability = "scaffold"
-	CapabilityContainerInfo  Capability = "container/info"
-	CapabilityContainerBuild Capability = "container/build"
-	CapabilityContainerPush  Capability = "container/push"
-	CapabilityDeploy         Capability = "deploy"
+	CapabilityEnvGet    Capability = "env/get"
+	CapabilityEnvSet    Capability = "env/set"
+	CapabilityEnvDelete Capability = "env/delete"
+	CapabilityEnvList   Capability = "env/list"
+	CapabilityEnvPull   Capability = "env/pull"
+	CapabilityEnvInject Capability = "env/inject"
+	CapabilityScaffold  Capability = "scaffold"
 )
 
 // Trait describes a shared wire/protocol family that is orthogonal to a
@@ -96,10 +74,7 @@ const (
 // without maintaining a second backend identity list.
 type Trait string
 
-const (
-	TraitS3Compatible Trait = "s3-compatible"
-	TraitOCIRegistry  Trait = "oci-registry"
-)
+const ()
 
 // RequirementKind describes a dependency that must be satisfied before a
 // backend operation begins.
@@ -149,14 +124,8 @@ type FieldSpec struct {
 type ProfileType string
 
 const (
-	ProfileTypeDotenv     ProfileType = "dotenv"
-	ProfileTypeInfisical  ProfileType = "infisical"
-	ProfileTypeS3         ProfileType = "s3"
-	ProfileTypeKustomize  ProfileType = "kustomize"
-	ProfileTypeVercel     ProfileType = "vercel"
-	ProfileTypeCloudflare ProfileType = "cloudflare"
-	ProfileTypeEdgeOne    ProfileType = "edgeone"
-	ProfileTypeContainer  ProfileType = "container"
+	ProfileTypeDotenv    ProfileType = "dotenv"
+	ProfileTypeInfisical ProfileType = "infisical"
 )
 
 // ProfileSpec describes whether and how a machine profile is configured for
@@ -193,8 +162,7 @@ type ProjectFieldSpec struct {
 
 // ProjectSpec describes the backend-owned fields that may be persisted in a
 // project's manifest config. It contains schema metadata only, never values or
-// credentials. Container's common kind/image/namespace settings deliberately
-// stay outside this backend-specific schema.
+// credentials.
 type ProjectSpec struct {
 	Configurable bool               `json:"configurable"`
 	Fields       []ProjectFieldSpec `json:"fields,omitempty"`

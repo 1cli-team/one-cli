@@ -17,6 +17,8 @@ Without a selector, builds all buildable manifest projects, even when invoked fr
 
 ## Build commands
 
+The Dashboard project overview shows the resolved build command and its source. This field is read-only; edit the project's `package.json` or `Taskfile.yml`, then refresh the page to see the update.
+
 - Node: runs `build` from the current `package.json` using the workspace package manager (`pnpm`, `npm`, `yarn`, or `bun`).
 - Go: runs `task build` from the project's `Taskfile.yml`. The Go API template writes `bin/server`; the Go library template compiles packages with `go build ./...`. Older libraries can add that task to their Taskfile.
 
@@ -38,4 +40,4 @@ Uses the same automatic mise/builtin selection and dependency preparation as `on
 
 `-o json` and `-o yaml` return `one-cli/build-plan/v1` for previews and `one-cli/build-result/v1` for execution results. Process logs go to stderr, leaving stdout parseable. Results include per-project status, command, duration, and exit code. Preparation failures include an error and leave build tasks `not_run`.
 
-Use [`one container build`](/docs/container/) to build container images and [`one run`](/docs/run/) for custom commands.
+Use [`one run`](/docs/run/) for custom commands.

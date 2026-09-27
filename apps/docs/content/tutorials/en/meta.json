@@ -4,14 +4,11 @@
     "---Basics---",
     "templates",
     "first-workspace",
-    "deploy",
     "---Advanced---",
     "configure-profiles",
     "env-vars",
     "env-multi-env",
     "dev-local",
-    "container-build-push",
-    "deploy-multi-backend",
     "json-output-error-codes"
   ]
 }

@@ -32,6 +32,12 @@ func OperationArgs(w Workspace, selector, operation string) ([]string, error) {
 		}
 		return []string{"sh", "-c", command}, nil
 	}
+	return ProjectOperationArgs(w.Root(), *p, operation)
+}
+
+// ProjectOperationArgs resolves a task from the project's current source files.
+// It is shared by execution and the Dashboard and never installs or runs tools.
+func ProjectOperationArgs(root string, p workspace.Project, operation string) ([]string, error) {
 	if operation != "build" && operation != "test" && operation != "lint" {
 		return nil, missingOperation(p.Name, operation)
 	}
@@ -46,7 +52,7 @@ func OperationArgs(w Workspace, selector, operation string) ([]string, error) {
 		if err = json.Unmarshal(raw, &pkg); err != nil {
 			return nil, err
 		}
-		manager, err := workspace.ResolvePackageManager(w.Root(), p.PackageManager)
+		manager, err := workspace.ResolvePackageManager(root, p.PackageManager)
 		if err != nil {
 			return nil, err
 		}

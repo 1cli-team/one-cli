@@ -370,7 +370,7 @@ func TestWorkspacesLegacyMutationPathsAreReadOnlyEvenForIdentityConflict(t *test
 	beforeA := snapshotRepositoryTree(t, rootA)
 	beforeB := snapshotRepositoryTree(t, rootB)
 
-	for _, suffix := range []string{"", "/environment", "/deploy", "/container", "/settings/deploy", "/settings/container"} {
+	for _, suffix := range []string{"", "/environment"} {
 		path := "/api/workspaces/" + conflict.EntryID + "/projects/web" + suffix
 		recorder := registryRequest(t, handler, http.MethodPut, path, strings.NewReader(`{}`))
 		if recorder.Code != http.StatusConflict ||

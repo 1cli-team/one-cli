@@ -179,44 +179,6 @@ func TestUpsert_MaskedCredentialPreservesExistingSecret(t *testing.T) {
 	}
 }
 
-func TestGetSection_MasksDeployTokensByDefault(t *testing.T) {
-	srv, _ := newTestServer(t)
-	cases := []struct {
-		path   string
-		body   string
-		secret string
-	}{
-		{
-			path:   "/api/configure/deploy/cloudflare",
-			body:   `{"name":"work","profile":{"accountId":"acct","credentials":{"apiToken":"cloudflare-secret"}}}`,
-			secret: "cloudflare-secret",
-		},
-		{
-			path:   "/api/configure/deploy/edgeone",
-			body:   `{"name":"work","profile":{"region":"ap-guangzhou","credentials":{"apiToken":"edgeone-secret"}}}`,
-			secret: "edgeone-secret",
-		},
-	}
-
-	for _, tc := range cases {
-		if res, raw := apiRequest(t, srv, http.MethodPost, tc.path, strings.NewReader(tc.body)); res.StatusCode != 200 {
-			t.Fatalf("seed %s: %d (%s)", tc.path, res.StatusCode, raw)
-		}
-		_, raw := apiRequest(t, srv, http.MethodGet, tc.path, nil)
-		if strings.Contains(string(raw), tc.secret) {
-			t.Errorf("%s leaked default token: %s", tc.path, raw)
-		}
-		if !strings.Contains(string(raw), "********") {
-			t.Errorf("%s should contain masked sentinel; got %s", tc.path, raw)
-		}
-
-		_, raw = apiRequest(t, srv, http.MethodGet, tc.path+"?reveal=1", nil)
-		if !strings.Contains(string(raw), tc.secret) {
-			t.Errorf("%s reveal=1 should expose plaintext; got %s", tc.path, raw)
-		}
-	}
-}
-
 func TestUse_SwitchesDefault(t *testing.T) {
 	srv, _ := newTestServer(t)
 	for _, n := range []string{"work", "personal"} {

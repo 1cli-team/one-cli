@@ -4,12 +4,6 @@ import (
 	"context"
 
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/adapters/ci/githubactions"
-	deploybuild "github.com/torchstellar-team/one-cli/packages/cli/internal/adapters/deploy/build"
-	"github.com/torchstellar-team/one-cli/packages/cli/internal/adapters/deploy/cloudflare"
-	"github.com/torchstellar-team/one-cli/packages/cli/internal/adapters/deploy/edgeone"
-	"github.com/torchstellar-team/one-cli/packages/cli/internal/adapters/deploy/kustomize"
-	"github.com/torchstellar-team/one-cli/packages/cli/internal/adapters/deploy/s3compat"
-	"github.com/torchstellar-team/one-cli/packages/cli/internal/adapters/deploy/vercel"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/adapters/env/dotenv"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/adapters/env/infisical"
 	miseruntime "github.com/torchstellar-team/one-cli/packages/cli/internal/adapters/runtime/mise"
@@ -17,14 +11,11 @@ import (
 	workspaceregistrylocal "github.com/torchstellar-team/one-cli/packages/cli/internal/adapters/workspaceregistry/local"
 	ciapp "github.com/torchstellar-team/one-cli/packages/cli/internal/application/ci"
 	configureapp "github.com/torchstellar-team/one-cli/packages/cli/internal/application/configure"
-	deploymentapp "github.com/torchstellar-team/one-cli/packages/cli/internal/application/deployment"
 	manifestapp "github.com/torchstellar-team/one-cli/packages/cli/internal/application/manifest"
 	workspaceapp "github.com/torchstellar-team/one-cli/packages/cli/internal/application/workspace"
 	catalog "github.com/torchstellar-team/one-cli/packages/cli/internal/core/backend"
-	containermodule "github.com/torchstellar-team/one-cli/packages/cli/internal/modules/container"
 	creationmodule "github.com/torchstellar-team/one-cli/packages/cli/internal/modules/creation"
 	environmentmodule "github.com/torchstellar-team/one-cli/packages/cli/internal/modules/environment"
-	deployport "github.com/torchstellar-team/one-cli/packages/cli/internal/ports/deploy"
 	runtimeport "github.com/torchstellar-team/one-cli/packages/cli/internal/ports/runtime"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/ports/secrets"
 	pkgci "github.com/torchstellar-team/one-cli/packages/cli/pkg/ci"
@@ -37,7 +28,6 @@ type dependencies struct {
 	runtime      runtimeport.Provider
 	catalog      *catalog.Catalog
 	profiles     *configureapp.ProfileService
-	containers   *containermodule.Service
 	creation     *creationmodule.Service
 	environments *environmentmodule.Service
 	manifest     *manifestapp.Service
@@ -52,7 +42,6 @@ func composeDependencies() dependencies {
 
 	backendCatalog := catalog.Builtin()
 	profiles := mustProfileService(backendCatalog)
-	containers := mustContainerService(backendCatalog)
 	environments := mustEnvironmentService(backendCatalog, profiles)
 	manifest := mustManifestService(backendCatalog)
 	registry := mustWorkspaceRegistryService()
@@ -62,7 +51,6 @@ func composeDependencies() dependencies {
 		runtime:      miseruntime.Provider{},
 		catalog:      backendCatalog,
 		profiles:     profiles,
-		containers:   containers,
 		creation:     creation,
 		environments: environments,
 		manifest:     manifest,
@@ -138,39 +126,8 @@ func mustEnvironmentService(
 	return service
 }
 
-func (d dependencies) newDeploymentService(buildVersion string) *deploymentapp.Service {
-	providers := []deployport.Provider{
-		kustomize.NewProvider(buildVersion),
-		vercel.Provider(),
-		cloudflare.Provider(),
-		edgeone.Provider(),
-	}
-	providers = append(providers, s3compat.Providers()...)
-	service, err := deploymentapp.NewService(
-		d.catalog,
-		deployport.MustRegistry(providers...),
-		d.profiles,
-		d.loaders,
-		deploybuild.Local{},
-	)
-	if err != nil {
-		panic(err)
-	}
-	return service
-}
-
 func mustProfileService(backendCatalog *catalog.Catalog) *configureapp.ProfileService {
 	service, err := configureapp.NewProfileService(backendCatalog, configureapp.LocalProfileRepository{})
-	if err != nil {
-		panic(err)
-	}
-	return service
-}
-
-func mustContainerService(
-	backendCatalog *catalog.Catalog,
-) *containermodule.Service {
-	service, err := containermodule.NewService(backendCatalog)
 	if err != nil {
 		panic(err)
 	}

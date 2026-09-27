@@ -54,13 +54,7 @@ const sectionsByLocale: Record<Locale, SidebarSection[]> = {
           href: "/docs/templates-cmd/",
           mono: true,
         },
-        {
-          label: "one container",
-          href: "/docs/container/",
-          mono: true,
-        },
         { label: "one dev", href: "/docs/dev/", mono: true },
-        { label: "one deploy", href: "/docs/deploy/", mono: true },
         { label: "one run", href: "/docs/run/", mono: true },
         { label: "one serve", href: "/docs/serve/", mono: true },
         { label: "错误码", href: "/docs/error-codes/" },
@@ -100,13 +94,7 @@ const sectionsByLocale: Record<Locale, SidebarSection[]> = {
           href: "/docs/templates-cmd/",
           mono: true,
         },
-        {
-          label: "one container",
-          href: "/docs/container/",
-          mono: true,
-        },
         { label: "one dev", href: "/docs/dev/", mono: true },
-        { label: "one deploy", href: "/docs/deploy/", mono: true },
         { label: "one run", href: "/docs/run/", mono: true },
         { label: "one serve", href: "/docs/serve/", mono: true },
         {

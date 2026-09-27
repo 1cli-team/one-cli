@@ -66,15 +66,9 @@ func (s *Service) projectProfileBackend(
 	case string(profile.DomainEnv):
 		domain = profile.DomainEnv
 		backend = workspacecore.EnvBackend(manifest)
-	case string(profile.DomainDeploy):
-		domain = profile.DomainDeploy
-		backend = effectiveDeployBackend(manifest, projectName)
-	case string(profile.DomainContainer):
-		domain = profile.DomainContainer
-		backend = workspacecore.ContainerKindForProject(manifest, projectName)
 	default:
 		return "", "", fmt.Errorf(
-			"%w: profile domain must be env, deploy, or container", ErrInvalidInput,
+			"%w: profile domain must be env", ErrInvalidInput,
 		)
 	}
 	backend = strings.TrimSpace(backend)

@@ -21,7 +21,7 @@ func addLanguageProject(t *testing.T, s *Service, root, id, name string) error {
 	}
 	for i := range r.Templates {
 		if r.Templates[i].ID == id {
-			_, err := s.AddProject(context.Background(), root, ProjectInput{Template: &r.Templates[i], Name: name, DeferDeployment: true})
+			_, err := s.AddProject(context.Background(), root, ProjectInput{Template: &r.Templates[i], Name: name})
 			return err
 		}
 	}

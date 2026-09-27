@@ -149,62 +149,12 @@
 	},
 	"sections": {
 		"groupLabel": {
-			"env": "Environment variables",
-			"deploy": "Deploy",
-			"container": "Container"
+			"env": "Environment variables"
 		},
 		"env": {
 			"infisical": {
 				"title": "Infisical",
 				"description": "Universal Auth credentials and Infisical site URL for the env domain."
-			}
-		},
-		"deploy": {
-			"aliyun-oss": {
-				"title": "Aliyun OSS",
-				"description": "Aliyun OSS endpoint plus AK/SK using the S3 protocol."
-			},
-			"tencent-cos": {
-				"title": "Tencent COS",
-				"description": "Tencent COS endpoint plus AK/SK using the S3 protocol."
-			},
-			"aws-s3": {
-				"title": "AWS S3",
-				"description": "AWS S3 region plus AK/SK; leave endpoint blank for SDK defaults."
-			},
-			"minio": {
-				"title": "MinIO",
-				"description": "Self-hosted MinIO object storage with path-style addressing."
-			},
-			"rustfs": {
-				"title": "RustFS",
-				"description": "Self-hosted RustFS object storage with path-style addressing."
-			},
-			"r2": {
-				"title": "Cloudflare R2",
-				"description": "Cloudflare R2 endpoint plus AK/SK."
-			},
-			"kustomize": {
-				"title": "Kustomize",
-				"description": "Kubeconfig context for the deploy domain."
-			},
-			"vercel": {
-				"title": "Vercel",
-				"description": "Vercel API token with optional team slug."
-			},
-			"cloudflare": {
-				"title": "Cloudflare",
-				"description": "Cloudflare API token with optional account ID."
-			},
-			"edgeone": {
-				"title": "EdgeOne Pages",
-				"description": "Tencent EdgeOne Pages token with optional region."
-			}
-		},
-		"container": {
-			"docker": {
-				"title": "Docker Registry",
-				"description": "ACR, Docker Hub, GHCR, Harbor, or another container registry."
 			}
 		}
 	},
@@ -331,7 +281,6 @@
 		"matrix": {
 			"project": "Project",
 			"environment": "Environment",
-			"deploy": "Deploy",
 			"status": "Status",
 			"notApplicable": "-",
 			"notApplicableTitle": "This configuration does not apply to the project",
@@ -354,8 +303,7 @@
 		"tabs": {
 			"label": "Project configuration sections",
 			"overview": "Overview",
-			"environment": "Environment",
-			"deploy": "Deploy"
+			"environment": "Environment"
 		},
 		"loadFailed": "Unable to load project configuration",
 		"retry": "Retry",
@@ -380,7 +328,12 @@
 			"buildVersion": "Build version",
 			"packageManager": "Package manager",
 			"packageManagerAutomatic": "Detect automatically",
-			"devCommand": "Development command"
+			"devCommand": "Development command",
+			"buildCommand": "Build command",
+			"buildSource": "one build reads {{source}}. Edit that file to change the build task.",
+			"buildMissing": "No build task configured",
+			"buildUnavailable": "Unable to read build configuration",
+			"buildUnsupported": "No build task is available for this project."
 		},
 		"environment": {
 			"title": "Environment configuration",
@@ -391,17 +344,6 @@
 			"disabled": "Disable project environment",
 			"disabledHint": "Do not inject environment variables into project commands.",
 			"keys": "Declared variable names"
-		},
-		"container": {
-			"title": "Image configuration",
-			"enabled": "Build an image for deployment",
-			"enabledHint": "Build and push this project's image with one container before deployment.",
-			"image": "Image address",
-			"namespace": "Image namespace"
-		},
-		"deploy": {
-			"title": "Deployment configuration",
-			"notSupported": "This project's Template does not support a deployment target."
 		},
 		"profile": {
 			"label": "Project profile",
@@ -554,15 +496,11 @@
 		},
 		"issue": {
 			"label": {
-				"container": "container",
-				"deploy": "deploy",
 				"env": "env",
 				"profile": "profile"
 			},
 			"missingProfile": "{{section}} is missing a usable credential profile{{profile}}. Fill in the API key / token.",
 			"missing": {
-				"container": "No container backend is configured. `one container build` will fail.",
-				"deploy": "No deploy backend is configured. `one deploy` will fail.",
 				"env": "Workspace has no env backend selected. Set one before using `one env`."
 			}
 		},

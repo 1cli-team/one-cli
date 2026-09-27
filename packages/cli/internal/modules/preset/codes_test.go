@@ -30,18 +30,10 @@ type goldenCodes struct {
 		Code       string `json:"code"`
 		TemplateID string `json:"template_id"`
 	} `json:"templates"`
-	Deploys []struct {
-		Code     string `json:"code"`
-		DeployID string `json:"deploy_id"`
-	} `json:"deploys"`
 	Envs []struct {
 		Code  string `json:"code"`
 		EnvID string `json:"env_id"`
 	} `json:"envs"`
-	Containers []struct {
-		Code        string `json:"code"`
-		ContainerID string `json:"container_id"`
-	} `json:"containers"`
 }
 
 func loadGolden(t *testing.T) goldenCodes {
@@ -111,42 +103,7 @@ func TestTemplateCodesMatchGoldenAndRegistry(t *testing.T) {
 	}
 }
 
-// TestDeployCodesMatchGolden locks the deploy code constants in
-// codes.go against the golden file.
-func TestDeployCodesMatchGolden(t *testing.T) {
-	golden := loadGolden(t)
-
-	goldenPairs := map[byte]string{}
-	for _, e := range golden.Deploys {
-		if len(e.Code) != 1 {
-			t.Errorf("golden deploy code %q is not 1 char", e.Code)
-			continue
-		}
-		goldenPairs[e.Code[0]] = e.DeployID
-	}
-
-	got := preset.DeployCodesSnapshot()
-	gotPairs := map[byte]string{}
-	for _, e := range got {
-		gotPairs[e.Code] = e.ID
-	}
-
-	// Golden entries must be present in code, with the same id.
-	for c, id := range goldenPairs {
-		if gotPairs[c] != id {
-			t.Errorf("deploy code %q in golden maps to %q but code maps to %q — frozen code drift", string(c), id, gotPairs[c])
-		}
-	}
-	// Code may add new entries (append-only) but must not drop golden ones.
-	for c, id := range gotPairs {
-		if _, ok := goldenPairs[c]; !ok {
-			t.Logf("note: deploy code %q (%s) is in code but not in v1_codes.json — append it to lock", string(c), id)
-		}
-	}
-}
-
-// TestEnvCodesMatchGolden mirrors TestDeployCodesMatchGolden for env
-// providers.
+// TestEnvCodesMatchGolden locks the environment provider codes.
 func TestEnvCodesMatchGolden(t *testing.T) {
 	golden := loadGolden(t)
 
@@ -172,38 +129,6 @@ func TestEnvCodesMatchGolden(t *testing.T) {
 	}
 }
 
-// TestContainerCodesMatchGolden mirrors TestDeployCodesMatchGolden for
-// container backends.
-func TestContainerCodesMatchGolden(t *testing.T) {
-	golden := loadGolden(t)
-
-	goldenPairs := map[byte]string{}
-	for _, e := range golden.Containers {
-		if len(e.Code) != 1 {
-			t.Errorf("golden container code %q is not 1 char", e.Code)
-			continue
-		}
-		goldenPairs[e.Code[0]] = e.ContainerID
-	}
-
-	got := preset.ContainerCodesSnapshot()
-	gotPairs := map[byte]string{}
-	for _, e := range got {
-		gotPairs[e.Code] = e.ID
-	}
-
-	for c, id := range goldenPairs {
-		if gotPairs[c] != id {
-			t.Errorf("container code %q in golden maps to %q but code maps to %q — frozen code drift", string(c), id, gotPairs[c])
-		}
-	}
-	for c, id := range gotPairs {
-		if _, ok := goldenPairs[c]; !ok {
-			t.Logf("note: container code %q (%s) is in code but not in v1_codes.json — append it to lock", string(c), id)
-		}
-	}
-}
-
 // TestGoldenSortedByCode keeps the golden file readable: each list is
 // sorted by code ASCII. Append-only with sort makes review diffs
 // minimal (new lines slot in alphabetically).
@@ -221,22 +146,8 @@ func TestGoldenSortedByCode(t *testing.T) {
 				out = append(out, x.Code)
 			}
 		case []struct {
-			Code     string `json:"code"`
-			DeployID string `json:"deploy_id"`
-		}:
-			for _, x := range xs {
-				out = append(out, x.Code)
-			}
-		case []struct {
 			Code  string `json:"code"`
 			EnvID string `json:"env_id"`
-		}:
-			for _, x := range xs {
-				out = append(out, x.Code)
-			}
-		case []struct {
-			Code        string `json:"code"`
-			ContainerID string `json:"container_id"`
 		}:
 			for _, x := range xs {
 				out = append(out, x.Code)
@@ -248,13 +159,7 @@ func TestGoldenSortedByCode(t *testing.T) {
 	if !sort.StringsAreSorted(codes(golden.Templates)) {
 		t.Error("templates section is not sorted by code (keep golden file readable)")
 	}
-	if !sort.StringsAreSorted(codes(golden.Deploys)) {
-		t.Error("deploys section is not sorted by code")
-	}
 	if !sort.StringsAreSorted(codes(golden.Envs)) {
 		t.Error("envs section is not sorted by code")
-	}
-	if !sort.StringsAreSorted(codes(golden.Containers)) {
-		t.Error("containers section is not sorted by code")
 	}
 }

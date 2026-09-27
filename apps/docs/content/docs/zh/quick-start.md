@@ -58,7 +58,7 @@ pnpm -C apps/web dev
 | `pnpm install` | 下载项目用到的包 |
 | `pnpm -C apps/web dev` | 启动第一个 Web 项目 |
 
-后面的能力按目标进入对应流程：环境变量用 `one env`，上线走 `one deploy`。容器镜像构建 / 推送属于部署流程里的底层环节，需要单独控制时再看进阶文档。
+后续使用 `one env` 管理环境变量，使用 `one build` 构建项目。
 
 ## 下一步
 

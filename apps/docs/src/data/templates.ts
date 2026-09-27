@@ -2,12 +2,6 @@ import type { LocalizedText } from "@/data/examples";
 
 export type TemplateKind = "frontend" | "backend" | "library";
 
-export type DeployOption = {
-  code: string;
-  id: string;
-  name: LocalizedText;
-};
-
 export type TemplateMeta = {
   id: string;
   code: string;
@@ -18,45 +12,7 @@ export type TemplateMeta = {
   toolchain: "node" | "go";
   defaultName: string;
   tags: string[];
-  /** Empty array = template forbids a deploy code (e.g. expo / electron / library). */
-  deployOptions: DeployOption[];
-  /** Code of the default deploy option, or null if the template has no deploy. */
-  defaultDeployCode: string | null;
 };
-
-const DEPLOY_LIBRARY: Record<string, LocalizedText> = {
-  kustomize: { zh: "Kustomize (k8s)", en: "Kustomize (k8s)" },
-  vercel: { zh: "Vercel", en: "Vercel" },
-  cloudflare: { zh: "Cloudflare Pages", en: "Cloudflare Pages" },
-  "aws-s3": { zh: "AWS S3 静态托管", en: "AWS S3 static" },
-  "aliyun-oss": { zh: "阿里云 OSS", en: "Aliyun OSS" },
-  "tencent-cos": { zh: "腾讯云 COS", en: "Tencent COS" },
-  r2: { zh: "Cloudflare R2", en: "Cloudflare R2" },
-  minio: { zh: "MinIO", en: "MinIO" },
-  rustfs: { zh: "RustFS", en: "RustFS" },
-  edgeone: { zh: "腾讯云 EdgeOne", en: "Tencent EdgeOne" },
-};
-
-const DEPLOY_CODE: Record<string, string> = {
-  kustomize: "k",
-  vercel: "v",
-  cloudflare: "c",
-  "aws-s3": "s",
-  "aliyun-oss": "a",
-  "tencent-cos": "t",
-  r2: "2",
-  minio: "m",
-  rustfs: "r",
-  edgeone: "e",
-};
-
-function deploy(ids: string[]): DeployOption[] {
-  return ids.map((id) => ({
-    id,
-    code: DEPLOY_CODE[id] ?? "",
-    name: DEPLOY_LIBRARY[id] ?? { zh: id, en: id },
-  }));
-}
 
 export const templates: TemplateMeta[] = [
   {
@@ -72,8 +28,6 @@ export const templates: TemplateMeta[] = [
     toolchain: "node",
     defaultName: "api",
     tags: ["api", "nestjs", "typescript"],
-    deployOptions: deploy(["kustomize"]),
-    defaultDeployCode: "k",
   },
   {
     id: "go-api",
@@ -88,8 +42,6 @@ export const templates: TemplateMeta[] = [
     toolchain: "go",
     defaultName: "api",
     tags: ["api", "go", "kustomize"],
-    deployOptions: deploy(["kustomize"]),
-    defaultDeployCode: "k",
   },
   {
     id: "nextjs-app",
@@ -104,8 +56,6 @@ export const templates: TemplateMeta[] = [
     toolchain: "node",
     defaultName: "web",
     tags: ["web", "nextjs", "react"],
-    deployOptions: deploy(["kustomize", "vercel", "cloudflare"]),
-    defaultDeployCode: "k",
   },
   {
     id: "react-spa",
@@ -120,18 +70,6 @@ export const templates: TemplateMeta[] = [
     toolchain: "node",
     defaultName: "web",
     tags: ["web", "vite", "react"],
-    deployOptions: deploy([
-      "aws-s3",
-      "cloudflare",
-      "vercel",
-      "r2",
-      "aliyun-oss",
-      "tencent-cos",
-      "minio",
-      "rustfs",
-      "edgeone",
-    ]),
-    defaultDeployCode: "s",
   },
   {
     id: "astro-site",
@@ -146,18 +84,6 @@ export const templates: TemplateMeta[] = [
     toolchain: "node",
     defaultName: "site",
     tags: ["web", "astro", "content"],
-    deployOptions: deploy([
-      "aws-s3",
-      "cloudflare",
-      "vercel",
-      "r2",
-      "aliyun-oss",
-      "tencent-cos",
-      "minio",
-      "rustfs",
-      "edgeone",
-    ]),
-    defaultDeployCode: "s",
   },
   {
     id: "starlight-docs",
@@ -172,18 +98,6 @@ export const templates: TemplateMeta[] = [
     toolchain: "node",
     defaultName: "docs",
     tags: ["docs", "starlight", "astro"],
-    deployOptions: deploy([
-      "aws-s3",
-      "cloudflare",
-      "vercel",
-      "r2",
-      "aliyun-oss",
-      "tencent-cos",
-      "minio",
-      "rustfs",
-      "edgeone",
-    ]),
-    defaultDeployCode: "s",
   },
   {
     id: "electron-app",
@@ -198,8 +112,6 @@ export const templates: TemplateMeta[] = [
     toolchain: "node",
     defaultName: "desktop",
     tags: ["desktop", "electron", "react"],
-    deployOptions: [],
-    defaultDeployCode: null,
   },
   {
     id: "expo-mobile",
@@ -214,8 +126,6 @@ export const templates: TemplateMeta[] = [
     toolchain: "node",
     defaultName: "mobile",
     tags: ["mobile", "expo", "native"],
-    deployOptions: [],
-    defaultDeployCode: null,
   },
   {
     id: "ts-library",
@@ -230,8 +140,6 @@ export const templates: TemplateMeta[] = [
     toolchain: "node",
     defaultName: "shared",
     tags: ["library", "typescript", "package"],
-    deployOptions: [],
-    defaultDeployCode: null,
   },
   {
     id: "go-lib",
@@ -246,8 +154,6 @@ export const templates: TemplateMeta[] = [
     toolchain: "go",
     defaultName: "lib",
     tags: ["library", "go", "golang", "module"],
-    deployOptions: [],
-    defaultDeployCode: null,
   },
 ];
 

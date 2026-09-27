@@ -35,7 +35,7 @@ var workspaceDefaultEnables = []string{
 // canonicalDomainOrder is the canonical iteration order for emitting
 // the list of enabled backends in the create envelope. Mirrors the
 // legacy ordering.
-var canonicalDomainOrder = []string{"container", "dev", "deploy", "ci", "env"}
+var canonicalDomainOrder = []string{"dev", "ci", "env"}
 
 type createFlags struct {
 	name         string

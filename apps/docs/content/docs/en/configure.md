@@ -1,6 +1,6 @@
 ---
 title: one configure
-description: Manage local connections and preferences for deployment, environment variables, and image registries.
+description: Manage local connections and preferences for environment variables.
 ---
 
 `one configure` manages **local connections and preferences**, not application code. Credentials stay on this machine and are never written to the workspace or Git.
@@ -40,22 +40,8 @@ Scripts and CI should not wait for the wizard; pass the service ID, connection n
 | pair | purpose |
 |---|---|
 | `env/infisical` | Infisical site URL + Universal Auth client id / secret |
-| `deploy/aliyun-oss` | Aliyun OSS object storage |
-| `deploy/tencent-cos` | Tencent COS object storage |
-| `deploy/aws-s3` | AWS S3 |
-| `deploy/minio` | self-hosted MinIO |
-| `deploy/rustfs` | self-hosted RustFS |
-| `deploy/r2` | Cloudflare R2 |
-| `deploy/kustomize` | Kubernetes kubeconfig + context |
-| `deploy/vercel` | Vercel API token |
-| `deploy/cloudflare` | Cloudflare API token |
-| `deploy/edgeone` | Tencent EdgeOne Pages API token |
-| `container/docker` | Generic Docker registry host, namespace, username, password |
-| `container/dockerhub` | Docker Hub username, password/token, namespace |
-| `container/ghcr` | GitHub Container Registry username, PAT, namespace |
-| `container/acr` | Aliyun ACR region, username, password/token, namespace |
 
-`env/dotenv` does not need a profile; it is for local `.env` workflows. The S3-compatible deploy backends share one profile shape, but each provider has its own backend ID.
+`env/dotenv` does not need a profile; it is for local `.env` workflows.
 
 ## Examples
 
@@ -65,22 +51,6 @@ one configure add env/infisical --profile work \
   --client-secret "$INFISICAL_CLIENT_SECRET" \
   --use
 
-one configure add deploy/aws-s3 --profile web-prod \
-  --region us-east-1 \
-  --access-key-id "$AWS_ACCESS_KEY_ID" \
-  --access-key-secret "$AWS_SECRET_ACCESS_KEY" \
-  --use
-
-one configure add deploy/kustomize --profile prod-k8s \
-  --kubeconfig ~/.kube/config \
-  --kubeconfig-context prod \
-  --use
-
-one configure add container/ghcr --profile ghcr \
-  --namespace "$GITHUB_USER" \
-  --username "$GITHUB_USER" \
-  --password "$GHCR_PAT" \
-  --use
 ```
 
 ## Resolution order
@@ -98,14 +68,12 @@ The environment-aware bindings are keyed by canonical Workspace root, environmen
 
 `one.manifest.json` never stores a local Profile name. `one configure use ... --workspace` and `--project` remain compatible legacy bindings; use `one serve` when you need a distinct selection for each environment.
 
-The same profile name can exist under different backends, for example `prod` under both `deploy/aws-s3` and `deploy/kustomize`.
-
 ## Storage
 
 ```text
 ~/.config/one/
 ├── config.json             # non-secret Profile fields, defaults, legacy bindings
-├── credentials.json        # secrets: clientSecret, accessKeySecret, password
+├── credentials.json        # secrets: clientId, clientSecret
 ├── profile-bindings.json   # v1: canonical root + environment -> Profile names
 └── cache/                  # short-lived token cache
 ```
@@ -139,5 +107,3 @@ All three JSON files are machine-local and written as `0600`; `profile-bindings.
 
 - [one serve](/en/docs/serve/) — edit Profiles and choose environment-aware local bindings
 - [one env](/en/docs/env-vars/) — use `env/infisical`
-- [one deploy](/en/docs/deploy/) — use deploy profiles
-- [one container](/en/docs/container/) — use container profiles

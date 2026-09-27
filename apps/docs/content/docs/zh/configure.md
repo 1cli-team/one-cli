@@ -1,6 +1,6 @@
 ---
 title: one configure
-description: 管理部署、环境变量和镜像仓库所需的本机连接与偏好设置。
+description: 管理环境变量所需的本机连接与偏好设置。
 ---
 
 `one configure` 管理**本机连接和偏好设置**；`one configure mise` 生成工作区工具配置，`one configure hooks` 生成 hk 检查并安装本地 Git 启动器。连接密钥只保存在本机，不写入工作区或 Git。
@@ -46,22 +46,8 @@ one configure add
 | pair | 用途 |
 |---|---|
 | `env/infisical` | Infisical site URL + Universal Auth client id / secret |
-| `deploy/aliyun-oss` | 阿里云 OSS |
-| `deploy/tencent-cos` | 腾讯云 COS |
-| `deploy/aws-s3` | AWS S3 |
-| `deploy/minio` | 自部署 MinIO |
-| `deploy/rustfs` | 自部署 RustFS |
-| `deploy/r2` | Cloudflare R2 |
-| `deploy/kustomize` | Kubernetes kubeconfig + context |
-| `deploy/vercel` | Vercel API token |
-| `deploy/cloudflare` | Cloudflare API token |
-| `deploy/edgeone` | Tencent EdgeOne Pages API token |
-| `container/docker` | 通用 Docker registry host、namespace、username、password |
-| `container/dockerhub` | Docker Hub username、password/token、namespace |
-| `container/ghcr` | GitHub Container Registry username、PAT、namespace |
-| `container/acr` | 阿里云 ACR region、username、password/token、namespace |
 
-`env/dotenv` 不需要 profile；它用于本地 `.env` 工作流。S3 兼容 deploy 后端共用一组 profile 字段，但每个供应商都有自己的 backend ID。
+`env/dotenv` 不需要 profile；它用于本地 `.env` 工作流。
 
 ## 常用示例
 
@@ -71,22 +57,6 @@ one configure add env/infisical --profile work \
   --client-secret "$INFISICAL_CLIENT_SECRET" \
   --use
 
-one configure add deploy/aws-s3 --profile web-prod \
-  --region us-east-1 \
-  --access-key-id "$AWS_ACCESS_KEY_ID" \
-  --access-key-secret "$AWS_SECRET_ACCESS_KEY" \
-  --use
-
-one configure add deploy/kustomize --profile prod-k8s \
-  --kubeconfig ~/.kube/config \
-  --kubeconfig-context prod \
-  --use
-
-one configure add container/ghcr --profile ghcr \
-  --namespace "$GITHUB_USER" \
-  --username "$GITHUB_USER" \
-  --password "$GHCR_PAT" \
-  --use
 ```
 
 ## profile 解析顺序
@@ -104,14 +74,12 @@ one configure add container/ghcr --profile ghcr \
 
 `one.manifest.json` 永远不保存本机 Profile 名。`one configure use ... --workspace` 和 `--project` 作为旧绑定仍兼容；需要每个环境不同选择时使用 `one serve`。
 
-同名 profile 可以存在于不同 backend 下，例如 `deploy/aws-s3` 和 `deploy/kustomize` 都可以有 `prod`。
-
 ## 存储位置
 
 ```text
 ~/.config/one/
 ├── config.json             # Profile 非敏感字段、default、旧绑定
-├── credentials.json        # 敏感字段：clientSecret、accessKeySecret、password
+├── credentials.json        # 敏感字段：clientId、clientSecret
 ├── profile-bindings.json   # v1：规范化 root + environment -> Profile 名
 └── cache/                  # 短期 token 缓存
 ```
@@ -179,5 +147,3 @@ One 保留用户的 `mise.toml` 和自定义任务；同目录的 `mise.toml` �
 
 - [`one serve`](/zh/docs/serve/) — 编辑 Profile 并选择环境感知的本机绑定
 - [`one env`](/zh/docs/env-vars/) — 使用 `env/infisical` profile
-- [`one deploy`](/zh/docs/deploy/) — 使用 deploy profile
-- [`one container`](/zh/docs/container/) — 使用 container profile

@@ -59,11 +59,6 @@ one create my-app --yes --env-provider infisical
 持续集成默认不配置。创建工作区不会写入 `.github/workflows/`；添加项目后如有
 需要，再显式运行 `one ci enable <project>`。
 
-**部署决策延后**
-
-create 不写部署或镜像配置，普通 `one add` 也保持未配置。第一次运行
-`one deploy <project>` 时，才选择兼容的部署目标和本机连接。
-
 ## --env-provider 语义
 
 `--env-provider <dotenv|infisical>` 显式指定 env 后端：

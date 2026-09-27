@@ -149,62 +149,12 @@
 	},
 	"sections": {
 		"groupLabel": {
-			"env": "环境变量",
-			"deploy": "部署",
-			"container": "容器"
+			"env": "环境变量"
 		},
 		"env": {
 			"infisical": {
 				"title": "Infisical",
 				"description": "Universal Auth 凭据 + Infisical site URL（env 域）"
-			}
-		},
-		"deploy": {
-			"aliyun-oss": {
-				"title": "Aliyun OSS",
-				"description": "阿里云 OSS endpoint + AK/SK（deploy 域，S3 协议）"
-			},
-			"tencent-cos": {
-				"title": "Tencent COS",
-				"description": "腾讯云 COS endpoint + AK/SK（deploy 域，S3 协议）"
-			},
-			"aws-s3": {
-				"title": "AWS S3",
-				"description": "AWS S3 region + AK/SK（deploy 域；endpoint 留空走 SDK 默认）"
-			},
-			"minio": {
-				"title": "MinIO",
-				"description": "MinIO 自部署对象存储（deploy 域，path-style 寻址）"
-			},
-			"rustfs": {
-				"title": "RustFS",
-				"description": "RustFS 自部署对象存储（deploy 域，path-style 寻址）"
-			},
-			"r2": {
-				"title": "Cloudflare R2",
-				"description": "Cloudflare R2 endpoint + AK/SK（deploy 域）"
-			},
-			"kustomize": {
-				"title": "Kustomize",
-				"description": "kubeconfig context（deploy 域）"
-			},
-			"vercel": {
-				"title": "Vercel",
-				"description": "Vercel API token + 可选 team slug（deploy 域）"
-			},
-			"cloudflare": {
-				"title": "Cloudflare",
-				"description": "Cloudflare API token + 可选 account ID（deploy 域）"
-			},
-			"edgeone": {
-				"title": "EdgeOne Pages",
-				"description": "Tencent EdgeOne Pages token + 可选 region（deploy 域）"
-			}
-		},
-		"container": {
-			"docker": {
-				"title": "Docker Registry",
-				"description": "ACR / Docker Hub / GHCR / Harbor 等（container 域）"
 			}
 		}
 	},
@@ -331,7 +281,6 @@
 		"matrix": {
 			"project": "项目",
 			"environment": "Environment",
-			"deploy": "Deploy",
 			"status": "状态",
 			"notApplicable": "-",
 			"notApplicableTitle": "这个项目不适用该配置",
@@ -354,8 +303,7 @@
 		"tabs": {
 			"label": "项目配置分区",
 			"overview": "概览",
-			"environment": "环境",
-			"deploy": "部署"
+			"environment": "环境"
 		},
 		"loadFailed": "无法加载项目配置",
 		"retry": "重试",
@@ -380,7 +328,12 @@
 			"buildVersion": "构建版本",
 			"packageManager": "包管理器",
 			"packageManagerAutomatic": "自动检测",
-			"devCommand": "开发命令"
+			"devCommand": "开发命令",
+			"buildCommand": "构建命令",
+			"buildSource": "one build 自动读取 {{source}}，请在该文件中修改构建任务。",
+			"buildMissing": "未配置构建任务",
+			"buildUnavailable": "无法读取构建配置",
+			"buildUnsupported": "此项目没有可用的构建任务。"
 		},
 		"environment": {
 			"title": "环境配置",
@@ -391,17 +344,6 @@
 			"disabled": "禁用项目环境",
 			"disabledHint": "运行项目命令时不注入环境变量。",
 			"keys": "已声明变量名"
-		},
-		"container": {
-			"title": "镜像配置",
-			"enabled": "为部署构建镜像",
-			"enabledHint": "部署前使用 one container 构建并推送这个项目的镜像。",
-			"image": "镜像地址",
-			"namespace": "镜像命名空间"
-		},
-		"deploy": {
-			"title": "部署配置",
-			"notSupported": "这个项目的 Template 不支持部署目标。"
 		},
 		"profile": {
 			"label": "项目 Profile",
@@ -554,15 +496,11 @@
 		},
 		"issue": {
 			"label": {
-				"container": "container",
-				"deploy": "deploy",
 				"env": "env",
 				"profile": "profile"
 			},
 			"missingProfile": "{{section}} 缺少可用凭据 profile{{profile}}，请补齐 API key / token。",
 			"missing": {
-				"container": "未配置 container，运行 `one container build` 会报错。",
-				"deploy": "未配置 deploy backend，运行 `one deploy` 会报错。",
 				"env": "workspace 未选择 env backend，请先配置再运行 `one env` 相关命令。"
 			}
 		},

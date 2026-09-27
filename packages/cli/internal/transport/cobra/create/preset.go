@@ -71,14 +71,9 @@ func runCreateWithPreset(deps Dependencies, cmd *cobra.Command, cwd, rawDir stri
 			if re.TemplateID != "" {
 				ctx["template_id"] = re.TemplateID
 			}
-			if len(re.Compat) > 0 {
-				ctx["compat"] = re.Compat
-			}
 			switch re.Kind {
 			case "template":
 				return cliErrors.New(cliErrors.TEMPLATE_NOT_FOUND, err.Error()).WithContext(ctx)
-			case "deploy", "container":
-				return cliErrors.New(cliErrors.PROFILE_BACKEND_INVALID, err.Error()).WithContext(ctx)
 			case "env", "extension":
 				return cliErrors.New(cliErrors.PRESET_INVALID, err.Error()).WithContext(ctx)
 			}
@@ -184,7 +179,6 @@ func runCreateWithPreset(deps Dependencies, cmd *cobra.Command, cwd, rawDir stri
 		CIEnabled:      false,
 		DevEnabled:     true,
 		Projects:       presetProjectsPayload(creationResult.Preset.Projects),
-		DeploySummary:  creationResult.Preset.SummarizeDeploys(),
 		EnvSummary: envSummary{
 			Backend:        effectiveEnv,
 			InfisicalBound: creationResult.InfisicalBound,
@@ -219,7 +213,6 @@ func presetProjectsPayload(projects []creationmodule.ProjectResult) []presetProj
 			Name:           p.Name,
 			TemplateID:     p.TemplateID,
 			TargetPath:     p.TargetPath,
-			DeployBackend:  p.DeployBackend,
 			Toolchain:      p.Toolchain,
 			PackageManager: p.PackageManager,
 		})
@@ -242,7 +235,6 @@ type createPresetResult struct {
 	CIEnabled       bool                   `json:"ci_enabled"`
 	DevEnabled      bool                   `json:"dev_enabled"`
 	Projects        []presetProjectPayload `json:"projects"`
-	DeploySummary   map[string]int         `json:"deploy_summary"`
 	EnvSummary      envSummary             `json:"env_summary"`
 	PartialState    string                 `json:"partial_state"`
 	UnknownSegments []string               `json:"preset_unknown_segments,omitempty"`
@@ -257,7 +249,6 @@ type presetProjectPayload struct {
 	Name           string `json:"name"`
 	TemplateID     string `json:"template_id"`
 	TargetPath     string `json:"target_path"`
-	DeployBackend  string `json:"deploy_backend,omitempty"`
 	Toolchain      string `json:"toolchain"`
 	PackageManager string `json:"package_manager,omitempty"`
 }
@@ -274,11 +265,7 @@ func (r *createPresetResult) RenderTTY(w io.Writer) {
 	fmt.Fprintf(w, i18n.T("create.preset_success")+"\n", r.Preset.ID)
 	fmt.Fprintf(w, i18n.T("create.location")+"\n", compactHomePath(r.CreatedPath))
 	for _, p := range r.Projects {
-		if p.DeployBackend != "" {
-			fmt.Fprintf(w, i18n.T("create.preset_project_deployed")+"\n", p.Name, p.TemplateID, p.DeployBackend)
-		} else {
-			fmt.Fprintf(w, i18n.T("create.preset_project")+"\n", p.Name, p.TemplateID)
-		}
+		fmt.Fprintf(w, i18n.T("create.preset_project")+"\n", p.Name, p.TemplateID)
 	}
 	fmt.Fprintf(w, i18n.T("create.env_source")+"\n", r.EnvSummary.Backend)
 	for _, warning := range r.Warnings {

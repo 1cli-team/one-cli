@@ -27,52 +27,15 @@ const schemaVersionByte byte = '1'
 // encoder never emits it (id stays as short as possible).
 const PresetIDPrefix = "preset:"
 
-// Deploy backend codes (v1). Single ASCII char from [a-z0-9].
-//
-// Adding a backend: pick the next unused letter (or digit), append the
-// pair here, append the same pair to testdata/preset/v1_codes.json. The
-// codes_test.go CI gate refuses renaming or deleting an existing entry.
-//
-// Note on the `s` slot: the v6 schema break that split the legacy
-// `deploy/s3` backend into six S3-protocol-compatible variants happened
-// during the same release window that introduced this preset table, so
-// `s` was re-pointed at `aws-s3` (the closest semantic successor)
-// before any preset id naming `s3` could escape into the wild. No
-// frozen vector under testdata/preset/v1_vectors.json uses code `s`,
-// so the swap is safe at the encode/decode layer.
-var deployCodes = map[byte]string{
-	'2': "r2",
-	'a': "aliyun-oss",
-	'c': "cloudflare",
-	'd': "docker",
-	'e': "edgeone",
-	'k': "kustomize",
-	'm': "minio",
-	'r': "rustfs",
-	's': "aws-s3",
-	't': "tencent-cos",
-	'v': "vercel",
-}
-
 // Env provider codes (v1). Single ASCII char.
 var envCodes = map[byte]string{
 	'd': "dotenv",
 	'i': "infisical",
 }
 
-// Container backend codes (v1). Single ASCII char from [a-z0-9].
-var containerCodes = map[byte]string{
-	'a': "acr",
-	'd': "docker",
-	'g': "ghcr",
-	'h': "dockerhub",
-}
-
 // Reverse maps, eagerly built so encoding stays O(1).
 var (
-	deployCodeReverse    = invertByteMap(deployCodes)
-	envCodeReverse       = invertByteMap(envCodes)
-	containerCodeReverse = invertByteMap(containerCodes)
+	envCodeReverse = invertByteMap(envCodes)
 )
 
 func invertByteMap(m map[byte]string) map[string]byte {
@@ -83,14 +46,6 @@ func invertByteMap(m map[byte]string) map[string]byte {
 	return out
 }
 
-// DeployBackendForCode returns the deploy backend id for a code, or ""
-// if the code is not recognised.
-func DeployBackendForCode(c byte) string { return deployCodes[c] }
-
-// CodeForDeployBackend returns the deploy code for a backend, or 0 if
-// no code is registered for that name.
-func CodeForDeployBackend(name string) byte { return deployCodeReverse[name] }
-
 // EnvProviderForCode returns the env provider id for a code, or "" if
 // the code is not recognised.
 func EnvProviderForCode(c byte) string { return envCodes[c] }
@@ -98,24 +53,8 @@ func EnvProviderForCode(c byte) string { return envCodes[c] }
 // CodeForEnvProvider returns the env code for a provider, or 0 if none.
 func CodeForEnvProvider(name string) byte { return envCodeReverse[name] }
 
-// ContainerBackendForCode returns the container backend id for a code,
-// or "" if the code is not recognised.
-func ContainerBackendForCode(c byte) string { return containerCodes[c] }
-
-// CodeForContainerBackend returns the container code for a backend, or
-// 0 if no code is registered for that name.
-func CodeForContainerBackend(name string) byte { return containerCodeReverse[name] }
-
-// DeployCodesSnapshot returns a stable snapshot of (code, backend) pairs
-// for use by codes_test.go's lock check against the golden file.
-func DeployCodesSnapshot() []CodeEntry { return snapshotByteMap(deployCodes) }
-
 // EnvCodesSnapshot returns a stable snapshot of (code, env) pairs.
 func EnvCodesSnapshot() []CodeEntry { return snapshotByteMap(envCodes) }
-
-// ContainerCodesSnapshot returns a stable snapshot of (code, container)
-// pairs.
-func ContainerCodesSnapshot() []CodeEntry { return snapshotByteMap(containerCodes) }
 
 // CodeEntry is one (code, id) pair used by the golden-file lock test.
 type CodeEntry struct {

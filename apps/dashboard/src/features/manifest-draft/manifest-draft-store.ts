@@ -1,7 +1,7 @@
 import { createStore } from "@/lib/utils";
 import type { ProjectManifestPatch, ProfileValue, WorkspaceManifestPatch } from "@/types/api";
 
-export type ManifestDraftSection = "general" | "environment" | "container" | "deploy";
+export type ManifestDraftSection = "general" | "environment";
 
 type DraftValue = string | boolean | number | null | undefined;
 
@@ -126,7 +126,7 @@ export const useManifestDraftStore = createStore<ManifestDraftState>(
 					summaries.push(...summariesFor(project, section, initial, next, labels));
 				}
 
-				const hasProjectChange = ["general", "environment", "container", "deploy"].some(
+				const hasProjectChange = ["general", "environment"].some(
 					(name) => projectPatch[name as ManifestDraftSection] !== undefined,
 				);
 				if (hasProjectChange) changes[project] = projectPatch;

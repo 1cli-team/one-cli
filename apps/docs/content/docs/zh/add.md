@@ -17,7 +17,7 @@ description: 往工作区里加一个模板化项目。
 ## 用法
 
 ```bash
-one add [template-id] --name <project-name> [--deploy-provider <backend>] [options]
+one add [template-id] --name <project-name> [options]
 ```
 
 ## 参数
@@ -27,7 +27,6 @@ one add [template-id] --name <project-name> [--deploy-provider <backend>] [optio
 | `template-id` | 模板 ID（如 `nestjs-api`）；不传走交互式选择 |
 | `-n, --name` | 项目名（必填，非交互模式） |
 | `-y, --yes` | 非交互模式 |
-| `--deploy-provider <backend>` | 显式选择 deploy 后端（必须在模板的 compat 列表里） |
 | `-o, --output <fmt>` | `json` / `yaml` / `text` |
 
 首次添加 JS/TS 项目时初始化 Node monorepo，新工作区默认使用 pnpm；已有 Node 工作区沿用其包管理器。首次添加 Go 模块时初始化根 `go.work`，从第一个模块开始维护 `use` 成员。Go 与 Node 配置可以共存，后续添加只增量登记。已有 `go.work` 的注释、`replace`、`toolchain` 和外部成员会保留；配置冲突会在写入前报告。
@@ -127,6 +126,6 @@ one add nestjs-api --name user-api --yes -o json | jq
 
 - 检查 `one.manifest.json#projects[]` 确认项目登记
 - Agent 文档和本地开发配置会由 `one add` 同步
-- 下一步运行 `one dev <project>`；需要部署时再运行 `one deploy <project>`
+- 下一步运行 `one dev <project>` 开发，使用 `one build <project>` 构建
 - 如需持续集成，单独运行 `one ci enable <project>` 生成 GitHub Actions 工作流
 - `one add` 只生成项目和工作区配置；`one dev` 会自动准备工具与应用依赖。JS/TS 在根目录统一安装，Go 按当前模块或 `go.work` 构建图准备依赖。修改 imports 或模块声明需要修复时，显式运行 `one run <project> -- go mod tidy`。

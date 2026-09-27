@@ -17,6 +17,8 @@ one build --dry-run -o json
 
 ## 构建命令
 
+Dashboard 的项目概览会展示实际构建命令和配置来源。该字段只读；修改项目中的 `package.json` 或 `Taskfile.yml` 后，刷新页面即可看到更新。
+
 - Node：读取当前 `package.json`，使用工作区包管理器（pnpm / npm / yarn / bun）执行 build 脚本。
 - Go：使用项目 `Taskfile.yml` 中的 `task build`。Go API 模板生成 `bin/server`；Go 库模板使用 `go build ./...` 编译包。旧的 Go 库可手动给 Taskfile 补上该任务。
 
@@ -38,4 +40,4 @@ Go 项目必须有 Taskfile。全量构建跳过没有 build 任务的项目，�
 
 `-o json` / `-o yaml` 预览返回 `one-cli/build-plan/v1`，实际执行返回 `one-cli/build-result/v1`。过程日志写入 stderr，stdout 保持可解析。结果包含每个项目的状态、命令、耗时和退出码。依赖准备失败时返回错误，构建任务保持 `not_run`。
 
-镜像构建使用 [`one container build`](/zh/docs/container/)，自定义命令使用 [`one run`](/zh/docs/run/)。
+自定义命令使用 [`one run`](/zh/docs/run/)。

@@ -31,6 +31,7 @@ export const GeneralForm: React.FC<ProjectSettingsFormProps> = ({
 		devCommand: project.devCommand ?? "",
 	};
 	const value = staged ?? initial;
+	const build = project.build;
 
 	function update(next: ProjectGeneralPatch) {
 		stageSection({
@@ -86,6 +87,30 @@ export const GeneralForm: React.FC<ProjectSettingsFormProps> = ({
 						disabled={readOnly}
 					/>
 				</ProjectField>
+				<div className="sm:col-start-2">
+					<ProjectField
+						label={t("projectInspector.general.buildCommand")}
+						htmlFor="project-build-command"
+					>
+						<Input
+							id="project-build-command"
+							className="font-mono"
+							value={build?.command ?? ""}
+							placeholder={t(
+								build?.status === "missing"
+									? "projectInspector.general.buildMissing"
+									: "projectInspector.general.buildUnavailable",
+							)}
+							readOnly
+							aria-describedby="project-build-command-hint"
+						/>
+						<p id="project-build-command-hint" className="text-xs text-muted-foreground">
+							{build?.source
+								? t("projectInspector.general.buildSource", { source: build.source })
+								: t("projectInspector.general.buildUnsupported")}
+						</p>
+					</ProjectField>
+				</div>
 			</div>
 			{project.environment.backend === "infisical" ? (
 				<SecretsManager

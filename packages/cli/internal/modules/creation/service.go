@@ -10,7 +10,6 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/torchstellar-team/one-cli/packages/cli/internal/core/template"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/core/workspace"
 	environmentmodule "github.com/torchstellar-team/one-cli/packages/cli/internal/modules/environment"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/modules/hooks"
@@ -229,16 +228,6 @@ func (s *Service) AddProject(
 	return AddProjectResult{
 		Project: project,
 	}, nil
-}
-
-func (s *Service) ConfigureProjectDeployment(
-	ctx context.Context,
-	projectRoot string,
-	tpl *template.Template,
-	projectName string,
-	backend string,
-) error {
-	return configureProjectDeployment(ctx, projectRoot, tpl, projectName, backend)
 }
 
 func enclosingWorkspace(targetDir string) string {

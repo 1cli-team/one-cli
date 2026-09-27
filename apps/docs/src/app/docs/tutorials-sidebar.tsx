@@ -26,7 +26,6 @@ const sectionsByLocale: Record<Locale, SidebarSection[]> = {
       items: [
         { label: "一键创建工作区", href: "/tutorials/templates/" },
         { label: "手动创建工作区", href: "/tutorials/first-workspace/" },
-        { label: "一键部署", href: "/tutorials/deploy/" },
       ],
     },
     {
@@ -36,11 +35,6 @@ const sectionsByLocale: Record<Locale, SidebarSection[]> = {
         { label: "配置环境变量", href: "/tutorials/env-vars/" },
         { label: "多环境变量", href: "/tutorials/env-multi-env/" },
         { label: "本地开发编排", href: "/tutorials/dev-local/" },
-        {
-          label: "构建与推送镜像",
-          href: "/tutorials/container-build-push/",
-        },
-        { label: "服务部署", href: "/tutorials/deploy-multi-backend/" },
         {
           label: "输出与错误码",
           href: "/tutorials/json-output-error-codes/",
@@ -54,7 +48,6 @@ const sectionsByLocale: Record<Locale, SidebarSection[]> = {
       items: [
         { label: "One-click workspace", href: "/tutorials/templates/" },
         { label: "Manual workspace", href: "/tutorials/first-workspace/" },
-        { label: "One-click deploy", href: "/tutorials/deploy/" },
       ],
     },
     {
@@ -67,11 +60,6 @@ const sectionsByLocale: Record<Locale, SidebarSection[]> = {
         { label: "Configure env vars", href: "/tutorials/env-vars/" },
         { label: "Multi-env vars", href: "/tutorials/env-multi-env/" },
         { label: "Local dev orchestration", href: "/tutorials/dev-local/" },
-        {
-          label: "Build & push images",
-          href: "/tutorials/container-build-push/",
-        },
-        { label: "Service deploy", href: "/tutorials/deploy-multi-backend/" },
         {
           label: "Output & error codes",
           href: "/tutorials/json-output-error-codes/",

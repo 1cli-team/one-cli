@@ -22,7 +22,6 @@ import (
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/core/workspace"
 	creationmodule "github.com/torchstellar-team/one-cli/packages/cli/internal/modules/creation"
 	cliErrors "github.com/torchstellar-team/one-cli/packages/cli/internal/platform/errors"
-	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/helpui"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/i18n"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/output"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/prompt"
@@ -35,9 +34,8 @@ func buildContributions(service *creationmodule.Service) []*cobra.Command {
 }
 
 type addFlags struct {
-	name   string
-	yes    bool
-	deploy string
+	name string
+	yes  bool
 }
 
 func newAddCmd(service *creationmodule.Service) *cobra.Command {
@@ -57,12 +55,8 @@ func newAddCmd(service *creationmodule.Service) *cobra.Command {
 	}
 	cmd.Flags().StringVarP(&flags.name, "name", "n", "", i18n.T("add.flag.name"))
 	cmd.Flags().BoolVarP(&flags.yes, "yes", "y", false, i18n.T("add.flag.yes"))
-	cmd.Flags().StringVar(&flags.deploy, "deploy-provider", "",
-		i18n.T("add.flag.deploy_provider"))
 	i18n.MarkFlagUsage(cmd, "name", "add.flag.name")
 	i18n.MarkFlagUsage(cmd, "yes", "add.flag.yes")
-	i18n.MarkFlagUsage(cmd, "deploy-provider", "add.flag.deploy_provider")
-	helpui.MarkAdvanced(cmd, "deploy-provider")
 	i18n.MarkShort(cmd, "add.short")
 	i18n.MarkLong(cmd, "add.tip")
 	return cmd
@@ -144,18 +138,8 @@ func runAdd(cmd *cobra.Command, service *creationmodule.Service, positional stri
 	// Ordinary add deliberately leaves deployment unset. An explicit advanced
 	// flag retains the automation path that configures it immediately.
 	projectInput := creationmodule.ProjectInput{
-		Template:        entry,
-		Name:            name,
-		Deploy:          flags.deploy,
-		Container:       entry.Defaults["container"],
-		DeferDeployment: strings.TrimSpace(flags.deploy) == "",
-	}
-	if !projectInput.DeferDeployment && interactive {
-		projectInput.ConfigureDeployTargets = true
-		projectInput.DeployTarget, err = promptDeploymentTarget(activeWorkspace.Manifest(), name, flags.deploy)
-		if err != nil {
-			return err
-		}
+		Template: entry,
+		Name:     name,
 	}
 	var result creationmodule.AddProjectResult
 	if err := prompt.Spin(i18n.Tf("add.generating", entry.ID), func() error {
@@ -172,51 +156,16 @@ func runAdd(cmd *cobra.Command, service *creationmodule.Service, positional stri
 	}
 
 	output.Emit(&addResult{
-		Schema:           "one-cli/add/v1",
-		SubprojectName:   project.Name,
-		TargetPath:       project.TargetPath,
-		TemplateID:       project.TemplateID,
-		Toolchain:        project.Toolchain,
-		PackageManager:   project.PackageManager,
-		Warnings:         project.Warnings,
-		DeployConfigured: project.DeployBackend != "",
+		Schema:         "one-cli/add/v1",
+		SubprojectName: project.Name,
+		TargetPath:     project.TargetPath,
+		TemplateID:     project.TemplateID,
+		Toolchain:      project.Toolchain,
+		PackageManager: project.PackageManager,
+		Warnings:       project.Warnings,
 	})
 
 	return nil
-}
-
-func promptDeploymentTarget(
-	manifest *workspace.Manifest,
-	projectName string,
-	backend string,
-) (creationmodule.DeploymentTarget, error) {
-	target := creationmodule.DeploymentTarget{}
-	var err error
-	if workspace.IsS3CompatibleDeploy(backend) &&
-		workspace.ExplicitDeployBucketForProject(manifest, projectName) == "" &&
-		workspace.WorkspaceID(manifest) == "" {
-		target.Bucket, err = prompt.Text(
-			fmt.Sprintf("S3 bucket — writes projects[%s].deploy.bucket (legacy manifest without workspace.id only)", projectName),
-			"",
-			nil,
-		)
-		if err != nil {
-			return creationmodule.DeploymentTarget{}, err
-		}
-	}
-	if backend == workspace.DeployBackendKustomize &&
-		workspace.ExplicitDeployNamespace(manifest) == "" &&
-		workspace.WorkspaceID(manifest) == "" {
-		target.Namespace, err = prompt.Text(
-			"k8s namespace — 写入 manifest.deploy.namespace（workspace 级，所有 k8s 项目共享）",
-			"default",
-			nil,
-		)
-		if err != nil {
-			return creationmodule.DeploymentTarget{}, err
-		}
-	}
-	return target, nil
 }
 
 type addResult struct {
@@ -229,8 +178,7 @@ type addResult struct {
 	// Warnings (v0.5+) carries one entry per template `compat` mismatch.
 	// Empty slice / nil is omitted from the JSON envelope so clean adds
 	// match the pre-v0.5 wire shape.
-	Warnings         []string `json:"warnings,omitempty"`
-	DeployConfigured bool     `json:"-"`
+	Warnings []string `json:"warnings,omitempty"`
 }
 
 // RenderTTY prints a friendly add-success summary.
@@ -243,11 +191,6 @@ func (r *addResult) RenderTTY(w io.Writer) {
 	fmt.Fprintf(w, i18n.T("add.stack")+"\n", r.TemplateID, r.Toolchain)
 	if r.PackageManager != "" {
 		fmt.Fprintf(w, i18n.T("add.package_manager")+"\n", r.PackageManager)
-	}
-	if r.DeployConfigured {
-		fmt.Fprintln(w, i18n.T("add.deploy_configured"))
-	} else {
-		fmt.Fprintln(w, i18n.T("add.deploy_deferred"))
 	}
 	fmt.Fprintln(w)
 	fmt.Fprintln(w, i18n.T("common.next_steps"))

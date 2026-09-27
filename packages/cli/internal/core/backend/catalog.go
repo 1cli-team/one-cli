@@ -95,9 +95,6 @@ func validateProjectFields(spec BackendSpec) error {
 		}
 		return nil
 	}
-	if !spec.Has(CapabilityDeploy) {
-		return fmt.Errorf("catalog: project-configurable backend %q does not declare deploy capability", spec.Pair)
-	}
 	if len(spec.Project.Fields) == 0 {
 		return fmt.Errorf("catalog: project-configurable backend %q declares no project fields", spec.Pair)
 	}

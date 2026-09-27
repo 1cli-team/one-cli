@@ -13,20 +13,20 @@ import type { BackendSpec } from "@/types/api";
 
 const server = setupServer();
 
-const vercelBackend: BackendSpec = {
-	id: "deploy/vercel",
-	domain: "deploy",
-	name: "vercel",
-	capabilities: ["deploy"],
+const infisicalBackend: BackendSpec = {
+	id: "env/infisical",
+	domain: "env",
+	name: "infisical",
+	capabilities: ["env"],
 	profile: {
 		configurable: true,
 		fields: [
-			{ path: "team", input_name: "team", type: "string", label_key: "form.fields.teamSlug" },
+			{ path: "siteUrl", input_name: "siteUrl", type: "string", label_key: "form.fields.siteUrl" },
 			{
-				path: "credentials/apiToken",
-				input_name: "token",
+				path: "credentials/clientSecret",
+				input_name: "client-secret",
 				type: "secret",
-				label_key: "form.fields.apiToken",
+				label_key: "form.fields.clientSecret",
 				required: true,
 			},
 		],
@@ -44,13 +44,13 @@ describe("profile editor dialog", () => {
 	it("owns profile upsert and reports the saved result", async () => {
 		let requestBody: unknown;
 		server.use(
-			http.post("http://localhost/api/configure/deploy/vercel", async ({ request }) => {
+			http.post("http://localhost/api/configure/env/infisical", async ({ request }) => {
 				requestBody = await request.json();
 				return HttpResponse.json({
 					schema: "one-cli/serve-configure-upsert/v1",
 					status: "completed",
-					domain: "deploy",
-					backend: "vercel",
+					domain: "env",
+					backend: "infisical",
 					name: "production",
 					default: true,
 				});
@@ -59,9 +59,9 @@ describe("profile editor dialog", () => {
 		const onOpenChange = vi.fn();
 		const onSaved = vi.fn();
 		const target: ProfileEditorTarget = {
-			backend: vercelBackend,
+			backend: infisicalBackend,
 			name: "production",
-			profile: { team: "one-team", credentials: { apiToken: "" } },
+			profile: { siteUrl: "https://app.infisical.com", credentials: { clientSecret: "" } },
 			mode: "edit",
 			hasDefault: true,
 		};
@@ -72,13 +72,16 @@ describe("profile editor dialog", () => {
 			</MemoryRouter>,
 		);
 
-		await userEvent.type(screen.getByLabelText("API Token"), "secret-token");
+		await userEvent.type(screen.getByLabelText("Client Secret"), "secret-token");
 		await userEvent.click(screen.getByRole("button", { name: "Save" }));
 
 		await waitFor(() => {
 			expect(requestBody).toEqual({
 				name: "production",
-				profile: { team: "one-team", credentials: { apiToken: "secret-token" } },
+				profile: {
+					siteUrl: "https://app.infisical.com",
+					credentials: { clientSecret: "secret-token" },
+				},
 				use: false,
 			});
 		});
@@ -91,13 +94,13 @@ describe("profile editor dialog", () => {
 	it("keeps a masked secret unchanged when the user leaves it blank", async () => {
 		let requestBody: unknown;
 		server.use(
-			http.post("http://localhost/api/configure/deploy/vercel", async ({ request }) => {
+			http.post("http://localhost/api/configure/env/infisical", async ({ request }) => {
 				requestBody = await request.json();
 				return HttpResponse.json({
 					schema: "one-cli/serve-configure-upsert/v1",
 					status: "updated",
-					domain: "deploy",
-					backend: "vercel",
+					domain: "env",
+					backend: "infisical",
 					name: "production",
 					default: true,
 				});
@@ -108,9 +111,12 @@ describe("profile editor dialog", () => {
 			<MemoryRouter>
 				<ProfileEditorDialog
 					target={{
-						backend: vercelBackend,
+						backend: infisicalBackend,
 						name: "production",
-						profile: { team: "one-team", credentials: { apiToken: "********" } },
+						profile: {
+							siteUrl: "https://app.infisical.com",
+							credentials: { clientSecret: "********" },
+						},
 						mode: "edit",
 						hasDefault: true,
 					}}
@@ -119,7 +125,7 @@ describe("profile editor dialog", () => {
 			</MemoryRouter>,
 		);
 
-		const token = screen.getByLabelText("API Token") as HTMLInputElement;
+		const token = screen.getByLabelText("Client Secret") as HTMLInputElement;
 		expect(token.type).toBe("password");
 		expect(token.value).toBe("");
 		expect(token.placeholder).toBe("Leave blank to keep unchanged");
@@ -129,7 +135,10 @@ describe("profile editor dialog", () => {
 		await waitFor(() => {
 			expect(requestBody).toEqual({
 				name: "production",
-				profile: { team: "one-team", credentials: { apiToken: "********" } },
+				profile: {
+					siteUrl: "https://app.infisical.com",
+					credentials: { clientSecret: "********" },
+				},
 				use: false,
 			});
 		});
@@ -138,13 +147,13 @@ describe("profile editor dialog", () => {
 	it("sends the default-profile choice from the checkbox", async () => {
 		let requestBody: unknown;
 		server.use(
-			http.post("http://localhost/api/configure/deploy/vercel", async ({ request }) => {
+			http.post("http://localhost/api/configure/env/infisical", async ({ request }) => {
 				requestBody = await request.json();
 				return HttpResponse.json({
 					schema: "one-cli/serve-configure-upsert/v1",
 					status: "updated",
-					domain: "deploy",
-					backend: "vercel",
+					domain: "env",
+					backend: "infisical",
 					name: "production",
 					default: true,
 				});
@@ -155,9 +164,12 @@ describe("profile editor dialog", () => {
 			<MemoryRouter>
 				<ProfileEditorDialog
 					target={{
-						backend: vercelBackend,
+						backend: infisicalBackend,
 						name: "production",
-						profile: { team: "one-team", credentials: { apiToken: "********" } },
+						profile: {
+							siteUrl: "https://app.infisical.com",
+							credentials: { clientSecret: "********" },
+						},
 						mode: "edit",
 						hasDefault: true,
 					}}

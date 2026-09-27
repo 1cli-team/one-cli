@@ -11,20 +11,6 @@ func TestBuiltinPairs(t *testing.T) {
 
 	got := Builtin().SortedPairs()
 	want := []string{
-		"container/acr",
-		"container/docker",
-		"container/dockerhub",
-		"container/ghcr",
-		"deploy/aliyun-oss",
-		"deploy/aws-s3",
-		"deploy/cloudflare",
-		"deploy/edgeone",
-		"deploy/kustomize",
-		"deploy/minio",
-		"deploy/r2",
-		"deploy/rustfs",
-		"deploy/tencent-cos",
-		"deploy/vercel",
 		"env/dotenv",
 		"env/infisical",
 	}
@@ -37,8 +23,8 @@ func TestBuiltinProfileBackendsExcludeDotenv(t *testing.T) {
 	t.Parallel()
 
 	got := Builtin().ProfileBackends()
-	if len(got) != 15 {
-		t.Fatalf("len(ProfileBackends()) = %d, want 15", len(got))
+	if len(got) != 1 {
+		t.Fatalf("len(ProfileBackends()) = %d, want 1", len(got))
 	}
 	for _, spec := range got {
 		if spec.Pair == "env/dotenv" {
@@ -110,8 +96,8 @@ func TestCatalogReturnsDefensiveCopies(t *testing.T) {
 	c := Builtin()
 	specs := c.All()
 	specs[0].Capabilities[0] = "mutated"
-	deploySpecs := c.ForDomain(DomainDeploy)
-	deploySpecs[0].Project.Fields[0].Path = "mutated"
+	envSpecs := c.ForDomain(DomainEnv)
+	envSpecs[1].Profile.Fields[0].Path = "mutated"
 
 	got, ok := c.LookupPair("env/dotenv")
 	if !ok {
@@ -120,12 +106,12 @@ func TestCatalogReturnsDefensiveCopies(t *testing.T) {
 	if got.Capabilities[0] == "mutated" {
 		t.Fatal("All() leaked mutable catalog storage")
 	}
-	deploy, ok := c.LookupPair("deploy/aliyun-oss")
+	env, ok := c.LookupPair("env/infisical")
 	if !ok {
-		t.Fatal("deploy/aliyun-oss not found")
+		t.Fatal("env/infisical not found")
 	}
-	if deploy.Project.Fields[0].Path == "mutated" {
-		t.Fatal("ForDomain() leaked mutable project field storage")
+	if env.Profile.Fields[0].Path == "mutated" {
+		t.Fatal("ForDomain() leaked mutable profile field storage")
 	}
 }
 
@@ -133,8 +119,8 @@ func TestNewRejectsInvalidProjectFieldMetadata(t *testing.T) {
 	t.Parallel()
 
 	valid := spec(
-		BackendID{Domain: DomainDeploy, Name: "test"},
-		[]Capability{CapabilityDeploy},
+		BackendID{Domain: DomainEnv, Name: "test"},
+		[]Capability{CapabilityEnvGet},
 		ProfileSpec{},
 	)
 	valid.Project = ProjectSpec{Configurable: true, Fields: []ProjectFieldSpec{{
@@ -150,12 +136,6 @@ func TestNewRejectsInvalidProjectFieldMetadata(t *testing.T) {
 			name: "fields require configurable flag",
 			mutate: func(value *BackendSpec) {
 				value.Project.Configurable = false
-			},
-		},
-		{
-			name: "configurable requires deploy capability",
-			mutate: func(value *BackendSpec) {
-				value.Capabilities = []Capability{CapabilityScaffold}
 			},
 		},
 		{
@@ -214,79 +194,6 @@ func TestNewRejectsInvalidProjectFieldMetadata(t *testing.T) {
 	}
 }
 
-func TestBuiltinDeployProjectFields(t *testing.T) {
-	t.Parallel()
-
-	wantS3 := []ProjectFieldSpec{
-		{Path: "bucket", InputName: "bucket", Type: ProjectFieldString, LabelKey: "project.fields.bucket", Placeholder: "my-static-site"},
-		{Path: "env", InputName: "environment", Type: ProjectFieldEnvironment, LabelKey: "project.fields.environment"},
-	}
-	for _, name := range []string{
-		DeployAliyunOSS, DeployTencentCOS, DeployAWSS3,
-		DeployMinIO, DeployRustFS, DeployR2,
-	} {
-		got, ok := Builtin().Lookup(DomainDeploy, name)
-		if !ok {
-			t.Fatalf("deploy/%s not found", name)
-		}
-		if !got.Project.Configurable || !reflect.DeepEqual(got.Project.Fields, wantS3) {
-			t.Fatalf("deploy/%s project schema = %#v, want %#v", name, got.Project, wantS3)
-		}
-	}
-
-	tests := []struct {
-		name string
-		want []ProjectFieldSpec
-	}{
-		{
-			name: DeployKustomize,
-			want: []ProjectFieldSpec{{Path: "env", InputName: "environment", Type: ProjectFieldEnvironment, LabelKey: "project.fields.environment"}},
-		},
-		{
-			name: DeployVercel,
-			want: []ProjectFieldSpec{
-				{Path: "projectId", InputName: "project-id", Type: ProjectFieldString, LabelKey: "project.fields.projectId", Placeholder: "prj_..."},
-				{Path: "projectName", InputName: "project-name", Type: ProjectFieldString, LabelKey: "project.fields.projectName", Placeholder: "my-project"},
-				{Path: "env", InputName: "environment", Type: ProjectFieldEnvironment, LabelKey: "project.fields.environment"},
-			},
-		},
-		{
-			name: DeployCloudflare,
-			want: []ProjectFieldSpec{
-				{Path: "workerName", InputName: "worker-name", Type: ProjectFieldString, LabelKey: "project.fields.workerName", Placeholder: "my-worker"},
-				{Path: "env", InputName: "environment", Type: ProjectFieldEnvironment, LabelKey: "project.fields.environment"},
-			},
-		},
-		{
-			name: DeployEdgeOne,
-			want: []ProjectFieldSpec{
-				{Path: "projectName", InputName: "project-name", Type: ProjectFieldString, LabelKey: "project.fields.projectName", Placeholder: "my-project"},
-				{Path: "env", InputName: "environment", Type: ProjectFieldEnvironment, LabelKey: "project.fields.environment"},
-			},
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-			got, ok := Builtin().Lookup(DomainDeploy, tt.name)
-			if !ok {
-				t.Fatalf("deploy/%s not found", tt.name)
-			}
-			if !got.Project.Configurable || !reflect.DeepEqual(got.Project.Fields, tt.want) {
-				t.Fatalf("deploy/%s project schema = %#v, want %#v", tt.name, got.Project, tt.want)
-			}
-		})
-	}
-
-	for _, domain := range []Domain{DomainEnv, DomainContainer} {
-		for _, got := range Builtin().ForDomain(domain) {
-			if got.Project.Configurable || len(got.Project.Fields) != 0 {
-				t.Fatalf("%s must not declare backend-specific project fields: %#v", got.Pair, got.Project)
-			}
-		}
-	}
-}
-
 func TestProfileFieldsNeverExposeCredentialValues(t *testing.T) {
 	t.Parallel()
 
@@ -315,9 +222,9 @@ func TestBuiltinBackendsDeclareProfileType(t *testing.T) {
 func TestBackendSpecJSONIncludesNormalizedIdentity(t *testing.T) {
 	t.Parallel()
 
-	backend, ok := Builtin().LookupPair("deploy/vercel")
+	backend, ok := Builtin().LookupPair("env/infisical")
 	if !ok {
-		t.Fatal("deploy/vercel not found")
+		t.Fatal("env/infisical not found")
 	}
 	raw, err := json.Marshal(backend)
 	if err != nil {
@@ -327,18 +234,18 @@ func TestBackendSpecJSONIncludesNormalizedIdentity(t *testing.T) {
 		ID      string      `json:"id"`
 		Domain  Domain      `json:"domain"`
 		Name    string      `json:"name"`
-		Project ProjectSpec `json:"project"`
+		Profile ProfileSpec `json:"profile"`
 	}
 	if err := json.Unmarshal(raw, &got); err != nil {
 		t.Fatal(err)
 	}
-	if got.ID != "deploy/vercel" || got.Domain != DomainDeploy || got.Name != "vercel" {
+	if got.ID != "env/infisical" || got.Domain != DomainEnv || got.Name != "infisical" {
 		t.Fatalf("identity = %#v", got)
 	}
-	if !got.Project.Configurable || len(got.Project.Fields) != 3 {
-		t.Fatalf("project schema = %#v", got.Project)
+	if !got.Profile.Configurable || len(got.Profile.Fields) != 3 {
+		t.Fatalf("profile schema = %#v", got.Profile)
 	}
-	if got.Project.Fields[0].Path != "projectId" || got.Project.Fields[2].Type != ProjectFieldEnvironment {
-		t.Fatalf("project fields = %#v", got.Project.Fields)
+	if got.Profile.Fields[0].Path != "siteUrl" || got.Profile.Fields[2].Type != FieldSecret {
+		t.Fatalf("profile fields = %#v", got.Profile.Fields)
 	}
 }

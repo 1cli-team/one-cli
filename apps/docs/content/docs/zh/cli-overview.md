@@ -17,10 +17,8 @@ description: one 顶层命令、常用子命令、输出模式和 agent 自动�
 | `one add` | 交互式或从内置模板添加项目 | `one add` |
 | `one templates` | 查看可用模板 | `one templates` |
 | `one env` | 管理 workspace 的 dotenv / Infisical 环境变量 | `one env list` |
-| `one container` | 查看、构建、推送 Dockerfile-driven 镜像 | `one container info` |
 | `one dev` | 并行启动所有项目的本地开发进程 | `one dev` |
 | `one build` | 构建全部项目或指定项目 | `one build web` |
-| `one deploy` | 按 project 派发 kustomize / S3-compatible / Vercel / Cloudflare / EdgeOne 部署 | `one deploy --dry-run` |
 | `one ci` | 查看或管理可选的持续集成 | `one ci` |
 | `one run` | 注入项目 `.env` 后执行任意命令 | `one run -- npm test` |
 | `one hk` | 工作区检查、显式修复和 Git hooks | `one hk check --all` |
@@ -45,7 +43,7 @@ one templates # 查看有哪些模板
 one add <template-id> --name <project-name> [--yes] # 直接添加某个技术栈
 ```
 
-直接 `one add` 会按目录分成应用、服务、共享库三类，再询问技术栈和项目名；文档站归在应用中。它不配置 CI，也不询问部署。普通 add 保持部署未配置，直到 `one deploy <project>`；`--deploy-provider` 只作为高级自动化选项保留。
+直接 `one add` 会按目录分成应用、服务、共享库三类，再询问技术栈和项目名；文档站归在应用中。它不配置 CI，也不询问部署。
 
 详见 [`one add`](/zh/docs/add/)。
 
@@ -97,10 +95,6 @@ one configure open
 | domain | backend |
 |---|---|
 | `env` | `infisical` |
-| `container` | `docker` |
-| `container` | `dockerhub`, `ghcr`, `acr` |
-| `deploy` | `aliyun-oss`, `tencent-cos`, `aws-s3`, `minio`, `rustfs`, `r2` |
-| `deploy` | `kustomize`, `vercel`, `cloudflare`, `edgeone` |
 
 本地 `.env` 文件不需要本机连接。
 本机连接写到 `~/.config/one/config.json` 和 `~/.config/one/credentials.json`。环境感知的 Workspace/Project 选择只保存名字，位于 `~/.config/one/profile-bindings.json`。敏感字段默认掩码，只有 `show --reveal` 会显示明文；这些文件都不会改动 `one.manifest.json`。
@@ -114,8 +108,6 @@ one configure open
 | `one add` | 有；无参时选择项目类型、技术栈和项目名 |
 | `one configure` | 有；无参或 `one configure add` 进入本机连接向导 |
 | `one env set` | 有；隐藏输入值、选择作用域、确认覆盖；脚本显式传值 |
-| `one container build` | 半交互；TTY 下缺少构建版本时可选择版本，CI 用 `--build-version` |
-| `one deploy` | 首次部署询问项目、目标类别/服务和本机连接；脚本传 `--provider` / `--profile` |
 | `one dev` | Node 依赖缺失时询问是否安装，否则直接启动 |
 | `one ci disable` | 删除生成的工作流前先确认；拒绝时成功退出 |
 | `one templates` / `one run` | 无交互式向导；通过参数控制行为 |
@@ -127,19 +119,9 @@ one configure open
 one serve [--host 127.0.0.1] [--port 0] [--open=false]
 ```
 
-启动仅绑定 loopback 的本地 HTTP 服务，用浏览器手工编辑 `env / deploy / container` Profile、选择环境感知的本机绑定，并在发布前审阅类型化的 Workspace Backend 或 Project 配置草稿及 revision 校验。Workspace 源码与非白名单 Manifest 字段保持只读。这个入口会处理 API key、kubeconfig path、registry token 等敏感字段，设计上是给人类使用，不给 AI agent 直接读写凭据。
+启动仅绑定 loopback 的本地 HTTP 服务，用浏览器手工编辑 Infisical Profile、选择环境感知的本机绑定，并在发布前审阅类型化的 Workspace Backend 或 Project 配置草稿及 revision 校验。Workspace 源码与非白名单 Manifest 字段保持只读。这个入口会处理 Infisical 凭据，设计上是给人类使用，不给 AI agent 直接读写凭据。
 
 详见 [`one serve`](/zh/docs/serve/)。
-
-## 容器
-
-```bash
-one container info
-one container build [subproject] [-p <name|path>] [--build-version <version>] [--dry-run] [--profile <name>]
-one container push  [subproject] [-p <name|path>] [--build-version <version>] [--dry-run] [--profile <name>]
-```
-
-`one container` 读取每个项目的 Dockerfile 和 manifest 里的 container 配置。裸 `build` 默认本地构建 `<workload>:<version>`；传 `--profile` 或解析到机器本地 registry 绑定/default 时，会使用 registry-qualified tag 并执行登录。`push` 需要 registry Profile，必要时会把本地镜像 retag 后推送。
 
 ## 本地开发
 
@@ -148,16 +130,6 @@ one dev [project] [--dry-run]
 ```
 
 读取项目的 dev 命令并用内置 supervisor 并行启动。位置参数只启动一个项目；`--project` 为旧脚本保留。Node 依赖缺失时可确认安装并继续。
-
-## 部署
-
-```bash
-one deploy [project] [--provider <target>] [--profile <connection>] [--dry-run]
-```
-
-首次部署只展示当前仓库已经实现、且与技术栈兼容的部署目标，然后询问本机连接。选择“稍后配置”会成功退出且不修改工作区；后续部署复用项目已保存的目标。
-
-`--env <name>` 一次性覆盖目标环境；`--dry-run` 打印 docker / kubectl / s3 / platform CLI 计划，不触碰远端。
 
 ## 持续集成
 

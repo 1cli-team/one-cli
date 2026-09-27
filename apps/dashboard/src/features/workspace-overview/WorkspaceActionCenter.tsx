@@ -21,11 +21,6 @@ function issueKey(issue: OverviewIssue): string {
 	);
 }
 
-function issueTab(issue: OverviewIssue): ProjectInspectorTab {
-	if (issue.domain === "env") return "environment";
-	return "deploy";
-}
-
 function profileIssueSettingsPath(issue: OverviewIssue): string {
 	const section = issue.section ?? (issue.backend ? `${issue.domain}/${issue.backend}` : "");
 	const [domain, backend, extra] = section.split("/");
@@ -139,7 +134,7 @@ export const WorkspaceActionCenter: React.FC<WorkspaceActionCenterProps> = ({
 									variant="ghost"
 									className="text-primary"
 									disabled={readOnly}
-									onClick={() => onInspect(project, issueTab(issue))}
+									onClick={() => onInspect(project, "environment")}
 								>
 									<span className="sr-only">{t("overview.actionCenter.resolve")}</span>
 									<ArrowRight />

@@ -22,10 +22,6 @@ const workspaceTestHost = "dashboard.test"
 func seedWorkspace(t *testing.T) string {
 	t.Helper()
 	root := t.TempDir()
-	deployConfig, err := json.Marshal(map[string]string{"projectId": "prj_web", "env": "prod"})
-	if err != nil {
-		t.Fatal(err)
-	}
 	manifest := &workspacecore.Manifest{
 		Version:      workspacecore.ManifestVersion,
 		Workspace:    &workspacecore.ManifestWorkspace{ID: "demo", Name: "demo"},
@@ -35,10 +31,7 @@ func seedWorkspace(t *testing.T) string {
 		},
 		Projects: []workspacecore.ManifestProject{{
 			Name: "web", RelativeDir: "apps/web", TemplateID: "react-spa", Toolchain: "node",
-			Domains: &workspacecore.ProjectDomains{
-				Container: &workspacecore.ProjectContainerOverride{Kind: "ghcr", Image: "ghcr.io/acme/web:latest"},
-				Deploy:    &workspacecore.ProjectDeployBackend{Kind: "vercel", Config: deployConfig},
-			},
+			Domains: &workspacecore.ProjectDomains{},
 		}},
 	}
 	if err := workspacecore.WriteManifest(root, manifest); err != nil {
@@ -89,22 +82,6 @@ func seedDashboardProfiles(t *testing.T) {
 				ClientID: "client", ClientSecret: "secret-must-not-leak",
 			},
 		},
-	}, true); err != nil {
-		t.Fatal(err)
-	}
-	if _, err := profile.Upsert(profile.DomainContainer, "ghcr", "work", profile.Profile{
-		Backend: "ghcr",
-		Container: &profile.ContainerProfile{Credentials: &profile.ContainerCredentials{
-			Username: "octo", Password: "container-secret-must-not-leak",
-		}},
-	}, true); err != nil {
-		t.Fatal(err)
-	}
-	if _, err := profile.Upsert(profile.DomainDeploy, "vercel", "work", profile.Profile{
-		Backend: "vercel",
-		Vercel: &profile.VercelProfile{Credentials: &profile.VercelCredentials{
-			APIToken: "deploy-secret-must-not-leak",
-		}},
 	}, true); err != nil {
 		t.Fatal(err)
 	}
@@ -179,23 +156,6 @@ type workspaceSettingsWire struct {
 				Source string `json:"source"`
 			} `json:"profile"`
 		} `json:"environment"`
-		Container struct {
-			Enabled         bool   `json:"enabled"`
-			Backend         string `json:"backend"`
-			SelectedProfile string `json:"selectedProfile"`
-			Profile         *struct {
-				Name   string `json:"name"`
-				Source string `json:"source"`
-			} `json:"profile"`
-		} `json:"container"`
-		Deploy struct {
-			Backend         string `json:"backend"`
-			SelectedProfile string `json:"selectedProfile"`
-			Profile         *struct {
-				Name   string `json:"name"`
-				Source string `json:"source"`
-			} `json:"profile"`
-		} `json:"deploy"`
 	} `json:"project"`
 }
 
@@ -405,7 +365,7 @@ func TestProjectProfileBindingSupportsAllManifestOwnedDomains(t *testing.T) {
 	seedDashboardProfiles(t)
 	before := snapshotRepositoryTree(t, root)
 
-	for _, domain := range []string{"env", "container", "deploy"} {
+	for _, domain := range []string{"env"} {
 		recorder := workspaceRequest(t, handler, http.MethodPut,
 			"/api/workspace/projects/web/profile-bindings/"+domain+"?env=preview",
 			strings.NewReader(`{"profile":"work"}`))
@@ -419,15 +379,7 @@ func TestProjectProfileBindingSupportsAllManifestOwnedDomains(t *testing.T) {
 		if settings.Environment != "preview" || settings.Project.Name != "web" {
 			t.Fatalf("bind %s settings = %#v", domain, settings)
 		}
-		var selected string
-		switch domain {
-		case "env":
-			selected = settings.Project.Environment.SelectedProfile
-		case "container":
-			selected = settings.Project.Container.SelectedProfile
-		case "deploy":
-			selected = settings.Project.Deploy.SelectedProfile
-		}
+		selected := settings.Project.Environment.SelectedProfile
 		if selected != "work" {
 			t.Fatalf("bind %s selectedProfile = %q", domain, selected)
 		}
@@ -503,10 +455,6 @@ func TestLegacyRepositoryMutationRoutesAlwaysReturnStableReadOnlyConflict(t *tes
 	paths := []string{
 		"/api/workspace/projects/web",
 		"/api/workspace/projects/web/environment",
-		"/api/workspace/projects/web/deploy",
-		"/api/workspace/projects/web/container",
-		"/api/workspace/projects/web/settings/deploy",
-		"/api/workspace/projects/web/settings/container",
 	}
 	for _, path := range paths {
 		for _, body := range []string{`{}`, `{this is not json`} {
