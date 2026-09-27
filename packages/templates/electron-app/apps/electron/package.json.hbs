@@ -9,6 +9,7 @@
   "scripts": {
     "dev": "cross-env NODE_ENV=development tsdown && cross-env NODE_ENV=development electron build/main/index.js",
     "build": "cross-env NODE_ENV=production tsdown",
+    "sandbox:profile": "node script/sandbox-profile.mjs",
     "pack": "cross-env NODE_ENV=development node script/release.mjs",
     "release": "cross-env NODE_ENV=production node script/release.mjs"
   },

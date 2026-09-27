@@ -11,13 +11,13 @@ export default defineConfig({
   plugins: [react(), tailwindcss()],
   resolve: {
     alias: {
-      "@": path.resolve(__dirname, "./src"),
+      "@": path.resolve(import.meta.dirname, "./src"),
     },
   },
   envDir: "../../",
   envPrefix: "APP",
   build: {
-    outDir: path.resolve(__dirname, "../electron/build/renderer"),
+    outDir: path.resolve(import.meta.dirname, "../electron/build/renderer"),
     emptyOutDir: true,
   },
 });
