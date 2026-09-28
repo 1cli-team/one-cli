@@ -3,7 +3,7 @@ title: one add
 description: Add a templated project to an existing workspace.
 ---
 
-`one add` selects a technology stack, writes a locally developable project into the workspace, and registers it in the manifest. CI and deployment remain unconfigured by default.
+`one add` creates a project from a template or an empty directory starter and registers it in the workspace manifest. CI and deployment remain unconfigured by default.
 
 When hk is enabled, `one add` updates the default language checks in `.config/hk.pkl`, preserving user edits and comments. Workspace and project tasks share the root `mise.toml`; project directories retain only their native command files. See [hooks](/en/docs/hk/) and [tasks](/en/docs/run/) for configuration details.
 
@@ -46,6 +46,20 @@ Non-interactive calls should pass both template ID and project name:
 ```bash
 one add nestjs-api --name api --yes
 ```
+
+## Create an Empty Project
+
+In an existing workspace, create and register a project before choosing a language or framework:
+
+```bash
+one add empty-app --name web --yes
+one add empty-service --name api --yes
+one add empty-library --name shared --yes
+```
+
+These templates create `apps/web/`, `services/api/`, and `packages/shared/`, respectively, containing only a `.gitkeep` file so Git tracks the directory. They register `toolchain: "none"` and generate no `package.json`, `go.mod`, dependencies, or startup tasks. Interactive `one add` and the Dashboard's new-project picker also offer these choices.
+
+For Node or Go code, set the project's `toolchain` in `one.manifest.json` to `node` or `go`. Node projects use `packageManager: "pnpm"` and need membership in the root package workspace; Go modules need membership in the root `go.work`. Define tasks in `package.json` / `Taskfile.yml`, or set the project's `dev.command`, then run `one init mise` to update task configuration. For other languages, keep `toolchain: "none"` and define your own tools and tasks in the root `mise.toml`, or set `dev.command`. Configure the commands before using `one dev` / `one build`.
 
 ## Output
 

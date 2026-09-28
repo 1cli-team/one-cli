@@ -43,7 +43,7 @@ func newAddCmd(service *creationmodule.Service) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "add [template-id]",
 		Long:    i18n.T("add.tip"),
-		Example: "  one add\n  one add react-spa --name web --yes",
+		Example: "  one add\n  one add react-spa --name web --yes\n  one add empty-app --name web --yes\n  one add empty-service --name api --yes",
 		Args:    i18n.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			positional := ""
@@ -194,6 +194,10 @@ func (r *addResult) RenderTTY(w io.Writer) {
 	}
 	fmt.Fprintln(w)
 	fmt.Fprintln(w, i18n.T("common.next_steps"))
+	if r.Toolchain == string(template.ToolchainNone) {
+		fmt.Fprintln(w, i18n.T("add.empty_next_steps"))
+		return
+	}
 	fmt.Fprintf(w, "  one dev -p %s\n", r.SubprojectName)
 }
 

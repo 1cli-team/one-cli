@@ -5,7 +5,7 @@ description: 往工作区里加一个模板化项目。
 
 工作区已启用 hk 时，`one add` 会同步更新语言检查：Go 加入格式检查，JS/TS 根据项目工具加入 lint 和格式检查。检查配置直接保存在 `.config/hk.pkl`，用户修改和注释会保留。工作区和项目任务统一登记在根 `mise.toml`，子项目继续使用自己的原生命令文件。旧工作区可先通过 `one init hooks` 启用，详见 [`one hk`](/zh/docs/hk/)。
 
-`one add` 选择技术栈，生成一个可本地开发的项目并登记到 manifest。CI 和部署默认都保持未配置。
+`one add` 可以从技术栈模板生成项目，也可以创建空项目，并登记到工作区 manifest。CI 和部署默认都保持未配置。
 
 有两条入口：
 
@@ -42,6 +42,20 @@ one add [template-id] --name <project-name> [options]
 ```bash
 one add nestjs-api --name api --yes
 ```
+
+## 创建空项目
+
+在已有工作区中，可以先创建目录并登记项目，之后再选择语言或框架：
+
+```bash
+one add empty-app --name web --yes
+one add empty-service --name api --yes
+one add empty-library --name shared --yes
+```
+
+三个模板分别创建 `apps/web/`、`services/api/`、`packages/shared/`，仅包含用于 Git 跟踪目录的 `.gitkeep`。它们以 `toolchain: "none"` 登记，不生成 `package.json`、`go.mod`、依赖或启动任务。交互式 `one add` 和 Dashboard 的新建项目选择器也提供这三个选项。
+
+如果使用 Node 或 Go，在 `one.manifest.json` 中将项目的 `toolchain` 改为 `node` 或 `go`；Node 项目使用 `packageManager: "pnpm"`，并补齐根工作区的包成员配置，Go 项目则将模块加入根 `go.work`。在 `package.json` / `Taskfile.yml` 中定义任务，或设置项目的 `dev.command`，然后运行 `one init mise` 更新任务配置。使用其他语言时，可以保留 `toolchain: "none"`，在根 `mise.toml` 中自行定义工具和任务，或设置 `dev.command`。配置好命令后再使用 `one dev` / `one build`。
 
 ## 输出
 

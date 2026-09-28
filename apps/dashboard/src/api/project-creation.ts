@@ -7,7 +7,7 @@ export interface ProjectTemplate {
 	description: string;
 	category: "frontend" | "backend" | "library";
 	directory: string;
-	toolchain: "node" | "go";
+	toolchain: "node" | "go" | "none";
 }
 
 export interface CreatedProject {

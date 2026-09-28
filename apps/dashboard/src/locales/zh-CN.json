@@ -372,7 +372,7 @@
 		"nameHint": "以字母或数字开头，可使用字母、数字、连字符和下划线。",
 		"nameInvalid": "请输入以字母或数字开头，且仅包含字母、数字、连字符或下划线的名称。",
 		"nameExists": "当前工作区已存在同名项目，请使用其他名称。",
-		"template": "技术栈",
+		"template": "技术栈或空项目",
 		"templatesFailed": "无法加载模板",
 		"loadingTemplates": "正在加载模板…",
 		"noTemplates": "暂无可用模板",
@@ -429,6 +429,18 @@
 			"electron-app": {
 				"name": "Electron 桌面应用",
 				"description": "Electron + React + Vite 桌面应用模板，主进程基于 inversify，内置 electron-log/store/updater"
+			},
+			"empty-app": {
+				"name": "空应用",
+				"description": "在 apps/ 下创建空项目，稍后自行配置技术栈。"
+			},
+			"empty-service": {
+				"name": "空服务",
+				"description": "在 services/ 下创建空项目，稍后自行配置技术栈。"
+			},
+			"empty-library": {
+				"name": "空共享库",
+				"description": "在 packages/ 下创建空项目，稍后自行配置技术栈。"
 			}
 		}
 	},
@@ -519,8 +531,30 @@
 				"feature1": "主进程、渲染进程与 preload 分包",
 				"feature2": "带类型的 IPC 桥接与依赖注入",
 				"feature3": "日志、本地设置与更新器模块"
+			},
+			"empty-app": {
+				"description": "在 apps/ 下创建空项目，稍后自行配置技术栈。",
+				"stack": "技术栈由你选择",
+				"feature1": "仅包含用于 Git 跟踪的 .gitkeep 文件",
+				"feature2": "自动登记到工作区",
+				"feature3": "添加代码后自行配置开发命令"
+			},
+			"empty-service": {
+				"description": "在 services/ 下创建空项目，稍后自行配置技术栈。",
+				"stack": "技术栈由你选择",
+				"feature1": "仅包含用于 Git 跟踪的 .gitkeep 文件",
+				"feature2": "自动登记到工作区",
+				"feature3": "添加代码后自行配置开发命令"
+			},
+			"empty-library": {
+				"description": "在 packages/ 下创建空项目，稍后自行配置技术栈。",
+				"stack": "技术栈由你选择",
+				"feature1": "仅包含用于 Git 跟踪的 .gitkeep 文件",
+				"feature2": "自动登记到工作区",
+				"feature3": "添加代码后自行配置开发命令"
 			}
-		}
+		},
+		"noToolchain": "未配置"
 	},
 	"services": {
 		"title": "开发服务",

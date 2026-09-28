@@ -7,7 +7,19 @@ import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } 
 import { CreateProjectDialog } from "@/features/project-creation/CreateProjectDialog";
 import i18n from "@/lib/i18n";
 
+const emptyTemplates = [
+	{ id: "empty-app", category: "frontend", directory: "apps" },
+	{ id: "empty-service", category: "backend", directory: "services" },
+	{ id: "empty-library", category: "library", directory: "packages" },
+].map((template) => ({
+	...template,
+	name: template.id,
+	description: template.id,
+	toolchain: "none",
+}));
+
 const templates = [
+	...emptyTemplates,
 	{
 		id: "react-spa",
 		name: "React",
@@ -55,7 +67,14 @@ afterEach(() => server.resetHandlers());
 afterAll(() => server.close());
 
 describe("project creation", () => {
-	it.each(["en-US", "zh-CN"])("creates the selected template in %s", async (locale) => {
+	it.each(
+		["en-US", "zh-CN"].flatMap((locale) =>
+			[...emptyTemplates, { id: "go-api", directory: "services" }].map((template) => ({
+				locale,
+				...template,
+			})),
+		),
+	)("creates $id in $locale", async ({ locale, id, directory }) => {
 		await i18n.changeLanguage(locale);
 		const user = userEvent.setup();
 		let payload: unknown;
@@ -66,7 +85,7 @@ describe("project creation", () => {
 					expect(params.entryId).toBe("selected-workspace");
 					payload = await request.json();
 					return HttpResponse.json(
-						{ name: "api", relativeDir: "services/api", templateId: "go-api" },
+						{ name: "api", relativeDir: `${directory}/api`, templateId: id },
 						{ status: 201 },
 					);
 				},
@@ -78,12 +97,12 @@ describe("project creation", () => {
 		await waitFor(() => expect((select as HTMLButtonElement).disabled).toBe(false));
 		await user.click(select);
 		await user.click(
-			await screen.findByRole("option", { name: i18n.t("projectCreate.templates.go-api.name") }),
+			await screen.findByRole("option", { name: i18n.t(`projectCreate.templates.${id}.name`) }),
 		);
-		expect(screen.getByText("services/api")).toBeDefined();
+		expect(screen.getByText(`${directory}/api`)).toBeDefined();
 		await user.click(screen.getByRole("button", { name: i18n.t("projectCreate.submit") }));
 		await waitFor(() => expect(onCreated).toHaveBeenCalledWith("api"));
-		expect(payload).toEqual({ name: "api", templateId: "go-api" });
+		expect(payload).toEqual({ name: "api", templateId: id });
 		expect(onClose).toHaveBeenCalledOnce();
 	});
 
@@ -174,7 +193,7 @@ describe("project creation", () => {
 			http.get("http://localhost/api/project-templates", () => HttpResponse.json({ templates })),
 		);
 		await user.click(screen.getByRole("button", { name: "Retry" }));
-		await screen.findByRole("combobox", { name: "Technology stack" });
+		await screen.findByRole("combobox", { name: i18n.t("projectCreate.template") });
 		await i18n.changeLanguage("zh-CN");
 		const dialog = await screen.findByRole("dialog", { name: "新建项目" });
 		expect(await within(dialog).findByText("React 单页应用")).toBeDefined();

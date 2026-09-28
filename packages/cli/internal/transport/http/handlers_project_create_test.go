@@ -161,3 +161,47 @@ func TestProjectTemplatesLocalized(t *testing.T) {
 		}
 	}
 }
+
+func TestCreateEmptyProjectsInSelectedWorkspace(t *testing.T) {
+	registry := newRegistryService(t)
+	root := seedRegistryWorkspace(t, "selected", "Selected", "")
+	selected := observeRegistryWorkspace(t, registry, root)
+	handler := newRegistryMux(t, root, registry)
+	for _, tc := range []struct{ id, name, dir string }{
+		{"empty-app", "web", "apps/web"},
+		{"empty-service", "api", "services/api"},
+		{"empty-library", "shared", "packages/shared"},
+	} {
+		payload, err := json.Marshal(createProjectRequest{Name: tc.name, TemplateID: tc.id})
+		if err != nil {
+			t.Fatal(err)
+		}
+		response := registryRequest(t, handler, http.MethodPost, "/api/workspaces/"+selected.EntryID+"/projects", strings.NewReader(string(payload)))
+		if response.Code != http.StatusCreated {
+			t.Fatalf("%s: %d %s", tc.id, response.Code, response.Body.String())
+		}
+		var created createProjectResponse
+		if err := json.Unmarshal(response.Body.Bytes(), &created); err != nil {
+			t.Fatal(err)
+		}
+		if created.Name != tc.name || created.RelativeDir != tc.dir || created.TemplateID != tc.id {
+			t.Fatalf("created = %#v", created)
+		}
+		entries, err := os.ReadDir(filepath.Join(root, tc.dir))
+		if err != nil || len(entries) != 1 || entries[0].Name() != ".gitkeep" {
+			t.Fatalf("empty project files: %v, %v", entries, err)
+		}
+	}
+	manifest, err := workspacecore.ReadManifest(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(manifest.Projects) != 3 {
+		t.Fatalf("manifest = %#v", manifest)
+	}
+	for _, project := range manifest.Projects {
+		if project.Toolchain != "none" || project.PackageManager != "" || project.Dev != nil {
+			t.Fatalf("empty project = %#v", project)
+		}
+	}
+}

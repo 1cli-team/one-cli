@@ -42,6 +42,7 @@ export function ProjectTemplates() {
 	const catalog = useSWR(projectTemplatesKey, getProjectTemplates);
 	const [query, setQuery] = useState("");
 	const [category, setCategory] = useState<(typeof CATEGORIES)[number]>("all");
+	const toolchainLabels = { node: "Node.js", go: "Go", none: t("templateCatalog.noToolchain") };
 	const templates = (catalog.data?.templates ?? []).map((template) => ({
 		...template,
 		name: t(`projectCreate.templates.${template.id}.name`, { defaultValue: template.name }),
@@ -49,7 +50,7 @@ export function ProjectTemplates() {
 			defaultValue: template.description,
 		}),
 		stack: t(`templateCatalog.templates.${template.id}.stack`, {
-			defaultValue: template.toolchain === "go" ? "Go" : "Node.js",
+			defaultValue: toolchainLabels[template.toolchain],
 		}),
 		features: ["feature1", "feature2", "feature3"]
 			.map((key) => t(`templateCatalog.templates.${template.id}.${key}`, { defaultValue: "" }))
@@ -65,7 +66,7 @@ export function ProjectTemplates() {
 				template.description,
 				template.stack,
 				template.directory,
-				template.toolchain === "go" ? "Go" : "Node.js",
+				toolchainLabels[template.toolchain],
 				...template.features,
 			]
 				.join(" ")
@@ -224,7 +225,7 @@ export function ProjectTemplates() {
 												<Folder className="size-3.5" aria-hidden="true" />
 												<span className="font-mono">{template.directory}/</span>
 											</span>
-											<span>{template.toolchain === "go" ? "Go" : "Node.js"}</span>
+											<span>{toolchainLabels[template.toolchain]}</span>
 										</div>
 									</article>
 								);

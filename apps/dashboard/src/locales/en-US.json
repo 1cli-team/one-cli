@@ -372,7 +372,7 @@
 		"nameHint": "Start with a letter or number. Use letters, numbers, hyphens or underscores.",
 		"nameInvalid": "Enter a name starting with a letter or number, using only letters, numbers, hyphens or underscores.",
 		"nameExists": "A project with this name already exists in the workspace.",
-		"template": "Technology stack",
+		"template": "Technology stack or empty project",
 		"templatesFailed": "Could not load templates",
 		"loadingTemplates": "Loading templates…",
 		"noTemplates": "No templates available",
@@ -429,6 +429,18 @@
 			"electron-app": {
 				"name": "Electron desktop app",
 				"description": "Electron + React + Vite with inversify, electron-log, electron-store, and electron-updater"
+			},
+			"empty-app": {
+				"name": "Empty application",
+				"description": "Create an empty project under apps/ and configure a technology stack later."
+			},
+			"empty-service": {
+				"name": "Empty service",
+				"description": "Create an empty project under services/ and configure a technology stack later."
+			},
+			"empty-library": {
+				"name": "Empty library",
+				"description": "Create an empty project under packages/ and configure a technology stack later."
 			}
 		}
 	},
@@ -519,8 +531,30 @@
 				"feature1": "Separate main, renderer, and preload packages",
 				"feature2": "Typed IPC bridge and dependency injection",
 				"feature3": "Logging, local settings, and updater modules"
+			},
+			"empty-app": {
+				"description": "Create an empty project under apps/ and configure a technology stack later.",
+				"stack": "Choose your own technology stack",
+				"feature1": "Only a .gitkeep file for Git tracking",
+				"feature2": "Registered in the workspace",
+				"feature3": "Configure a development command after adding code"
+			},
+			"empty-service": {
+				"description": "Create an empty project under services/ and configure a technology stack later.",
+				"stack": "Choose your own technology stack",
+				"feature1": "Only a .gitkeep file for Git tracking",
+				"feature2": "Registered in the workspace",
+				"feature3": "Configure a development command after adding code"
+			},
+			"empty-library": {
+				"description": "Create an empty project under packages/ and configure a technology stack later.",
+				"stack": "Choose your own technology stack",
+				"feature1": "Only a .gitkeep file for Git tracking",
+				"feature2": "Registered in the workspace",
+				"feature3": "Configure a development command after adding code"
 			}
-		}
+		},
+		"noToolchain": "Not configured"
 	},
 	"services": {
 		"title": "Development service",

@@ -169,6 +169,48 @@
       "toolchain": "node",
       "repo": "local:electron-app",
       "domains": {}
+    },
+    {
+      "id": "empty-app",
+      "code": "xa",
+      "name": "空应用",
+      "description": "在 apps/ 下创建空项目，稍后自行配置技术栈",
+      "category": "frontend",
+      "tags": [
+        "empty",
+        "frontend"
+      ],
+      "toolchain": "none",
+      "repo": "local:empty-app",
+      "domains": {}
+    },
+    {
+      "id": "empty-service",
+      "code": "xs",
+      "name": "空服务",
+      "description": "在 services/ 下创建空项目，稍后自行配置技术栈",
+      "category": "backend",
+      "tags": [
+        "empty",
+        "backend"
+      ],
+      "toolchain": "none",
+      "repo": "local:empty-service",
+      "domains": {}
+    },
+    {
+      "id": "empty-library",
+      "code": "xl",
+      "name": "空共享库",
+      "description": "在 packages/ 下创建空项目，稍后自行配置技术栈",
+      "category": "library",
+      "tags": [
+        "empty",
+        "library"
+      ],
+      "toolchain": "none",
+      "repo": "local:empty-library",
+      "domains": {}
     }
   ]
 }

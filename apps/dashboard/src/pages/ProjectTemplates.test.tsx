@@ -81,7 +81,9 @@ describe("project template catalog", () => {
 		show();
 		await screen.findAllByRole("article");
 		await user.click(screen.getByRole("button", { name: /Services/ }));
-		expect(screen.getAllByRole("article")).toHaveLength(2);
+		expect(screen.getAllByRole("article")).toHaveLength(
+			templates.filter((template: { category: string }) => template.category === "backend").length,
+		);
 		await user.type(
 			screen.getByRole("textbox", { name: "Search templates, stacks, or features…" }),
 			"  DRIZZLE  ",
