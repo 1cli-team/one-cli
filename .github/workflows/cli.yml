@@ -297,7 +297,9 @@ jobs:
 
       - name: Run complete release gate
         if: steps.release.outputs.already_published != 'true'
-        run: mise run pre-push
+        # The release gate combines jobs that PR CI runs on separate runners.
+        # Keep cold Go builds/vet/race tests from starving jsdom interactions.
+        run: mise run --jobs 1 pre-push
 
       - name: Verify release tree is clean
         if: steps.release.outputs.already_published != 'true'
