@@ -18,6 +18,15 @@ func appendRootTaskConfig(t *testing.T, root, value string) {
 }
 
 func TestE2E_TasksRestoreArtifactsAndInvalidateRootConfiguration(t *testing.T) {
+	// CI runs race and plain suites with the same outer artifact cache. A new
+	// fixture must execute its first build even when identical artifacts exist.
+	t.Setenv("MISE_TASK_CACHE_DIR", t.TempDir())
+	for _, name := range []string{"first", "fresh-home"} {
+		t.Run(name, testTasksRestoreArtifactsAndInvalidateRootConfiguration)
+	}
+}
+
+func testTasksRestoreArtifactsAndInvalidateRootConfiguration(t *testing.T) {
 	root := buildFixture(t, true)
 	for _, project := range []struct{ name, dir string }{{"web", "apps/web"}, {"lib", "packages/lib"}} {
 		name, dir := project.name, project.dir
@@ -139,9 +148,11 @@ func TestE2E_NativeMiseIncludedTOMLTask(t *testing.T) {
 }
 
 func TestE2E_TasksReuseArtifactsAcrossCheckouts(t *testing.T) {
-	t.Setenv("MISE_TASK_CACHE_DIR", t.TempDir())
+	cache := t.TempDir()
 	for i := 0; i < 2; i++ {
 		root := buildFixture(t, true)
+		// Opt into sharing only after the fixture has isolated its home/cache.
+		t.Setenv("MISE_TASK_CACHE_DIR", cache)
 		for _, project := range []struct{ name, dir string }{{"web", "apps/web"}, {"lib", "packages/lib"}} {
 			name, dir := project.name, project.dir
 			buildWrite(t, root, dir+"/build.sh", "#!/bin/sh\nmkdir -p dist\necho portable-artifact > dist/value\necho executed >> executions\n")
