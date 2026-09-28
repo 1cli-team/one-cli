@@ -43,9 +43,8 @@ var expectedScaffoldPaths = []string{
 	"packages",
 	"one.manifest.json",
 	"AGENTS.md",
-	".mise/conf.d/one.toml",
-	"hk.pkl",
-	".config/one/hk.pkl",
+	"mise.toml",
+	".config/hk.pkl",
 	".git/hooks/pre-commit",
 	".git/hooks/commit-msg",
 }

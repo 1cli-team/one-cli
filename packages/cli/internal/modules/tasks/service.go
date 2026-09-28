@@ -5,7 +5,9 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"slices"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/application/execution"
@@ -13,7 +15,6 @@ import (
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/i18n"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/output"
 	process "github.com/torchstellar-team/one-cli/packages/cli/internal/platform/process"
-	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/taskrun"
 	runtimeport "github.com/torchstellar-team/one-cli/packages/cli/internal/ports/runtime"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/ports/secrets"
 )
@@ -33,6 +34,11 @@ type Result struct {
 
 func (r *Result) RenderTTY(w io.Writer) { fmt.Fprintln(w, i18n.T("tasks.result."+r.Status)) }
 func ValidateOptions(opts Options) error {
+	for _, arg := range opts.Arguments {
+		if arg == ":::" {
+			return i18n.Errorf("tasks.reserved_argument")
+		}
+	}
 	if opts.Jobs < 1 {
 		return i18n.Errorf("build.concurrency_invalid")
 	}
@@ -54,7 +60,7 @@ func (s Service) Execute(ctx context.Context, w execution.Workspace, p *Plan, op
 	if err := ValidateOptions(opts); err != nil {
 		return nil, err
 	}
-	ctx, stop := taskrun.SignalContext(ctx)
+	ctx, stop := process.SignalContext(ctx)
 	defer stop()
 	if err := p.configuration.Apply(ctx); err != nil {
 		return nil, err
@@ -62,22 +68,22 @@ func (s Service) Execute(ctx context.Context, w execution.Workspace, p *Plan, op
 	if s.Provider == nil {
 		return nil, i18n.Errorf("exec.mise_missing")
 	}
+	if err := executionOptions(p, &opts); err != nil {
+		return nil, err
+	}
 	if err := s.inspectCache(ctx, w, p, opts); err != nil {
 		return nil, err
 	}
 	for _, task := range p.Tasks {
 		if task.Interactive || task.Raw {
 			opts.Cache = "off"
-			if opts.UI == "auto" {
-				opts.UI = "raw"
-			}
 		}
 	}
 	prepare := s.Prepare
 	if prepare == nil {
 		prepare = (dependencies.Service{Provider: s.Provider}).Prepare
 	}
-	if err := prepare(ctx, dependencies.Input{Root: w.Root(), Manifest: w.Manifest(), Projects: projectNames(p), Runtime: runtimeport.Mise, Log: errOut}); err != nil {
+	if err := prepare(ctx, dependencies.Input{Root: w.Root(), Manifest: w.Manifest(), Projects: projectNames(p), Runtime: runtimeport.Mise, Development: opts.Name == "dev", Log: errOut}); err != nil {
 		return nil, err
 	}
 	env, cleanup, err := prepareContext(ctx, w, p, s.Loaders)
@@ -86,7 +92,7 @@ func (s Service) Execute(ctx context.Context, w execution.Workspace, p *Plan, op
 	}
 	defer cleanup()
 	mode := "interleave"
-	if len(p.Entries) > 1 {
+	if len(projectNames(p)) > 1 || len(p.Entries) > 1 {
 		mode = "prefix"
 	}
 	argv := []string{"run", "--jobs", strconv.Itoa(opts.Jobs), "--task-cache", opts.Cache, "--output", mode}
@@ -112,6 +118,13 @@ func (s Service) Execute(ctx context.Context, w execution.Workspace, p *Plan, op
 			argv = append(argv, opts.Arguments...)
 		}
 	}
+	// One starts its own scheduler, even when invoked from another mise task.
+	// Inheriting the parent's marker disables child process groups in mise,
+	// preventing it from stopping sibling services when one task fails.
+	env = slices.DeleteFunc(env, func(entry string) bool {
+		key, _, _ := strings.Cut(entry, "=")
+		return strings.EqualFold(key, "MISE_TASK_PGID_MANAGED")
+	})
 	command, err := s.Provider.PrepareCLI(ctx, runtimeport.Command{Directory: w.Root(), Argv: argv, Env: env})
 	if err != nil {
 		return nil, err

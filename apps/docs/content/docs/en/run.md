@@ -16,15 +16,43 @@ one run ci
 one run build --dry-run -o json
 ```
 
+## Task shorthand
+
+`one <task>` is shorthand for `one run <task>`. For example, `one test -p api` and `one run test -p api` execute the same task. Built-in commands and aliases take precedence: `one env` opens environment management, while `one run env` executes a task named `env`. Unknown names resolve as tasks and report a missing-task error when absent. `one <task> --help` shows One's common task flags; use `-- --help` to forward help to the underlying command.
+
 ## Selection and arguments
 
-Without `-p`, a task selects the workspace aggregate. Repeat `-p` to select project names or workspace-relative paths. Everything after `--` is forwarded to one selected task; forwarding arguments to multiple projects is rejected. `one build web` shares the execution path of `one run build -p web`.
+Without `-p`, a task selects the workspace aggregate. Repeat `-p` to select project names or workspace-relative paths. Everything after `--` is forwarded to one selected task; forwarding arguments to multiple projects is rejected. `one build -p web` shares the execution path of `one run build -p web`.
 
 `one exec web -- pnpm add axios` runs an arbitrary command. It does not invoke a task graph or install application dependencies.
 
+`:::` is reserved by mise for separating tasks and cannot be forwarded as a task argument.
+
 ## Configuration
 
-One maintains root and project `.mise/conf.d/one.toml` fragments. They contain tool pins, task adapters, aggregates, and local Node build dependencies. Edit `mise.toml` for your overrides; generated fragments have ownership checks and cannot be edited in place. Running a task refreshes generated configuration. Root `build`, `check`, and `test` aggregate only available project tasks; `ci` combines them.
+One writes tool versions, task adapters, aggregates, and local Node build dependencies into `mise.toml` at the workspace and project roots. Edit these files directly to add tasks or adjust settings. Running tasks, adding projects, or calling `one init mise` adds missing configuration and updates generated fields that you have not changed. Custom fields and comments are preserved. Root `dev`, `build`, `check`, and `test` aggregate only available project tasks; `ci` combines build, check, and test.
+
+Keep the `# one:managed-v1` comment at the end of each file. It records the last generated fields for incremental updates. If you and One change the same field to different values, One reports `MISE_CONFIG_CONFLICT` with the field name. Adding comments, custom tasks, or changing defaults does not trigger a whole-file ownership error.
+
+```text
+workspace/
+  one.manifest.json
+  mise.toml             # Tool versions, project directories, aggregate tasks
+  .config/hk.pkl        # Workspace Git checks
+  apps/web/
+    mise.toml           # Project tasks and cache settings
+    package.json        # pnpm scripts
+  services/api/
+    mise.toml           # Project tools and tasks
+    Taskfile.yml        # Go project commands
+```
+
+Preview and refresh configuration:
+
+```bash
+one init mise --dry-run -o json
+one init mise
+```
 
 Project tasks use canonical names such as `//apps/web:build`. Local Node dependencies with a build task run before dependent build, check, test, typecheck, and dev tasks. Go resolves module dependencies through `go.work` and its compiler. New Node workspaces use pnpm exclusively.
 
@@ -75,7 +103,7 @@ One loads each managed project's environment once per invocation, before cache l
 
 ## Terminals and output
 
-Finite tasks use streamed mise output. `--ui raw` preserves native terminal input and disables caching. `--ui tui` is available for development through `one run dev` / `one dev`; finite tasks report that it is unavailable. Use a dedicated `test:watch` task or raw mode for interactive tests. Development runs finite upstream builds before starting the existing supervisor.
+Tasks use streamed mise output. `--ui raw` preserves native terminal input and disables artifact caching. Multiple development services use prefixed logs and automatically allocated concurrency; raw/interactive services must run separately. `--ui tui` is unavailable. `one dev` and `one run dev` share the same execution path, including upstream builds. See [one dev](/en/docs/dev/) for development behavior.
 
 JSON/YAML previews use `one-cli/task-plan/v1`; execution uses `one-cli/task-result/v1`. Child logs go to stderr in structured mode. The result reports the overall status and exit code. Per-task status remains `unknown` because the selected mise version does not provide reliable structured completion events. One does not infer cache hits from console text.
 

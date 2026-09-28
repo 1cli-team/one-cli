@@ -29,7 +29,7 @@ one exec [-p <name|path>] [--env-provider dotenv|infisical] [--env <env>] -- <cm
 
 ## mise 工具环境
 
-命令和原有参数保持不变。根目录存在 One 生成的 `.mise/conf.d/one.toml` 时，`one exec` 自动通过 mise 准备项目工具和环境，再注入 One 环境变量并执行原始命令。新 workspace 自动生成该配置；旧 workspace 未启用时继续使用原有工具。
+命令和原有参数保持不变。根目录存在 One 生成的 `mise.toml` 时，`one exec` 自动通过 mise 准备项目工具和环境，再注入 One 环境变量并执行原始命令。新 workspace 自动生成该配置；旧 workspace 未启用时继续使用原有工具。
 
 覆盖顺序为：父进程环境 → mise 环境 → 当前项目的 One 环境变量。项目目录、参数边界、标准 IO 和应用退出码保持原有语义，不需要 `mise activate`。
 

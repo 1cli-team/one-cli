@@ -1,26 +1,25 @@
 
 DESCRIPTION
-Start local development
+Run development tasks with mise
 
 USAGE
-  one dev [projects...] [flags]
+  one dev [flags]
 
 EXAMPLES
   one dev
-  one dev web
-  one dev web api
-  one dev --select
+  one dev -p web -p api
+  one dev -p web --dry-run
 
 TIPS
-Start all developable projects, or the selected project names or paths, in parallel. One task keeps its native terminal; multiple tasks use the TUI. Pipes and CI use streaming logs. Dependencies are prepared before startup. For pnpm, local development synchronizes the lockfile when needed and reuses an up-to-date installation.
+Equivalent to one run dev. Runs the effective mise dev task, including upstream builds. Use -p to select projects. Multiple services use prefixed logs; use --ui raw for one interactive service.
 
 COMMON OPTIONS
-  --dry-run                Print the development command without starting it
+  --cache <value>          Cache access: local-only, read-write, read-only, write-only, off
+  --concurrency <value>    Maximum parallel tasks (dev allocates automatically when omitted)
+  --dry-run                Preview tasks without preparing tools, dependencies, secrets, or caches
   --env <value>            One project environment name
-  --keep-going             Keep other projects running when a project exits
+  --force                  Bypass freshness checks; combine with --cache off to ensure execution
+  --list                   List available tasks
   -o, --output <value>     Output format: json | yaml | text (default: terminal-friendly text, JSON when piped)
-  --select                 Interactively search and select projects to start
-  --ui <value>             Terminal interface: auto | raw | tui | stream
-
-AUTOMATION AND ADVANCED OPTIONS
-  -p, --project <value>    Legacy project selector (prefer the positional project)
+  -p, --project <value>    Project name or relative path (repeatable)
+  --ui <value>             Output mode: auto, stream, raw

@@ -18,6 +18,10 @@ import (
 // Plan uses mise's effective catalog for real runs, including file tasks and
 // native config precedence. Dry runs use NewPlan and never execute a child.
 func (s Service) Plan(ctx context.Context, w execution.Workspace, opts Options) (*Plan, error) {
+	// Reject selectors before publishing configuration or bootstrapping mise.
+	if _, err := w.SelectProjects(opts.Projects, ""); err != nil {
+		return nil, err
+	}
 	if s.Provider == nil {
 		return nil, i18n.Errorf("exec.mise_missing")
 	}

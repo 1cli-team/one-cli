@@ -18,8 +18,8 @@ import (
 // project root.
 const ManifestFilename = "one.manifest.json"
 
-// MiseConfigFilename is the managed fragment marking a mise-enabled workspace.
-const MiseConfigFilename = ".mise/conf.d/one.toml"
+// MiseConfigFilename is the workspace and project task configuration.
+const MiseConfigFilename = "mise.toml"
 
 // ManifestVersion is the current manifest schema generation.
 const ManifestVersion = 1
@@ -105,8 +105,7 @@ type ProjectDomains struct {
 // customise — there's no auto-sync if package.json scripts change after
 // scaffold; manifest is the source of truth.
 //
-// Empty Command (or missing block) means "this project is not part of
-// `one dev`" — the supervisor will skip it.
+// An empty Command (or missing block) falls back to the native dev task.
 type ProjectDevOverride struct {
 	// Command is the full shell line executed by the platform shell
 	// (sh on Unix, cmd.exe on Windows).

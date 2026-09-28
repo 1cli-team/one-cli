@@ -41,7 +41,7 @@ Create a workspace and add a project:
 one create my-app
 cd my-app
 one add react-spa --name web
-one dev web
+one dev -p web
 ```
 
 That gives you a workspace, a first app, and a local way to run it.
@@ -89,8 +89,8 @@ one add nestjs-api --name api
 |---|---|
 | `one create <workspace>` | Create an empty workspace |
 | `one add <starter>` | Add another app, service, docs site, or library |
-| `one dev [projects...]` | Run all or selected projects; native output for one task, TUI for multiple tasks |
-| `one build [projects...]` | Build all or selected projects in dependency order; optional bounded concurrency |
+| `one dev [-p project]` | Run development tasks through mise; repeat -p to select services |
+| `one build [-p project]` | Build all or selected projects in dependency order; optional bounded concurrency |
 | `one env` | Review and manage environment variables |
 | `one login` | Sign in to Infisical with your browser |
 | `one serve` | Inspect workspaces, manage the current account and shared credentials |
@@ -164,21 +164,18 @@ Read [CONTRIBUTING.md](./CONTRIBUTING.md) before opening a pull request.
 
 MIT.
 
-### Development and build terminals
+### Tasks and development
+
+`one <task>` is shorthand for `one run <task>`. Built-in commands take precedence; use `one run env` for a task that shares a built-in name.
 
 ```sh
-one dev web api                   # Run a selected set of projects in parallel
-one dev --select                  # Search and select projects interactively
-one dev web                       # Keep the project's native colors, progress, and input
-one dev web api --keep-going      # Keep peers running if a project exits
-one dev web api --ui=stream       # Use continuous prefixed logs
-one build web api --concurrency=4 # Build ready tasks concurrently, respecting local dependencies
+one run test -p api               # Explicit task entry
+one test -p api                   # Same task through shorthand
+one dev -p web -p api             # Concurrent development services
+one dev -p web --ui raw           # Native terminal input for the selected service
+one build -p web -p api --concurrency 4
 ```
 
-Development uses native output for one project and the supervisor TUI for multiple projects. Finite tasks use mise streaming output; `one build web --ui raw` preserves interactive input and disables artifact caching. Structured results stay on stdout and child logs go to stderr.
+All tasks use mise for scheduling, including development and user overrides. Multiple services use prefixed logs; Ctrl+C or a task failure stops the invocation and its child processes. Raw mode preserves terminal input and disables artifact caching. The previous development TUI and single-service restart controls have been removed. Structured results stay on stdout and child logs go to stderr.
 
-In the development TUI, use ↑/↓ to select a project, Enter to send input, and Ctrl+] to return to navigation. PgUp/PgDn scroll history, f resumes following, / searches, and h hides the project list. Use r to restart and s to stop the selected project. Ctrl+C stops the session and its process trees.
-
-Build concurrency defaults to 1. Local Node dependencies are included automatically and build before their consumers. `one run build --cache off --force` always executes the build. See the [task guide](apps/docs/content/docs/en/run.md) for cache declarations and Actions examples.
-
-The development TUI supports Linux and macOS. Windows uses native single-project output and streaming multiple projects.
+Build concurrency defaults to 1; development allocates it automatically. Local Node dependencies build before their consumers. `one run build --cache off --force` always executes the build. See the [task guide](apps/docs/content/docs/en/run.md) for configuration, cache declarations, and Actions examples.

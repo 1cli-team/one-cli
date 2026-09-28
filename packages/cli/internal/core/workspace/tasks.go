@@ -55,7 +55,7 @@ func DiscoverTasks(root string, p Project, read func(string) ([]byte, error)) ([
 		}
 		for name, command := range pkg.Scripts {
 			if strings.TrimSpace(command) != "" {
-				result = append(result, ProjectTask{Name: name, Argv: []string{"pnpm", "run", name}, Source: source, Interactive: name == "dev" || strings.Contains(name, "watch"), Inputs: []string{source}})
+				result = append(result, ProjectTask{Name: name, Argv: []string{"pnpm", "run", name}, Source: source, Inputs: []string{source}})
 			}
 		}
 	case "go":
@@ -99,7 +99,7 @@ func DiscoverTasks(root string, p Project, read func(string) ([]byte, error)) ([
 					continue
 				}
 				name = prefix + name
-				tasks = append(tasks, ProjectTask{Name: name, Description: meta.Desc, Argv: []string{"task", name}, Source: file, Interactive: name == "dev" || strings.Contains(name, "watch"), Inputs: []string{file}})
+				tasks = append(tasks, ProjectTask{Name: name, Description: meta.Desc, Argv: []string{"task", name}, Source: file, Inputs: []string{file}})
 			}
 			keys := make([]string, 0, len(doc.Includes))
 			for key := range doc.Includes {

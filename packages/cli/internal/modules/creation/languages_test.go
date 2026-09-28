@@ -133,8 +133,8 @@ func TestAddConflictLeavesManifestAndRootConfigurationsUnchanged(t *testing.T) {
 	for _, conflict := range []struct{ file, content, template string }{
 		{"go.work", "invalid Go syntax", "go-api"},
 		{"pnpm-workspace.yaml", "packages: [ '!apps/*' ]\n", "react-spa"},
-		{workspace.MiseConfigFilename, "# user's modified configuration", "go-api"},
-		{workspace.HooksConfigFilename, "// user's modified configuration", "go-api"},
+		{workspace.MiseConfigFilename, "# one:managed-v1 invalid", "go-api"},
+		{workspace.HooksConfigFilename, "// one:managed-v1 invalid", "go-api"},
 	} {
 		t.Run(conflict.file, func(t *testing.T) {
 			s := newCreationService(t)

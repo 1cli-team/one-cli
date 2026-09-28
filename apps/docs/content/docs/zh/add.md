@@ -3,7 +3,7 @@ title: one add
 description: 往工作区里加一个模板化项目。
 ---
 
-工作区已启用 hk 时，`one add` 会同步更新语言检查：Go 加入格式检查，JS/TS 根据项目工具加入 lint 和格式检查。用户的 `hk.pkl` 保留不变。旧工作区可先通过 `one init hooks` 启用，详见 [`one hk`](/zh/docs/hk/)。
+工作区已启用 hk 时，`one add` 会同步更新语言检查：Go 加入格式检查，JS/TS 根据项目工具加入 lint 和格式检查。检查配置直接保存在 `.config/hk.pkl`，用户修改和注释会保留。旧工作区可先通过 `one init hooks` 启用，详见 [`one hk`](/zh/docs/hk/)。
 
 `one add` 选择技术栈，生成一个可本地开发的项目并登记到 manifest。CI 和部署默认都保持未配置。
 
@@ -126,5 +126,5 @@ one add nestjs-api --name user-api --yes -o json | jq
 
 - 检查 `one.manifest.json#projects[]` 确认项目登记
 - Agent 文档和本地开发配置会由 `one add` 同步
-- 下一步运行 `one dev <project>` 开发，使用 `one build <project>` 构建
+- 下一步运行 `one dev -p <project>` 开发，使用 `one build -p <project>` 构建
 - `one add` 只生成项目和工作区配置；`one dev` 会自动准备工具与应用依赖。JS/TS 在根目录统一安装，Go 按当前模块或 `go.work` 构建图准备依赖。修改 imports 或模块声明需要修复时，显式运行 `one exec <project> -- go mod tidy`。

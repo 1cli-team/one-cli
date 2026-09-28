@@ -2,6 +2,7 @@
 package runcmd
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"strings"
@@ -11,32 +12,33 @@ import (
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/modules/tasks"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/i18n"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/output"
+	process "github.com/torchstellar-team/one-cli/packages/cli/internal/platform/process"
 	runtimeport "github.com/torchstellar-team/one-cli/packages/cli/internal/ports/runtime"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/ports/secrets"
 )
 
-type DevRunner func(*cobra.Command, tasks.Options) error
-
-func Commands(loaders *secrets.Registry, provider runtimeport.Provider, dev DevRunner) []*cobra.Command {
+func Commands(loaders *secrets.Registry, provider runtimeport.Provider) []*cobra.Command {
 	service := tasks.Service{Provider: provider, Loaders: loaders}
-	return []*cobra.Command{command("run", service, dev), command("build", service, dev), internal(false), internal(true)}
+	return []*cobra.Command{command("run", service), command("build", service), command("dev", service), internal(false), internal(true)}
 }
-func command(kind string, service tasks.Service, dev DevRunner) *cobra.Command {
+func command(kind string, service tasks.Service) *cobra.Command {
 	opts := tasks.Options{Jobs: 1, Cache: "local-only", UI: "auto"}
 	var list, dry bool
 	use := "run [task]"
-	if kind == "build" {
-		use = "build [projects...]"
+	if kind != "run" {
+		use = kind
 	}
-	cmd := &cobra.Command{Use: use, Args: cobra.ArbitraryArgs, Example: "  one run\n  one run build -p web\n  one run test -p api\n  one run build --dry-run", RunE: func(cmd *cobra.Command, args []string) error {
+	cmd := &cobra.Command{Use: use, Args: cobra.ArbitraryArgs, Example: "  one run\n  one run build -p web\n  one run test -p api\n  one run build --dry-run", RunE: func(cmd *cobra.Command, args []string) (resultErr error) {
 		dash := cmd.ArgsLenAtDash()
 		if dash >= 0 {
 			opts.Arguments = args[dash:]
 			args = args[:dash]
 		}
-		if kind == "build" {
-			opts.Name = "build"
-			opts.Projects = append(opts.Projects, args...)
+		if kind != "run" {
+			opts.Name = kind
+			if len(args) > 0 {
+				return i18n.Errorf("tasks.project_flag_required")
+			}
 		} else {
 			if len(args) > 1 {
 				return i18n.Errorf("tasks.one_name")
@@ -80,31 +82,22 @@ func command(kind string, service tasks.Service, dev DevRunner) *cobra.Command {
 			}
 			return nil
 		}
-		if opts.Name == "dev" && dev != nil {
-			if len(opts.Arguments) > 0 {
-				return i18n.Errorf("tasks.dev_arguments")
-			}
-			if dry {
-				_ = cmd.Flags().Set("dry-run", "true")
-			}
-			return dev(cmd, opts)
-		}
-		for _, arg := range opts.Arguments {
-			if arg == "--watch" || arg == "--watch=true" || arg == "--watchAll" || arg == "--watchAll=true" {
-				opts.Cache = "off"
-				if opts.UI == "auto" {
-					opts.UI = "raw"
-				}
-			}
-		}
 		if err := tasks.ValidateOptions(opts); err != nil {
 			return err
 		}
+		ctx, stop := process.SignalContext(cmd.Context())
+		defer stop()
+		defer func() {
+			if ctx.Err() != nil {
+				resultErr = &process.ExitStatus{Code: process.ExitCode(context.Cause(ctx))}
+			}
+		}()
+		opts.JobsExplicit = cmd.Flags().Changed("concurrency")
 		var plan *tasks.Plan
 		if dry {
 			plan, err = tasks.NewPlan(w, opts)
 		} else {
-			plan, err = service.Plan(cmd.Context(), w, opts)
+			plan, err = service.Plan(ctx, w, opts)
 		}
 		if err != nil {
 			return err
@@ -113,14 +106,14 @@ func command(kind string, service tasks.Service, dev DevRunner) *cobra.Command {
 			output.Emit(plan)
 			return nil
 		}
-		result, err := service.Execute(cmd.Context(), w, plan, opts, cmd.InOrStdin(), cmd.OutOrStdout(), cmd.ErrOrStderr())
+		result, err := service.Execute(ctx, w, plan, opts, cmd.InOrStdin(), cmd.OutOrStdout(), cmd.ErrOrStderr())
 		if result != nil {
 			output.Emit(result)
 		}
 		return err
 	}}
-	if kind == "build" {
-		cmd.Example = "  one build\n  one build web api\n  one build web --dry-run"
+	if kind != "run" {
+		cmd.Example = "  one " + kind + "\n  one " + kind + " -p web -p api\n  one " + kind + " -p web --dry-run"
 	}
 	cmd.Flags().StringArrayVarP(&opts.Projects, "project", "p", nil, "")
 	cmd.Flags().StringVar(&opts.Environment, "env", "", "")

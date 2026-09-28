@@ -46,7 +46,9 @@ one create my-app --yes --env-provider infisical
 | Capability | Default | Behavior |
 |---|---|---|
 | Environment variables | Local `.env` files | Switch to Infisical with `--env-provider infisical` or later with `one env switch infisical` |
-| Local development | `one dev` | Runs project development commands through One CLI's built-in supervisor |
+| Tool environment | mise | Creates root `mise.toml`; `one add` creates each project’s `mise.toml` |
+| Git checks | hk | Creates `.config/hk.pkl` and installs local Git launchers |
+| Local development | `one dev` | Runs the development task graph through mise |
 
 Continuous integration is not configured automatically. Creating a workspace
 does not write files under `.github/workflows/`. After adding a project, enable

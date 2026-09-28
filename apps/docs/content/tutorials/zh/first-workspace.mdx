@@ -85,7 +85,7 @@ manifest 关键字段：
 | Domain | Backend | 给你啥 |
 |---|---|---|
 | `env` | `dotenv`（或 `infisical`，看你选的） | 每个项目自己的 `.env` 管理 |
-| `dev` | `process` | `one add` 时把每个项目的 dev 命令写到 `projects[].domains.dev.command`，[`one dev`](/zh/tutorials/dev-local/) 用内置 supervisor 启动 |
+| `dev` | `process` | `one add` 时把每个项目的 dev 命令写到 `projects[].domains.dev.command`，[`one dev`](/zh/tutorials/dev-local/) 通过 mise 调度 |
 
 `one create` 和 `one add` 都不会默认配置 CI，也不会自动生成 workflow 文件。
 

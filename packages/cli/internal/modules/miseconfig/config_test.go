@@ -48,8 +48,8 @@ func TestConfigurationGenerationIsAdditiveAndIdempotent(t *testing.T) {
 	if len(p.Changes) != 3 || !p.DryRun {
 		t.Fatalf("unexpected plan: %+v", p)
 	}
-	if _, err := os.Stat(filepath.Join(root, Filename)); !os.IsNotExist(err) {
-		t.Fatal("planning wrote a file")
+	if actual, _ := os.ReadFile(filepath.Join(root, Filename)); string(actual) != string(userBefore) {
+		t.Fatal("planning changed a file")
 	}
 	if err := p.Apply(context.Background()); err != nil {
 		t.Fatal(err)
@@ -77,8 +77,10 @@ func TestConfigurationGenerationIsAdditiveAndIdempotent(t *testing.T) {
 		t.Fatalf("not idempotent: %+v", second.Changes)
 	}
 	userAfter, _ := os.ReadFile(filepath.Join(root, "mise.toml"))
-	if string(userBefore) != string(userAfter) {
-		t.Fatal("user TOML was modified")
+	for _, line := range strings.Split(strings.TrimSpace(string(userBefore)), "\n") {
+		if !strings.Contains(string(userAfter), line) {
+			t.Fatalf("lost user text %q", line)
+		}
 	}
 }
 
@@ -135,12 +137,12 @@ func TestManagedConfigurationConflictDoesNotOverwrite(t *testing.T) {
 	if err := p.Apply(context.Background()); err != nil {
 		t.Fatal(err)
 	}
-	path := filepath.Join(root, "apps/web", Filename)
+	path := filepath.Join(root, Filename)
 	raw, _ := os.ReadFile(path)
-	modified := string(raw) + "\n# My edit\n"
+	modified := strings.Replace(string(raw), "node = '24.15.0'", "node = '25.0.0'", 1) + "\n# My edit\n"
 	writeFixture(t, path, modified)
-	if _, err := Build(root, Options{}); err == nil {
-		t.Fatal("expected ownership conflict")
+	if _, err := Build(root, Options{NodeVersion: "26.0.0"}); err == nil {
+		t.Fatal("expected same-entry conflict")
 	}
 	after, _ := os.ReadFile(path)
 	if string(after) != modified {
@@ -158,7 +160,7 @@ func TestPlanRejectsChangedSourceBeforeWriting(t *testing.T) {
 	if err := p.Apply(context.Background()); err == nil {
 		t.Fatal("expected stale-plan conflict")
 	}
-	if _, err := os.Stat(filepath.Join(root, Filename)); !os.IsNotExist(err) {
+	if _, err := os.Stat(filepath.Join(root, "apps/web", Filename)); !os.IsNotExist(err) {
 		t.Fatal("stale plan wrote files")
 	}
 }
@@ -177,22 +179,25 @@ func TestPlanDistinguishesEmptySourceFromRemovedSource(t *testing.T) {
 	if err := p.Apply(context.Background()); err == nil {
 		t.Fatal("source deletion was ignored")
 	}
-	if _, err := os.Stat(filepath.Join(root, Filename)); !os.IsNotExist(err) {
+	if _, err := os.Stat(filepath.Join(root, "apps/web", Filename)); !os.IsNotExist(err) {
 		t.Fatal("stale plan wrote files")
 	}
 }
 
-func TestGeneratorRejectsSymlinkAndEmptyUserFile(t *testing.T) {
+func TestGeneratorAcceptsEmptyFileAndRejectsSymlink(t *testing.T) {
 	t.Run("empty user file", func(t *testing.T) {
 		root := fixture(t)
 		writeFixture(t, filepath.Join(root, Filename), "")
-		if _, err := Build(root, Options{}); err == nil {
-			t.Fatal("empty user file must not be claimed")
+		if _, err := Build(root, Options{}); err != nil {
+			t.Fatal(err)
 		}
 	})
 	t.Run("symlink", func(t *testing.T) {
 		root := fixture(t)
-		if err := os.Symlink(t.TempDir(), filepath.Join(root, ".mise")); err != nil {
+		if err := os.Remove(filepath.Join(root, Filename)); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.Symlink(filepath.Join(t.TempDir(), "mise.toml"), filepath.Join(root, Filename)); err != nil {
 			t.Skip(err)
 		}
 		if _, err := Build(root, Options{}); err == nil {
@@ -210,7 +215,7 @@ func TestFailedWriteRestoresAlreadyWrittenFiles(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	blocked := filepath.Join(root, "apps/web/.mise/conf.d")
+	blocked := filepath.Join(root, "services/api")
 	if err := os.MkdirAll(blocked, 0o755); err != nil {
 		t.Fatal(err)
 	}
@@ -225,7 +230,7 @@ func TestFailedWriteRestoresAlreadyWrittenFiles(t *testing.T) {
 	if err := p.Apply(context.Background()); err == nil {
 		t.Fatal("expected write failure")
 	}
-	if _, err := os.Stat(filepath.Join(root, Filename)); !os.IsNotExist(err) {
+	if _, err := os.Stat(filepath.Join(root, "apps/web", Filename)); !os.IsNotExist(err) {
 		t.Fatal("partial configuration was not rolled back")
 	}
 }

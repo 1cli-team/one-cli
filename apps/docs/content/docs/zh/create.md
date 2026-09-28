@@ -46,8 +46,9 @@ one create my-app --yes --env-provider infisical
 | 能力 | 默认值 | 行为 |
 |---|---|---|
 | 环境变量 | 本地 `.env` 文件 | 可通过 `--env-provider infisical` 或后续 `one env switch infisical` 切换到 Infisical |
-| 本地开发 | `one dev` | 通过内置进程管理器运行各项目的开发命令 |
-| 工具环境 | mise | 自动生成根 `.mise/conf.d/one.toml`；后续 `one add` 自动生成项目配置 |
+| 本地开发 | `one dev` | 通过 mise 运行开发任务图 |
+| Git 检查 | hk | 生成 `.config/hk.pkl` 并安装本地 Git 启动器 |
+| 工具环境 | mise | 自动生成根 `mise.toml`；后续 `one add` 自动生成项目 `mise.toml` |
 | Git 检查 | hk | 创建共享检查配置并安装本地提交钩子；后续 `one add` 增量加入语言检查 |
 
 创建和添加项目只生成配置，不下载工具。首次运行时 One 优先使用兼容的系统 mise，否则按需下载并托管；本地没有可用版本时需要联网，正常命令保持不变。工具版本与已有 workspace 的启用方式见 [`one init mise`](/zh/docs/login/#mise-工作区工具配置)。
@@ -130,7 +131,7 @@ one create . --yes
 one create my-app --yes
 cd my-app
 one add nestjs-api --name api --yes
-one dev api
+one dev -p api
 ```
 
 ## 错误恢复

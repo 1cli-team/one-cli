@@ -7,11 +7,11 @@ description: Build selected projects and their local dependencies through mise.
 
 ```sh
 one build
-one build web api
+one build -p web -p api
 one build -p web --env prod
-one build web --dry-run -o json
+one build -p web --dry-run -o json
 one build --cache off --force
-one build web --ui raw
+one build -p web --ui raw
 ```
 
 Node commands come from `package.json` and use pnpm. Go commands come from Taskfile. Full builds include available build tasks; explicitly selecting a project without one fails. Local Node dependencies build before their consumers. Default concurrency is one; `--concurrency 4` allows independent tasks to run in parallel.

@@ -8,7 +8,7 @@ USAGE
 EXAMPLES
   one init mise --dry-run -o json
   one init mise
-  one dev web
+  one dev -p web
 
 COMMON OPTIONS
   --dry-run                Print proposed file contents without writing files or executing mise

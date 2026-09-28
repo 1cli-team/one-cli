@@ -12,42 +12,36 @@ import (
 	"strings"
 
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/core/workspace"
+	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/configedit"
 	cliErrors "github.com/torchstellar-team/one-cli/packages/cli/internal/platform/errors"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/fsutil"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/i18n"
 )
 
-const configHeader = "// Managed by One CLI hooks/v1; sha256="
-const userConfig = "// Customize workspace checks here; One refreshes only .config/one/hk.pkl.\namends \".config/one/hk.pkl\"\n"
-
 // PlanFiles is static and participates in creation's workspace transaction.
-// Existing hk.pkl overrides are never rewritten.
+// User changes remain in the same .config/hk.pkl file.
 func PlanFiles(p *fsutil.FilePlan, m *workspace.Manifest) error {
 	before, err := p.Read(workspace.HooksConfigFilename)
 	if err != nil {
 		return err
 	}
-	if before != nil {
-		if err := validateManaged(workspace.HooksConfigFilename, before, configHeader); err != nil {
-			return err
-		}
-	}
+	// A root configuration takes precedence over .config/hk.pkl in hk.
 	rootConfig, err := p.Read("hk.pkl")
 	if err != nil {
 		return err
 	}
-	if rootConfig != nil && before == nil && !strings.Contains(string(rootConfig), `amends ".config/one/hk.pkl"`) {
+	if rootConfig != nil {
 		return conflict("hk.pkl", i18n.T("hooks.existing_configuration"))
 	}
-	if rootConfig == nil {
-		if err := p.Set("hk.pkl", []byte(userConfig), 0o644); err != nil {
-			return err
-		}
-	}
 	var b strings.Builder
+	begin := func(id string) { fmt.Fprintf(&b, "// one:begin %s\n", id) }
+	end := func(id string) { fmt.Fprintf(&b, "// one:end %s\n", id) }
+	begin("config/schema")
 	fmt.Fprintf(&b, "amends %s\nimport %s\n\n", pklQuote(schemaURL("Config.pkl")), pklQuote(schemaURL("Builtins.pkl")))
 	fmt.Fprintf(&b, "min_hk_version = %s\n\n", pklQuote(workspace.HKVersion))
 	b.WriteString("local one = read?(\"env:ONE_BINARY_PATH\") ?? \"one\"\n\n")
+	end("config/schema")
+	b.WriteString("// one:insert config\n\n")
 	b.WriteString("// Shared by local checks, explicit fixes, and the pre-commit hook.\nsteps {\n")
 	projects := append([]workspace.ManifestProject(nil), m.Projects...)
 	sort.Slice(projects, func(i, j int) bool { return projects[i].Name < projects[j].Name })
@@ -61,7 +55,9 @@ func PlanFiles(p *fsutil.FilePlan, m *workspace.Manifest) error {
 		}
 		switch project.Toolchain {
 		case "go":
+			begin("steps/" + project.Name + ":format")
 			fmt.Fprintf(&b, "  [%s] {\n    dir = %s\n    glob = \"**/*.go\"\n    exclude = List(\"**/vendor/**\")\n    check = new Command { argv = List(\"mise\", \"exec\", \"--\", one, \"__hook-gofmt\", \"--\", \"{{files}}\") }\n    fix = new Command { argv = List(\"mise\", \"exec\", \"--\", \"gofmt\", \"-w\", \"--\", \"{{files}}\") }\n  }\n", pklQuote(project.Name+":format"), pklQuote(dir))
+			end("steps/" + project.Name + ":format")
 		case "node":
 			raw, err := p.Read(dir + "/package.json")
 			if err != nil {
@@ -85,6 +81,7 @@ func PlanFiles(p *fsutil.FilePlan, m *workspace.Manifest) error {
 			}
 			for _, tool := range []struct{ name, builtin, operation string }{{"oxlint", "ox_lint", "lint"}, {"oxfmt", "oxfmt", "format"}} {
 				if pkg.Dependencies[tool.name] != "" || pkg.DevDependencies[tool.name] != "" {
+					begin("steps/" + project.Name + ":" + tool.operation)
 					fmt.Fprintf(&b, "  [%s] = (Builtins.%s) {\n    dir = %s\n    prefix = %s\n    exclude = List(\"**/.mise/**\", \"**/node_modules/**\", \"**/dist/**\", \"**/pnpm-lock.yaml\", \"**/package-lock.json\")\n", pklQuote(project.Name+":"+tool.operation), tool.builtin, pklQuote(dir), pklList(append([]string{"mise", "exec", "--"}, prefix...)))
 					if tool.name == "oxfmt" {
 						// hk 2.0 resolves --list-different output against the root,
@@ -93,6 +90,7 @@ func PlanFiles(p *fsutil.FilePlan, m *workspace.Manifest) error {
 						b.WriteString("    check_list_files = null\n")
 					}
 					b.WriteString("  }\n")
+					end("steps/" + project.Name + ":" + tool.operation)
 					continue
 				}
 				// Imported projects may use other tools. Retain their explicit
@@ -104,17 +102,28 @@ func PlanFiles(p *fsutil.FilePlan, m *workspace.Manifest) error {
 				if pkg.Scripts[script] == "" {
 					continue
 				}
+				begin("steps/" + project.Name + ":" + tool.operation)
 				fmt.Fprintf(&b, "  [%s] {\n    dir = %s\n    glob = \"**/*\"\n    exclusive = true\n    check = new Command { argv = %s }\n", pklQuote(project.Name+":"+tool.operation), pklQuote(dir), pklList([]string{"mise", "exec", "--", pm, "run", script}))
 				if pkg.Scripts[fix] != "" {
 					fmt.Fprintf(&b, "    fix = new Command { argv = %s }\n", pklList([]string{"mise", "exec", "--", pm, "run", fix}))
 				}
 				b.WriteString("  }\n")
+				end("steps/" + project.Name + ":" + tool.operation)
 			}
 		}
 	}
-	b.WriteString("}\n\nhooks {\n  [\"pre-commit\"] {\n    fix = false\n    stage = false\n    stash = \"git\"\n  }\n  [\"commit-msg\"] {\n    steps {\n      [\"conventional-commit\"] {\n        check = new Command { argv = List(\"hk\", \"util\", \"check-conventional-commit\", \"{{commit_msg_file}}\") }\n      }\n    }\n  }\n}\n")
-	body := []byte(b.String())
-	after := []byte(fmt.Sprintf("%s%x\n// Customize hk.pkl; refresh generated defaults with one init hooks.\n%s", configHeader, sha256.Sum256(body), body))
+	b.WriteString("// one:insert steps\n}\n\nhooks {\n")
+	begin("hooks/pre-commit")
+	b.WriteString("  [\"pre-commit\"] {\n    fix = false\n    stage = false\n    stash = \"git\"\n  }\n")
+	end("hooks/pre-commit")
+	begin("hooks/commit-msg")
+	b.WriteString("  [\"commit-msg\"] {\n    steps {\n      [\"conventional-commit\"] {\n        check = new Command { argv = List(\"hk\", \"util\", \"check-conventional-commit\", \"{{commit_msg_file}}\") }\n      }\n    }\n  }\n")
+	end("hooks/commit-msg")
+	b.WriteString("// one:insert hooks\n}\n")
+	after, err := configedit.Regions(before, []byte(b.String()))
+	if err != nil {
+		return conflict(workspace.HooksConfigFilename, err.Error())
+	}
 	return p.Set(workspace.HooksConfigFilename, after, 0o644)
 }
 

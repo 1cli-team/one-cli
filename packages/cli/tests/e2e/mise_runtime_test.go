@@ -22,12 +22,12 @@ func runtimeFixture(t *testing.T) string {
 	t.Setenv("XDG_STATE_HOME", filepath.Join(root, ".local", "state"))
 	t.Setenv("ONE_RUNTIME", "")
 	files := map[string]string{
-		"one.manifest.json":              `{"version":1,"workspace":{"id":"runtime-test","name":"runtime-test"},"projects":[{"name":"web","relativeDir":"apps/web","toolchain":"node","templateId":"react-spa","domains":{"dev":{"command":"node dev.cjs"}}},{"name":"api","relativeDir":"services/api","toolchain":"go","templateId":"go-api","domains":{"dev":{"command":"node dev.cjs"}}}]}`,
-		".mise/conf.d/one.toml":          "[env]\nONE_MISE_TEST_VALUE = 'root'\nONE_MISE_PARENT = 'root-only'\n",
-		"apps/web/.mise/conf.d/one.toml": "[env]\nONE_MISE_TEST_VALUE = 'project'\nONE_MISE_ONLY = 'from-mise'\n",
-		"apps/web/.env":                  "ONE_MISE_TEST_VALUE=web-secret\nWEB_ONLY=web-only\n",
-		"services/api/.env":              "ONE_MISE_TEST_VALUE=api-secret\nAPI_ONLY=api-only\n",
-		"apps/web/package.json":          `{"scripts":{"dev":"node dev.cjs"}}`,
+		"one.manifest.json":     `{"version":1,"workspace":{"id":"runtime-test","name":"runtime-test"},"projects":[{"name":"web","relativeDir":"apps/web","toolchain":"node","templateId":"react-spa","domains":{"dev":{"command":"node dev.cjs"}}},{"name":"api","relativeDir":"services/api","toolchain":"go","templateId":"go-api","domains":{"dev":{"command":"node dev.cjs"}}}]}`,
+		"mise.toml":             "[env]\nONE_MISE_TEST_VALUE = 'root'\nONE_MISE_PARENT = 'root-only'\n",
+		"apps/web/mise.toml":    "[env]\nONE_MISE_TEST_VALUE = 'project'\nONE_MISE_ONLY = 'from-mise'\n",
+		"apps/web/.env":         "ONE_MISE_TEST_VALUE=web-secret\nWEB_ONLY=web-only\n",
+		"services/api/.env":     "ONE_MISE_TEST_VALUE=api-secret\nAPI_ONLY=api-only\n",
+		"apps/web/package.json": `{"scripts":{"dev":"node dev.cjs"}}`,
 	}
 	for rel, content := range files {
 		path := filepath.Join(root, rel)
@@ -103,7 +103,7 @@ func TestE2E_MiseTrustThroughOneBeforeRunningProject(t *testing.T) {
 	t.Setenv("MISE_TRUSTED_CONFIG_PATHS", "")
 	t.Setenv("MISE_PARANOID", "1")
 	// Static env values need no trust; command templates deliberately do.
-	if err := os.WriteFile(filepath.Join(root, "apps/web/.mise/conf.d/one.toml"), []byte(`[env]
+	if err := os.WriteFile(filepath.Join(root, "apps/web/mise.toml"), []byte(`[env]
 ONE_MISE_TEST_VALUE = '{{ exec(command="echo from-mise") }}'
 `), 0o644); err != nil {
 		t.Fatal(err)
@@ -112,7 +112,7 @@ ONE_MISE_TEST_VALUE = '{{ exec(command="echo from-mise") }}'
 	if _, _, code := runBinaryIn(t, root, args...); code == 0 {
 		t.Fatal("untrusted configuration ran")
 	}
-	for _, rel := range []string{".mise/conf.d/one.toml", "apps/web/.mise/conf.d/one.toml"} {
+	for _, rel := range []string{"mise.toml", "apps/web/mise.toml"} {
 		out, stderr, code := runBinaryIn(t, root, "mise", "trust", filepath.Join(root, rel))
 		if code != 0 {
 			t.Fatalf("trust: %d %q %s", code, out, stderr)
@@ -133,7 +133,7 @@ func TestE2E_MiseMissingReportsErrorAndLegacyStillRuns(t *testing.T) {
 		t.Fatalf("missing mise: %d %s %s", code, out, stderr)
 	}
 	// Removing only the One-generated root configuration models an old workspace.
-	if err := os.Remove(filepath.Join(root, ".mise/conf.d/one.toml")); err != nil {
+	if err := os.Remove(filepath.Join(root, "mise.toml")); err != nil {
 		t.Fatal(err)
 	}
 	out, stderr, code = runBinaryIn(t, root, "exec", "web", "--dry-run", "--", "unavailable-command")
@@ -326,9 +326,9 @@ func TestE2E_MiseCreateAddAndRefreshWithoutNewFlags(t *testing.T) {
 			t.Fatalf("add %s: %d %s %s", p.name, code, out, stderr)
 		}
 	}
-	for _, rel := range []string{".mise/conf.d/one.toml", "apps/web/.mise/conf.d/one.toml", "services/api/.mise/conf.d/one.toml"} {
+	for _, rel := range []string{"mise.toml", "apps/web/mise.toml", "services/api/mise.toml"} {
 		raw, err := os.ReadFile(filepath.Join(root, rel))
-		if err != nil || !strings.Contains(string(raw), "Managed by One CLI") {
+		if err != nil || !strings.Contains(string(raw), "# one:managed-v1") {
 			t.Fatalf("configuration %s: %v %s", rel, err, raw)
 		}
 	}
@@ -340,10 +340,10 @@ func TestE2E_MiseCreateAddAndRefreshWithoutNewFlags(t *testing.T) {
 	if code != 0 || !strings.Contains(out, `"runtime": "mise"`) {
 		t.Fatalf("automatic runtime: %d %s %s", code, out, stderr)
 	}
-	// A modified generated fragment must fail before rendering a new project.
-	path := filepath.Join(root, ".mise/conf.d/one.toml")
+	// A conflicting config_roots edit must fail before rendering a new project.
+	path := filepath.Join(root, "mise.toml")
 	raw, _ := os.ReadFile(path)
-	if err := os.WriteFile(path, append(raw, []byte("\n# edited\n")...), 0o644); err != nil {
+	if err := os.WriteFile(path, []byte(strings.Replace(string(raw), "config_roots = [", "config_roots = ['custom', ", 1)), 0o644); err != nil {
 		t.Fatal(err)
 	}
 	manifest, _ := os.ReadFile(filepath.Join(root, "one.manifest.json"))
@@ -373,9 +373,16 @@ func TestE2E_MiseRealGeneratedTasksRequireOneContext(t *testing.T) {
 	if out, stderr, code := runBinaryIn(t, root, "add", "react-spa", "--name", "web", "-y"); code != 0 {
 		t.Fatalf("add: %d %s %s", code, out, stderr)
 	}
-	// User overrides have higher priority than generated defaults. This test
-	// exercises real mise without downloading Node or package managers.
-	if err := os.WriteFile(filepath.Join(root, "mise.toml"), []byte("[tools]\nnode = 'system'\npnpm = 'system'\n[env]\nTASK_DEFAULT = 'mise'\n"), 0o644); err != nil {
+	// Edit the generated configuration in place, preserving monorepo fields.
+	configPath := filepath.Join(root, "mise.toml")
+	configRaw, err := os.ReadFile(configPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	configText := strings.ReplaceAll(string(configRaw), "node = '24.15.0'", "node = 'system'")
+	configText = strings.ReplaceAll(configText, "pnpm = '12.3.4'", "pnpm = 'system'")
+	configText += "\n[env]\nTASK_DEFAULT = 'mise'\n"
+	if err := os.WriteFile(configPath, []byte(configText), 0o644); err != nil {
 		t.Fatal(err)
 	}
 	if err := os.WriteFile(filepath.Join(root, "apps/web/.env"), []byte("TASK_DEFAULT=one\n"), 0o644); err != nil {

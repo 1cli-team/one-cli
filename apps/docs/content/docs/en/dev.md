@@ -1,24 +1,23 @@
 ---
 title: one dev
-description: Start every developable project, or one selected project.
+description: Run development tasks and their prerequisites through mise.
 ---
 
-`one dev` reads each project's development command from the manifest and runs it through One CLI's built-in supervisor.
+`one dev` is equivalent to `one run dev`. Both execute the effective mise task graph, including your overrides in `mise.toml`.
 
-## Usage
-
-```bash
-one dev [project] [--dry-run]
+```sh
+one dev
+one dev -p web -p api
+one dev -p apps/web --dry-run -o json
+one dev -p web --ui raw
+one dev -p web -- --port 4300
 ```
 
-## Options
+Without `-p`, One invokes the root `dev` task. The generated aggregate includes projects with a dev task. Repeat `-p` to select projects by name or relative path. Pass task arguments after `--`, selecting one project when forwarding development arguments.
 
-| option | purpose |
-|---|---|
-| positional `project` | start one project by manifest `name` or `relativeDir` |
-| `-p`, `--project <name|path>` | legacy selector for scripts and CI |
-| `--dry-run` | print the supervisor command without starting processes |
-| `-o`, `--output <fmt>` | `json` / `yaml` / `text` |
+## Commands and overrides
+
+Generated adapters use `projects[].domains.dev.command` when set, otherwise the project's native `dev` script or Taskfile task. Project `mise.toml` can override the task; root `mise.toml` can replace the workspace aggregate. Custom mise commands use mise's environment. Generated adapters receive One's frozen project environment.
 
 ## Dependency preparation
 
@@ -29,48 +28,13 @@ one dev [project] [--dry-run]
 - Go preparation downloads the fixed module build list or resolves workspace dependencies, maintaining checksums as needed. It does not run `go mod tidy` or `go work sync` automatically.
 - A failed preparation stops startup. Package-manager diagnostics are streamed once; canceling stops the preparation process. `one exec` does not install dependencies.
 
-## Runner
 
-One CLI's built-in supervisor starts all developable projects by default, or one positional project.
+## Logs, input, and exit
 
-```bash
-one dev
-one dev web
-one dev apps/web --dry-run
-```
+Development allocates enough concurrency for the selected graph by default. Multiple services use prefixed mise logs; `--concurrency` must leave enough slots for all development services. Upstream finite builds finish before their dependent service starts.
 
-## Scroll and resize the task interface
+`--ui raw` preserves native terminal input for one service and disables artifact caching. mise raw/interactive tasks take exclusive terminal access; run interactive services separately. Multiple development services cannot use raw output. The previous TUI, project picker, `--keep-going`, and single-service restart controls have been removed.
 
-On Unix, multiple tasks use the TUI in an interactive terminal. Use `one dev web --ui=tui` to open it for a single project. Finite builds use mise streaming output.
+Ctrl+C or SIGTERM stops the invocation and its child processes. If one task fails, the invocation stops and returns the child exit code. JSON/YAML output uses `one-cli/task-result/v1`, with child logs on stderr. `--dry-run` uses static `one-cli/task-plan/v1` output without installing tools, loading secrets, or writing configuration.
 
-| Control | Action |
-|---|---|
-| `↑` / `↓` | Select a project |
-| Mouse wheel over the log panel | Scroll the selected project's output |
-| `PgUp` / `PgDn` | Scroll logs; in a full-screen child's input mode these keys go to that child |
-| `Shift+PgUp` / `Shift+PgDn` | Scroll history, including while in input mode |
-| `f` / `End` | Resume following output in navigation mode |
-| `Shift+End` | Resume following output in either mode |
-| `Enter` / `Ctrl+]` | Enter child input / return to navigation |
-| `h` | Hide or show the project list |
-| `?` | Show all shortcuts, including restart and stop |
-
-Each project keeps its own scroll position. New output leaves a paused view in place until those rows leave the retained history. Typing or pasting into a child returns to the live screen. Resizing the terminal reflows retained log output and updates every child's terminal dimensions. Full-screen children redraw their own layouts.
-
-History is bounded to 3,000 screen rows, with an 1 MiB replay buffer per project. Older output can be dropped when these limits are reached.
-
-## Common errors
-
-| code | fix |
-|---|---|
-| `RUN_COMMAND_NOT_FOUND` | check the native tools or mise configuration |
-| `ONE_CLI_ERROR` | fix the reported dependency error, then retry |
-| `SUBPROJECT_NOT_FOUND` | use a project `name` or `relativeDir` |
-
-## Next
-
-- [Local dev orchestration](/en/tutorials/dev-local/)
-- [one exec](/en/docs/exec/)
-- [Workspace manifest](/en/docs/manifest/)
-
-`one run dev` uses this same supervisor. Finite builds of upstream local packages run through mise before development starts.
+See [one run](/en/docs/run/) for common flags, task configuration, caching, and command-name conflicts.

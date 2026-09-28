@@ -1,12 +1,7 @@
 package workspace
 
-// devcmd.go owns the script-name → dev-command heuristic used at
-// `one add` time. The resolved string is persisted to
-// projects[].domains.dev.command in the manifest; `one dev` later reads
-// the manifest directly without re-scanning package.json. Keeping this
-// logic here (rather than under the dev-runner package) lets future
-// `one add` variants and migration scripts call into the same source
-// of truth without pulling in the supervisor implementation.
+// Resolve initial development commands when scaffolding. Task adapters read
+// the manifest override on each invocation and fall back to native dev tasks.
 
 import (
 	"os"
@@ -21,8 +16,7 @@ import (
 // (Expo / generic). Falls back to a Go runner for the Go toolchain.
 //
 // Returns "" when nothing resolves — the caller MUST NOT persist a
-// placeholder; an empty Command in the manifest means "this project
-// does not participate in `one dev`".
+// placeholder; an empty Command allows native dev task discovery.
 func ResolveDevCommand(scripts map[string]string, toolchain string) string {
 	for _, key := range []string{"dev", "start:dev", "start"} {
 		if v, ok := scripts[key]; ok && strings.TrimSpace(v) != "" {

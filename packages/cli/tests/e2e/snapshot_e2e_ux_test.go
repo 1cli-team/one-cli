@@ -111,13 +111,13 @@ func TestSnapshot_E2E_WorkspaceOverviewAndDeferredDeployment(t *testing.T) {
 	}
 	summary := mustParseJSON(t, stdout)
 	project := summary["projects"].([]any)[0].(map[string]any)
-	if project["deployment_configured"] != nil || summary["next_command"] != "one dev web" {
+	if project["deployment_configured"] != nil || summary["next_command"] != "one dev -p web" {
 		t.Fatalf("unexpected project summary: %v", summary)
 	}
 
 	savedPath := os.Getenv("PATH")
 	t.Setenv("PATH", t.TempDir())
-	_, stderr, code = runBinaryIn(t, ws, "dev", "web", "-o", "json")
+	_, stderr, code = runBinaryIn(t, ws, "exec", "-p", "web", "-o", "json", "--", "pnpm", "dev")
 	t.Setenv("PATH", savedPath)
 	if code == 0 {
 		t.Fatal("dev should report that the native package manager is unavailable")
@@ -127,12 +127,12 @@ func TestSnapshot_E2E_WorkspaceOverviewAndDeferredDeployment(t *testing.T) {
 		t.Fatalf("unexpected missing-tool error: %v", devErr)
 	}
 
-	_, stderr, code = runBinaryIn(t, ws, "deploy", "-o", "json")
+	_, stderr, code = runBinaryIn(t, ws, "deploy", "--dry-run", "-o", "json")
 	if code == 0 {
 		t.Fatal("removed deploy command should fail")
 	}
 	deployErr := mustParseJSON(t, firstJSONLine(stderr))
-	if deployErr["error"].(map[string]any)["code"] != "UNKNOWN_COMMAND" {
+	if !strings.Contains(deployErr["error"].(map[string]any)["message"].(string), "//:deploy") {
 		t.Fatalf("unexpected removed-command error: %v", deployErr)
 	}
 	manifestAfter, err := os.ReadFile(filepath.Join(ws, "one.manifest.json"))

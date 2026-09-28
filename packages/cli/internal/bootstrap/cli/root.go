@@ -31,7 +31,6 @@ import (
 	addcmd "github.com/torchstellar-team/one-cli/packages/cli/internal/transport/cobra/add"
 	authcmd "github.com/torchstellar-team/one-cli/packages/cli/internal/transport/cobra/auth"
 	createcmd "github.com/torchstellar-team/one-cli/packages/cli/internal/transport/cobra/create"
-	devcmd "github.com/torchstellar-team/one-cli/packages/cli/internal/transport/cobra/dev"
 	envcmd "github.com/torchstellar-team/one-cli/packages/cli/internal/transport/cobra/env"
 	execcmd "github.com/torchstellar-team/one-cli/packages/cli/internal/transport/cobra/exec"
 	hookscmd "github.com/torchstellar-team/one-cli/packages/cli/internal/transport/cobra/hooks"
@@ -55,12 +54,11 @@ func newRootCommand() *cobra.Command {
 		authcmd.Commands(),
 		{localecmd.Command(), initcmd.Command()},
 		createcmd.Commands(createcmd.Dependencies{Creation: deps.creation}),
-		devcmd.Commands(deps.runtime, deps.loaders),
 		misecmd.RuntimeCommands(deps.runtime),
 		hookscmd.Commands(deps.runtime),
 		envcmd.Commands(envcmd.Dependencies{Service: deps.environments}),
 		execcmd.Commands(deps.loaders, deps.runtime),
-		runcmd.Commands(deps.loaders, deps.runtime, devcmd.TaskRunner(deps.runtime, deps.loaders)),
+		runcmd.Commands(deps.loaders, deps.runtime),
 		servecmd.Commands(servecmd.Dependencies{
 			Catalog: deps.catalog, Workspaces: deps.workspaces, Creation: deps.creation,
 			Registry: deps.registry, Manifest: deps.manifest, Environments: deps.environments,
@@ -115,6 +113,7 @@ func Execute(version string, args []string) (resultErr error) {
 	}()
 
 	rootCmd.Version = version
+	args = expandTaskShorthand(args, isKnownSubcommand)
 	rootCmd.SetArgs(args)
 
 	// Output mode detection runs before cobra so subcommands can already
@@ -216,7 +215,7 @@ func Execute(version string, args []string) (resultErr error) {
 
 // Execution leaves and previews must not start another background network check.
 func shouldCheckUpdates(args []string) bool {
-	if first, _ := firstPositional(args); first == "__exec" || first == "mise" || first == "hk" || first == "__hook-gofmt" {
+	if first, _ := firstPositional(args); strings.HasPrefix(first, "__") || first == "mise" || first == "hk" {
 		return false
 	}
 	for _, arg := range args {
@@ -366,6 +365,9 @@ func detectOutputMode(args []string) {
 func scanOutputValue(args []string) string {
 	for i := 0; i < len(args); i++ {
 		a := args[i]
+		if a == "--" {
+			break
+		}
 		switch {
 		case a == "-o" || a == "--output":
 			if i+1 < len(args) {

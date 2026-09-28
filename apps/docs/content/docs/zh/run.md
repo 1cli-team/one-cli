@@ -16,15 +16,43 @@ one run ci
 one run build --dry-run -o json
 ```
 
+## 任务简写
+
+`one <任务名>` 是 `one run <任务名>` 的简写。例如 `one test -p api` 与 `one run test -p api` 执行同一个任务。内置命令及其别名优先：`one env` 打开环境变量管理，`one run env` 执行名为 env 的任务。未知名称按任务解析，找不到时提示任务不存在。`one <任务名> --help` 显示 One 通用任务参数；用 `-- --help` 把帮助参数传给底层命令。
+
 ## 项目选择与参数
 
-不传 `-p` 时选择工作区聚合任务。可以重复传入 `-p`，指定项目名或工作区相对路径。`--` 后的参数原样传给一个选中的任务；同时选择多个项目时不接受这类参数。`one build web` 和 `one run build -p web` 共用执行链路。
+不传 `-p` 时选择工作区聚合任务。可以重复传入 `-p`，指定项目名或工作区相对路径。`--` 后的参数原样传给一个选中的任务；同时选择多个项目时不接受这类参数。`one build -p web` 和 `one run build -p web` 共用执行链路。
 
 任意命令使用 `one exec web -- pnpm add axios`。它不运行任务图，也不自动安装应用依赖。
 
+`:::` 是 mise 的任务分隔符，不能作为任务参数透传。
+
 ## 配置与依赖
 
-One 管理根目录和项目目录的 `.mise/conf.d/one.toml`，声明工具版本、项目命令入口、聚合任务和本地 Node 构建依赖。自定义配置放在 `mise.toml`；生成文件有内容校验，不能直接编辑。执行任务时会刷新生成配置。根 `build`、`check`、`test` 只聚合项目实际存在的任务，`ci` 再组合这些聚合任务。
+One 在工作区和项目根目录的 `mise.toml` 中声明工具版本、项目命令入口、聚合任务和本地 Node 构建依赖。直接编辑这个文件即可添加任务或调整设置。执行任务、添加项目或运行 `one init mise` 时，One 会补充新配置，并更新未被用户修改的生成项；自定义字段和注释保留。根 `dev`、`build`、`check`、`test` 只聚合项目实际存在的任务，`ci` 组合 build、check、test 聚合任务。
+
+文件末尾的 `# one:managed-v1` 注释记录 One 上一次生成的字段。请保留它，以便后续增量更新。如果同一个字段被用户和 One 同时改成不同内容，会报告 `MISE_CONFIG_CONFLICT` 并指出冲突项。仅修改注释、添加自定义任务或调整默认值，不会因为整份文件改变而被拒绝。
+
+```text
+workspace/
+  one.manifest.json
+  mise.toml             # 工具版本、项目目录和聚合任务
+  .config/hk.pkl        # 工作区 Git 检查
+  apps/web/
+    mise.toml           # 项目任务与缓存配置
+    package.json        # pnpm 脚本
+  services/api/
+    mise.toml           # 项目工具与任务
+    Taskfile.yml        # Go 项目命令
+```
+
+预览和刷新配置：
+
+```bash
+one init mise --dry-run -o json
+one init mise
+```
 
 项目任务的规范名称为 `//apps/web:build`。本地 Node 上游存在 build 时，会在下游 build、check、test、typecheck 和 dev 前执行。Go 的模块依赖由 `go.work` 和编译器解析。One 管理的 Node 项目统一使用 pnpm。
 
@@ -75,7 +103,7 @@ cache = { enabled = true, env = ["NODE_ENV"], command_inputs = ['one __task-inpu
 
 ## 终端与结构化输出
 
-有限任务默认流式输出。`--ui raw` 保留终端输入并关闭缓存。开发任务 `one run dev` / `one dev` 可以使用 TUI；有限任务指定 `--ui tui` 会得到明确错误。交互测试使用独立的 `test:watch` 任务或 raw 模式。开发启动前先执行有限的上游构建，再交给原有 supervisor 管理开发进程。
+任务使用 mise 流式输出，`--ui raw` 保留原生终端输入并关闭产物缓存。多开发服务使用带前缀的日志并自动分配并发数；raw/interactive 服务需要单独运行。`--ui tui` 不再支持。`one dev` 与 `one run dev` 共用执行路径，包括上游构建。开发行为见 [one dev](/zh/docs/dev/)。
 
 JSON/YAML 预览的 schema 是 `one-cli/task-plan/v1`，执行结果是 `one-cli/task-result/v1`。结构化模式下子进程日志写到 stderr。结果包含整体状态与退出码。当前 mise 版本没有可靠的结构化完成事件，因此单任务状态为 `unknown`，不会从日志文字猜测缓存命中。
 

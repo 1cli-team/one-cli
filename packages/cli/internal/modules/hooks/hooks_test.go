@@ -63,7 +63,7 @@ func TestConfigureDryRunIdempotentAndUserOverrides(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !preview.DryRun || len(preview.GitChanges) != 2 || len(preview.Changes) != 3 {
+	if !preview.DryRun || len(preview.GitChanges) != 2 || len(preview.Changes) != 2 {
 		t.Fatalf("preview: %+v", preview)
 	}
 	for _, path := range []string{"hk.pkl", workspace.HooksConfigFilename, workspace.MiseConfigFilename, ".git/hooks/pre-commit"} {
@@ -77,13 +77,13 @@ func TestConfigureDryRunIdempotentAndUserOverrides(t *testing.T) {
 	if !strings.Contains(read(t, root, workspace.MiseConfigFilename), "aqua:jdx/hk") {
 		t.Fatal("hk not declared in mise")
 	}
-	custom := read(t, root, "hk.pkl") + "\n// Team overrides\nhooks { [\"pre-commit\"] { enabled = false } }\n"
-	write(t, root, "hk.pkl", custom)
+	custom := strings.Replace(read(t, root, workspace.HooksConfigFilename), "fix = false", "fix = true // Team override", 1) + "\n// Team checks\n"
+	write(t, root, workspace.HooksConfigFilename, custom)
 	again, err := Configure(ctx, root, binary, false)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(again.Changes) != 0 || len(again.GitChanges) != 0 || read(t, root, "hk.pkl") != custom {
+	if len(again.Changes) != 0 || len(again.GitChanges) != 0 || read(t, root, workspace.HooksConfigFilename) != custom {
 		t.Fatalf("not idempotent: %+v", again)
 	}
 	if !strings.Contains(read(t, root, ".git/hooks/commit-msg"), shellQuote(filepath.ToSlash(binary))+" hk run commit-msg \"$@\"") {
@@ -160,7 +160,7 @@ func TestConfigureLinkedWorktreeUsesCommonGitHooks(t *testing.T) {
 	if info, err := os.Stat(filepath.Join(linked, ".git")); err != nil || info.IsDir() {
 		t.Fatalf("linked worktree Git file replaced: %v", err)
 	}
-	if _, err := os.Stat(filepath.Join(linked, "hk.pkl")); err != nil {
+	if _, err := os.Stat(filepath.Join(linked, workspace.HooksConfigFilename)); err != nil {
 		t.Fatal("worktree hk configuration missing")
 	}
 }
@@ -260,8 +260,11 @@ func TestGeneratedLanguageStepsAndConcurrentEdit(t *testing.T) {
 		t.Fatal("expected concurrent edit conflict")
 	}
 	p = fsutil.NewFilePlan(root)
-	if err := PlanFiles(p, m); err == nil {
-		t.Fatal("modified generated configuration was accepted")
+	if err := PlanFiles(p, m); err != nil {
+		t.Fatal(err)
+	}
+	if len(p.Changes()) != 0 {
+		t.Fatal("comment-only edit caused a refresh")
 	}
 }
 

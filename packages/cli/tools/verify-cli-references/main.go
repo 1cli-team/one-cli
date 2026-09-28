@@ -167,7 +167,7 @@ var (
 	// that could plausibly be a subcommand. The token must start with
 	// a-z to filter out flags (`-h`), placeholders (`<dir>`), and meta
 	// (`--version`).
-	oneCmdRE = regexp.MustCompile(`\bone\s+([a-z][a-z0-9-]*)`)
+	oneCmdRE = regexp.MustCompile(`\bone\s+([a-z][a-z0-9:-]*)`)
 
 	// codeSpanRE matches inline `code spans` (single backticks). Avoids
 	// crossing newlines.
@@ -175,6 +175,16 @@ var (
 )
 
 func scanFile(path string, content []byte, valid map[string]struct{}) []string {
+	// A task demonstrated with the explicit run syntax can also be called
+	// through shorthand in this document. Keep checking unrelated typos.
+	local := make(map[string]struct{}, len(valid))
+	for name := range valid {
+		local[name] = struct{}{}
+	}
+	for _, match := range regexp.MustCompile(`\bone run ([a-z][a-z0-9:-]*)`).FindAllSubmatch(content, -1) {
+		local[string(match[1])] = struct{}{}
+	}
+	valid = local
 	var problems []string
 	ignore := false
 	inFence := false

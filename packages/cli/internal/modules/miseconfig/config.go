@@ -1,10 +1,9 @@
-// Package miseconfig produces additive mise fragments without rewriting user TOML.
+// Package miseconfig maintains workspace and project mise.toml defaults.
 package miseconfig
 
 import (
 	"bytes"
 	"context"
-	"crypto/sha256"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -19,6 +18,7 @@ import (
 
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/core/workspace"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/modules/gowork"
+	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/configedit"
 	cliErrors "github.com/torchstellar-team/one-cli/packages/cli/internal/platform/errors"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/fsutil"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/i18n"
@@ -26,7 +26,6 @@ import (
 )
 
 const Filename = workspace.MiseConfigFilename
-const header = "# Managed by One CLI mise/v1; sha256="
 
 type Options struct {
 	NodeVersion string
@@ -128,20 +127,23 @@ func BuildWithFiles(root string, opts Options, files map[string][]byte) (*Plan, 
 	if err != nil {
 		return nil, err
 	}
-	var previous config
+	var previous struct {
+		Tools map[string]any `toml:"tools"`
+	}
 	if oldRoot != nil {
-		if err := validateManaged(Filename, oldRoot); err != nil {
-			return nil, err
-		}
 		if err := toml.Unmarshal(oldRoot, &previous); err != nil {
 			return nil, err
 		}
 	}
 	if opts.GoVersion == "" {
-		opts.GoVersion = previous.Tools["go"]
+		if version, ok := previous.Tools["go"].(string); ok && exactVersion.MatchString(version) {
+			opts.GoVersion = version
+		}
 	}
 	if opts.NodeVersion == "" {
-		opts.NodeVersion = previous.Tools["node"]
+		if version, ok := previous.Tools["node"].(string); ok && exactVersion.MatchString(version) {
+			opts.NodeVersion = version
+		}
 	}
 	if opts.NodeVersion == "" {
 		opts.NodeVersion = "24.15.0"
@@ -238,7 +240,7 @@ func BuildWithFiles(root string, opts Options, files map[string][]byte) (*Plan, 
 				}
 			}
 			if !found {
-				operations = append(operations, workspace.ProjectTask{Name: "dev", Interactive: true})
+				operations = append(operations, workspace.ProjectTask{Name: "dev"})
 			}
 		}
 		switch project.Toolchain {
@@ -273,7 +275,7 @@ func BuildWithFiles(root string, opts Options, files map[string][]byte) (*Plan, 
 				p.configureCache(root, nativeProject, op, &task)
 			}
 			pc.Tasks[op.Name] = task
-			if op.Name == "build" || op.Name == "check" || op.Name == "test" {
+			if op.Name == "build" || op.Name == "check" || op.Name == "test" || op.Name == "dev" {
 				aggregate := rootConfig.Tasks[op.Name]
 				aggregate.Depends = append(aggregate.Depends, "//"+rel+":"+op.Name)
 				rootConfig.Tasks[op.Name] = aggregate
@@ -387,26 +389,16 @@ func (p *Plan) add(rel string, value config) error {
 	if err != nil {
 		return err
 	}
-	if before != nil {
-		if err := validateManaged(rel, before); err != nil {
-			return err
-		}
-	}
 	body, err := toml.Marshal(value)
 	if err != nil {
 		return err
 	}
-	after := []byte(fmt.Sprintf("%s%x\n# Edit user overrides in mise.toml; refresh with one init mise.\n%s", header, sha256.Sum256(body), body))
+	after, err := configedit.TOML(before, body)
+	if err != nil {
+		return conflict(rel, err.Error())
+	}
 	if !bytes.Equal(before, after) {
 		p.Changes = append(p.Changes, Change{Path: rel, Before: string(before), After: string(after)})
-	}
-	return nil
-}
-
-func validateManaged(path string, raw []byte) error {
-	lines := bytes.SplitN(raw, []byte("\n"), 3)
-	if len(lines) != 3 || string(lines[0]) != fmt.Sprintf("%s%x", header, sha256.Sum256(lines[2])) {
-		return conflict(path, i18n.T("config.user_modified"))
 	}
 	return nil
 }

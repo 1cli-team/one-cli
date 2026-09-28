@@ -119,8 +119,8 @@ One 仅修改子进程 PATH。托管版本随 One 更新，自动升级和更新
 ```bash
 one mise --version
 one mise doctor
-one mise trust .mise/conf.d/one.toml
-one mise trust apps/web/.mise/conf.d/one.toml
+one mise trust mise.toml
+one mise trust apps/web/mise.toml
 one mise exec -- pnpm install
 ```
 

@@ -106,7 +106,7 @@ func ProjectEnv(m *Manifest, projectName string) *ProjectEnvOverride {
 
 // ProjectDev returns the dev command for projectName, or "" when there
 // is no domains.dev block or its Command is empty. Used by `one dev` to
-// build its supervisor entry list.
+// resolve the generated development adapter.
 func ProjectDev(m *Manifest, projectName string) string {
 	d := projectDomains(m, projectName)
 	if d == nil || d.Dev == nil {

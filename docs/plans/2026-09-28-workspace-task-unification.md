@@ -1,5 +1,7 @@
 # One CLI 工作区任务与 mise 缓存统一规划
 
+> 后续调整：dev/build 已统一为 mise 任务入口，支持 `one <任务名>` 简写，项目使用重复的 `-p` 选择。开发 supervisor 与 TUI 已移除；当前行为见 [任务管理说明](../../apps/docs/content/docs/zh/run.md)。下文保留原规划。
+
 日期：2026-09-28  
 状态：本地实现已完成，检查与验收记录见第 16、17 节。Windows/macOS 原生运行和远端 Actions 验证待对应 runner 执行。
 
@@ -157,23 +159,23 @@ workspace/
   package.json
   pnpm-workspace.yaml
   pnpm-lock.yaml
-  mise.toml                         用户维护的工作区配置和自定义任务
-  .mise/conf.d/one.toml              One 生成的工具默认值、项目目录和根聚合任务
+  mise.toml                         工作区工具、聚合任务与自定义配置
+  .config/hk.pkl                    工作区检查与 Git hooks
   apps/web/
     package.json                    Node 命令正文
-    mise.toml                       用户可选的项目任务 / 缓存覆盖
-    .mise/conf.d/one.toml            One 生成的项目任务引用
+    mise.toml                       项目任务引用、自定义任务与缓存
   services/api/
     go.mod
     go.sum
     Taskfile.yml                    Go 命令正文
-    mise.toml                       用户可选的项目任务 / 缓存覆盖
-    .mise/conf.d/one.toml            One 生成的工具默认值和项目任务引用
+    mise.toml                       项目工具、任务引用与缓存
 ~~~
 
 项目配置放在子目录，是为了让 mise 采用对应项目的工具与环境作用域；整次工作区运行仍由根启动的一个 mise 调度器管理。[mise monorepo 配置](https://mise.jdx.dev/tasks/monorepo.html)
 
 锁文件本轮明确保持每个配置根独立的现有模式，设置 `monorepo.lockfile = false`。提交和验证全部相关 mise lockfile，不同时引入统一 monorepo lockfile 布局变更。精确工具版本、平台解析结果和 CI 安装参数必须相互匹配。
+
+生成配置可直接编辑。One 通过文件内的跟踪注释更新未改动的默认项，保留用户修改与注释；同一项双方都有变更时报告冲突。
 
 ### 5.2 权威来源
 
@@ -223,7 +225,7 @@ One 将 `-p web` 映射成对应路径。无需额外创造 build:web / web:buil
 下例说明任务和缓存的组织方式，省略工具精确版本、管理标记及 One 环境上下文桥接；不能直接当成完整生成结果。
 
 ~~~toml
-# workspace/.mise/conf.d/one.toml
+# workspace/mise.toml
 monorepo_root = true
 
 [monorepo]
@@ -241,7 +243,7 @@ depends = ["//apps/web:check", "//services/api:check"]
 ~~~
 
 ~~~toml
-# apps/web/.mise/conf.d/one.toml
+# apps/web/mise.toml
 [tasks.build]
 run = "pnpm run build"
 sources = [

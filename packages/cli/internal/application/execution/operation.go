@@ -15,11 +15,7 @@ func OperationArgs(w Workspace, selector, operation string) ([]string, error) {
 	if !ok {
 		return nil, cliErrors.New(cliErrors.SUBPROJECT_NOT_FOUND, i18n.Tf("workspace.unknown_project", selector))
 	}
-	if operation == "dev" {
-		command := workspace.ProjectDev(w.Manifest(), p.Name)
-		if command == "" {
-			return nil, missingOperation(p.Name, operation)
-		}
+	if command := workspace.ProjectDev(w.Manifest(), p.Name); operation == "dev" && command != "" {
 		if runtime.GOOS == "windows" {
 			shell := os.Getenv("ComSpec")
 			if shell == "" {

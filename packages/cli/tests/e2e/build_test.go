@@ -39,7 +39,8 @@ func buildFixture(t *testing.T, mise bool) string {
 		t.Skip("real mise is required for task integration")
 	}
 	root := t.TempDir()
-	isolateHome(t, root)
+	// mise does not discover a monorepo rooted at HOME.
+	isolateHome(t, t.TempDir())
 	t.Setenv("ONE_RUNTIME", "builtin")
 	buildWrite(t, root, "one.manifest.json", `{"version":1,"workspace":{"id":"build-test","name":"build-test"},"environments":{"names":["dev","prod"],"default":"dev"},"projects":[{"name":"web","relativeDir":"apps/web","toolchain":"node"},{"name":"lib","relativeDir":"packages/lib","toolchain":"node"},{"name":"mobile","relativeDir":"apps/mobile","toolchain":"node"}]}`)
 	buildWrite(t, root, "package.json", `{"packageManager":"pnpm@12.3.4"}`)
@@ -50,7 +51,7 @@ func buildFixture(t *testing.T, mise bool) string {
 	buildWrite(t, root, "apps/web/build.sh", "#!/bin/sh\n[ -f ../../packages/lib/artifact ] || exit 93\necho web >> ../../order\nprintf 'web-env=%s runtime=%s\\n' \"$BUILD_VALUE\" \"${ONE_MISE_ONLY:-builtin}\"\n")
 	buildWrite(t, root, "apps/web/.env", "BUILD_VALUE=base\n")
 	buildWrite(t, root, "apps/web/.env.prod", "BUILD_VALUE=production\n")
-	buildWrite(t, root, "tools/pnpm", "#!/bin/sh\ncase \"$1\" in\n--version) echo 12.3.4;;\ninstall) mkdir -p node_modules; echo installed >> installs;;\nrun) shift 2; exec sh build.sh \"$@\";;\n*) exit 95;;\nesac\n")
+	buildWrite(t, root, "tools/pnpm", "#!/bin/sh\ncase \"$1\" in\n--version) echo 12.3.4;;\ninstall) mkdir -p node_modules; echo installed >> installs;;\nrun) script=$2; shift 2; exec sh \"$script.sh\" \"$@\";;\n*) exit 95;;\nesac\n")
 	buildWrite(t, root, "tools/node", "#!/bin/sh\necho v24.15.0\n")
 	t.Setenv("PATH", filepath.Join(root, "tools")+string(os.PathListSeparator)+os.Getenv("PATH"))
 	t.Setenv("ONE_MISE_BINARY", misePath)
@@ -116,7 +117,7 @@ func TestE2E_BuildPreviewAndProjectSelection(t *testing.T) {
 	// secrets or probes tools. The selected lib has no dev configuration.
 	buildWrite(t, root, "packages/lib/.env", "INVALID=\"unterminated")
 	t.Setenv("ONE_MISE_BINARY", filepath.Join(root, "missing-mise"))
-	stdout, stderr, code := runBinaryIn(t, root, "build", "packages/lib", "-p", "lib", "--dry-run", "-o", "yaml")
+	stdout, stderr, code := runBinaryIn(t, root, "build", "-p", "packages/lib", "-p", "lib", "--dry-run", "-o", "yaml")
 	if code != 0 || stderr != "" {
 		t.Fatalf("%d %s %s", code, stdout, stderr)
 	}
@@ -128,12 +129,12 @@ func TestE2E_BuildPreviewAndProjectSelection(t *testing.T) {
 	if result["schema"] != "one-cli/task-plan/v1" || len(tasks) != 1 {
 		t.Fatal(result)
 	}
-	for _, path := range []string{"installs", "order", "node_modules", ".mise/conf.d/one.toml"} {
+	for _, path := range []string{"installs", "order", "node_modules", "apps/web/mise.toml"} {
 		if _, err := os.Stat(filepath.Join(root, path)); !os.IsNotExist(err) {
 			t.Fatalf("dry-run wrote %s", path)
 		}
 	}
-	for _, args := range [][]string{{"build", "mobile", "--dry-run"}, {"build", "unknown", "--dry-run"}, {"build", "web", "-p", "lib", "--dry-run", "--", "argument"}, {"build", "web", "--env", "typo", "--dry-run"}} {
+	for _, args := range [][]string{{"build", "-p", "mobile", "--dry-run"}, {"build", "-p", "unknown", "--dry-run"}, {"build", "-p", "web", "-p", "lib", "--dry-run", "--", "argument"}, {"build", "-p", "web", "--env", "typo", "--dry-run"}} {
 		if _, _, code := runBinaryIn(t, root, args...); code == 0 {
 			t.Fatal(args)
 		}
@@ -148,7 +149,7 @@ func TestE2E_GoLibraryTemplateHasBuildTask(t *testing.T) {
 	if code != 0 {
 		t.Fatal(stderr)
 	}
-	stdout, stderr, code := runBinaryIn(t, ws, "build", "lib", "--dry-run", "-o", "json")
+	stdout, stderr, code := runBinaryIn(t, ws, "build", "-p", "lib", "--dry-run", "-o", "json")
 	if code != 0 {
 		t.Fatalf("%d %s %s", code, stdout, stderr)
 	}
@@ -163,7 +164,7 @@ func TestE2E_GoLibraryTemplateHasBuildTask(t *testing.T) {
 	if err != nil || !strings.Contains(string(raw), "go build {{.CLI_ARGS}} ./...") {
 		t.Fatalf("%s %v", raw, err)
 	}
-	raw, err = os.ReadFile(filepath.Join(ws, "packages/lib/.mise/conf.d/one.toml"))
+	raw, err = os.ReadFile(filepath.Join(ws, "packages/lib/mise.toml"))
 	if err != nil || !strings.Contains(string(raw), "[tasks.build]") {
 		t.Fatalf("%s %v", raw, err)
 	}

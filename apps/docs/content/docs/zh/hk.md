@@ -48,16 +48,19 @@ Git 启动器记录本次 One 可执行文件的位置，并通过它解析和�
 
 提交检查按暂存文件执行；Go 模板的 `check` 只做格式和 vet 检查，`tidy` 单独执行。构建、类型检查和测试仍可通过项目原有命令执行，也可以自行加入 hk 配置。
 
-工具版本由 mise 提供，首次需要时下载并缓存。mise 本身优先使用系统版本，本地没有可用程序时由 One 下载并托管；hk 是单独安装的工作区工具。JS 检查使用项目依赖，需要先安装依赖；`one dev <project>` 会准备开发依赖，也可运行 `one mise exec -- pnpm install`。
+工具版本由 mise 提供，首次需要时下载并缓存。mise 本身优先使用系统版本，本地没有可用程序时由 One 下载并托管；hk 是单独安装的工作区工具。JS 检查使用项目依赖，需要先安装依赖；`one dev -p <project>` 会准备开发依赖，也可运行 `one mise exec -- pnpm install`。
 
 ## 配置与项目增量更新
 
-- `hk.pkl`：用户维护的根配置，默认继承 `.config/one/hk.pkl`。
-- `.config/one/hk.pkl`：One 生成的默认检查，随 `one add` 更新。
-- `.mise/conf.d/one.toml`：声明固定的 hk 版本。
+- `.config/hk.pkl`：工作区唯一的 hk 配置，hk 会从根目录自动发现它；检查项中的项目路径仍相对工作区根目录。
+- `mise.toml`：声明固定的 hk 版本。
 - Git hooks：安装到当前仓库的 Git hooks 目录，不写用户全局 Git 配置。
 
-在 `hk.pkl` 中增加检查或覆盖设置；One 不会覆盖这个文件。不要直接修改生成文件，它带有内容校验，修改后再次生成会报告冲突。新增自定义 hook 事件时，需要自行接入对应 Git 启动器；One 默认安装两个提交检查事件。
+直接在 `.config/hk.pkl` 中增加检查或修改设置。`one add` 和 `one init hooks` 会按检查项增量更新：未改动的默认检查自动刷新，用户修改与注释保留。同一检查项同时被用户和 One 改动时，报告 `HOOKS_CONFIG_CONFLICT`，保留当前文件。
+
+请保留 `// one:begin`、`// one:end`、`// one:insert` 和末尾的 `// one:managed-v1` 跟踪注释。自定义检查可加在 `steps` 块内、生成项的标记之外；删除某个默认检查时，连同它对应的 begin/end 标记一起删除，后续刷新会保留这次删除。已有且不带 One 标记的 `.config/hk.pkl` 完全由用户维护，One 不会替换它。
+
+新增自定义 hook 事件时，需要自行接入对应 Git 启动器；One 默认安装 `pre-commit` 和 `commit-msg`。如果已有根目录 `hk.pkl`，请把配置合并到 `.config/hk.pkl` 后移除根文件，避免 hk 优先读取旧文件。
 
 ## 迁移旧工作区
 
@@ -71,7 +74,7 @@ one mise exec -- pnpm install
 
 迁移移除根 `package.json` 中的 Husky / commitlint 依赖以及默认 `prepare: husky`，保留已有的 Changesets 等其他配置。最后使用实际包管理器执行安装，以更新锁文件；命令本身不会猜测或重写包管理器锁文件。
 
-hk 的基础提交检查不等价于 commitlint 的全部规则。例如自定义的长度、大小写和插件规则，需要显式补充到 `hk.pkl` 中。
+hk 的基础提交检查不等价于 commitlint 的全部规则。例如自定义的长度、大小写和插件规则，需要显式补充到 `.config/hk.pkl` 中。
 
 ## CI
 

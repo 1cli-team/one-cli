@@ -3,7 +3,6 @@
 package cli_test
 
 import (
-	"bytes"
 	"net"
 	"os"
 	"os/exec"
@@ -15,54 +14,17 @@ import (
 )
 
 func TestE2E_MiseDevStopsBothProjects(t *testing.T) {
-	if _, err := exec.LookPath("node"); err != nil {
+	// Reproduce invocation from an outer mise task, including Git hook gates.
+	t.Setenv("MISE_TASK_PGID_MANAGED", "1")
+	node, err := exec.LookPath("node")
+	if err != nil {
 		t.Skip("node required for process integration")
 	}
-	for _, mode := range []string{"interrupt", "child-failure"} {
+	for _, mode := range []string{"interrupt", "terminate", "child-failure"} {
 		t.Run(mode, func(t *testing.T) {
-			root := runtimeFixture(t)
-			// Both long-running fixtures execute Node. Give them valid Node
-			// workspace metadata so preparation can be exercised without Go.
-			manifest := filepath.Join(root, "one.manifest.json")
-			b, err := os.ReadFile(manifest)
-			if err != nil {
-				t.Fatal(err)
-			}
-			if err := os.WriteFile(manifest, []byte(strings.ReplaceAll(string(b), `"toolchain":"go"`, `"toolchain":"node"`)), 0o644); err != nil {
-				t.Fatal(err)
-			}
-			for path, body := range map[string]string{
-				"package.json":              `{"private":true,"packageManager":"pnpm@12.3.4","workspaces":["apps/*","services/*"]}`,
-				"services/api/package.json": `{"name":"api"}`,
-			} {
-				if err := os.WriteFile(filepath.Join(root, path), []byte(body), 0o644); err != nil {
-					t.Fatal(err)
-				}
-			}
-			// Task planning owns generated fragments; user environment belongs in mise.toml.
-			for _, dir := range []string{"", "apps/web"} {
-				source := filepath.Join(root, dir, ".mise/conf.d/one.toml")
-				raw, err := os.ReadFile(source)
-				if err != nil {
-					t.Fatal(err)
-				}
-				if err = os.WriteFile(filepath.Join(root, dir, "mise.toml"), raw, 0644); err != nil {
-					t.Fatal(err)
-				}
-				if err = os.Remove(source); err != nil {
-					t.Fatal(err)
-				}
-			}
-			tools := t.TempDir()
-			buildWrite(t, tools, "pnpm", "#!/bin/sh\nif [ \"$1\" = --version ]; then echo 12.3.4; fi\nexit 0\n")
-			t.Setenv("PATH", tools+string(os.PathListSeparator)+os.Getenv("PATH"))
-			if mise := os.Getenv("ONE_TEST_MISE_BINARY"); mise != "" {
-				useRealMise(t, root, mise)
-			} else {
-				installFakeMise(t)
-			}
-			if err := os.MkdirAll(filepath.Join(root, "node_modules"), 0o755); err != nil {
-				t.Fatal(err)
+			root := devTerminalFixture(t, true)
+			for _, project := range []string{"web", "lib"} {
+				overrideDevCommand(t, root, project, "'"+strings.ReplaceAll(node, "'", "'\"'\"'")+"' dev.cjs")
 			}
 			script := `const fs = require('node:fs');
 const net = require('node:net');
@@ -70,7 +32,7 @@ const server = net.createServer();
 server.listen(0, '127.0.0.1', () => fs.writeFileSync('ready', String(server.address().port)));
 setInterval(() => { if (fs.existsSync('fail')) process.exit(7); }, 20);
 `
-			for _, rel := range []string{"apps/web", "services/api"} {
+			for _, rel := range []string{"apps/web", "packages/lib"} {
 				if err := os.WriteFile(filepath.Join(root, rel, "dev.cjs"), []byte(script), 0o644); err != nil {
 					t.Fatal(err)
 				}
@@ -78,7 +40,7 @@ setInterval(() => { if (fs.existsSync('fail')) process.exit(7); }, 20);
 			cmd := exec.Command(binaryPath(t), "dev")
 			cmd.Dir = root
 			cmd.Env = os.Environ()
-			var log bytes.Buffer
+			var log lockedBuffer
 			cmd.Stdout, cmd.Stderr = &log, &log
 			if err := cmd.Start(); err != nil {
 				t.Fatal(err)
@@ -99,7 +61,7 @@ setInterval(() => { if (fs.existsSync('fail')) process.exit(7); }, 20);
 			}()
 			ports := []string{}
 			deadline := time.Now().Add(10 * time.Second)
-			for _, rel := range []string{"apps/web", "services/api"} {
+			for _, rel := range []string{"apps/web", "packages/lib"} {
 				for {
 					if raw, err := os.ReadFile(filepath.Join(root, rel, "ready")); err == nil {
 						ports = append(ports, strings.TrimSpace(string(raw)))
@@ -121,6 +83,10 @@ setInterval(() => { if (fs.existsSync('fail')) process.exit(7); }, 20);
 				if err := cmd.Process.Signal(os.Interrupt); err != nil {
 					t.Fatal(err)
 				}
+			} else if mode == "terminate" {
+				if err := cmd.Process.Signal(syscall.SIGTERM); err != nil {
+					t.Fatal(err)
+				}
 			} else {
 				if err := os.WriteFile(filepath.Join(root, "apps/web/fail"), nil, 0o644); err != nil {
 					t.Fatal(err)
@@ -129,17 +95,34 @@ setInterval(() => { if (fs.existsSync('fail')) process.exit(7); }, 20);
 			select {
 			case err := <-done:
 				finished = true
-				if err == nil {
-					t.Fatalf("expected interrupted or failed exit\n%s", log.String())
+				want := 7
+				if mode == "interrupt" {
+					want = 130
+				}
+				if mode == "terminate" {
+					want = 143
+				}
+				if exit, ok := err.(*exec.ExitError); !ok || exit.ExitCode() != want {
+					t.Fatalf("exit=%v want=%d\n%s", err, want, log.String())
 				}
 			case <-time.After(8 * time.Second):
-				t.Fatal("dev did not stop")
+				t.Fatalf("dev did not stop\n%s", log.String())
 			}
 			for _, port := range ports {
-				conn, err := net.DialTimeout("tcp", "127.0.0.1:"+port, 250*time.Millisecond)
-				if err == nil {
+				// SIGKILL delivery and the kernel closing descendant sockets are
+				// asynchronous. Require closure within a bounded interval.
+				deadline := time.Now().Add(time.Second)
+				for {
+					conn, err := net.DialTimeout("tcp", "127.0.0.1:"+port, 100*time.Millisecond)
+					if err != nil {
+						break
+					}
 					conn.Close()
-					t.Errorf("project still listening on %s after dev stopped", port)
+					if time.Now().After(deadline) {
+						t.Errorf("project still listening on %s after dev stopped", port)
+						break
+					}
+					time.Sleep(10 * time.Millisecond)
 				}
 			}
 		})

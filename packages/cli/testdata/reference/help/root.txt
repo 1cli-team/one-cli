@@ -23,7 +23,9 @@ EXAMPLES
   one create demo
   one add
   one dev
-  one build
+  one build -p web
+  one test -p web
 
 All commands: one help --all
+Task shorthand: one <task> = one run <task> (built-ins take precedence)
 Command help: one <command> --help

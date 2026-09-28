@@ -228,7 +228,12 @@ func ExecuteLeaf(ctx context.Context, w execution.Workspace, project, operation 
 	argv := append([]string{}, values.Operations[operation]...)
 	p, _ := w.Project(project)
 	if len(args) > 0 {
-		if p.Toolchain == "go" {
+		if operation == "dev" && workspace.ProjectDev(w.Manifest(), p.Name) != "" {
+			if runtime.GOOS != "windows" {
+				argv[2] += ` "$@"`
+				argv = append(argv, "one-dev")
+			}
+		} else if p.Toolchain == "go" {
 			argv = append(argv, "--")
 		}
 		argv = append(argv, args...)

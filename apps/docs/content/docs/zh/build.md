@@ -7,11 +7,11 @@ description: 通过 mise 构建项目及其本地依赖。
 
 ```sh
 one build
-one build web api
+one build -p web -p api
 one build -p web --env prod
-one build web --dry-run -o json
+one build -p web --dry-run -o json
 one build --cache off --force
-one build web --ui raw
+one build -p web --ui raw
 ```
 
 Node 从 `package.json` 读取命令，使用 pnpm；Go 从 Taskfile 读取命令。全工作区构建只包含存在 build 的项目，显式选择没有 build 的项目会报错。本地 Node 上游先于下游构建。默认并发为 1，`--concurrency 4` 可并行执行独立任务。

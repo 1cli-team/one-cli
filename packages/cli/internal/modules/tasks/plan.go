@@ -1,4 +1,4 @@
-// Package tasks owns finite workspace task planning and one mise invocation.
+// Package tasks owns workspace task planning and one mise invocation.
 package tasks
 
 import (
@@ -18,14 +18,15 @@ import (
 )
 
 type Options struct {
-	Name        string
-	Projects    []string
-	Arguments   []string
-	Environment string
-	Cache       string
-	Force       bool
-	Jobs        int
-	UI          string
+	Name         string
+	Projects     []string
+	Arguments    []string
+	Environment  string
+	Cache        string
+	Force        bool
+	Jobs         int
+	JobsExplicit bool
+	UI           string
 }
 type Task struct {
 	Name         string   `json:"name"`
@@ -102,16 +103,6 @@ func Catalog(w execution.Workspace) ([]Task, *miseconfig.Plan, error) {
 		if err != nil {
 			return nil, nil, err
 		}
-		managed := filepath.Join(w.Root(), dir, miseconfig.Filename)
-		found := false
-		for _, f := range files {
-			if f == managed {
-				found = true
-			}
-		}
-		if !found {
-			files = append(files, managed)
-		}
 		sort.Strings(files)
 		for _, name := range []string{".mise.toml", "mise.toml", ".mise.local.toml", "mise.local.toml"} {
 			files = append(files, filepath.Join(w.Root(), dir, name))
@@ -152,16 +143,16 @@ func Catalog(w execution.Workspace) ([]Task, *miseconfig.Plan, error) {
 					task = Task{Name: canonical, Project: project, Operation: name, Directory: filepath.Join(w.Root(), dir), Status: "unknown", Dependencies: []string{}}
 				}
 				task.Source = rel
-				if filepath.Clean(file) == filepath.Clean(managed) {
-					task.Managed = true
-				} else if _, replaced := fields["run"]; replaced {
-					task.Managed = false
-				}
 				if v, ok := fields["description"].(string); ok {
 					task.Description = v
 				}
 				if v, ok := fields["run"]; ok {
 					task.Run = v
+					if command, ok := v.(string); ok {
+						task.Managed = strings.HasPrefix(command, "one __task ")
+					} else {
+						task.Managed = false
+					}
 				}
 				if v, ok := fields["depends"]; ok {
 					task.Dependencies, err = stringList(v)
@@ -359,6 +350,9 @@ func planCatalog(w execution.Workspace, opts Options, catalog []Task, configurat
 				}
 			}
 		}
+	}
+	if err := executionOptions(p, &opts); err != nil {
+		return nil, err
 	}
 	return p, nil
 }

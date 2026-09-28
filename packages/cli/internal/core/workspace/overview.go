@@ -27,9 +27,8 @@ const (
 // Note: dev command is intentionally NOT a domain here. `one add` writes
 // projects[].domains.dev.command from a package.json-scripts heuristic
 // (see workspace.ResolveDevCommand); an empty Command is a *valid* state
-// meaning "this project does not participate in `one dev`" (the supervisor
-// skips it silently). Flagging that as a missing-config issue would be a
-// false positive.
+// that allows native task discovery. Projects without any development task
+// are omitted from the generated dev aggregate.
 const (
 	IssueDomainEnv = "env"
 

@@ -26,8 +26,8 @@ Requires a pnpm workspace. Node.js and pnpm versions follow the root configurati
 从仓库根目录运行 / Run from the repository root:
 
 ```sh
-one dev {{projectName}}
-one build {{projectName}}
+one dev -p {{projectName}}
+one build -p {{projectName}}
 ```
 
 开发时会按需更新根锁文件；请将其提交 Git。已有锁文件在构建时严格校验。

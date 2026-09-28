@@ -32,7 +32,7 @@ func TestE2E_TasksRestoreArtifactsAndInvalidateEnvironment(t *testing.T) {
 		return strings.Count(string(raw), "executed")
 	}
 	run("run", "build", "-p", "web", "-o", "json")
-	run("build", "web", "-o", "json")
+	run("build", "-p", "web", "-o", "json")
 	if runs("apps/web") != 1 || runs("packages/lib") != 1 {
 		t.Fatal("repeat did not hit cache")
 	}
@@ -85,7 +85,7 @@ func TestE2E_NativeMiseFileTask(t *testing.T) {
 			t.Fatalf("%v: %d %s %s", args, code, stdout, stderr)
 		}
 	}
-	if _, err := os.Stat(filepath.Join(root, ".mise/conf.d/one.toml")); !os.IsNotExist(err) {
+	if _, err := os.Stat(filepath.Join(root, "apps/web/mise.toml")); !os.IsNotExist(err) {
 		t.Fatal("static discovery wrote managed configuration")
 	}
 	stdout, stderr, code := runBinaryIn(t, root, "run", "hello", "-o", "json")
@@ -183,7 +183,7 @@ func TestE2E_GoTaskBuildRestoresExecutableAndForwardsArguments(t *testing.T) {
 			t.Fatalf("built executable: %s %v, want %s", out, err, want)
 		}
 	}
-	run("build", "api")
+	run("build", "-p", "api")
 	check("default")
 	if err = os.RemoveAll(filepath.Join(root, "services/api/bin")); err != nil {
 		t.Fatal(err)

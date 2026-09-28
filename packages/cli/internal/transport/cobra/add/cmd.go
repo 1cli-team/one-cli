@@ -194,7 +194,7 @@ func (r *addResult) RenderTTY(w io.Writer) {
 	}
 	fmt.Fprintln(w)
 	fmt.Fprintln(w, i18n.T("common.next_steps"))
-	fmt.Fprintf(w, "  one dev %s\n", r.SubprojectName)
+	fmt.Fprintf(w, "  one dev -p %s\n", r.SubprojectName)
 }
 
 func findTemplate(items []template.Template, id string) *template.Template {

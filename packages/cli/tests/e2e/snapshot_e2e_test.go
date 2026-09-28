@@ -46,7 +46,7 @@ func TestSnapshot_E2E_TemplatesJSON(t *testing.T) {
 func TestSnapshot_E2E_UnknownCommand(t *testing.T) {
 	isolateHome(t, t.TempDir())
 	t.Setenv("LC_ALL", "en_US.UTF-8")
-	_, stderr, code := runBinary(t, "unknown-cmd", "-o", "json")
+	_, stderr, code := runBinary(t, "__unknown-cmd", "-o", "json")
 	if code != 1 {
 		t.Fatalf("expected exit 1, got %d", code)
 	}
