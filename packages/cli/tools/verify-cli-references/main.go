@@ -12,7 +12,7 @@
 // What we scan:
 //   - Top-level: README.md, CONTRIBUTING.md
 //   - apps/docs/content/docs/**/*.{md,mdx}
-//   - packages/templates/<id>/README.md and README.md.hbs
+//   - packages/templates/<id>/README.md
 //
 // Where we look (intentional):
 //   - Inside `inline code spans` and ```fenced code blocks```.
@@ -156,7 +156,6 @@ func docFiles() ([]string, error) {
 
 	for _, glob := range []string{
 		filepath.Join(repoRel("packages", "templates"), "*", "README.md"),
-		filepath.Join(repoRel("packages", "templates"), "*", "README.md.hbs"),
 	} {
 		matches, err := filepath.Glob(glob)
 		if err != nil {

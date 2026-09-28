@@ -135,6 +135,9 @@ jobs:
         # Calls the same test subtask as local `mise run check`.
         run: mise run check:test
 
+      - name: Build template sources and generated projects
+        run: mise run check:templates
+
   test-windows:
     runs-on: windows-latest
     steps:

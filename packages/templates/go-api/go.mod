@@ -1,9 +1,4 @@
-// Dev-only module declaration. This file isolates the go-api template's
-// literal *.go files from parent Go modules during repository development.
-// The template renderer excludes this file; generated projects use go.mod.hbs.
-// Keep requirements synchronized with go.mod.hbs using a rendered project:
-// go mod tidy here cannot see the imports in *.go.hbs template files.
-module template-api-go
+module github.com/example/one-template-go-api
 
 go 1.27.0
 

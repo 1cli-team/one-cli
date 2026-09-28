@@ -55,3 +55,7 @@ bin-go/
 
 # mise task artifacts
 .cache/mise-task-artifacts/
+
+# Local template development; generated projects resolve their own workspace lock.
+/packages/templates/**/pnpm-lock.yaml
+/packages/templates/**/go.work.sum

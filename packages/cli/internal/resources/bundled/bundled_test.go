@@ -15,6 +15,7 @@ package bundled_test
 // run `mise run sync-bundled` first.
 
 import (
+	"bytes"
 	"encoding/json"
 	"io/fs"
 	"os"
@@ -23,6 +24,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/templatefiles"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/resources/bundled"
 )
 
@@ -108,16 +110,23 @@ func TestTemplatesFS_MatchesOnDisk(t *testing.T) {
 			t.Errorf("retired agent asset embedded in binary: %s", name)
 		}
 	}
-	// mise run sync-bundled strips go.mod from the bundled copy (a quirk of
-	// keeping each Go template module-isolated during repo dev). Apply
-	// the same filter to the on-disk side before comparing.
-	disk := mustWalkOSFiltered(t, filepath.Join(repoRoot(t), "packages", "templates"), func(rel string) bool {
-		// mise run sync-bundled strips go.mod (each Go template is module-isolated
-		// during dev) and skips the registry.json sibling (bundled separately
-		// at internal/resources/bundled/registry.json).
-		base := filepath.Base(rel)
-		return base == "go.mod" || rel == "registry.json" || isAgentAsset(rel)
+	diskRoot := filepath.Join(repoRoot(t), "packages", "templates")
+	disk := mustWalkOSFiltered(t, diskRoot, func(rel string) bool {
+		return rel == "registry.json" || templatefiles.Excluded(rel)
 	})
+	for i, name := range disk {
+		packed := templatefiles.PackPath(name)
+		original, err := os.ReadFile(filepath.Join(diskRoot, filepath.FromSlash(name)))
+		if err != nil {
+			t.Fatal(err)
+		}
+		actual, err := fs.ReadFile(bundled.TemplatesFS, bundled.TemplatesRoot+"/"+packed)
+		if err != nil || !bytes.Equal(actual, original) {
+			t.Errorf("bundled content differs for %s: %v", name, err)
+		}
+		disk[i] = packed
+	}
+
 	assertSameFiles(t, "templates", embedded, disk)
 
 	// At least one known template must ship.
@@ -128,7 +137,7 @@ func TestTemplatesFS_MatchesOnDisk(t *testing.T) {
 
 func isAgentAsset(path string) bool {
 	for _, part := range strings.Split(filepath.ToSlash(path), "/") {
-		switch strings.TrimSuffix(part, ".hbs") {
+		switch part {
 		case ".one", ".agents", "AGENTS.md", "CLAUDE.md", "SKILL.md":
 			return true
 		}
@@ -165,10 +174,13 @@ func mustWalkOSFiltered(t *testing.T, root string, skip func(rel string) bool) [
 		if err != nil {
 			return err
 		}
+		rel, _ := filepath.Rel(root, path)
 		if d.IsDir() {
+			if skip != nil && skip(filepath.ToSlash(rel)) {
+				return filepath.SkipDir
+			}
 			return nil
 		}
-		rel, _ := filepath.Rel(root, path)
 		// Normalise to forward slashes — embed.FS always uses '/'.
 		rel = filepath.ToSlash(rel)
 		if skip != nil && skip(rel) {

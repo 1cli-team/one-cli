@@ -95,7 +95,7 @@
   "engines": {
     "node": "^24.15.0 || >=26.0.0"
   },
-  "packageManager": "pnpm@12.3.4",
+  "packageManager": "pnpm@10.14.0",
   "expo": {
     "install": {
       "exclude": [

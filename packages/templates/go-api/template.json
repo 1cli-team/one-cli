@@ -1,0 +1,15 @@
+{
+  "schemaVersion": 1,
+  "go": {
+    "modulePrefix": "github.com/example/"
+  },
+  "text": [
+    {
+      "files": [
+        "README.md"
+      ],
+      "from": "one-template-go-api",
+      "value": "projectNameKebabCase"
+    }
+  ]
+}

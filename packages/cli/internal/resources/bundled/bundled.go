@@ -36,7 +36,8 @@ var RegistryBytes []byte
 
 // TemplatesFS is the bundled templates tree consumed by `one add` when the
 // registry entry uses the local: prefix. internal/core/template walks this fs
-// and renders handlebars files into the user's workspace.
+// and copies runnable starter projects into the user's workspace. Go module
+// files travel as _go.mod so embed does not cross a nested module boundary.
 //
 // The directory is named "_templates" (leading underscore) so the Go toolchain
 // skips it during `go build ./...` / `go test ./...` — the literal *.go files
