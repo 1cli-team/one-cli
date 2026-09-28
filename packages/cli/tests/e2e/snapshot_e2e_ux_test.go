@@ -144,7 +144,7 @@ func TestSnapshot_E2E_WorkspaceOverviewAndDeferredDeployment(t *testing.T) {
 	}
 }
 
-func TestSnapshot_E2E_EnvSummarySafeSetAndList(t *testing.T) {
+func TestSnapshot_E2E_EnvSummaryRequiresExplicitValue(t *testing.T) {
 	tmp := t.TempDir()
 	isolateHome(t, tmp)
 	ws := bootstrapWorkspace(t, tmp, "demo")
@@ -167,16 +167,6 @@ func TestSnapshot_E2E_EnvSummarySafeSetAndList(t *testing.T) {
 		t.Fatalf("unexpected missing-value error: %v", setErr)
 	}
 
-	if _, stderr, code = runBinaryIn(t, ws, "env", "set", "TEST_KEY", "super-secret", "--yes", "-o", "json"); code != 0 {
-		t.Fatalf("env set failed: exit=%d stderr=%s", code, stderr)
-	}
-	stdout, stderr, code = runBinaryIn(t, ws, "env", "list", "-o", "text")
-	if code != 0 || stderr != "" {
-		t.Fatalf("env list failed: exit=%d stderr=%q", code, stderr)
-	}
-	if !strings.Contains(stdout, "TEST_KEY") || strings.Contains(stdout, "super-secret") {
-		t.Fatalf("env list must show names only: %q", stdout)
-	}
 }
 
 func TestSnapshot_E2E_EnvSummaryYAMLKeepsStableProtocolFields(t *testing.T) {

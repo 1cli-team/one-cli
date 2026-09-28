@@ -5,6 +5,8 @@ description: Inject project env vars into any command and execute it from the re
 
 `one exec` resolves a project, injects its Infisical variables when configured, and runs your command from the project directory.
 
+Workspace and global execution mask known injected secret values on stdout and stderr. Ordinary log formatting and child exit codes are preserved. Masking also covers multiline values and their JSON-escaped forms; it does not isolate arbitrary child programs.
+
 ## Usage
 
 ```bash

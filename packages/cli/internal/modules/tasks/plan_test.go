@@ -116,7 +116,7 @@ func TestContextFreezesEachProjectOnceAndCleansUp(t *testing.T) {
 	// The same project may contribute multiple tasks to an aggregate.
 	p.Tasks = append(p.Tasks, Task{Project: "web", Operation: "test", Managed: true})
 	loader := &countingLoader{calls: map[string]int{}, value: "secret-"}
-	env, cleanup, err := prepareContext(context.Background(), w, p, secrets.MustRegistry(loader))
+	env, _, cleanup, err := prepareContext(context.Background(), w, p, secrets.MustRegistry(loader))
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -122,7 +122,7 @@ func Set(ctx context.Context, projectRoot string, in SetInput) (*SetResult, erro
 	}, nil
 }
 
-// GetInput captures `env get` flags.
+// GetInput describes an explicit Dashboard secret read.
 type GetInput struct {
 	Env  string
 	Path string
@@ -132,24 +132,13 @@ type GetInput struct {
 	Creds *Credentials
 }
 
-// GetResult is the JSON envelope. The value is included intentionally — in
-// JSON mode this lets agents pipe `one env get FOO -o json | jq -r .value`
-// into a subprocess. We do NOT log the value anywhere; only stdout.
+// GetResult carries a value for explicit Dashboard reveal/copy requests only.
 type GetResult struct {
 	Schema string `json:"schema"`
 	Env    string `json:"env"`
 	Path   string `json:"path"`
 	Key    string `json:"key"`
 	Value  string `json:"value"`
-}
-
-// RenderTTY prints just the value (so users can pipe it sanely).
-// Header line goes to context only; the bare value is the last line.
-func (r *GetResult) RenderTTY(w io.Writer) {
-	if r == nil {
-		return
-	}
-	fmt.Fprintln(w, r.Value)
 }
 
 // Get reads a single key. Returns ENV_KEY_NOT_FOUND when absent.
@@ -192,8 +181,7 @@ type ListInput struct {
 }
 
 // ListResult is the JSON envelope. Values are deliberately omitted —
-// listing a folder shouldn't dump every secret on stdout. Use `get` for
-// individual values.
+// listing a folder must never dump secret values.
 type ListResult struct {
 	Schema string   `json:"schema"`
 	Env    string   `json:"env"`

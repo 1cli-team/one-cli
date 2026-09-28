@@ -15,7 +15,7 @@ one env list -p web --env qa
 one exec -p web --env qa -- pnpm test
 ```
 
-`set` registers the environment name. `get` and `list` reject undeclared names. Omit `--env` to use the manifest default.
+`set` registers the environment name. `list` rejects undeclared names. Omit `--env` to use the manifest default.
 
 ## Folder inheritance
 

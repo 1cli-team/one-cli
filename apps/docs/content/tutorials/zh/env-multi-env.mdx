@@ -15,7 +15,7 @@ one env list -p web --env qa
 one exec -p web --env qa -- pnpm test
 ```
 
-`set` 会登记新环境名，`get` 和 `list` 拒绝未声明名称。省略 `--env` 时使用 Manifest 默认环境。
+`set` 会登记新环境名，`list` 拒绝未声明名称。省略 `--env` 时使用 Manifest 默认环境。
 
 ## 目录继承
 

@@ -15,6 +15,7 @@ import (
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/i18n"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/output"
 	process "github.com/torchstellar-team/one-cli/packages/cli/internal/platform/process"
+	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/redact"
 	runtimeport "github.com/torchstellar-team/one-cli/packages/cli/internal/ports/runtime"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/ports/secrets"
 )
@@ -86,7 +87,7 @@ func (s Service) Execute(ctx context.Context, w execution.Workspace, p *Plan, op
 	if err := prepare(ctx, dependencies.Input{Root: w.Root(), Manifest: w.Manifest(), Projects: projectNames(p), Runtime: runtimeport.Mise, Development: opts.Name == "dev", Log: errOut}); err != nil {
 		return nil, err
 	}
-	env, cleanup, err := prepareContext(ctx, w, p, s.Loaders)
+	env, variables, cleanup, err := prepareContext(ctx, w, p, s.Loaders)
 	if err != nil {
 		return nil, err
 	}
@@ -140,7 +141,12 @@ func (s Service) Execute(ctx context.Context, w execution.Workspace, p *Plan, op
 	if output.IsStructured() {
 		child.Stdout = errOut
 	}
+	filter := redact.New(variables)
+	stdout, flushOut := filter.Writer(child.Stdout)
+	stderr, flushErr := filter.Writer(child.Stderr)
+	child.Stdout, child.Stderr = stdout, stderr
 	err = child.Run()
+	err = errors.Join(err, flushOut(), flushErr())
 	result := &Result{Schema: "one-cli/task-result/v1", Status: "succeeded", Entries: p.Entries, Tasks: p.Tasks}
 	if err != nil {
 		result.Status = "failed"

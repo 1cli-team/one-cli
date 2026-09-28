@@ -18,6 +18,7 @@ import (
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/core/workspace"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/i18n"
 	process "github.com/torchstellar-team/one-cli/packages/cli/internal/platform/process"
+	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/redact"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/ports/secrets"
 )
 
@@ -35,25 +36,25 @@ type runContext struct {
 	Projects    map[string]projectContext `json:"projects"`
 }
 
-func prepareContext(ctx context.Context, w execution.Workspace, p *Plan, loaders *secrets.Registry) ([]string, func(), error) {
+func prepareContext(ctx context.Context, w execution.Workspace, p *Plan, loaders *secrets.Registry) ([]string, map[string]string, func(), error) {
 	environment, _, err := secrets.ResolveEnvName(w.Root(), p.Environment, false)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 	state := runContext{Protocol: 1, Root: w.Root(), Environment: environment, Projects: map[string]projectContext{}}
 	binary, err := os.Executable()
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 	f, err := os.Open(binary)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 	h := sha256.New()
 	_, err = io.Copy(h, f)
 	f.Close()
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 	state.Executable = hex.EncodeToString(h.Sum(nil))
 	provider := workspace.EnvBackend(w.Manifest())
@@ -64,7 +65,7 @@ func prepareContext(ctx context.Context, w execution.Workspace, p *Plan, loaders
 		project, ok := state.Projects[task.Project]
 		if !ok {
 			if provider != "" && (loaders == nil || loaders.Find(provider) == nil) {
-				return nil, nil, i18n.Errorf("exec.provider_unregistered", provider)
+				return nil, nil, nil, i18n.Errorf("exec.provider_unregistered", provider)
 			}
 			entry, _ := w.Project(task.Project)
 			variables := map[string]string{}
@@ -73,14 +74,14 @@ func prepareContext(ctx context.Context, w execution.Workspace, p *Plan, loaders
 				variables, err = loaders.Find(provider).Load(ctx, w.Root(), entry.RelativeDir, environment)
 			}
 			if err != nil {
-				return nil, nil, err
+				return nil, nil, nil, err
 			}
 			project = projectContext{Variables: variables, Operations: map[string][]string{}}
 		}
 		if task.Managed {
 			argv, err := execution.OperationArgs(w, task.Project, task.Operation)
 			if err != nil {
-				return nil, nil, err
+				return nil, nil, nil, err
 			}
 			project.Operations[task.Operation] = argv
 		}
@@ -88,7 +89,7 @@ func prepareContext(ctx context.Context, w execution.Workspace, p *Plan, loaders
 	}
 	dir, err := os.MkdirTemp("", "one-task-context-")
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 	cleanup := func() { _ = os.RemoveAll(dir) }
 	raw, err := json.Marshal(state)
@@ -97,7 +98,7 @@ func prepareContext(ctx context.Context, w execution.Workspace, p *Plan, loaders
 	}
 	if err != nil {
 		cleanup()
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 	launcher := filepath.Join(dir, "one")
 	if runtime.GOOS == "windows" {
@@ -107,13 +108,13 @@ func prepareContext(ctx context.Context, w execution.Workspace, p *Plan, loaders
 		source, e := os.Open(binary)
 		if e != nil {
 			cleanup()
-			return nil, nil, e
+			return nil, nil, nil, e
 		}
 		dest, e := os.OpenFile(launcher, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0700)
 		if e != nil {
 			source.Close()
 			cleanup()
-			return nil, nil, e
+			return nil, nil, nil, e
 		}
 		_, e = io.Copy(dest, source)
 		source.Close()
@@ -123,11 +124,17 @@ func prepareContext(ctx context.Context, w execution.Workspace, p *Plan, loaders
 		}
 		if e != nil {
 			cleanup()
-			return nil, nil, e
+			return nil, nil, nil, e
 		}
 	}
 	env := secrets.MergeIntoEnviron(os.Environ(), map[string]string{contextVariable: filepath.Join(dir, "context.json"), "PATH": dir + string(os.PathListSeparator) + os.Getenv("PATH")}, true)
-	return env, cleanup, nil
+	variables := map[string]string{}
+	for name, project := range state.Projects {
+		for key, value := range project.Variables {
+			variables[name+"/"+key] = value
+		}
+	}
+	return env, variables, cleanup, nil
 }
 func loadContext(w execution.Workspace, project, operation string) (runContext, projectContext, error) {
 	var state runContext
@@ -164,11 +171,13 @@ func loadContext(w execution.Workspace, project, operation string) (runContext, 
 }
 
 // InputFingerprint runs before mise's lookup, including cache hits. It returns no values.
-func InputFingerprint(ctx context.Context, w execution.Workspace, project, operation string) (string, error) {
+func InputFingerprint(ctx context.Context, w execution.Workspace, project, operation string) (fingerprint string, resultErr error) {
 	state, values, err := loadContext(w, project, operation)
 	if err != nil {
 		return "", err
 	}
+	filter := redact.New(values.Variables)
+	defer func() { resultErr = filter.Error(resultErr) }()
 	h := sha256.New()
 	// json sorts map keys; unset and empty variables remain distinct. All injected
 	// project values are potential build inputs. Account credentials aren't injected.
@@ -221,11 +230,13 @@ func InputFingerprint(ctx context.Context, w execution.Workspace, project, opera
 	}
 	return hex.EncodeToString(h.Sum(nil)), nil
 }
-func ExecuteLeaf(ctx context.Context, w execution.Workspace, project, operation string, args []string, in io.Reader, out, errOut io.Writer) error {
+func ExecuteLeaf(ctx context.Context, w execution.Workspace, project, operation string, args []string, in io.Reader, out, errOut io.Writer) (resultErr error) {
 	_, values, err := loadContext(w, project, operation)
 	if err != nil {
 		return err
 	}
+	filter := redact.New(values.Variables)
+	defer func() { resultErr = filter.Error(resultErr) }()
 	argv := append([]string{}, values.Operations[operation]...)
 	p, _ := w.Project(project)
 	if len(args) > 0 {
@@ -258,7 +269,7 @@ func ExecuteLeaf(ctx context.Context, w execution.Workspace, project, operation 
 	child.Stdin = in
 	child.Stdout = out
 	child.Stderr = errOut
-	return process.RunForwarded(ctx, child)
+	return process.RunRedacted(ctx, child, values.Variables)
 }
 func projectNames(p *Plan) []string {
 	set := map[string]bool{}

@@ -316,7 +316,7 @@ compiled implementation components rather than independently distributed
 plugins:
 
 - `modules/environment.Service` owns environment/backend resolution, profile
-  resolution, project/path targeting, set planning, get/list/set/pull,
+  resolution, project/path targeting, set planning, list/set/delete, explicit Dashboard reads,
   backend switching, manifest bookkeeping, and create-time environment setup;
 - the module composes the Infisical adapter directly;
 - create enters through `PrepareWorkspace`; Cobra does not sequence backend

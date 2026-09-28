@@ -1,7 +1,6 @@
 package execcmd
 
 import (
-	"bytes"
 	"context"
 	"os"
 	"path/filepath"
@@ -9,25 +8,6 @@ import (
 	"testing"
 )
 
-func TestSecretWriterMasksAcrossChunks(t *testing.T) {
-	for _, size := range []int{1, 2, 5, 100} {
-		var out bytes.Buffer
-		w := newSecretWriter(&out, map[string]string{"A": "very-secret", "B": "short", "C": "very-secret-long", "EMPTY": ""})
-		input := "before very-secret-long and short after very-secret"
-		for i := 0; i < len(input); i += size {
-			end := min(i+size, len(input))
-			if _, e := w.Write([]byte(input[i:end])); e != nil {
-				t.Fatal(e)
-			}
-		}
-		if e := w.Close(); e != nil {
-			t.Fatal(e)
-		}
-		if got := out.String(); got != "before [REDACTED] and [REDACTED] after [REDACTED]" {
-			t.Fatalf("chunk %d: %q", size, got)
-		}
-	}
-}
 func TestGlobalCommandEnvRejectsRepositoryAndRelativePATH(t *testing.T) {
 	root := t.TempDir()
 	binDir := filepath.Join(root, "bin")

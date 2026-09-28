@@ -31,7 +31,7 @@ one exec --global --env dev --path /docker --keys REGISTRY_USER,REGISTRY_PASSWOR
 
 Listings contain immediate folders, names, and descriptions, without values. Execution requires an explicit environment and path. It does not recurse, import other folders, or expand secret references. Use `--keys` to narrow injection further. Global mode works outside a workspace and preserves the current directory. Project commands, `one dev`, and `one build` do not automatically receive shared credentials.
 
-Read plaintext explicitly with `one env get KEY --global --env dev --path /docker --reveal`. Write with the interactive password prompt or `one env set KEY --global --env dev --path /docker --stdin`. Overwrites require `--yes`. Delete with `one env unset KEY --global --env dev --path /docker`.
+The CLI never displays secret values. Inject shared credentials with `one exec --global --env dev --path /docker -- command`. Write with the interactive password prompt or `one env set KEY --global --env dev --path /docker --stdin`. Overwrites require `--yes`. Delete with `one env unset KEY --global --env dev --path /docker`.
 
 ## Dashboard
 

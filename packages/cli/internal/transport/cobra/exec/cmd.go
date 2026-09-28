@@ -19,6 +19,7 @@ import (
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/i18n"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/output"
 	platformprocess "github.com/torchstellar-team/one-cli/packages/cli/internal/platform/process"
+	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/redact"
 	runtimeport "github.com/torchstellar-team/one-cli/packages/cli/internal/ports/runtime"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/ports/secrets"
 )
@@ -135,7 +136,7 @@ func parseRunArgs(cmd *cobra.Command, flags *runFlags, args []string) ([]string,
 	return commandArgs, nil
 }
 
-func runRun(ctx context.Context, loaders *secrets.Registry, flags *runFlags, args []string) error {
+func runRun(ctx context.Context, loaders *secrets.Registry, flags *runFlags, args []string) (resultErr error) {
 	activeWorkspace, err := execution.ResolveWorkspace(ctx)
 	if err != nil {
 		return err
@@ -192,6 +193,8 @@ func runRun(ctx context.Context, loaders *secrets.Registry, flags *runFlags, arg
 	if err != nil {
 		return err
 	}
+	filter := redact.New(vars)
+	defer func() { resultErr = filter.Error(resultErr) }()
 	if output.IsTTY() && source != "" {
 		fmt.Fprintf(os.Stderr, i18n.T("exec.injected")+"\n", len(vars), source)
 	}
@@ -224,7 +227,7 @@ func runRun(ctx context.Context, loaders *secrets.Registry, flags *runFlags, arg
 	child.Env = childEnv
 	child.Dir = targetDir
 
-	err = platformprocess.RunForwarded(ctx, child)
+	err = platformprocess.RunRedacted(ctx, child, vars)
 	var exit *platformprocess.ExitStatus
 	if err != nil && !errors.As(err, &exit) {
 		return cliErrors.New(cliErrors.RUN_COMMAND_NOT_FOUND, i18n.Tf("exec.start_failed", args[0], err))

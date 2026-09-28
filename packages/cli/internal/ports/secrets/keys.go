@@ -17,7 +17,7 @@ var secretKeyRE = regexp.MustCompile(`^[A-Za-z_][A-Za-z0-9_]*$`)
 func AssertValidKey(s string) error {
 	if !secretKeyRE.MatchString(s) {
 		return cliErrors.New(cliErrors.ENV_INVALID_KEY,
-			i18n.Tf("env.key_naming", s))
+			i18n.T("env.key_naming"))
 	}
 	return nil
 }

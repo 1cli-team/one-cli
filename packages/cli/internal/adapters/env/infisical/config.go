@@ -155,7 +155,7 @@ func resolveCfgAndCreds(projectRoot string, cfgOverride *WorkspaceConfig, credsO
 
 // RequireWorkspaceConfig is the strict variant: returns INFISICAL_NOT_CONFIGURED
 // when no config is present. Use for command paths that depend on having
-// Infisical wired up (set / get / list).
+// Infisical wired up (set / list).
 func RequireWorkspaceConfig(projectRoot string) (*WorkspaceConfig, error) {
 	cfg, err := LoadWorkspaceConfig(projectRoot)
 	if err != nil {

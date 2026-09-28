@@ -5,6 +5,8 @@ description: 给任意命令注入项目环境变量，并在解析出的项目�
 
 `one exec` 解析项目，在配置了 Infisical 时注入变量，然后在项目目录执行命令。
 
+工作区与全局执行都会遮盖 stdout、stderr 中的已知注入密钥值，保留普通日志格式和子进程退出码。遮盖覆盖多行值及其 JSON 转义形式，但不构成对子进程任意行为的隔离。
+
 ## 用法
 
 ```bash
@@ -20,7 +22,7 @@ one exec [-p <name|path>] [--env <env>] -- <cmd> [args...]
 | `-p, --project <name|path>` | 选择项目；不传时从当前目录推导 |
 | `--env <env>` | 使用指定环境；默认取 manifest 的默认环境 |
 | `--dry-run` | 仅输出目录、原始参数和 runtime，不执行 mise、不读取密钥、不启动命令 |
-| `-o, --output <fmt>` | 只影响 One CLI 自己的输出；子进程 stdout/stderr 原样透传 |
+| `-o, --output <fmt>` | 只影响 One CLI 自己的输出；子进程 stdout/stderr 保留格式并遮盖已知注入密钥 |
 
 ## 交互模式
 

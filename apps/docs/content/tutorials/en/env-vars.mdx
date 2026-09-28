@@ -30,10 +30,9 @@ At the workspace root, omit `-p` for shared values; interactive `set` offers a s
 
 ```bash
 one env list -p api --env dev
-one env get DATABASE_URL -p api --env dev --reveal
 ```
 
-`list` shows names only. Use `--reveal` only when you need the value itself.
+`list` shows names only. The CLI does not print secret values; use `one exec` to inject them into commands.
 
 ## 4. Run the project
 

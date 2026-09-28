@@ -2,12 +2,9 @@ package execcmd
 
 import (
 	"context"
-	"io"
 	"os"
 	"path/filepath"
-	"sort"
 	"strings"
-	"sync"
 
 	remote "github.com/torchstellar-team/one-cli/packages/cli/internal/modules/environment"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/i18n"
@@ -58,20 +55,8 @@ func runGlobal(ctx context.Context, f *runFlags, args []string) error {
 	child.Dir = cwd
 	child.Env = secrets.MergeIntoEnviron(env, vars, true)
 	child.Stdin = os.Stdin
-	out := newSecretWriter(os.Stdout, vars)
-	errOut := newSecretWriter(os.Stderr, vars)
-	child.Stdout = out
-	child.Stderr = errOut
-	err := process.RunForwarded(ctx, child)
-	flushOut := out.Close()
-	flushErr := errOut.Close()
-	if err != nil {
-		return err
-	}
-	if flushOut != nil {
-		return flushOut
-	}
-	return flushErr
+	child.Stdout, child.Stderr = os.Stdout, os.Stderr
+	return process.RunRedacted(ctx, child, vars)
 }
 func reservedGlobalKey(key string) bool {
 	key = strings.ToUpper(key)
@@ -104,58 +89,4 @@ func globalCommandEnv(env []string) []string {
 		result = append(result, entry)
 	}
 	return result
-}
-
-// Exact-value output masking is best effort, not an exfiltration boundary.
-// Keep enough bytes to redact secrets split across arbitrary Write calls.
-type secretWriter struct {
-	mu      sync.Mutex
-	out     io.Writer
-	pending []byte
-	values  []string
-	longest int
-}
-
-func newSecretWriter(out io.Writer, vars map[string]string) *secretWriter {
-	w := &secretWriter{out: out, longest: 1}
-	for _, v := range vars {
-		if v != "" {
-			w.values = append(w.values, v)
-			if len(v) > w.longest {
-				w.longest = len(v)
-			}
-		}
-	}
-	sort.Slice(w.values, func(i, j int) bool { return len(w.values[i]) > len(w.values[j]) })
-	return w
-}
-func (w *secretWriter) Write(p []byte) (int, error) {
-	w.mu.Lock()
-	defer w.mu.Unlock()
-	w.pending = append(w.pending, p...)
-	return len(p), w.drain(false)
-}
-func (w *secretWriter) Close() error { w.mu.Lock(); defer w.mu.Unlock(); return w.drain(true) }
-func (w *secretWriter) drain(final bool) error {
-	var result strings.Builder
-	for len(w.pending) > 0 && (final || len(w.pending) >= w.longest) {
-		matched := false
-		for _, v := range w.values {
-			if strings.HasPrefix(string(w.pending), v) {
-				result.WriteString("[REDACTED]")
-				w.pending = w.pending[len(v):]
-				matched = true
-				break
-			}
-		}
-		if !matched {
-			result.WriteByte(w.pending[0])
-			w.pending = w.pending[1:]
-		}
-	}
-	if result.Len() == 0 {
-		return nil
-	}
-	_, e := io.WriteString(w.out, result.String())
-	return e
 }

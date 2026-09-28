@@ -1,13 +1,13 @@
 ---
 title: one env
-description: Manage Infisical variables with set, get, and list; inject them directly into commands.
+description: Manage Infisical variables with set, unset, and list; inject them directly into commands.
 ---
 
 Infisical is One CLI's only managed environment source. Variables are fetched for command execution and injected into the child process. One CLI does not read, write, or export `.env` files.
 
 ## Setup
 
-New workspaces have no Infisical binding and can run without signing in. Run `one login`, then use `one env set`, `one env get`, or `one env list` to initialize the binding on first use. You can also select an existing Infisical project in Dashboard workspace settings.
+New workspaces have no Infisical binding and can run without signing in. Run `one login`, then use `one env set` or `one env list` to initialize the binding on first use. You can also select an existing Infisical project in Dashboard workspace settings.
 
 The binding lives in the top-level `env` field of `one.manifest.json`:
 
@@ -34,11 +34,10 @@ The manifest records binding information, folder paths, and declared key names. 
 one env
 one env set DATABASE_URL -p api
 one env set API_URL=https://example.com -p web --env dev --yes
-one env get API_URL -p web --env dev --reveal
 one env list -p web --env dev
 ```
 
-`set KEY` prompts for a hidden value in a terminal. Scripts pass a value explicitly. `--yes` confirms overwrites and new environment names. `get` requires `--reveal`; `list` returns names only. `-o json` or `-o yaml` provides structured output with the stable schemas `one-cli/env-set/v1`, `one-cli/env-get/v1`, and `one-cli/env-list/v1`.
+`set KEY` prompts for a hidden value in a terminal. Scripts pass a value explicitly. `--yes` confirms overwrites and new environment names. `list` returns names only. The CLI has no plaintext read command; use `one exec` to inject values into a child process. `-o json` or `-o yaml` provides structured output with the stable schemas `one-cli/env-set/v1` and `one-cli/env-list/v1`.
 
 `-p / --project` accepts a project name or workspace-relative path. Without it, One CLI infers the project from the current directory. At the workspace root, variables are shared; interactive `set` offers a scope selection.
 
@@ -46,7 +45,7 @@ one env list -p web --env dev
 
 `environments.names` declares the available environments. The default is `environments.default`, falling back to the first name. New workspaces declare `dev`, `preview`, and `prod` with `dev` as default. `--env` overrides this choice.
 
-`set` can register a new environment with confirmation. `get` and `list` reject names not declared in the manifest with `ENV_UNKNOWN_ENVIRONMENT`. These commands can still initialize an absent Infisical binding.
+`set` can register a new environment with confirmation. `list` rejects names not declared in the manifest with `ENV_UNKNOWN_ENVIRONMENT`. These commands can still initialize an absent Infisical binding.
 
 Projects use their `relativeDir` as the default Infisical folder. Override this in `projects[].env`:
 
@@ -71,7 +70,7 @@ one exec -p api --env dev -- go run ./cmd/server
 one run dev --env dev
 ```
 
-With an `env` binding, generated task adapters and `one exec` fetch Infisical variables and override matching shell variables. Without a binding, or with project injection disabled, they inherit the shell environment. Authentication or fetch failures stop execution; there is no local-file fallback. Custom mise tasks use mise's environment.
+With an `env` binding, generated task adapters and `one exec` fetch Infisical variables and override matching shell variables. Without a binding, or with project injection disabled, they inherit the shell environment. Authentication or fetch failures stop execution; there is no local-file fallback. Custom mise tasks use mise's environment. One masks known injected values in stdout, stderr, and task-cache replay, including multiline values and their JSON-escaped forms.
 
 ## Shared credentials
 

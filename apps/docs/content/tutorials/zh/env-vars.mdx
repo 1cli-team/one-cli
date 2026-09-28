@@ -30,10 +30,9 @@ one env set DATABASE_URL -p api --env dev
 
 ```bash
 one env list -p api --env dev
-one env get DATABASE_URL -p api --env dev --reveal
 ```
 
-`list` 只显示名称。确实需要查看值时才使用 `--reveal`。
+`list` 只显示名称。CLI 不输出密钥值；通过 `one exec` 将其注入命令。
 
 ## 4. 运行项目
 

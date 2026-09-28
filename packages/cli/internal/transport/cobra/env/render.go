@@ -34,14 +34,6 @@ func (r summaryOutput) RenderTTY(w io.Writer) {
 	}
 }
 
-type getOutput struct{ *environmentmodule.GetResult }
-
-func (r getOutput) RenderTTY(w io.Writer) {
-	if r.GetResult != nil {
-		fmt.Fprintln(w, r.Value)
-	}
-}
-
 type listOutput struct{ *environmentmodule.ListResult }
 
 func (r listOutput) RenderTTY(w io.Writer) {

@@ -35,7 +35,7 @@ func Commands(deps Dependencies) []*cobra.Command {
 		},
 	}
 	children := []*cobra.Command{
-		newGetCmd(deps), newSetCmd(deps), newListCmd(deps),
+		newSetCmd(deps), newListCmd(deps),
 	}
 	for _, child := range children {
 		helpui.MarkAdvanced(child)
