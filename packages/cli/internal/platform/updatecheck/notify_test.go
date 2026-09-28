@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/i18n"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/output"
 )
 
@@ -17,6 +18,9 @@ import (
 // internal/platform/output doesn't surface a getter for the current mode.
 func withTTY(t *testing.T) {
 	t.Helper()
+	originalChannel := buildChannel
+	buildChannel = "release"
+	t.Cleanup(func() { buildChannel = originalChannel })
 	output.SetMode(output.ModeTTY)
 	t.Cleanup(func() { output.SetMode(output.ModeAuto) })
 }
@@ -40,6 +44,7 @@ func TestShouldSkip_CI(t *testing.T) {
 }
 
 func TestShouldSkip_NonTTY(t *testing.T) {
+	withTTY(t)
 	clearCIEnv(t)
 	output.SetMode(output.ModeJSON)
 	t.Cleanup(func() { output.SetMode(output.ModeAuto) })
@@ -48,22 +53,63 @@ func TestShouldSkip_NonTTY(t *testing.T) {
 	}
 }
 
+var developmentVersions = []string{
+	"", "dev", "unknown", "0.0.0", "v0.0.0", "0.0.0-dev",
+	"0.0.0-dev-local.abc1234", "0.0.0-dev-local.abc1234.dirty",
+	"1.2.3-local.abc1234", "1.2.3-local.abc1234.dirty",
+	"v1.2.3-dev", "1.2.3-SNAPSHOT-abc1234", "v1.2.3-rc.1",
+	"1.2.3+local.abc1234", "v1", "1.2", "01.2.3", "1.2.3.4",
+}
+
 func TestShouldSkip_DevVersion(t *testing.T) {
 	withTTY(t)
 	clearCIEnv(t)
-	if !shouldSkip("0.0.0-dev") {
-		t.Errorf("expected skip for dev build")
+	for _, version := range developmentVersions {
+		if !shouldSkip(version) {
+			t.Errorf("expected skip for development/unknown build %q", version)
+		}
 	}
-	if !shouldSkip("") {
-		t.Errorf("expected skip for empty version")
+}
+
+func TestDevelopmentBuildsNeverRefreshOrNotify(t *testing.T) {
+	withTTY(t)
+	clearCIEnv(t)
+	withIsolatedCache(t)
+	cached := &Cache{LastChecked: time.Now().Add(-48 * time.Hour).UTC(), LatestVersion: "v99.0.0"}
+	if err := saveCache(cached); err != nil {
+		t.Fatal(err)
+	}
+	path, err := cachePath()
+	if err != nil {
+		t.Fatal(err)
+	}
+	before, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, version := range developmentVersions {
+		MaybeRefreshAsync(version)
+
+		if got := captureStderr(t, func() { Notify(version) }); got != "" {
+			t.Fatalf("development build %q printed an update: %q", version, got)
+		}
+	}
+	after, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Equal(before, after) {
+		t.Fatal("development update check rewrote the cache")
 	}
 }
 
 func TestShouldSkip_HappyPath(t *testing.T) {
 	withTTY(t)
 	clearCIEnv(t)
-	if shouldSkip("v0.8.0") {
-		t.Errorf("expected no skip for plain TTY interactive run")
+	for _, version := range []string{"v0.8.0", "0.8.0", "1.2.3", "v10.20.30"} {
+		if shouldSkip(version) {
+			t.Errorf("expected no skip for stable release %q", version)
+		}
 	}
 }
 
@@ -155,4 +201,40 @@ func captureStderr(t *testing.T, fn func()) string {
 	fn()
 	_ = w.Close()
 	return <-done
+}
+
+func TestDevelopmentBuildWithReleaseVersionStillSkips(t *testing.T) {
+	withTTY(t)
+	clearCIEnv(t)
+	buildChannel = "development"
+	if !shouldSkip("1.2.3") {
+		t.Fatal("version override enabled updates in a source build")
+	}
+}
+
+func TestNotifyInstalledUpdateOnceInBothLanguages(t *testing.T) {
+	withTTY(t)
+	clearCIEnv(t)
+	withIsolatedCache(t)
+	target, err := os.Executable()
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = i18n.Init(i18n.DefaultLocale) })
+	for _, locale := range []string{"en-US", "zh-CN"} {
+		if err := i18n.Init(locale); err != nil {
+			t.Fatal(err)
+		}
+		c := &Cache{LastChecked: time.Now(), TargetPath: target, CurrentVersion: "1.0.0", LatestVersion: "v1.2.3", InstalledVersion: "v1.2.3", Status: "updated", NotificationPending: true}
+		if err := saveCache(c); err != nil {
+			t.Fatal(err)
+		}
+		got := captureStderr(t, func() { Notify("1.2.3") })
+		if !strings.Contains(got, i18n.Tf("update.installed", "v1.2.3")) {
+			t.Fatalf("%s notification: %q", locale, got)
+		}
+		if got := captureStderr(t, func() { Notify("1.2.3") }); got != "" {
+			t.Fatalf("notification repeated: %q", got)
+		}
+	}
 }

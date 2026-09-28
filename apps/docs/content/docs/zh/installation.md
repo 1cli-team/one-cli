@@ -72,6 +72,16 @@ one --version
 
 Windows 归档名是 `one-cli_windows_amd64.zip`。
 
+## 自动更新
+
+正式稳定版在普通终端使用时，每 24 小时最多启动一次独立后台更新进程。它从官方 GitHub Release 下载对应平台归档和 `checksums.txt`，校验 SHA256 与程序版本后替换当前安装。当前命令继续运行，新版本从下一次调用生效；Windows 会等发起更新的命令退出后再替换程序。
+
+下载、校验或写入失败时保留当前程序；已发现新版本时会提示失败原因和手动更新命令。如果下载期间程序已被重新构建或替换，更新器会放弃覆盖。更新失败也按 24 小时间隔重试。
+
+**开发构建完全跳过更新检查、下载、安装和提示。** `go build`、`mise run build`、`mise run build-local`、`mise run install` 生成的包默认关闭更新，即使设置了 `RELEASE_VERSION`。只有发布打包流程启用更新标记，并且版本必须是完整的稳定版本号；`-dev`、`-local`、snapshot 和其他预发布版本都不会自动更新。
+
+CI、JSON/YAML 等结构化输出、`--dry-run` 以及内部任务进程不启动更新。更新状态位于 `$XDG_CACHE_HOME/one/update-check.json`，默认是 `~/.cache/one/update-check.json`。
+
 ## 升级与降级
 
 `install.sh` 和 `install.ps1` 都会先读已装 `one --version` 再决定怎么处理：

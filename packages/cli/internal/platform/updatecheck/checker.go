@@ -6,11 +6,12 @@ package updatecheck
 
 import (
 	"context"
-	"fmt"
 	"io"
 	"net/http"
 	"strings"
 	"time"
+
+	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/i18n"
 )
 
 // latestEndpoint is the source of truth. GitHub redirects this URL to
@@ -27,9 +28,13 @@ const fetchTimeout = 5 * time.Second
 // surfaced as an error; the caller treats all errors as "skip cache update,
 // try again next time".
 func fetchLatest(ctx context.Context, currentVersion string) (string, error) {
+	return fetchLatestUsing(ctx, http.DefaultClient, latestEndpoint, currentVersion)
+}
+
+func fetchLatestUsing(ctx context.Context, client *http.Client, endpoint, currentVersion string) (string, error) {
 	ctx, cancel := context.WithTimeout(ctx, fetchTimeout)
 	defer cancel()
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, latestEndpoint, nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoint, nil)
 	if err != nil {
 		return "", err
 	}
@@ -37,13 +42,13 @@ func fetchLatest(ctx context.Context, currentVersion string) (string, error) {
 	// useful for traffic attribution and lets them block buggy versions
 	// later if needed. Carries no PII.
 	req.Header.Set("User-Agent", "one-cli/"+currentVersion)
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := client.Do(req)
 	if err != nil {
 		return "", err
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
-		return "", fmt.Errorf("updatecheck: %s returned %d", latestEndpoint, resp.StatusCode)
+		return "", i18n.Errorf("update.http_failed", resp.StatusCode)
 	}
 	if v := versionFromReleasePath(resp.Request.URL.Path); v != "" {
 		return v, nil
@@ -56,7 +61,7 @@ func fetchLatest(ctx context.Context, currentVersion string) (string, error) {
 	}
 	v := normalizeTag(strings.TrimSpace(string(raw)))
 	if v == "" {
-		return "", fmt.Errorf("updatecheck: %s returned unparseable %q", latestEndpoint, string(raw))
+		return "", i18n.Errorf("update.version_invalid", string(raw))
 	}
 	return v, nil
 }

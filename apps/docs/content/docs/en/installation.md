@@ -72,6 +72,16 @@ one --version
 
 On Windows, the archive is `one-cli_windows_amd64.zip`.
 
+## Automatic Updates
+
+Stable release builds start an independent background updater at most once every 24 hours during normal terminal use. It downloads the platform archive and `checksums.txt` from the official GitHub Release, verifies SHA256 and the executable version, then replaces the installed program. The current command keeps running; subsequent invocations use the new version. On Windows, replacement waits for the command that started the update to exit.
+
+Download, verification, or write failures preserve the installed program. When a newer release is known, One shows the failure and a manual update command. If the executable changes during the download, such as after a local rebuild, the updater refuses to overwrite it. Failed attempts also retry on the 24-hour interval.
+
+**Development builds skip update checks, downloads, installation, and notifications entirely.** Builds from `go build`, `mise run build`, `mise run build-local`, and `mise run install` default to updates disabled, even when `RELEASE_VERSION` is set. Only the release packager enables the update marker, and a complete stable version is also required. Development, local, snapshot, and other prerelease versions never update automatically.
+
+CI, structured JSON/YAML output, `--dry-run`, and internal task processes do not start updates. Update state lives at `$XDG_CACHE_HOME/one/update-check.json`, defaulting to `~/.cache/one/update-check.json`.
+
 ## Upgrade And Downgrade
 
 `install.sh` and `install.ps1` check the installed `one --version` before deciding what to do:

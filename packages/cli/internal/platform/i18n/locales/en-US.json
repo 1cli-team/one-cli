@@ -649,5 +649,18 @@
   "template.empty-service.name": "Empty service",
   "template.empty-service.description": "Create an empty project under services/ and configure a technology stack later",
   "template.empty-library.name": "Empty library",
-  "template.empty-library.description": "Create an empty project under packages/ and configure a technology stack later"
+  "template.empty-library.description": "Create an empty project under packages/ and configure a technology stack later",
+  "update.installed": "One CLI was automatically updated to %s; new invocations use the updated version.",
+  "update.failed": "One CLI could not finish updating. The installed program was preserved; update manually with the command below.\nReason: %s",
+  "update.redirect_invalid": "Update downloads require HTTPS redirects and at most 10 redirects.",
+  "update.release_required": "Only stable release builds can update automatically.",
+  "update.platform_unsupported": "No One CLI update archive is available for %s/%s.",
+  "update.checksum_mismatch": "SHA256 verification failed for update archive %s.",
+  "update.checksum_invalid": "The SHA256 entry for update archive %s is missing, invalid, or duplicated.",
+  "update.http_failed": "Update download failed with HTTP status %d.",
+  "update.download_too_large": "The update download exceeds the size limit.",
+  "update.archive_invalid": "The update archive must contain exactly one valid One CLI executable.",
+  "update.target_changed": "The executable at %s changed or is not a regular file; automatic replacement was canceled.",
+  "update.version_mismatch": "The update executable reported version %s instead of the expected %s.",
+  "update.version_invalid": "The update service returned an invalid stable version: %s"
 }

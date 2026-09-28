@@ -134,11 +134,9 @@ func Execute(version string, args []string) (resultErr error) {
 	_ = i18n.Init(i18n.Resolve(stored))
 	i18n.RefreshTree(rootCmd)
 
-	// Background update check kicks off here so its goroutine has the
-	// whole command runtime to finish; the notification (if any) prints
-	// in the defer below from cached state. Both calls are no-ops on
-	// CI / -o json / dev builds / opt-out, so this is free in those
-	// paths. See internal/platform/updatecheck.
+	// Official releases may start an independent update worker. The command
+	// never waits for a download; cached completion/failure notices are printed
+	// on exit. Development builds, CI, and structured output skip this path.
 	if shouldCheckUpdates(args) {
 		updatecheck.MaybeRefreshAsync(version)
 		defer updatecheck.Notify(version)

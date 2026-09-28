@@ -649,5 +649,18 @@
   "template.empty-service.name": "空服务",
   "template.empty-service.description": "在 services/ 下创建空项目，稍后自行配置技术栈",
   "template.empty-library.name": "空共享库",
-  "template.empty-library.description": "在 packages/ 下创建空项目，稍后自行配置技术栈"
+  "template.empty-library.description": "在 packages/ 下创建空项目，稍后自行配置技术栈",
+  "update.installed": "One CLI 已自动更新到 %s；新版本将在下一次运行时生效。",
+  "update.failed": "One CLI 自动更新未完成，当前程序已保留。可使用下面的命令手动更新。\n原因：%s",
+  "update.redirect_invalid": "更新下载的重定向必须使用 HTTPS，且不能超过 10 次。",
+  "update.release_required": "只有正式发布版可以自动更新。",
+  "update.platform_unsupported": "没有适用于 %s/%s 的 One CLI 更新包。",
+  "update.checksum_mismatch": "更新包 %s 的 SHA256 校验失败。",
+  "update.checksum_invalid": "更新包 %s 的 SHA256 记录缺失、无效或重复。",
+  "update.http_failed": "更新下载失败，HTTP 状态码为 %d。",
+  "update.download_too_large": "更新下载超过允许的大小。",
+  "update.archive_invalid": "更新包未包含唯一且有效的 One CLI 程序。",
+  "update.target_changed": "程序 %s 已变化或不是普通文件，已取消自动替换。",
+  "update.version_mismatch": "更新程序报告版本 %s，与预期版本 %s 不符。",
+  "update.version_invalid": "更新服务返回了无效的正式版本：%s"
 }

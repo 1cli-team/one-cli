@@ -36,6 +36,7 @@ builds:
     ldflags:
       - -s -w
       - -X main.version={{.Version}}
+      - -X github.com/torchstellar-team/one-cli/packages/cli/internal/platform/updatecheck.buildChannel=release
     flags:
       - -trimpath
 

@@ -1,108 +1,201 @@
 package updatecheck
 
-// Background-fetch dispatcher. Decides whether the cache is stale enough
-// to warrant a network request, then runs that request in a detached
-// goroutine that does NOT block the main command.
-//
-// Trade-off: if the main command exits before the goroutine completes,
-// the cache write is lost and we re-fetch next time. That's fine — most
-// commands run >100ms, the GitHub Releases redirect usually
-// responds in <300ms over good network, and long-running commands
-// (`one serve`, `one dev`) easily give the goroutine
-// time to finish.
-
 import (
 	"context"
-	"sync"
+	"os"
+	"os/exec"
+	"path/filepath"
+	"strconv"
+	"strings"
 	"time"
+
+	"github.com/gofrs/flock"
+	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/i18n"
+	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/preferences"
 )
 
-// refreshInterval is how stale the cached result must be before we go
-// back to the network. 24h matches what `npm` / `brew` / similar
-// peripheral checkers do. Anything tighter would burn the operator's
-// origin bandwidth; anything looser would let critical-fix releases sit
-// unnoticed for too long.
+// Only the release packager overrides this. Setting main.version for a local
+// go/task/mise build is deliberately insufficient to enable self-updates.
+var buildChannel = "development"
+
 const refreshInterval = 24 * time.Hour
+const workerCommand = "__self-update"
+const workerPrefix = ".update-worker-"
 
-// inflight prevents two concurrent fetches in the same process — not a
-// realistic problem today (Execute is called once per process invocation),
-// but cheap insurance if cli.Execute ever gets called more than once.
-var inflight sync.Mutex
-
-// refreshDone is closed when the background goroutine started by
-// MaybeRefreshAsync finishes (success or failure), or immediately when
-// no fetch was needed. Notify selects on it with a short deadline so
-// fast commands (--help / --version, ~10ms) still get a chance to
-// populate the cache on first run instead of forever skipping past
-// the goroutine's window.
-var refreshDone chan struct{}
-
-// MaybeRefreshAsync kicks off a background version check if all skip
-// rules pass and the cache is stale (or absent). Returns immediately —
-// the goroutine writes to the cache file, no main-thread synchronisation.
-//
-// Pass the current binary's version (from main.version / cobra
-// rootCmd.Version) so the User-Agent is honest and shouldSkip's dev-build
-// short-circuit fires correctly.
+// MaybeRefreshAsync starts an independent worker at most once a day. It never
+// waits for network I/O, and the worker survives short commands such as --help.
 func MaybeRefreshAsync(currentVersion string) {
 	if shouldSkip(currentVersion) {
 		return
 	}
-	if !inflight.TryLock() {
-		return // another goroutine already running for this process
-	}
-	c, err := loadCache()
-	if err == nil && c != nil && time.Since(c.LastChecked) < refreshInterval {
-		inflight.Unlock()
+	target, err := os.Executable()
+	if err != nil {
 		return
 	}
-	refreshDone = make(chan struct{})
-	go func() {
-		defer close(refreshDone)
-		defer inflight.Unlock()
-		runRefresh(currentVersion)
+	startUpdate(currentVersion, target, launchWorker)
+}
+
+func freshFor(c *Cache, version, target string) bool {
+	return c != nil && c.TargetPath == target &&
+		(c.CurrentVersion == version || c.InstalledVersion != "" && c.InstalledVersion == normalizeTag(version)) &&
+		time.Since(c.LastChecked) < refreshInterval
+}
+
+func startUpdate(version, target string, launch func(string, string) error) {
+	path, err := cachePath()
+	if err != nil {
+		return
+	}
+	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
+		return
+	}
+	lock := flock.New(path + ".lock")
+	locked, err := lock.TryLock()
+	if err != nil || !locked {
+		return
+	}
+	defer lock.Unlock()
+	previous, _ := loadCache()
+	if freshFor(previous, version, target) {
+		return
+	}
+	c := &Cache{LastChecked: time.Now().UTC(), CurrentVersion: version, TargetPath: target, Status: "checking"}
+	if previous != nil {
+		c.LatestVersion = previous.LatestVersion
+	}
+	// Publish the attempt before starting the worker. A failed launch is also
+	// rate-limited, so a read-only install never delays every command.
+	if err := saveCache(c); err != nil {
+		return
+	}
+	if err := launch(target, filepath.Dir(path)); err != nil {
+		c.Status, c.Error = "failed", err.Error()
+		_ = saveCache(c)
+	}
+}
+
+func launchWorker(target, cacheDir string) error {
+	cleanupWorkers(cacheDir)
+	dir, err := os.MkdirTemp(cacheDir, workerPrefix)
+	if err != nil {
+		return err
+	}
+	started := false
+	defer func() {
+		if !started {
+			_ = os.RemoveAll(dir)
+		}
 	}()
+	worker := filepath.Join(dir, executableName())
+	// A separate executable lets Windows install after the invoking process
+	// exits without the updater itself keeping the target binary locked.
+	if err := copyExecutable(target, worker); err != nil {
+		return err
+	}
+	cmd := exec.Command(worker, workerCommand, target, strconv.Itoa(os.Getpid()))
+	detachWorker(cmd)
+	// Nil streams map to the null device, never to a user's terminal or pipe.
+	if err := cmd.Start(); err != nil {
+		return err
+	}
+	started = true
+	go func() { _ = cmd.Wait() }()
+	return nil
 }
 
-// notifyWait is how long Notify will block waiting for an in-flight
-// refresh goroutine to finish. Short enough not to be perceptible
-// (CLI usability research puts the human-noticeable threshold at ~200ms),
-// long enough that a typical latest-release round-trip on a residential
-// connection (~80ms warm DNS, ~50ms TLS, ~50ms response) usually fits.
-const notifyWait = 200 * time.Millisecond
-
-// waitForRefresh blocks the caller for at most notifyWait if a fetch is
-// in flight. No-op if no fetch was started (fresh cache or skip rule).
-// Called by Notify to bridge the case where the host command exits
-// faster than the network round-trip — without this, --help / --version
-// runs would never populate the cache.
-func waitForRefresh() {
-	d := refreshDone
-	if d == nil {
-		return
-	}
-	select {
-	case <-d:
-	case <-time.After(notifyWait):
-	}
-}
-
-// runRefresh does the actual network call + cache write. Always updates
-// LastChecked even on fetch failure — that rate-limits retry attempts so
-// a transient network blip doesn't cause every subsequent command to
-// re-fire the same failing request.
-func runRefresh(currentVersion string) {
-	ctx := context.Background()
-	latest, err := fetchLatest(ctx, currentVersion)
-	c := &Cache{LastChecked: time.Now().UTC()}
-	if err == nil {
-		c.LatestVersion = latest
-	} else {
-		// Preserve any previously-cached LatestVersion so a transient
-		// failure doesn't drop a known-good notification target.
-		if prev, _ := loadCache(); prev != nil {
-			c.LatestVersion = prev.LatestVersion
+func cleanupWorkers(dir string) {
+	entries, _ := os.ReadDir(dir)
+	for _, entry := range entries {
+		if !entry.IsDir() || !strings.HasPrefix(entry.Name(), workerPrefix) {
+			continue
+		}
+		info, err := entry.Info()
+		if err == nil && time.Since(info.ModTime()) > refreshInterval {
+			// On Windows, a running worker's executable cannot be deleted;
+			// stale workers from previous runs can be reclaimed here.
+			_ = os.RemoveAll(filepath.Join(dir, entry.Name()))
 		}
 	}
+}
+
+// RunWorker consumes the private worker invocation before Cobra, prompts, or
+// application services are initialized. Non-release builds always do nothing.
+func RunWorker(version string, args []string) bool {
+	return runWorker(version, args, defaultUpdater)
+}
+
+func runWorker(version string, args []string, makeUpdater func() updater) bool {
+	if len(args) == 0 || args[0] != workerCommand {
+		return false
+	}
+	if len(args) != 3 || buildChannel != "release" || !isStableRelease(version) {
+		return true
+	}
+	worker, err := os.Executable()
+	if err != nil {
+		return true
+	}
+	path, err := cachePath()
+	if err != nil {
+		return true
+	}
+	workerDir := filepath.Dir(worker)
+	cacheDir, err := filepath.EvalSymlinks(filepath.Dir(path))
+	if err != nil {
+		return true
+	}
+	if filepath.Dir(workerDir) != cacheDir || !strings.HasPrefix(filepath.Base(workerDir), workerPrefix) {
+		return true
+	}
+	defer os.RemoveAll(workerDir)
+	target := args[1]
+	parent, err := strconv.Atoi(args[2])
+	if err != nil || parent <= 0 || !filepath.IsAbs(target) {
+		return true
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
+	defer cancel()
+	lock := flock.New(path + ".lock")
+	locked, err := lock.TryLockContext(ctx, 50*time.Millisecond)
+	if err != nil || !locked {
+		return true
+	}
+	defer lock.Unlock()
+	c, err := loadCache()
+	if err != nil || c == nil || c.TargetPath != target || c.CurrentVersion != version || c.Status != "checking" {
+		return true
+	}
+	// Only replace the exact executable that was copied by the parent. A user
+	// rebuilding or reinstalling while we download always wins.
+	storedLocale := preferences.LocaleAuto
+	if prefs, _ := preferences.Load(); prefs != nil {
+		storedLocale = prefs.Locale
+	}
+	_ = i18n.Init(i18n.Resolve(storedLocale))
+	expected, err := executableDigest(worker)
+	if err == nil {
+		updater := makeUpdater()
+		var closeParent func()
+		updater.beforeInstall, closeParent, err = parentExitWaiter(parent)
+		if err != nil {
+			c.Status, c.Error = "failed", err.Error()
+			_ = saveCache(c)
+			return true
+		}
+		defer closeParent()
+		var latest string
+		latest, c.InstalledVersion, err = updater.update(ctx, target, version, expected)
+		if latest != "" {
+			c.LatestVersion = latest
+		}
+	}
+	c.Status = "current"
+	if err != nil {
+		c.Status, c.Error = "failed", err.Error()
+	}
+	if c.InstalledVersion != "" {
+		c.Status, c.NotificationPending = "updated", true
+	}
 	_ = saveCache(c)
+	return true
 }
