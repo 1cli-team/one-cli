@@ -139,8 +139,14 @@ func TestDetachedWorkerHelper(t *testing.T) {
 		}
 		closeParent()
 		time.Sleep(100 * time.Millisecond)
-		if err := os.WriteFile(os.Getenv("ONE_UPDATE_TEST_MARKER"), []byte("finished"), 0o600); err != nil {
+		// Publish completion only after the contents are fully written and closed.
+		// Writing the marker directly lets the parent observe an empty file.
+		marker := os.Getenv("ONE_UPDATE_TEST_MARKER")
+		if err := os.WriteFile(marker+".tmp", []byte("finished"), 0o600); err != nil {
 			os.Exit(5)
+		}
+		if err := os.Rename(marker+".tmp", marker); err != nil {
+			os.Exit(6)
 		}
 		os.Exit(0)
 	}
