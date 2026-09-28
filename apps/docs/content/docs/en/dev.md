@@ -39,6 +39,26 @@ one dev web
 one dev apps/web --dry-run
 ```
 
+## Scroll and resize the task interface
+
+On Unix, multiple tasks use the TUI in an interactive terminal. Use `one dev web --ui=tui` to open it for a single project. `one build --ui=tui` uses the same log controls.
+
+| Control | Action |
+|---|---|
+| `↑` / `↓` | Select a project |
+| Mouse wheel over the log panel | Scroll the selected project's output |
+| `PgUp` / `PgDn` | Scroll logs; in a full-screen child's input mode these keys go to that child |
+| `Shift+PgUp` / `Shift+PgDn` | Scroll history, including while in input mode |
+| `f` / `End` | Resume following output in navigation mode |
+| `Shift+End` | Resume following output in either mode |
+| `Enter` / `Ctrl+]` | Enter child input / return to navigation |
+| `h` | Hide or show the project list |
+| `?` | Show all shortcuts, including restart and stop |
+
+Each project keeps its own scroll position. New output leaves a paused view in place until those rows leave the retained history. Typing or pasting into a child returns to the live screen. Resizing the terminal reflows retained log output and updates every child's terminal dimensions. Full-screen children redraw their own layouts.
+
+History is bounded to 3,000 screen rows, with an 1 MiB replay buffer per project. Older output can be dropped when these limits are reached.
+
 ## Common errors
 
 | code | fix |

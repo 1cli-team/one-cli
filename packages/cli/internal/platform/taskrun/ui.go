@@ -15,11 +15,13 @@ import (
 )
 
 type tickMsg struct{}
+type resizeMsg struct{ width, height int }
 type model struct {
 	s                                *Session
 	selected, width, height          int
 	input, help, searching, hideList bool
 	query                            string
+	resizePending                    bool
 }
 
 func (s *Session) show() error {
@@ -40,22 +42,61 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, tick()
 		}
 	case tea.WindowSizeMsg:
-		m.width, m.height = msg.Width, msg.Height
-		m.resize()
+		if msg.Width > 0 && msg.Height > 0 {
+			m.width, m.height = msg.Width, msg.Height
+			m.resizePending = true
+			return m, tea.Tick(75*time.Millisecond, func(time.Time) tea.Msg {
+				return resizeMsg{msg.Width, msg.Height}
+			})
+		}
+	case resizeMsg:
+		if m.resizePending && msg.width == m.width && msg.height == m.height {
+			m.resizePending = false
+			m.resize()
+		}
+	case tea.MouseWheelMsg:
+		if !m.help && msg.Y >= 2 && msg.Y < m.height-2 && msg.X >= m.logLeft() && msg.X < m.width {
+			switch msg.Button {
+			case tea.MouseWheelUp:
+				m.scroll(3)
+			case tea.MouseWheelDown:
+				m.scroll(-3)
+			}
+		}
 	case tea.PasteMsg:
 		if m.input {
 			m.s.mu.Lock()
+			m.s.jobs[m.selected].offset = 0
 			m.s.jobs[m.selected].terminal.Paste(msg.Content)
 			m.s.mu.Unlock()
 		}
 	case tea.KeyPressMsg:
 		key := msg.String()
+		// Reserve explicit history shortcuts even while typing into a child.
+		// Full-screen children keep their unmodified PgUp/PgDn bindings.
+		if !m.searching && !m.help {
+			m.s.mu.Lock()
+			alt := m.s.jobs[m.selected].terminal != nil && m.s.jobs[m.selected].terminal.IsAltScreen()
+			m.s.mu.Unlock()
+			switch {
+			case key == "shift+pgup" || (key == "pgup" && (!m.input || !alt)):
+				m.scroll(max(1, (m.height-4)/2))
+				return m, nil
+			case key == "shift+pgdown" || (key == "pgdown" && (!m.input || !alt)):
+				m.scroll(-max(1, (m.height-4)/2))
+				return m, nil
+			case key == "shift+end":
+				m.follow()
+				return m, nil
+			}
+		}
 		if m.input {
 			if key == "ctrl+]" {
 				m.input = false
 				return m, nil
 			}
 			m.s.mu.Lock()
+			m.s.jobs[m.selected].offset = 0
 			m.s.jobs[m.selected].terminal.SendKey(uv.KeyPressEvent(msg))
 			m.s.mu.Unlock()
 			return m, nil
@@ -89,6 +130,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "down", "j":
 			m.move(1)
 		case "enter", "i":
+			m.help = false
 			m.s.mu.Lock()
 			m.input = m.s.jobs[m.selected].result.Status == "running"
 			m.s.jobs[m.selected].offset = 0
@@ -114,14 +156,12 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "h":
 			m.hideList = !m.hideList
 			m.resize()
-		case "pgup", "u":
-			m.scroll(max(1, m.height/2))
-		case "pgdown", "d":
-			m.scroll(-max(1, m.height/2))
+		case "u":
+			m.scroll(max(1, (m.height-4)/2))
+		case "d":
+			m.scroll(-max(1, (m.height-4)/2))
 		case "end", "f":
-			m.s.mu.Lock()
-			m.s.jobs[m.selected].offset = 0
-			m.s.mu.Unlock()
+			m.follow()
 		}
 	}
 	return m, nil
@@ -132,13 +172,20 @@ func (m model) listWidth() int {
 	}
 	return min(28, m.width/3)
 }
+func (m model) logLeft() int {
+	if width := m.listWidth(); width > 0 {
+		return width + 3
+	}
+	return 0
+}
 func (m model) resize() {
-	w, h := max(10, m.width-m.listWidth()-3), max(2, m.height-4)
+	w, h := max(1, m.width-m.logLeft()), max(1, m.height-4)
 	m.s.mu.Lock()
 	defer m.s.mu.Unlock()
 	m.s.width, m.s.height = w, h
 	for _, j := range m.s.jobs {
 		j.terminal.Resize(w, h)
+		j.offset = min(j.offset, j.terminal.ScrollbackLen())
 		j.ioMu.Lock()
 		if j.child != nil {
 			_ = j.child.Resize(w, h)
@@ -183,6 +230,12 @@ func (m model) scroll(delta int) {
 	j.offset = max(0, min(j.terminal.ScrollbackLen(), j.offset+delta))
 }
 
+func (m model) follow() {
+	m.s.mu.Lock()
+	defer m.s.mu.Unlock()
+	m.s.jobs[m.selected].offset = 0
+}
+
 var accent = lipgloss.NewStyle().Foreground(lipgloss.Color("#ea580c")).Bold(true)
 var muted = lipgloss.NewStyle().Foreground(lipgloss.Color("#888888"))
 
@@ -213,18 +266,27 @@ func (m model) View() tea.View {
 	if j.attempt > 1 {
 		detail += i18n.Tf("task.ui.attempt", j.attempt)
 	}
-	if j.terminal.ScrollbackLen() >= 3000 {
+	if j.terminal.ScrollbackLen() >= historyLines || j.terminal.truncated {
 		detail += i18n.T("task.ui.history_limit")
 	}
 	if j.offset > 0 {
 		detail += i18n.T("task.ui.history")
 	}
 	body := terminalView(j, panelHeight)
+	if m.resizePending {
+		// Keep the frame inside the new bounds while rapid resize events settle.
+		lines := strings.Split(body, "\n")
+		for i := range lines {
+			lines[i] = ansi.Truncate(lines[i], max(1, width-m.logLeft()), "")
+		}
+		body = strings.Join(lines, "\n")
+	}
 	if m.help {
 		body = i18n.T("task.ui.help")
 		if s.opts.Development {
 			body += i18n.T("task.ui.help_dev")
 		}
+		body = ansi.Hardwrap(body, max(1, width-m.logLeft()), true)
 	}
 	lw := m.listWidth()
 	if lw > 0 {
@@ -267,7 +329,8 @@ func (m model) View() tea.View {
 	}
 	v := tea.NewView(header + "\n" + muted.Render(ansi.Truncate(detail, width, "…")) + "\n" + lipgloss.NewStyle().Height(panelHeight).MaxHeight(panelHeight).Render(body) + "\n" + muted.Render(ansi.Truncate(hint, width, "…")))
 	v.AltScreen = true
-	if m.input && j.offset == 0 {
+	v.MouseMode = tea.MouseModeCellMotion
+	if m.input && j.offset == 0 && !m.resizePending {
 		pos := j.terminal.CursorPosition()
 		v.Cursor = &tea.Cursor{Position: tea.Position{X: pos.X + max(0, lw) + func() int {
 			if lw > 0 {

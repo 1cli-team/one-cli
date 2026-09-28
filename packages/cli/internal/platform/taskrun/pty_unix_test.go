@@ -39,7 +39,7 @@ func TestPTYResizeAndTerminalResponses(t *testing.T) {
 	s := &Session{width: 80, height: 24}
 	j := &job{}
 	s.initTerminal(j)
-	defer func() { _ = j.terminal.InputPipe().(io.Closer).Close(); <-j.inputDone; _ = j.terminal.Close() }()
+	defer func() { _ = j.terminal.Close() }()
 	if _, err := (jobOutput{s, j}).Write([]byte("\x1b[31mred\x1b[0m\rnew\x1b[K\n\x1b[6n")); err != nil {
 		t.Fatal(err)
 	}
@@ -82,13 +82,21 @@ func TestPTYCancellationCleansDescendants(t *testing.T) {
 	case <-time.After(4 * time.Second):
 		t.Fatal("cancel hung")
 	}
-	if syscall.Kill(pid, 0) != syscall.ESRCH {
+	// Waiting for the shell does not wait for its descendants to finish
+	// handling the group signal. Allow the kernel to complete their exit.
+	deadline = time.Now().Add(time.Second)
+	for time.Now().Before(deadline) {
+		if syscall.Kill(pid, 0) == syscall.ESRCH {
+			return
+		}
 		raw, _ := os.ReadFile(fmt.Sprintf("/proc/%d/stat", pid))
 		end := strings.LastIndex(string(raw), ") ")
-		if end < 0 || !strings.HasPrefix(string(raw)[end+2:], "Z ") {
-			t.Fatalf("descendant %d alive", pid)
+		if end >= 0 && strings.HasPrefix(string(raw)[end+2:], "Z ") {
+			return
 		}
+		time.Sleep(10 * time.Millisecond)
 	}
+	t.Fatalf("descendant %d alive", pid)
 }
 
 func TestPTYResizeReachesChild(t *testing.T) {

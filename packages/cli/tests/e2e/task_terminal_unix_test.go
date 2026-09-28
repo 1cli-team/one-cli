@@ -154,7 +154,18 @@ func TestE2E_SingleDevAndBuildExitWithIdleTerminalInput(t *testing.T) {
 
 func TestE2E_DevTUIInputResizeAndStop(t *testing.T) {
 	root := devTerminalFixture(t, true)
-	buildWrite(t, root, "apps/web/dev.sh", "test -t 0 && test -t 1 || exit 91\necho run >> runs\necho WEB_READY\nwhile read value; do printf 'web:%s\\n' \"$value\"; done\n")
+	buildWrite(t, root, "apps/web/dev.sh", `test -t 0 && test -t 1 || exit 91
+echo run >> runs
+i=0
+while [ "$i" -lt 60 ]; do
+  printf 'LOG_%02d original project output\n' "$i"
+  i=$((i + 1))
+done
+echo WEB_READY
+while read value; do
+  if [ "$value" = size ]; then stty size > terminal-size; else printf 'web:%s\n' "$value"; fi
+done
+`)
 	buildWrite(t, root, "packages/lib/dev.sh", "echo LIB_READY\nsleep 60\n")
 	tt := startTaskTerminal(t, root, "dev", "web", "lib", "--keep-going", "-o", "text")
 	waitForTTYOutput(t, tt.out, "WEB_READY", 8*time.Second)
@@ -163,10 +174,39 @@ func TestE2E_DevTUIInputResizeAndStop(t *testing.T) {
 	}
 	_, _ = tt.pty.Write([]byte("\r"))
 	waitForTTYOutput(t, tt.out, "INPUT", 5*time.Second)
+	// Real SGR mouse input must browse history even after entering child input.
+	if !strings.Contains(tt.out.String(), "\x1b[?1006h") {
+		t.Fatal("TUI did not enable mouse reporting")
+	}
+	_, _ = tt.pty.Write([]byte("\x1b[<64;55;5M"))
+	waitForTTYOutput(t, tt.out, "Shift+End", 5*time.Second)
 	_, _ = tt.pty.Write([]byte("hello\r"))
 	waitForTTYOutput(t, tt.out, "web:hello", 5*time.Second)
-	_ = pty.Setsize(tt.pty, &pty.Winsize{Rows: 24, Cols: 80})
-	_, _ = tt.pty.Write([]byte{29}) // Ctrl+] leaves input mode.
+	assertChildSize := func(cols, rows, logCols int) {
+		t.Helper()
+		if err := pty.Setsize(tt.pty, &pty.Winsize{Rows: uint16(rows), Cols: uint16(cols)}); err != nil {
+			t.Fatal(err)
+		}
+		want := fmt.Sprintf("%d %d", rows-4, logCols)
+		deadline := time.Now().Add(5 * time.Second)
+		for time.Now().Before(deadline) {
+			_, _ = tt.pty.Write([]byte("size\r"))
+			raw, _ := os.ReadFile(filepath.Join(root, "apps/web/terminal-size"))
+			if strings.TrimSpace(string(raw)) == want {
+				return
+			}
+			time.Sleep(20 * time.Millisecond)
+		}
+		t.Fatalf("child did not resize to %s", want)
+	}
+	assertChildSize(80, 24, 51)
+	assertChildSize(60, 18, 60) // Automatically hidden sidebar uses the full width.
+	assertChildSize(110, 30, 79)
+	_, _ = tt.pty.Write([]byte{29})    // Ctrl+] leaves input mode.
+	_, _ = tt.pty.Write([]byte("h\r")) // Hide the list, then return to child input.
+	assertChildSize(110, 30, 110)
+	_, _ = tt.pty.Write([]byte{29})
+
 	_, _ = tt.pty.Write([]byte("r"))
 	deadline := time.Now().Add(5 * time.Second)
 	restarted := false

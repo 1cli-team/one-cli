@@ -12,7 +12,7 @@ import (
 	"syscall"
 	"time"
 
-	vt "github.com/charmbracelet/x/vt"
+	uv "github.com/charmbracelet/ultraviolet"
 
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/i18n"
 	platformprocess "github.com/torchstellar-team/one-cli/packages/cli/internal/platform/process"
@@ -38,17 +38,16 @@ type Options struct {
 	Run func(context.Context, Task, io.Writer) error
 }
 type job struct {
-	task      Task
-	result    Result
-	terminal  *vt.Emulator
-	cancel    context.CancelFunc
-	started   time.Time
-	action    string
-	attempt   int
-	offset    int
-	ioMu      sync.Mutex
-	child     *childProcess
-	inputDone chan struct{}
+	task     Task
+	result   Result
+	terminal *terminal
+	cancel   context.CancelFunc
+	started  time.Time
+	action   string
+	attempt  int
+	offset   int
+	ioMu     sync.Mutex
+	child    *childProcess
 }
 type Session struct {
 	mu            sync.Mutex
@@ -121,8 +120,6 @@ func Run(ctx context.Context, tasks []Task, opts Options) ([]Result, error) {
 	if opts.Mode == TUI {
 		s.printFailures()
 		for _, j := range s.jobs {
-			_ = j.terminal.InputPipe().(io.Closer).Close()
-			<-j.inputDone
 			_ = j.terminal.Close()
 		}
 	}
@@ -170,10 +167,7 @@ func validateTasks(tasks []Task) error {
 	return nil
 }
 func (s *Session) initTerminal(j *job) {
-	j.terminal = vt.NewEmulator(s.width, s.height)
-	j.terminal.SetScrollbackSize(3000)
-	j.inputDone = make(chan struct{})
-	go func() { defer close(j.inputDone); _, _ = io.Copy(jobInput{j}, j.terminal) }()
+	j.terminal = newTerminal(s.width, s.height, jobInput{j})
 }
 
 type jobInput struct{ j *job }
@@ -198,10 +192,38 @@ type jobOutput struct {
 func (w jobOutput) Write(p []byte) (int, error) {
 	w.s.mu.Lock()
 	defer w.s.mu.Unlock()
-	before := w.j.terminal.ScrollbackLen()
-	n, err := w.j.terminal.Write(p)
+	t := w.j.terminal
+	before := t.ScrollbackLen()
+	// Scrollback rows keep their cell storage as the bounded history rotates.
+	// Anchor to a retained row so new output cannot move a paused viewport,
+	// including after the history buffer has reached its capacity.
+	var anchor *uv.Cell
+	anchorIndex := max(0, before-w.j.offset)
 	if w.j.offset > 0 {
-		w.j.offset += max(0, w.j.terminal.ScrollbackLen()-before)
+		for ; anchorIndex < before; anchorIndex++ {
+			if line := t.Scrollback().Line(anchorIndex); len(line) > 0 {
+				anchor = &line[0]
+				break
+			}
+		}
+	}
+	n, err := t.Write(p)
+	if w.j.offset > 0 {
+		delta := max(0, t.ScrollbackLen()-before)
+		if anchor != nil {
+			found := false
+			for i, line := range t.Scrollback().Lines() {
+				if len(line) > 0 && &line[0] == anchor {
+					delta = t.ScrollbackLen() - before + anchorIndex - i
+					found = true
+					break
+				}
+			}
+			if !found {
+				delta = t.ScrollbackLen()
+			}
+		}
+		w.j.offset = min(t.ScrollbackLen(), w.j.offset+delta)
 	}
 	return n, err
 }
