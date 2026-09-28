@@ -326,10 +326,15 @@ func TestE2E_MiseCreateAddAndRefreshWithoutNewFlags(t *testing.T) {
 			t.Fatalf("add %s: %d %s %s", p.name, code, out, stderr)
 		}
 	}
-	for _, rel := range []string{"mise.toml", "apps/web/mise.toml", "services/api/mise.toml"} {
+	for _, rel := range []string{"mise.toml"} {
 		raw, err := os.ReadFile(filepath.Join(root, rel))
 		if err != nil || !strings.Contains(string(raw), "# one:managed-v1") {
 			t.Fatalf("configuration %s: %v %s", rel, err, raw)
+		}
+	}
+	for _, rel := range []string{"apps/web/mise.toml", "services/api/mise.toml"} {
+		if fileExists(t, filepath.Join(root, rel)) {
+			t.Fatalf("unexpected project configuration: %s", rel)
 		}
 	}
 	out, stderr, code := runBinaryIn(t, root, "init", "mise", "--dry-run", "-o", "json")
@@ -340,10 +345,10 @@ func TestE2E_MiseCreateAddAndRefreshWithoutNewFlags(t *testing.T) {
 	if code != 0 || !strings.Contains(out, `"runtime": "mise"`) {
 		t.Fatalf("automatic runtime: %d %s %s", code, out, stderr)
 	}
-	// A conflicting config_roots edit must fail before rendering a new project.
+	// A conflicting aggregate task edit must fail before rendering a new project.
 	path := filepath.Join(root, "mise.toml")
 	raw, _ := os.ReadFile(path)
-	if err := os.WriteFile(path, []byte(strings.Replace(string(raw), "config_roots = [", "config_roots = ['custom', ", 1)), 0o644); err != nil {
+	if err := os.WriteFile(path, []byte(strings.Replace(string(raw), "//:web:build", "//:custom:build", 1)), 0o644); err != nil {
 		t.Fatal(err)
 	}
 	manifest, _ := os.ReadFile(filepath.Join(root, "one.manifest.json"))
@@ -406,7 +411,7 @@ func TestE2E_MiseRealGeneratedTasksRequireOneContext(t *testing.T) {
 	t.Setenv("PATH", binDir+string(os.PathListSeparator)+os.Getenv("PATH"))
 	for _, command := range []string{"echo live-first", "echo live-second"} {
 		overrideDevCommand(t, root, "web", command)
-		cmd := exec.Command(mise, "run", "//apps/web:dev")
+		cmd := exec.Command(mise, "run", "//:web:dev")
 		cmd.Dir = root
 		out, err := cmd.CombinedOutput()
 		if err == nil || !strings.Contains(string(out), "one run") {

@@ -30,20 +30,18 @@ Without `-p`, a task selects the workspace aggregate. Repeat `-p` to select proj
 
 ## Configuration
 
-One writes tool versions, task adapters, aggregates, and local Node build dependencies into `mise.toml` at the workspace and project roots. Edit these files directly to add tasks or adjust settings. Running tasks, adding projects, or calling `one init mise` adds missing configuration and updates generated fields that you have not changed. Custom fields and comments are preserved. Root `dev`, `build`, `check`, and `test` aggregate only available project tasks; `ci` combines build, check, and test.
+One writes tool versions, task adapters, aggregates, and local Node build dependencies into a single `mise.toml` at the workspace root. Project directories keep their native command files; One does not generate project-level mise configurations. Edit the root file directly to add tasks or adjust settings. Running tasks, adding projects, or calling `one init mise` adds missing configuration and updates generated fields that you have not changed. Custom fields and comments are preserved. Root `dev`, `build`, `check`, and `test` aggregate only available project tasks; `ci` combines build, check, and test.
 
-Keep the `# one:managed-v1` comment at the end of each file. It records the last generated fields for incremental updates. If you and One change the same field to different values, One reports `MISE_CONFIG_CONFLICT` with the field name. Adding comments, custom tasks, or changing defaults does not trigger a whole-file ownership error.
+Keep the `# one:managed-v1` comment at the end of the file. It records the last generated fields for incremental updates. If you and One change the same field to different values, One reports `MISE_CONFIG_CONFLICT` with the field name. Adding comments, custom tasks, or changing defaults does not trigger a whole-file ownership error.
 
 ```text
 workspace/
   one.manifest.json
-  mise.toml             # Tool versions, project directories, aggregate tasks
+  mise.toml             # Tools, project task adapters, aggregates, cache settings
   .config/hk.pkl        # Workspace Git checks
   apps/web/
-    mise.toml           # Project tasks and cache settings
     package.json        # pnpm scripts
   services/api/
-    mise.toml           # Project tools and tasks
     Taskfile.yml        # Go project commands
 ```
 
@@ -54,7 +52,7 @@ one init mise --dry-run -o json
 one init mise
 ```
 
-Project tasks use canonical names such as `//apps/web:build`. Local Node dependencies with a build task run before dependent build, check, test, typecheck, and dev tasks. Go resolves module dependencies through `go.work` and its compiler. New Node workspaces use pnpm exclusively.
+Project tasks use root names such as `web:build` (canonical name `//:web:build`), with `dir = "apps/web"`. Tool versions are pinned at the root; Go defaults to the highest version required by workspace modules. Local Node dependencies with a build task run before dependent build, check, test, typecheck, and dev tasks. Go resolves module dependencies through `go.work` and its compiler. New Node workspaces use pnpm exclusively.
 
 List and dry-run use static configuration and never execute mise, install tools, read secrets, or write files. Dynamic task expressions and parameterized dependencies cannot be previewed. Actual runs also read mise's effective task catalogue. Native mise tasks with their own commands use mise's environment; generated project adapters use One's project environment.
 
@@ -64,7 +62,7 @@ Keep project commands in `package.json` scripts or a Taskfile. For example, addi
 
 ```toml
 [tasks.verify]
-depends = ["//apps/web:check", "//services/api:test"]
+depends = ["//:web:check", "//:api:test"]
 
 [tasks.hello]
 description = "Print a greeting"
@@ -73,11 +71,11 @@ run = "echo hello"
 
 Run the aggregate with `one run verify`, or the custom command with `one run hello`. You can also put executable scripts in `.mise/tasks/`, or load a separate task file with `[task_config] includes = ["tasks.toml"]`.
 
-Inspect native configuration with `one mise tasks ls --all --local` and `one mise tasks info //apps/web:build --json`. Custom native tasks can run directly with `mise run hello`; generated project tasks need `one run` to prepare their environment context.
+Inspect native configuration with `one mise tasks ls --all --local` and `one mise tasks info //:web:build --json`. Custom native tasks can run directly with `mise run hello`; generated project tasks need `one run` to prepare their environment context.
 
 ## Cache
 
-Generated configuration enables mise's experimental features. Known template **build** tasks receive `sources`, `outputs`, and an environment fingerprint. Other tasks stay uncached until they have an explicit cache contract. Changing a template build script or build configuration disables automatic caching; declare the actual inputs and outputs in the project's `mise.toml` to enable it again. Cache storage and artifact restoration belong to mise.
+Generated configuration enables mise's experimental features. Known template **build** tasks receive `sources`, `outputs`, and an environment fingerprint. Other tasks stay uncached until they have an explicit cache contract. Changing a template build script or build configuration disables automatic caching; declare the actual inputs and outputs under the project task in the root `mise.toml` to enable it again. Cache storage and artifact restoration belong to mise.
 
 ```sh
 one run build --cache local-only
@@ -88,14 +86,17 @@ one run build --concurrency 4
 
 `--cache off --force` ensures execution even if source freshness checks would skip a task. Cache modes also include `read-write` and `write-only`; remote access requires your own mise cache backend configuration. One does not provision a remote service.
 
-To opt a generated task into caching, declare its complete inputs and outputs in the project's `mise.toml`, including One's fingerprint command:
+To opt a generated task into caching, declare its complete inputs and outputs under the project task in the root `mise.toml`, including One's fingerprint command:
 
 ```toml
-[tasks.build]
+[tasks."web:build"]
+dir = "apps/web"
 sources = ["src/**/*", "package.json", "tsconfig.json", "../../pnpm-lock.yaml"]
 outputs = ["dist"]
 cache = { enabled = true, env = ["NODE_ENV"], command_inputs = ['one __task-input --project "web" --task "build"'] }
 ```
+
+Source and output paths are relative to the task’s `dir`. mise also hashes the defining configuration, so editing the root `mise.toml` invalidates caches for tasks defined there.
 
 `outputs = []` is appropriate for a deterministic task that only verifies inputs. Declare every upstream source, external file, configuration value, and compiler input that affects a custom task. Outputs must stay inside the task directory and must not overlap another selected task's outputs. Use `--cache off --force` while checking a new cache declaration.
 

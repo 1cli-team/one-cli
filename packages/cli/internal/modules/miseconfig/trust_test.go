@@ -36,6 +36,17 @@ func TestTrustOnlyCompleteGeneratedConfigurations(t *testing.T) {
 	}
 	unavailable := errors.New("runtime unavailable")
 	probe := &trustProbe{prepare: func(c runtimeport.Command) (runtimeport.Command, error) { return c, unavailable }}
+	if err := plan.TrustGenerated(context.Background(), probe); err != nil || len(probe.commands) != 0 {
+		t.Fatalf("custom root must not be auto-trusted: %v %v", err, probe.commands)
+	}
+	writeFixture(t, filepath.Join(root, Filename), "")
+	plan, err = Build(root, Options{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := plan.Apply(context.Background()); err != nil {
+		t.Fatal(err)
+	}
 	if err := plan.TrustGenerated(context.Background(), probe); !errors.Is(err, unavailable) {
 		t.Fatalf("lost preparation error: %v", err)
 	}
@@ -46,13 +57,14 @@ func TestTrustOnlyCompleteGeneratedConfigurations(t *testing.T) {
 		}
 		paths = append(paths, command.Argv[3])
 	}
-	if !reflect.DeepEqual(paths, []string{filepath.Join(plan.Root, "apps/web/mise.toml"), filepath.Join(plan.Root, "services/api/mise.toml")}) {
+	if !reflect.DeepEqual(paths, []string{filepath.Join(plan.Root, Filename)}) {
 		t.Fatalf("trusted unexpected configs: %v", paths)
 	}
 }
 
 func TestTrustRejectsFileChangedWhilePreparingRuntime(t *testing.T) {
 	root := fixture(t)
+	writeFixture(t, filepath.Join(root, Filename), "")
 	plan, err := Build(root, Options{})
 	if err != nil {
 		t.Fatal(err)

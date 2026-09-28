@@ -31,7 +31,7 @@ func TestGoCacheIncludesExternalWorkspaceSourcesAndRejectsChangedBuild(t *testin
 	}
 	readBuild := func() Task {
 		t.Helper()
-		raw, err := os.ReadFile(filepath.Join(root, "services/api", Filename))
+		raw, err := os.ReadFile(filepath.Join(root, Filename))
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -39,7 +39,7 @@ func TestGoCacheIncludesExternalWorkspaceSourcesAndRejectsChangedBuild(t *testin
 		if err = toml.Unmarshal(raw, &config); err != nil {
 			t.Fatal(err)
 		}
-		return config.Tasks["build"]
+		return config.Tasks["api:build"]
 	}
 	build := readBuild()
 	if build.Cache == nil || !build.Cache.Enabled {
@@ -81,13 +81,13 @@ func TestNodeCacheRequiresKnownOutputConfiguration(t *testing.T) {
 		if err = plan.Apply(context.Background()); err != nil {
 			t.Fatal(err)
 		}
-		raw, _ := os.ReadFile(filepath.Join(root, "apps/web", Filename))
+		raw, _ := os.ReadFile(filepath.Join(root, Filename))
 		var config config
 		if err = toml.Unmarshal(raw, &config); err != nil {
 			t.Fatal(err)
 		}
-		if config.Tasks["build"].Cache.Enabled != want {
-			t.Fatalf("cache enabled = %v, want %v", config.Tasks["build"].Cache.Enabled, want)
+		if config.Tasks["web:build"].Cache.Enabled != want {
+			t.Fatalf("cache enabled = %v, want %v", config.Tasks["web:build"].Cache.Enabled, want)
 		}
 	}
 	check(true)

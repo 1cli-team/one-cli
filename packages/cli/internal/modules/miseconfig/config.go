@@ -1,4 +1,4 @@
-// Package miseconfig maintains workspace and project mise.toml defaults.
+// Package miseconfig maintains the workspace-root mise.toml.
 package miseconfig
 
 import (
@@ -74,6 +74,7 @@ type monorepo struct {
 
 // Task is the generated mise declaration. User overrides remain in mise.toml.
 type Task struct {
+	Directory   string    `toml:"dir,omitempty" json:"dir,omitempty"`
 	Description string    `toml:"description,omitempty" json:"description,omitempty"`
 	Run         string    `toml:"run,omitempty" json:"run,omitempty"`
 	RunWindows  string    `toml:"run_windows,omitempty" json:"run_windows,omitempty"`
@@ -227,7 +228,6 @@ func BuildWithFiles(root string, opts Options, files map[string][]byte) (*Plan, 
 		if rel == "." || filepath.IsAbs(rel) || rel == ".." || strings.HasPrefix(rel, "../") {
 			return nil, conflict(rel, i18n.T("config.project_path"))
 		}
-		rootConfig.Monorepo.ConfigRoots = append(rootConfig.Monorepo.ConfigRoots, rel)
 		pc := config{MinVersion: runtimeport.MinimumMiseVersion, Tasks: map[string]Task{}, Tools: map[string]string{}}
 		nativeProject := workspace.Project{Name: project.Name, RelativeDir: rel, TargetDir: filepath.Join(root, rel), Toolchain: project.Toolchain, PackageManager: project.PackageManager, TemplateID: project.TemplateID}
 		operations, err := workspace.DiscoverTasks(root, nativeProject, p.readOptional)
@@ -264,14 +264,16 @@ func BuildWithFiles(root string, opts Options, files map[string][]byte) (*Plan, 
 				if goWorkspace.Version != "" && compareVersions(version, goWorkspace.Version) < 0 {
 					version = goWorkspace.Version
 				}
-				pc.Tools["go"] = version
+				if current := rootConfig.Tools["go"]; current == "" || compareVersions(version, current) > 0 {
+					rootConfig.Tools["go"] = version
+				}
 			}
-			pc.Tools["task"] = "3.51.1"
+			rootConfig.Tools["task"] = "3.51.1"
 		}
 		for _, op := range operations {
 			// Stable command text keeps per-run context paths out of cache keys.
 			args := " --project " + shellQuote(project.Name) + " --task " + shellQuote(op.Name)
-			task := Task{Description: op.Description, Run: "one __task" + args + " --", RawArgs: true, Interactive: op.Interactive, Cache: &Cache{Enabled: false}}
+			task := Task{Directory: rel, Description: op.Description, Run: "one __task" + args + " --", RawArgs: true, Interactive: op.Interactive, Cache: &Cache{Enabled: false}}
 			task.RunWindows = "one __task --project " + windowsQuote(project.Name) + " --task " + windowsQuote(op.Name) + " --"
 			if !op.Interactive {
 				p.configureCache(root, nativeProject, op, &task)
@@ -279,7 +281,7 @@ func BuildWithFiles(root string, opts Options, files map[string][]byte) (*Plan, 
 			pc.Tasks[op.Name] = task
 			if op.Name == "build" || op.Name == "check" || op.Name == "test" || op.Name == "dev" {
 				aggregate := rootConfig.Tasks[op.Name]
-				aggregate.Depends = append(aggregate.Depends, "//"+rel+":"+op.Name)
+				aggregate.Depends = append(aggregate.Depends, "//:"+project.Name+":"+op.Name)
 				rootConfig.Tasks[op.Name] = aggregate
 			}
 		}
@@ -305,7 +307,7 @@ func BuildWithFiles(root string, opts Options, files map[string][]byte) (*Plan, 
 				upstream := byName[dep]
 				if name == "build" || name == "dev" || name == "check" || name == "test" || name == "typecheck" {
 					if _, ok := configs[dep].Tasks["build"]; ok {
-						task.Depends = append(task.Depends, "//"+upstream.RelativeDir+":build")
+						task.Depends = append(task.Depends, "//:"+dep+":build")
 					}
 				}
 				if task.Cache != nil && task.Cache.Enabled {
@@ -320,10 +322,7 @@ func BuildWithFiles(root string, opts Options, files map[string][]byte) (*Plan, 
 				}
 				task.Sources = append(task.Sources, inputs...)
 			}
-			pc.Tasks[name] = task
-		}
-		if err := p.add(project.RelativeDir+"/"+Filename, pc); err != nil {
-			return nil, err
+			rootConfig.Tasks[project.Name+":"+name] = task
 		}
 	}
 	var ci Task
@@ -336,7 +335,6 @@ func BuildWithFiles(root string, opts Options, files map[string][]byte) (*Plan, 
 		rootConfig.Tasks["ci"] = ci
 	}
 
-	sort.Strings(rootConfig.Monorepo.ConfigRoots)
 	if err := p.add(Filename, rootConfig); err != nil {
 		return nil, err
 	}

@@ -489,7 +489,7 @@
   "hooks.flag.dry_run": "Preview configuration, migration, and local hook files without changing anything",
   "mise.flag.dry_run": "Print proposed file contents without writing files or executing mise",
   "mise.flag.node_version": "Exact Node version (default: previous generated version or 24.15.0)",
-  "mise.flag.go_version": "Exact Go version override (default: each project's go.mod)",
+  "mise.flag.go_version": "Exact workspace Go version (default: existing root pin or highest module requirement)",
   "hooks.migrated": "Husky/commitlint defaults were migrated. Run your package manager's install through one mise exec to refresh the dependency lockfile.",
   "hooks.existing_configuration": "The root hk.pkl takes precedence over .config/hk.pkl. Merge its settings into .config/hk.pkl and remove the root file before continuing.",
   "hooks.project_invalid": "invalid project name or directory",

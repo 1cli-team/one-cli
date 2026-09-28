@@ -167,7 +167,8 @@ func TestE2E_BuildRawKeepsFailure(t *testing.T) {
 
 func TestE2E_DevHonorsMiseProjectOverrideAndRawTerminal(t *testing.T) {
 	root := devTerminalFixture(t, true)
-	buildWrite(t, root, "packages/lib/mise.toml", `[tasks.dev]
+	appendRootTaskConfig(t, root, `[tasks."lib:dev"]
+dir = "packages/lib"
 run = "sh override.sh"
 raw = true
 `)

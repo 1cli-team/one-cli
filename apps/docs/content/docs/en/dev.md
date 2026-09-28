@@ -17,7 +17,7 @@ Without `-p`, One invokes the root `dev` task. The generated aggregate includes 
 
 ## Commands and overrides
 
-Generated adapters use `projects[].dev.command` when set, otherwise the project's native `dev` script or Taskfile task. Project `mise.toml` can override the task; root `mise.toml` can replace the workspace aggregate. Custom mise commands use mise's environment. Generated adapters receive One's frozen project environment.
+Generated adapters use `projects[].dev.command` when set, otherwise the project's native `dev` script or Taskfile task. The root `mise.toml` can override a project task such as `web:dev` or replace the workspace aggregate. Custom mise commands use mise's environment. Generated adapters receive One's frozen project environment.
 
 ## Dependency preparation
 

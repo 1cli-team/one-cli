@@ -5,7 +5,7 @@ description: Add a templated project to an existing workspace.
 
 `one add` selects a technology stack, writes a locally developable project into the workspace, and registers it in the manifest. CI and deployment remain unconfigured by default.
 
-When hk is enabled, `one add` updates the default language checks in `.config/hk.pkl`, preserving user edits and comments. Workspace and project tasks use `mise.toml`. See [hooks](/en/docs/hk/) and [tasks](/en/docs/run/) for configuration details.
+When hk is enabled, `one add` updates the default language checks in `.config/hk.pkl`, preserving user edits and comments. Workspace and project tasks share the root `mise.toml`; project directories retain only their native command files. See [hooks](/en/docs/hk/) and [tasks](/en/docs/run/) for configuration details.
 
 There are two entry points:
 

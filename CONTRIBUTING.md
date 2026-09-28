@@ -8,7 +8,7 @@
 brew install mise               # macOS；其他系统先安装 mise
 git clone https://github.com/1cli-team/one-cli
 cd one-cli
-mise trust
+mise trust              # 信任当前 checkout 的根和项目配置
 mise install                    # 安装 mise.toml 固定的工具版本
 mise run install                # 打包 Dashboard + CLI，再创建本地启动器
 one --version                   # 验证装好
@@ -27,26 +27,44 @@ one --version                   # 验证装好
 
 ## 日常开发
 
-跨项目命令通过根 mise.toml 调度，Go 子项目使用自己的 Taskfile：
+仓库本身也是 One CLI 工作区，`one.manifest.json` 登记了四个项目：
+
+| 项目 | 目录 | 用途 |
+|---|---|---|
+| `dashboard` | `apps/dashboard` | React / Vite 管理界面 |
+| `docs` | `apps/docs` | Next.js / Fumadocs 文档站 |
+| `cli` | `packages/cli` | Go CLI 和公开 Go 包 |
+| `kernel` | `packages/kernel` | 共享 Go 内核 |
+
+`packages/templates` 和测试 fixture 是源码素材，不登记为项目。`packages/cli` 保留现有路径，因为公开 Go 包的 module path 已包含该目录。
+
+完成首次安装后，可以直接用 One CLI 开发自身：
 
 ```bash
-mise tasks ls                   # 查看可用任务
-mise run install-deps           # 安装根 Node workspace 的锁定依赖
-mise run dev                    # 同时启动 Go Dashboard API + Vite UI
-mise run check                  # 在当前操作系统运行 monorepo 验证入口
-pnpm check                      # 根目录快捷入口，等价于 mise run check
-mise run hooks:install          # 为当前 checkout 启用提交前 PR gate
-mise run build                  # 编译到 packages/cli/bin/one
-mise run test                   # Go race 测试 + Dashboard 测试
-mise run vet                    # go vet
-mise run fmt                    # gofmt
-mise run install                # 打包 + 本地启动器
-mise run pre-push               # 推前必跑（含上面所有 + verify-docs）
+one                             # 查看当前工作区
+one run                         # 查看根任务和项目任务
+one dev                         # Go Dashboard API + Vite UI，使用原有开发 fixture
+one dev -p docs                  # 文档站：http://localhost:3000
+one build -p cli                 # 准备嵌入资源并构建 CLI
+one test -p kernel               # 测试共享 Go 内核
+one run check                   # 完整仓库检查；也可简写 one check
+one serve                       # 在 Dashboard 中管理当前真实仓库
 ```
 
-`build` / `test` / `vet` 都隐式依赖 `sync-bundled` + `sync-web`，所以你不用
-手动跑这两个——除非要让 gopls 立刻看到 `packages/templates/` 或 `apps/dashboard/`
-的改动。
+单独运行 `one dev -p dashboard` 只启动 Vite 前端，需要在另一终端运行 `one dev -p cli` 提供 API；通常直接使用联合任务 `one dev`。`one serve` 管理当前真实仓库，开发 API 仍使用测试 fixture。构建、测试和开发不需要绑定 Infisical。
+
+根 `mise.toml` 继续维护原生任务，供首次安装、CI 和 Git hooks 使用：
+
+```bash
+mise run install-deps           # 安装锁定的 Node workspace 依赖
+mise run check                  # 完整仓库检查
+mise run build                  # 编译到 packages/cli/bin/one
+mise run test                   # Go race 测试 + Dashboard 测试
+mise run install                # 打包并安装本地启动器，无需预先安装 one
+mise run pre-push               # 推送前检查，包含 race 测试
+```
+
+项目任务来自各自的 `package.json` 或 `Taskfile.yml`，只在根 `mise.toml` 登记 `cli:build`、`dashboard:dev` 这样的任务入口，并通过 `dir` 指定子项目目录。根文件也声明 Dashboard、模板和嵌入资源的前置步骤，CLI 测试会先构建 E2E 使用的二进制。新增或修改任务目录后，运行 `one init mise` 同步这些受版本控制的配置。
 
 ## 提交流程
 

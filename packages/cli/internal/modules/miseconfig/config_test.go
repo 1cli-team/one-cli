@@ -45,7 +45,7 @@ func TestConfigurationGenerationIsAdditiveAndIdempotent(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(p.Changes) != 3 || !p.DryRun {
+	if len(p.Changes) != 1 || !p.DryRun {
 		t.Fatalf("unexpected plan: %+v", p)
 	}
 	if actual, _ := os.ReadFile(filepath.Join(root, Filename)); string(actual) != string(userBefore) {
@@ -62,12 +62,19 @@ func TestConfigurationGenerationIsAdditiveAndIdempotent(t *testing.T) {
 	if rootConfig.Tools["node"] != "25.4.0" || rootConfig.Tools["pnpm"] != "10.14.0" {
 		t.Fatalf("tools: %+v", rootConfig.Tools)
 	}
-	web, _ := os.ReadFile(filepath.Join(root, "apps/web", Filename))
-	if !strings.Contains(string(web), "[tasks.build]") || strings.Contains(string(web), "[tasks.lint]") || strings.Contains(string(web), "vite") {
-		t.Fatalf("tasks do not reference the source commands: %s", web)
+	if !rootConfig.MonorepoRoot || len(rootConfig.Monorepo.ConfigRoots) != 0 {
+		t.Fatalf("expected root-only scheduling: %+v", rootConfig.Monorepo)
 	}
-	if !strings.Contains(string(web), "one __task --project 'web' --task 'dev'") {
+	if rootConfig.Tasks["web:build"].Directory != "apps/web" || strings.Contains(string(rootRaw), "vite") {
+		t.Fatalf("tasks do not reference the source commands: %s", rootRaw)
+	}
+	if !strings.Contains(rootConfig.Tasks["web:dev"].Run, "one __task --project 'web' --task 'dev'") {
 		t.Fatal("missing terminal execution leaf")
+	}
+	for _, dir := range []string{"apps/web", "services/api"} {
+		if _, err := os.Stat(filepath.Join(root, dir, Filename)); !os.IsNotExist(err) {
+			t.Fatalf("generated a project configuration in %s: %v", dir, err)
+		}
 	}
 	second, err := Build(root, Options{})
 	if err != nil {
@@ -94,7 +101,7 @@ func TestGoVersionHonorsMinimumAndToolchain(t *testing.T) {
 	if err := p.Apply(context.Background()); err != nil {
 		t.Fatal(err)
 	}
-	raw, err := os.ReadFile(filepath.Join(root, "services/api", Filename))
+	raw, err := os.ReadFile(filepath.Join(root, Filename))
 	if err != nil || !strings.Contains(string(raw), "1.25.6") {
 		t.Fatalf("toolchain ignored: %v %s", err, raw)
 	}
@@ -103,7 +110,7 @@ func TestGoVersionHonorsMinimumAndToolchain(t *testing.T) {
 	}
 }
 
-func TestGoWorkspaceVersionAppliesToMembersWithoutAddingGoToNode(t *testing.T) {
+func TestGoWorkspaceVersionIsPinnedAtRoot(t *testing.T) {
 	root := fixture(t)
 	writeFixture(t, filepath.Join(root, "go.work"), "go 1.27.0\nuse ./services/api\n")
 	p, err := Build(root, Options{})
@@ -113,15 +120,9 @@ func TestGoWorkspaceVersionAppliesToMembersWithoutAddingGoToNode(t *testing.T) {
 	if err := p.Apply(context.Background()); err != nil {
 		t.Fatal(err)
 	}
-	goConfig, _ := os.ReadFile(filepath.Join(root, "services/api", Filename))
+	goConfig, _ := os.ReadFile(filepath.Join(root, Filename))
 	if !strings.Contains(string(goConfig), "go = '1.27.0'") {
 		t.Fatalf("workspace version ignored: %s", goConfig)
-	}
-	for _, rel := range []string{Filename, "apps/web/" + Filename} {
-		b, _ := os.ReadFile(filepath.Join(root, rel))
-		if strings.Contains(string(b), "go =") {
-			t.Fatalf("Node inherited Go: %s", b)
-		}
 	}
 	if _, err := Build(root, Options{GoVersion: "1.26.0"}); err == nil {
 		t.Fatal("accepted override below workspace minimum")
@@ -206,7 +207,7 @@ func TestGeneratorAcceptsEmptyFileAndRejectsSymlink(t *testing.T) {
 	})
 }
 
-func TestFailedWriteRestoresAlreadyWrittenFiles(t *testing.T) {
+func TestFailedWritePreservesRootConfiguration(t *testing.T) {
 	if runtime.GOOS == "windows" {
 		t.Skip("permission failure fixture is Unix-specific")
 	}
@@ -215,7 +216,8 @@ func TestFailedWriteRestoresAlreadyWrittenFiles(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	blocked := filepath.Join(root, "services/api")
+	blocked := root
+	before, _ := os.ReadFile(filepath.Join(root, Filename))
 	if err := os.MkdirAll(blocked, 0o755); err != nil {
 		t.Fatal(err)
 	}
@@ -230,8 +232,9 @@ func TestFailedWriteRestoresAlreadyWrittenFiles(t *testing.T) {
 	if err := p.Apply(context.Background()); err == nil {
 		t.Fatal("expected write failure")
 	}
-	if _, err := os.Stat(filepath.Join(root, "apps/web", Filename)); !os.IsNotExist(err) {
-		t.Fatal("partial configuration was not rolled back")
+	after, _ := os.ReadFile(filepath.Join(root, Filename))
+	if string(after) != string(before) {
+		t.Fatal("failed write changed root configuration")
 	}
 }
 
@@ -247,14 +250,14 @@ func TestGoWithoutTaskfileDoesNotGenerateBuildFallback(t *testing.T) {
 	if err := plan.Apply(context.Background()); err != nil {
 		t.Fatal(err)
 	}
-	raw, err := os.ReadFile(filepath.Join(root, "services/api", Filename))
+	raw, err := os.ReadFile(filepath.Join(root, Filename))
 	if err != nil {
 		t.Fatal(err)
 	}
-	if strings.Contains(string(raw), "[tasks.build]") {
+	if strings.Contains(string(raw), "[tasks.'api:build']") {
 		t.Fatal("Go build fallback must not be generated without a Taskfile")
 	}
-	if strings.Contains(string(raw), "[tasks.test]") {
+	if strings.Contains(string(raw), "[tasks.'api:test']") {
 		t.Fatal("test task must come from Taskfile")
 	}
 }

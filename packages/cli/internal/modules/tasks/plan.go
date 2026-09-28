@@ -93,118 +93,116 @@ func Catalog(w execution.Workspace) ([]Task, *miseconfig.Plan, error) {
 		overlay[change.Path] = []byte(change.After)
 	}
 	all := map[string]Task{}
-	dirs := map[string]string{"": ""}
-	for _, p := range w.Projects() {
-		dirs[p.RelativeDir] = p.Name
+	// Scheduling lives at the workspace root; package scripts and Taskfiles
+	// remain the command sources inside projects.
+	var includes []string
+	files, err := filepath.Glob(filepath.Join(w.Root(), ".mise/conf.d/*.toml"))
+	if err != nil {
+		return nil, nil, err
 	}
-	for dir, project := range dirs {
-		var includes []string
-		files, err := filepath.Glob(filepath.Join(w.Root(), dir, ".mise/conf.d/*.toml"))
-		if err != nil {
-			return nil, nil, err
-		}
-		sort.Strings(files)
-		for _, name := range []string{".mise.toml", "mise.toml", ".mise.local.toml", "mise.local.toml"} {
-			files = append(files, filepath.Join(w.Root(), dir, name))
-		}
-		for _, file := range files {
-			rel, _ := filepath.Rel(w.Root(), file)
-			rel = filepath.ToSlash(rel)
-			raw, ok := overlay[rel]
-			if !ok {
-				raw, err = os.ReadFile(file)
-				if os.IsNotExist(err) {
-					continue
-				}
-				if err != nil {
-					return nil, nil, err
-				}
+	sort.Strings(files)
+	for _, name := range []string{".mise.toml", "mise.toml", ".mise.local.toml", "mise.local.toml"} {
+		files = append(files, filepath.Join(w.Root(), name))
+	}
+	for _, file := range files {
+		rel, _ := filepath.Rel(w.Root(), file)
+		rel = filepath.ToSlash(rel)
+		raw, ok := overlay[rel]
+		if !ok {
+			raw, err = os.ReadFile(file)
+			if os.IsNotExist(err) {
+				continue
 			}
-			var doc struct {
-				Tasks      map[string]any `toml:"tasks"`
-				TaskConfig struct {
-					Includes []string `toml:"includes"`
-				} `toml:"task_config"`
-			}
-			if err = toml.Unmarshal(raw, &doc); err != nil {
+			if err != nil {
 				return nil, nil, err
 			}
-			if doc.TaskConfig.Includes != nil {
-				includes = doc.TaskConfig.Includes
-			}
-			for name, value := range doc.Tasks {
-				fields, ok := value.(map[string]any)
-				if !ok {
-					fields = map[string]any{"run": value}
-				}
-				canonical := "//" + dir + ":" + name
-				task, exists := all[canonical]
-				if !exists {
-					task = Task{Name: canonical, Project: project, Operation: name, Directory: filepath.Join(w.Root(), dir), Status: "unknown", Dependencies: []string{}}
-				}
-				task.Source = rel
-				if v, ok := fields["description"].(string); ok {
-					task.Description = v
-				}
-				if v, ok := fields["run"]; ok {
-					task.Run = v
-					if command, ok := v.(string); ok {
-						task.Managed = strings.HasPrefix(command, "one __task ")
-					} else {
-						task.Managed = false
-					}
-				}
-				if v, ok := fields["depends"]; ok {
-					task.Dependencies, err = stringList(v)
-					if err != nil {
-						return nil, nil, i18n.Errorf("tasks.dynamic_config", canonical)
-					}
-				}
-				if v, ok := fields["depends_post"]; ok {
-					post, e := stringList(v)
-					if e != nil || len(post) > 0 {
-						return nil, nil, i18n.Errorf("tasks.dynamic_config", canonical)
-					}
-				}
-				if v, ok := fields["sources"]; ok {
-					task.Sources, _ = stringList(v)
-				}
-				if v, ok := fields["outputs"]; ok {
-					task.Outputs, _ = stringList(v)
-				}
-				if v, ok := fields["cache"].(map[string]any); ok {
-					if value, ok := v["enabled"].(bool); ok {
-						task.Cached = value
-					}
-					task.cacheInputs, _ = stringList(v["command_inputs"])
-				}
-				if v, ok := fields["interactive"].(bool); ok {
-					task.Interactive = v
-				}
-				if v, ok := fields["raw"].(bool); ok {
-					task.Raw = v
-				}
-				if v, ok := fields["dir"].(string); ok {
-					if strings.Contains(v, "{{") {
-						return nil, nil, i18n.Errorf("tasks.dynamic_config", canonical)
-					}
-					if filepath.IsAbs(v) {
-						task.Directory = v
-					} else {
-						task.Directory = filepath.Join(w.Root(), dir, v)
-					}
-				}
-				all[canonical] = task
-			}
 		}
-		scripts, err := fileTasks(w.Root(), dir, project, includes)
-		if err != nil {
+		var doc struct {
+			Tasks      map[string]any `toml:"tasks"`
+			TaskConfig struct {
+				Includes []string `toml:"includes"`
+			} `toml:"task_config"`
+		}
+		if err = toml.Unmarshal(raw, &doc); err != nil {
 			return nil, nil, err
 		}
-		for name, task := range scripts {
-			if _, exists := all[name]; !exists {
-				all[name] = task
+		if doc.TaskConfig.Includes != nil {
+			includes = doc.TaskConfig.Includes
+		}
+		for name, value := range doc.Tasks {
+			fields, ok := value.(map[string]any)
+			if !ok {
+				fields = map[string]any{"run": value}
 			}
+			canonical := "//:" + name
+			task, exists := all[canonical]
+			if !exists {
+				project, operation := taskIdentity(w, canonical)
+				task = Task{Name: canonical, Project: project, Operation: operation, Directory: w.Root(), Status: "unknown", Dependencies: []string{}}
+			}
+			task.Source = rel
+			if v, ok := fields["description"].(string); ok {
+				task.Description = v
+			}
+			if v, ok := fields["run"]; ok {
+				task.Run = v
+				if command, ok := v.(string); ok {
+					task.Managed = strings.HasPrefix(command, "one __task ")
+				} else {
+					task.Managed = false
+				}
+			}
+			if v, ok := fields["depends"]; ok {
+				task.Dependencies, err = stringList(v)
+				if err != nil {
+					return nil, nil, i18n.Errorf("tasks.dynamic_config", canonical)
+				}
+			}
+			if v, ok := fields["depends_post"]; ok {
+				post, e := stringList(v)
+				if e != nil || len(post) > 0 {
+					return nil, nil, i18n.Errorf("tasks.dynamic_config", canonical)
+				}
+			}
+			if v, ok := fields["sources"]; ok {
+				task.Sources, _ = stringList(v)
+			}
+			if v, ok := fields["outputs"]; ok {
+				task.Outputs, _ = stringList(v)
+			}
+			if v, ok := fields["cache"].(map[string]any); ok {
+				if value, ok := v["enabled"].(bool); ok {
+					task.Cached = value
+				}
+				task.cacheInputs, _ = stringList(v["command_inputs"])
+			}
+			if v, ok := fields["interactive"].(bool); ok {
+				task.Interactive = v
+			}
+			if v, ok := fields["raw"].(bool); ok {
+				task.Raw = v
+			}
+			if v, ok := fields["dir"].(string); ok {
+				if strings.Contains(v, "{{") {
+					return nil, nil, i18n.Errorf("tasks.dynamic_config", canonical)
+				}
+				if filepath.IsAbs(v) {
+					task.Directory = v
+				} else {
+					task.Directory = filepath.Join(w.Root(), v)
+				}
+			}
+			all[canonical] = task
+		}
+	}
+	scripts, err := fileTasks(w.Root(), "", "", includes)
+	if err != nil {
+		return nil, nil, err
+	}
+	for name, task := range scripts {
+		task.Project, task.Operation = taskIdentity(w, name)
+		if _, exists := all[name]; !exists {
+			all[name] = task
 		}
 	}
 	out := make([]Task, 0, len(all))
@@ -214,6 +212,21 @@ func Catalog(w execution.Workspace) ([]Task, *miseconfig.Plan, error) {
 	sort.Slice(out, func(i, j int) bool { return out[i].Name < out[j].Name })
 	return out, config, nil
 }
+
+// Project task names are namespaced in the single root configuration.
+func taskIdentity(w execution.Workspace, canonical string) (string, string) {
+	name := strings.TrimPrefix(canonical, "//:")
+	project, operation, found := strings.Cut(name, ":")
+	if found {
+		for _, entry := range w.Projects() {
+			if entry.Name == project {
+				return project, operation
+			}
+		}
+	}
+	return "", name
+}
+
 func stringList(value any) ([]string, error) {
 	if s, ok := value.(string); ok {
 		return []string{s}, nil
@@ -259,8 +272,7 @@ func planCatalog(w execution.Workspace, opts Options, catalog []Task, configurat
 			return nil, err
 		}
 		for _, name := range names {
-			project, _ := w.Project(name)
-			p.Entries = append(p.Entries, "//"+project.RelativeDir+":"+opts.Name)
+			p.Entries = append(p.Entries, "//:"+name+":"+opts.Name)
 		}
 	}
 	if len(p.Entries) > 1 && len(opts.Arguments) > 0 {

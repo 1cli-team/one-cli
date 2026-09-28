@@ -8,11 +8,21 @@ import (
 	"testing"
 )
 
-func TestE2E_TasksRestoreArtifactsAndInvalidateProjectConfiguration(t *testing.T) {
+func appendRootTaskConfig(t *testing.T, root, value string) {
+	t.Helper()
+	raw, err := os.ReadFile(filepath.Join(root, "mise.toml"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	buildWrite(t, root, "mise.toml", string(raw)+"\n"+value)
+}
+
+func TestE2E_TasksRestoreArtifactsAndInvalidateRootConfiguration(t *testing.T) {
 	root := buildFixture(t, true)
-	for name, dir := range map[string]string{"web": "apps/web", "lib": "packages/lib"} {
+	for _, project := range []struct{ name, dir string }{{"web", "apps/web"}, {"lib", "packages/lib"}} {
+		name, dir := project.name, project.dir
 		buildWrite(t, root, dir+"/build.sh", "#!/bin/sh\nmkdir -p dist\nprintf '%s' \"$BUILD_VALUE\" > dist/value\necho executed >> executions\nprintf '<%s>\\n' \"$@\"\n")
-		buildWrite(t, root, dir+"/mise.toml", "[env]\nBUILD_VALUE='"+name+"'\n[tasks.build]\nsources=['package.json','build.sh','mise.toml']\noutputs=['dist']\ncache={enabled=true,command_inputs=['one __task-input --project "+name+" --task build']}\n")
+		appendRootTaskConfig(t, root, "[tasks.\""+name+":build\"]\nenv={BUILD_VALUE='"+name+"'}\nsources=['package.json','build.sh']\noutputs=['dist']\ncache={enabled=true,env=['BUILD_VALUE'],command_inputs=['one __task-input --project "+name+" --task build']}\n")
 	}
 	run := func(args ...string) string {
 		t.Helper()
@@ -41,7 +51,8 @@ func TestE2E_TasksRestoreArtifactsAndInvalidateProjectConfiguration(t *testing.T
 		}
 	}
 	run("run", "build", "-p", "web", "-o", "json")
-	for name, dir := range map[string]string{"web": "apps/web", "lib": "packages/lib"} {
+	for _, project := range []struct{ name, dir string }{{"web", "apps/web"}, {"lib", "packages/lib"}} {
+		name, dir := project.name, project.dir
 		raw, err := os.ReadFile(filepath.Join(root, dir, "dist/value"))
 		if err != nil || string(raw) != name {
 			t.Fatalf("restored environment %s: %s %v", name, raw, err)
@@ -50,21 +61,27 @@ func TestE2E_TasksRestoreArtifactsAndInvalidateProjectConfiguration(t *testing.T
 			t.Fatal("restore executed the task")
 		}
 	}
-	config, err := os.ReadFile(filepath.Join(root, "apps/web/mise.toml"))
+	config, err := os.ReadFile(filepath.Join(root, "mise.toml"))
 	if err != nil {
 		t.Fatal(err)
 	}
-	buildWrite(t, root, "apps/web/mise.toml", strings.Replace(string(config), "BUILD_VALUE='web'", "BUILD_VALUE='changed'", 1))
+	buildWrite(t, root, "mise.toml", strings.Replace(string(config), "BUILD_VALUE='web'", "BUILD_VALUE='changed'", 1))
 	run("run", "build", "-p", "web", "-o", "json")
-	if runs("apps/web") != 2 || runs("packages/lib") != 1 {
-		t.Fatal("project environments are not isolated")
+	// mise includes the defining config in every task cache key. Editing the
+	// shared root config invalidates both tasks, while their environments stay isolated.
+	if runs("apps/web") != 2 || runs("packages/lib") != 2 {
+		t.Fatalf("root configuration did not invalidate both tasks: web=%d lib=%d", runs("apps/web"), runs("packages/lib"))
 	}
 	raw, _ := os.ReadFile(filepath.Join(root, "apps/web/dist/value"))
 	if string(raw) != "changed" {
 		t.Fatal("stale environment cache hit")
 	}
+	lib, _ := os.ReadFile(filepath.Join(root, "packages/lib/dist/value"))
+	if string(lib) != "lib" {
+		t.Fatal("project environments are not isolated")
+	}
 	run("run", "build", "-p", "web", "--force", "--cache", "off")
-	if runs("apps/web") != 3 || runs("packages/lib") != 2 {
+	if runs("apps/web") != 3 || runs("packages/lib") != 3 {
 		t.Fatal("forced execution skipped tasks")
 	}
 	out := run("run", "build", "-p", "web", "--", "a b", "中文", "$(nope)")
@@ -99,7 +116,7 @@ func TestE2E_NativeMiseFileTask(t *testing.T) {
 
 func TestE2E_TasksRejectCacheWithoutEnvironmentFingerprint(t *testing.T) {
 	root := buildFixture(t, true)
-	buildWrite(t, root, "apps/web/mise.toml", "[tasks.build]\nsources=['package.json']\noutputs=['dist']\ncache={enabled=true}\n")
+	appendRootTaskConfig(t, root, "[tasks.\"web:build\"]\nsources=['package.json']\noutputs=['dist']\ncache={enabled=true}\n")
 	stdout, stderr, code := runBinaryIn(t, root, "run", "build", "-p", "web", "-o", "json")
 	if code == 0 || !strings.Contains(stderr+stdout, "__task-input") {
 		t.Fatalf("effective cache without fingerprint accepted: %d %s %s", code, stdout, stderr)
@@ -125,9 +142,10 @@ func TestE2E_TasksReuseArtifactsAcrossCheckouts(t *testing.T) {
 	t.Setenv("MISE_TASK_CACHE_DIR", t.TempDir())
 	for i := 0; i < 2; i++ {
 		root := buildFixture(t, true)
-		for name, dir := range map[string]string{"web": "apps/web", "lib": "packages/lib"} {
+		for _, project := range []struct{ name, dir string }{{"web", "apps/web"}, {"lib", "packages/lib"}} {
+			name, dir := project.name, project.dir
 			buildWrite(t, root, dir+"/build.sh", "#!/bin/sh\nmkdir -p dist\necho portable-artifact > dist/value\necho executed >> executions\n")
-			buildWrite(t, root, dir+"/mise.toml", "[tasks.build]\nsources=['package.json','build.sh']\noutputs=['dist']\ncache={enabled=true,command_inputs=['one __task-input --project "+name+" --task build']}\n")
+			appendRootTaskConfig(t, root, "[tasks.\""+name+":build\"]\nsources=['package.json','build.sh']\noutputs=['dist']\ncache={enabled=true,command_inputs=['one __task-input --project "+name+" --task build']}\n")
 		}
 		stdout, stderr, code := runBinaryIn(t, root, "build", "-o", "json")
 		if code != 0 {
@@ -164,7 +182,6 @@ func TestE2E_GoTaskBuildRestoresExecutableAndForwardsArguments(t *testing.T) {
 	t.Setenv("CGO_ENABLED", "0")
 	buildWrite(t, root, "one.manifest.json", `{"version":1,"workspace":{"id":"go-test","name":"go-test"},"projects":[{"name":"api","relativeDir":"services/api","toolchain":"go","templateId":"go-api"}]}`)
 	buildWrite(t, root, "mise.toml", "[tools]\ngo='system'\ntask='system'\nnode='system'\npnpm='system'\n")
-	buildWrite(t, root, "services/api/mise.toml", "[tools]\ngo='system'\ntask='system'\n")
 	buildWrite(t, root, "services/api/go.mod", "module example.com/task-test\n\ngo 1.25.0\n")
 	buildWrite(t, root, "services/api/cmd/server/main.go", "package main\nimport \"fmt\"\nvar message=\"default\"\nfunc main(){fmt.Print(message)}\n")
 	scaffold, err := os.ReadFile(filepath.Join(repoRoot(t), "../templates/go-api/Taskfile.yml"))

@@ -56,6 +56,25 @@ func TestPlanIncludesSharedDependenciesWithoutWrites(t *testing.T) {
 		t.Fatal("unknown environment accepted")
 	}
 }
+func TestRootProjectTaskPreservesColonNameAndNativeDirectory(t *testing.T) {
+	w := taskWorkspace(t)
+	writeTaskFile(t, w.Root(), "apps/web/package.json", `{"scripts":{"docs:build":"echo docs"}}`)
+	p, err := NewPlan(w, Options{Name: "docs:build", Projects: []string{"web"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(p.Tasks) != 1 {
+		t.Fatal(p.Tasks)
+	}
+	task := p.Tasks[0]
+	if task.Name != "//:web:docs:build" || task.Operation != "docs:build" || task.Project != "web" || task.Source != "mise.toml" || task.Directory != filepath.Join(w.Root(), "apps/web") {
+		t.Fatalf("wrong project task identity or directory: %+v", task)
+	}
+	if len(p.ConfigChanges) != 1 || p.ConfigChanges[0].Path != "mise.toml" {
+		t.Fatalf("generated non-root configuration: %+v", p.ConfigChanges)
+	}
+}
+
 func TestPlanRejectsCycleOutputConflictsAndUnsafeCache(t *testing.T) {
 	for _, tc := range []struct{ name, root, project string }{
 		{"cycle", `[tasks.build]
@@ -87,8 +106,7 @@ dir="../elsewhere"`},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			w := taskWorkspace(t)
-			writeTaskFile(t, w.Root(), "mise.toml", tc.root)
-			writeTaskFile(t, w.Root(), "apps/web/mise.toml", tc.project)
+			writeTaskFile(t, w.Root(), "mise.toml", tc.root+"\n"+strings.ReplaceAll(tc.project, "[tasks.build]", "[tasks.\"web:build\"]"))
 			if _, err := NewPlan(w, Options{Name: "build"}); err == nil {
 				t.Fatal("invalid task plan accepted")
 			}

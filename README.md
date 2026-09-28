@@ -133,22 +133,41 @@ If you want to work on One CLI itself, the repository is organized like this:
 
 | Path | Purpose |
 |---|---|
-| `packages/cli` | The One CLI app |
+| `one.manifest.json` | The four projects managed by One CLI itself |
+| `packages/cli` | The One CLI app and its public Go packages |
+| `packages/kernel` | Shared Go kernel |
 | `packages/templates` | Starters used by `one add` |
 | `mise.toml` | Workspace scheduling, tools, and artifact cache declarations |
 | `apps/docs` | Documentation website |
 | `apps/dashboard` | Local workspace, account, and global-variable Dashboard opened by `one serve` |
 | `assets` | Brand assets, including the logo |
 
-Common contributor commands:
+This repository is also a One CLI workspace: `dashboard`, `docs`, `cli`, and `kernel`. Template directories under `packages/templates` and test fixtures are source assets, not registered projects. `packages/cli` keeps its existing location because it also exports Go packages with that module path.
+
+Bootstrap a fresh checkout without requiring an installed `one`:
 
 ```bash
-pnpm install
-mise run check
-mise run build
-mise run test
-mise run verify-docs
+mise trust
+mise install
+mise run install
 ```
+
+Then use the workspace commands:
+
+```bash
+one                             # Inspect this workspace
+one run                         # List root and project tasks
+one dev                         # Dashboard API + Vite UI, using the development fixture
+one dev -p docs                  # Documentation at http://localhost:3000
+one build -p cli                 # Prepare embedded resources and build the CLI
+one test -p kernel               # Test the shared Go kernel
+one run check                   # The complete repository gate; one check is shorthand
+one serve                       # Manage this repository in the Dashboard
+```
+
+`one dev -p dashboard` starts the Vite UI; run `one dev -p cli` in another terminal for its API, or use the combined `one dev` task. `one serve` opens this repository as a real workspace, while the contributor development API uses the existing test fixture. No Infisical binding is required to build, test, or start these projects.
+
+Root tasks remain native mise commands, so CI and first-time installation can still use `mise run build`, `mise run check`, and `mise run install`. Project tasks come from package scripts and Taskfiles. Only the root `mise.toml` is used: project tasks are namespaced as `cli:build` or `dashboard:dev` and select their directory with `dir`. CLI tasks declare their embedded-resource prerequisites there; CLI tests also build the binary used by E2E tests. Run `one init mise` after changing the project task catalogue to refresh the tracked task adapters.
 
 Read [CONTRIBUTING.md](./CONTRIBUTING.md) before opening a pull request.
 

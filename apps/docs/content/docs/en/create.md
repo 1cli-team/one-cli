@@ -43,7 +43,7 @@ one create my-app --yes
 | Capability | Default | Behavior |
 |---|---|---|
 | Environment variables | Unbound | Bind Infisical when variables are needed; otherwise inherit the shell environment |
-| Tool environment | mise | Creates root `mise.toml`; `one add` creates each project’s `mise.toml` |
+| Tool environment | mise | Creates root `mise.toml`; `one add` registers project tasks in that same file |
 | Git checks | hk | Creates `.config/hk.pkl` and installs local Git launchers |
 | Local development | `one dev` | Runs the development task graph through mise |
 

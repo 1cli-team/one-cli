@@ -3,7 +3,7 @@ title: one add
 description: 往工作区里加一个模板化项目。
 ---
 
-工作区已启用 hk 时，`one add` 会同步更新语言检查：Go 加入格式检查，JS/TS 根据项目工具加入 lint 和格式检查。检查配置直接保存在 `.config/hk.pkl`，用户修改和注释会保留。旧工作区可先通过 `one init hooks` 启用，详见 [`one hk`](/zh/docs/hk/)。
+工作区已启用 hk 时，`one add` 会同步更新语言检查：Go 加入格式检查，JS/TS 根据项目工具加入 lint 和格式检查。检查配置直接保存在 `.config/hk.pkl`，用户修改和注释会保留。工作区和项目任务统一登记在根 `mise.toml`，子项目继续使用自己的原生命令文件。旧工作区可先通过 `one init hooks` 启用，详见 [`one hk`](/zh/docs/hk/)。
 
 `one add` 选择技术栈，生成一个可本地开发的项目并登记到 manifest。CI 和部署默认都保持未配置。
 

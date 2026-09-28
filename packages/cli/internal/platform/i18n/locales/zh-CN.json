@@ -489,7 +489,7 @@
   "hooks.flag.dry_run": "预览配置、迁移和本地钩子文件，不写入修改",
   "mise.flag.dry_run": "显示拟生成的文件内容，不写入文件或执行 mise",
   "mise.flag.node_version": "精确 Node 版本（默认沿用此前生成的版本，或使用 24.15.0）",
-  "mise.flag.go_version": "指定精确 Go 版本（默认读取各项目的 go.mod）",
+  "mise.flag.go_version": "工作区 Go 精确版本（默认：根目录已有固定版本或模块要求的最高版本）",
   "hooks.migrated": "Husky/commitlint 默认配置已迁移。请通过 one mise exec 运行包管理器的安装命令，以更新依赖锁文件。",
   "hooks.existing_configuration": "根目录 hk.pkl 会优先于 .config/hk.pkl 生效。请将设置合并到 .config/hk.pkl，并移除根文件后继续。",
   "hooks.project_invalid": "项目名称或目录无效",

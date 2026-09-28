@@ -165,8 +165,8 @@ func TestE2E_GoLibraryTemplateHasBuildTask(t *testing.T) {
 	if err != nil || !strings.Contains(string(raw), "go build {{.CLI_ARGS}} ./...") {
 		t.Fatalf("%s %v", raw, err)
 	}
-	raw, err = os.ReadFile(filepath.Join(ws, "packages/lib/mise.toml"))
-	if err != nil || !strings.Contains(string(raw), "[tasks.build]") {
+	raw, err = os.ReadFile(filepath.Join(ws, "mise.toml"))
+	if err != nil || !strings.Contains(string(raw), "[tasks.'lib:build']") {
 		t.Fatalf("%s %v", raw, err)
 	}
 }

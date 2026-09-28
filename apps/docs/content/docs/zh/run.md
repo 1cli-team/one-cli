@@ -30,20 +30,18 @@ one run build --dry-run -o json
 
 ## 配置与依赖
 
-One 在工作区和项目根目录的 `mise.toml` 中声明工具版本、项目命令入口、聚合任务和本地 Node 构建依赖。直接编辑这个文件即可添加任务或调整设置。执行任务、添加项目或运行 `one init mise` 时，One 会补充新配置，并更新未被用户修改的生成项；自定义字段和注释保留。根 `dev`、`build`、`check`、`test` 只聚合项目实际存在的任务，`ci` 组合 build、check、test 聚合任务。
+One 只在工作区根目录的 `mise.toml` 中声明工具版本、项目命令入口、聚合任务和本地 Node 构建依赖。子项目保留原生的命令文件，不再生成子项目级 mise 配置。直接编辑这个文件即可添加任务或调整设置。执行任务、添加项目或运行 `one init mise` 时，One 会补充新配置，并更新未被用户修改的生成项；自定义字段和注释保留。根 `dev`、`build`、`check`、`test` 只聚合项目实际存在的任务，`ci` 组合 build、check、test 聚合任务。
 
 文件末尾的 `# one:managed-v1` 注释记录 One 上一次生成的字段。请保留它，以便后续增量更新。如果同一个字段被用户和 One 同时改成不同内容，会报告 `MISE_CONFIG_CONFLICT` 并指出冲突项。仅修改注释、添加自定义任务或调整默认值，不会因为整份文件改变而被拒绝。
 
 ```text
 workspace/
   one.manifest.json
-  mise.toml             # 工具版本、项目目录和聚合任务
+  mise.toml             # 工具版本、项目任务入口、聚合与缓存配置
   .config/hk.pkl        # 工作区 Git 检查
   apps/web/
-    mise.toml           # 项目任务与缓存配置
     package.json        # pnpm 脚本
   services/api/
-    mise.toml           # 项目工具与任务
     Taskfile.yml        # Go 项目命令
 ```
 
@@ -54,7 +52,7 @@ one init mise --dry-run -o json
 one init mise
 ```
 
-项目任务的规范名称为 `//apps/web:build`。本地 Node 上游存在 build 时，会在下游 build、check、test、typecheck 和 dev 前执行。Go 的模块依赖由 `go.work` 和编译器解析。One 管理的 Node 项目统一使用 pnpm。
+项目任务统一使用根任务名，如 `web:build`（规范名称为 `//:web:build`），并通过 `dir = "apps/web"` 指定执行目录。工具版本统一固定在根目录，Go 默认采用工作区模块要求的最高版本。本地 Node 上游存在 build 时，会在下游 build、check、test、typecheck 和 dev 前执行。Go 的模块依赖由 `go.work` 和编译器解析。One 管理的 Node 项目统一使用 pnpm。
 
 列表和 dry-run 静态读取配置，不启动 mise、不安装工具、不读取密钥、不写文件。动态表达式和带参数的依赖无法静态预览。实际运行还会读取 mise 的有效任务清单。用户直接定义命令的原生 mise 任务使用 mise 环境；One 生成的项目入口使用 One 项目环境。
 
@@ -64,7 +62,7 @@ one init mise
 
 ```toml
 [tasks.verify]
-depends = ["//apps/web:check", "//services/api:test"]
+depends = ["//:web:check", "//:api:test"]
 
 [tasks.hello]
 description = "Print a greeting"
@@ -73,11 +71,11 @@ run = "echo hello"
 
 使用 `one run verify` 执行聚合，或 `one run hello` 执行自定义命令。也可以把可执行脚本放到 `.mise/tasks/`，或用 `[task_config] includes = ["tasks.toml"]` 加载独立任务文件。
 
-诊断原生配置可运行 `one mise tasks ls --all --local` 和 `one mise tasks info //apps/web:build --json`。用户自行定义的原生任务可以直接用 `mise run hello`；One 生成的项目任务需要 `one run` 准备环境上下文。
+诊断原生配置可运行 `one mise tasks ls --all --local` 和 `one mise tasks info //:web:build --json`。用户自行定义的原生任务可以直接用 `mise run hello`；One 生成的项目任务需要 `one run` 准备环境上下文。
 
 ## 缓存
 
-生成配置开启 mise 实验性功能。已知模板的 **build** 任务声明输入、输出和环境指纹；其他任务需要显式声明缓存规则。修改模板构建脚本或构建配置后，自动缓存声明会关闭；在项目 `mise.toml` 中声明实际输入和输出即可重新启用。缓存存储和产物恢复交给 mise。
+生成配置开启 mise 实验性功能。已知模板的 **build** 任务声明输入、输出和环境指纹；其他任务需要显式声明缓存规则。修改模板构建脚本或构建配置后，自动缓存声明会关闭；在根 `mise.toml` 对应的项目任务中声明实际输入和输出即可重新启用。缓存存储和产物恢复交给 mise。
 
 ```sh
 one run build --cache local-only
@@ -88,14 +86,17 @@ one run build --concurrency 4
 
 `--cache off --force` 同时关闭产物缓存和输入新鲜度跳过，确保实际执行。还支持 `read-write` 和 `write-only`；使用远程缓存前需自行配置 mise 缓存后端，One 不创建远程服务。
 
-在项目的 `mise.toml` 为生成任务开启缓存时，需要完整输入、输出和 One 环境指纹命令：
+在根 `mise.toml` 为项目的生成任务开启缓存时，需要完整输入、输出和 One 环境指纹命令：
 
 ```toml
-[tasks.build]
+[tasks."web:build"]
+dir = "apps/web"
 sources = ["src/**/*", "package.json", "tsconfig.json", "../../pnpm-lock.yaml"]
 outputs = ["dist"]
 cache = { enabled = true, env = ["NODE_ENV"], command_inputs = ['one __task-input --project "web" --task "build"'] }
 ```
+
+输入和输出路径相对于任务的 `dir`。mise 也会将任务所在的配置文件纳入缓存输入，因此修改根 `mise.toml` 会使其中任务的缓存失效。
 
 只验证输入且结果确定的任务可以声明 `outputs = []`。自定义任务应包含所有上游源码、外部文件、配置值和编译器输入。输出必须位于任务目录内，且不能与同次执行其他任务的输出重叠。新配置先用 `--cache off --force` 验证。
 

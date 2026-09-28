@@ -45,7 +45,7 @@ one create my-app --yes
 | 环境变量 | 未绑定 | 需要时绑定 Infisical，否则继承 shell 环境 |
 | 本地开发 | `one dev` | 通过 mise 运行开发任务图 |
 | Git 检查 | hk | 生成 `.config/hk.pkl` 并安装本地 Git 启动器 |
-| 工具环境 | mise | 自动生成根 `mise.toml`；后续 `one add` 自动生成项目 `mise.toml` |
+| 工具环境 | mise | 自动生成根 `mise.toml`；后续 `one add` 在同一文件登记项目任务 |
 | Git 检查 | hk | 创建共享检查配置并安装本地提交钩子；后续 `one add` 增量加入语言检查 |
 
 创建工作区和添加项目时会准备 mise，并自动信任完全由 One 生成的 `mise.toml`，进入新目录无需再单独执行信任命令。已有自定义配置保留 mise 原有的信任检查。本机没有兼容版本时，One 可能下载托管的 mise 程序；项目工具和依赖仍按需安装。信任失败会保留生成文件并给出恢复命令。工具版本与已有 workspace 的启用方式见 [`one init mise`](/zh/docs/login/#mise-工作区工具配置)。

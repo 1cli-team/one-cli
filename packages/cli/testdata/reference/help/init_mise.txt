@@ -12,6 +12,6 @@ EXAMPLES
 
 COMMON OPTIONS
   --dry-run                Print proposed file contents without writing files or executing mise
-  --go-version <value>     Exact Go version override (default: each project's go.mod)
+  --go-version <value>     Exact workspace Go version (default: existing root pin or highest module requirement)
   --node-version <value>   Exact Node version (default: previous generated version or 24.15.0)
   -o, --output <value>     Output format: json | yaml | text (default: terminal-friendly text, JSON when piped)

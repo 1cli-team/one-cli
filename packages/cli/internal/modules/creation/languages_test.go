@@ -95,7 +95,7 @@ func TestFirstProjectInitializesLanguageWorkspaceInEitherOrder(t *testing.T) {
 				}
 			}
 			rootMise, _ := os.ReadFile(filepath.Join(root, workspace.MiseConfigFilename))
-			if strings.Contains(string(rootMise), "go =") || !strings.Contains(string(rootMise), "pnpm =") {
+			if !strings.Contains(string(rootMise), "go = '1.27.0'") || !strings.Contains(string(rootMise), "pnpm =") {
 				t.Fatalf("wrong root tools: %s", rootMise)
 			}
 			hk, err := os.ReadFile(filepath.Join(root, workspace.HooksConfigFilename))
@@ -121,9 +121,10 @@ func TestFirstProjectInitializesLanguageWorkspaceInEitherOrder(t *testing.T) {
 					t.Errorf("obsolete workspace file %s", obsolete)
 				}
 			}
-			goMise, _ := os.ReadFile(filepath.Join(root, "services/api", workspace.MiseConfigFilename))
-			if !strings.Contains(string(goMise), "go = '1.27.0'") {
-				t.Fatalf("Go tool not configured: %s", goMise)
+			for _, project := range m.Projects {
+				if _, err := os.Stat(filepath.Join(root, project.RelativeDir, workspace.MiseConfigFilename)); !os.IsNotExist(err) {
+					t.Fatalf("unexpected project mise configuration for %s: %v", project.Name, err)
+				}
 			}
 		})
 	}

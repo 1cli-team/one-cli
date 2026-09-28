@@ -83,14 +83,7 @@ func (s Service) Plan(ctx context.Context, w execution.Workspace, opts Options) 
 		task.Sources = item.Sources
 		task.Outputs = item.Outputs
 		task.Status = "unknown"
-		_, operation, _ := strings.Cut(item.Name, ":")
-		task.Operation = operation
-		for _, project := range w.Projects() {
-			if strings.HasPrefix(item.Name, "//"+project.RelativeDir+":") {
-				task.Project = project.Name
-				break
-			}
-		}
+		task.Project, task.Operation = taskIdentity(w, item.Name)
 		task.Managed = false
 		for _, command := range item.Run {
 			if strings.HasPrefix(command, "one __task ") {
