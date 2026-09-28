@@ -19,33 +19,22 @@ import (
 
 func Commands(loaders *secrets.Registry, provider runtimeport.Provider) []*cobra.Command {
 	service := tasks.Service{Provider: provider, Loaders: loaders}
-	return []*cobra.Command{command("run", service), command("build", service), command("dev", service), internal(false), internal(true), serviceWorker(service)}
+	return []*cobra.Command{command(service), internal(false), internal(true), serviceWorker(service)}
 }
-func command(kind string, service tasks.Service) *cobra.Command {
+func command(service tasks.Service) *cobra.Command {
 	opts := tasks.Options{Jobs: 1, Cache: "local-only", UI: "auto"}
 	var list, dry bool
-	use := "run [task]"
-	if kind != "run" {
-		use = kind
-	}
-	cmd := &cobra.Command{Use: use, Args: cobra.ArbitraryArgs, Example: "  one run\n  one run build -p web\n  one run test -p api\n  one run build --dry-run", RunE: func(cmd *cobra.Command, args []string) (resultErr error) {
+	cmd := &cobra.Command{Use: "run [task]", Args: cobra.ArbitraryArgs, Example: "  one run\n  one run build -p web\n  one run test -p api\n  one run build --dry-run", RunE: func(cmd *cobra.Command, args []string) (resultErr error) {
 		dash := cmd.ArgsLenAtDash()
 		if dash >= 0 {
 			opts.Arguments = args[dash:]
 			args = args[:dash]
 		}
-		if kind != "run" {
-			opts.Name = kind
-			if len(args) > 0 {
-				return i18n.Errorf("tasks.project_flag_required")
-			}
-		} else {
-			if len(args) > 1 {
-				return i18n.Errorf("tasks.one_name")
-			}
-			if len(args) == 1 {
-				opts.Name = args[0]
-			}
+		if len(args) > 1 {
+			return i18n.Errorf("tasks.one_name")
+		}
+		if len(args) == 1 {
+			opts.Name = args[0]
 		}
 		w, err := execution.ResolveWorkspace(cmd.Context())
 		if err != nil {
@@ -112,9 +101,6 @@ func command(kind string, service tasks.Service) *cobra.Command {
 		}
 		return err
 	}}
-	if kind != "run" {
-		cmd.Example = "  one " + kind + "\n  one " + kind + " -p web -p api\n  one " + kind + " -p web --dry-run"
-	}
 	cmd.Flags().StringArrayVarP(&opts.Projects, "project", "p", nil, "")
 	cmd.Flags().StringVar(&opts.Environment, "env", "", "")
 	cmd.Flags().StringVar(&opts.Cache, "cache", "local-only", "")
@@ -126,8 +112,8 @@ func command(kind string, service tasks.Service) *cobra.Command {
 	for _, name := range []string{"project", "env", "cache", "ui", "concurrency", "force", "dry-run", "list"} {
 		i18n.MarkFlagUsage(cmd, name, "tasks.flag."+strings.ReplaceAll(name, "-", "_"))
 	}
-	i18n.MarkShort(cmd, "tasks."+kind+".short")
-	i18n.MarkLong(cmd, "tasks."+kind+".long")
+	i18n.MarkShort(cmd, "tasks.run.short")
+	i18n.MarkLong(cmd, "tasks.run.long")
 	return cmd
 }
 func internal(fingerprint bool) *cobra.Command {

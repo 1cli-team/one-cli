@@ -18,7 +18,7 @@ one run build --dry-run -o json
 
 ## 任务简写
 
-`one <任务名>` 是 `one run <任务名>` 的简写。例如 `one test -p api` 与 `one run test -p api` 执行同一个任务。内置命令及其别名优先：`one env` 打开环境变量管理，`one run env` 执行名为 env 的任务。未知名称按任务解析，找不到时提示任务不存在。`one <任务名> --help` 显示 One 通用任务参数；用 `-- --help` 把帮助参数传给底层命令。
+`one <任务名>` 是 `one run <任务名>` 的简写。`dev`、`build`、`test`、`lint` 都是普通任务名，统一遵循这条规则。例如 `one test -p api` 与 `one run test -p api` 执行同一个任务。内置命令及其别名优先：`one env` 打开环境变量管理，`one run env` 执行名为 env 的任务。未知名称按任务解析，找不到时提示任务不存在。`one <任务名> --help` 显示 One 通用任务参数；用 `-- --help` 把帮助参数传给底层命令。
 
 ## 项目选择与参数
 

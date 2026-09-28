@@ -1,9 +1,9 @@
 ---
-title: one dev
+title: dev 任务
 description: 通过 mise 运行开发任务及其前置依赖。
 ---
 
-`one dev` 等同于 `one run dev`，执行 mise 中最终生效的任务图，包括你在 `mise.toml` 中定义的覆盖。
+`one dev` 是 `one run dev` 的简写。`dev` 和 `test`、`lint` 一样是普通任务名，共用任务解析、参数和帮助。最终执行 mise 中生效的任务图，包括你在 `mise.toml` 中定义的覆盖。
 
 ```sh
 one dev

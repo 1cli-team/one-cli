@@ -1,9 +1,9 @@
 ---
-title: one dev
+title: dev task
 description: Run development tasks and their prerequisites through mise.
 ---
 
-`one dev` is equivalent to `one run dev`. Both execute the effective mise task graph, including your overrides in `mise.toml`.
+`one dev` is shorthand for `one run dev`. `dev` is an ordinary task name, just like `test` or `lint`, and uses the same task parsing, flags, and help. The effective task graph comes from mise, including your overrides in `mise.toml`.
 
 ```sh
 one dev

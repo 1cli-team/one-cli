@@ -1,9 +1,9 @@
 ---
-title: one build
+title: build 任务
 description: 通过 mise 构建项目及其本地依赖。
 ---
 
-`one build` 是 `one run build` 的便捷入口，共用任务规划、环境快照、mise 调用、缓存和输出 schema。
+`one build` 是 `one run build` 的简写。`build` 和 `test`、`lint` 一样是普通任务名，共用任务解析、参数和帮助。最终执行 mise 中生效的任务图，包括你在 `mise.toml` 中定义的覆盖。
 
 ```sh
 one build

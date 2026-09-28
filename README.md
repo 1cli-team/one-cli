@@ -89,13 +89,13 @@ one add nestjs-api --name api
 |---|---|
 | `one create <workspace>` | Create an empty workspace |
 | `one add <starter>` | Add another app, service, docs site, or library |
-| `one dev [-p project]` | Run development tasks through mise; repeat -p to select services |
-| `one build [-p project]` | Build all or selected projects in dependency order; optional bounded concurrency |
 | `one env` | Review and manage environment variables |
 | `one login` | Sign in to Infisical with your browser |
 | `one serve` | Inspect workspaces, manage the current account and shared credentials |
 | `one run [task]` | Discover and execute workspace tasks through mise |
 | `one exec <project> -- <command>` | Execute a command with the selected project environment |
+
+`dev`, `build`, `test`, and `lint` are task names. They all use the same shorthand: `one <task>` → `one run <task>`. For example, `one dev` runs `one run dev`, and `one build -p web` runs `one run build -p web`.
 
 Full command docs live at [1cli.dev](https://1cli.dev).
 

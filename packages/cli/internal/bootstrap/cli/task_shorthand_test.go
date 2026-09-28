@@ -7,6 +7,9 @@ import (
 
 func TestTaskShorthandPreservesCommandBoundaries(t *testing.T) {
 	for _, tc := range []struct{ args, want []string }{
+		{[]string{"dev", "-p", "web", "--", "--port", "4300"}, []string{"run", "dev", "-p", "web", "--", "--port", "4300"}},
+		{[]string{"--output=json", "build", "--dry-run"}, []string{"--output=json", "run", "build", "--dry-run"}},
+		{[]string{"lint", "--help"}, []string{"run", "lint", "--help"}},
 		{[]string{"test", "-p", "web", "--", "-o", "result.json"}, []string{"run", "test", "-p", "web", "--", "-o", "result.json"}},
 		{[]string{"-o", "json", "docs:build", "--dry-run"}, []string{"-o", "json", "run", "docs:build", "--dry-run"}},
 		{[]string{"-ojson", "verify", "--help"}, []string{"-ojson", "run", "verify", "--help"}},

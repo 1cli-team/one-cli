@@ -45,32 +45,41 @@ func TestSnapshot_E2E_HelpDailyAndCompleteCatalogues(t *testing.T) {
 	tmp := t.TempDir()
 	isolateHome(t, tmp)
 
-	daily, stderr, code := runBinaryIn(t, tmp, "--help")
-	if code != 0 || stderr != "" {
-		t.Fatalf("one --help failed: exit=%d stderr=%q", code, stderr)
-	}
-	for _, command := range []string{"create", "add", "dev", "build", "env", "login", "run", "exec"} {
-		if !strings.Contains(daily, "  "+command) {
-			t.Errorf("daily help missing %q:\n%s", command, daily)
-		}
-	}
-	for _, command := range []string{"ci", "templates", "serve"} {
-		if strings.Contains(daily, "\n  "+command) {
-			t.Errorf("daily help should not advertise advanced command %q:\n%s", command, daily)
-		}
-	}
+	for _, locale := range []string{"en_US.UTF-8", "zh_CN.UTF-8"} {
+		t.Run(locale, func(t *testing.T) {
+			t.Setenv("LC_ALL", locale)
+			daily, stderr, code := runBinaryIn(t, tmp, "--help")
+			if code != 0 || stderr != "" {
+				t.Fatalf("one --help failed: exit=%d stderr=%q", code, stderr)
+			}
+			for _, command := range []string{"create", "add", "env", "login", "run", "exec"} {
+				if !strings.Contains(daily, "\n  "+command+" ") {
+					t.Errorf("daily help missing %q:\n%s", command, daily)
+				}
+			}
+			for _, command := range []string{"templates", "serve"} {
+				if strings.Contains(daily, "\n  "+command+" ") {
+					t.Errorf("daily help should not advertise advanced command %q:\n%s", command, daily)
+				}
+			}
 
-	all, stderr, code := runBinaryIn(t, tmp, "help", "--all")
-	if code != 0 || stderr != "" {
-		t.Fatalf("one help --all failed: exit=%d stderr=%q", code, stderr)
-	}
-	for _, command := range []string{"create", "add", "dev", "build", "env", "login", "run", "exec", "templates", "serve"} {
-		if !strings.Contains(all, "  "+command) {
-			t.Errorf("complete help missing %q:\n%s", command, all)
-		}
-	}
-	if strings.Contains(all, "\n  skills") || strings.Contains(all, "\n  ci ") {
-		t.Errorf("complete help exposes removed commands:\n%s", all)
+			all, stderr, code := runBinaryIn(t, tmp, "help", "--all")
+			if code != 0 || stderr != "" {
+				t.Fatalf("one help --all failed: exit=%d stderr=%q", code, stderr)
+			}
+			for _, command := range []string{"create", "add", "env", "login", "logout", "whoami", "run", "exec", "templates", "serve", "init", "locale", "mise", "hk"} {
+				if !strings.Contains(all, "\n  "+command+" ") {
+					t.Errorf("complete help missing %q:\n%s", command, all)
+				}
+			}
+			for _, command := range []string{"dev", "build", "test", "lint", "ci", "skills"} {
+				for _, help := range []string{daily, all} {
+					if strings.Contains(help, "\n  "+command+" ") {
+						t.Errorf("help advertises task or removed command %q as built-in:\n%s", command, help)
+					}
+				}
+			}
+		})
 	}
 }
 

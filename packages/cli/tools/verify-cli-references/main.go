@@ -1,6 +1,6 @@
 // verify-cli-references walks every prose / template doc in the repo and
 // asserts that any `one <subcommand>` reference inside a code-span or
-// fenced code block names a real, currently-registered subcommand.
+// fenced code block names a registered command or a documented task shorthand.
 //
 // Run via Taskfile: `task verify-cli-references`. Exits non-zero with a
 // list of file:line offenders on any drift.
@@ -54,17 +54,24 @@ func run() error {
 	if err != nil {
 		return err
 	}
-	var problems []string
+	contents := make(map[string][]byte, len(files))
 	for _, f := range files {
 		b, err := os.ReadFile(f)
 		if err != nil {
 			return fmt.Errorf("read %s: %w", f, err)
 		}
-		problems = append(problems, scanFile(f, b, valid)...)
+		contents[f] = b
+	}
+	// Task guides declare names with one run <task>. Their shorthand may
+	// also appear in quick starts and template READMEs elsewhere in the docs.
+	references := collectReferences(valid, contents)
+	var problems []string
+	for _, f := range files {
+		problems = append(problems, scanFile(f, contents[f], references)...)
 	}
 	if len(problems) > 0 {
 		return fmt.Errorf(
-			"found unknown `one <subcommand>` references in docs:\n  %s\n\nFix one of:\n  - Rename to a registered command (see `one --help`).\n  - If the reference is intentional (migration guide / changelog), wrap the section in:\n      <!-- verify-cli:ignore-start -->\n      ... section with deprecated command names ...\n      <!-- verify-cli:ignore-end -->",
+			"found unknown `one <subcommand>` references in docs:\n  %s\n\nFix one of:\n  - Rename to a registered command (see `one --help`) or a documented task (one run <task>).\n  - If the reference is intentional (migration guide / changelog), wrap the section in:\n      <!-- verify-cli:ignore-start -->\n      ... section with deprecated command names ...\n      <!-- verify-cli:ignore-end -->",
 			strings.Join(problems, "\n  "),
 		)
 	}
@@ -174,17 +181,23 @@ var (
 	codeSpanRE = regexp.MustCompile("`([^`\n]+)`")
 )
 
+// collectReferences adds documented task names without changing the command
+// catalogue. Undeclared names still fail the reference check to catch typos.
+func collectReferences(commands map[string]struct{}, documents map[string][]byte) map[string]struct{} {
+	valid := make(map[string]struct{}, len(commands))
+	for name := range commands {
+		valid[name] = struct{}{}
+	}
+	taskRE := regexp.MustCompile(`\bone run ([a-z][a-z0-9:-]*)`)
+	for _, content := range documents {
+		for _, match := range taskRE.FindAllSubmatch(content, -1) {
+			valid[string(match[1])] = struct{}{}
+		}
+	}
+	return valid
+}
+
 func scanFile(path string, content []byte, valid map[string]struct{}) []string {
-	// A task demonstrated with the explicit run syntax can also be called
-	// through shorthand in this document. Keep checking unrelated typos.
-	local := make(map[string]struct{}, len(valid))
-	for name := range valid {
-		local[name] = struct{}{}
-	}
-	for _, match := range regexp.MustCompile(`\bone run ([a-z][a-z0-9:-]*)`).FindAllSubmatch(content, -1) {
-		local[string(match[1])] = struct{}{}
-	}
-	valid = local
 	var problems []string
 	ignore := false
 	inFence := false
@@ -227,7 +240,7 @@ func scanFile(path string, content []byte, valid map[string]struct{}) []string {
 				cmd := m[1]
 				if _, ok := valid[cmd]; !ok {
 					problems = append(problems, fmt.Sprintf(
-						"%s:%d: `one %s …` — `%s` is not a registered subcommand",
+						"%s:%d: `one %s …` — `%s` is not a registered command or documented task",
 						path, i+1, cmd, cmd,
 					))
 				}

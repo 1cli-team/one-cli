@@ -7,7 +7,7 @@
 // Two checks:
 //
 //   - **help catalogue completeness.** The concise root help deliberately
-//     lists only the seven everyday commands. `one help --all` is generated
+//     lists only the curated everyday commands. `one help --all` is generated
 //     from the Cobra tree and must contain every registered top-level
 //     command.
 //
@@ -50,7 +50,7 @@ func main() {
 			fmt.Fprintf(os.Stderr, "  %s\n", p)
 		}
 		fmt.Fprintln(os.Stderr, "\nFix one of:")
-		fmt.Fprintln(os.Stderr, "  - Keep root help limited to the seven everyday commands and keep `one help --all` complete.")
+		fmt.Fprintln(os.Stderr, "  - Keep root help limited to the curated everyday commands and keep `one help --all` complete.")
 		fmt.Fprintln(os.Stderr, "  - Update the Example / Long text in the offending cmd.go to use a flag that actually exists.")
 		fmt.Fprintln(os.Stderr, "  - Re-run with UPDATE_SNAPSHOTS=1 if you have also intentionally changed help text:")
 		fmt.Fprintln(os.Stderr, "      UPDATE_SNAPSHOTS=1 go test ./tests/e2e/ -run TestHelpSnapshots")
@@ -124,7 +124,7 @@ func checkRootHelp(root *cobra.Command) []string {
 	}
 
 	want := map[string]bool{
-		"create": true, "add": true, "dev": true, "build": true,
+		"create": true, "add": true,
 		"env": true, "login": true,
 		"run": true, "exec": true,
 	}
@@ -189,7 +189,7 @@ var flagInExampleRE = regexp.MustCompile(`--([a-z][a-z0-9-]*)`)
 // We anchor on `one ` so prose mentioning the bare `--flag` outside
 // a command line is ignored. Continuation lines ending with `\` are
 // joined back together before scanning.
-var invocationRE = regexp.MustCompile(`(^|\s)one\s+([a-z][a-z0-9/-]*(?:\s+[a-z][a-z0-9/-]*)*)`)
+var invocationRE = regexp.MustCompile(`(^|\s)one\s+([a-z][a-z0-9:/-]*(?:\s+[a-z][a-z0-9:/-]*)*)`)
 
 // checkExampleFlags walks every command, scans its Example + Long
 // text for command invocations, resolves each invocation to a real
@@ -254,7 +254,7 @@ func scanInvocations(root, owner *cobra.Command, field, text string) []string {
 		}
 		// The first capture group can include the leading whitespace;
 		// strip and split into command-path tokens. invocationRE
-		// already limited the capture to [a-z0-9/-] runs separated by
+		// already limited the capture to [a-z0-9:/-] runs separated by
 		// whitespace, so URL fragments / placeholders / flags can't
 		// appear here. We DO keep slashes — configurecmd's leaf
 		// commands have names like "env/infisical".
@@ -273,8 +273,10 @@ func scanInvocations(root, owner *cobra.Command, field, text string) []string {
 			continue
 		}
 
-		// Extract --flag tokens from the FULL line so we catch flags
-		// even after the command path.
+		// Task arguments after -- belong to the underlying command.
+		if i := strings.Index(line, " -- "); i >= 0 {
+			line = line[:i]
+		}
 		flagSet := collectFlagSet(resolved)
 		for _, fm := range flagInExampleRE.FindAllStringSubmatch(line, -1) {
 			flag := fm[1]
@@ -301,7 +303,7 @@ func scanInvocations(root, owner *cobra.Command, field, text string) []string {
 // (`one container build`) rather than returning nil. Flags on
 // `user-api` should be validated against `container build`.
 //
-// Returns nil only when the very first token doesn't match any child.
+// Unregistered task names use run flags, matching the CLI task shorthand.
 func resolveCommand(root *cobra.Command, pathTokens []string) *cobra.Command {
 	if len(pathTokens) == 0 {
 		return nil
@@ -336,6 +338,11 @@ func resolveCommand(root *cobra.Command, pathTokens []string) *cobra.Command {
 		matched = true
 	}
 	if !matched {
+		for _, child := range root.Commands() {
+			if child.Name() == "run" {
+				return child
+			}
+		}
 		return nil
 	}
 	return cur

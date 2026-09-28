@@ -20,7 +20,16 @@ raw_args = true
 [tasks.env]
 run = 'echo TASK_ENV'
 [tasks.dev]
-run = 'echo ROOT_DEV_OVERRIDE'
+run = 'echo ROOT_TASK_OVERRIDE'
+depends = []
+[tasks.build]
+run = 'echo ROOT_TASK_OVERRIDE'
+depends = []
+[tasks.test]
+run = 'echo ROOT_TASK_OVERRIDE'
+depends = []
+[tasks.lint]
+run = 'echo ROOT_TASK_OVERRIDE'
 depends = []
 `)
 	buildWrite(t, root, "hello.sh", "printf '<%s>\\n' \"$@\"\n")
@@ -42,19 +51,21 @@ depends = []
 	if code != 0 || !strings.Contains(logs, "TASK_ENV") {
 		t.Fatal(logs)
 	}
-	for _, args := range [][]string{{"dev"}, {"run", "dev"}} {
-		_, logs, code = runBinaryIn(t, root, append(args, "-o", "json")...)
-		if code != 0 || !strings.Contains(logs, "ROOT_DEV_OVERRIDE") {
-			t.Fatal(logs)
+	for _, name := range []string{"dev", "build", "test", "lint"} {
+		for _, args := range [][]string{{name}, {"run", name}} {
+			_, logs, code = runBinaryIn(t, root, append(args, "-o", "json")...)
+			if code != 0 || !strings.Contains(logs, "ROOT_TASK_OVERRIDE") {
+				t.Fatal(args, code, logs)
+			}
 		}
 	}
 }
 
 func TestE2E_TaskShortcutPreviewAndHelpAreStatic(t *testing.T) {
 	root := buildFixture(t, true)
-	buildWrite(t, root, "packages/lib/package.json", `{"name":"@build/lib","scripts":{"dev":"sh dev.sh","test":"sh test.sh","build":"sh build.sh"}}`)
+	buildWrite(t, root, "packages/lib/package.json", `{"name":"@build/lib","scripts":{"dev":"sh dev.sh","test":"sh test.sh","build":"sh build.sh","lint":"sh lint.sh"}}`)
 	t.Setenv("ONE_MISE_BINARY", filepath.Join(root, "missing-mise"))
-	for _, name := range []string{"dev", "build", "test"} {
+	for _, name := range []string{"dev", "build", "test", "lint"} {
 		short, logs, code := runBinaryIn(t, root, name, "-p", "lib", "--dry-run", "-o", "json")
 		if code != 0 {
 			t.Fatal(name, logs)
@@ -67,12 +78,21 @@ func TestE2E_TaskShortcutPreviewAndHelpAreStatic(t *testing.T) {
 			t.Fatalf("%s preview differs", name)
 		}
 	}
+	outside := t.TempDir()
 	for _, locale := range []string{"en_US.UTF-8", "zh_CN.UTF-8"} {
 		t.Setenv("LC_ALL", locale)
-		for _, name := range []string{"dev", "build", "test"} {
-			out, logs, code := runBinaryIn(t, root, name, "--help")
-			if code != 0 || !strings.Contains(out, "--project") || strings.Contains(out, "tasks.") {
-				t.Fatal(out, logs)
+		want, logs, code := runBinaryIn(t, outside, "run", "--help")
+		if code != 0 || !strings.Contains(want, "--project") || strings.Contains(want, "tasks.") {
+			t.Fatal(want, logs)
+		}
+		for _, dir := range []string{root, outside} {
+			for _, name := range []string{"dev", "build", "test", "lint"} {
+				for _, args := range [][]string{{name, "--help"}, {"run", name, "--help"}} {
+					out, logs, code := runBinaryIn(t, dir, args...)
+					if code != 0 || out != want {
+						t.Fatalf("%s %v help differs from run: exit=%d out=%s logs=%s", locale, args, code, out, logs)
+					}
+				}
 			}
 		}
 	}

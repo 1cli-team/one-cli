@@ -7,8 +7,6 @@ USAGE
 EVERYDAY COMMANDS
   create        Create a workspace
   add           Add a project
-  dev           Start local development
-  build         Build projects
   run           List and execute workspace tasks
   exec          Execute a command with project variables
   env           Manage environment variables

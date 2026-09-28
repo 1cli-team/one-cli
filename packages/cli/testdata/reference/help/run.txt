@@ -12,7 +12,7 @@ EXAMPLES
   one run build --dry-run
 
 TIPS
-Lists tasks with no arguments. Runs root tasks or selected project tasks with their dependencies. one <task> is shorthand for one run <task>; built-in commands take precedence. Use one run <task> for a conflicting name.
+Lists tasks with no arguments. Runs root tasks or selected project tasks with their dependencies. one <task> is shorthand for one run <task>, including dev, build, test, and lint. Built-in commands take precedence; use one run <task> for a conflicting name.
 
 COMMON OPTIONS
   --cache <value>          Cache access: local-only, read-write, read-only, write-only, off

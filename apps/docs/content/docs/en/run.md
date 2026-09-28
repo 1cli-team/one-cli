@@ -18,7 +18,7 @@ one run build --dry-run -o json
 
 ## Task shorthand
 
-`one <task>` is shorthand for `one run <task>`. For example, `one test -p api` and `one run test -p api` execute the same task. Built-in commands and aliases take precedence: `one env` opens environment management, while `one run env` executes a task named `env`. Unknown names resolve as tasks and report a missing-task error when absent. `one <task> --help` shows One's common task flags; use `-- --help` to forward help to the underlying command.
+`one <task>` is shorthand for `one run <task>`. `dev`, `build`, `test`, and `lint` are ordinary task names and all follow this rule. For example, `one test -p api` and `one run test -p api` execute the same task. Built-in commands and aliases take precedence: `one env` opens environment management, while `one run env` executes a task named `env`. Unknown names resolve as tasks and report a missing-task error when absent. `one <task> --help` shows One's common task flags; use `-- --help` to forward help to the underlying command.
 
 ## Selection and arguments
 

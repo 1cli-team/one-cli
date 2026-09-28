@@ -1,9 +1,9 @@
 ---
-title: one build
+title: build task
 description: Build selected projects and their local dependencies through mise.
 ---
 
-`one build` is the convenience entry point for `one run build`. Both use the same task planner, environment snapshot, mise invocation, cache, and output schema.
+`one build` is shorthand for `one run build`. `build` is an ordinary task name, just like `test` or `lint`, and uses the same task parsing, flags, and help. The effective task graph comes from mise, including your overrides in `mise.toml`.
 
 ```sh
 one build
