@@ -107,7 +107,7 @@ Managed mise updates with One; automatic self-updates are disabled for that chil
 
 Download, migration, or verification failures return `MISE_INSTALL_FAILED`. Check network/proxy access to GitHub Releases and permissions on One's runtime directory, then retry the same command. Help, dry-run, and static project/configuration generation do not prepare mise.
 
-Use `one mise --version`, `one mise doctor`, or `one mise trust <config-path>` to work with the same selected runtime. Review configuration before trusting it; `MISE_PARANOID=1` requires explicit trust. Arguments, IO, and exit codes are forwarded, without One project secrets; use `one run` when those secrets are needed.
+Use `one mise --version`, `one mise doctor`, or `one mise trust <config-path>` to work with the same selected runtime. Review configuration before trusting it; `MISE_PARANOID=1` requires explicit trust. Arguments, IO, and exit codes are forwarded, without One project secrets; use `one exec` when those secrets are needed.
 
 ## Infisical login
 
@@ -157,8 +157,8 @@ If you are changing One CLI itself, read [CONTRIBUTING.md](https://github.com/1c
 ```bash
 git clone https://github.com/1cli-team/one-cli
 cd one-cli
-brew install go go-task     # macOS; adapt for Linux
-task install                 # package Dashboard + CLI, then create a native launcher
+brew install mise     # macOS; adapt for Linux
+mise run install                 # package Dashboard + CLI, then create a native launcher
 hash -r
 which one
 one --version
@@ -173,7 +173,3 @@ For the full contributor flow, see [CONTRIBUTING.md](https://github.com/1cli-tea
 ## Installed?
 
 Go to [Quick start](/en/docs/quick-start/) and create your first workspace.
-
-## Agent skill
-
-Run `one skills install` to install the bundled `one-cli` skill into your coding agent's user skills directory. Use `one skills install --help` for target selection and supported agents. See [Skills](./skills).

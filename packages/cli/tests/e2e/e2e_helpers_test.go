@@ -5,7 +5,7 @@ package cli_test
 // exec it, and compare JSON output against testdata/reference/ fixtures.
 //
 // Tests that depend on bin/one being present must call binaryPath; it
-// t.Skip's if the binary isn't built yet (CI runs `task build` first).
+// t.Skip's if the binary isn't built yet (CI runs `mise run build` first).
 
 import (
 	"bytes"
@@ -42,7 +42,7 @@ func expectedBuildVersion(t *testing.T) string {
 }
 
 // binaryPath returns the path to bin/one (bin/one.exe on Windows), skipping the test if the
-// binary hasn't been built. Run `task build` first.
+// binary hasn't been built. Run `mise run build` first.
 func binaryPath(t *testing.T) string {
 	t.Helper()
 	name := "one"
@@ -51,7 +51,7 @@ func binaryPath(t *testing.T) string {
 	}
 	bin := filepath.Join(repoRoot(t), "bin", name)
 	if _, err := os.Stat(bin); err != nil {
-		t.Skipf("binary not built; run `task build` first (%v)", err)
+		t.Skipf("binary not built; run `mise run build` first (%v)", err)
 	}
 	return bin
 }

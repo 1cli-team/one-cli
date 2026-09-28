@@ -1,7 +1,7 @@
 package processorch
 
 // Start resolves manifest commands and delegates execution to the shared task
-// session. one run remains the owner of runtime and per-project environment.
+// session. one exec remains the owner of runtime and per-project environment.
 
 import (
 	"context"
@@ -26,6 +26,7 @@ type ProcEntry struct {
 
 // StartInput addresses Start.
 type StartInput struct {
+	Environment string
 	Runtime     string
 	ProjectRoot string
 	DryRun      bool
@@ -91,7 +92,11 @@ func Start(ctx context.Context, in StartInput) (*StartResult, error) {
 				}
 				shell = []string{comspec, "/d", "/s", "/c", command}
 			}
-			entries[i].Argv = append([]string{binary, "run", "--project", entries[i].Name, "--"}, shell...)
+			args := []string{binary, "exec", "--project", entries[i].Name}
+			if in.Environment != "" {
+				args = append(args, "--env", in.Environment)
+			}
+			entries[i].Argv = append(append(args, "--"), shell...)
 			entries[i].Cmd = strings.Join(entries[i].Argv, " ")
 		}
 	}
@@ -133,7 +138,7 @@ func Start(ctx context.Context, in StartInput) (*StartResult, error) {
 
 // buildEntriesFromManifest walks m.Projects in declaration order,
 // gathers each project's domains.dev.command, and wraps it with
-// `one run -p <relativeDir> -- <cmd>` so the secrets injection (dotenv
+// `one exec -p <relativeDir> -- <cmd>` so the secrets injection (dotenv
 // or infisical) configured by `one env` still runs per-project. When
 // selector is non-empty, only the matching project is returned. When
 // selector is "", projects without a dev command are skipped silently.
@@ -152,7 +157,7 @@ func buildEntriesFromManifest(m *workspace.Manifest, selector string) []ProcEntr
 		}
 		entries = append(entries, ProcEntry{
 			Name: p.Name,
-			Cmd:  fmt.Sprintf("one run -p %s -- %s", p.RelativeDir, cmd),
+			Cmd:  fmt.Sprintf("one exec -p %s -- %s", p.RelativeDir, cmd),
 		})
 	}
 	return entries

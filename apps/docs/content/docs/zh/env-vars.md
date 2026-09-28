@@ -247,4 +247,4 @@ Workspace 级 env 后端写在 `one.manifest.json#domains.env`，环境列表写
 
 ## 共享凭据
 
-共享凭据独立于工作区。使用 `one env bind --global` 选择存放位置，`one env list --global --env dev --path /` 浏览元数据，`one run --global --env dev --path /folder -- command` 注入明确范围的变量。完整的命令和安全边界见[登录与共享凭据](/zh/docs/login/)。
+共享凭据独立于工作区。使用 `one env bind --global` 选择存放位置，`one env list --global --env dev --path /` 浏览元数据，`one exec --global --env dev --path /folder -- command` 注入明确范围的变量。完整的命令和安全边界见[登录与共享凭据](/zh/docs/login/)。

@@ -16,7 +16,6 @@ type Code string
 // Code constants. Keep alphabetical within each group for grep-ability.
 const (
 	// Bundled skill installation.
-	SKILLS_INSTALL_FAILED Code = "SKILLS_INSTALL_FAILED"
 
 	// Generic / lifecycle.
 	ONE_CLI_ERROR         Code = "ONE_CLI_ERROR"
@@ -69,7 +68,7 @@ const (
 	STATUS_FIX_FAILED Code = "STATUS_FIX_FAILED"
 	DOCTOR_FAILED          = STATUS_FIX_FAILED // internal compatibility alias; do not document.
 
-	// Per-domain backend selection (container / deploy / dev / ci / env).
+	// Environment backend selection.
 	// Surface when one.manifest.json references a backend the build doesn't
 	// know about, when a domain is required but missing, or when a profile
 	// is mismatched with its target backend.
@@ -87,13 +86,9 @@ const (
 	PREFERENCES_FILE_INVALID   Code = "PREFERENCES_FILE_INVALID"
 	PREFERENCES_INVALID        Code = "PREFERENCES_INVALID"
 
-	CI_DISABLE_CONFIRMATION_REQUIRED Code = "CI_DISABLE_CONFIRMATION_REQUIRED"
-	CI_NOT_ENABLED                   Code = "CI_NOT_ENABLED"
-	CI_PROVIDER_UNKNOWN              Code = "CI_PROVIDER_UNKNOWN"
-	CI_RENDER_FAILED                 Code = "CI_RENDER_FAILED"
-	RELEASE_FLOW_MISMATCH            Code = "RELEASE_FLOW_MISMATCH"
-	ENV_PROFILE_NOT_FOUND            Code = "ENV_PROFILE_NOT_FOUND"
-	LOCAL_ORCH_PORT_CONFLICT         Code = "LOCAL_ORCH_PORT_CONFLICT"
+	RELEASE_FLOW_MISMATCH    Code = "RELEASE_FLOW_MISMATCH"
+	ENV_PROFILE_NOT_FOUND    Code = "ENV_PROFILE_NOT_FOUND"
+	LOCAL_ORCH_PORT_CONFLICT Code = "LOCAL_ORCH_PORT_CONFLICT"
 
 	// Env vars — input validation (provider-agnostic).
 	ENV_INVALID_ENV_NAME       Code = "ENV_INVALID_ENV_NAME"
@@ -151,10 +146,6 @@ type Definition struct {
 // from here, so any published error-code reference can be made
 // authoritative by template-rendering this map.
 var Codes = map[Code]Definition{
-	SKILLS_INSTALL_FAILED: {
-		Summary:     "The bundled one-cli skill could not be installed into the selected agents.",
-		Remediation: []output.Remediation{{Action: "inspect-skill-install", Hint: "Check the target agent and directory permissions. Completed targets are listed in context.installed_to; retrying is safe.", Command: "one skills install --help"}},
-	},
 	RUNTIME_INVALID:          {Summary: "The selected execution runtime is not builtin or mise."},
 	MISE_NOT_FOUND:           {Summary: "The explicitly selected mise executable is unavailable."},
 	MISE_INSTALL_FAILED:      {Summary: "One could not download, migrate, verify, or prepare its managed mise runtime."},
@@ -193,26 +184,22 @@ var Codes = map[Code]Definition{
 
 	STATUS_FIX_FAILED: {Summary: "Workspace 后置同步失败：写入 manifest 后某个后端 sync 回滚或失败。", Remediation: []output.Remediation{{Action: "retry", Hint: "重试触发该错误的命令"}}},
 
-	BACKEND_ID_UNKNOWN:               {Summary: "one.manifest.json refers to a backend id that this build does not recognise."},
-	DOMAIN_REQUIRED:                  {Summary: "A domain (container / deploy / dev / ci / env) is required but its section is missing in one.manifest.json."},
-	DOMAIN_INVALID:                   {Summary: "Domain name is not one of the recognised domains (container / deploy / dev / ci / env)."},
-	DOMAIN_NOT_REGISTERED:            {Summary: "Domain is recognised but this build has no backend implementation for it."},
-	DOMAIN_NOT_PER_SUBPROJECT:        {Summary: "This domain operates at workspace scope; -p / --project is not allowed.", Remediation: []output.Remediation{{Action: "drop-flag", Hint: "去掉 -p / --project 重试"}}},
-	SUBPROJECT_NOT_FOUND:             {Summary: "-p / --project named a project that does not exist in manifest.projects.", Remediation: []output.Remediation{{Action: "list-projects", Hint: "查看现有项目", Command: "cat one.manifest.json"}}},
-	PATCH_CONFLICT:                   {Summary: "Two configuration fragments contributed conflicting patches to the same backend target."},
-	BACKEND_INVOKE_FAILED:            {Summary: "Backend's Invoke method returned an error."},
-	BACKEND_NOT_ENABLED:              {Summary: "A domain command was invoked in a workspace where that domain is not configured.", Remediation: []output.Remediation{{Action: "configure-domain", Hint: "在 one.manifest.json 的 domains 块中配置该域（domains.env.kind / projects[].domains.container 等），或选用声明它的模板再 one add"}}},
-	BACKEND_VERB_NOT_SUPPORTED:       {Summary: "The active backend in this domain does not implement the requested verb (e.g. `one env pull` against the dotenv backend).", Remediation: []output.Remediation{{Action: "switch-backend", Hint: "切换到支持该 verb 的同 domain backend（例如 env 域改用 infisical）"}}},
-	BACKEND_INTERFACE_MISMATCH:       {Summary: "Internal: the dispatched backend failed its capability assertion. Build-side bug; should never reach end users."},
-	PREFERENCES_FILE_INVALID:         {Summary: "The local preferences file could not be read or parsed."},
-	PREFERENCES_INVALID:              {Summary: "The requested preference value is not supported."},
-	CI_DISABLE_CONFIRMATION_REQUIRED: {Summary: "A non-interactive CI disable requires explicit --yes confirmation."},
-	CI_NOT_ENABLED:                   {Summary: "The selected project does not have a generated CI workflow."},
-	CI_PROVIDER_UNKNOWN:              {Summary: "The requested CI provider is not implemented by this build."},
-	CI_RENDER_FAILED:                 {Summary: "The selected CI provider returned an error while rendering the workflow."},
-	RELEASE_FLOW_MISMATCH:            {Summary: "The release-flow backend's expected toolchain or repo state does not match the workspace."},
-	ENV_PROFILE_NOT_FOUND:            {Summary: "manifest.environments[<env>] was requested by a backend but is missing or empty."},
-	LOCAL_ORCH_PORT_CONFLICT:         {Summary: "Two projects requested the same dev port and the dev runner could not auto-allocate a free one."},
+	BACKEND_ID_UNKNOWN:         {Summary: "one.manifest.json refers to a backend id that this build does not recognise."},
+	DOMAIN_REQUIRED:            {Summary: "The environment configuration is missing in one.manifest.json."},
+	DOMAIN_INVALID:             {Summary: "The requested configuration domain is not supported."},
+	DOMAIN_NOT_REGISTERED:      {Summary: "Domain is recognised but this build has no backend implementation for it."},
+	DOMAIN_NOT_PER_SUBPROJECT:  {Summary: "This domain operates at workspace scope; -p / --project is not allowed.", Remediation: []output.Remediation{{Action: "drop-flag", Hint: "去掉 -p / --project 重试"}}},
+	SUBPROJECT_NOT_FOUND:       {Summary: "-p / --project named a project that does not exist in manifest.projects.", Remediation: []output.Remediation{{Action: "list-projects", Hint: "查看现有项目", Command: "cat one.manifest.json"}}},
+	PATCH_CONFLICT:             {Summary: "Two configuration fragments contributed conflicting patches to the same backend target."},
+	BACKEND_INVOKE_FAILED:      {Summary: "Backend's Invoke method returned an error."},
+	BACKEND_NOT_ENABLED:        {Summary: "The requested environment backend is not configured.", Remediation: []output.Remediation{{Action: "configure-domain", Hint: "Configure the environment backend with one env bind."}}},
+	BACKEND_VERB_NOT_SUPPORTED: {Summary: "The active backend in this domain does not implement the requested verb (e.g. `one env pull` against the dotenv backend).", Remediation: []output.Remediation{{Action: "switch-backend", Hint: "切换到支持该 verb 的同 domain backend（例如 env 域改用 infisical）"}}},
+	BACKEND_INTERFACE_MISMATCH: {Summary: "Internal: the dispatched backend failed its capability assertion. Build-side bug; should never reach end users."},
+	PREFERENCES_FILE_INVALID:   {Summary: "The local preferences file could not be read or parsed."},
+	PREFERENCES_INVALID:        {Summary: "The requested preference value is not supported."},
+	RELEASE_FLOW_MISMATCH:      {Summary: "The release-flow backend's expected toolchain or repo state does not match the workspace."},
+	ENV_PROFILE_NOT_FOUND:      {Summary: "manifest.environments[<env>] was requested by a backend but is missing or empty."},
+	LOCAL_ORCH_PORT_CONFLICT:   {Summary: "Two projects requested the same dev port and the dev runner could not auto-allocate a free one."},
 
 	ENV_INVALID_ENV_NAME:       {Summary: "Environment name fails ^[a-zA-Z0-9][a-zA-Z0-9-_]*$ (e.g. dev, staging, prod)."},
 	ENV_INVALID_KEY:            {Summary: "Variable name fails POSIX env-var pattern (uppercase + underscore + digits, must not start with digit)."},
@@ -238,9 +225,9 @@ var Codes = map[Code]Definition{
 	INFISICAL_API_ERROR:                {Summary: "Infisical API returned an unexpected error. See error.context for details."},
 	INFISICAL_FOLDER_NOT_FOUND:         {Summary: "The requested Infisical folder does not exist in the requested environment.", Remediation: []output.Remediation{{Action: "check-env-name", Hint: "确认 --env 名是否拼对（dev / staging / prod 等）"}, {Action: "create-folder", Hint: "在该 folder 下写入第一个环境变量值时会自动创建", Command: "one env set --env <env> -p <name|path> KEY value"}, {Action: "verify-path", Hint: "或在 Infisical UI 里确认 folder 是否存在"}}},
 
-	RUN_COMMAND_NOT_FOUND: {Summary: "one run could not locate the requested executable on PATH.", Remediation: []output.Remediation{{Action: "check-spelling", Hint: "确认命令名拼写正确"}, {Action: "use-package-runner", Hint: "对于 npm script，使用包管理器调用", Command: "one run -- npm run <script>"}}},
-	RUN_DOTENV_MISSING:    {Summary: "one run could not find a .env file for the resolved subproject.", Remediation: []output.Remediation{{Action: "pull-secrets", Hint: "先把 Infisical 环境变量拉到项目 .env", Command: "one env pull"}, {Action: "specify-subproject", Hint: "或显式指定项目（按 manifest 里的 name 或相对路径）", Command: "one run <name|path> -- <cmd>"}}},
-	RUN_USAGE_INVALID:     {Summary: "one run arguments do not match `one run [project] -- <cmd> [args...]`.", Remediation: []output.Remediation{{Action: "use-run-separator", Hint: "用 -- 分隔 One CLI 参数和子进程命令", Command: "one run [project] -- <cmd> [args...]"}}},
+	RUN_COMMAND_NOT_FOUND: {Summary: "one exec could not locate the requested executable on PATH.", Remediation: []output.Remediation{{Action: "check-spelling", Hint: "确认命令名拼写正确"}, {Action: "use-package-runner", Hint: "对于 npm script，使用包管理器调用", Command: "one exec -- npm run <script>"}}},
+	RUN_DOTENV_MISSING:    {Summary: "one exec could not find a .env file for the resolved subproject.", Remediation: []output.Remediation{{Action: "pull-secrets", Hint: "先把 Infisical 环境变量拉到项目 .env", Command: "one env pull"}, {Action: "specify-subproject", Hint: "或显式指定项目（按 manifest 里的 name 或相对路径）", Command: "one exec <name|path> -- <cmd>"}}},
+	RUN_USAGE_INVALID:     {Summary: "one exec arguments do not match `one exec [project] -- <cmd> [args...]`.", Remediation: []output.Remediation{{Action: "use-run-separator", Hint: "用 -- 分隔 One CLI 参数和子进程命令", Command: "one exec [project] -- <cmd> [args...]"}}},
 
 	SERVE_PORT_BUSY:            {Summary: "one serve 无法绑定请求的端口（被占用或权限不足）。", Remediation: []output.Remediation{{Action: "use-random-port", Hint: "改用随机端口（让内核分配空闲端口）", Command: "one serve --port 0"}, {Action: "pick-different-port", Hint: "或显式换一个空闲端口", Command: "one serve --port 17900"}}},
 	SERVE_BIND_FORBIDDEN:       {Summary: "one serve 拒绝绑定到非 loopback 地址（本地接口可操作敏感凭据，仅 127.0.0.1 / localhost 才安全）。", Remediation: []output.Remediation{{Action: "use-loopback", Hint: "改用 127.0.0.1（默认）", Command: "one serve --host 127.0.0.1"}}},

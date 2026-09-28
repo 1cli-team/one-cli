@@ -97,9 +97,7 @@ The full catalogue is in [Error codes](/en/docs/error-codes/).
 
 ## Rule 3: Project Instructions Belong To The Team
 
-New workspaces include a short root `AGENTS.md` requiring the `one-cli` skill. If it is missing, agents are directed to run `one skills install`. Ordinary and preset creation use the same instructions; subsequent `one add` calls preserve team edits.
 
-The skill follows [One Workspace Convention](https://github.com/1cli-team/one-workspace-convention) and directs agents to the installed CLI help. Agents can also read `one.manifest.json` and project README files. Skill installation is explicit and independent of workspace creation; see [Skills](./skills).
 
 ## Rule 4: Configuration And Credentials Have Boundaries
 

@@ -6,7 +6,7 @@ author: "One CLI Team"
 tags: ["skill", "codex", "dependencies"]
 ---
 
-> 历史设计记录：下文的详细 playbook 已由精简的 `one-cli` skill 替代。当前 `one skills install` 用法见 [Skills](/zh/docs/skills/)。
+> 历史设计记录：内置 skill 功能已移除。当前任务用法见 [one run](/zh/docs/run/)。
 
 ## skill 不是营销文档
 

@@ -157,14 +157,11 @@ func runCreate(deps Dependencies, cmd *cobra.Command, rawDir string, flags *crea
 	// booleans. Container / deploy are template-driven and live on the
 	// subproject record, not in this envelope.
 	secretsBackend := ""
-	ciEnabled := false
 	devEnabled := false
 	for _, id := range enables {
 		switch {
 		case strings.HasPrefix(id, "env/"):
 			secretsBackend = strings.TrimPrefix(id, "env/")
-		case strings.HasPrefix(id, "ci/"):
-			ciEnabled = true
 		case strings.HasPrefix(id, "dev/"):
 			devEnabled = true
 		}
@@ -177,7 +174,6 @@ func runCreate(deps Dependencies, cmd *cobra.Command, rawDir string, flags *crea
 		CreatedInPlace: result.CreatedInPlace,
 		PackageManager: result.PackageManager,
 		SecretsBackend: secretsBackend,
-		CIEnabled:      ciEnabled,
 		DevEnabled:     devEnabled,
 	}
 	if result.HooksWarn != nil {

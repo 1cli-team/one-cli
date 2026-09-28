@@ -97,9 +97,7 @@ agent 的处理顺序应该是：
 
 ## 规则三：项目说明由团队维护
 
-新工作区包含简短的根 `AGENTS.md`，要求使用 `one-cli` skill；缺失时运行 `one skills install`。普通创建与 preset 创建使用同一份指引，后续 `one add` 保留团队修改。
 
-Skill 要求遵循 [One Workspace Convention](https://github.com/1cli-team/one-workspace-convention)，并查询当前 CLI 的 help。Agent 还可以读取 `one.manifest.json` 和项目 README。Skill 安装独立于项目创建，详见 [Skills](./skills)。
 
 ## 规则四：配置和凭据有边界
 

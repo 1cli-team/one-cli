@@ -118,7 +118,11 @@ func TestE2E_SingleDevAndBuildKeepNativeTTY(t *testing.T) {
 			root := devTerminalFixture(t, false)
 			script := "test -t 0 && test -t 1 && test -t 2 || exit 91\nprintf '\\033[35mNATIVE_READY\\033[0m'\nread value\nprintf '\\rNATIVE_REPLY:%s\\n' \"$value\"\n"
 			buildWrite(t, root, "packages/lib/"+command+".sh", script)
-			tt := startTaskTerminal(t, root, command, "lib", "-o", "text")
+			args := []string{command, "lib", "-o", "text"}
+			if command == "build" {
+				args = append(args, "--ui", "raw")
+			}
+			tt := startTaskTerminal(t, root, args...)
 			waitForTTYOutput(t, tt.out, "NATIVE_READY", 8*time.Second)
 			_, _ = tt.pty.Write([]byte("hello\r"))
 			tt.wait(t, 0)
@@ -142,7 +146,11 @@ func TestE2E_SingleDevAndBuildExitWithIdleTerminalInput(t *testing.T) {
 				// reading stdin. Exiting must cancel that read and keep the exit code.
 				script := fmt.Sprintf("test -t 0 && test -t 1 && test -t 2 || exit 91\nprintf 'NATIVE_DONE\\n'\nexit %d\n", tc.code)
 				buildWrite(t, root, "packages/lib/"+command+".sh", script)
-				tt := startTaskTerminal(t, root, command, "lib", "-o", "text")
+				args := []string{command, "lib", "-o", "text"}
+				if command == "build" {
+					args = append(args, "--ui", "raw")
+				}
+				tt := startTaskTerminal(t, root, args...)
 				tt.wait(t, tc.code)
 				if !strings.Contains(tt.out.String(), "NATIVE_DONE") {
 					t.Fatal(tt.out.String())
@@ -227,13 +235,13 @@ done
 		t.Fatal("terminal was not restored")
 	}
 }
-func TestE2E_BuildTUIAutoFinishesAndKeepsFailure(t *testing.T) {
+func TestE2E_BuildRawKeepsFailure(t *testing.T) {
 	root := devTerminalFixture(t, false)
 	buildWrite(t, root, "packages/lib/build.sh", "test -t 1 || exit 91\nprintf '\\033[31mBUILD_FAILURE\\033[0m\\n'\nexit 42\n")
-	tt := startTaskTerminal(t, root, "build", "--ui=tui", "-o", "text")
+	tt := startTaskTerminal(t, root, "build", "--ui=raw", "-o", "text")
 	tt.wait(t, 42)
 	got := tt.out.String()
-	if !strings.Contains(got, "BUILD_FAILURE") || !strings.Contains(got, "blocked") || !strings.Contains(got, "\x1b[?1049l") {
+	if !strings.Contains(got, "BUILD_FAILURE") {
 		t.Fatal(got)
 	}
 }

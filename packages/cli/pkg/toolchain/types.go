@@ -24,8 +24,6 @@ type PackageManager string
 
 const (
 	PMpnpm PackageManager = "pnpm"
-	PMnpm  PackageManager = "npm"
-	PMyarn PackageManager = "yarn"
 )
 
 // CommandStep is the install-plan output type used by `add`'s
@@ -41,15 +39,6 @@ type PlanInput struct {
 	PackageManager PackageManager    // empty for Go
 	Scripts        map[string]string // package.json#scripts; empty for Go
 	TemplateID     string            // e.g. "nestjs-api"
-}
-
-// WorkflowInput drives GitHub Actions workflow generation.
-type WorkflowInput struct {
-	ProjectName      string
-	RelativeDir      string
-	WorkflowFilePath string
-	PackageManager   PackageManager
-	Scripts          map[string]string
 }
 
 // StringifyCommandStep formats a CommandStep as `command arg1 arg2 ...`

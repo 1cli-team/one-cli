@@ -23,10 +23,19 @@ func TestResolvePackageManagerPrecedence(t *testing.T) {
 	}
 	check("", "pnpm")
 	put("package-lock.json", "{}")
-	check("", "npm")
-	check("yarn@4.0.0", "yarn")
-	put("package.json", `{"packageManager":"bun@1.0.0"}`)
-	check("yarn", "bun")
+	if _, err := ResolvePackageManager(root, ""); err == nil {
+		t.Fatal("unsupported lockfile accepted")
+	}
+	for _, manager := range []string{"npm", "yarn", "bun"} {
+		put("package.json", `{"packageManager":"pnpm@12.3.4"}`)
+		if _, err := ResolvePackageManager(root, manager); err == nil {
+			t.Fatal("unsupported project manager accepted", manager)
+		}
+		put("package.json", `{"packageManager":"`+manager+`@1.0.0"}`)
+		if _, err := ResolvePackageManager(root, "pnpm"); err == nil {
+			t.Fatal("unsupported workspace manager accepted", manager)
+		}
+	}
 	put("package.json", `{"packageManager":"unknown@1.0.0"}`)
 	if _, err := ResolvePackageManager(root, ""); err == nil {
 		t.Fatal("invalid manager accepted")

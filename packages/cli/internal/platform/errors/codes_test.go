@@ -18,7 +18,6 @@ func TestEveryCodeHasDefinition(t *testing.T) {
 	// We can't enumerate constants by reflection, so we curate the list
 	// here and rely on grep + this test together. New code = new line.
 	allCodes := []cliErrors.Code{
-		cliErrors.SKILLS_INSTALL_FAILED,
 		cliErrors.ONE_CLI_ERROR,
 		cliErrors.UNKNOWN_COMMAND,
 		cliErrors.PROMPT_CANCELLED,
@@ -54,9 +53,6 @@ func TestEveryCodeHasDefinition(t *testing.T) {
 		cliErrors.BACKEND_INTERFACE_MISMATCH,
 		cliErrors.PREFERENCES_FILE_INVALID,
 		cliErrors.PREFERENCES_INVALID,
-		cliErrors.CI_DISABLE_CONFIRMATION_REQUIRED,
-		cliErrors.CI_PROVIDER_UNKNOWN,
-		cliErrors.CI_RENDER_FAILED,
 		cliErrors.RELEASE_FLOW_MISMATCH,
 		cliErrors.ENV_PROFILE_NOT_FOUND,
 		cliErrors.LOCAL_ORCH_PORT_CONFLICT,

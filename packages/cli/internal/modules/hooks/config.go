@@ -133,16 +133,10 @@ func pklList(values []string) string {
 }
 
 func packageExec(manager string) ([]string, error) {
-	switch manager {
-	case "pnpm", "yarn":
-		return []string{manager, "exec"}, nil
-	case "npm":
-		return []string{"npm", "exec", "--offline", "--"}, nil
-	case "bun":
-		return []string{"bun", "run"}, nil
-	default:
+	if manager != "pnpm" {
 		return nil, i18n.Errorf("hooks.package_manager_unsupported", manager)
 	}
+	return []string{"pnpm", "exec"}, nil
 }
 
 func validateManaged(path string, raw []byte, header string) error {

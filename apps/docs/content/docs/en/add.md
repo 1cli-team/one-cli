@@ -129,5 +129,4 @@ Not sure which one to use? Read the [template decision tree](/en/docs/templates/
 - Check `one.manifest.json#projects[]` to confirm registration
 - Agent docs and local-development configuration are synced by `one add`
 - Run `one dev <project>` for development and `one build <project>` to build
-- Optionally run `one ci enable <project>` to generate its GitHub Actions workflow
 - `one add` does not install dependencies: JS / TS workspaces install from the root with the package manager; Go projects run `go mod download` in the project directory, then `go mod tidy` only after changing imports or when module metadata needs repair

@@ -49,7 +49,7 @@ Add a new environment — say `qa` — by adding it to the array. Commands then 
 ```bash
 one env set DATABASE_URL=... --env qa -p api
 one env pull --env qa            # Infisical
-one run -p api --env qa -- npm run e2e
+one exec -p api --env qa -- npm run e2e
 ```
 
 Environment names are arbitrary strings; the manifest is the single source of truth.

@@ -40,18 +40,6 @@ import { Callout } from "fumadocs-ui/components/callout";
 
 下面按命令域分组列出所有 code。
 
-## Agent skill 安装
-
-内置 one-cli skill 的目标选择与用户级目录安装错误。
-
-### `SKILLS_INSTALL_FAILED`
-
-The bundled one-cli skill could not be installed into the selected agents.
-
-**Remediation**:
-
-- `inspect-skill-install` — Check the target agent and directory permissions. Completed targets are listed in context.installed_to; retrying is safe.<br />运行：`one skills install --help`
-
 ## 通用 / 生命周期
 
 命令本身的失败、用户取消、内部序列化错误。
@@ -226,30 +214,6 @@ Workspace 后置同步失败：写入 manifest 后某个后端 sync 回滚或失
 ## Profile / CI / 本地开发
 
 Profile 解析、CI 产物生成和本地开发过程中的问题。
-
-### `CI_DISABLE_CONFIRMATION_REQUIRED`
-
-A non-interactive CI disable requires explicit --yes confirmation.
-
-> 没有默认 remediation。具体恢复方式请看错误的 `context` 字段。
-
-### `CI_NOT_ENABLED`
-
-The selected project does not have a generated CI workflow.
-
-> 没有默认 remediation。具体恢复方式请看错误的 `context` 字段。
-
-### `CI_PROVIDER_UNKNOWN`
-
-The requested CI provider is not implemented by this build.
-
-> 没有默认 remediation。具体恢复方式请看错误的 `context` 字段。
-
-### `CI_RENDER_FAILED`
-
-The selected CI provider returned an error while rendering the workflow.
-
-> 没有默认 remediation。具体恢复方式请看错误的 `context` 字段。
 
 ### `LOCAL_ORCH_PORT_CONFLICT`
 
@@ -452,11 +416,11 @@ Backend's Invoke method returned an error.
 
 ### `BACKEND_NOT_ENABLED`
 
-A domain command was invoked in a workspace where that domain is not configured.
+The requested environment backend is not configured.
 
 **Remediation**:
 
-- `configure-domain` — 在 one.manifest.json 的 domains 块中配置该域（domains.env.kind / projects[].domains.container 等），或选用声明它的模板再 one add
+- `configure-domain` — Configure the environment backend with one env bind.
 
 ### `BACKEND_VERB_NOT_SUPPORTED`
 
@@ -474,7 +438,7 @@ Node dependencies required for local development are not installed.
 
 ### `DOMAIN_INVALID`
 
-Domain name is not one of the recognised domains (container / deploy / dev / ci / env).
+The requested configuration domain is not supported.
 
 > 没有默认 remediation。具体恢复方式请看错误的 `context` 字段。
 
@@ -494,7 +458,7 @@ Domain is recognised but this build has no backend implementation for it.
 
 ### `DOMAIN_REQUIRED`
 
-A domain (container / deploy / dev / ci / env) is required but its section is missing in one.manifest.json.
+The environment configuration is missing in one.manifest.json.
 
 > 没有默认 remediation。具体恢复方式请看错误的 `context` 字段。
 
@@ -577,29 +541,29 @@ The project does not provide the requested runtime task.
 
 ### `RUN_COMMAND_NOT_FOUND`
 
-one run could not locate the requested executable on PATH.
+one exec could not locate the requested executable on PATH.
 
 **Remediation**:
 
 - `check-spelling` — 确认命令名拼写正确
-- `use-package-runner` — 对于 npm script，使用包管理器调用<br />运行：`one run -- npm run <script>`
+- `use-package-runner` — 对于 npm script，使用包管理器调用<br />运行：`one exec -- npm run <script>`
 
 ### `RUN_DOTENV_MISSING`
 
-one run could not find a .env file for the resolved subproject.
+one exec could not find a .env file for the resolved subproject.
 
 **Remediation**:
 
 - `pull-secrets` — 先把 Infisical 环境变量拉到项目 .env<br />运行：`one env pull`
-- `specify-subproject` — 或显式指定项目（按 manifest 里的 name 或相对路径）<br />运行：`one run <name|path> -- <cmd>`
+- `specify-subproject` — 或显式指定项目（按 manifest 里的 name 或相对路径）<br />运行：`one exec <name|path> -- <cmd>`
 
 ### `RUN_USAGE_INVALID`
 
-one run arguments do not match `one run [project] -- <cmd> [args...]`.
+one exec arguments do not match `one exec [project] -- <cmd> [args...]`.
 
 **Remediation**:
 
-- `use-run-separator` — 用 -- 分隔 One CLI 参数和子进程命令<br />运行：`one run [project] -- <cmd> [args...]`
+- `use-run-separator` — 用 -- 分隔 One CLI 参数和子进程命令<br />运行：`one exec [project] -- <cmd> [args...]`
 
 ### `SERVE_BIND_FORBIDDEN`
 

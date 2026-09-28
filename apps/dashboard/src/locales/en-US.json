@@ -352,12 +352,20 @@
 			"packageManagerAutomatic": "Detect automatically",
 			"devCommand": "Development command",
 			"buildCommand": "Build command",
-			"buildSource": "one build reads {{source}}. Edit that file to change the build task.",
+			"buildSource": "one build reads {{source}}. Edit that file to change the build task. Workspace dependencies and caching are managed by mise; one run build uses the same entry point.",
 			"buildMissing": "No build task configured",
 			"buildUnavailable": "Unable to read build configuration",
 			"buildUnsupported": "No build task is available for this project.",
 			"metadata": "Project information",
-			"runtime": "Development and build"
+			"runtime": "Development and build",
+			"tasks": "Configured tasks",
+			"tasksUnavailable": "Task configuration could not be read. Check it with one run.",
+			"tasksEmpty": "No project tasks are configured.",
+			"taskSource": "Source: {{source}}",
+			"taskCacheOn": "Artifact caching is configured.",
+			"taskCacheOff": "Artifact caching is not configured.",
+			"taskDepends": "Dependencies: {{tasks}}",
+			"taskOutputs": "Outputs: {{outputs}}"
 		},
 		"environment": {
 			"title": "Environment configuration",

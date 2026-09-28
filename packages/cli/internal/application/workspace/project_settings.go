@@ -36,6 +36,7 @@ type ProjectSettingsProject struct {
 	BuildVersion          string                     `json:"buildVersion,omitempty"`
 	DevCommand            string                     `json:"devCommand,omitempty"`
 	Build                 ProjectBuildSettings       `json:"build"`
+	Tasks                 *ProjectTasks              `json:"tasks,omitempty"`
 	DefaultEnvironment    string                     `json:"defaultEnvironment,omitempty"`
 	AvailableEnvironments []string                   `json:"availableEnvironments"`
 	Environment           ProjectEnvironmentSettings `json:"environment"`
@@ -116,6 +117,7 @@ func (s *Service) projectSettings(
 			BuildVersion:          project.BuildVersion,
 			DevCommand:            workspacecore.ProjectDev(manifest, project.Name),
 			Build:                 projectBuildSettings(root, *project),
+			Tasks:                 s.projectTasks(ctx, root, project.Name),
 			DefaultEnvironment:    defaultEnvironment,
 			AvailableEnvironments: environments,
 			Environment:           env,

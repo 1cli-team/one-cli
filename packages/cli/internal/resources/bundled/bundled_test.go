@@ -1,6 +1,6 @@
 package bundled_test
 
-// Bundled-asset invariants. Phase 2 of the test plan: gives `task test`
+// Bundled-asset invariants. Phase 2 of the test plan: gives `mise run test`
 // authority equivalent to `task verify-bundled`'s shell `diff -rq` so a
 // developer running `go test ./...` (e.g. via IDE) sees drift too.
 //
@@ -11,8 +11,8 @@ package bundled_test
 //   - Spot files known to ship are present (registry.json structure and
 //     at least one template)
 //
-// If you add a new template and `task test` suddenly fails here,
-// run `task sync-bundled` first.
+// If you add a new template and `mise run test` suddenly fails here,
+// run `mise run sync-bundled` first.
 
 import (
 	"encoding/json"
@@ -75,7 +75,7 @@ func TestRegistryBytes_MatchesOnDisk(t *testing.T) {
 		t.Fatalf("read root registry.json: %v", err)
 	}
 	if string(disk) != string(bundled.RegistryBytes) {
-		t.Error("registry.json drift between root and internal/resources/bundled — run 'task sync-bundled'")
+		t.Error("registry.json drift between root and internal/resources/bundled — run 'mise run sync-bundled'")
 	}
 }
 
@@ -87,7 +87,7 @@ func TestRegistryBytes_MatchesOnDisk(t *testing.T) {
 func TestWebDistFS_HasViteDist(t *testing.T) {
 	files := mustWalk(t, bundled.WebDistFS, bundled.WebDistRoot)
 	if !contains(files, "index.html") {
-		t.Errorf("WebDistFS missing index.html — run 'task sync-bundled'")
+		t.Errorf("WebDistFS missing index.html — run 'mise run sync-bundled'")
 	}
 	hasJSAsset := false
 	for _, f := range files {
@@ -97,7 +97,7 @@ func TestWebDistFS_HasViteDist(t *testing.T) {
 		}
 	}
 	if !hasJSAsset {
-		t.Errorf("WebDistFS has no assets/*.js — run 'task sync-bundled'")
+		t.Errorf("WebDistFS has no assets/*.js — run 'mise run sync-bundled'")
 	}
 }
 
@@ -108,11 +108,11 @@ func TestTemplatesFS_MatchesOnDisk(t *testing.T) {
 			t.Errorf("retired agent asset embedded in binary: %s", name)
 		}
 	}
-	// task sync-bundled strips go.mod from the bundled copy (a quirk of
+	// mise run sync-bundled strips go.mod from the bundled copy (a quirk of
 	// keeping each Go template module-isolated during repo dev). Apply
 	// the same filter to the on-disk side before comparing.
 	disk := mustWalkOSFiltered(t, filepath.Join(repoRoot(t), "packages", "templates"), func(rel string) bool {
-		// task sync-bundled strips go.mod (each Go template is module-isolated
+		// mise run sync-bundled strips go.mod (each Go template is module-isolated
 		// during dev) and skips the registry.json sibling (bundled separately
 		// at internal/resources/bundled/registry.json).
 		base := filepath.Base(rel)
@@ -184,7 +184,7 @@ func mustWalkOSFiltered(t *testing.T, root string, skip func(rel string) bool) [
 }
 
 // assertSameFiles compares two file lists as sets and reports drift in a
-// way that points at `task sync-bundled`.
+// way that points at `mise run sync-bundled`.
 func assertSameFiles(t *testing.T, label string, embedded, disk []string) {
 	t.Helper()
 	t.Logf("%s: embedded=%d disk=%d", label, len(embedded), len(disk))
@@ -211,7 +211,7 @@ func assertSameFiles(t *testing.T, label string, embedded, disk []string) {
 		if len(onlyDisk) > cap {
 			onlyDisk = append(onlyDisk[:cap], "...")
 		}
-		t.Errorf("%s drift between bundled and root — run 'task sync-bundled'\n  only in bundled: %v\n  only on disk:    %v",
+		t.Errorf("%s drift between bundled and root — run 'mise run sync-bundled'\n  only in bundled: %v\n  only on disk:    %v",
 			label, onlyEmbed, onlyDisk)
 	}
 }
@@ -240,14 +240,4 @@ func hasPrefix(xs []string, prefix string) bool {
 		}
 	}
 	return false
-}
-
-func TestOneCLISkillMatchesSource(t *testing.T) {
-	source, err := os.ReadFile(filepath.Join(repoRoot(t), "skills", "one-cli", "SKILL.md"))
-	if err != nil {
-		t.Fatal(err)
-	}
-	if len(source) == 0 || string(source) != string(bundled.OneCLISkill) {
-		t.Fatal("embedded skill differs from source; run task sync-bundled")
-	}
 }

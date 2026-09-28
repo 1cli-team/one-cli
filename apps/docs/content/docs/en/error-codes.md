@@ -37,12 +37,6 @@ Field meanings:
 - **`error.context`**: structured data from the failure site. It often already contains the data needed for recovery.
 - **`error.remediation`**: recovery actions. Each item has `action`, `hint`, and sometimes `command`; agents should prefer these before guessing.
 
-## Agent Skill Installation
-
-### `SKILLS_INSTALL_FAILED`
-
-The bundled `one-cli` skill could not be installed. Check the agent ID and destination permissions with `one skills install --help`. If some targets were installed before a failure, `context.installed_to` lists those directories. Retrying is safe.
-
 ## Generic / Lifecycle
 
 Command-level failures, user cancellation, and internal serialization failures.
@@ -159,25 +153,6 @@ A backend sync failed or rolled back after manifest write. Re-run the command af
 ## Backends and workspace configuration
 
 Backend selection and generated workspace configuration.
-
-### `CI_DISABLE_CONFIRMATION_REQUIRED`
-
-A non-interactive `one ci disable` call did not pass `--yes`. Review the
-selected projects and rerun with explicit confirmation; no workflow was removed.
-
-### `CI_PROVIDER_UNKNOWN`
-
-The requested CI provider is not implemented by this build. Use the IDs in
-`error.context.available_providers`.
-
-### `CI_NOT_ENABLED`
-
-The selected project has no generated CI workflow. Run the command in
-`error.remediation`, usually `one ci enable <project>`, before syncing it.
-
-### `CI_RENDER_FAILED`
-
-CI backend failed while rendering workflow files.
 
 ### `LOCAL_ORCH_PORT_CONFLICT`
 

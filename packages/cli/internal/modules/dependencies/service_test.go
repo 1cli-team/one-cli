@@ -328,13 +328,13 @@ func TestNodeLockfileMismatchUsesFrozenInstallAndStops(t *testing.T) {
 	}
 }
 
-func TestPNPMEnvironmentDocumentDoesNotPretendDependenciesAreLocked(t *testing.T) {
+func TestFinitePNPMTasksNeverCreateAnApplicationLockfile(t *testing.T) {
 	root := t.TempDir()
 	environment := "---\nlockfileVersion: '9.0'\nimporters:\n  .:\n    configDependencies: {}\n    packageManagerDependencies:\n      pnpm: {specifier: 12.3.4, version: 12.3.4}\n"
 	graph := "---\nlockfileVersion: '9.0'\nimporters:\n  .: {}\n  apps/web:\n    dependencies:\n      react: {specifier: '19', version: '19.3.0'}\n"
 	for _, fixture := range []struct{ body, flag string }{
-		{environment, "--no-frozen-lockfile"},
-		{environment + "\n---\n", "--no-frozen-lockfile"},
+		{environment, "--frozen-lockfile"},
+		{environment + "\n---\n", "--frozen-lockfile"},
 		{environment + graph, "--frozen-lockfile"},
 		{graph + environment, "--frozen-lockfile"},
 		{"not valid: [", "--frozen-lockfile"},

@@ -68,5 +68,3 @@ func (stubAdapter) InstallPlan(toolchain.PlanInput) toolchain.CommandStep {
 func (stubAdapter) PackageManagerForManifest(p toolchain.PackageManager) toolchain.PackageManager {
 	return p
 }
-
-func (stubAdapter) RenderWorkflow(toolchain.WorkflowInput) string { return "" }

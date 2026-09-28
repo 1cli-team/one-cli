@@ -508,6 +508,38 @@ describe("workspace overview Profile-only configuration", () => {
 		},
 	);
 
+	it("shows configured task dependencies and cache settings without claiming cache hits", async () => {
+		server.use(
+			http.get("http://localhost/api/workspace/projects/web", () =>
+				HttpResponse.json({
+					...webSettings,
+					project: {
+						...webSettings.project,
+						tasks: {
+							status: "ready",
+							entries: [
+								{
+									name: "//apps/web:build",
+									source: "apps/web/mise.toml",
+									depends: ["//packages/lib:build"],
+									outputs: ["dist"],
+									cacheEnabled: true,
+								},
+							],
+						},
+					},
+				}),
+			),
+		);
+		renderOverview();
+		const inspector = await openProjectSettings();
+		const tasks = await within(inspector).findByRole("region", { name: "Configured tasks" });
+		expect(within(tasks).getByText("//apps/web:build")).toBeDefined();
+		expect(within(tasks).getByText("Dependencies: //packages/lib:build")).toBeDefined();
+		expect(within(tasks).getByText("Artifact caching is configured.")).toBeDefined();
+		expect(within(tasks).queryByRole("button")).toBeNull();
+	});
+
 	it("keeps project environment configuration separate from remote secret operations", async () => {
 		const user = userEvent.setup();
 		renderOverview();

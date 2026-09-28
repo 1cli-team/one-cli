@@ -249,4 +249,4 @@ Full table: [Error codes](/en/docs/error-codes/).
 
 ## Shared credentials
 
-Shared credentials are independent of workspaces. Select storage with `one env bind --global`, browse metadata with `one env list --global --env dev --path /`, and inject an explicit scope with `one run --global --env dev --path /folder -- command`. See [login and shared credentials](/en/docs/login/) for commands and security boundaries.
+Shared credentials are independent of workspaces. Select storage with `one env bind --global`, browse metadata with `one env list --global --env dev --path /`, and inject an explicit scope with `one exec --global --env dev --path /folder -- command`. See [login and shared credentials](/en/docs/login/) for commands and security boundaries.

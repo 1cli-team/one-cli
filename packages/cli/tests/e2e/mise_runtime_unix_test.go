@@ -32,13 +32,30 @@ func TestE2E_MiseDevStopsBothProjects(t *testing.T) {
 				t.Fatal(err)
 			}
 			for path, body := range map[string]string{
-				"package.json":              `{"private":true,"packageManager":"npm@11.0.0","workspaces":["apps/*","services/*"]}`,
+				"package.json":              `{"private":true,"packageManager":"pnpm@12.3.4","workspaces":["apps/*","services/*"]}`,
 				"services/api/package.json": `{"name":"api"}`,
 			} {
 				if err := os.WriteFile(filepath.Join(root, path), []byte(body), 0o644); err != nil {
 					t.Fatal(err)
 				}
 			}
+			// Task planning owns generated fragments; user environment belongs in mise.toml.
+			for _, dir := range []string{"", "apps/web"} {
+				source := filepath.Join(root, dir, ".mise/conf.d/one.toml")
+				raw, err := os.ReadFile(source)
+				if err != nil {
+					t.Fatal(err)
+				}
+				if err = os.WriteFile(filepath.Join(root, dir, "mise.toml"), raw, 0644); err != nil {
+					t.Fatal(err)
+				}
+				if err = os.Remove(source); err != nil {
+					t.Fatal(err)
+				}
+			}
+			tools := t.TempDir()
+			buildWrite(t, tools, "pnpm", "#!/bin/sh\nif [ \"$1\" = --version ]; then echo 12.3.4; fi\nexit 0\n")
+			t.Setenv("PATH", tools+string(os.PathListSeparator)+os.Getenv("PATH"))
 			if mise := os.Getenv("ONE_TEST_MISE_BINARY"); mise != "" {
 				useRealMise(t, root, mise)
 			} else {

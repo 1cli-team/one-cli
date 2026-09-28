@@ -122,12 +122,16 @@ func classifyProject(projectRoot, targetDir string) (Project, error) {
 		if err != nil || pkg == nil {
 			return Project{}, err
 		}
+		manager, err := ResolvePackageManager(projectRoot, pkg.PackageManager)
+		if err != nil {
+			return Project{}, err
+		}
 		return Project{
 			Name:           name,
 			TargetDir:      targetDir,
 			RelativeDir:    rel,
 			Toolchain:      "node",
-			PackageManager: detectPackageManager(targetDir),
+			PackageManager: manager,
 			TemplateID:     inferTemplateIDFromPackageJSON(pkg),
 		}, nil
 	}
@@ -144,19 +148,6 @@ func classifyProject(projectRoot, targetDir string) (Project, error) {
 		Toolchain:   "go",
 		TemplateID:  templateID,
 	}, nil
-}
-
-func detectPackageManager(dir string) string {
-	switch {
-	case fileExists(filepath.Join(dir, "pnpm-lock.yaml")):
-		return "pnpm"
-	case fileExists(filepath.Join(dir, "package-lock.json")):
-		return "npm"
-	case fileExists(filepath.Join(dir, "yarn.lock")):
-		return "yarn"
-	default:
-		return "pnpm"
-	}
 }
 
 func inferTemplateIDFromPackageJSON(pkg *PackageJSON) string {

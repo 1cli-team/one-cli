@@ -39,10 +39,10 @@ one env list -p api
 
 ### 3. Use the value at runtime
 
-`one run` injects the project's env vars into a child command:
+`one exec` injects the project's env vars into a child command:
 
 ```bash
-one run -p api -- npm run dev
+one exec -p api -- npm run dev
 # DATABASE_URL is in process.env inside the child
 ```
 

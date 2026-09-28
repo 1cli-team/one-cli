@@ -1,0 +1,141 @@
+min_version = "2026.9.7"
+
+[settings]
+experimental = true
+
+[tools]
+go = "1.27.1"
+node = "24.15.0"
+pnpm = "10.14.0"
+task = "3.53.1"
+
+[tasks.install-deps]
+description = "Install the root pnpm workspace dependencies"
+run = "pnpm install --frozen-lockfile"
+
+[tasks.build-web]
+description = "Build the embedded Dashboard"
+depends = ["install-deps"]
+run = "pnpm --dir apps/dashboard build"
+sources = ["apps/dashboard/src/**/*", "apps/dashboard/index.html", "apps/dashboard/package.json", "apps/dashboard/vite.config.ts", "apps/dashboard/tsconfig*.json", "package.json", "pnpm-lock.yaml", "pnpm-workspace.yaml"]
+outputs = ["apps/dashboard/dist"]
+cache = { enabled = true, env = ["NODE_ENV", "CI", "VITE_DEV_API_TARGET", "VITE_DEV_DATA_MODE"] }
+
+[tasks.sync-bundled]
+description = "Refresh embedded templates and registry"
+run = "task -d packages/cli sync-bundled"
+
+[tasks.sync-web]
+depends = ["build-web"]
+run = "task -d packages/cli sync-web"
+
+[tasks.build]
+description = "Build One CLI with all embedded resources"
+depends = ["sync-bundled", "sync-web"]
+run = "task -d packages/cli build"
+
+[tasks.build-local]
+depends = ["sync-bundled", "sync-web"]
+run = "task -d packages/cli build-local"
+
+[tasks.build-all]
+description = "Cross compile every supported target"
+depends = ["sync-bundled", "sync-web"]
+run = "task -d packages/cli build-all"
+
+[tasks.verify-docs]
+depends = ["sync-bundled", "sync-web"]
+run = "task -d packages/cli verify-docs"
+
+[tasks.verify-node-workspace]
+run = "task -d packages/cli verify-node-workspace"
+
+[tasks.gen-error-codes]
+run = "task -d packages/cli gen-error-codes"
+
+[tasks."check:go"]
+depends = ["sync-bundled", "sync-web"]
+run = ["task -d packages/kernel check", "task -d packages/cli check"]
+
+[tasks."check:dashboard"]
+depends = ["install-deps"]
+run = "pnpm --dir apps/dashboard run check"
+
+[tasks."check:static"]
+description = "Check documentation, Go, and Dashboard"
+depends = ["verify-node-workspace", "verify-docs", "check:go", "check:dashboard"]
+
+[tasks."test:go:plain"]
+depends = ["build"]
+run = ["task -d packages/kernel test", "task -d packages/cli test"]
+
+[tasks."test:go"]
+depends = ["build"]
+run = ["task -d packages/kernel test:race", "task -d packages/cli test:race"]
+
+[tasks."test:dashboard"]
+depends = ["build-web"]
+run = "pnpm --dir apps/dashboard run test"
+
+[tasks."test:snapshot"]
+depends = ["build"]
+run = "task -d packages/cli test:snapshot"
+
+[tasks."check:test"]
+depends = ["test:go:plain", "test:dashboard"]
+
+[tasks.check]
+description = "Run the complete local and CI gate"
+depends = ["check:static", "check:test"]
+
+[tasks.ci]
+depends = ["check"]
+
+[tasks.test]
+description = "Run Go race and Dashboard tests"
+depends = ["test:go", "test:dashboard"]
+
+[tasks.pre-push]
+description = "Run the PR gate and Go race tests"
+depends = ["check", "test:go"]
+
+[tasks.fmt]
+run = ["task -d packages/kernel fmt", "task -d packages/cli fmt"]
+
+[tasks."fmt:check"]
+run = "go run ./packages/cli/tools/repo-checks gofmt"
+
+[tasks.vet]
+depends = ["check:go"]
+
+[tasks.tidy]
+run = ["task -d packages/kernel tidy", "task -d packages/cli tidy", "go work sync"]
+
+[tasks."hooks:install"]
+run = "git config --local core.hooksPath .githooks"
+
+[tasks.install]
+description = "Build a local One launcher and enable Git hooks"
+depends = ["build-local"]
+run = ["git config --local core.hooksPath .githooks", "task -d packages/cli install-launcher"]
+
+[tasks."dev:serve"]
+depends = ["sync-bundled", "sync-web"]
+run = "task -d packages/cli dev"
+
+[tasks."dev:dashboard"]
+depends = ["install-deps"]
+run = "pnpm --filter one-serve-web dev"
+env = { VITE_DEV_API_TARGET = "http://127.0.0.1:5174", VITE_DEV_DATA_MODE = "fixture-live-session" }
+
+[tasks.dev]
+description = "Run the Go API and Vite Dashboard"
+depends = ["dev:serve", "dev:dashboard"]
+
+[tasks."docs:dev"]
+depends = ["install-deps"]
+run = "pnpm --filter one-cli-docs dev"
+
+[tasks."docs:build"]
+depends = ["install-deps"]
+run = "pnpm --filter one-cli-docs build"

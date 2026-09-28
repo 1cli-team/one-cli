@@ -233,7 +233,7 @@ func TestGeneratedLanguageStepsAndConcurrentEdit(t *testing.T) {
 	write(t, root, "apps/web/package.json", `{"devDependencies":{"oxlint":"1.82.0","oxfmt":"0.67.0"}}`)
 	m := &workspace.Manifest{Projects: []workspace.ManifestProject{
 		{Name: "api", RelativeDir: "services/api", Toolchain: "go"},
-		{Name: "web", RelativeDir: "apps/web", Toolchain: "node", PackageManager: "npm"},
+		{Name: "web", RelativeDir: "apps/web", Toolchain: "node", PackageManager: "pnpm"},
 	}}
 	p := fsutil.NewFilePlan(root)
 	if err := PlanFiles(p, m); err != nil {
@@ -243,7 +243,7 @@ func TestGeneratedLanguageStepsAndConcurrentEdit(t *testing.T) {
 		t.Fatal(err)
 	}
 	config := read(t, root, workspace.HooksConfigFilename)
-	for _, part := range []string{`["api:format"]`, `dir = "services/api"`, `__hook-gofmt`, `["web:lint"]`, `Builtins.oxfmt`, `"npm", "exec", "--offline", "--"`, `fix = false`, `stage = false`, `stash = "git"`, `check-conventional-commit`} {
+	for _, part := range []string{`["api:format"]`, `dir = "services/api"`, `__hook-gofmt`, `["web:lint"]`, `Builtins.oxfmt`, `"pnpm", "exec"`, `fix = false`, `stage = false`, `stash = "git"`, `check-conventional-commit`} {
 		if !strings.Contains(config, part) {
 			t.Errorf("missing %s", part)
 		}

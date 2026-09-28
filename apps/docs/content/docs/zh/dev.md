@@ -31,7 +31,7 @@ one dev [project] [--dry-run]
 - Go：独立模块下载固定构建列表并补充 `go.sum`；存在 `go.work` 时由 Go 按实际包依赖解析本地成员和外部依赖，按需维护 `go.work.sum`。准备过程不自动运行 `go mod tidy` 或 `go work sync`。
 - 所有准备成功后才启动 supervisor。失败保留底层错误和下载缓存，可修复后重试原命令；取消时停止准备进程。
 
-`go.work.sum` 不替代各模块发布所需的 `go.sum`。模块声明需要修复时，可显式运行 `one run api -- go mod tidy`。`one run` 保持直接执行命令，不自动安装应用依赖。
+`go.work.sum` 不替代各模块发布所需的 `go.sum`。模块声明需要修复时，可显式运行 `one exec api -- go mod tidy`。`one exec` 保持直接执行命令，不自动安装应用依赖。
 
 ## 运行方式
 
@@ -45,7 +45,7 @@ one dev apps/web --dry-run
 
 ## 日志滚动与窗口缩放
 
-在 Unix 交互式终端中运行多个任务时会进入 TUI。单项目也可通过 `one dev web --ui=tui` 打开；`one build --ui=tui` 使用相同的日志操作。
+在 Unix 交互式终端中运行多个任务时会进入 TUI。单项目也可通过 `one dev web --ui=tui` 打开。有限构建任务使用 mise 流式输出。
 
 | 操作 | 行为 |
 |---|---|
@@ -76,5 +76,7 @@ one dev apps/web --dry-run
 ## 进一步阅读
 
 - [本地开发编排](/zh/tutorials/dev-local/) — 内置 supervisor 的完整流程
-- [`one run`](/zh/docs/run/) — 只给单条命令注入环境变量
+- [`one exec`](/zh/docs/exec/) — 只给单条命令注入环境变量
 - [manifest](/zh/docs/manifest/) — 项目列表的来源
+
+`one run dev` 使用相同的 supervisor。开发启动前，本地上游包的有限构建由 mise 调度执行。

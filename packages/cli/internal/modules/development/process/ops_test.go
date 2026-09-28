@@ -32,7 +32,7 @@ func TestBuildEntriesFromManifest_AllProjectsWithDev(t *testing.T) {
 	if entries[0].Name != "api" || entries[1].Name != "web" {
 		t.Errorf("order drift: %+v", entries)
 	}
-	wantCmd := "one run -p services/api -- pnpm run start:dev"
+	wantCmd := "one exec -p services/api -- pnpm run start:dev"
 	if entries[0].Cmd != wantCmd {
 		t.Errorf("api cmd = %q, want %q", entries[0].Cmd, wantCmd)
 	}

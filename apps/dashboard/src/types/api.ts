@@ -177,6 +177,16 @@ export interface ProjectSettings {
 	defaultEnvironment?: string;
 	availableEnvironments?: string[];
 	environment: ProjectEnvironmentSettings;
+	tasks?: {
+		status: "ready" | "unavailable";
+		entries: Array<{
+			name: string;
+			source: string;
+			depends: string[] | null;
+			outputs: string[] | null;
+			cacheEnabled: boolean;
+		}>;
+	};
 }
 
 export interface ProjectSettingsResponse {

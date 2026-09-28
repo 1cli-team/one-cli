@@ -11,4 +11,4 @@ COMMON OPTIONS
   -o, --output <value>     Output format: json | yaml | text (default: terminal-friendly text, JSON when piped)
   --path <value>           Shared credential folder (current level only, not recursive)
   -p, --project <value>    Project name or relative path; defaults to the current project
-  --reveal                 Explicitly display plaintext; normally use variables through one run
+  --reveal                 Explicitly display plaintext; normally use variables through one exec

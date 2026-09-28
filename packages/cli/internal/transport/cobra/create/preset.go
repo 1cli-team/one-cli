@@ -174,7 +174,6 @@ func runCreateWithPreset(deps Dependencies, cmd *cobra.Command, cwd, rawDir stri
 		CreatedInPlace: creationResult.CreatedInPlace,
 		PackageManager: creationResult.PackageManager,
 		SecretsBackend: effectiveEnv,
-		CIEnabled:      false,
 		DevEnabled:     true,
 		Projects:       presetProjectsPayload(creationResult.Preset.Projects),
 		EnvSummary: envSummary{
@@ -230,7 +229,6 @@ type createPresetResult struct {
 	CreatedInPlace  bool                   `json:"created_in_place"`
 	PackageManager  string                 `json:"package_manager"`
 	SecretsBackend  string                 `json:"secrets_backend,omitempty"`
-	CIEnabled       bool                   `json:"ci_enabled"`
 	DevEnabled      bool                   `json:"dev_enabled"`
 	Projects        []presetProjectPayload `json:"projects"`
 	EnvSummary      envSummary             `json:"env_summary"`

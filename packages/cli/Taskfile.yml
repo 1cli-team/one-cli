@@ -1,0 +1,66 @@
+version: '3'
+
+vars:
+  GOEXE:
+    sh: go env GOEXE
+  BUILD_VERSION: '{{.RELEASE_VERSION | default "0.0.0-dev"}}'
+  LOCAL_VERSION:
+    sh: |
+      base="${RELEASE_VERSION:-0.0.0-dev}"
+      commit=$(git rev-parse --short=7 HEAD 2>/dev/null || echo unknown)
+      dirty=""
+      if [ -n "$(git status --porcelain 2>/dev/null)" ]; then dirty=".dirty"; fi
+      echo "${base}-local.${commit}${dirty}"
+
+tasks:
+  build:
+    desc: Build One after mise has prepared embedded resources
+    cmds:
+      - go build -trimpath -ldflags '-s -w -X main.version={{.BUILD_VERSION}}' -o 'bin/one{{.GOEXE}}' ./cmd/one
+  build-local:
+    cmds:
+      - go build -trimpath -ldflags '-s -w -X main.version={{.LOCAL_VERSION}}' -o 'bin/one{{.GOEXE}}' ./cmd/one
+  build-all:
+    desc: Cross compile the supported release targets
+    cmds:
+      - for: ['darwin/amd64', 'darwin/arm64', 'linux/amd64', 'linux/arm64', 'windows/amd64']
+        cmd: |
+          plat={{.ITEM}}
+          os=${plat%/*}
+          arch=${plat#*/}
+          out=../../go-dist/one-${os}-${arch}
+          [ "$os" = "windows" ] && out="${out}.exe"
+          GOOS=$os GOARCH=$arch go build -trimpath -ldflags '-s -w -X main.version={{.BUILD_VERSION}}' -o "$out" ./cmd/one
+  test:
+    cmds: ['go test ./... {{.CLI_ARGS}}']
+  test:race:
+    cmds: ['go test -race ./... {{.CLI_ARGS}}']
+  test:snapshot:
+    cmds: ['go test -run Snapshot ./... {{.CLI_ARGS}}']
+  check:
+    cmds:
+      - go vet ./...
+      - go run ./tools/repo-checks gofmt
+  fmt:
+    cmds: ['go fmt ./...']
+  tidy:
+    cmds: ['go mod tidy']
+  sync-bundled:
+    cmds: ['go run ./tools/sync-resources bundled']
+  sync-web:
+    cmds: ['go run ./tools/sync-resources web']
+  gen-error-codes:
+    cmds: ['go run ./tools/gen-error-codes']
+  verify-docs:
+    cmds:
+      - go run ./tools/verify-cli-references
+      - go run ./tools/verify-help
+      - go run ./tools/repo-checks frontmatter
+      - go test -count=1 -run 'TestTemplateCodesMatchGoldenAndRegistry|TestEnvCodesMatchGolden|TestGoldenSortedByCode|TestEncodeVectors|TestParseEncodeRoundTrip|TestEncodeOrderIndependent' ./internal/modules/preset/...
+  verify-node-workspace:
+    cmds: ['go run ./tools/repo-checks node-workspace']
+  install-launcher:
+    cmds: ['go run ./tools/install-local bin/one{{.GOEXE}}']
+  dev:
+    dir: testdata/dashboard-dev-workspace
+    cmds: ['go run ../../cmd/one serve --port 5174 --open=false -o text']

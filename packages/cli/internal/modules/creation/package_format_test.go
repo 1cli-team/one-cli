@@ -16,7 +16,7 @@ import (
 
 func TestConfigureNodePackagePreservesTemplateFormatting(t *testing.T) {
 	const source = "{\n\t\"name\": \"template\",\n\t\"scripts\": {\n\t\t\"lint\": \"echo '<ready>' && echo done\",\n\t\t\"check\": \"pnpm run lint && pnpm run format\"\n\t},\n\t\"files\": [\"src\", \"dist\"],\n\t\"custom\": { \"command\": \"pnpm run untouched\" },\n\t\"engines\": { \"node\": \">=24\" },\n\t\"packageManager\": \"pnpm@12.3.4\"\n}\n"
-	for _, manager := range []string{"pnpm", "npm", "yarn", "bun"} {
+	for _, manager := range []string{"pnpm"} {
 		t.Run(manager, func(t *testing.T) {
 			p := fsutil.NewFilePlan(t.TempDir())
 			root := `{"packageManager":"` + manager + `@1.2.3"}`

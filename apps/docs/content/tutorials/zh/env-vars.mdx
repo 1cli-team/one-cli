@@ -39,10 +39,10 @@ one env list -p api
 
 ### 3. 运行时用
 
-`one run` 把项目的环境变量注入到子进程：
+`one exec` 把项目的环境变量注入到子进程：
 
 ```bash
-one run -p api -- npm run dev
+one exec -p api -- npm run dev
 # 子进程的 process.env 里就有 DATABASE_URL
 ```
 

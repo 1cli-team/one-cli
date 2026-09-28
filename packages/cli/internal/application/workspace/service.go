@@ -19,13 +19,18 @@ var (
 type Service struct {
 	catalog *catalog.Catalog
 	mu      sync.RWMutex
+	tasks   TaskReader
 }
 
-func NewService(backendCatalog *catalog.Catalog) (*Service, error) {
+func NewService(backendCatalog *catalog.Catalog, taskReaders ...TaskReader) (*Service, error) {
 	if backendCatalog == nil {
 		return nil, errors.New("workspace: backend catalog is required")
 	}
-	return &Service{catalog: backendCatalog}, nil
+	service := &Service{catalog: backendCatalog}
+	if len(taskReaders) > 0 {
+		service.tasks = taskReaders[0]
+	}
+	return service, nil
 }
 
 func (s *Service) Overview(root string, environments ...string) (workspacecore.Overview, error) {

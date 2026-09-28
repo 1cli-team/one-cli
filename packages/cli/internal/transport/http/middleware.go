@@ -188,7 +188,7 @@ func spaHandler() http.Handler {
 	if err != nil {
 		// Programmer error: the binary was built without the bundled
 		// dist. Fail loudly at startup rather than serve a 404 storm.
-		panic("serve: bundled web dist missing (run `task sync-bundled`): " + err.Error())
+		panic("serve: bundled web dist missing (run `mise run sync-web`): " + err.Error())
 	}
 	indexHTML, err := fs.ReadFile(distFS, "index.html")
 	if err != nil {

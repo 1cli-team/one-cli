@@ -63,10 +63,10 @@ func TestConfigurationGenerationIsAdditiveAndIdempotent(t *testing.T) {
 		t.Fatalf("tools: %+v", rootConfig.Tools)
 	}
 	web, _ := os.ReadFile(filepath.Join(root, "apps/web", Filename))
-	if !strings.Contains(string(web), "one:build") || strings.Contains(string(web), "one:lint") || strings.Contains(string(web), "vite") {
+	if !strings.Contains(string(web), "[tasks.build]") || strings.Contains(string(web), "[tasks.lint]") || strings.Contains(string(web), "vite") {
 		t.Fatalf("tasks do not reference the source commands: %s", web)
 	}
-	if !strings.Contains(string(web), "__exec --protocol 1 --project web --operation dev") {
+	if !strings.Contains(string(web), "one __task --project 'web' --task 'dev'") {
 		t.Fatal("missing terminal execution leaf")
 	}
 	second, err := Build(root, Options{})
@@ -246,10 +246,10 @@ func TestGoWithoutTaskfileDoesNotGenerateBuildFallback(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if strings.Contains(string(raw), "one:build") {
+	if strings.Contains(string(raw), "[tasks.build]") {
 		t.Fatal("Go build fallback must not be generated without a Taskfile")
 	}
-	if !strings.Contains(string(raw), "one:test") {
-		t.Fatal("existing test fallback was removed")
+	if strings.Contains(string(raw), "[tasks.test]") {
+		t.Fatal("test task must come from Taskfile")
 	}
 }

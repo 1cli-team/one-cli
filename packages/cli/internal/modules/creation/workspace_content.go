@@ -6,7 +6,16 @@ import (
 
 // These are the verbatim file contents the scaffolder writes.
 
-const agentsContent = "# Development\n\nUse the `one-cli` skill when developing this workspace.\nIf it is not installed, run `one skills install` first.\n"
+const agentsContent = `# Development / 开发
+
+Use one run to list and execute workspace tasks.
+Use one exec <project> -- <command> for commands with project environment variables.
+Node projects use pnpm; Go projects use Task.
+
+使用 one run 列出和执行工作区任务。
+使用 one exec <project> -- <command> 在项目环境中运行命令。
+Node 项目使用 pnpm，Go 项目使用 Task。
+`
 
 const pnpmWorkspaceContent = `packages:
   - "apps/*"
@@ -64,8 +73,7 @@ func buildPackageJSON(name string) orderedJSON {
 
 // emptyManifest is the freshly-stamped one.manifest.json. Carries
 // only the workspace identity (workspace.id + workspace.name) and an
-// empty projects array; backend selections (env / deploy / container)
-// land later via `env init`, `one add`, etc.
+// empty projects array; environment and project configuration are added later.
 func emptyManifest(projectName string) orderedJSON {
 	return orderedJSON{
 		{Key: "version", Value: workspace.ManifestVersion},

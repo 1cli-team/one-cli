@@ -141,7 +141,7 @@ func configureGlobal(parent *cobra.Command, deps Dependencies) {
 				if err != nil {
 					return err
 				}
-				result = map[string]any{"location": l, "environments": environments, "commands": []string{"one env list --global --path /", "one run --global --path /folder --env ENV -- command"}}
+				result = map[string]any{"location": l, "environments": environments, "commands": []string{"one env list --global --path /", "one exec --global --path /folder --env ENV -- command"}}
 			case "list":
 				result, e = remote.ListGlobal(cmd.Context(), env, folder)
 			case "get", "unset":

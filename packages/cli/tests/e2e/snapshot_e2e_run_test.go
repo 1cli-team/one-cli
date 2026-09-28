@@ -1,8 +1,8 @@
 package cli_test
 
-// E2E coverage of `one run`.
+// E2E coverage of `one exec`.
 //
-// `one run` is an exec-passthrough: it loads the resolved subproject's
+// `one exec` is an exec-passthrough: it loads the resolved subproject's
 // .env into the child process environment and execs the requested command.
 // The contract these tests pin down:
 //   - no args: prints help (Long usage block) and exits 0
@@ -48,13 +48,13 @@ func addSubprojectWithDotenv(t *testing.T, name string, dotenv string) (string, 
 }
 
 func TestSnapshot_E2E_Run_NoArgs_PrintsHelp(t *testing.T) {
-	// `one run` 不带任何位置参数时应当像父命令一样打印 help 并 exit 0，
+	// `one exec` 不带任何位置参数时应当像父命令一样打印 help 并 exit 0，
 	// 而不是返回 cobra 的 "requires at least 1 arg(s)" JSON 错误。
 	tmp := t.TempDir()
 	isolateHome(t, tmp)
 
 	t.Setenv("LC_ALL", "en_US.UTF-8")
-	stdout, stderr, code := runBinaryIn(t, tmp, "run")
+	stdout, stderr, code := runBinaryIn(t, tmp, "exec")
 	if code != 0 {
 		t.Fatalf("expected exit code 0, got %d\n  stdout: %s\n  stderr: %s", code, stdout, stderr)
 	}
@@ -74,7 +74,7 @@ func TestSnapshot_E2E_Run_HappyPath(t *testing.T) {
 	// Use sh -c so we can both observe stdout and read $RUN_TEST_KEY in
 	// one shot. printenv is portable; -- separator pins the contract for
 	// users who type it explicitly.
-	args := append([]string{"run", "--"}, environmentEchoCommand("RUN_TEST_KEY")...)
+	args := append([]string{"exec", "--"}, environmentEchoCommand("RUN_TEST_KEY")...)
 	stdout, stderr, code := runBinaryIn(t, subDir, args...)
 	if code != 0 {
 		t.Fatalf("run failed: exit %d\n  stdout: %q\n  stderr: %q", code, stdout, stderr)
@@ -88,7 +88,7 @@ func TestSnapshot_E2E_Run_PositionalProjectSelector(t *testing.T) {
 	ws, _ := addSubprojectWithDotenv(t, "auth",
 		"RUN_TEST_KEY=hello-from-dotenv\n")
 
-	args := append([]string{"run", "auth", "--"}, environmentEchoCommand("RUN_TEST_KEY")...)
+	args := append([]string{"exec", "auth", "--"}, environmentEchoCommand("RUN_TEST_KEY")...)
 	stdout, stderr, code := runBinaryIn(t, ws, args...)
 	if code != 0 {
 		t.Fatalf("positional project run failed: exit %d\n  stdout: %q\n  stderr: %q", code, stdout, stderr)
@@ -101,7 +101,7 @@ func TestSnapshot_E2E_Run_PositionalProjectSelector(t *testing.T) {
 func TestSnapshot_E2E_Run_ExitCodePassthrough(t *testing.T) {
 	_, subDir := addSubprojectWithDotenv(t, "billing", "K=v\n")
 
-	args := append([]string{"run", "--"}, exitWithCodeCommand(42)...)
+	args := append([]string{"exec", "--"}, exitWithCodeCommand(42)...)
 	_, _, code := runBinaryIn(t, subDir, args...)
 	if code != 42 {
 		t.Errorf("expected child exit code 42 to passthrough, got %d", code)
@@ -113,7 +113,7 @@ func TestSnapshot_E2E_Run_MissingDotenv_RunsLeniently(t *testing.T) {
 	isolateHome(t, tmp)
 	ws := bootstrapWorkspace(t, tmp, "ws")
 
-	// Add a subproject but DO NOT write a .env. `one run` should now
+	// Add a subproject but DO NOT write a .env. `one exec` should now
 	// continue with zero injected variables instead of erroring — `.env`
 	// is gitignored and optional, so the first-run experience must not
 	// require it.
@@ -123,7 +123,7 @@ func TestSnapshot_E2E_Run_MissingDotenv_RunsLeniently(t *testing.T) {
 	}
 	subDir := filepath.Join(ws, "services", "no-env")
 
-	stdout, stderr, code = runBinaryIn(t, subDir, "run", "--", "echo", "hi")
+	stdout, stderr, code = runBinaryIn(t, subDir, "exec", "--", "echo", "hi")
 	if code != 0 {
 		t.Fatalf("expected exit 0 with no .env, got %d\n  stdout: %s\n  stderr: %s", code, stdout, stderr)
 	}
@@ -135,7 +135,7 @@ func TestSnapshot_E2E_Run_MissingDotenv_RunsLeniently(t *testing.T) {
 func TestSnapshot_E2E_Run_MissingSeparator_ReturnsStructuredError(t *testing.T) {
 	ws, _ := addSubprojectWithDotenv(t, "auth", "K=v\n")
 
-	_, stderr, code := runBinaryIn(t, ws, "run", "-o", "json", "auth", "echo", "hi")
+	_, stderr, code := runBinaryIn(t, ws, "exec", "-o", "json", "auth", "echo", "hi")
 	if code == 0 {
 		t.Fatal("expected missing -- separator to fail")
 	}
@@ -153,7 +153,7 @@ func TestSnapshot_E2E_Run_MissingSeparator_ReturnsStructuredError(t *testing.T) 
 func TestSnapshot_E2E_Run_SelectorConflict_ReturnsStructuredError(t *testing.T) {
 	ws, _ := addSubprojectWithDotenv(t, "auth", "K=v\n")
 
-	_, stderr, code := runBinaryIn(t, ws, "run", "-o", "json", "auth", "-p", "billing", "--", "echo", "hi")
+	_, stderr, code := runBinaryIn(t, ws, "exec", "-o", "json", "auth", "-p", "billing", "--", "echo", "hi")
 	if code == 0 {
 		t.Fatal("expected conflicting project selectors to fail")
 	}
@@ -177,7 +177,7 @@ func TestSnapshot_E2E_Run_UnknownCommand_ReturnsStructuredError(t *testing.T) {
 	// A name that almost certainly isn't on $PATH. If a future CI image
 	// somehow ships this binary, the test will yell loudly — the random
 	// suffix is deliberately unguessable.
-	_, stderr, code := runBinaryIn(t, subDir, "run", "-o", "json", "--",
+	_, stderr, code := runBinaryIn(t, subDir, "exec", "-o", "json", "--",
 		"definitely-not-a-real-binary-xZQ7p9")
 	if code == 0 {
 		t.Fatalf("expected non-zero exit for unknown command, got 0\n  stderr: %s", stderr)
@@ -203,7 +203,7 @@ func TestSnapshot_E2E_Run_DefaultOverwrite(t *testing.T) {
 	// Default behaviour (v0.8+): injected secrets always overwrite shell vars.
 	t.Setenv("OVERRIDE_KEY", "value-from-shell")
 
-	args := append([]string{"run", "--"}, environmentEchoCommand("OVERRIDE_KEY")...)
+	args := append([]string{"exec", "--"}, environmentEchoCommand("OVERRIDE_KEY")...)
 	stdout, stderr, code := runBinaryIn(t, subDir, args...)
 	if code != 0 {
 		t.Fatalf("default run failed: exit %d\n  stderr: %s", code, stderr)
@@ -214,7 +214,7 @@ func TestSnapshot_E2E_Run_DefaultOverwrite(t *testing.T) {
 
 	// Sanity: -p resolves the same subproject from workspace root, both by
 	// relative path and by manifest name (v0.7+ name-based selection).
-	args = append([]string{"run", "-p", "services/auth", "--"}, environmentEchoCommand("OVERRIDE_KEY")...)
+	args = append([]string{"exec", "-p", "services/auth", "--"}, environmentEchoCommand("OVERRIDE_KEY")...)
 	stdout, stderr, code = runBinaryIn(t, ws, args...)
 	if code != 0 {
 		t.Fatalf("-p path run failed: exit %d\n  stderr: %s", code, stderr)
@@ -223,7 +223,7 @@ func TestSnapshot_E2E_Run_DefaultOverwrite(t *testing.T) {
 		t.Errorf("-p path resolution: want dotenv to win, got %q", got)
 	}
 
-	args = append([]string{"run", "-p", "auth", "--"}, environmentEchoCommand("OVERRIDE_KEY")...)
+	args = append([]string{"exec", "-p", "auth", "--"}, environmentEchoCommand("OVERRIDE_KEY")...)
 	stdout, stderr, code = runBinaryIn(t, ws, args...)
 	if code != 0 {
 		t.Fatalf("-p name run failed: exit %d\n  stderr: %s", code, stderr)

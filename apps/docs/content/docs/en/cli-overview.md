@@ -12,10 +12,12 @@ description: Daily commands and advanced entry points.
 | `one env` | Manage project variables |
 | `one login` / `one whoami` / `one logout` | Single browser session |
 | `one env --global` | Discover global variable locations and environments |
-| `one run` | Run a command with injected variables |
+| `one exec` | Run a command with injected variables |
 | `one serve` | Open the Dashboard |
 | `one locale` | Local language preference |
 | `one init mise` / `one init hooks` | Workspace tool configuration |
-| `one ci` / `one templates` / `one skills` | Automation and resources |
+| `one run` | List and execute workspace tasks |
+| `one templates` | List project templates |
+| `one hk` | Run Git hook checks |
 
 Discover the full catalogue with `one help --all`, then read command-specific `--help`. Agents discover metadata and execution options through the CLI, without copying commands from the Dashboard. See [login and shared credentials](/en/docs/login/).

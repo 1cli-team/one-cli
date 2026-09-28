@@ -4,32 +4,35 @@
 package devcmd
 
 import (
-	"context"
 	"fmt"
 	"strings"
 
 	"github.com/spf13/cobra"
 
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/application/execution"
-	"github.com/torchstellar-team/one-cli/packages/cli/internal/modules/dependencies"
 	processorch "github.com/torchstellar-team/one-cli/packages/cli/internal/modules/development/process"
+	"github.com/torchstellar-team/one-cli/packages/cli/internal/modules/tasks"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/helpui"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/i18n"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/output"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/prompt"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/taskrun"
 	runtimeport "github.com/torchstellar-team/one-cli/packages/cli/internal/ports/runtime"
+	"github.com/torchstellar-team/one-cli/packages/cli/internal/ports/secrets"
 )
 
-func Commands(provider runtimeport.Provider) []*cobra.Command { return buildContributions(provider) }
-
-func buildContributions(provider runtimeport.Provider) []*cobra.Command {
-	return []*cobra.Command{newDevCmd(provider)}
+func Commands(provider runtimeport.Provider, loaders *secrets.Registry) []*cobra.Command {
+	return buildContributions(provider, loaders)
 }
 
-func newDevCmd(provider runtimeport.Provider) *cobra.Command {
+func buildContributions(provider runtimeport.Provider, loaders *secrets.Registry) []*cobra.Command {
+	return []*cobra.Command{newDevCmd(provider, loaders)}
+}
+
+func newDevCmd(provider runtimeport.Provider, loaders *secrets.Registry) *cobra.Command {
 	var (
 		project                   string
+		environment               string
 		dryRun                    bool
 		ui                        string
 		selectProjects, keepGoing bool
@@ -96,15 +99,13 @@ func newDevCmd(provider runtimeport.Provider) *cobra.Command {
 				selected = append(selected, entry.Name)
 			}
 			if !dryRun {
-				if err := (dependencies.Service{Provider: provider}).Prepare(cmd.Context(), dependencies.Input{Root: root, Manifest: activeWorkspace.Manifest(), Projects: selected, Runtime: runtimeKind, Development: true, Log: cmd.ErrOrStderr()}); err != nil {
-					if ctx.Err() != nil {
-						return context.Cause(ctx)
-					}
+				if err := (tasks.Service{Provider: provider, Loaders: loaders}).PrepareDevelopment(ctx, activeWorkspace, selected, environment, cmd.InOrStdin(), cmd.OutOrStdout(), cmd.ErrOrStderr()); err != nil {
 					return err
 				}
 			}
 			res, err := processorch.Start(cmd.Context(), processorch.StartInput{
 				Runtime:     runtimeKind,
+				Environment: environment,
 				ProjectRoot: root,
 				DryRun:      dryRun,
 				Processes:   processNames,
@@ -135,6 +136,8 @@ func newDevCmd(provider runtimeport.Provider) *cobra.Command {
 	i18n.MarkFlagUsage(cmd, "select", "dev.flag.select")
 	i18n.MarkFlagUsage(cmd, "keep-going", "dev.flag.keep_going")
 	cmd.Flags().BoolVar(&dryRun, "dry-run", false, i18n.T("dev.flag.dry_run"))
+	cmd.Flags().StringVar(&environment, "env", "", i18n.T("tasks.flag.env"))
+	i18n.MarkFlagUsage(cmd, "env", "tasks.flag.env")
 	cmd.Flags().StringVarP(&project, "project", "p", "", i18n.T("dev.flag.project"))
 	i18n.MarkFlagUsage(cmd, "dry-run", "dev.flag.dry_run")
 	i18n.MarkFlagUsage(cmd, "project", "dev.flag.project")

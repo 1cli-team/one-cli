@@ -352,12 +352,20 @@
 			"packageManagerAutomatic": "自动检测",
 			"devCommand": "开发命令",
 			"buildCommand": "构建命令",
-			"buildSource": "one build 自动读取 {{source}}，请在该文件中修改构建任务。",
+			"buildSource": "one build 自动读取 {{source}}，请在该文件中修改构建任务。 工作区依赖与缓存由 mise 管理，one run build 使用相同入口。",
 			"buildMissing": "未配置构建任务",
 			"buildUnavailable": "无法读取构建配置",
 			"buildUnsupported": "此项目没有可用的构建任务。",
 			"metadata": "项目信息",
-			"runtime": "开发与构建"
+			"runtime": "开发与构建",
+			"tasks": "已配置任务",
+			"tasksUnavailable": "无法读取任务配置，请使用 one run 检查。",
+			"tasksEmpty": "此项目没有配置任务。",
+			"taskSource": "来源：{{source}}",
+			"taskCacheOn": "已配置产物缓存。",
+			"taskCacheOff": "未配置产物缓存。",
+			"taskDepends": "依赖：{{tasks}}",
+			"taskOutputs": "产物：{{outputs}}"
 		},
 		"environment": {
 			"title": "环境配置",

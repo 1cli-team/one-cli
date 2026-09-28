@@ -66,7 +66,7 @@ For Infisical, `domains.env.config` can contain `projectId`, `projectName`, `roo
 | `one env switch` | Changes the workspace environment source |
 | `one serve` | Applies explicitly reviewed project or environment-source changes with revision checks |
 
-`one build` selects each project's build command from its toolchain. Node projects use package scripts; Go projects use `Taskfile.yml`. CI is managed separately with `one ci`.
+`one build` selects each project's build command from its toolchain. Node projects use package scripts; Go projects use `Taskfile.yml`. Workspace tasks and the ordinary `ci` aggregate run through `one run`.
 
 ## Manual edits
 

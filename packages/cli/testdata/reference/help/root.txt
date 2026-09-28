@@ -9,6 +9,8 @@ EVERYDAY COMMANDS
   add           Add a project
   dev           Start local development
   build         Build projects
+  run           List and execute workspace tasks
+  exec          Execute a command with project variables
   env           Manage environment variables
   login         Sign in to Infisical in your browser
 

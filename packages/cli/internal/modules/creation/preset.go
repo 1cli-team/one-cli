@@ -43,13 +43,11 @@ type PresetOptions struct {
 var applyOrder = []preset.Kind{preset.KindBackend, preset.KindFrontend, preset.KindLibrary}
 
 // ApplyPreset renders every project segment in resolved into projectRoot,
-// upserts the manifest, and runs local/deployment infra sync per project. CI
-// is not generated implicitly.
+// upserts the manifest, and synchronizes workspace tooling per project.
 //
 // Apply assumes:
 //   - resolved came from Resolve() against the current registry, so
-//     every Item.Template is non-nil and every Item.Deploy is either
-//     "" (template default) or already compat-checked.
+//     every Item.Template is non-nil.
 //   - The workspace skeleton and Backend selection already exist.
 //
 // On mid-flight failure, Apply returns the partial ApplyResult plus the

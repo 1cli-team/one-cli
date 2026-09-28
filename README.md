@@ -94,21 +94,14 @@ one add nestjs-api --name api
 | `one env` | Review and manage environment variables |
 | `one login` | Sign in to Infisical with your browser |
 | `one serve` | Inspect workspaces, manage the current account and shared credentials |
-| `one ci [enable\|sync\|disable]` | Optionally manage generated GitHub Actions workflows |
+| `one run [task]` | Discover and execute workspace tasks through mise |
+| `one exec <project> -- <command>` | Execute a command with the selected project environment |
 
 Full command docs live at [1cli.dev](https://1cli.dev).
 
 ## Work With AI Assistants
 
-Install the bundled `one-cli` skill for your coding agent:
-
-```bash
-one skills install
-```
-
-Use `--agent <id>` to choose an agent directly, or `--yes` to install into every detected agent. Installation works offline and only writes the selected agents' user skills directories.
-
-New workspaces include an `AGENTS.md` asking agents to use this skill and run `one skills install` if it is missing. The [skill](./skills/one-cli/SKILL.md) stays small: follow [One Workspace Convention](https://github.com/1cli-team/one-workspace-convention), then consult `one --help` and the relevant command help. Ordinary CLI upgrades do not require reinstalling it.
+New workspaces include bilingual `AGENTS.md` guidance. Agents can inspect `one run --list -o json`, preview tasks with `one run build --dry-run`, and consult command-specific help.
 
 You can ask an assistant for project-level changes in natural language, for example:
 
@@ -126,7 +119,7 @@ One CLI manages local dotenv and Infisical variables. Run `one login` to sign in
 
 Run `one serve` for account settings, workspaces, and shared credentials. Workspace and project configuration changes share one reviewed, revision-checked Manifest draft. Remote variable edits take effect immediately; lists omit values and reveal/copy fetch plaintext only on demand.
 
-Choose shared credential storage with `one env bind --global`. Agents discover environments and folders through `one env --global` and `one env list --global`, then execute with `one run --global --env dev --path /folder --keys KEY -- command`. Explicit scope and best-effort masking reduce accidental exposure; they do not isolate arbitrary programs running as the same OS user. Use least-privilege remote permissions.
+Choose shared credential storage with `one env bind --global`. Agents discover environments and folders through `one env --global` and `one env list --global`, then execute with `one exec --global --env dev --path /folder --keys KEY -- command`. Explicit scope and best-effort masking reduce accidental exposure; they do not isolate arbitrary programs running as the same OS user. Use least-privilege remote permissions.
 
 ## Project Map
 
@@ -142,7 +135,7 @@ If you want to work on One CLI itself, the repository is organized like this:
 |---|---|
 | `packages/cli` | The One CLI app |
 | `packages/templates` | Starters used by `one add` |
-| `skills/one-cli` | Minimal workspace guidance installed by `one skills install` |
+| `mise.toml` | Workspace scheduling, tools, and artifact cache declarations |
 | `apps/docs` | Documentation website |
 | `apps/dashboard` | Local workspace, account, and global-variable Dashboard opened by `one serve` |
 | `assets` | Brand assets, including the logo |
@@ -151,10 +144,10 @@ Common contributor commands:
 
 ```bash
 pnpm install
-task check
-task build
-task test
-task verify-docs
+mise run check
+mise run build
+mise run test
+mise run verify-docs
 ```
 
 Read [CONTRIBUTING.md](./CONTRIBUTING.md) before opening a pull request.
@@ -182,24 +175,10 @@ one dev web api --ui=stream       # Use continuous prefixed logs
 one build web api --concurrency=4 # Build ready tasks concurrently, respecting local dependencies
 ```
 
-`--ui=auto` uses a native terminal for one task and a TUI for multiple tasks.
-Override it with `raw`, `tui`, or `stream`. TUI and raw require an interactive
-terminal with text output; CI, pipes, and JSON/YAML output use streaming logs.
-Structured results remain on stdout and task logs go to stderr. `--dry-run`
-only prints the selected execution plan.
+Development uses native output for one project and the supervisor TUI for multiple projects. Finite tasks use mise streaming output; `one build web --ui raw` preserves interactive input and disables artifact caching. Structured results stay on stdout and child logs go to stderr.
 
-In the TUI, use ↑/↓ to select a project, Enter to send it keyboard input, and
-Ctrl+] to return to navigation. PgUp/PgDn scroll history, f resumes following,
-/ searches projects, and h hides the project list. In dev, r restarts the selected
-project and s stops it. Ctrl+C in navigation stops the session and its process
-trees. Ctrl+C in input mode is sent to the selected application. By default any
-dev process exiting stops the group; `--keep-going` keeps the other projects alive.
+In the development TUI, use ↑/↓ to select a project, Enter to send input, and Ctrl+] to return to navigation. PgUp/PgDn scroll history, f resumes following, / searches, and h hides the project list. Use r to restart and s to stop the selected project. Ctrl+C stops the session and its process trees.
 
-Build concurrency defaults to 1. Selected local Node dependencies run first;
-project selection does not implicitly add unselected dependencies. Failed builds
-stop new scheduling, finish already running independent builds, and block tasks
-that depend on the failure. Build sessions return to the shell automatically.
+Build concurrency defaults to 1. Local Node dependencies are included automatically and build before their consumers. `one run build --cache off --force` always executes the build. See the [task guide](apps/docs/content/docs/en/run.md) for cache declarations and Actions examples.
 
-Interactive task terminals currently support Unix (including Linux and macOS).
-Windows supports native single-task output and streaming multiple tasks; auto
-falls back to streaming until a ConPTY adapter is available.
+The development TUI supports Linux and macOS. Windows uses native single-project output and streaming multiple projects.

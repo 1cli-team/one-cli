@@ -166,7 +166,7 @@ func TestAddConflictLeavesManifestAndRootConfigurationsUnchanged(t *testing.T) {
 	}
 }
 
-func TestExistingNodeManagerAndUserFilesArePreserved(t *testing.T) {
+func TestUnsupportedNodeManagerIsRejectedWithoutMutation(t *testing.T) {
 	s := newCreationService(t)
 	root := filepath.Join(t.TempDir(), "demo")
 	if _, err := s.CreateWorkspace(context.Background(), WorkspaceInput{TargetDir: root, Name: "demo"}); err != nil {
@@ -176,24 +176,21 @@ func TestExistingNodeManagerAndUserFilesArePreserved(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(root, "package.json"), []byte(user), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	if err := addLanguageProject(t, s, root, "react-spa", "web"); err != nil {
-		t.Fatal(err)
+	if err := addLanguageProject(t, s, root, "react-spa", "web"); err == nil {
+		t.Fatal("unsupported package manager accepted")
 	}
 	pkg, _ := os.ReadFile(filepath.Join(root, "package.json"))
-	for _, keep := range []string{"npm@11.0.0", "echo keep", "custom/*", "apps/web"} {
-		if !strings.Contains(string(pkg), keep) {
-			t.Fatalf("lost %s: %s", keep, pkg)
-		}
+	if string(pkg) != user {
+		t.Fatalf("user package.json changed: %s", pkg)
 	}
 	if _, err := os.Stat(filepath.Join(root, "pnpm-workspace.yaml")); !os.IsNotExist(err) {
 		t.Fatal("npm workspace converted to pnpm")
 	}
 	m, _ := workspace.ReadManifest(root)
-	if m.Projects[0].PackageManager != "npm" || workspace.ProjectDev(m, "web") != "npm run dev" {
-		t.Fatalf("wrong runtime: %+v", m.Projects[0])
+	if len(m.Projects) != 0 {
+		t.Fatal("failed add published a project")
 	}
-	projectPkg, _ := os.ReadFile(filepath.Join(root, "apps/web/package.json"))
-	if strings.Contains(string(projectPkg), "pnpm") || !strings.Contains(string(projectPkg), "npm@11.0.0") {
-		t.Fatalf("generated project uses another manager: %s", projectPkg)
+	if _, err := os.Stat(filepath.Join(root, "apps/web")); !os.IsNotExist(err) {
+		t.Fatal("failed add left a generated project")
 	}
 }

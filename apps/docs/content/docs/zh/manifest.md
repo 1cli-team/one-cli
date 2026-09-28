@@ -66,7 +66,7 @@ Infisical 的 `domains.env.config` 可以包含 `projectId`、`projectName`、`r
 | `one env switch` | 修改环境变量来源 |
 | `one serve` | 用户审阅后，经过 revision 校验保存项目配置或环境来源变更 |
 
-`one build` 按工具链选择项目构建命令：Node 项目使用包脚本，Go 项目使用 `Taskfile.yml`。CI 通过 `one ci` 单独管理。
+`one build` 按工具链选择项目构建命令：Node 项目使用包脚本，Go 项目使用 `Taskfile.yml`。工作区任务和普通的 `ci` 聚合任务通过 `one run` 执行。
 
 ## 手动修改
 

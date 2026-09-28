@@ -1,12 +1,8 @@
 package execution
 
 import (
-	"encoding/json"
 	"os"
-	"path/filepath"
 	"runtime"
-
-	"gopkg.in/yaml.v3"
 
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/core/workspace"
 	cliErrors "github.com/torchstellar-team/one-cli/packages/cli/internal/platform/errors"
@@ -39,53 +35,18 @@ func OperationArgs(w Workspace, selector, operation string) ([]string, error) {
 // ProjectOperationArgs resolves a task from the project's current source files.
 // It is shared by execution and the Dashboard and never installs or runs tools.
 func ProjectOperationArgs(root string, p workspace.Project, operation string) ([]string, error) {
-	if operation != "build" && operation != "test" && operation != "lint" {
-		return nil, missingOperation(p.Name, operation)
-	}
 	if p.Toolchain == "node" {
-		var pkg struct {
-			Scripts map[string]string `json:"scripts"`
-		}
-		raw, err := os.ReadFile(filepath.Join(p.TargetDir, "package.json"))
-		if err != nil {
+		if _, err := workspace.ResolvePackageManager(root, p.PackageManager); err != nil {
 			return nil, err
 		}
-		if err = json.Unmarshal(raw, &pkg); err != nil {
-			return nil, err
-		}
-		manager, err := workspace.ResolvePackageManager(root, p.PackageManager)
-		if err != nil {
-			return nil, err
-		}
-		if pkg.Scripts[operation] == "" {
-			return nil, missingOperation(p.Name, operation)
-		}
-		return []string{manager, "run", operation}, nil
 	}
-	if p.Toolchain == "go" {
-		raw, err := os.ReadFile(filepath.Join(p.TargetDir, "Taskfile.yml"))
-		if err == nil {
-			var tasks struct {
-				Tasks map[string]any `yaml:"tasks"`
-			}
-			if err = yaml.Unmarshal(raw, &tasks); err != nil {
-				return nil, err
-			}
-			if _, exists := tasks.Tasks[operation]; exists {
-				return []string{"task", operation}, nil
-			}
-			return nil, missingOperation(p.Name, operation)
-		}
-		if !os.IsNotExist(err) {
-			return nil, err
-		}
-		switch operation {
-		case "build":
-			return nil, i18n.Errorf("build.taskfile_required", p.Name)
-		case "test":
-			return []string{"go", "test", "./..."}, nil
-		case "lint":
-			return []string{"go", "vet", "./..."}, nil
+	tasks, err := workspace.DiscoverTasks(root, p, nil)
+	if err != nil {
+		return nil, err
+	}
+	for _, task := range tasks {
+		if task.Name == operation {
+			return task.Argv, nil
 		}
 	}
 	return nil, missingOperation(p.Name, operation)

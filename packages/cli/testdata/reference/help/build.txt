@@ -1,25 +1,25 @@
 
 DESCRIPTION
-Build projects
+Build projects and required dependencies with mise
 
 USAGE
   one build [projects...] [flags]
 
 EXAMPLES
   one build
-  one build web
-  one build apps/web --dry-run
-  one build web --env prod
+  one build web api
+  one build web --dry-run
 
 TIPS
-Build all buildable projects, or selected project names or paths. Node runs its build script; Go runs task build. Respect local dependencies among selected projects, with concurrency 1 by default. Tools and dependencies are prepared first. One task keeps its native terminal; multiple tasks use the TUI.
+Uses the same task graph and cache as one run build. Selecting a project includes required upstream builds.
 
 COMMON OPTIONS
-  --concurrency <value>    Maximum concurrent builds, respecting dependencies
-  --dry-run                Show the build plan without installing tools, loading secrets, or running commands
+  --cache <value>          Cache access: local-only, read-write, read-only, write-only, off
+  --concurrency <value>    Maximum parallel tasks
+  --dry-run                Preview tasks without preparing tools, dependencies, secrets, or caches
+  --env <value>            One project environment name
+  --force                  Bypass freshness checks; combine with --cache off to ensure execution
+  --list                   List available tasks
   -o, --output <value>     Output format: json | yaml | text (default: terminal-friendly text, JSON when piped)
-  --ui <value>             Terminal interface: auto | raw | tui | stream
-
-AUTOMATION AND ADVANCED OPTIONS
-  --env <value>            Environment to load for each project
-  -p, --project <value>    Project name or relative path; defaults to all buildable projects
+  -p, --project <value>    Project name or relative path (repeatable)
+  --ui <value>             Output mode: auto, stream, raw

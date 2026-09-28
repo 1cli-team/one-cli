@@ -1,5 +1,7 @@
 # one dev / one build 终端界面与多项目执行规划
 
+> 有限 build 的调度及显示已由 [工作区任务统一方案](2026-09-28-workspace-task-unification.md) 更新为 mise stream/raw；开发 supervisor 与 TUI 保留。下文保留历史设计。
+
 状态：已实施前三阶段的 Unix 版本；Windows ConPTY TUI 留待第四阶段。下文保留设计时的现状调查，实际行为以文末实施记录为准。
 
 ## 1. 目标与默认体验

@@ -49,12 +49,12 @@ func TestSnapshot_E2E_HelpDailyAndCompleteCatalogues(t *testing.T) {
 	if code != 0 || stderr != "" {
 		t.Fatalf("one --help failed: exit=%d stderr=%q", code, stderr)
 	}
-	for _, command := range []string{"create", "add", "dev", "build", "env", "login"} {
+	for _, command := range []string{"create", "add", "dev", "build", "env", "login", "run", "exec"} {
 		if !strings.Contains(daily, "  "+command) {
 			t.Errorf("daily help missing %q:\n%s", command, daily)
 		}
 	}
-	for _, command := range []string{"ci", "templates", "run", "serve"} {
+	for _, command := range []string{"ci", "templates", "serve"} {
 		if strings.Contains(daily, "\n  "+command) {
 			t.Errorf("daily help should not advertise advanced command %q:\n%s", command, daily)
 		}
@@ -64,13 +64,13 @@ func TestSnapshot_E2E_HelpDailyAndCompleteCatalogues(t *testing.T) {
 	if code != 0 || stderr != "" {
 		t.Fatalf("one help --all failed: exit=%d stderr=%q", code, stderr)
 	}
-	for _, command := range []string{"create", "add", "dev", "build", "env", "login", "ci", "templates", "run", "serve"} {
+	for _, command := range []string{"create", "add", "dev", "build", "env", "login", "run", "exec", "templates", "serve"} {
 		if !strings.Contains(all, "  "+command) {
 			t.Errorf("complete help missing %q:\n%s", command, all)
 		}
 	}
-	if !strings.Contains(all, "\n  skills") || !strings.Contains(all, "install") {
-		t.Errorf("complete help is missing skills install:\n%s", all)
+	if strings.Contains(all, "\n  skills") || strings.Contains(all, "\n  ci ") {
+		t.Errorf("complete help exposes removed commands:\n%s", all)
 	}
 }
 

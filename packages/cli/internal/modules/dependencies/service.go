@@ -1,5 +1,5 @@
 // Package dependencies prepares application dependencies before development and builds.
-// Tool installation belongs to the runtime provider; run remains a plain runner.
+// Tool installation belongs to the runtime provider; exec remains a plain runner.
 package dependencies
 
 import (
@@ -18,8 +18,6 @@ import (
 	"strconv"
 	"strings"
 	"syscall"
-
-	"gopkg.in/yaml.v3"
 
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/core/workspace"
 	cliErrors "github.com/torchstellar-team/one-cli/packages/cli/internal/platform/errors"
@@ -181,7 +179,7 @@ func (s Service) prepareGo(ctx context.Context, in Input, p workspace.ManifestPr
 		if err := s.run(ctx, in, dir, args, env, out, io.MultiWriter(in.Log, &detail)); err != nil {
 			failure := preparationError(p.Name, dir, strings.Join(args, " "), err, detail.String())
 			if args[1] == "list" {
-				return failure.WithRemediation(output.Remediation{Action: "repair-go-module", Hint: i18n.T("dependencies.go_repair_hint"), Command: "one run " + p.Name + " -- go mod tidy"})
+				return failure.WithRemediation(output.Remediation{Action: "repair-go-module", Hint: i18n.T("dependencies.go_repair_hint"), Command: "one exec " + p.Name + " -- go mod tidy"})
 			}
 			return failure
 		}
@@ -237,7 +235,7 @@ func (s Service) downloadModule(ctx context.Context, in Input, p workspace.Manif
 	}
 	if !bytes.Equal(module, after) {
 		return cliErrors.New(cliErrors.ONE_CLI_ERROR, i18n.Tf("dependencies.go_changes_required", p.Name)).WithRemediation(output.Remediation{
-			Action: "repair-go-module", Command: "one run " + p.Name + " -- go mod tidy", Hint: i18n.T("dependencies.go_tidy_hint"),
+			Action: "repair-go-module", Command: "one exec " + p.Name + " -- go mod tidy", Hint: i18n.T("dependencies.go_tidy_hint"),
 		})
 	}
 	afterSums, err := os.ReadFile(sumName)
@@ -273,7 +271,7 @@ func (s Service) prepareNode(ctx context.Context, in Input, fallback string) err
 	// workspace structure, manifest changes, lockfile, and installation settings.
 	// The error policy never installs; stale or unsupported state falls through
 	// to the ordinary install below. This also recognizes manual `pnpm install`.
-	nativeCheck := in.Development && manager == "pnpm" && supportsPNPMDependencyCheck(versions.String())
+	nativeCheck := in.Development && supportsPNPMDependencyCheck(versions.String())
 	if nativeCheck {
 		if nodeInstalled(in) {
 			args := []string{"pnpm", "--config.verify-deps-before-run=error", "exec", "node", "--eval", ""}
@@ -299,7 +297,7 @@ func (s Service) prepareNode(ctx context.Context, in Input, fallback string) err
 		return nil
 	}
 	args := NodeInstallCommand(in.Root, manager)
-	if in.Development && manager == "pnpm" {
+	if in.Development {
 		args = []string{manager, "install", "--no-frozen-lockfile"}
 	}
 	fmt.Fprintf(in.Log, i18n.T("dependencies.node_preparing"), strings.Join(args, " "))
@@ -356,7 +354,7 @@ func nodeInstalled(in Input) bool {
 func nodeFingerprint(in Input, versions string) (string, error) {
 	h := sha256.New()
 	fmt.Fprintln(h, "node-dependencies-v3", in.Development, in.Runtime, versions)
-	paths := []string{"package.json", "pnpm-workspace.yaml", "pnpm-lock.yaml", "package-lock.json", "yarn.lock", "bun.lock", "bun.lockb", ".npmrc", ".yarnrc.yml"}
+	paths := []string{"package.json", "pnpm-workspace.yaml", "pnpm-lock.yaml", ".npmrc"}
 	dirs, err := nodePackageDirs(in)
 	if err != nil {
 		return "", err
@@ -376,77 +374,10 @@ func nodeFingerprint(in Input, versions string) (string, error) {
 }
 
 func NodeInstallCommand(root, manager string) []string {
-	switch manager {
-	case "pnpm":
-		if pnpmDependencyLock(filepath.Join(root, "pnpm-lock.yaml")) {
-			return []string{manager, "install", "--frozen-lockfile"}
-		}
-		return []string{manager, "install", "--no-frozen-lockfile"}
-	case "npm":
-		if exists(filepath.Join(root, "package-lock.json")) {
-			return []string{manager, "ci"}
-		}
-	case "yarn":
-		if exists(filepath.Join(root, "yarn.lock")) {
-			pkg, _ := workspace.ReadPackageJSON(root)
-			if pkg != nil && strings.HasPrefix(pkg.PackageManager, "yarn@1.") {
-				return []string{manager, "install", "--frozen-lockfile"}
-			}
-			return []string{manager, "install", "--immutable"}
-		}
-	case "bun":
-		if exists(filepath.Join(root, "bun.lock")) || exists(filepath.Join(root, "bun.lockb")) {
-			return []string{manager, "install", "--frozen-lockfile"}
-		}
+	if manager != "pnpm" {
+		return nil
 	}
-	return []string{manager, "install"}
-}
-
-// pnpm 12 may write an environment-only YAML document even for --version.
-// That records packageManagerDependencies, not installed application packages.
-// Read every document; keep malformed/unknown existing locks frozen so pnpm
-// reports the problem rather than silently regenerating them.
-func pnpmDependencyLock(path string) bool {
-	b, err := os.ReadFile(path)
-	if os.IsNotExist(err) {
-		return false
-	}
-	if err != nil {
-		return true
-	}
-	decoder := yaml.NewDecoder(bytes.NewReader(b))
-	documents := 0
-	for {
-		var doc map[string]any
-		err := decoder.Decode(&doc)
-		if err == io.EOF {
-			return documents == 0
-		}
-		if err != nil {
-			return true
-		}
-		// pnpm separates the not-yet-created application document with a
-		// trailing `---`; the YAML decoder returns a nil document for it.
-		if doc == nil {
-			continue
-		}
-		documents++
-		importers, ok := doc["importers"].(map[string]any)
-		if !ok || len(importers) == 0 {
-			return true
-		}
-		for _, value := range importers {
-			fields, ok := value.(map[string]any)
-			if !ok || len(fields) == 0 {
-				return true
-			}
-			for key := range fields {
-				if key != "configDependencies" && key != "packageManagerDependencies" {
-					return true
-				}
-			}
-		}
-	}
+	return []string{"pnpm", "install", "--frozen-lockfile"}
 }
 
 func exists(path string) bool { _, err := os.Stat(path); return err == nil }

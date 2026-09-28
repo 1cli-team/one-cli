@@ -16,6 +16,7 @@ Start all developable projects, or the selected project names or paths, in paral
 
 COMMON OPTIONS
   --dry-run                Print the development command without starting it
+  --env <value>            One project environment name
   --keep-going             Keep other projects running when a project exits
   -o, --output <value>     Output format: json | yaml | text (default: terminal-friendly text, JSON when piped)
   --select                 Interactively search and select projects to start

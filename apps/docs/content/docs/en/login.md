@@ -26,7 +26,7 @@ one env bind --global --project-id PROJECT_ID --env dev
 one env --global
 one env list --global --env dev --path /
 one env list --global --env dev --path /docker
-one run --global --env dev --path /docker --keys REGISTRY_USER,REGISTRY_PASSWORD -- docker-push-script
+one exec --global --env dev --path /docker --keys REGISTRY_USER,REGISTRY_PASSWORD -- docker-push-script
 ```
 
 Listings contain immediate folders, names, and descriptions, without values. Execution requires an explicit environment and path. It does not recurse, import other folders, or expand secret references. Use `--keys` to narrow injection further. Global mode works outside a workspace and preserves the current directory. Project commands, `one dev`, and `one build` do not automatically receive shared credentials.

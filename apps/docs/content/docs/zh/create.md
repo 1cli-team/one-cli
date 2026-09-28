@@ -57,7 +57,7 @@ one create my-app --yes --env-provider infisical
 提交前默认只检查暂存内容，使用 `one hk fix` 显式修复。用法与自定义方式见 [`one hk`](/zh/docs/hk/)。Git 未安装或已有 hooks 配置发生冲突时，工作区仍会创建，输出的 `warnings` 会提示后续执行 `one init hooks`。
 
 持续集成默认不配置。创建工作区不会写入 `.github/workflows/`；添加项目后如有
-需要，再显式运行 `one ci enable <project>`。
+需要，可以手动配置调用 `one run ci` 的工作流。
 
 ## --env-provider 语义
 
@@ -147,4 +147,5 @@ one dev api
 
 ## Agent 指引
 
-普通创建和 preset 创建都会写入简短的根 `AGENTS.md`，要求使用 `one-cli` skill，缺失时运行 `one skills install`。Skill 安装是独立的用户级操作；后续 `one add` 保留这份文件及团队自行补充的内容。
+
+新工作区生成中英文 `AGENTS.md`，说明 `one run`、`one exec`、pnpm 和 Task 的分工。后续添加项目保留团队修改。

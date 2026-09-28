@@ -1,0 +1,23 @@
+
+DESCRIPTION
+Load environment variables and run a command
+
+USAGE
+  one exec [project] [-p <name|path>] [--env-provider dotenv|infisical] [--env <name>] -- <cmd> [args...]
+
+TIPS
+Loads project environment variables and runs a command in the project directory. Select a project by name or relative path, or run from inside a project. The positional project and --project must agree when both are used.
+
+Use -- to separate One options from the child command. --env overrides the workspace default environment; --env-provider selects dotenv or Infisical. Loaded values override existing shell environment variables.
+
+With --global, provide --env and --path explicitly. The command keeps the current working directory. Use --keys to select which shared credentials to inject.
+
+COMMON OPTIONS
+  --dry-run                Print the execution plan without loading environment values or starting a command
+  --env <value>            Environment name (default: manifest.environments.default)
+  --env-provider <value>   Environment source: dotenv or infisical (default: workspace configuration)
+  --global                 Use shared credentials, keeping the current working directory
+  --keys <value>           Inject only the specified variable names, separated by commas
+  -o, --output <value>     Output format: json | yaml | text (default: terminal-friendly text, JSON when piped)
+  --path <value>           Shared credential folder (must be explicit)
+  -p, --project <value>    Project name or relative path; inferred from the current directory by default

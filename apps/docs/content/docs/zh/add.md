@@ -127,5 +127,4 @@ one add nestjs-api --name user-api --yes -o json | jq
 - 检查 `one.manifest.json#projects[]` 确认项目登记
 - Agent 文档和本地开发配置会由 `one add` 同步
 - 下一步运行 `one dev <project>` 开发，使用 `one build <project>` 构建
-- 如需持续集成，单独运行 `one ci enable <project>` 生成 GitHub Actions 工作流
-- `one add` 只生成项目和工作区配置；`one dev` 会自动准备工具与应用依赖。JS/TS 在根目录统一安装，Go 按当前模块或 `go.work` 构建图准备依赖。修改 imports 或模块声明需要修复时，显式运行 `one run <project> -- go mod tidy`。
+- `one add` 只生成项目和工作区配置；`one dev` 会自动准备工具与应用依赖。JS/TS 在根目录统一安装，Go 按当前模块或 `go.work` 构建图准备依赖。修改 imports 或模块声明需要修复时，显式运行 `one exec <project> -- go mod tidy`。

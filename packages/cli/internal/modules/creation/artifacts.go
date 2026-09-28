@@ -30,10 +30,6 @@ func syncProject(opts syncProjectOptions) error {
 	if tc == "" {
 		tc = toolchain.Node
 	}
-	pm := opts.PackageManager
-	if pm == "" && tc == toolchain.Node {
-		pm = toolchain.PMpnpm
-	}
 
 	scripts, err := loadProjectScripts(opts.TargetDir)
 	if err != nil {
@@ -45,9 +41,6 @@ func syncProject(opts syncProjectOptions) error {
 	}
 	relDir = filepath.ToSlash(relDir)
 	if command := workspace.ResolveScaffoldDevCommand(scripts, string(tc), opts.TargetDir); command != "" {
-		if tc == toolchain.Node && pm != toolchain.PMpnpm {
-			command = strings.Replace(command, "pnpm run ", string(pm)+" run ", 1)
-		}
 		if err := workspace.UpdateProjectDev(opts.ProjectRoot, relDir, command); err != nil {
 			return err
 		}

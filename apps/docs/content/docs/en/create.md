@@ -50,7 +50,7 @@ one create my-app --yes --env-provider infisical
 
 Continuous integration is not configured automatically. Creating a workspace
 does not write files under `.github/workflows/`. After adding a project, enable
-it explicitly with `one ci enable <project>` if needed.
+a workflow that calls `one run ci` when needed.
 
 ## `--env-provider` Semantics
 
@@ -139,4 +139,5 @@ Full table: [Error codes](/en/docs/error-codes/).
 
 ## Agent instructions
 
-Ordinary and preset creation write a short root `AGENTS.md` requiring the `one-cli` skill and directing agents to `one skills install` when it is missing. Skill installation is a separate user-level operation. Later `one add` calls preserve this file, including team edits.
+
+New workspaces include bilingual `AGENTS.md` guidance for `one run`, `one exec`, pnpm, and Task. Later project additions preserve team edits.

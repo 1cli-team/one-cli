@@ -6,8 +6,8 @@ package cli_test
 // logic; this file tests the actual CLI surface (cobra, error envelopes,
 // stdout/stderr partitioning, exit codes).
 //
-// Tests are skipped if the binary hasn't been built yet (run `task build`).
-// CI should run `task build && task test` so the binary is present.
+// Tests are skipped if the binary hasn't been built yet (run `mise run build`).
+// CI should run `mise run build && mise run test` so the binary is present.
 // Shared helpers live in e2e_helpers_test.go.
 
 import (

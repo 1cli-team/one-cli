@@ -30,18 +30,16 @@ import (
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/updatecheck"
 	addcmd "github.com/torchstellar-team/one-cli/packages/cli/internal/transport/cobra/add"
 	authcmd "github.com/torchstellar-team/one-cli/packages/cli/internal/transport/cobra/auth"
-	buildcmd "github.com/torchstellar-team/one-cli/packages/cli/internal/transport/cobra/build"
-	cicmd "github.com/torchstellar-team/one-cli/packages/cli/internal/transport/cobra/ci"
 	createcmd "github.com/torchstellar-team/one-cli/packages/cli/internal/transport/cobra/create"
 	devcmd "github.com/torchstellar-team/one-cli/packages/cli/internal/transport/cobra/dev"
 	envcmd "github.com/torchstellar-team/one-cli/packages/cli/internal/transport/cobra/env"
+	execcmd "github.com/torchstellar-team/one-cli/packages/cli/internal/transport/cobra/exec"
 	hookscmd "github.com/torchstellar-team/one-cli/packages/cli/internal/transport/cobra/hooks"
 	initcmd "github.com/torchstellar-team/one-cli/packages/cli/internal/transport/cobra/init"
 	localecmd "github.com/torchstellar-team/one-cli/packages/cli/internal/transport/cobra/locale"
 	misecmd "github.com/torchstellar-team/one-cli/packages/cli/internal/transport/cobra/mise"
 	runcmd "github.com/torchstellar-team/one-cli/packages/cli/internal/transport/cobra/run"
 	servecmd "github.com/torchstellar-team/one-cli/packages/cli/internal/transport/cobra/serve"
-	skillscmd "github.com/torchstellar-team/one-cli/packages/cli/internal/transport/cobra/skills"
 	templatescmd "github.com/torchstellar-team/one-cli/packages/cli/internal/transport/cobra/templates"
 )
 
@@ -54,22 +52,20 @@ func newRootCommand() *cobra.Command {
 	}
 	groups := [][]*cobra.Command{
 		addcmd.Commands(deps.creation),
-		buildcmd.Commands(deps.runtime),
-		cicmd.Commands(deps.ci),
 		authcmd.Commands(),
 		{localecmd.Command(), initcmd.Command()},
 		createcmd.Commands(createcmd.Dependencies{Creation: deps.creation}),
-		devcmd.Commands(deps.runtime),
+		devcmd.Commands(deps.runtime, deps.loaders),
 		misecmd.RuntimeCommands(deps.runtime),
 		hookscmd.Commands(deps.runtime),
 		envcmd.Commands(envcmd.Dependencies{Service: deps.environments}),
-		runcmd.Commands(deps.loaders, deps.runtime),
+		execcmd.Commands(deps.loaders, deps.runtime),
+		runcmd.Commands(deps.loaders, deps.runtime, devcmd.TaskRunner(deps.runtime, deps.loaders)),
 		servecmd.Commands(servecmd.Dependencies{
 			Catalog: deps.catalog, Workspaces: deps.workspaces, Creation: deps.creation,
 			Registry: deps.registry, Manifest: deps.manifest, Environments: deps.environments,
 		}),
 		templatescmd.Commands(),
-		skillscmd.Commands(),
 	}
 	for _, commands := range groups {
 		root.AddCommand(commands...)

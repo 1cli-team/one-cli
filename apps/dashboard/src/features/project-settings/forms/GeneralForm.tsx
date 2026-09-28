@@ -128,6 +128,54 @@ export const GeneralForm: React.FC<ProjectSettingsFormProps> = ({
 					</div>
 				</div>
 			</div>
+			{project.tasks && (
+				<section
+					className="space-y-3 rounded-lg border border-border bg-card p-5"
+					aria-label={t("projectInspector.general.tasks")}
+				>
+					<SectionHeading icon={Terminal} title={t("projectInspector.general.tasks")} />
+					{project.tasks.status === "unavailable" ? (
+						<p className="text-sm text-muted-foreground">
+							{t("projectInspector.general.tasksUnavailable")}
+						</p>
+					) : project.tasks.entries.length === 0 ? (
+						<p className="text-sm text-muted-foreground">
+							{t("projectInspector.general.tasksEmpty")}
+						</p>
+					) : (
+						project.tasks.entries.map((task) => (
+							<div
+								key={task.name}
+								className="space-y-1 border-t border-border pt-3 text-sm break-words"
+							>
+								<p className="font-mono">{task.name}</p>
+								<p className="text-muted-foreground">
+									{t("projectInspector.general.taskSource", { source: task.source })}
+								</p>
+								<p>
+									{t(
+										task.cacheEnabled
+											? "projectInspector.general.taskCacheOn"
+											: "projectInspector.general.taskCacheOff",
+									)}
+								</p>
+								{!!task.depends?.length && (
+									<p>
+										{t("projectInspector.general.taskDepends", { tasks: task.depends.join(", ") })}
+									</p>
+								)}
+								{!!task.outputs?.length && (
+									<p>
+										{t("projectInspector.general.taskOutputs", {
+											outputs: task.outputs.join(", "),
+										})}
+									</p>
+								)}
+							</div>
+						))
+					)}
+				</section>
+			)}
 		</ManifestDraftLayout>
 	);
 };

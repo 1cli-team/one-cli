@@ -6,7 +6,7 @@ author: "One CLI Team"
 tags: ["skill", "codex", "dependencies"]
 ---
 
-> Historical design note: the detailed playbooks described below have been replaced by a minimal `one-cli` skill. See [Skills](/en/docs/skills/) for the current `one skills install` workflow.
+> Historical design note: the bundled skill feature has been removed. Current task usage is documented in [one run](/en/docs/run/).
 
 ## A skill is not marketing copy
 

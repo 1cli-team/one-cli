@@ -202,8 +202,8 @@ func TestSnapshot_E2E_Create_DefaultEnablesUniversalSet(t *testing.T) {
 	if got["secrets_backend"] != "dotenv" {
 		t.Errorf("secrets_backend: want dotenv, got %v", got["secrets_backend"])
 	}
-	if got["ci_enabled"] != false {
-		t.Errorf("ci_enabled: want false, got %v", got["ci_enabled"])
+	if _, exists := got["ci_enabled"]; exists {
+		t.Error("creation still exposes the removed CI feature")
 	}
 	if got["dev_enabled"] != true {
 		t.Errorf("dev_enabled: want true, got %v", got["dev_enabled"])
@@ -233,7 +233,7 @@ func assertWorkspaceAgentDocs(t *testing.T, root string) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !strings.Contains(string(body), "`one-cli` skill") || !strings.Contains(string(body), "one skills install") {
+	if !strings.Contains(string(body), "one run") || !strings.Contains(string(body), "one exec") {
 		t.Fatalf("workspace guidance does not explain skill installation: %s", body)
 	}
 	for _, entry := range []string{"apps", "services", "packages"} {

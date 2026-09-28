@@ -1,6 +1,6 @@
 ---
 title: 本地开发编排
-description: 用 one dev 一次性起所有项目的 dev 进程。命令存哪里、什么时候只跑单项目、和 one run 怎么配合。
+description: 用 one dev 一次性起所有项目的 dev 进程。命令存哪里、什么时候只跑单项目、和 one exec 怎么配合。
 ---
 
 `one dev` 一次起所有项目的本地 dev 进程。命令读自 `one.manifest.json` 的 `projects[].domains.dev.command`，由内置 supervisor 跑——**不需要安装任何第三方工具**。
@@ -68,11 +68,11 @@ one dev --dry-run
 
 打印每个项目即将执行的命令，不实际启进程。
 
-## 5. 跟 `one run` 配合
+## 5. 跟 `one exec` 配合
 
-`one dev` 每个项目的命令实际是通过 `one run -p <reldir> -- <command>` 启的——这意味着 **`one env` 的环境变量会自动注入到 dev 进程**（dotenv 或 Infisical，看工作区的 env backend 设置）。不需要在模板的 dev 命令里再套 `one run`。
+`one dev` 每个项目的命令实际是通过 `one exec -p <reldir> -- <command>` 启的——这意味着 **`one env` 的环境变量会自动注入到 dev 进程**（dotenv 或 Infisical，看工作区的 env backend 设置）。不需要在模板的 dev 命令里再套 `one exec`。
 
-要单独启某个项目并自己控制注入，直接用 `one run -p <name>` 也行；`one dev` 是编排器，不是必选。
+要单独启某个项目并自己控制注入，直接用 `one exec -p <name>` 也行；`one dev` 是编排器，不是必选。
 
 ## 常见错误
 

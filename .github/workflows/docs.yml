@@ -10,6 +10,9 @@ on:
       - "package.json"
       - "pnpm-lock.yaml"
       - "pnpm-workspace.yaml"
+      - "mise.toml"
+      - "packages/templates/registry.json"
+      - ".github/workflows/docs.yml"
   push:
     branches: [master]
     paths:
@@ -17,6 +20,9 @@ on:
       - "package.json"
       - "pnpm-lock.yaml"
       - "pnpm-workspace.yaml"
+      - "mise.toml"
+      - "packages/templates/registry.json"
+      - ".github/workflows/docs.yml"
   workflow_dispatch:
 
 permissions:
@@ -29,20 +35,11 @@ jobs:
       - name: Check out
         uses: actions/checkout@v7
 
-      - name: Set up pnpm
-        uses: pnpm/action-setup@v4
+      - name: Set up mise
+        uses: jdx/mise-action@v4
         with:
-          run_install: false
-
-      - name: Set up Node
-        uses: actions/setup-node@v6
-        with:
-          node-version: "24"
-          cache: pnpm
-          cache-dependency-path: pnpm-lock.yaml
-
-      - name: Install docs deps
-        run: pnpm --filter one-cli-docs install --frozen-lockfile
+          version: 2026.9.7
+          experimental: true
 
       - name: Build docs site
-        run: pnpm docs:build
+        run: mise run docs:build

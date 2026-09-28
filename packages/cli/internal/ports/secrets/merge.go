@@ -12,8 +12,7 @@ import (
 // useful when the caller explicitly fetched values from a remote backend
 // and wants them to take effect now.
 //
-// Used by `one run` (child env) and `one deploy` (build-time injection into
-// each provider's CLI subprocess).
+// Used by arbitrary commands and managed tasks to prepare child environments.
 func MergeIntoEnviron(parent []string, vars map[string]string, override bool) []string {
 	idx := make(map[string]int, len(parent))
 	for i, kv := range parent {

@@ -1,11 +1,11 @@
-// Package secrets is the cross-provider hook used by `one run` and
-// `one deploy` to inject secrets into child processes. Concrete loaders are
+// Package secrets is the cross-provider hook used by `one exec` and
+// managed tasks to inject secrets into child processes. Concrete loaders are
 // supplied to an instance Registry by the CLI composition root.
 //
 // What the registry IS:
 //
-//   - The single integration point for `one run`. Without this hook,
-//     callers resolve a loader through one small, typed contract.
+//   - A single integration point: callers resolve a loader through one
+//     small, typed contract.
 //
 // What the registry is NOT:
 //
@@ -21,7 +21,7 @@
 //     "given a workspace + subproject + env name, return the KV map a
 //     child process needs in its environment".
 //
-// Ordering is by Priority. `one run --from auto` walks the registry's
+// Ordering is by Priority. `one exec --from auto` walks the registry's
 // loaders highest-priority first and uses the first whose
 // Available() returns true. Explicit `--from <id>` skips priority
 // and resolves directly via Find().
@@ -36,7 +36,7 @@ import (
 )
 
 // Loader is the minimal contract every secrets backend implements
-// for `one run` integration. Backends typically expose much richer
+// for command and task integration. Backends typically expose much richer
 // CLI surfaces (init / set / get / pull) under their own top-level
 // commands; this interface is intentionally just the run-injection
 // path.
@@ -151,7 +151,7 @@ func (r *Registry) PickAvailable(projectRoot string) Loader {
 }
 
 // All returns the registered loaders in priority order. Useful for
-// `one run --help`-style introspection ("which providers does this
+// `one exec --help`-style introspection ("which providers does this
 // build know about?"). Returns a copy so callers can't mutate the
 // registry in place.
 func (r *Registry) All() []Loader {

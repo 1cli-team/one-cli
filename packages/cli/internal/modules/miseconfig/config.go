@@ -16,7 +16,6 @@ import (
 	"strings"
 
 	"github.com/pelletier/go-toml/v2"
-	"gopkg.in/yaml.v3"
 
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/core/workspace"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/modules/gowork"
@@ -64,16 +63,30 @@ type config struct {
 	MonorepoRoot bool              `toml:"monorepo_root,omitempty"`
 	Monorepo     *monorepo         `toml:"monorepo,omitempty"`
 	Tools        map[string]string `toml:"tools,omitempty"`
-	Tasks        map[string]task   `toml:"tasks,omitempty"`
+	Tasks        map[string]Task   `toml:"tasks,omitempty"`
+	Settings     map[string]bool   `toml:"settings,omitempty"`
 }
 type monorepo struct {
 	ConfigRoots []string `toml:"config_roots"`
 	Lockfile    bool     `toml:"lockfile"`
 }
-type task struct {
-	Description string `toml:"description"`
-	Run         string `toml:"run"`
-	RunWindows  string `toml:"run_windows"`
+
+// Task is the generated mise declaration. User overrides remain in mise.toml.
+type Task struct {
+	Description string    `toml:"description,omitempty" json:"description,omitempty"`
+	Run         string    `toml:"run,omitempty" json:"run,omitempty"`
+	RunWindows  string    `toml:"run_windows,omitempty" json:"run_windows,omitempty"`
+	RawArgs     bool      `toml:"raw_args,omitempty" json:"raw_args,omitempty"`
+	Interactive bool      `toml:"interactive,omitempty" json:"interactive,omitempty"`
+	Depends     []string  `toml:"depends,omitempty" json:"depends,omitempty"`
+	Sources     []string  `toml:"sources,omitempty" json:"sources,omitempty"`
+	Outputs     *[]string `toml:"outputs,omitempty" json:"outputs,omitempty"`
+	Cache       *Cache    `toml:"cache,omitempty" json:"cache,omitempty"`
+}
+type Cache struct {
+	Enabled       bool     `toml:"enabled" json:"enabled"`
+	Env           []string `toml:"env,omitempty" json:"env,omitempty"`
+	CommandInputs []string `toml:"command_inputs,omitempty" json:"command_inputs,omitempty"`
 }
 
 func Enabled(root string) bool {
@@ -139,7 +152,7 @@ func BuildWithFiles(root string, opts Options, files map[string][]byte) (*Plan, 
 	if opts.GoVersion != "" && !exactVersion.MatchString(opts.GoVersion) {
 		return nil, i18n.Errorf("miseconfig.go_version")
 	}
-	rootConfig := config{MinVersion: runtimeport.MinimumMiseVersion, MonorepoRoot: true, Monorepo: &monorepo{ConfigRoots: []string{}}, Tools: map[string]string{}}
+	rootConfig := config{MinVersion: runtimeport.MinimumMiseVersion, MonorepoRoot: true, Monorepo: &monorepo{ConfigRoots: []string{}}, Tools: map[string]string{}, Tasks: map[string]Task{}, Settings: map[string]bool{"experimental": true}}
 	hooks, err := p.readOptional(workspace.HooksConfigFilename)
 	if err != nil {
 		return nil, err
@@ -169,7 +182,7 @@ func BuildWithFiles(root string, opts Options, files map[string][]byte) (*Plan, 
 			return nil, i18n.Errorf("miseconfig.package_version")
 		}
 		switch name {
-		case "pnpm", "npm", "yarn", "bun":
+		case "pnpm":
 		default:
 			return nil, i18n.Errorf("workspace.package_manager_unsupported", name)
 		}
@@ -197,6 +210,11 @@ func BuildWithFiles(root string, opts Options, files map[string][]byte) (*Plan, 
 	if opts.GoVersion != "" && goWorkspace.Version != "" && compareVersions(opts.GoVersion, goWorkspace.Version) < 0 {
 		return nil, i18n.Errorf("miseconfig.go_work_version", opts.GoVersion, goWorkspace.Version)
 	}
+	configs := map[string]config{}
+	projects := []workspace.Project{}
+	for _, mp := range m.Projects {
+		projects = append(projects, workspace.Project{Name: mp.Name, RelativeDir: mp.RelativeDir, TargetDir: filepath.Join(root, mp.RelativeDir), Toolchain: mp.Toolchain, PackageManager: mp.PackageManager, TemplateID: mp.TemplateID})
+	}
 	for _, project := range m.Projects {
 		if !workspace.IsValidProjectName(project.Name) {
 			return nil, i18n.Errorf("miseconfig.project_name", project.Name)
@@ -206,29 +224,26 @@ func BuildWithFiles(root string, opts Options, files map[string][]byte) (*Plan, 
 			return nil, conflict(rel, i18n.T("config.project_path"))
 		}
 		rootConfig.Monorepo.ConfigRoots = append(rootConfig.Monorepo.ConfigRoots, rel)
-		pc := config{MinVersion: runtimeport.MinimumMiseVersion, Tasks: map[string]task{}, Tools: map[string]string{}}
-		operations := []string{}
+		pc := config{MinVersion: runtimeport.MinimumMiseVersion, Tasks: map[string]Task{}, Tools: map[string]string{}}
+		nativeProject := workspace.Project{Name: project.Name, RelativeDir: rel, TargetDir: filepath.Join(root, rel), Toolchain: project.Toolchain, PackageManager: project.PackageManager, TemplateID: project.TemplateID}
+		operations, err := workspace.DiscoverTasks(root, nativeProject, p.readOptional)
+		if err != nil {
+			return nil, err
+		}
 		if workspace.ProjectDev(&m, project.Name) != "" {
-			operations = append(operations, "dev")
+			found := false
+			for _, op := range operations {
+				if op.Name == "dev" {
+					found = true
+				}
+			}
+			if !found {
+				operations = append(operations, workspace.ProjectTask{Name: "dev", Interactive: true})
+			}
 		}
 		switch project.Toolchain {
 		case "node":
 			rootConfig.Tools["node"] = opts.NodeVersion
-			raw, err := p.read(rel + "/package.json")
-			if err != nil {
-				return nil, err
-			}
-			var scripts struct {
-				Scripts map[string]string `json:"scripts"`
-			}
-			if err := json.Unmarshal(raw, &scripts); err != nil {
-				return nil, err
-			}
-			for _, op := range []string{"build", "test", "lint"} {
-				if scripts.Scripts[op] != "" {
-					operations = append(operations, op)
-				}
-			}
 		case "go":
 			raw, err := p.read(rel + "/go.mod")
 			if err != nil {
@@ -247,39 +262,76 @@ func BuildWithFiles(root string, opts Options, files map[string][]byte) (*Plan, 
 				}
 				pc.Tools["go"] = version
 			}
-			rawTask, err := p.readOptional(rel + "/Taskfile.yml")
-			if err != nil {
-				return nil, err
-			}
-			if rawTask == nil {
-				operations = append(operations, "test", "lint")
-			} else {
-				pc.Tools["task"] = "3.51.1"
-				var tasks struct {
-					Tasks map[string]any `yaml:"tasks"`
-				}
-				if err := yaml.Unmarshal(rawTask, &tasks); err != nil {
-					return nil, err
-				}
-				for _, op := range []string{"build", "test", "lint"} {
-					if _, ok := tasks.Tasks[op]; ok {
-						operations = append(operations, op)
-					}
-				}
-			}
+			pc.Tools["task"] = "3.51.1"
 		}
 		for _, op := range operations {
-			args := " __exec --protocol 1 --project " + project.Name + " --operation " + op
-			pc.Tasks["one:"+op] = task{
-				Description: "One " + op + " for " + project.Name,
-				Run:         "{{ env.ONE_BINARY_PATH | default(value='one') | quote }}" + args,
-				RunWindows:  `if defined ONE_BINARY_PATH ("%ONE_BINARY_PATH%"` + args + `) else (one` + args + `)`,
+			// Stable command text keeps per-run context paths out of cache keys.
+			args := " --project " + shellQuote(project.Name) + " --task " + shellQuote(op.Name)
+			task := Task{Description: op.Description, Run: "one __task" + args + " --", RawArgs: true, Interactive: op.Interactive, Cache: &Cache{Enabled: false}}
+			task.RunWindows = "one __task --project " + windowsQuote(project.Name) + " --task " + windowsQuote(op.Name) + " --"
+			if !op.Interactive {
+				p.configureCache(root, nativeProject, op, &task)
+			}
+			pc.Tasks[op.Name] = task
+			if op.Name == "build" || op.Name == "check" || op.Name == "test" {
+				aggregate := rootConfig.Tasks[op.Name]
+				aggregate.Depends = append(aggregate.Depends, "//"+rel+":"+op.Name)
+				rootConfig.Tasks[op.Name] = aggregate
 			}
 		}
-		if err := p.add(rel+"/"+Filename, pc); err != nil {
+		configs[project.Name] = pc
+
+	}
+	edges, err := workspace.BuildDependencies(root, projects, p.readOptional)
+	if err != nil {
+		return nil, err
+	}
+	byName := map[string]workspace.Project{}
+	for _, project := range projects {
+		byName[project.Name] = project
+	}
+	for _, project := range projects {
+		pc := configs[project.Name]
+		upstreamNames, err := dependencyClosure(project.Name, edges)
+		if err != nil {
+			return nil, err
+		}
+		for name, task := range pc.Tasks {
+			for _, dep := range upstreamNames {
+				upstream := byName[dep]
+				if name == "build" || name == "dev" || name == "check" || name == "test" || name == "typecheck" {
+					if _, ok := configs[dep].Tasks["build"]; ok {
+						task.Depends = append(task.Depends, "//"+upstream.RelativeDir+":build")
+					}
+				}
+				if task.Cache != nil && task.Cache.Enabled {
+					relative, _ := filepath.Rel(project.TargetDir, upstream.TargetDir)
+					task.Sources = append(task.Sources, filepath.ToSlash(relative)+"/**", "!"+filepath.ToSlash(relative)+"/node_modules/**")
+				}
+			}
+			if project.Toolchain == "go" && task.Cache != nil && task.Cache.Enabled {
+				inputs, err := p.goCacheSources(root, project.TargetDir, goWorkspace.Modules)
+				if err != nil {
+					return nil, err
+				}
+				task.Sources = append(task.Sources, inputs...)
+			}
+			pc.Tasks[name] = task
+		}
+		if err := p.add(project.RelativeDir+"/"+Filename, pc); err != nil {
 			return nil, err
 		}
 	}
+	var ci Task
+	for _, name := range []string{"check", "test", "build"} {
+		if _, ok := rootConfig.Tasks[name]; ok {
+			ci.Depends = append(ci.Depends, name)
+		}
+	}
+	if len(ci.Depends) > 0 {
+		rootConfig.Tasks["ci"] = ci
+	}
+
 	sort.Strings(rootConfig.Monorepo.ConfigRoots)
 	if err := p.add(Filename, rootConfig); err != nil {
 		return nil, err

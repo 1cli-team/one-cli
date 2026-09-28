@@ -1,6 +1,6 @@
 ---
 title: Local dev orchestration
-description: Run every project's dev process at once with one dev. Where the command lives, how to run a single project, how it composes with one run.
+description: Run every project's dev process at once with one dev. Where the command lives, how to run a single project, how it composes with one exec.
 ---
 
 `one dev` starts every project's local dev process at once. Commands are read from `one.manifest.json` at `projects[].domains.dev.command`, and a built-in supervisor handles the children — **no third-party tool to install**.
@@ -68,11 +68,11 @@ one dev --dry-run
 
 Prints the per-project commands that would run without starting any process.
 
-## 5. Composition with `one run`
+## 5. Composition with `one exec`
 
-Each project's command is internally launched as `one run -p <reldir> -- <command>` — so **`one env` variables are auto-injected** (dotenv or Infisical, per workspace backend). No need to wrap your dev script with `one run` in the manifest.
+Each project's command is internally launched as `one exec -p <reldir> -- <command>` — so **`one env` variables are auto-injected** (dotenv or Infisical, per workspace backend). No need to wrap your dev script with `one exec` in the manifest.
 
-To start one project with full control, you can still call `one run -p <name>` directly; `one dev` is an orchestrator, not a gate.
+To start one project with full control, you can still call `one exec -p <name>` directly; `one dev` is an orchestrator, not a gate.
 
 ## Common errors
 
