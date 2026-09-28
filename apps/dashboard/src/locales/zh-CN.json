@@ -325,7 +325,8 @@
 		"tabs": {
 			"label": "项目配置分区",
 			"overview": "概览",
-			"environment": "环境"
+			"environment": "环境",
+			"runtime": "运行"
 		},
 		"loadFailed": "无法加载项目配置",
 		"retry": "重试",
@@ -365,7 +366,9 @@
 			"taskCacheOn": "已配置产物缓存。",
 			"taskCacheOff": "未配置产物缓存。",
 			"taskDepends": "依赖：{{tasks}}",
-			"taskOutputs": "产物：{{outputs}}"
+			"taskOutputs": "产物：{{outputs}}",
+			"devURL": "开发服务访问地址（可选）",
+			"devURLHint": "留空时从日志自动识别。仅支持不含凭据及查询参数的本机 HTTP(S) 地址。"
 		},
 		"environment": {
 			"title": "环境配置",
@@ -388,7 +391,10 @@
 			"none": "尚未解析到 Profile",
 			"manage": "前往设置管理"
 		},
-		"draftHint": "修改将暂存为草稿，预览并保存后生效。"
+		"draftHint": "修改将暂存为草稿，预览并保存后生效。",
+		"runtime": {
+			"title": "运行与控制台"
+		}
 	},
 	"secrets": {
 		"title": "Infisical 密钥",
@@ -786,6 +792,45 @@
 				"feature2": "带类型的 IPC 桥接与依赖注入",
 				"feature3": "日志、本地设置与更新器模块"
 			}
+		}
+	},
+	"services": {
+		"title": "开发服务",
+		"description": "在这里启动项目，查看输出并打开页面进行测试。",
+		"start": "启动服务",
+		"stop": "停止",
+		"restart": "重启",
+		"open": "打开访问",
+		"console": "控制台",
+		"live": "已连接",
+		"reconnecting": "正在连接…",
+		"search": "搜索日志",
+		"pause": "暂停滚动",
+		"follow": "跟随日志",
+		"copy": "复制",
+		"copied": "日志已复制",
+		"copyFailed": "无法复制，请在控制台选择文本后复制。",
+		"actionFailed": "操作失败，请重试。",
+		"saveFirst": "有未保存的配置，请先保存或丢弃，再启动或重启服务。",
+		"noDev": "尚未配置 dev 任务。请在概览中设置开发命令，或在项目的 mise.toml 中添加 dev 任务。",
+		"environmentMismatch": "当前服务使用 {{environment}} 环境。重启后将使用所选的 {{next}} 环境。",
+		"exitCode": "退出码：{{code}}",
+		"reachable": "本机端口可连接",
+		"unreachable": "本机端口尚不可连接",
+		"waitingURL": "等待服务输出本机访问地址。没有页面的服务也可正常运行。",
+		"urlHint": "启动后自动识别本机地址，也可在概览中设置访问地址。",
+		"waitingLogs": "正在准备运行环境，等待输出…",
+		"emptyLogs": "启动服务后，运行日志会显示在这里。",
+		"noMatches": "没有匹配的日志。",
+		"consoleHint": "日志已脱敏，最多保留最近 256 KiB。关闭页面不影响服务；关闭 one serve 会停止服务。",
+		"truncated": "较早的日志已移除，仅显示最近的输出。",
+		"status": {
+			"preparing": "准备中",
+			"running": "运行中",
+			"stopping": "停止中",
+			"stopped": "已停止",
+			"exited": "已退出",
+			"failed": "运行失败"
 		}
 	}
 }

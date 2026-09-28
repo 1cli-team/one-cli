@@ -92,3 +92,33 @@ func TestSchedulerMasksCachedOutputAcrossProjects(t *testing.T) {
 		t.Fatalf("unsafe cached logs: %q", combined)
 	}
 }
+
+// The Dashboard worker merges both streams into one private console pipe.
+func TestDevConsoleMasksBeforeForwardingAndReportsSchedulerStart(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("shell fixture")
+	}
+	w := taskWorkspace(t)
+	w.Manifest().Env = &workspace.EnvironmentConfig{ProjectID: "remote"}
+	for i := range w.Manifest().Projects {
+		w.Manifest().Projects[i].Dev = &workspace.ProjectDevOverride{Command: "echo dev"}
+	}
+	if err := workspace.WriteManifest(w.Root(), w.Manifest()); err != nil {
+		t.Fatal(err)
+	}
+	opts := Options{Name: "dev", Projects: []string{"web", "lib"}, Cache: "off", UI: "stream", Jobs: 1}
+	plan, err := NewPlan(w, opts)
+	if err != nil {
+		t.Fatal(err)
+	}
+	started := false
+	service := Service{Provider: replayProvider{}, Loaders: secrets.MustRegistry(&countingLoader{calls: map[string]int{}, value: "private-test-value-"}), Prepare: func(context.Context, dependencies.Input) error { return nil }, OnStarted: func() { started = true }}
+	var console bytes.Buffer
+	result, err := service.Execute(context.Background(), w, plan, opts, nil, &console, &console)
+	if err != nil || result.Status != "succeeded" || !started {
+		t.Fatalf("%+v %v %v", result, err, started)
+	}
+	if strings.Contains(console.String(), "private-test-value-") || strings.Count(console.String(), "[REDACTED]") != 2 {
+		t.Fatal("unsafe console output")
+	}
+}

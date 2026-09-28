@@ -1,14 +1,14 @@
 
 DESCRIPTION
-Open the local settings page
+Open the local Dashboard
 
 USAGE
   one serve [flags]
 
 TIPS
-Starts a local settings page for workspaces, project configuration, Infisical login, and shared credentials. Review manifest changes before saving. Variable lists show names and descriptions; plaintext is fetched only when viewed or copied.
+Starts a local Dashboard for workspaces, development services, project configuration, Infisical login, and shared credentials. The project Run tab provides start, stop, restart, a live console, and local access links. Review manifest changes before saving. Plaintext variables are fetched only when viewed or copied.
 
-By default, binds to 127.0.0.1 on an available port and opens your browser. Press Ctrl-C to stop. Host and Origin checks protect the local interface.
+By default, binds to 127.0.0.1 on an available port and opens your browser. Closing the page keeps services running; Ctrl-C stops the Dashboard and its services. Host and Origin checks protect the interface.
 
 COMMON OPTIONS
   --host <value>           Loopback host for the local settings page

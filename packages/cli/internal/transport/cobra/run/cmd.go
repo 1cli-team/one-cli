@@ -19,7 +19,7 @@ import (
 
 func Commands(loaders *secrets.Registry, provider runtimeport.Provider) []*cobra.Command {
 	service := tasks.Service{Provider: provider, Loaders: loaders}
-	return []*cobra.Command{command("run", service), command("build", service), command("dev", service), internal(false), internal(true)}
+	return []*cobra.Command{command("run", service), command("build", service), command("dev", service), internal(false), internal(true), serviceWorker(service)}
 }
 func command(kind string, service tasks.Service) *cobra.Command {
 	opts := tasks.Options{Jobs: 1, Cache: "local-only", UI: "auto"}

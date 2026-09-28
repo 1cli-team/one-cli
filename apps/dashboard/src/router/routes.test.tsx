@@ -18,6 +18,7 @@ import type {
 } from "@/types/api";
 
 const server = setupServer(
+	http.get(/\/api\/workspaces?(?:\/[^/]+)?\/services$/, () => HttpResponse.json({ services: [] })),
 	http.get("http://localhost/api/session", () =>
 		HttpResponse.json({ session: { loggedIn: false, expired: false } }),
 	),

@@ -71,7 +71,7 @@ description: 工作区的项目登记表、环境变量来源和本地开发配�
 | `env` | 可选 Infisical 绑定：`siteUrl`、`projectId`、`projectName`、`rootPath` 和 `keys` |
 | `projects[]` | 项目名称、路径、模板、工具链，可选的 `packageManager` 和 `buildVersion` |
 | `projects[].env` | 项目覆盖项：`path`、`inherits`、`disabled` 和变量名 `keys`；后端继承工作区 |
-| `projects[].dev` | `one dev` 执行的 `command` |
+| `projects[].dev` | `one dev` 执行的 `command`，及 Dashboard 可选本机访问地址 `url` |
 
 Infisical 的 `env` 可以包含 `projectId`、`projectName`、`rootPath` 和 `keys`。Manifest 不保存变量值或本机 Profile 名；凭据保存在系统 keyring，变量值交给 Infisical。
 

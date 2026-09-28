@@ -153,9 +153,9 @@
   "exec.command_required": "No command was provided after --. Use `one exec [project] -- <command> [args...]`.",
   "exec.project_args_invalid": "Only one project name or path may appear before --.",
   "exec.selector_conflict": "The positional project and --project refer to different projects; keep only one form.",
-  "serve.short": "Open the local settings page",
+  "serve.short": "Open the local Dashboard",
   "serve.started": "✓ Local settings page started: %s",
-  "serve.instructions": "  Manage local connections in the browser; press Ctrl-C to stop.",
+  "serve.instructions": "  Manage projects, development services, and connections in the browser; press Ctrl-C to stop all services.",
   "serve.browser_failed": "  Could not open the browser automatically (%v); copy the URL above.",
   "serve.registry_warning": "The workspace list was not updated (%v); Dashboard will still start, but this workspace may be absent",
   "serve.flag.host": "Loopback host for the local settings page",
@@ -317,7 +317,7 @@
   "exec.control_variable": "The shared folder contains process-control variable %s. Use --keys to select application credentials before injection.",
   "locale.tip": "Shows the saved language preference and the language active in this terminal. Pass auto, zh-CN, or en-US to change the preference.\n\nauto follows LC_ALL, LC_MESSAGES, then LANG; the fallback is English. The Dashboard shares this preference. Project and third-party tool logs keep their original language.",
   "exec.tip": "Runs a command in the selected project directory. Select a project by name or relative path, or run from inside a project. The positional project and --project must agree when both are used.\n\nUse -- to separate One options from the child command. When the workspace has an env binding, variables are fetched from Infisical and injected into the child process. --env selects the environment. Injected values override same-name shell variables. Without a binding, or for a disabled project, the shell environment is used directly. Local .env files are not loaded by One.\n\nWith --global, provide --env and --path explicitly. The command keeps the current working directory. Use --keys to select shared credentials.\n\nKnown injected secret values are masked on stdout and stderr.",
-  "serve.tip": "Starts a local settings page for workspaces, project configuration, Infisical login, and shared credentials. Review manifest changes before saving. Variable lists show names and descriptions; plaintext is fetched only when viewed or copied.\n\nBy default, binds to 127.0.0.1 on an available port and opens your browser. Press Ctrl-C to stop. Host and Origin checks protect the local interface.",
+  "serve.tip": "Starts a local Dashboard for workspaces, development services, project configuration, Infisical login, and shared credentials. The project Run tab provides start, stop, restart, a live console, and local access links. Review manifest changes before saving. Plaintext variables are fetched only when viewed or copied.\n\nBy default, binds to 127.0.0.1 on an available port and opens your browser. Closing the page keeps services running; Ctrl-C stops the Dashboard and its services. Host and Origin checks protect the interface.",
   "template.compat.project": "Workspace setting %s/%s is incompatible with project %q (template %s); this template supports %s backends: [%s].",
   "template.compat.workspace": "Workspace setting %s/%s is incompatible with template %s; this template supports %s backends: [%s]. Switch the manifest to %s, or keep %s for other projects.",
   "templates.empty": "No templates registered.",
@@ -670,5 +670,11 @@
   "error.RUN_DOTENV_MISSING.summary": "Reserved error code from the retired local environment workflow.",
   "miseconfig.trust_failed": "Could not trust generated mise configuration %s: %w. Review it and run one mise trust %q.",
   "creation.mise_trust_warning": "Files were created, but automatic mise trust did not complete: %s",
-  "env.set_syntax_conflict": "Use either KEY=VALUE or KEY VALUE, without combining the two forms."
+  "env.set_syntax_conflict": "Use either KEY=VALUE or KEY VALUE, without combining the two forms.",
+  "devservice.closed": "The service manager is shutting down.",
+  "devservice.limit": "Too many services are running. Stop a service first.",
+  "devservice.url_invalid": "Use a local HTTP(S) URL without credentials, query parameters, or fragments.",
+  "devservice.interactive": "This dev task needs an interactive terminal. Run one dev in an external console.",
+  "devservice.unavailable": "The service manager is unavailable. Restart one serve.",
+  "devservice.forget_active": "Stop this workspace’s development services before removing it from the list."
 }

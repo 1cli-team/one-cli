@@ -325,7 +325,8 @@
 		"tabs": {
 			"label": "Project configuration sections",
 			"overview": "Overview",
-			"environment": "Environment"
+			"environment": "Environment",
+			"runtime": "Run"
 		},
 		"loadFailed": "Unable to load project configuration",
 		"retry": "Retry",
@@ -365,7 +366,9 @@
 			"taskCacheOn": "Artifact caching is configured.",
 			"taskCacheOff": "Artifact caching is not configured.",
 			"taskDepends": "Dependencies: {{tasks}}",
-			"taskOutputs": "Outputs: {{outputs}}"
+			"taskOutputs": "Outputs: {{outputs}}",
+			"devURL": "Development URL (optional)",
+			"devURLHint": "Leave empty to detect from logs. Use a local HTTP(S) URL without credentials or query parameters."
 		},
 		"environment": {
 			"title": "Environment configuration",
@@ -388,7 +391,10 @@
 			"none": "No profile currently resolves",
 			"manage": "Manage in Settings"
 		},
-		"draftHint": "Changes are kept in a draft. Review and save them to apply."
+		"draftHint": "Changes are kept in a draft. Review and save them to apply.",
+		"runtime": {
+			"title": "Service and console"
+		}
 	},
 	"secrets": {
 		"title": "Infisical secrets",
@@ -786,6 +792,45 @@
 				"feature2": "Typed IPC bridge and dependency injection",
 				"feature3": "Logging, local settings, and updater modules"
 			}
+		}
+	},
+	"services": {
+		"title": "Development service",
+		"description": "Start the project, view its output, and open it for testing.",
+		"start": "Start service",
+		"stop": "Stop",
+		"restart": "Restart",
+		"open": "Open",
+		"console": "Console",
+		"live": "Connected",
+		"reconnecting": "Connecting…",
+		"search": "Search logs",
+		"pause": "Pause scrolling",
+		"follow": "Follow logs",
+		"copy": "Copy",
+		"copied": "Logs copied",
+		"copyFailed": "Could not copy. Select and copy text in the console.",
+		"actionFailed": "Action failed. Try again.",
+		"saveFirst": "Save or discard pending configuration changes before starting or restarting.",
+		"noDev": "No dev task is configured. Set a dev command in Overview or add a dev task to the project’s mise.toml.",
+		"environmentMismatch": "This service uses {{environment}}. Restart to use the selected {{next}} environment.",
+		"exitCode": "Exit code: {{code}}",
+		"reachable": "Local port is reachable",
+		"unreachable": "Local port is not reachable",
+		"waitingURL": "Waiting for a local URL in the output. Services without a web page can still run.",
+		"urlHint": "Local URLs are detected after startup. You can also set one in Overview.",
+		"waitingLogs": "Preparing the runtime. Waiting for output…",
+		"emptyLogs": "Start a service to see its output here.",
+		"noMatches": "No matching logs.",
+		"consoleHint": "Logs are redacted; up to 256 KiB is retained. Closing this page keeps services running; closing one serve stops them.",
+		"truncated": "Older logs were removed. Only recent output is shown.",
+		"status": {
+			"preparing": "Preparing",
+			"running": "Running",
+			"stopping": "Stopping",
+			"stopped": "Stopped",
+			"exited": "Exited",
+			"failed": "Failed"
 		}
 	}
 }

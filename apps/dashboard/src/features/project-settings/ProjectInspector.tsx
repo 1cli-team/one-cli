@@ -4,6 +4,7 @@ import {
 } from "@/features/manifest-draft/manifest-draft-store";
 import {
 	Plus,
+	Terminal,
 	Server,
 	Code2,
 	FileKey2,
@@ -16,6 +17,7 @@ import type React from "react";
 import { useEffect, useId, useState } from "react";
 import { useTranslation } from "react-i18next";
 import useSWR from "swr";
+import { getServices, servicesKey } from "@/api/services";
 import { getProjectSettings, projectSettingsKey } from "@/api/workspace";
 import { CreateProjectDialog } from "@/features/project-creation/CreateProjectDialog";
 import { ManifestSaveControl } from "@/features/manifest-draft/ManifestSaveControl";
@@ -45,6 +47,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { EnvironmentSelector } from "@/features/environment-context/EnvironmentSelector";
 import { useEnvironmentDirtyStore } from "@/features/environment-context/environment-dirty-store";
 import { EnvironmentForm } from "@/features/project-settings/forms/EnvironmentForm";
+import { ServicePanel } from "@/features/services/ServicePanel";
 import { GeneralForm } from "@/features/project-settings/forms/GeneralForm";
 import type { ProjectInspectorTab } from "@/features/project-settings/ProjectMatrix";
 import { WorkspaceSettingsDialog } from "@/features/workspace-settings/WorkspaceSettingsDialog";
@@ -64,6 +67,7 @@ const TAB_ITEMS: ReadonlyArray<{
 	icon: React.ComponentType<{ className?: string }>;
 }> = [
 	{ id: "overview", icon: LayoutGrid },
+	{ id: "runtime", icon: Terminal },
 	{ id: "environment", icon: FileKey2 },
 ];
 
@@ -76,6 +80,9 @@ export const ProjectInspector: React.FC<ProjectInspectorProps> = ({
 }) => {
 	const { t } = useTranslation();
 	const dirtyOwner = useId();
+	const services = useSWR(servicesKey(workspaceEntryId), () => getServices(workspaceEntryId), {
+		refreshInterval: 2000,
+	});
 	const [query, setQuery] = useState("");
 	const [createOpen, setCreateOpen] = useState(false);
 	const canCreate = !!workspaceEntryId && !readOnly;
@@ -151,6 +158,9 @@ export const ProjectInspector: React.FC<ProjectInspectorProps> = ({
 						{filteredProjects.map((project) => {
 							const Icon = PROJECT_KIND_ICON[project.kind];
 							const selected = project.name === selectedProject?.name;
+							const status = services.data?.services.find(
+								(service) => service.project === project.name,
+							)?.status;
 							return (
 								<Button
 									key={project.name}
@@ -170,7 +180,26 @@ export const ProjectInspector: React.FC<ProjectInspectorProps> = ({
 										<Icon className="size-4" />
 									</span>
 									<span className="min-w-0 flex-1">
-										<span className="block truncate text-sm font-semibold">{project.name}</span>
+										<span className="flex min-w-0 items-center gap-2">
+											<span className="truncate text-sm font-semibold">{project.name}</span>
+											{status && (
+												<span
+													className={cn(
+														"size-2 shrink-0 rounded-full",
+														status === "running"
+															? "bg-success-foreground"
+															: status === "failed"
+																? "bg-error-foreground"
+																: status === "preparing" || status === "stopping"
+																	? "bg-warning-foreground"
+																	: "bg-muted-foreground",
+													)}
+													role="img"
+													aria-label={t(`services.status.${status}`)}
+													title={t(`services.status.${status}`)}
+												/>
+											)}
+										</span>
 										<span className="mt-0.5 block truncate font-mono text-xs text-muted-foreground">
 											{project.relativeDir}
 										</span>
@@ -472,6 +501,16 @@ const ProjectSettingsPanel: React.FC<ProjectSettingsPanelProps> = ({
 	onDirtyChange,
 }) => {
 	const project = data.project;
+	if (activeTab === "runtime") {
+		return (
+			<ServicePanel
+				project={project}
+				environment={environment}
+				entryId={workspaceEntryId}
+				readOnly={readOnly}
+			/>
+		);
+	}
 	if (activeTab === "overview") {
 		return (
 			<GeneralForm

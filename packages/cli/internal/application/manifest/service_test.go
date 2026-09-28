@@ -261,3 +261,40 @@ func TestWorkspaceBindingAndProjectChangesPublishTogether(t *testing.T) {
 		t.Fatalf("binding: %#v", config)
 	}
 }
+
+func TestDevURLCanExistWithoutOverrideAndSurvivesLegacyPatches(t *testing.T) {
+	root, service, revision := seedManifest(t)
+	url := "http://localhost:3000/"
+	apply := func(patch *ProjectGeneralPatch) error {
+		result, err := service.ApplyManifestDraft(context.Background(), root, ApplyManifestInput{Revision: revision, Changes: []ProjectManifestPatch{{Project: "web", General: patch}}})
+		if err == nil {
+			revision = result.Revision
+		}
+		return err
+	}
+	if err := apply(&ProjectGeneralPatch{DevURL: &url}); err != nil {
+		t.Fatal(err)
+	}
+	if err := apply(&ProjectGeneralPatch{DevCommand: "pnpm start"}); err != nil {
+		t.Fatal(err)
+	}
+	m, err := workspacecore.ReadManifest(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if m.Projects[0].Dev.URL != url || m.Projects[0].Dev.Command != "pnpm start" {
+		t.Fatal(m.Projects[0].Dev)
+	}
+	unsafe := "https://external.example/?token=x"
+	if err := apply(&ProjectGeneralPatch{DevURL: &unsafe}); !errors.Is(err, ErrInvalidInput) {
+		t.Fatal(err)
+	}
+	empty := ""
+	if err := apply(&ProjectGeneralPatch{DevURL: &empty}); err != nil {
+		t.Fatal(err)
+	}
+	m, _ = workspacecore.ReadManifest(root)
+	if m.Projects[0].Dev != nil {
+		t.Fatal("empty dev override not removed")
+	}
+}

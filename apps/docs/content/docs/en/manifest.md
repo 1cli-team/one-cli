@@ -71,7 +71,7 @@ The real file is strict JSON; comments and unknown fields are rejected.
 | `env` | Optional Infisical binding: `siteUrl`, `projectId`, `projectName`, `rootPath`, and `keys` |
 | `projects[]` | Project names, paths, templates, toolchains, optional `packageManager` and `buildVersion` |
 | `projects[].env` | Environment overrides: `path`, `inherits`, `disabled`, and declared key names; inherits the workspace backend |
-| `projects[].dev` | The `command` executed by `one dev` |
+| `projects[].dev` | The `command` executed by `one dev`, plus an optional local Dashboard access `url` |
 
 For Infisical, `env` can contain `projectId`, `projectName`, `rootPath`, and `keys`. Key values and local Profile names never belong in the manifest. Keep credentials in the system keyring and values in Infisical.
 

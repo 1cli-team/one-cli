@@ -23,6 +23,7 @@ import (
 	workspaceapp "github.com/torchstellar-team/one-cli/packages/cli/internal/application/workspace"
 	catalog "github.com/torchstellar-team/one-cli/packages/cli/internal/core/backend"
 	creationmodule "github.com/torchstellar-team/one-cli/packages/cli/internal/modules/creation"
+	"github.com/torchstellar-team/one-cli/packages/cli/internal/modules/devservice"
 	environmentmodule "github.com/torchstellar-team/one-cli/packages/cli/internal/modules/environment"
 	cliErrors "github.com/torchstellar-team/one-cli/packages/cli/internal/platform/errors"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/output"
@@ -32,9 +33,10 @@ import (
 // MuxOpts is the static configuration for one running server. Tests
 // construct it directly; production goes through Run.
 type MuxOpts struct {
-	UIDisabled    bool
-	ExpectedHosts map[string]struct{}
-	SelfOrigin    string
+	ServiceManager *devservice.Manager
+	UIDisabled     bool
+	ExpectedHosts  map[string]struct{}
+	SelfOrigin     string
 	// WorkspaceRoot is the absolute path to the workspace `one serve` was
 	// launched in, or "" when launched outside a workspace. Handlers read
 	// it through opts capture; we don't auto-detect per request because
@@ -106,6 +108,7 @@ func BuildMux(opts MuxOpts) http.Handler {
 	registerWorkspaceMutateRoutes(api, opts)
 	registerSecretRoutes(api, opts)
 	registerWorkspacesRoutes(api, opts)
+	registerServiceRoutes(api, opts)
 
 	root := http.NewServeMux()
 	root.Handle("/api/", http.StripPrefix("/api", api))

@@ -29,6 +29,7 @@ export const GeneralForm: React.FC<ProjectSettingsFormProps> = ({
 	const initial: ProjectGeneralPatch = {
 		buildVersion: project.buildVersion ?? "",
 		devCommand: project.devCommand ?? "",
+		devURL: project.devURL ?? "",
 	};
 	const value = staged ?? initial;
 	const build = project.build;
@@ -44,6 +45,7 @@ export const GeneralForm: React.FC<ProjectSettingsFormProps> = ({
 			labels: {
 				buildVersion: "projectInspector.general.buildVersion",
 				devCommand: "projectInspector.general.devCommand",
+				devURL: "projectInspector.general.devURL",
 			},
 		});
 	}
@@ -101,6 +103,19 @@ export const GeneralForm: React.FC<ProjectSettingsFormProps> = ({
 							onChange={(event) => update({ ...value, devCommand: event.target.value })}
 							readOnly={readOnly}
 						/>
+					</ProjectField>
+					<ProjectField label={t("projectInspector.general.devURL")} htmlFor="project-dev-url">
+						<Input
+							id="project-dev-url"
+							value={value.devURL ?? ""}
+							placeholder="http://localhost:3000"
+							readOnly={readOnly}
+							onChange={(event) => update({ ...value, devURL: event.target.value })}
+							aria-describedby="project-dev-url-hint"
+						/>
+						<p id="project-dev-url-hint" className="text-xs text-muted-foreground">
+							{t("projectInspector.general.devURLHint")}
+						</p>
 					</ProjectField>
 					<div className="@xl:col-span-2">
 						<ProjectField

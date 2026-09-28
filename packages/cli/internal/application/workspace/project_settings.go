@@ -35,6 +35,7 @@ type ProjectSettingsProject struct {
 	PackageManager        string                     `json:"packageManager,omitempty"`
 	BuildVersion          string                     `json:"buildVersion,omitempty"`
 	DevCommand            string                     `json:"devCommand,omitempty"`
+	DevURL                string                     `json:"devURL,omitempty"`
 	Build                 ProjectBuildSettings       `json:"build"`
 	Tasks                 *ProjectTasks              `json:"tasks,omitempty"`
 	DefaultEnvironment    string                     `json:"defaultEnvironment,omitempty"`
@@ -102,6 +103,10 @@ func (s *Service) projectSettings(
 		sort.Strings(env.Keys)
 	}
 
+	devURL := ""
+	if project.Dev != nil {
+		devURL = project.Dev.URL
+	}
 	return ProjectSettings{
 		Schema:      ProjectSettingsSchema,
 		Root:        root,
@@ -116,6 +121,7 @@ func (s *Service) projectSettings(
 			PackageManager:        project.PackageManager,
 			BuildVersion:          project.BuildVersion,
 			DevCommand:            workspacecore.ProjectDev(manifest, project.Name),
+			DevURL:                devURL,
 			Build:                 projectBuildSettings(root, *project),
 			Tasks:                 s.projectTasks(ctx, root, project.Name),
 			DefaultEnvironment:    defaultEnvironment,

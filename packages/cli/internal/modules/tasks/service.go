@@ -21,9 +21,11 @@ import (
 )
 
 type Service struct {
-	Provider runtimeport.Provider
-	Loaders  *secrets.Registry
-	Prepare  func(context.Context, dependencies.Input) error
+	// OnStarted runs after the scheduler starts, before waiting for its exit.
+	OnStarted func()
+	Provider  runtimeport.Provider
+	Loaders   *secrets.Registry
+	Prepare   func(context.Context, dependencies.Input) error
 }
 type Result struct {
 	Schema   string   `json:"schema"`
@@ -128,7 +130,7 @@ func (s Service) Execute(ctx context.Context, w execution.Workspace, p *Plan, op
 	})
 	command, err := s.Provider.PrepareCLI(ctx, runtimeport.Command{Directory: w.Root(), Argv: argv, Env: env})
 	if err != nil {
-		return nil, err
+		return nil, redact.New(variables).Error(err)
 	}
 	child := process.CommandContext(ctx, command.Argv[0], command.Argv[1:]...)
 	child.Cancel = func() error { return process.StopTree(child.Process) }
@@ -145,7 +147,13 @@ func (s Service) Execute(ctx context.Context, w execution.Workspace, p *Plan, op
 	stdout, flushOut := filter.Writer(child.Stdout)
 	stderr, flushErr := filter.Writer(child.Stderr)
 	child.Stdout, child.Stderr = stdout, stderr
-	err = child.Run()
+	err = child.Start()
+	if err == nil {
+		if s.OnStarted != nil {
+			s.OnStarted()
+		}
+		err = child.Wait()
+	}
 	err = errors.Join(err, flushOut(), flushErr())
 	result := &Result{Schema: "one-cli/task-result/v1", Status: "succeeded", Entries: p.Entries, Tasks: p.Tasks}
 	if err != nil {

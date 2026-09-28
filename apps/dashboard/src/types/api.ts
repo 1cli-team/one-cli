@@ -169,6 +169,7 @@ export interface ProjectSettings {
 	packageManager?: string;
 	buildVersion?: string;
 	devCommand?: string;
+	devURL?: string;
 	build?: {
 		command?: string;
 		source?: string;
@@ -202,6 +203,7 @@ export interface ProjectSettingsResponse {
 export interface ProjectGeneralPatch {
 	buildVersion: string;
 	devCommand: string;
+	devURL?: string;
 }
 
 export interface ProjectEnvironmentPatch {
@@ -284,4 +286,19 @@ export interface WorkspaceEnvironmentSettings {
 	projectId: string;
 	projectName: string;
 	siteUrl: string;
+}
+
+export type ServiceStatus = "preparing" | "running" | "stopping" | "stopped" | "exited" | "failed";
+export interface DevService {
+	id: string;
+	project: string;
+	environment: string;
+	status: ServiceStatus;
+	startedAt: string;
+	finishedAt?: string;
+	exitCode?: number;
+	endpoints: Array<{ url: string; reachable: boolean }>;
+	logs: Array<{ seq: number; text: string }>;
+	firstSeq: number;
+	nextSeq: number;
 }

@@ -11,6 +11,7 @@ import (
 
 	catalog "github.com/torchstellar-team/one-cli/packages/cli/internal/core/backend"
 	workspacecore "github.com/torchstellar-team/one-cli/packages/cli/internal/core/workspace"
+	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/localurl"
 )
 
 const (
@@ -48,8 +49,9 @@ func (e *ManifestConflict) Error() string {
 func (e *ManifestConflict) Unwrap() error { return ErrManifestConflict }
 
 type ProjectGeneralPatch struct {
-	BuildVersion string `json:"buildVersion"`
-	DevCommand   string `json:"devCommand"`
+	BuildVersion string  `json:"buildVersion"`
+	DevCommand   string  `json:"devCommand"`
+	DevURL       *string `json:"devURL,omitempty"`
 }
 
 type ProjectEnvironmentPatch struct {
@@ -248,10 +250,21 @@ func (s *Service) applyProjectChanges(
 		if change.General != nil {
 			project.BuildVersion = workspacecore.NormalizeBuildVersion(change.General.BuildVersion)
 			command := strings.TrimSpace(change.General.DevCommand)
-			if command == "" {
+			url := ""
+			if project.Dev != nil {
+				url = project.Dev.URL
+			}
+			if change.General.DevURL != nil {
+				var err error
+				url, err = localurl.Normalize(*change.General.DevURL)
+				if err != nil {
+					return 0, fmt.Errorf("%w: %w", ErrInvalidInput, err)
+				}
+			}
+			if command == "" && url == "" {
 				project.Dev = nil
 			} else {
-				project.Dev = &workspacecore.ProjectDevOverride{Command: command}
+				project.Dev = &workspacecore.ProjectDevOverride{Command: command, URL: url}
 			}
 			applied++
 		}

@@ -99,6 +99,7 @@ type ProjectDevOverride struct {
 	// Command is the full shell line executed by the platform shell
 	// (sh on Unix, cmd.exe on Windows).
 	Command string `json:"command,omitempty"`
+	URL     string `json:"url,omitempty"`
 }
 
 // ProjectEnvOverride is the per-project env override. Carries no `kind`

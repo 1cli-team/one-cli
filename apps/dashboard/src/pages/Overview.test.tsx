@@ -24,7 +24,9 @@ import type {
 	ProjectSettingsResponse,
 } from "@/types/api";
 
-const server = setupServer();
+const server = setupServer(
+	http.get(/\/api\/workspaces?(?:\/[^/]+)?\/services$/, () => HttpResponse.json({ services: [] })),
+);
 
 const catalogBackends: BackendSpec[] = [
 	{
@@ -398,7 +400,7 @@ describe("workspace overview Profile-only configuration", () => {
 		await user.type(within(inspector).getByLabelText("Build version"), "2.0.0");
 		expect(
 			useManifestDraftStore.getState().drafts[manifestDraftKey()]?.changes.web?.general,
-		).toEqual({ buildVersion: "2.0.0", devCommand: "pnpm dev" });
+		).toEqual({ buildVersion: "2.0.0", devCommand: "pnpm dev", devURL: "" });
 		expect(within(inspector).queryByRole("button", { name: "Save local binding" })).toBeNull();
 		expect(receivedEnvironment).toBe("dev");
 	});

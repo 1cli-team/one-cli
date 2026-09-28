@@ -45,7 +45,7 @@ import type {
 	OverviewProjectKind,
 } from "@/types/api";
 
-export type ProjectInspectorTab = "overview" | "environment";
+export type ProjectInspectorTab = "overview" | "environment" | "runtime";
 
 type MatrixDomain = OverviewIssueDomain;
 
