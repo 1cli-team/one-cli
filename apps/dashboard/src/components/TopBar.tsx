@@ -1,4 +1,5 @@
 import type React from "react";
+import { MoonStar, SunMedium } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useLocation, useMatch } from "react-router-dom";
 import useSWR from "swr";
@@ -13,7 +14,10 @@ import {
 	BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
 import { EnvironmentLink } from "@/features/environment-context/EnvironmentLink";
-import { MobileNavigation } from "@/components/AppSidebar";
+import { AppMenu } from "@/components/AppMenu";
+import { LanguageSwitcher } from "@/components/LanguageSwitcher";
+import { Button } from "@/components/ui/button";
+import { useThemeStore } from "@/lib/stores/theme";
 import type { SectionKey } from "@/types/api";
 export { ManifestSaveControl } from "@/features/manifest-draft/ManifestSaveControl";
 interface TopBarProps {
@@ -22,10 +26,13 @@ interface TopBarProps {
 
 export const TopBar: React.FC<TopBarProps> = () => {
 	const { t } = useTranslation();
+	const { mode, toggle } = useThemeStore();
+	const themeLabel = t(mode === "light" ? "sidebar.themeToDark" : "sidebar.themeToLight");
 	const sectionMatch = useMatch("/section/:domain/:backend");
 	const profileMatch = useMatch("/profile");
 	const settingsSectionMatch = useMatch("/settings/:domain/:backend");
 	const settingsMatch = useMatch("/settings");
+	const templatesMatch = useMatch("/templates");
 	const globalMatch = useMatch("/global");
 	const workspaceMatch = useMatch("/workspace/:entryId");
 
@@ -33,9 +40,10 @@ export const TopBar: React.FC<TopBarProps> = () => {
 	const detailMatch = settingsSectionMatch ?? sectionMatch;
 
 	return (
-		<header className="flex min-h-14 shrink-0 flex-wrap items-center justify-between gap-2 border-b border-border bg-card px-4 py-2 ud-md:px-6">
+		<header className="flex min-h-14 shrink-0 items-center justify-between gap-2 border-b border-border bg-card px-4 py-2 ud-md:px-6">
 			<div className="flex min-w-0 flex-1 items-center gap-3">
-				<MobileNavigation />
+				<AppMenu />
+				<span className="h-5 shrink-0 border-l border-border" aria-hidden="true" />
 				<div className="min-w-0">
 					<Breadcrumb>
 						<BreadcrumbList className="flex-nowrap text-sm [&>li]:min-w-0 [&_[data-slot=breadcrumb-page]]:truncate">
@@ -44,6 +52,10 @@ export const TopBar: React.FC<TopBarProps> = () => {
 									match={detailMatch.params}
 									settingsRoute={Boolean(settingsSectionMatch)}
 								/>
+							) : templatesMatch ? (
+								<BreadcrumbItem>
+									<BreadcrumbPage>{t("templateCatalog.title")}</BreadcrumbPage>
+								</BreadcrumbItem>
 							) : globalMatch ? (
 								<BreadcrumbItem>
 									<BreadcrumbPage>{t("global.title")}</BreadcrumbPage>
@@ -64,6 +76,18 @@ export const TopBar: React.FC<TopBarProps> = () => {
 						</BreadcrumbList>
 					</Breadcrumb>
 				</div>
+			</div>
+			<div className="flex shrink-0 items-center gap-1">
+				<LanguageSwitcher />
+				<Button
+					variant="ghost"
+					size="icon"
+					onClick={toggle}
+					title={themeLabel}
+					aria-label={themeLabel}
+				>
+					{mode === "light" ? <MoonStar aria-hidden="true" /> : <SunMedium aria-hidden="true" />}
+				</Button>
 			</div>
 		</header>
 	);

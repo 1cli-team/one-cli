@@ -800,5 +800,6 @@
   "dependencies.failed_summary": "%s dependency preparation failed (%s): %v",
   "workspace.node_member_pattern": "Project %q has unsupported workspace pattern %q. Use relative package paths or single-level globs.",
   "creation.composite_requires_pnpm": "Template %q contains multiple Node packages and requires a pnpm workspace; the current workspace uses %q.",
-  "creation.duplicate_package": "Package name %q is shared by %q and %q. Choose a different project name."
+  "creation.duplicate_package": "Package name %q is shared by %q and %q. Choose a different project name.",
+  "serve.project_payload_invalid": "Invalid project creation request: %v"
 }

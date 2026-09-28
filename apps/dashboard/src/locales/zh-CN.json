@@ -562,7 +562,11 @@
 		"settingsHint": "管理已连接的账号与界面偏好。",
 		"connected": "已连接",
 		"account": "账号",
-		"languageHint": "选择显示语言，或跟随系统设置。"
+		"languageHint": "选择显示语言，或跟随系统设置。",
+		"theme": "外观主题",
+		"themeHint": "选择浅色或深色主题，偏好会保存在当前浏览器中。",
+		"themeLight": "浅色",
+		"themeDark": "深色"
 	},
 	"global": {
 		"title": "共享凭据",
@@ -618,5 +622,162 @@
 		"noMatches": "没有匹配的变量",
 		"noMatchesHint": "尝试其他名称，或清除搜索条件。",
 		"emptyHint": "添加变量，让多个项目共享使用。"
+	},
+	"projectCreate": {
+		"title": "新建项目",
+		"description": "在当前工作区中，使用模板创建一个项目。",
+		"name": "项目名称",
+		"nameHint": "以字母或数字开头，可使用字母、数字、连字符和下划线。",
+		"nameInvalid": "请输入以字母或数字开头，且仅包含字母、数字、连字符或下划线的名称。",
+		"nameExists": "当前工作区已存在同名项目，请使用其他名称。",
+		"template": "技术栈",
+		"templatesFailed": "无法加载模板",
+		"loadingTemplates": "正在加载模板…",
+		"noTemplates": "暂无可用模板",
+		"location": "项目目录",
+		"locationHint": "相对于当前工作区。创建项目时会同步更新工作区配置。",
+		"submit": "创建项目",
+		"creating": "正在创建项目…",
+		"failed": "创建项目失败",
+		"success": "项目 {{name}} 已创建",
+		"refreshFailed": "项目已创建，请刷新页面加载最新工作区。",
+		"connectionLost": "连接已中断，请先刷新项目列表确认是否已创建，再尝试提交。",
+		"categories": {
+			"frontend": "应用",
+			"backend": "服务",
+			"library": "库"
+		},
+		"templates": {
+			"nestjs-api": {
+				"name": "NestJS API 服务",
+				"description": "NestJS + TypeScript，适合 API 服务与业务后台"
+			},
+			"go-api": {
+				"name": "Go API 服务",
+				"description": "Gin + Gorm + Viper + Zap，适合 API 服务与业务后台"
+			},
+			"astro-site": {
+				"name": "Astro 静态网站",
+				"description": "前端静态站模板，适合官网、营销站与内容站点"
+			},
+			"starlight-docs": {
+				"name": "Starlight 文档站点",
+				"description": "基于 Astro + Starlight 的文档项目模板"
+			},
+			"nextjs-app": {
+				"name": "Next.js 全栈应用",
+				"description": "Next.js 前端模板，适合 SEO 与首屏性能要求较高场景"
+			},
+			"react-spa": {
+				"name": "React 单页应用",
+				"description": "React + Vite 单页应用模板，适合交互型业务系统"
+			},
+			"expo-mobile": {
+				"name": "Expo 移动 App",
+				"description": "React Native + Expo App 模板，适合 iOS/Android 双端开发"
+			},
+			"ts-library": {
+				"name": "TypeScript 通用库",
+				"description": "通用库模板，适合发包场景，内置 tsdown + vitest + oxlint/oxfmt"
+			},
+			"go-lib": {
+				"name": "Go 通用库",
+				"description": "Go 库模板，遵循 golang-standards/project-layout，适合发包与被 import 场景"
+			},
+			"electron-app": {
+				"name": "Electron 桌面应用",
+				"description": "Electron + React + Vite 桌面应用模板，主进程基于 inversify，内置 electron-log/store/updater"
+			}
+		}
+	},
+	"appMenu": {
+		"label": "One CLI 导航菜单"
+	},
+	"templateCatalog": {
+		"title": "项目模板",
+		"description": "浏览内置项目模板，了解适用场景、技术栈和内置功能，选择合适的项目起点。",
+		"getStarted": "从模板开始创建项目",
+		"getStartedHint": "打开工作区，点击「新建项目」，选择模板并填写项目名称即可创建。",
+		"chooseWorkspace": "选择工作区",
+		"filter": "按分类筛选模板",
+		"all": "全部模板",
+		"search": "搜索模板、技术栈或功能…",
+		"resultCount": "显示 {{count}} / {{total}} 个模板",
+		"includes": "内置功能",
+		"noResults": "没有匹配的模板",
+		"noResultsHint": "试试其他关键词，或切换模板分类。",
+		"reset": "清除筛选",
+		"templates": {
+			"nestjs-api": {
+				"description": "使用模块化 NestJS 架构构建 TypeScript API，适合业务后台与后端服务。",
+				"stack": "NestJS · TypeScript · Drizzle",
+				"feature1": "JWT 鉴权与用户业务模块",
+				"feature2": "Drizzle 数据访问与数据库迁移",
+				"feature3": "Swagger 文档、健康检查与监控指标"
+			},
+			"go-api": {
+				"description": "构建 Go API 服务，按 HTTP 接口、业务逻辑和数据访问分层组织代码。",
+				"stack": "Go · Gin · Gorm · Viper · Zap",
+				"feature1": "JWT 鉴权与用户接口",
+				"feature2": "Gorm 数据访问与 SQL 迁移",
+				"feature3": "OpenAPI 文档、配置管理与日志"
+			},
+			"astro-site": {
+				"description": "通过静态页面构建官网、营销落地页和内容站点，适合以内容展示为主的项目。",
+				"stack": "Astro · TypeScript · Tailwind CSS",
+				"feature1": "基于文件的页面路由与共享布局",
+				"feature2": "统一设计变量与 Tailwind 样式",
+				"feature3": "类型检查、代码检查与格式化"
+			},
+			"starlight-docs": {
+				"description": "快速搭建产品文档、开发者指南和团队知识库，专注于文档内容的编写。",
+				"stack": "Astro · Starlight · Markdown / MDX",
+				"feature1": "Markdown 与 MDX 文档页面",
+				"feature2": "指南、参考文档与预设侧边栏",
+				"feature3": "可定制的文档主题样式"
+			},
+			"nextjs-app": {
+				"description": "构建需要服务端渲染、API 路由和搜索引擎友好页面的 Web 应用。",
+				"stack": "Next.js · React · TypeScript",
+				"feature1": "App Router 页面与接口路由",
+				"feature2": "shadcn/ui 组件与主题切换",
+				"feature3": "SWR 数据请求与 Zustand 状态管理"
+			},
+			"react-spa": {
+				"description": "构建交互丰富的仪表盘、管理后台和浏览器端业务系统。",
+				"stack": "React · Vite · TypeScript",
+				"feature1": "客户端路由与错误边界",
+				"feature2": "shadcn/ui 组件与明暗主题",
+				"feature3": "SWR 数据请求与 Zustand 状态管理"
+			},
+			"expo-mobile": {
+				"description": "基于 React Native 和 Expo，以同一项目开发 iOS 与 Android 移动应用。",
+				"stack": "Expo · React Native · NativeWind",
+				"feature1": "Expo Router 导航与标签页面",
+				"feature2": "SWR、Zustand 与 MMKV 本地存储",
+				"feature3": "原生模块通过 Expo 开发构建运行"
+			},
+			"ts-library": {
+				"description": "开发可复用的 TypeScript 模块，适合共享工具库和发布到 npm 的包。",
+				"stack": "TypeScript · tsdown · Vitest",
+				"feature1": "tsdown 库构建与类型声明生成",
+				"feature2": "Vitest 单元测试与覆盖率",
+				"feature3": "代码检查、格式化与发包脚本"
+			},
+			"go-lib": {
+				"description": "开发可被其他项目导入的 Go 模块，使用清晰的公共包目录组织可复用代码。",
+				"stack": "Go · Go modules · go-task",
+				"feature1": "pkg/greeter 公共 API 起点",
+				"feature2": "示例包与单元测试",
+				"feature3": "构建、格式化、静态检查与测试任务"
+			},
+			"electron-app": {
+				"description": "使用 Electron 主进程和 React 界面构建桌面应用，适合桌面工具与业务客户端。",
+				"stack": "Electron · React · Vite · Inversify",
+				"feature1": "主进程、渲染进程与 preload 分包",
+				"feature2": "带类型的 IPC 桥接与依赖注入",
+				"feature3": "日志、本地设置与更新器模块"
+			}
+		}
 	}
 }

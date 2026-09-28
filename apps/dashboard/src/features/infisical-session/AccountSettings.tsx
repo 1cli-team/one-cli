@@ -4,6 +4,8 @@ import {
 	Languages,
 	LogIn,
 	LogOut,
+	MoonStar,
+	SunMedium,
 	RefreshCw,
 	Settings2,
 	ShieldCheck,
@@ -22,9 +24,18 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
+import {
+	Select,
+	SelectContent,
+	SelectItem,
+	SelectTrigger,
+	SelectValue,
+} from "@/components/ui/select";
+import { useThemeStore, type ThemeMode } from "@/lib/stores/theme";
 
 export function AccountSettings() {
 	const { t } = useTranslation();
+	const { mode: theme, setMode: setTheme } = useThemeStore();
 	const state = useSWR(sessionKey, getSession, { refreshInterval: 2000 });
 	const { mutate } = useSWRConfig();
 	const [site, setSite] = useState("https://app.infisical.com");
@@ -226,6 +237,34 @@ export function AccountSettings() {
 						description={t("session.languageHint")}
 					/>
 					<LanguageSwitcher showLabel />
+				</CardContent>
+			</Card>
+			<Card>
+				<CardContent className="flex flex-wrap items-center justify-between gap-4 p-6">
+					<SectionHeading
+						icon={MoonStar}
+						title={t("session.theme")}
+						description={t("session.themeHint")}
+					/>
+					<Select value={theme} onValueChange={(value) => setTheme(value as ThemeMode)}>
+						<SelectTrigger className="w-40" aria-label={t("session.theme")}>
+							<SelectValue />
+						</SelectTrigger>
+						<SelectContent>
+							<SelectItem value="light">
+								<span className="flex items-center gap-2">
+									<SunMedium aria-hidden="true" />
+									{t("session.themeLight")}
+								</span>
+							</SelectItem>
+							<SelectItem value="dark">
+								<span className="flex items-center gap-2">
+									<MoonStar aria-hidden="true" />
+									{t("session.themeDark")}
+								</span>
+							</SelectItem>
+						</SelectContent>
+					</Select>
 				</CardContent>
 			</Card>
 		</div>

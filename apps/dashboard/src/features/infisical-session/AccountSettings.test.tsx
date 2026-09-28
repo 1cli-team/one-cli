@@ -2,10 +2,12 @@ import { act, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import { SWRConfig } from "swr";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import * as api from "@/api/session";
 import i18n from "@/lib/i18n";
 import { AccountSettings } from "./AccountSettings";
+import { useThemeStore } from "@/lib/stores/theme";
+import { ThemeProvider } from "@/providers/ThemeProvider";
 vi.mock("@/api/session", async (original) => ({
 	...(await original<typeof api>()),
 	getSession: vi.fn(),
@@ -15,7 +17,14 @@ vi.mock("@/api/session", async (original) => ({
 }));
 beforeEach(async () => {
 	vi.resetAllMocks();
+	useThemeStore.setState({ mode: "light" });
 	await i18n.changeLanguage("en-US");
+});
+afterEach(() => {
+	localStorage.removeItem("app_theme_mode");
+	document.documentElement.classList.remove("dark", "light");
+	document.documentElement.removeAttribute("data-theme");
+	document.documentElement.style.colorScheme = "";
 });
 function mount() {
 	return render(
@@ -23,7 +32,9 @@ function mount() {
 			value={{ provider: () => new Map(), dedupingInterval: 0, shouldRetryOnError: false }}
 		>
 			<MemoryRouter>
-				<AccountSettings />
+				<ThemeProvider>
+					<AccountSettings />
+				</ThemeProvider>
 			</MemoryRouter>
 		</SWRConfig>,
 	);
@@ -65,4 +76,29 @@ describe("account state and recovery", () => {
 		expect(screen.getByRole("button", { name: "Cancel" })).toBeDefined();
 		expect(api.startLogin).not.toHaveBeenCalled();
 	});
+});
+
+describe("theme preference", () => {
+	it.each(["en-US", "zh-CN"])(
+		"saves the theme and follows shared theme changes in %s",
+		async (locale) => {
+			await i18n.changeLanguage(locale);
+			vi.mocked(api.getSession).mockResolvedValue({ session: { loggedIn: false, expired: false } });
+			const user = userEvent.setup();
+			mount();
+			await user.click(screen.getByRole("combobox", { name: i18n.t("session.theme") }));
+			await user.click(await screen.findByRole("option", { name: i18n.t("session.themeDark") }));
+			expect(useThemeStore.getState().mode).toBe("dark");
+			expect(localStorage.getItem("app_theme_mode")).toBe("dark");
+			expect(document.documentElement.classList.contains("dark")).toBe(true);
+			await act(async () => {
+				useThemeStore.getState().toggle();
+			});
+			expect(screen.getByRole("combobox", { name: i18n.t("session.theme") }).textContent).toBe(
+				i18n.t("session.themeLight"),
+			);
+			expect(localStorage.getItem("app_theme_mode")).toBe("light");
+			expect(document.documentElement.classList.contains("dark")).toBe(false);
+		},
+	);
 });

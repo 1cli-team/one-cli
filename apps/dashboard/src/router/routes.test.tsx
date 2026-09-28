@@ -385,8 +385,8 @@ describe("multi-workspace routing", () => {
 				</MemoryRouter>
 			</SWRConfig>,
 		);
-		const navigation = await screen.findAllByRole("link", { name: "Shared credentials" });
-		await user.click(navigation[0]);
+		await user.click(screen.getByRole("button", { name: "One CLI navigation menu" }));
+		await user.click(await screen.findByRole("menuitem", { name: "Shared credentials" }));
 		await screen.findByRole("heading", { name: "Shared credentials" });
 		await user.click(screen.getByRole("link", { name: "Sign in with browser" }));
 		await screen.findByRole("heading", { name: "Infisical" });

@@ -164,7 +164,8 @@ func materializeProject(ctx context.Context, projectRoot string, in ProjectInput
 	}
 	for _, p := range manifest.Projects {
 		if p.RelativeDir == newProject.RelativeDir || p.Name == in.Name {
-			return ProjectResult{}, i18n.Errorf("creation.project_registered", in.Name)
+			return ProjectResult{}, cliErrors.New(cliErrors.TARGET_EXISTS,
+				i18n.Tf("creation.project_registered", in.Name))
 		}
 	}
 	manifest.Projects = append(manifest.Projects, newProject)

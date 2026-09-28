@@ -2,12 +2,22 @@ import {
 	manifestDraftKey,
 	useManifestDraftStore,
 } from "@/features/manifest-draft/manifest-draft-store";
-import { Server, Code2, FileKey2, Library, Search, LayoutGrid, LockKeyhole } from "lucide-react";
+import {
+	Plus,
+	Server,
+	Code2,
+	FileKey2,
+	Library,
+	Search,
+	LayoutGrid,
+	LockKeyhole,
+} from "lucide-react";
 import type React from "react";
 import { useEffect, useId, useState } from "react";
 import { useTranslation } from "react-i18next";
 import useSWR from "swr";
 import { getProjectSettings, projectSettingsKey } from "@/api/workspace";
+import { CreateProjectDialog } from "@/features/project-creation/CreateProjectDialog";
 import { ManifestSaveControl } from "@/features/manifest-draft/ManifestSaveControl";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
@@ -67,6 +77,8 @@ export const ProjectInspector: React.FC<ProjectInspectorProps> = ({
 	const { t } = useTranslation();
 	const dirtyOwner = useId();
 	const [query, setQuery] = useState("");
+	const [createOpen, setCreateOpen] = useState(false);
+	const canCreate = !!workspaceEntryId && !readOnly;
 	const [dirty, setDirty] = useState(false);
 	const [pendingAction, setPendingAction] = useState<(() => void) | null>(null);
 	const [selectedName, setSelectedName] = useState(projects[0]?.name ?? "");
@@ -176,6 +188,16 @@ export const ProjectInspector: React.FC<ProjectInspectorProps> = ({
 								) : null}
 							</div>
 						) : null}
+						{canCreate && (
+							<Button
+								className="mx-2 mt-2"
+								variant="outline"
+								onClick={() => requestDiscard(() => setCreateOpen(true))}
+							>
+								<Plus className="size-4" />
+								{t("projectCreate.title")}
+							</Button>
+						)}
 					</nav>
 				</aside>
 				<div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
@@ -207,7 +229,17 @@ export const ProjectInspector: React.FC<ProjectInspectorProps> = ({
 								{selectedProject?.relativeDir}
 							</span>
 						</p>
-						<div className="flex items-center gap-2">
+						<div className="flex max-w-full flex-wrap items-center gap-2">
+							{canCreate && (
+								<Button
+									className="ud-md:hidden"
+									variant="outline"
+									onClick={() => requestDiscard(() => setCreateOpen(true))}
+								>
+									<Plus className="size-4" />
+									{t("projectCreate.title")}
+								</Button>
+							)}
 							<EnvironmentSelector />
 							<WorkspaceSettingsDialog
 								currentBackend={currentBackend}
@@ -239,6 +271,19 @@ export const ProjectInspector: React.FC<ProjectInspectorProps> = ({
 					</div>
 				</div>
 			</section>
+
+			{createOpen && canCreate && workspaceEntryId && (
+				<CreateProjectDialog
+					entryId={workspaceEntryId}
+					projectNames={projects.map((project) => project.name)}
+					onClose={() => setCreateOpen(false)}
+					onCreated={(name) => {
+						setQuery("");
+						setInspectorDirty(false);
+						setSelectedName(name);
+					}}
+				/>
+			)}
 
 			<AlertDialog
 				open={pendingAction !== null}

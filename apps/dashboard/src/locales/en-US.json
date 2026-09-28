@@ -562,7 +562,11 @@
 		"settingsHint": "Manage your connected account and dashboard preferences.",
 		"connected": "Connected",
 		"account": "Account",
-		"languageHint": "Choose a language or follow your system setting."
+		"languageHint": "Choose a language or follow your system setting.",
+		"theme": "Appearance",
+		"themeHint": "Choose a light or dark theme. Your choice is saved in this browser.",
+		"themeLight": "Light",
+		"themeDark": "Dark"
 	},
 	"global": {
 		"title": "Shared credentials",
@@ -618,5 +622,162 @@
 		"noMatches": "No matching variables",
 		"noMatchesHint": "Try another name or clear the search.",
 		"emptyHint": "Add a variable to share it across your projects."
+	},
+	"projectCreate": {
+		"title": "New project",
+		"description": "Create a project from a template in this workspace.",
+		"name": "Project name",
+		"nameHint": "Start with a letter or number. Use letters, numbers, hyphens or underscores.",
+		"nameInvalid": "Enter a name starting with a letter or number, using only letters, numbers, hyphens or underscores.",
+		"nameExists": "A project with this name already exists in the workspace.",
+		"template": "Technology stack",
+		"templatesFailed": "Could not load templates",
+		"loadingTemplates": "Loading templates…",
+		"noTemplates": "No templates available",
+		"location": "Project directory",
+		"locationHint": "Relative to this workspace. Creating the project also updates the workspace configuration.",
+		"submit": "Create project",
+		"creating": "Creating project…",
+		"failed": "Could not create project",
+		"success": "Project {{name}} created",
+		"refreshFailed": "Project created. Refresh the page to load the updated workspace.",
+		"connectionLost": "The connection was interrupted. Refresh the project list to check whether the project was created before trying again.",
+		"categories": {
+			"frontend": "Applications",
+			"backend": "Services",
+			"library": "Libraries"
+		},
+		"templates": {
+			"nestjs-api": {
+				"name": "NestJS API service",
+				"description": "NestJS + TypeScript for APIs and backend services"
+			},
+			"go-api": {
+				"name": "Go API service",
+				"description": "Gin + Gorm + Viper + Zap for APIs and backend services"
+			},
+			"astro-site": {
+				"name": "Astro static site",
+				"description": "Static site template for company, marketing, and content websites"
+			},
+			"starlight-docs": {
+				"name": "Starlight documentation",
+				"description": "Documentation project based on Astro + Starlight"
+			},
+			"nextjs-app": {
+				"name": "Next.js application",
+				"description": "Next.js application for SEO and fast initial page loads"
+			},
+			"react-spa": {
+				"name": "React single-page application",
+				"description": "React + Vite template for interactive applications"
+			},
+			"expo-mobile": {
+				"name": "Expo mobile app",
+				"description": "React Native + Expo template for iOS and Android"
+			},
+			"ts-library": {
+				"name": "TypeScript library",
+				"description": "Publishable library with tsdown, vitest, and oxlint/oxfmt"
+			},
+			"go-lib": {
+				"name": "Go library",
+				"description": "Go library following golang-standards/project-layout, ready to publish and import"
+			},
+			"electron-app": {
+				"name": "Electron desktop app",
+				"description": "Electron + React + Vite with inversify, electron-log, electron-store, and electron-updater"
+			}
+		}
+	},
+	"appMenu": {
+		"label": "One CLI navigation menu"
+	},
+	"templateCatalog": {
+		"title": "Project templates",
+		"description": "Explore the built-in starters and compare their use cases, technology stacks, and included features.",
+		"getStarted": "Start a project from a template",
+		"getStartedHint": "Open a workspace, click New project, then choose a template and enter a project name.",
+		"chooseWorkspace": "Choose a workspace",
+		"filter": "Filter templates by category",
+		"all": "All templates",
+		"search": "Search templates, stacks, or features…",
+		"resultCount": "Showing {{count}} of {{total}} templates",
+		"includes": "Included features",
+		"noResults": "No matching templates",
+		"noResultsHint": "Try another search term or select a different category.",
+		"reset": "Clear filters",
+		"templates": {
+			"nestjs-api": {
+				"description": "Build TypeScript APIs and business backends with a modular NestJS structure.",
+				"stack": "NestJS · TypeScript · Drizzle",
+				"feature1": "JWT authentication and user modules",
+				"feature2": "Drizzle data access and database migrations",
+				"feature3": "Swagger documentation, health checks, and metrics"
+			},
+			"go-api": {
+				"description": "Build Go APIs with separate HTTP, service, and data-access layers.",
+				"stack": "Go · Gin · Gorm · Viper · Zap",
+				"feature1": "JWT authentication and user endpoints",
+				"feature2": "Gorm data access and SQL migrations",
+				"feature3": "OpenAPI documentation, configuration, and logging"
+			},
+			"astro-site": {
+				"description": "Create company websites, landing pages, and content sites with static page output.",
+				"stack": "Astro · TypeScript · Tailwind CSS",
+				"feature1": "File-based pages and shared layouts",
+				"feature2": "Shared design tokens and Tailwind styles",
+				"feature3": "Type checking, linting, and formatting"
+			},
+			"starlight-docs": {
+				"description": "Publish product documentation, developer guides, and team knowledge bases.",
+				"stack": "Astro · Starlight · Markdown / MDX",
+				"feature1": "Markdown and MDX documentation pages",
+				"feature2": "Guide and reference sections with a configured sidebar",
+				"feature3": "Customizable documentation theme"
+			},
+			"nextjs-app": {
+				"description": "Build web applications with server rendering, API routes, and search-friendly pages.",
+				"stack": "Next.js · React · TypeScript",
+				"feature1": "App Router pages and route handlers",
+				"feature2": "shadcn/ui components and theme switching",
+				"feature3": "SWR data fetching and Zustand state management"
+			},
+			"react-spa": {
+				"description": "Create interactive dashboards, admin panels, and browser-based business applications.",
+				"stack": "React · Vite · TypeScript",
+				"feature1": "Client-side routing and error boundaries",
+				"feature2": "shadcn/ui components and light / dark themes",
+				"feature3": "SWR data fetching and Zustand state management"
+			},
+			"expo-mobile": {
+				"description": "Build iOS and Android apps with React Native and a shared Expo project.",
+				"stack": "Expo · React Native · NativeWind",
+				"feature1": "Expo Router navigation and tab pages",
+				"feature2": "SWR, Zustand, and MMKV local storage",
+				"feature3": "Native modules use an Expo development build"
+			},
+			"ts-library": {
+				"description": "Create reusable TypeScript modules and packages for publishing to npm.",
+				"stack": "TypeScript · tsdown · Vitest",
+				"feature1": "Library builds and type declarations with tsdown",
+				"feature2": "Unit tests and coverage with Vitest",
+				"feature3": "Linting, formatting, and publishing scripts"
+			},
+			"go-lib": {
+				"description": "Create reusable Go modules with a public package layout for other projects to import.",
+				"stack": "Go · Go modules · go-task",
+				"feature1": "Public API starter in pkg/greeter",
+				"feature2": "Example package and unit tests",
+				"feature3": "Build, format, vet, and test tasks"
+			},
+			"electron-app": {
+				"description": "Create desktop applications with an Electron main process and a React user interface.",
+				"stack": "Electron · React · Vite · Inversify",
+				"feature1": "Separate main, renderer, and preload packages",
+				"feature2": "Typed IPC bridge and dependency injection",
+				"feature3": "Logging, local settings, and updater modules"
+			}
+		}
 	}
 }

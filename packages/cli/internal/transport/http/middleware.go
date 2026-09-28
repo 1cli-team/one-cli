@@ -22,6 +22,7 @@ import (
 	manifestapp "github.com/torchstellar-team/one-cli/packages/cli/internal/application/manifest"
 	workspaceapp "github.com/torchstellar-team/one-cli/packages/cli/internal/application/workspace"
 	catalog "github.com/torchstellar-team/one-cli/packages/cli/internal/core/backend"
+	creationmodule "github.com/torchstellar-team/one-cli/packages/cli/internal/modules/creation"
 	environmentmodule "github.com/torchstellar-team/one-cli/packages/cli/internal/modules/environment"
 	cliErrors "github.com/torchstellar-team/one-cli/packages/cli/internal/platform/errors"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/output"
@@ -45,6 +46,8 @@ type MuxOpts struct {
 	// ManifestService is the explicit repository-publication boundary. It only
 	// accepts typed, revision-checked project setting patches.
 	ManifestService *manifestapp.Service
+	// CreationService reuses the CLI template-to-project workflow.
+	CreationService *creationmodule.Service
 	// EnvironmentService powers Infisical secret operations through the same
 	// workspace/session/path resolution used by the CLI.
 	EnvironmentService *environmentmodule.Service
@@ -86,7 +89,15 @@ func BuildMux(opts MuxOpts) http.Handler {
 		}
 		opts.EnvironmentService = service
 	}
+	if opts.CreationService == nil {
+		service, err := creationmodule.NewService(opts.EnvironmentService)
+		if err != nil {
+			panic(err)
+		}
+		opts.CreationService = service
+	}
 	api := http.NewServeMux()
+	api.HandleFunc("GET /project-templates", handleProjectTemplates())
 	registerSessionRoutes(api)
 	registerGlobalRoutes(api)
 	registerCatalogRoutes(api, opts)

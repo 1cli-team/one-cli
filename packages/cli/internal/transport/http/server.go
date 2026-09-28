@@ -18,6 +18,7 @@ import (
 	manifestapp "github.com/torchstellar-team/one-cli/packages/cli/internal/application/manifest"
 	workspaceapp "github.com/torchstellar-team/one-cli/packages/cli/internal/application/workspace"
 	catalog "github.com/torchstellar-team/one-cli/packages/cli/internal/core/backend"
+	creationmodule "github.com/torchstellar-team/one-cli/packages/cli/internal/modules/creation"
 	environmentmodule "github.com/torchstellar-team/one-cli/packages/cli/internal/modules/environment"
 	cliErrors "github.com/torchstellar-team/one-cli/packages/cli/internal/platform/errors"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/i18n"
@@ -44,6 +45,7 @@ type Opts struct {
 	WorkspaceRoot      string
 	Catalog            *catalog.Catalog
 	ManifestService    *manifestapp.Service
+	CreationService    *creationmodule.Service
 	EnvironmentService *environmentmodule.Service
 	WorkspaceService   *workspaceapp.Service
 	RegistryService    *workspaceapp.RegistryService
@@ -122,6 +124,7 @@ func Run(ctx context.Context, opts Opts, ready func(Result)) error {
 		Catalog:       opts.Catalog,
 
 		ManifestService:    opts.ManifestService,
+		CreationService:    opts.CreationService,
 		EnvironmentService: opts.EnvironmentService,
 		WorkspaceService:   opts.WorkspaceService,
 		RegistryService:    opts.RegistryService,

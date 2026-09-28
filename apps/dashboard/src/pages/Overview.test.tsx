@@ -286,6 +286,53 @@ describe("workspace overview Profile-only configuration", () => {
 	});
 	afterAll(() => server.close());
 
+	it("creates a project from the empty workspace and selects it after refreshing", async () => {
+		const user = userEvent.setup();
+		let created = false;
+		server.use(
+			http.get("http://localhost/api/project-templates", () =>
+				HttpResponse.json({
+					templates: [
+						{
+							id: "react-spa",
+							name: "React",
+							description: "React",
+							category: "frontend",
+							directory: "apps",
+							toolchain: "node",
+						},
+					],
+				}),
+			),
+			http.post("http://localhost/api/workspaces/demo-entry/projects", async ({ request }) => {
+				expect(await request.json()).toEqual({ name: "web", templateId: "react-spa" });
+				created = true;
+				return HttpResponse.json(
+					{ name: "web", relativeDir: "apps/web", templateId: "react-spa" },
+					{ status: 201 },
+				);
+			}),
+			http.get("http://localhost/api/workspaces/demo-entry/overview", () =>
+				HttpResponse.json({ ...overview, projects: created ? [overview.projects![0]] : [] }),
+			),
+			http.get("http://localhost/api/workspaces", () => HttpResponse.json({ workspaces: [] })),
+		);
+		renderOverview({ ...overview, projects: [] }, "demo-entry", false, true);
+		const navigation = screen.getByRole("navigation", { name: "Workspace projects" });
+		await user.click(within(navigation).getByRole("button", { name: "New project" }));
+		const dialog = await screen.findByRole("dialog", { name: "New project" });
+		await user.type(within(dialog).getByLabelText("Project name"), "web");
+		await user.click(within(dialog).getByRole("button", { name: "Create project" }));
+		const project = await within(navigation).findByRole("button", { name: "web apps/web" });
+		expect(project.getAttribute("aria-current")).toBe("page");
+		expect(screen.queryByRole("dialog", { name: "New project" })).toBeNull();
+	});
+
+	it("hides project creation for an identity-conflicted workspace", () => {
+		renderOverview({ ...overview, projects: [] }, "demo-entry", true);
+		expect(screen.queryByRole("button", { name: "New project" })).toBeNull();
+	});
+
 	it("shows projects in a persistent left-hand list with project settings tabs", async () => {
 		renderOverview();
 

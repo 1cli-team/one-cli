@@ -800,5 +800,6 @@
   "dependencies.failed_summary": "%s 的依赖准备失败（%s）：%v",
   "workspace.node_member_pattern": "项目 %q 中的 workspace 路径模式 %q 不受支持。请使用相对包路径或单层通配符。",
   "creation.composite_requires_pnpm": "模板 %q 包含多个 Node 包，需要 pnpm 工作区；当前工作区使用 %q。",
-  "creation.duplicate_package": "包名 %q 同时用于 %q 和 %q，请选择不同的项目名。"
+  "creation.duplicate_package": "包名 %q 同时用于 %q 和 %q，请选择不同的项目名。",
+  "serve.project_payload_invalid": "新建项目请求无效：%v"
 }
