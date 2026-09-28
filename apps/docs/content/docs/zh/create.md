@@ -131,4 +131,4 @@ one dev -p api
 ## Agent 指引
 
 
-新工作区生成中英文 `AGENTS.md`，说明 `one run`、`one exec`、pnpm 和 Task 的分工。后续添加项目保留团队修改。
+新工作区生成精简的中英文 `AGENTS.md`，各用 7 条规则覆盖工作区定位、CLI 帮助、添加项目、任务与验证、依赖、环境变量和自动化错误处理。命令细节通过 `one <command> --help` 按需查询，不内嵌完整命令手册。该文件由团队维护，后续 `one add` 保留修改。

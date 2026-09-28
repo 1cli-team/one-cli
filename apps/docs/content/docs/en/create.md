@@ -125,4 +125,4 @@ Full table: [Error codes](/en/docs/error-codes/).
 ## Agent instructions
 
 
-New workspaces include bilingual `AGENTS.md` guidance for `one run`, `one exec`, pnpm, and Task. Later project additions preserve team edits.
+New workspaces include a concise bilingual `AGENTS.md` with 7 rules per language covering workspace discovery, CLI help, adding projects, tasks and verification, dependencies, environment variables, and automation error handling. Command details are discovered through `one <command> --help` instead of embedding a full command manual. The file is team-owned; later `one add` operations preserve edits.
