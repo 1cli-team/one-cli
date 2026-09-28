@@ -145,3 +145,48 @@ func TestDetachedWorkerHelper(t *testing.T) {
 		os.Exit(0)
 	}
 }
+
+func TestWorkerDirectoryValidation(t *testing.T) {
+	root := t.TempDir()
+	cacheDir := filepath.Join(root, "cache")
+	workerDir := filepath.Join(cacheDir, workerPrefix+"test")
+	otherDir := filepath.Join(root, "other", workerPrefix+"test")
+	unprefixedDir := filepath.Join(cacheDir, "ordinary")
+	for _, dir := range []string{workerDir, otherDir, unprefixedDir} {
+		if err := os.MkdirAll(dir, 0o700); err != nil {
+			t.Fatal(err)
+		}
+	}
+	check := func(t *testing.T, workerDir, cacheDir string, want bool) {
+		t.Helper()
+		resolved, valid := validatedWorkerDir(filepath.Join(workerDir, executableName()), cacheDir)
+		if valid != want {
+			t.Fatalf("worker %q in cache %q: valid = %v, want %v", workerDir, cacheDir, valid, want)
+		}
+		if valid {
+			wantDir, err := filepath.EvalSymlinks(workerDir)
+			if err != nil || resolved != wantDir {
+				t.Fatalf("worker directory = %q, want %q: %v", resolved, wantDir, err)
+			}
+		}
+	}
+	check(t, workerDir, cacheDir, true)
+	check(t, otherDir, cacheDir, false)
+	check(t, unprefixedDir, cacheDir, false)
+	check(t, workerDir, filepath.Join(root, "missing"), false)
+	t.Run("path aliases", func(t *testing.T) {
+		alias := filepath.Join(root, "alias")
+		if err := os.Symlink(cacheDir, alias); err != nil {
+			t.Skipf("directory symlinks unavailable: %v", err)
+		}
+		check(t, filepath.Join(alias, filepath.Base(workerDir)), cacheDir, true)
+		check(t, workerDir, alias, true)
+		check(t, filepath.Join(alias, filepath.Base(workerDir)), alias, true)
+		// A worker-shaped symlink into another directory must remain invalid.
+		escaped := filepath.Join(cacheDir, workerPrefix+"outside")
+		if err := os.Symlink(otherDir, escaped); err != nil {
+			t.Fatal(err)
+		}
+		check(t, escaped, cacheDir, false)
+	})
+}

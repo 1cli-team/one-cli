@@ -4,6 +4,7 @@ import (
 	"context"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 
@@ -45,8 +46,13 @@ func TestGoCacheIncludesExternalWorkspaceSourcesAndRejectsChangedBuild(t *testin
 	if build.Cache == nil || !build.Cache.Enabled {
 		t.Fatal("known Go build should cache")
 	}
-	relative, _ := filepath.Rel(filepath.Join(root, "services/api"), external)
-	if !strings.Contains(strings.Join(build.Sources, "\n"), filepath.ToSlash(relative)+"/**/*") {
+	// Build resolves workspace aliases (including macOS /var and Windows
+	// short paths), so source globs are relative to the plan's canonical root.
+	relative, err := filepath.Rel(filepath.Join(plan.Root, "services/api"), external)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !slices.Contains(build.Sources, filepath.ToSlash(relative)+"/**/*") {
 		t.Fatal("external Go member not hashed", build.Sources)
 	}
 	writeFixture(t, taskfile, "version: '3'\ntasks:\n  build:\n    cmds: ['go build -o other/server ./cmd/server']\n")

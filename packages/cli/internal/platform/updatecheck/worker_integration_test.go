@@ -110,7 +110,8 @@ func TestBackgroundWorkerCompletesAfterCommandExits(t *testing.T) {
 		}
 		time.Sleep(20 * time.Millisecond)
 	}
-	t.Fatal("update did not complete after the initiating command exited")
+	c, err := loadCache()
+	t.Fatalf("update did not complete after the initiating command exited: cache=%#v, error=%v", c, err)
 }
 
 func TestUpdateIntegrationLauncher(t *testing.T) {

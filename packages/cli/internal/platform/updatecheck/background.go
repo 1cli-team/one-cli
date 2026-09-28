@@ -139,12 +139,8 @@ func runWorker(version string, args []string, makeUpdater func() updater) bool {
 	if err != nil {
 		return true
 	}
-	workerDir := filepath.Dir(worker)
-	cacheDir, err := filepath.EvalSymlinks(filepath.Dir(path))
-	if err != nil {
-		return true
-	}
-	if filepath.Dir(workerDir) != cacheDir || !strings.HasPrefix(filepath.Base(workerDir), workerPrefix) {
+	workerDir, valid := validatedWorkerDir(worker, filepath.Dir(path))
+	if !valid {
 		return true
 	}
 	defer os.RemoveAll(workerDir)
@@ -198,4 +194,24 @@ func runWorker(version string, args []string, makeUpdater func() updater) bool {
 	}
 	_ = saveCache(c)
 	return true
+}
+
+// validatedWorkerDir only accepts a copied worker directly inside the cache.
+func validatedWorkerDir(worker, cacheDir string) (string, bool) {
+	// Executable paths may retain /var aliases on macOS or short names on
+	// Windows. Resolve the worker before checking its directory name, then
+	// compare directory identities instead of platform-dependent spellings.
+	workerDir, err := filepath.EvalSymlinks(filepath.Dir(worker))
+	if err != nil || !strings.HasPrefix(filepath.Base(workerDir), workerPrefix) {
+		return "", false
+	}
+	parentInfo, err := os.Stat(filepath.Dir(workerDir))
+	if err != nil {
+		return "", false
+	}
+	cacheInfo, err := os.Stat(cacheDir)
+	if err != nil || !cacheInfo.IsDir() || !os.SameFile(parentInfo, cacheInfo) {
+		return "", false
+	}
+	return workerDir, true
 }

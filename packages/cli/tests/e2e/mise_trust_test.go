@@ -18,6 +18,9 @@ func TestE2E_CreateAndAddTrustGeneratedMiseFiles(t *testing.T) {
 	t.Setenv("ONE_MISE_BINARY", mise)
 	t.Setenv("MISE_PARANOID", "1")
 	t.Setenv("MISE_TRUSTED_CONFIG_PATHS", "")
+	// mise-action enables automatic confirmation, which bypasses the trust
+	// checks this test needs to observe even in paranoid mode.
+	t.Setenv("MISE_YES", "0")
 	parent := filepath.Join(temp, "workspaces")
 	buildWrite(t, parent, "mise.toml", "[env]\nPARENT_USER_CONFIG='unchanged'\n")
 	checkTrust := func(path string, want bool) {
