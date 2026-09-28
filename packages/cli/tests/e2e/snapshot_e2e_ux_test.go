@@ -20,7 +20,7 @@ func TestSnapshot_E2E_CreateDailyText(t *testing.T) {
 	if code != 0 {
 		t.Fatalf("create text flow failed: exit=%d stderr=%q", code, stderr)
 	}
-	want := "✓ 工作区已创建：demo\n  位置：~/demo\n  环境变量来源：本地 .env 文件\n  本地开发：one dev\n\n下一步：\n  cd demo\n  one add\n"
+	want := "✓ 工作区已创建：demo\n  位置：~/demo\n  环境变量来源：infisical\n  本地开发：one dev\n\n下一步：\n  cd demo\n  one add\n"
 	if stdout != want {
 		t.Fatalf("unexpected create success text:\n--- want\n%s--- got\n%s", want, stdout)
 	}
@@ -97,7 +97,7 @@ func TestSnapshot_E2E_WorkspaceOverviewAndDeferredDeployment(t *testing.T) {
 	}
 	m := readManifest(t, ws)
 	projects := m["projects"].([]any)
-	domains := projects[0].(map[string]any)["domains"].(map[string]any)
+	domains, _ := projects[0].(map[string]any)["domains"].(map[string]any)
 	if _, exists := domains["deploy"]; exists {
 		t.Fatalf("ordinary add configured deployment: %v", domains["deploy"])
 	}
@@ -154,7 +154,7 @@ func TestSnapshot_E2E_EnvSummarySafeSetAndList(t *testing.T) {
 		t.Fatalf("env summary failed: exit=%d stderr=%q", code, stderr)
 	}
 	summary := mustParseJSON(t, stdout)
-	if summary["schema"] != "one-cli/env-summary/v1" || summary["source"] != "dotenv" || summary["default_environment"] != "dev" {
+	if summary["schema"] != "one-cli/env-summary/v1" || summary["source"] != "" || summary["default_environment"] != "dev" {
 		t.Fatalf("unexpected env summary: %v", summary)
 	}
 
@@ -192,7 +192,7 @@ func TestSnapshot_E2E_EnvSummaryYAMLKeepsStableProtocolFields(t *testing.T) {
 	if err := yaml.Unmarshal([]byte(stdout), &summary); err != nil {
 		t.Fatalf("decode env YAML output: %v\n%s", err, stdout)
 	}
-	if summary["schema"] != "one-cli/env-summary/v1" || summary["source"] != "dotenv" || summary["default_environment"] != "dev" {
+	if summary["schema"] != "one-cli/env-summary/v1" || summary["source"] != "" || summary["default_environment"] != "dev" {
 		t.Fatalf("unexpected env YAML contract: %v", summary)
 	}
 }

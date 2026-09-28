@@ -1,9 +1,9 @@
-// Package env implements the Infisical-backed secrets workflow for One CLI.
+// Package infisical implements the Infisical-backed secrets workflow for One CLI.
 // Workspace-level config (provider / projectId / environments / rootPath)
-// lives in one.manifest.json#domains.env (kind="infisical") + the top-level
+// lives in one.manifest.json#env + the top-level
 // environments section. Subproject-level overrides (path / inherits /
 // disabled) live in the matching subproject's manifest entry under
-// projects[].domains.env.
+// projects[].env.
 package infisical
 
 import (
@@ -28,8 +28,7 @@ const DefaultEnvironment = "dev"
 // matching entry.
 var DefaultEnvironments = []string{"dev", "preview", "prod"}
 
-// WorkspaceConfig is the runtime view of one.manifest.json#domains.env (when
-// kind=infisical) merged with the workspace-level environments section.
+// WorkspaceConfig is the runtime view of one.manifest.json#env merged with the workspace-level environments section.
 //
 // ProjectName mirrors the Infisical-side display name that auto-bind resolved
 // to (matters when the auto-create flow appended a collision suffix).
@@ -46,14 +45,12 @@ type WorkspaceConfig struct {
 }
 
 // SubprojectConfig is the (optional) per-subproject override stored on the
-// matching one.manifest.json subproject entry under projects[].domains.env.
+// matching one.manifest.json subproject entry under projects[].env.
 type SubprojectConfig struct {
 	// Path is the absolute Infisical folder path this subproject maps to.
 	// Default: "/" + relativeDir (e.g. /services/user-api).
 	Path string
-	// Inherits controls whether the pull pipeline merges parent-folder
-	// keys (root → ancestors → self) before applying the .env.example
-	// filter. Default: true.
+	// Inherits controls whether injection merges parent-folder keys. Default: true.
 	Inherits *bool
 	// Disabled is the explicit "this subproject doesn't consume secrets"
 	// signal.
@@ -61,8 +58,7 @@ type SubprojectConfig struct {
 }
 
 // manifestEnvConfig is the JSON shape persisted under
-// `manifest.domains.env.config` when kind == "infisical". Backend-specific
-// fields plus the shared workspace-tracked variable-name list.
+// `manifest.env`, including the shared variable-name list.
 type manifestEnvConfig struct {
 	SiteURL     string   `json:"siteUrl,omitempty"`
 	ProjectID   string   `json:"projectId,omitempty"`
@@ -103,7 +99,7 @@ func (c *WorkspaceConfig) RootPathOrDefault() string {
 
 // LoadWorkspaceConfig reads the workspace's Infisical config from the
 // manifest. Returns nil config (no error) when no env backend is selected
-// or the selected backend is not Infisical. Returns INFISICAL_NOT_CONFIGURED
+// Returns INFISICAL_NOT_CONFIGURED
 // only when invoked via RequireWorkspaceConfig.
 func LoadWorkspaceConfig(projectRoot string) (*WorkspaceConfig, error) {
 	if !workspace.HasManifest(projectRoot) {
@@ -113,24 +109,11 @@ func LoadWorkspaceConfig(projectRoot string) (*WorkspaceConfig, error) {
 	if err != nil {
 		return nil, err
 	}
-	if m.Domains == nil || m.Domains.Env == nil {
+	if m.Env == nil {
 		return nil, nil
 	}
-	if m.Domains.Env.Kind != workspace.EnvBackendInfisical {
-		return nil, nil
-	}
-	cfg := &WorkspaceConfig{}
-	if len(m.Domains.Env.Config) > 0 {
-		var raw manifestEnvConfig
-		if err := json.Unmarshal(m.Domains.Env.Config, &raw); err != nil {
-			return nil, err
-		}
-		cfg.SiteURL = raw.SiteURL
-		cfg.ProjectID = raw.ProjectID
-		cfg.ProjectName = raw.ProjectName
-		cfg.RootPath = raw.RootPath
-		cfg.Keys = raw.Keys
-	}
+	cfg := &WorkspaceConfig{SiteURL: m.Env.SiteURL, ProjectID: m.Env.ProjectID, ProjectName: m.Env.ProjectName, RootPath: m.Env.RootPath, Keys: append([]string(nil), m.Env.Keys...)}
+
 	if m.Environments != nil {
 		cfg.Environments = append([]string{}, m.Environments.Names...)
 		cfg.DefaultEnv = m.Environments.Default
@@ -172,7 +155,7 @@ func resolveCfgAndCreds(projectRoot string, cfgOverride *WorkspaceConfig, credsO
 
 // RequireWorkspaceConfig is the strict variant: returns INFISICAL_NOT_CONFIGURED
 // when no config is present. Use for command paths that depend on having
-// Infisical wired up (set / get / list / pull / etc).
+// Infisical wired up (set / get / list).
 func RequireWorkspaceConfig(projectRoot string) (*WorkspaceConfig, error) {
 	cfg, err := LoadWorkspaceConfig(projectRoot)
 	if err != nil {
@@ -190,7 +173,7 @@ func RequireWorkspaceConfig(projectRoot string) (*WorkspaceConfig, error) {
 }
 
 // LoadSubprojectConfig reads the per-subproject env override from the
-// matching one.manifest.json#projects[].domains.env entry. Returns
+// matching one.manifest.json#projects[].env entry. Returns
 // (nil, nil) when the manifest is missing, the entry doesn't exist, or no
 // override is set.
 func LoadSubprojectConfig(projectRoot, relativeDir string) (*SubprojectConfig, error) {
@@ -206,20 +189,20 @@ func LoadSubprojectConfig(projectRoot, relativeDir string) (*SubprojectConfig, e
 		if s.RelativeDir != rel {
 			continue
 		}
-		if s.Domains == nil || s.Domains.Env == nil {
+		if s.Env == nil {
 			return nil, nil
 		}
 		return &SubprojectConfig{
-			Path:     s.Domains.Env.Path,
-			Inherits: s.Domains.Env.Inherits,
-			Disabled: s.Domains.Env.Disabled,
+			Path:     s.Env.Path,
+			Inherits: s.Env.Inherits,
+			Disabled: s.Env.Disabled,
 		}, nil
 	}
 	return nil, nil
 }
 
 // EncodeManifestConfig serialises the Infisical-specific config blob for
-// storage under manifest.domains.env.config. Used by init.go when writing
+// storage under manifest.env. Used by init.go when writing
 // a freshly-resolved workspace setup back to disk.
 func EncodeManifestConfig(cfg *WorkspaceConfig) (json.RawMessage, error) {
 	raw := manifestEnvConfig{

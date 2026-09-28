@@ -29,7 +29,7 @@ const PresetIDPrefix = "preset:"
 
 // Env provider codes (v1). Single ASCII char.
 var envCodes = map[byte]string{
-	'd': "dotenv",
+	'd': "dotenv", // Reserved historical code; creation rejects this source.
 	'i': "infisical",
 }
 

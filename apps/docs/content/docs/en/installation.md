@@ -105,9 +105,9 @@ Managed mise updates with One; automatic self-updates are disabled for that chil
 
 **Offline use:** a valid external, managed, or migratable legacy executable can be reused offline. A fresh environment without any of them needs network access. Prepare mise and the required tools/dependencies beforehand, or point `ONE_MISE_BINARY` to a compatible external executable. `ONE_RUNTIME=builtin` is a temporary diagnostic escape hatch using existing tools.
 
-Download, migration, or verification failures return `MISE_INSTALL_FAILED`. Check network/proxy access to GitHub Releases and permissions on One's runtime directory, then retry the same command. Help, dry-run, and static project/configuration generation do not prepare mise.
+Download, migration, or verification failures return `MISE_INSTALL_FAILED`. Check network/proxy access to GitHub Releases and permissions on One's runtime directory, then retry the same command. Help, dry-run, and configuration planning do not prepare mise. Creation and project addition prepare it to trust complete One-generated configurations; a failure returns a warning while preserving the generated files.
 
-Use `one mise --version`, `one mise doctor`, or `one mise trust <config-path>` to work with the same selected runtime. Review configuration before trusting it; `MISE_PARANOID=1` requires explicit trust. Arguments, IO, and exit codes are forwarded, without One project secrets; use `one exec` when those secrets are needed.
+Use `one mise --version`, `one mise doctor`, or `one mise trust <config-path>` to work with the same selected runtime. Creation and project addition register file-specific trust for complete One-generated configurations, including with `MISE_PARANOID=1`. Custom configuration still requires review and follows mise’s trust policy. Arguments, IO, and exit codes are forwarded, without One project secrets; use `one exec` when those secrets are needed.
 
 ## Infisical login
 

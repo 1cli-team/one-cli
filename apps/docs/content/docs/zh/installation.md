@@ -91,7 +91,7 @@ Windows 归档名是 `one-cli_windows_amd64.zip`。
 
 每次需要 runtime 时重新检查：系统 mise 被删除、版本过旧或不可执行时，One 转用托管版本；托管程序缺失或损坏时自动恢复。系统版本重新可用后恢复系统优先。显式设置 `ONE_MISE_BINARY` 的路径或版本有误时直接报错，不自动回退。
 
-不需要激活 shell。配置信任遵循 mise 自身规则；设置 `MISE_PARANOID=1` 后需先显式审查并信任配置。旧 workspace 在显式启用前继续沿用已有工具，详见 [`one init mise`](/zh/docs/login/#mise-工作区工具配置)。
+不需要激活 shell。创建工作区和添加项目会为完整的 One 生成配置登记文件级信任，包括 `MISE_PARANOID=1` 模式；自定义配置仍按 mise 规则审查和信任。旧 workspace 在显式启用前继续沿用已有工具，详见 [`one init mise`](/zh/docs/login/#mise-工作区工具配置)。
 
 | 托管内容 | 默认目录 | 自定义根目录 |
 |---|---|---|
@@ -112,7 +112,7 @@ One 仅修改子进程 PATH。托管版本随 One 更新，自动升级和更新
 | `ONE_MISE_BINARY` | 显式指定 mise 可执行文件的绝对路径，外部程序最低支持版本为 2026.9.7 |
 | `ONE_RUNTIME=builtin` | 临时诊断时使用机器原有工具，跳过 mise |
 
-下载、迁移、写入或校验失败返回 `MISE_INSTALL_FAILED`；检查到 GitHub Releases 的网络/代理及托管目录权限后重试原命令。显式外部文件不存在时返回 `MISE_NOT_FOUND`。帮助、`--dry-run`、创建项目和生成配置不准备 runtime。
+下载、迁移、写入或校验失败返回 `MISE_INSTALL_FAILED`；检查到 GitHub Releases 的网络/代理及托管目录权限后重试原命令。显式外部文件不存在时返回 `MISE_NOT_FOUND`。帮助、`--dry-run` 和配置规划不准备 runtime。创建工作区和添加项目会准备 runtime 以信任完整的 One 生成配置；失败时保留文件并返回警告。
 
 需要访问 mise 的原生命令时，使用 `one mise`，无需把托管程序目录加入 PATH：
 

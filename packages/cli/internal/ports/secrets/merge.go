@@ -5,14 +5,8 @@ import (
 	"strings"
 )
 
-// MergeIntoEnviron combines the parent process environment with values loaded
-// from a secrets backend. Default behaviour: shell vars win over the loaded
-// map (matches dotenv-cli / node-dotenv defaults — least surprise for
-// engineers used to those). override=true flips it: the loaded map wins,
-// useful when the caller explicitly fetched values from a remote backend
-// and wants them to take effect now.
-//
-// Used by arbitrary commands and managed tasks to prepare child environments.
+// MergeIntoEnviron combines shell variables with fetched values.
+// When override is true, fetched values replace matching shell variables.
 func MergeIntoEnviron(parent []string, vars map[string]string, override bool) []string {
 	idx := make(map[string]int, len(parent))
 	for i, kv := range parent {

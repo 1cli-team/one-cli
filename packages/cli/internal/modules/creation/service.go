@@ -17,9 +17,11 @@ import (
 	cliErrors "github.com/torchstellar-team/one-cli/packages/cli/internal/platform/errors"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/fsutil"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/i18n"
+	runtimeport "github.com/torchstellar-team/one-cli/packages/cli/internal/ports/runtime"
 )
 
 type Service struct {
+	Runtime      runtimeport.Provider
 	environments *environmentmodule.Service
 	observer     WorkspaceObserver
 }
@@ -62,6 +64,7 @@ type WorkspaceResult struct {
 	InfisicalBound  bool
 	EnvironmentWarn error
 	RegistryWarn    error
+	MiseTrustWarn   error
 	HooksWarn       error
 	Preset          PresetResult
 	PartialState    string
@@ -117,9 +120,9 @@ func (s *Service) CreateWorkspace(ctx context.Context, input WorkspaceInput) (Wo
 		)
 	}
 	if result.EnvBackend == "" {
-		result.EnvBackend = workspace.EnvBackendDotenv
+		result.EnvBackend = workspace.EnvBackendInfisical
 	}
-	if result.EnvBackend != workspace.EnvBackendDotenv && result.EnvBackend != workspace.EnvBackendInfisical {
+	if result.EnvBackend != workspace.EnvBackendInfisical {
 		return result, cliErrors.New(
 			cliErrors.BACKEND_ID_UNKNOWN,
 			i18n.Tf("env.provider_invalid", result.EnvBackend),
@@ -144,21 +147,7 @@ func (s *Service) CreateWorkspace(ctx context.Context, input WorkspaceInput) (Wo
 		return result, err
 	}
 
-	enables := []string{"dev/process", "env/" + result.EnvBackend}
-	if err := workspace.ApplyBackendSelection(input.TargetDir, enables); err != nil {
-		return result, cliErrors.New(cliErrors.BACKEND_ID_UNKNOWN, err.Error()).
-			WithContext(map[string]any{"enabled_backends": enables})
-	}
-	environment, err := s.environments.PrepareWorkspace(ctx, environmentmodule.PrepareWorkspaceInput{
-		ProjectRoot: input.TargetDir,
-		ProjectName: input.Name,
-		Backend:     result.EnvBackend,
-	})
-	if err != nil {
-		return result, err
-	}
-	result.InfisicalBound = environment.InfisicalBound
-	result.EnvironmentWarn = environment.BindWarning
+	// Remote environment binding is created explicitly by env operations.
 	manifest, err := workspace.ReadManifest(input.TargetDir)
 	if err != nil {
 		return result, err
@@ -194,6 +183,7 @@ func (s *Service) CreateWorkspace(ctx context.Context, input WorkspaceInput) (Wo
 			i18n.Tf("creation.mise_warning", err)).
 			WithContext(map[string]any{"workspace": input.TargetDir, "partial_state": "mise_configuration_incomplete"})
 	}
+	result.MiseTrustWarn = plan.TrustGenerated(ctx, s.Runtime)
 	if pkg, err := workspace.ReadPackageJSON(input.TargetDir); err == nil && pkg != nil {
 		result.PackageManager, _, _ = strings.Cut(pkg.PackageManager, "@")
 	}
@@ -224,6 +214,15 @@ func (s *Service) AddProject(
 	project, err := materializeProject(ctx, projectRoot, input)
 	if err != nil {
 		return AddProjectResult{}, err
+	}
+	if s.Runtime != nil && miseconfig.Enabled(projectRoot) {
+		plan, trustErr := miseconfig.Build(projectRoot, miseconfig.Options{})
+		if trustErr == nil {
+			trustErr = plan.TrustGenerated(ctx, s.Runtime)
+		}
+		if trustErr != nil {
+			project.Warnings = append(project.Warnings, i18n.Tf("creation.mise_trust_warning", trustErr))
+		}
 	}
 	return AddProjectResult{
 		Project: project,

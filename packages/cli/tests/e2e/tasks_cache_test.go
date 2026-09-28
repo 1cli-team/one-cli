@@ -8,12 +8,11 @@ import (
 	"testing"
 )
 
-func TestE2E_TasksRestoreArtifactsAndInvalidateEnvironment(t *testing.T) {
+func TestE2E_TasksRestoreArtifactsAndInvalidateProjectConfiguration(t *testing.T) {
 	root := buildFixture(t, true)
 	for name, dir := range map[string]string{"web": "apps/web", "lib": "packages/lib"} {
 		buildWrite(t, root, dir+"/build.sh", "#!/bin/sh\nmkdir -p dist\nprintf '%s' \"$BUILD_VALUE\" > dist/value\necho executed >> executions\nprintf '<%s>\\n' \"$@\"\n")
-		buildWrite(t, root, dir+"/.env", "BUILD_VALUE="+name+"\n")
-		buildWrite(t, root, dir+"/mise.toml", "[tasks.build]\nsources=['package.json','build.sh']\noutputs=['dist']\ncache={enabled=true,command_inputs=['one __task-input --project "+name+" --task build']}\n")
+		buildWrite(t, root, dir+"/mise.toml", "[env]\nBUILD_VALUE='"+name+"'\n[tasks.build]\nsources=['package.json','build.sh','mise.toml']\noutputs=['dist']\ncache={enabled=true,command_inputs=['one __task-input --project "+name+" --task build']}\n")
 	}
 	run := func(args ...string) string {
 		t.Helper()
@@ -51,7 +50,11 @@ func TestE2E_TasksRestoreArtifactsAndInvalidateEnvironment(t *testing.T) {
 			t.Fatal("restore executed the task")
 		}
 	}
-	buildWrite(t, root, "apps/web/.env", "BUILD_VALUE=changed\n")
+	config, err := os.ReadFile(filepath.Join(root, "apps/web/mise.toml"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	buildWrite(t, root, "apps/web/mise.toml", strings.Replace(string(config), "BUILD_VALUE='web'", "BUILD_VALUE='changed'", 1))
 	run("run", "build", "-p", "web", "-o", "json")
 	if runs("apps/web") != 2 || runs("packages/lib") != 1 {
 		t.Fatal("project environments are not isolated")

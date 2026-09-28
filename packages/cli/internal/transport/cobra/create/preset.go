@@ -26,7 +26,6 @@ import (
 //     registry (still no FS mutation).
 //  2. Refuses to prompt — `--preset` without a dir argument errors
 //     with PROJECT_NAME_REQUIRED rather than dropping into a TTY form.
-//  3. Validates the env provider doesn't collide with --env-provider.
 //  4. Hands one resolved plan to creation.Service, which owns the same
 //     Workspace and Project mutation path as ordinary create/add.
 //  6. Emits an envelope with schema=one-cli/create/v3 (the non-preset
@@ -79,27 +78,9 @@ func runCreateWithPreset(deps Dependencies, cmd *cobra.Command, cwd, rawDir stri
 		return err
 	}
 
-	// Step 3: env-provider conflict check.
-	flagProvider := strings.TrimSpace(flags.envProvider)
-	if flagProvider != "" && flagProvider != "dotenv" && flagProvider != "infisical" {
-		return cliErrors.New(cliErrors.BACKEND_ID_UNKNOWN,
-			i18n.Tf("env.provider_invalid", flagProvider))
-	}
-	effectiveEnv, err := preset.ResolveEnvWithFlag(resolved.EnvProvider, flagProvider)
-	if err != nil {
-		var ce *preset.EnvConflictError
-		if errors.As(err, &ce) {
-			return cliErrors.New(cliErrors.PRESET_FLAG_CONFLICT,
-				i18n.Tf("create.preset_provider_conflict", ce.Preset, ce.Flag)).
-				WithContext(map[string]any{
-					"preset_env_provider": ce.Preset,
-					"flag_env_provider":   ce.Flag,
-				})
-		}
-		return err
-	}
+	effectiveEnv := resolved.EnvProvider
 	if effectiveEnv == "" {
-		effectiveEnv = "dotenv"
+		effectiveEnv = "infisical"
 	}
 
 	customProjectNames, err := parsePresetProjectNames(flags.projectNames, len(resolved.Items))
@@ -182,8 +163,11 @@ func runCreateWithPreset(deps Dependencies, cmd *cobra.Command, cwd, rawDir stri
 		},
 		PartialState: creationResult.PartialState,
 	}
+	if creationResult.MiseTrustWarn != nil {
+		payload.Warnings = append(payload.Warnings, i18n.Tf("creation.mise_trust_warning", creationResult.MiseTrustWarn))
+	}
 	if creationResult.HooksWarn != nil {
-		payload.Warnings = []string{i18n.Tf("create.hooks_warning", creationResult.HooksWarn)}
+		payload.Warnings = append(payload.Warnings, i18n.Tf("create.hooks_warning", creationResult.HooksWarn))
 	}
 	if len(creationResult.Preset.UnknownSegments) > 0 {
 		payload.UnknownSegments = creationResult.Preset.UnknownSegments

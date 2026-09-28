@@ -10,7 +10,7 @@ import (
 )
 
 func TestReadManifestRejectsRetiredDomainsWithoutRewritingFiles(t *testing.T) {
-	for _, domain := range []string{"deploy", "container"} {
+	for _, domain := range []string{"env", "dev", "deploy", "container"} {
 		for _, scope := range []string{"workspace", "project"} {
 			t.Run(scope+"/"+domain, func(t *testing.T) {
 				root := t.TempDir()
@@ -24,13 +24,13 @@ func TestReadManifestRejectsRetiredDomainsWithoutRewritingFiles(t *testing.T) {
 				if err := os.WriteFile(path, before, 0o644); err != nil {
 					t.Fatal(err)
 				}
-				artifact := filepath.Join(root, "Dockerfile")
-				content := []byte("FROM scratch\n")
+				artifact := filepath.Join(root, ".env")
+				content := []byte("UNCHANGED=local\n")
 				if err := os.WriteFile(artifact, content, 0o644); err != nil {
 					t.Fatal(err)
 				}
 				_, err := ReadManifest(root)
-				if err == nil || !strings.Contains(err.Error(), "have been removed") {
+				if err == nil || !strings.Contains(err.Error(), "domains") {
 					t.Fatalf("error = %v", err)
 				}
 				coded, ok := err.(interface{ ErrorCode() string })

@@ -5,5 +5,5 @@
   "package_manager": "",
   "project_name": "my-app",
   "schema": "one-cli/create/v2",
-  "secrets_backend": "dotenv"
+  "secrets_backend": "infisical"
 }

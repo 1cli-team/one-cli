@@ -3,12 +3,12 @@ title: one exec
 description: 给任意命令注入项目环境变量，并在解析出的项目目录内执行。
 ---
 
-`one exec` 类似 `infisical run` / `dotenv run`：它先解析当前项目，再从 workspace 选择的 env provider 取环境变量，把它们注入子进程，然后执行你传入的命令。
+`one exec` 解析项目，在配置了 Infisical 时注入变量，然后在项目目录执行命令。
 
 ## 用法
 
 ```bash
-one exec [-p <name|path>] [--env-provider dotenv|infisical] [--env <env>] -- <cmd> [args...]
+one exec [-p <name|path>] [--env <env>] -- <cmd> [args...]
 ```
 
 必须使用 `--` 分隔 One 参数和子命令参数。项目也可以写成位置参数，例如 `one exec web -- pnpm build`。
@@ -18,7 +18,6 @@ one exec [-p <name|path>] [--env-provider dotenv|infisical] [--env <env>] -- <cm
 | 参数 | 说明 |
 |---|---|
 | `-p, --project <name|path>` | 选择项目；不传时从当前目录推导 |
-| `--env-provider dotenv|infisical` | 强制使用指定 env provider；默认取 workspace manifest |
 | `--env <env>` | 使用指定环境；默认取 manifest 的默认环境 |
 | `--dry-run` | 仅输出目录、原始参数和 runtime，不执行 mise、不读取密钥、不启动命令 |
 | `-o, --output <fmt>` | 只影响 One CLI 自己的输出；子进程 stdout/stderr 原样透传 |
@@ -33,7 +32,7 @@ one exec [-p <name|path>] [--env-provider dotenv|infisical] [--env <env>] -- <cm
 
 覆盖顺序为：父进程环境 → mise 环境 → 当前项目的 One 环境变量。项目目录、参数边界、标准 IO 和应用退出码保持原有语义，不需要 `mise activate`。
 
-无需单独安装 mise：One 优先使用兼容的系统版本，否则复用或从官方下载到自己的目录；本地没有可用程序时首次运行需要联网，程序被删后会按需恢复。配置信任遵循 mise 自身规则；需要显式审批时设置 `MISE_PARANOID=1`，审查配置后通过 `one mise trust` 授权。离线配置见 [One 自动管理 mise](/zh/docs/installation/#one-自动管理-mise)，旧项目启用和版本调整见 [`one init mise`](/zh/docs/login/#mise-工作区工具配置)。
+无需单独安装 mise：One 优先使用兼容的系统版本，否则复用或从官方下载到自己的目录；本地没有可用程序时首次运行需要联网，程序被删后会按需恢复。创建工作区和添加项目时自动信任完整的 One 生成配置；自定义配置继续遵循 mise 规则，审查后通过 `one mise trust` 授权。离线配置见 [One 自动管理 mise](/zh/docs/installation/#one-自动管理-mise)，旧项目启用和版本调整见 [`one init mise`](/zh/docs/login/#mise-工作区工具配置)。
 
 ## 示例
 
@@ -41,7 +40,6 @@ one exec [-p <name|path>] [--env-provider dotenv|infisical] [--env <env>] -- <cm
 one exec -- pnpm test
 one exec -p web -- pnpm run build
 one exec -p apps/web -- pnpm lint
-one exec --env-provider dotenv -- pnpm test
 one exec --env staging -- pnpm run e2e
 ```
 
@@ -58,15 +56,9 @@ one exec --env staging -- pnpm run e2e
 
 这样在 pnpm monorepo 里直接执行 `vite`、`next`、`astro` 等二进制也能解析到。
 
-## env provider
+## Infisical 注入
 
-| provider | 行为 |
-|---|---|
-| `dotenv` | 读取项目 `.env` overlay |
-| `infisical` | 联网从 Infisical 拉取当前环境变量 |
-| 空 | 读取 workspace manifest 记录的 provider |
-
-`--env-provider infisical` 需要先通过 `one login` 登录；离线或本地调试可以用 `--env-provider dotenv`。
+Manifest 顶层 `env` 绑定启用 Infisical 注入。未绑定或设置 `projects[].env.disabled: true` 时，命令继承 shell 环境。One CLI 不加载 `.env` 文件，认证或拉取失败会停止执行，不回退到本地文件。通过 `one login` 登录。
 
 ## 错误恢复
 
@@ -75,7 +67,6 @@ one exec --env staging -- pnpm run e2e
 | `NOT_ONE_PROJECT` | 在 workspace 内运行，或进入某个项目目录 |
 | `SUBPROJECT_NOT_FOUND` | `-p` 改成 manifest 里的 `name` 或 `relativeDir` |
 | `RUN_COMMAND_NOT_FOUND` | 确认命令在 PATH、项目 `node_modules/.bin` 或 workspace `node_modules/.bin` 内 |
-| `ENV_FILE_NOT_FOUND` | 建项目 `.env`，或切到 `--env-provider infisical` |
 | `INFISICAL_AUTH_MISSING` | 先 `one login` |
 
 完整码表：[错误码大全](/zh/docs/error-codes/)。
@@ -83,7 +74,7 @@ one exec --env staging -- pnpm run e2e
 ## 进一步阅读
 
 - [环境变量注入命令](/zh/tutorials/run-passthrough/) — 真实使用场景
-- [`one env`](/zh/docs/env-vars/) — 设置 / 拉取环境变量
+- [`one env`](/zh/docs/env-vars/) — 管理 Infisical 环境变量
 - [`one dev`](/zh/docs/dev/) — 启动全部可开发项目
 
 

@@ -105,7 +105,7 @@ func devTerminalFixture(t *testing.T, mise bool) string {
 	for _, v := range m["projects"].([]any) {
 		p := v.(map[string]any)
 		if p["name"] != "mobile" {
-			p["domains"] = map[string]any{"dev": map[string]any{"command": "sh dev.sh"}}
+			p["dev"] = map[string]any{"command": "sh dev.sh"}
 		}
 	}
 	raw, _ = json.Marshal(m)

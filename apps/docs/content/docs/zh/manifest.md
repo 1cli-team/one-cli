@@ -10,12 +10,18 @@ description: 工作区的项目登记表、环境变量来源和本地开发配�
 ```json
 {
   "version": 1,
-  "workspace": { "id": "demo-app-2bb61e", "name": "demo-app" },
+  "workspace": {
+    "id": "demo-app-2bb61e",
+    "name": "demo-app"
+  },
   "environments": {
-    "names": ["dev", "preview", "prod"],
+    "names": [
+      "dev",
+      "preview",
+      "prod"
+    ],
     "default": "dev"
   },
-  "domains": { "env": { "kind": "dotenv" } },
   "projects": [
     {
       "name": "web",
@@ -24,9 +30,15 @@ description: 工作区的项目登记表、环境变量来源和本地开发配�
       "toolchain": "node",
       "buildVersion": "0.1.0",
       "packageManager": "pnpm",
-      "domains": {
-        "env": { "path": ".env", "inherits": true, "keys": ["API_URL"] },
-        "dev": { "command": "pnpm dev" }
+      "env": {
+        "path": "/apps/web",
+        "inherits": true,
+        "keys": [
+          "API_URL"
+        ]
+      },
+      "dev": {
+        "command": "pnpm dev"
       }
     },
     {
@@ -34,9 +46,16 @@ description: 工作区的项目登记表、环境变量来源和本地开发配�
       "templateId": "go-api",
       "relativeDir": "services/api",
       "toolchain": "go",
-      "domains": { "dev": { "command": "go run ./cmd/server" } }
+      "dev": {
+        "command": "go run ./cmd/server"
+      }
     }
-  ]
+  ],
+  "env": {
+    "siteUrl": "https://app.infisical.com",
+    "projectId": "your-project-id",
+    "rootPath": "/"
+  }
 }
 ```
 
@@ -49,12 +68,12 @@ description: 工作区的项目登记表、环境变量来源和本地开发配�
 | `version` | Manifest 版本，当前为 `1` |
 | `workspace` | 稳定的工作区 `id` 与名称 `name` |
 | `environments` | 环境名称和默认环境 |
-| `domains.env` | 工作区环境变量来源：`dotenv` 或 `infisical`，可附带后端专属 `config` |
+| `env` | 可选 Infisical 绑定：`siteUrl`、`projectId`、`projectName`、`rootPath` 和 `keys` |
 | `projects[]` | 项目名称、路径、模板、工具链，可选的 `packageManager` 和 `buildVersion` |
-| `projects[].domains.env` | 项目覆盖项：`path`、`inherits`、`disabled` 和变量名 `keys`；后端继承工作区 |
-| `projects[].domains.dev` | `one dev` 执行的 `command` |
+| `projects[].env` | 项目覆盖项：`path`、`inherits`、`disabled` 和变量名 `keys`；后端继承工作区 |
+| `projects[].dev` | `one dev` 执行的 `command` |
 
-Infisical 的 `domains.env.config` 可以包含 `projectId`、`projectName`、`rootPath` 和 `keys`。Manifest 不保存变量值或本机 Profile 名；凭据保存在本机 Profile，变量值交给 dotenv 或 Infisical。
+Infisical 的 `env` 可以包含 `projectId`、`projectName`、`rootPath` 和 `keys`。Manifest 不保存变量值或本机 Profile 名；凭据保存在系统 keyring，变量值交给 Infisical。
 
 ## 谁会修改它
 
@@ -63,14 +82,13 @@ Infisical 的 `domains.env.config` 可以包含 `projectId`、`projectName`、`r
 | `one create` | 创建工作区身份、默认环境、环境来源和空项目列表 |
 | `one add` | 登记项目及其开发命令 |
 | `one env set` | 登记变量名；Infisical 可初始化项目绑定 |
-| `one env switch` | 修改环境变量来源 |
 | `one serve` | 用户审阅后，经过 revision 校验保存项目配置或环境来源变更 |
 
 `one build` 按工具链选择项目构建命令：Node 项目使用包脚本，Go 项目使用 `Taskfile.yml`。工作区任务和普通的 `ci` 聚合任务通过 `one run` 执行。
 
 ## 手动修改
 
-重命名或删除项目时，应同时维护登记信息和磁盘目录。项目开发脚本变化后，更新 `projects[].domains.dev.command`。目录约定保持 `apps/`、`services/`、`packages/`。
+重命名或删除项目时，应同时维护登记信息和磁盘目录。项目开发脚本变化后，更新 `projects[].dev.command`。目录约定保持 `apps/`、`services/`、`packages/`。
 
 如果清单与磁盘不一致，检查登记路径，恢复缺少的项目文件或修正登记项。业务变量值、依赖、缓存和构建产物不应写入 Manifest。
 
@@ -79,3 +97,9 @@ Infisical 的 `domains.env.config` 可以包含 `projectId`、`projectName`、`r
 `deploy` 和 `container` 域已下线。清单中仍有这些字段时返回 `MANIFEST_INVALID`，并提示手动删除对应字段。CLI 不提供迁移，也不会清理已有 Dockerfile、平台配置或 CI 文件。
 
 无效 JSON 或未知字段同样返回 `MANIFEST_INVALID`。详见[错误码](/zh/docs/error-codes/)。
+
+## 从 domains 迁移
+
+不再接受 `domains` 包装层。将工作区 Infisical 的 `domains.env.config` 提到顶层 `env`，项目的 `domains.env` / `domains.dev` 提到项目的 `env` / `dev`，移除 `kind` 和 `config` 包装。原 dotenv 工作区删除旧绑定及本地文件 `path` 覆盖，需要时再绑定 Infisical。
+
+旧清单返回 `MANIFEST_INVALID` 并提示迁移。One CLI 不会自动改写清单，也不会导入或删除已有 `.env` 文件；需要的值应显式写入 Infisical。env 的 `pull`、`switch` 子命令及 `--env-provider` 参数已删除。旧 preset 代码 `d` 保留占位但不再接受，请使用 `i` 或省略环境段。

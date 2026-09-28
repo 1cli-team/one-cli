@@ -63,18 +63,14 @@ modal 三个区：
 列表上方两个字段：
 
 - **工作区名** — 决定生成的目录名 + `one.manifest.json` 里的 workspace id。默认 `my-workspace`。
-- **Env 提供方** — `dotenv`（本地 `.env` 文件）或 `infisical`（托管 secrets）。不确定先选 `dotenv`，后面可以切。
+- **Env 提供方** — Infisical；创建后需要托管变量时再绑定项目。
 
 ### 底部 — 实时生成的命令
 
 每次加 / 移模板，下面的 `one create` 命令都会重算一次。长这样：
 
 ```bash
-one create my-workspace \
-  --env-provider dotenv \
-  --add nestjs-api:api \
-  --add nextjs-app:web \
-  --add ts-library:shared
+one create my-workspace --preset 1.bne.fna.ltl.ei --project-names api,web,shared --yes
 ```
 
 按 **复制**。这就是整张页面的产出：一条确定的命令，可以粘贴、归档、分享，或喂给 agent。

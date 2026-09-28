@@ -11,6 +11,7 @@ import (
 	"sort"
 
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/fsutil"
+	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/i18n"
 )
 
 // ManifestProjectInput is the upsert payload from `add` and status fixes.
@@ -47,12 +48,14 @@ func UpsertManifestProject(projectRoot string, input ManifestProjectInput) error
 	}
 	relativeDir := ToPosixPath(input.RelativeDir)
 
-	var preservedDomains *ProjectDomains
+	var preservedEnv *ProjectEnvOverride
+	var preservedDev *ProjectDevOverride
 	buildVersion := DefaultBuildVersion
 	kept := make([]ManifestProject, 0, len(m.Projects))
 	for _, p := range m.Projects {
 		if p.RelativeDir == relativeDir {
-			preservedDomains = p.Domains
+			preservedEnv = p.Env
+			preservedDev = p.Dev
 			buildVersion = NormalizeBuildVersion(p.BuildVersion)
 			continue
 		}
@@ -70,7 +73,8 @@ func UpsertManifestProject(projectRoot string, input ManifestProjectInput) error
 		Toolchain:      toolchain,
 		BuildVersion:   buildVersion,
 		PackageManager: input.PackageManager,
-		Domains:        preservedDomains,
+		Env:            preservedEnv,
+		Dev:            preservedDev,
 	})
 
 	m.Projects = sortByRelativeDir(kept)
@@ -89,7 +93,6 @@ func MarshalManifest(m *Manifest) ([]byte, error) {
 			out.Projects[i].Toolchain = "node"
 		}
 		out.Projects[i].BuildVersion = NormalizeBuildVersion(out.Projects[i].BuildVersion)
-		pruneProjectDomains(&out.Projects[i])
 	}
 
 	b, err := json.MarshalIndent(out, "", "  ")
@@ -195,15 +198,19 @@ func InitWorkspaceEnv(projectRoot string, init EnvInit) error {
 		return err
 	}
 	if init.Kind == "" {
-		// Clear semantics: drop the env section entirely.
-		if m.Domains != nil {
-			m.Domains.Env = nil
-		}
+		m.Env = nil
 	} else {
-		ensureWorkspaceEnv(m)
-		m.Domains.Env.Kind = init.Kind
-		m.Domains.Env.Config = init.ConfigJSON
+		if init.Kind != EnvBackendInfisical {
+			return i18n.Errorf("env.provider_invalid", init.Kind)
+		}
+		m.Env = &EnvironmentConfig{}
+		if len(init.ConfigJSON) > 0 {
+			if err := json.Unmarshal(init.ConfigJSON, m.Env); err != nil {
+				return err
+			}
+		}
 	}
+
 	if init.EnvironmentNames != nil {
 		if m.Environments == nil {
 			m.Environments = &Environments{}
@@ -231,10 +238,14 @@ func SetWorkspaceEnvConfig(projectRoot string, configJSON json.RawMessage) error
 	if err != nil {
 		return err
 	}
-	if m.Domains == nil || m.Domains.Env == nil {
+	if m.Env == nil {
 		return ErrEnvBackendNotConfigured
 	}
-	m.Domains.Env.Config = configJSON
+	config := &EnvironmentConfig{}
+	if err := json.Unmarshal(configJSON, config); err != nil {
+		return err
+	}
+	m.Env = config
 	return WriteManifest(projectRoot, m)
 }
 
@@ -271,7 +282,7 @@ func EnsureEnvironment(projectRoot, name string) (added bool, err error) {
 	return true, WriteManifest(projectRoot, m)
 }
 
-// UpdateProjectDev sets projects[].domains.dev.command on the project
+// UpdateProjectDev sets projects[].dev.command on the project
 // entry keyed by relativeDir. Empty cmd clears the override block.
 // Mirrors UpdateManifestProjectEnv's read-modify-write pattern.
 //
@@ -283,21 +294,14 @@ func UpdateProjectDev(projectRoot, relativeDir, cmd string) error {
 	if err != nil {
 		return err
 	}
-	relativeDir = ToPosixPath(relativeDir)
 	for i := range m.Projects {
-		if m.Projects[i].RelativeDir != relativeDir {
-			continue
-		}
-		if cmd == "" {
-			if m.Projects[i].Domains != nil {
-				m.Projects[i].Domains.Dev = nil
-				pruneProjectDomains(&m.Projects[i])
+		if m.Projects[i].RelativeDir == ToPosixPath(relativeDir) {
+			m.Projects[i].Dev = nil
+			if cmd != "" {
+				m.Projects[i].Dev = &ProjectDevOverride{Command: cmd}
 			}
-		} else {
-			ensureProjectDomains(&m.Projects[i])
-			m.Projects[i].Domains.Dev = &ProjectDevOverride{Command: cmd}
+			return WriteManifest(projectRoot, m)
 		}
-		return WriteManifest(projectRoot, m)
 	}
 	return nil
 }
@@ -313,9 +317,7 @@ func UpdateManifestProjectEnv(projectRoot, relativeDir string, env *ProjectEnvOv
 	relativeDir = ToPosixPath(relativeDir)
 	for i := range m.Projects {
 		if m.Projects[i].RelativeDir == relativeDir {
-			ensureProjectDomains(&m.Projects[i])
-			m.Projects[i].Domains.Env = env
-			pruneProjectDomains(&m.Projects[i])
+			m.Projects[i].Env = env
 			return WriteManifest(projectRoot, m)
 		}
 	}
@@ -337,35 +339,13 @@ func RecordWorkspaceEnvKey(projectRoot, key string) error {
 		return err
 	}
 	ensureWorkspaceEnv(m)
-	cfg := map[string]json.RawMessage{}
-	if len(m.Domains.Env.Config) > 0 {
-		if err := json.Unmarshal(m.Domains.Env.Config, &cfg); err != nil {
-			return err
-		}
-	}
-	var keys []string
-	if raw, ok := cfg["keys"]; ok {
-		if err := json.Unmarshal(raw, &keys); err != nil {
-			return err
-		}
-	}
-	for _, existing := range keys {
+	for _, existing := range m.Env.Keys {
 		if existing == key {
 			return nil
 		}
 	}
-	keys = append(keys, key)
-	sort.Strings(keys)
-	keysRaw, err := json.Marshal(keys)
-	if err != nil {
-		return err
-	}
-	cfg["keys"] = keysRaw
-	cfgRaw, err := json.Marshal(cfg)
-	if err != nil {
-		return err
-	}
-	m.Domains.Env.Config = cfgRaw
+	m.Env.Keys = append(m.Env.Keys, key)
+	sort.Strings(m.Env.Keys)
 	return WriteManifest(projectRoot, m)
 }
 
@@ -373,19 +353,13 @@ func RecordWorkspaceEnvKey(projectRoot, key string) error {
 // workspace-root scope, or nil when none. Reads the "keys" field embedded
 // in m.Domains.Env.Config.
 func WorkspaceEnvKeys(m *Manifest) []string {
-	if m == nil || m.Domains == nil || m.Domains.Env == nil || len(m.Domains.Env.Config) == 0 {
+	if m == nil || m.Env == nil {
 		return nil
 	}
-	cfg := struct {
-		Keys []string `json:"keys,omitempty"`
-	}{}
-	if err := json.Unmarshal(m.Domains.Env.Config, &cfg); err != nil {
-		return nil
-	}
-	return cfg.Keys
+	return m.Env.Keys
 }
 
-// RecordProjectEnvKey appends key to projects[i].domains.env.keys for the
+// RecordProjectEnvKey appends key to projects[i].env.keys for the
 // named project. Sorted, deduped, idempotent — calling twice with the
 // same key is a no-op on the second call. Caller passes the project's name
 // (matches manifest.projects[i].name); unknown names are silently skipped
@@ -402,17 +376,16 @@ func RecordProjectEnvKey(projectRoot, projectName, key string) error {
 		if m.Projects[i].Name != projectName {
 			continue
 		}
-		ensureProjectDomains(&m.Projects[i])
-		if m.Projects[i].Domains.Env == nil {
-			m.Projects[i].Domains.Env = &ProjectEnvOverride{}
+		if m.Projects[i].Env == nil {
+			m.Projects[i].Env = &ProjectEnvOverride{}
 		}
-		for _, existing := range m.Projects[i].Domains.Env.Keys {
+		for _, existing := range m.Projects[i].Env.Keys {
 			if existing == key {
 				return nil
 			}
 		}
-		m.Projects[i].Domains.Env.Keys = append(m.Projects[i].Domains.Env.Keys, key)
-		sort.Strings(m.Projects[i].Domains.Env.Keys)
+		m.Projects[i].Env.Keys = append(m.Projects[i].Env.Keys, key)
+		sort.Strings(m.Projects[i].Env.Keys)
 		return WriteManifest(projectRoot, m)
 	}
 	return nil
@@ -444,13 +417,15 @@ func RebuildManifest(projectRoot string, inputs []ManifestProjectInput) (*Manife
 	}
 	type prior struct {
 		buildVersion string
-		domains      *ProjectDomains
+		env          *ProjectEnvOverride
+		dev          *ProjectDevOverride
 	}
 	priorByDir := make(map[string]prior, len(current.Projects))
 	for _, p := range current.Projects {
 		priorByDir[p.RelativeDir] = prior{
 			buildVersion: NormalizeBuildVersion(p.BuildVersion),
-			domains:      p.Domains,
+			env:          p.Env,
+			dev:          p.Dev,
 		}
 	}
 
@@ -469,14 +444,15 @@ func RebuildManifest(projectRoot string, inputs []ManifestProjectInput) (*Manife
 			Toolchain:      toolchain,
 			BuildVersion:   NormalizeBuildVersion(p.buildVersion),
 			PackageManager: in.PackageManager,
-			Domains:        p.domains,
+			Env:            p.env,
+			Dev:            p.dev,
 		})
 	}
 	m := &Manifest{
 		Version:      ManifestVersion,
 		Workspace:    current.Workspace,
 		Environments: current.Environments,
-		Domains:      current.Domains,
+		Env:          current.Env,
 		Projects:     sortByRelativeDir(projects),
 	}
 	if err := WriteManifest(projectRoot, m); err != nil {

@@ -22,19 +22,18 @@ func seedProjectSettingsWorkspace(t *testing.T) string {
 		Version:      workspacecore.ManifestVersion,
 		Workspace:    &workspacecore.ManifestWorkspace{ID: "ws-demo", Name: "Demo"},
 		Environments: &workspacecore.Environments{Names: []string{"dev", "staging", "prod"}, Default: "dev"},
-		Domains: &workspacecore.WorkspaceDomains{
-			Env: &workspacecore.BackendRef{Kind: catalog.EnvInfisical},
-		},
+
+		Env: &workspacecore.EnvironmentConfig{ProjectID: "remote"},
+
 		Projects: []workspacecore.ManifestProject{{
 			Name: "web", RelativeDir: "apps/web", TemplateID: "react-spa", Toolchain: "node",
 			BuildVersion: "1.2.3", PackageManager: "pnpm",
-			Domains: &workspacecore.ProjectDomains{
-				Env: &workspacecore.ProjectEnvOverride{
-					Path: "/apps/web", Inherits: &inherits, Keys: []string{"Z_KEY", "A_KEY"},
-				},
 
-				Dev: &workspacecore.ProjectDevOverride{Command: "pnpm dev"},
+			Env: &workspacecore.ProjectEnvOverride{
+				Path: "/apps/web", Inherits: &inherits, Keys: []string{"Z_KEY", "A_KEY"},
 			},
+
+			Dev: &workspacecore.ProjectDevOverride{Command: "pnpm dev"},
 		}},
 	}
 	if err := workspacecore.WriteManifest(root, manifest); err != nil {

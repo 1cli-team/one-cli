@@ -31,7 +31,7 @@ type Item struct {
 //   - Items: project segments. Parse stores them in input order;
 //     Canonicalize reorders for stable encoding.
 //   - EnvCode: 1-char env code, "" if absent (means: workspace default
-//     dotenv).
+//     Infisical).
 //   - UnknownSegments: forward-compat — kinds not recognised by this
 //     parser are preserved verbatim so the envelope can echo them in
 //     preset_unknown_segments and the user can upgrade the CLI.

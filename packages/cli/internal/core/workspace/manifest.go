@@ -29,15 +29,15 @@ const ManifestVersion = 1
 // Current layout:
 //   - workspace: identity only (id, name)
 //   - environments: environment-name list and default for secrets backends
-//   - domains: workspace environment backend and its config
+//   - env: optional Infisical binding
 //   - projects[]: each project carries identity (name, relativeDir,
 //     templateId, toolchain, buildVersion, packageManager) plus an optional
-//     domains block with environment overrides and a development command.
+//     env overrides and a dev command.
 type Manifest struct {
 	Version      int                `json:"version"`
 	Workspace    *ManifestWorkspace `json:"workspace,omitempty"`
 	Environments *Environments      `json:"environments,omitempty"`
-	Domains      *WorkspaceDomains  `json:"domains,omitempty"`
+	Env          *EnvironmentConfig `json:"env,omitempty"`
 	Projects     []ManifestProject  `json:"projects"`
 }
 
@@ -50,7 +50,7 @@ type ManifestWorkspace struct {
 	Name string `json:"name"`
 }
 
-// Environments names the dotenv files or Infisical environments available
+// Environments names the Infisical environments available
 // to the workspace ("dev" / "preview" / "prod" by default).
 //
 // Default is the env name used when --env is omitted; it must appear in
@@ -66,37 +66,26 @@ type Environments struct {
 // independent of any specific secrets backend.
 var DefaultEnvironments = []string{"dev", "preview", "prod"}
 
-// WorkspaceDomains selects the optional workspace environment backend.
-type WorkspaceDomains struct {
-	Env *BackendRef `json:"env,omitempty"`
-}
-
-// BackendRef is the workspace-level "selected backend" for a single domain.
-// `Kind` is the bare backend name ("infisical" or "dotenv").
-// `Config` is decoded via the environment backend's typed accessors.
-type BackendRef struct {
-	Kind   string          `json:"kind,omitempty"`
-	Config json.RawMessage `json:"config,omitempty"`
+// EnvironmentConfig binds the workspace to Infisical. Values and credentials never live here.
+type EnvironmentConfig struct {
+	SiteURL     string   `json:"siteUrl,omitempty"`
+	ProjectID   string   `json:"projectId,omitempty"`
+	ProjectName string   `json:"projectName,omitempty"`
+	RootPath    string   `json:"rootPath,omitempty"`
+	Keys        []string `json:"keys,omitempty"`
 }
 
 // ManifestProject is one project entry in manifest.projects[]. Identity
-// fields are flat at the top; backend overrides live inside the optional
-// `domains` block (mirroring the workspace shape).
+// fields, env overrides, and dev commands are stored directly on the project.
 type ManifestProject struct {
-	Name           string          `json:"name"`
-	RelativeDir    string          `json:"relativeDir"`
-	TemplateID     string          `json:"templateId"`
-	Toolchain      string          `json:"toolchain"`
-	BuildVersion   string          `json:"buildVersion"`
-	PackageManager string          `json:"packageManager,omitempty"`
-	Domains        *ProjectDomains `json:"domains,omitempty"`
-}
-
-// ProjectDomains holds environment overrides and the development command.
-// The environment backend is always inherited from the workspace.
-type ProjectDomains struct {
-	Env *ProjectEnvOverride `json:"env,omitempty"`
-	Dev *ProjectDevOverride `json:"dev,omitempty"`
+	Name           string              `json:"name"`
+	RelativeDir    string              `json:"relativeDir"`
+	TemplateID     string              `json:"templateId"`
+	Toolchain      string              `json:"toolchain"`
+	BuildVersion   string              `json:"buildVersion"`
+	PackageManager string              `json:"packageManager,omitempty"`
+	Env            *ProjectEnvOverride `json:"env,omitempty"`
+	Dev            *ProjectDevOverride `json:"dev,omitempty"`
 }
 
 // ProjectDevOverride is the per-project dev command for `one dev`.
@@ -199,6 +188,9 @@ func ReadManifestSnapshot(projectRoot string) (*Manifest, string, error) {
 	dec := json.NewDecoder(bytes.NewReader(raw))
 	dec.DisallowUnknownFields()
 	if err := dec.Decode(&m); err != nil {
+		if err.Error() == `json: unknown field "domains"` {
+			return nil, "", cliErrors.New(cliErrors.MANIFEST_INVALID, i18n.T("manifest.domains_removed"))
+		}
 		if err.Error() == `json: unknown field "deploy"` || err.Error() == `json: unknown field "container"` {
 			return nil, "", cliErrors.New(cliErrors.MANIFEST_INVALID, i18n.T("manifest.retired_fields"))
 		}

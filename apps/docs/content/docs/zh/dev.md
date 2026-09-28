@@ -17,7 +17,7 @@ one dev -p web -- --port 4300
 
 ## 命令与覆盖
 
-生成的适配任务优先使用 `projects[].domains.dev.command`，未设置时使用项目原生的 `dev` 包脚本或 Taskfile 任务。项目 `mise.toml` 可覆盖任务，根 `mise.toml` 可替换工作区聚合。自定义 mise 命令使用 mise 的环境；生成的适配任务接收 One 冻结的项目环境。
+生成的适配任务优先使用 `projects[].dev.command`，未设置时使用项目原生的 `dev` 包脚本或 Taskfile 任务。项目 `mise.toml` 可覆盖任务，根 `mise.toml` 可替换工作区聚合。自定义 mise 命令使用 mise 的环境；生成的适配任务接收 One 冻结的项目环境。
 
 ## 依赖准备
 

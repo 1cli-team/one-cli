@@ -44,7 +44,7 @@ var clientVersion = "0.0.0-dev"
 func SetVersion(v string) { clientVersion = v }
 
 // ListSecrets reads every key at the given path/environment, optionally
-// recursively (for `env pull` which fetches a folder subtree).
+// recursively when the caller requests a folder subtree.
 func (c *Client) ListSecrets(env, secretPath string, recursive bool) ([]models.Secret, error) {
 	out, err := c.sdk.Secrets().List(infisical.ListSecretsOptions{
 		ProjectID:              c.cfg.ProjectID,

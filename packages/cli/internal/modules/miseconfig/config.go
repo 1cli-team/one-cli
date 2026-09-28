@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"reflect"
 	"regexp"
 	"sort"
 	"strconv"
@@ -39,12 +40,13 @@ type Change struct {
 }
 
 type Plan struct {
-	Schema  string   `json:"schema"`
-	Root    string   `json:"root"`
-	DryRun  bool     `json:"dry_run"`
-	Changes []Change `json:"changes"`
-	inputs  map[string][]byte
-	overlay map[string][]byte
+	Schema    string   `json:"schema"`
+	Root      string   `json:"root"`
+	DryRun    bool     `json:"dry_run"`
+	Changes   []Change `json:"changes"`
+	inputs    map[string][]byte
+	overlay   map[string][]byte
+	generated []Change
 }
 
 // ReadInputs allows creation to preserve this planner's conflict checks when
@@ -399,6 +401,18 @@ func (p *Plan) add(rel string, value config) error {
 	}
 	if !bytes.Equal(before, after) {
 		p.Changes = append(p.Changes, Change{Path: rel, Before: string(before), After: string(after)})
+	}
+	// Only complete configurations matching our generated values are eligible
+	// for automatic trust. User additions and overrides keep mise's own policy.
+	var actual, generated map[string]any
+	if err := toml.Unmarshal(after, &actual); err != nil {
+		return err
+	}
+	if err := toml.Unmarshal(body, &generated); err != nil {
+		return err
+	}
+	if reflect.DeepEqual(actual, generated) {
+		p.generated = append(p.generated, Change{Path: rel, After: string(after)})
 	}
 	return nil
 }

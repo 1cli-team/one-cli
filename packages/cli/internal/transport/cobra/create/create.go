@@ -119,12 +119,7 @@ func runCreate(deps Dependencies, cmd *cobra.Command, rawDir string, flags *crea
 
 	displayPath := relativeOrAbs(cwd, targetDir, useCurrentDir)
 
-	// Backend selection: --env-provider flag wins; otherwise interactive
-	// prompt asks dotenv vs infisical.
-	enables, err := resolveCreateEnables(flags.envProvider, interactive)
-	if err != nil {
-		return err
-	}
+	enables := append([]string(nil), workspaceDefaultEnables...)
 
 	var result creationmodule.WorkspaceResult
 	if err := prompt.Spin(i18n.T("create.generating"), func() error {
@@ -153,7 +148,7 @@ func runCreate(deps Dependencies, cmd *cobra.Command, rawDir string, flags *crea
 
 	// v2 envelope: replaces the v1 `enabled_backends []string` with
 	// per-domain semantic fields. `secrets_backend` names the env
-	// backend ("dotenv" / "infisical"); `ci_enabled` / `dev_enabled` are
+	// backend ("infisical"); `ci_enabled` / `dev_enabled` are
 	// booleans. Container / deploy are template-driven and live on the
 	// subproject record, not in this envelope.
 	secretsBackend := ""
@@ -176,8 +171,11 @@ func runCreate(deps Dependencies, cmd *cobra.Command, rawDir string, flags *crea
 		SecretsBackend: secretsBackend,
 		DevEnabled:     devEnabled,
 	}
+	if result.MiseTrustWarn != nil {
+		payload.Warnings = append(payload.Warnings, i18n.Tf("creation.mise_trust_warning", result.MiseTrustWarn))
+	}
 	if result.HooksWarn != nil {
-		payload.Warnings = []string{i18n.Tf("create.hooks_warning", result.HooksWarn)}
+		payload.Warnings = append(payload.Warnings, i18n.Tf("create.hooks_warning", result.HooksWarn))
 	}
 	output.Emit(&payload)
 

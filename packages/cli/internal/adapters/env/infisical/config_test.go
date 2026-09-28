@@ -1,7 +1,6 @@
 package infisical
 
 import (
-	"encoding/json"
 	"testing"
 
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/core/workspace"
@@ -9,19 +8,15 @@ import (
 
 func TestLoadWorkspaceConfig_FromManifest(t *testing.T) {
 	tmp := t.TempDir()
-	cfgRaw, _ := json.Marshal(map[string]string{"projectId": "proj-x"})
 	if err := workspace.WriteManifest(tmp, &workspace.Manifest{
 		Version: workspace.ManifestVersion,
 		Environments: &workspace.Environments{
 			Names:   []string{"dev", "prod"},
 			Default: "dev",
 		},
-		Domains: &workspace.WorkspaceDomains{
-			Env: &workspace.BackendRef{
-				Kind:   workspace.EnvBackendInfisical,
-				Config: cfgRaw,
-			},
-		},
+
+		Env: &workspace.EnvironmentConfig{ProjectID: "proj-x"},
+
 		Projects: []workspace.ManifestProject{},
 	}); err != nil {
 		t.Fatal(err)
@@ -56,26 +51,6 @@ func TestLoadWorkspaceConfig_NilWhenNoEnv(t *testing.T) {
 	}
 }
 
-func TestLoadWorkspaceConfig_NilWhenEnvIsDotenv(t *testing.T) {
-	tmp := t.TempDir()
-	if err := workspace.WriteManifest(tmp, &workspace.Manifest{
-		Version: workspace.ManifestVersion,
-		Domains: &workspace.WorkspaceDomains{
-			Env: &workspace.BackendRef{Kind: workspace.EnvBackendDotenv},
-		},
-		Projects: []workspace.ManifestProject{},
-	}); err != nil {
-		t.Fatal(err)
-	}
-	cfg, err := LoadWorkspaceConfig(tmp)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if cfg != nil {
-		t.Errorf("expected nil cfg when env backend is dotenv; got %+v", cfg)
-	}
-}
-
 func TestLoadSubprojectConfig_FromManifestEntry(t *testing.T) {
 	tmp := t.TempDir()
 	inherits := false
@@ -86,11 +61,10 @@ func TestLoadSubprojectConfig_FromManifestEntry(t *testing.T) {
 			RelativeDir: "services/api",
 			TemplateID:  "go-api",
 			Toolchain:   "go",
-			Domains: &workspace.ProjectDomains{
-				Env: &workspace.ProjectEnvOverride{
-					Path:     "/custom/api",
-					Inherits: &inherits,
-				},
+
+			Env: &workspace.ProjectEnvOverride{
+				Path:     "/custom/api",
+				Inherits: &inherits,
 			},
 		}},
 	}); err != nil {
@@ -121,9 +95,8 @@ func TestLoadSubprojectConfig_DisabledRoundTrip(t *testing.T) {
 			RelativeDir: "apps/web",
 			TemplateID:  "react-spa",
 			Toolchain:   "node",
-			Domains: &workspace.ProjectDomains{
-				Env: &workspace.ProjectEnvOverride{Disabled: true},
-			},
+
+			Env: &workspace.ProjectEnvOverride{Disabled: true},
 		}},
 	}); err != nil {
 		t.Fatal(err)

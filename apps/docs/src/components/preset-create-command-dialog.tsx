@@ -22,7 +22,6 @@ import {
 } from "@/data/templates";
 import {
   buildCustomPresetCommand,
-  envFromPresetId,
   projectsFromPresetId,
   sortCommandProjects,
   type CommandProject,
@@ -120,15 +119,13 @@ export function PresetCreateCommandDialog({
     [projects],
   );
 
-  const env = example ? envFromPresetId(example.presetId) : "dotenv";
   const command = useMemo(() => {
     if (projects.length === 0) return "";
     return buildCustomPresetCommand({
       workspaceName,
-      env,
       projects,
     });
-  }, [env, projects, workspaceName]);
+  }, [projects, workspaceName]);
 
   async function handleCopy() {
     if (!command) return;

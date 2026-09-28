@@ -52,9 +52,6 @@ func BuildSummary(root string) (Summary, error) {
 		name = strings.TrimSpace(m.Workspace.Name)
 	}
 	envSource := EnvBackend(m)
-	if envSource == "" {
-		envSource = "dotenv"
-	}
 	defaultEnv := "dev"
 	environments := append([]string(nil), DefaultEnvironments...)
 	if m.Environments != nil {
@@ -213,8 +210,8 @@ func (s *Summary) RenderTTY(w io.Writer) {
 }
 
 func environmentSourceLabel(source string) string {
-	if source == EnvBackendDotenv {
-		return i18n.T("workspace.env_dotenv")
+	if source == "" {
+		return i18n.T("env.not_configured")
 	}
 	return source
 }

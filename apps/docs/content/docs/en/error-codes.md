@@ -193,7 +193,7 @@ Requested environment profile is missing or empty.
 
 ### `ENV_PULL_CONFLICT`
 
-Existing `.env` differs from pulled values. Inspect first or use `--force` intentionally.
+Reserved error code from the removed local environment-file workflow.
 
 ### `ENV_SET_KEY_REQUIRED`
 
@@ -213,20 +213,19 @@ Env name is not registered. `set` can create it; read commands require it to exi
 
 ### `ENV_BACKEND_INVALID`
 
-Env backend is not `dotenv` or `infisical`.
+The Infisical binding is invalid.
 
 ### `ENV_BACKEND_UNCHANGED`
 
-Workspace is already on the requested env backend. No action needed.
+Reserved error code from the removed local environment-file workflow.
 
 ### `ENV_MIGRATE_CONFLICT`
 
-Target backend has a same-name key with a different value. Use overwrite or no-sync intentionally.
+Reserved error code from the removed local environment-file workflow.
 
 ### `ENV_MIGRATE_PARTIAL`
 
-Some keys synced and others failed. Fix the cause and retry.
-
+Reserved error code from the removed local environment-file workflow.
 
 ## Infisical Backend
 
@@ -319,7 +318,7 @@ Two backend patches conflict on the same target.
 
 ### `RUN_DOTENV_MISSING`
 
-Local dotenv file required by `one run` is missing.
+Reserved error code from the removed local environment-file workflow.
 
 ### `SERVE_BIND_FORBIDDEN`
 

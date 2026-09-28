@@ -14,6 +14,8 @@ description: 往工作区里加一个模板化项目。
 
 `template-id` 是模板 ID，例如 `nestjs-api` / `nextjs-app` / `ts-library`，不是项目名；项目名由 `--name` 决定。
 
+创建工作区和添加项目时会准备 mise，并自动信任完全由 One 生成的 `mise.toml`，进入新目录无需再单独执行信任命令。已有自定义配置保留 mise 原有的信任检查。本机没有兼容版本时，One 可能下载托管的 mise 程序；项目工具和依赖仍按需安装。信任失败会保留生成文件并给出恢复命令。
+
 ## 用法
 
 ```bash

@@ -100,7 +100,7 @@ const (
 	ENV_KEY_NOT_FOUND          Code = "ENV_KEY_NOT_FOUND"
 	ENV_UNKNOWN_ENVIRONMENT    Code = "ENV_UNKNOWN_ENVIRONMENT"
 
-	// Env vars — `one env switch` backend migration.
+	// Reserved codes from the removed environment migration workflow.
 	ENV_BACKEND_INVALID   Code = "ENV_BACKEND_INVALID"
 	ENV_BACKEND_UNCHANGED Code = "ENV_BACKEND_UNCHANGED"
 	ENV_MIGRATE_CONFLICT  Code = "ENV_MIGRATE_CONFLICT"
@@ -193,7 +193,7 @@ var Codes = map[Code]Definition{
 	PATCH_CONFLICT:             {Summary: "Two configuration fragments contributed conflicting patches to the same backend target."},
 	BACKEND_INVOKE_FAILED:      {Summary: "Backend's Invoke method returned an error."},
 	BACKEND_NOT_ENABLED:        {Summary: "The requested environment backend is not configured.", Remediation: []output.Remediation{{Action: "configure-domain", Hint: "Configure the environment backend with one env bind."}}},
-	BACKEND_VERB_NOT_SUPPORTED: {Summary: "The active backend in this domain does not implement the requested verb (e.g. `one env pull` against the dotenv backend).", Remediation: []output.Remediation{{Action: "switch-backend", Hint: "切换到支持该 verb 的同 domain backend（例如 env 域改用 infisical）"}}},
+	BACKEND_VERB_NOT_SUPPORTED: {Summary: "The requested environment operation is not supported."},
 	BACKEND_INTERFACE_MISMATCH: {Summary: "Internal: the dispatched backend failed its capability assertion. Build-side bug; should never reach end users."},
 	PREFERENCES_FILE_INVALID:   {Summary: "The local preferences file could not be read or parsed."},
 	PREFERENCES_INVALID:        {Summary: "The requested preference value is not supported."},
@@ -206,27 +206,27 @@ var Codes = map[Code]Definition{
 	ENV_SET_KEY_REQUIRED:       {Summary: "env set called without <KEY>."},
 	ENV_SET_OVERWRITE_REQUIRED: {Summary: "Variable already exists with a different value.", Remediation: []output.Remediation{{Action: "confirm-overwrite", Hint: "加 --yes 确认覆盖"}}},
 	ENV_SET_VALUE_REQUIRED:     {Summary: "Non-interactive env set called without <VALUE>."},
-	ENV_PULL_CONFLICT:          {Summary: "Existing on-disk .env differs from the values pulled from Infisical.", Remediation: []output.Remediation{{Action: "force-overwrite", Hint: "覆盖本地 .env（destructive）", Command: "one env pull --env <env> --force", Destructive: true}}},
+	ENV_PULL_CONFLICT:          {Summary: "Reserved error code from the retired local environment workflow."},
 	ENV_KEY_NOT_FOUND:          {Summary: "Requested env var key does not exist at the given Infisical path/environment."},
-	ENV_UNKNOWN_ENVIRONMENT:    {Summary: "请求的环境名不在 manifest.environments.names 列表中。", Remediation: []output.Remediation{{Action: "use-existing-env", Hint: "查看 one.manifest.json#environments.names 中已声明的环境，或改用 --env 指定其中一个"}, {Action: "create-via-set", Hint: "在 dotenv 后端，用 set 隐式创建：one env set <KEY> <VALUE> --env <name>"}, {Action: "register-env", Hint: "在 Infisical 后端，先在 UI 创建环境，再把名称加入 one.manifest.json#environments.names"}}},
+	ENV_UNKNOWN_ENVIRONMENT:    {Summary: "请求的环境名不在 manifest.environments.names 列表中。", Remediation: []output.Remediation{{Action: "use-existing-env", Hint: "查看 one.manifest.json#environments.names 中已声明的环境，或改用 --env 指定其中一个"}, {Action: "create-via-set", Hint: "先在 Infisical 创建环境，再将名称登记到 manifest.environments.names"}, {Action: "register-env", Hint: "在 Infisical 后端，先在 UI 创建环境，再把名称加入 one.manifest.json#environments.names"}}},
 
-	ENV_BACKEND_INVALID:   {Summary: "env switch 的 <backend> 不合法，必须是 dotenv 或 infisical。"},
-	ENV_BACKEND_UNCHANGED: {Summary: "工作区已经在使用目标 backend，无需切换。"},
-	ENV_MIGRATE_CONFLICT:  {Summary: "目标 backend 已有同名 key 但值不一致；为防止误覆盖，默认拒绝。", Remediation: []output.Remediation{{Action: "overwrite", Hint: "确认要覆盖，加 --overwrite 重跑", Command: "one env switch infisical --overwrite", Destructive: true}, {Action: "skip-sync", Hint: "或只切 manifest，不做数据迁移", Command: "one env switch infisical --no-sync"}}},
-	ENV_MIGRATE_PARTIAL:   {Summary: "部分 key 同步失败；manifest 已切换，但未完成的 key 仍只在原 backend。", Remediation: []output.Remediation{{Action: "retry", Hint: "检查报错原因（网络 / 权限），修复后再跑同步：one env switch infisical（manifest 已切，等价 sync-only）"}}},
+	ENV_BACKEND_INVALID:   {Summary: "The workspace Infisical binding is missing or invalid."},
+	ENV_BACKEND_UNCHANGED: {Summary: "Reserved error code from the retired local environment workflow."},
+	ENV_MIGRATE_CONFLICT:  {Summary: "Reserved error code from the retired local environment workflow."},
+	ENV_MIGRATE_PARTIAL:   {Summary: "Reserved error code from the retired local environment workflow."},
 
 	INFISICAL_NOT_CONFIGURED:           {Summary: "The workspace has no Infisical project binding.", Remediation: []output.Remediation{{Action: "select-project", Hint: "在 Dashboard 工作区设置中选择 Infisical 项目", Command: "one serve"}}},
 	INFISICAL_AUTH_MISSING:             {Summary: "No active Infisical browser session.", Remediation: []output.Remediation{{Action: "login", Command: "one login"}}},
 	INFISICAL_AUTH_FAILED:              {Summary: "The Infisical session was rejected or expired.", Remediation: []output.Remediation{{Action: "login", Command: "one login"}}},
 	INFISICAL_PROJECT_NOT_FOUND:        {Summary: "Infisical project id does not exist or the current account has no access to it."},
-	INFISICAL_PROJECT_NAME_TAKEN:       {Summary: "Infisical 项目名已被占用；auto-bind 会自动加随机后缀重试，但重试次数耗尽后会冒泡此错误。", Remediation: []output.Remediation{{Action: "use-explicit-name", Hint: "在 one.manifest.json#domains.env.config.projectName 写一个不冲突的项目名后重试 env 命令"}}},
+	INFISICAL_PROJECT_NAME_TAKEN:       {Summary: "Infisical 项目名已被占用；auto-bind 会自动加随机后缀重试，但重试次数耗尽后会冒泡此错误。", Remediation: []output.Remediation{{Action: "use-explicit-name", Hint: "在 one.manifest.json#env.projectName 写一个不冲突的项目名后重试 env 命令"}}},
 	INFISICAL_PROJECT_CREATE_FORBIDDEN: {Summary: "当前账号没有创建项目权限，请选择一个已有且有权访问的项目。"},
 	INFISICAL_NETWORK_ERROR:            {Summary: "Network error reaching the Infisical API. Check siteUrl + connectivity."},
 	INFISICAL_API_ERROR:                {Summary: "Infisical API returned an unexpected error. See error.context for details."},
 	INFISICAL_FOLDER_NOT_FOUND:         {Summary: "The requested Infisical folder does not exist in the requested environment.", Remediation: []output.Remediation{{Action: "check-env-name", Hint: "确认 --env 名是否拼对（dev / staging / prod 等）"}, {Action: "create-folder", Hint: "在该 folder 下写入第一个环境变量值时会自动创建", Command: "one env set --env <env> -p <name|path> KEY value"}, {Action: "verify-path", Hint: "或在 Infisical UI 里确认 folder 是否存在"}}},
 
 	RUN_COMMAND_NOT_FOUND: {Summary: "one exec could not locate the requested executable on PATH.", Remediation: []output.Remediation{{Action: "check-spelling", Hint: "确认命令名拼写正确"}, {Action: "use-package-runner", Hint: "对于 npm script，使用包管理器调用", Command: "one exec -- npm run <script>"}}},
-	RUN_DOTENV_MISSING:    {Summary: "one exec could not find a .env file for the resolved subproject.", Remediation: []output.Remediation{{Action: "pull-secrets", Hint: "先把 Infisical 环境变量拉到项目 .env", Command: "one env pull"}, {Action: "specify-subproject", Hint: "或显式指定项目（按 manifest 里的 name 或相对路径）", Command: "one exec <name|path> -- <cmd>"}}},
+	RUN_DOTENV_MISSING:    {Summary: "Reserved error code from the retired local environment workflow."},
 	RUN_USAGE_INVALID:     {Summary: "one exec arguments do not match `one exec [project] -- <cmd> [args...]`.", Remediation: []output.Remediation{{Action: "use-run-separator", Hint: "用 -- 分隔 One CLI 参数和子进程命令", Command: "one exec [project] -- <cmd> [args...]"}}},
 
 	SERVE_PORT_BUSY:            {Summary: "one serve 无法绑定请求的端口（被占用或权限不足）。", Remediation: []output.Remediation{{Action: "use-random-port", Hint: "改用随机端口（让内核分配空闲端口）", Command: "one serve --port 0"}, {Action: "pick-different-port", Hint: "或显式换一个空闲端口", Command: "one serve --port 17900"}}},

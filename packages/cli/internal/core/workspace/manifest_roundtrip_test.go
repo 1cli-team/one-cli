@@ -131,8 +131,8 @@ func TestManifest_PreservesDevOverride(t *testing.T) {
 	if err != nil {
 		t.Fatalf("ReadManifest after clear: %v", err)
 	}
-	if loaded.Projects[0].Domains != nil {
-		t.Errorf("Domains should be pruned to nil when all overrides cleared, got %+v", loaded.Projects[0].Domains)
+	if loaded.Projects[0].Env != nil {
+		t.Errorf("Env should be cleared to nil when all overrides cleared, got %+v", loaded.Projects[0].Env)
 	}
 }
 
@@ -177,14 +177,14 @@ func TestManifest_UpsertPreservesEnvOverride(t *testing.T) {
 		t.Fatalf("expected 1 entry, got %d", len(loaded.Projects))
 	}
 	sub := loaded.Projects[0]
-	if sub.Domains == nil || sub.Domains.Env == nil {
+	if sub.Env == nil {
 		t.Fatalf("env override lost on upsert")
 	}
-	if sub.Domains.Env.Path != "/teams/payments/billing" {
-		t.Errorf("env.path drifted on upsert: got %q", sub.Domains.Env.Path)
+	if sub.Env.Path != "/teams/payments/billing" {
+		t.Errorf("env.path drifted on upsert: got %q", sub.Env.Path)
 	}
-	if len(sub.Domains.Env.Keys) != 1 || sub.Domains.Env.Keys[0] != "DATABASE_URL" {
-		t.Errorf("env.keys drifted on upsert: got %v", sub.Domains.Env.Keys)
+	if len(sub.Env.Keys) != 1 || sub.Env.Keys[0] != "DATABASE_URL" {
+		t.Errorf("env.keys drifted on upsert: got %v", sub.Env.Keys)
 	}
 	if sub.BuildVersion != "1.2.3" {
 		t.Errorf("buildVersion drifted on upsert: got %q", sub.BuildVersion)
@@ -229,17 +229,17 @@ func TestManifest_RebuildPreservesOverrides(t *testing.T) {
 	}
 
 	a := byName["a"]
-	if a.Domains == nil || a.Domains.Env == nil ||
-		len(a.Domains.Env.Keys) == 0 || a.Domains.Env.Keys[0] != "FOO" {
-		t.Errorf("a.env.keys should survive rebuild, got %+v", a.Domains)
+	if a.Env == nil ||
+		len(a.Env.Keys) == 0 || a.Env.Keys[0] != "FOO" {
+		t.Errorf("a.env.keys should survive rebuild, got %+v", a.Env)
 	}
 	if a.BuildVersion != "2.3.4" {
 		t.Errorf("a.buildVersion should survive rebuild, got %q", a.BuildVersion)
 	}
 
 	c := byName["c"]
-	if c.Domains != nil && c.Domains.Env != nil {
-		t.Errorf("c (new) should have no env override, got %+v", c.Domains.Env)
+	if c.Env != nil {
+		t.Errorf("c (new) should have no env override, got %+v", c.Env)
 	}
 	if c.BuildVersion != DefaultBuildVersion {
 		t.Errorf("c.buildVersion: want %s, got %q", DefaultBuildVersion, c.BuildVersion)
@@ -290,10 +290,10 @@ func TestManifest_RecordProjectEnvKey(t *testing.T) {
 		}
 	}
 	m, _ := ReadManifest(tmp)
-	if m.Projects[0].Domains == nil || m.Projects[0].Domains.Env == nil {
+	if m.Projects[0].Env == nil {
 		t.Fatalf("env override missing")
 	}
-	got := m.Projects[0].Domains.Env.Keys
+	got := m.Projects[0].Env.Keys
 	want := []string{"DATABASE_URL", "JWT_SECRET"}
 	if len(got) != 2 || got[0] != want[0] || got[1] != want[1] {
 		t.Errorf("env.keys: want %v, got %v", want, got)

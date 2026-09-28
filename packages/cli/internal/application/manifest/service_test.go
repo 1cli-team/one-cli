@@ -15,25 +15,20 @@ import (
 func seedManifest(t *testing.T) (string, *Service, string) {
 	t.Helper()
 	root := t.TempDir()
-	config, err := json.Marshal(map[string]string{"projectName": "old-web"})
-	if err != nil {
-		t.Fatal(err)
-	}
 	value := true
 	manifest := &workspacecore.Manifest{
 		Version:      workspacecore.ManifestVersion,
 		Workspace:    &workspacecore.ManifestWorkspace{ID: "demo", Name: "demo"},
 		Environments: &workspacecore.Environments{Names: []string{"dev", "preview", "prod"}, Default: "dev"},
-		Domains: &workspacecore.WorkspaceDomains{
-			Env: &workspacecore.BackendRef{Kind: workspacecore.EnvBackendInfisical, Config: config},
-		},
+
+		Env: &workspacecore.EnvironmentConfig{ProjectName: "old-web"},
+
 		Projects: []workspacecore.ManifestProject{{
 			Name: "web", RelativeDir: "apps/web", TemplateID: "react-spa", Toolchain: "node",
 			BuildVersion: "1.0.0",
-			Domains: &workspacecore.ProjectDomains{
-				Dev: &workspacecore.ProjectDevOverride{Command: "pnpm dev"},
-				Env: &workspacecore.ProjectEnvOverride{Path: "/apps/web", Inherits: &value, Keys: []string{"API_URL"}},
-			},
+
+			Dev: &workspacecore.ProjectDevOverride{Command: "pnpm dev"},
+			Env: &workspacecore.ProjectEnvOverride{Path: "/apps/web", Inherits: &value, Keys: []string{"API_URL"}},
 		}},
 	}
 	if err := workspacecore.WriteManifest(root, manifest); err != nil {
@@ -71,14 +66,14 @@ func TestApplyManifestDraftPublishesAllowlistedFieldsAtomically(t *testing.T) {
 		t.Fatal(err)
 	}
 	project := manifest.Projects[0]
-	if project.BuildVersion != "2.1.0" || project.Domains.Dev.Command != "pnpm start" {
+	if project.BuildVersion != "2.1.0" || project.Dev.Command != "pnpm start" {
 		t.Fatalf("general patch = %#v", project)
 	}
-	if project.Domains.Env.Path != "/frontend" || *project.Domains.Env.Inherits || !project.Domains.Env.Disabled {
-		t.Fatalf("environment patch = %#v", project.Domains.Env)
+	if project.Env.Path != "/frontend" || *project.Env.Inherits || !project.Env.Disabled {
+		t.Fatalf("environment patch = %#v", project.Env)
 	}
-	if len(project.Domains.Env.Keys) != 1 || project.Domains.Env.Keys[0] != "API_URL" {
-		t.Fatalf("environment keys were not preserved: %#v", project.Domains.Env.Keys)
+	if len(project.Env.Keys) != 1 || project.Env.Keys[0] != "API_URL" {
+		t.Fatalf("environment keys were not preserved: %#v", project.Env.Keys)
 	}
 }
 
@@ -194,8 +189,8 @@ func TestPreviewManifestDraftReturnsCanonicalBeforeAfterWithoutWriting(t *testin
 	if len(afterManifest.Projects) != 1 || afterManifest.Projects[0].BuildVersion != "9.9.9" {
 		t.Fatalf("preview after did not include requested patch: %#v", afterManifest.Projects)
 	}
-	if afterManifest.Projects[0].Domains == nil || afterManifest.Projects[0].Domains.Dev == nil || afterManifest.Projects[0].Domains.Dev.Command != "pnpm preview" {
-		t.Fatalf("preview after dev command mismatch: %#v", afterManifest.Projects[0].Domains)
+	if afterManifest.Projects[0].Dev == nil || afterManifest.Projects[0].Dev.Command != "pnpm preview" {
+		t.Fatalf("preview after dev command mismatch: %#v", afterManifest.Projects[0].Dev)
 	}
 
 	afterOnDisk, err := os.ReadFile(path)
@@ -259,7 +254,7 @@ func TestWorkspaceBindingAndProjectChangesPublishTogether(t *testing.T) {
 		t.Fatal(err)
 	}
 	var config map[string]string
-	if err = json.Unmarshal(manifest.Domains.Env.Config, &config); err != nil {
+	if err = json.Unmarshal(workspacecore.EnvConfigRaw(manifest), &config); err != nil {
 		t.Fatal(err)
 	}
 	if config["projectId"] != id || config["siteUrl"] != site || config["projectName"] != name {

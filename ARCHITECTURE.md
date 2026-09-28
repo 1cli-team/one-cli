@@ -36,7 +36,7 @@ The built-in catalog currently contains 16 backends:
 
 | Domain | Backends | Count |
 | --- | --- | ---: |
-| Environment | dotenv, infisical | 2 |
+| Environment | infisical | 1 |
 | Deploy | aliyun-oss, tencent-cos, aws-s3, minio, rustfs, r2, kustomize, vercel, cloudflare, edgeone | 10 |
 | Container | docker, dockerhub, ghcr, acr | 4 |
 
@@ -114,7 +114,7 @@ packages/cli/internal/
   modules/
     creation/          Template-to-Workspace/Project materialisation
     development/       local development process orchestration
-    environment/       dotenv/Infisical workflows and workspace setup
+    environment/       Infisical variables and workspace bindings
     preset/            pure preset encoding, parsing, and resolution
     tasks/             finite task plans and environment snapshots
     miseconfig/        additive task and tool configuration
@@ -318,7 +318,7 @@ plugins:
 - `modules/environment.Service` owns environment/backend resolution, profile
   resolution, project/path targeting, set planning, get/list/set/pull,
   backend switching, manifest bookkeeping, and create-time environment setup;
-- the module composes the concrete dotenv and Infisical adapters directly;
+- the module composes the Infisical adapter directly;
 - create enters through `PrepareWorkspace`; Cobra does not sequence backend
   sync/bind functions, and the Infisical adapter exposes no no-op `Sync` API;
 - `env set` enters through `PlanSet` and `Set`; the workspace resolution carried

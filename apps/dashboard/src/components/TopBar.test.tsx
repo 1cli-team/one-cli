@@ -56,7 +56,7 @@ describe("TopBar and manifest review", () => {
 			revision: "sha256:base",
 			before: JSON.stringify(
 				{
-					domains: { env: "infisical" },
+					env: { projectId: "old-project" },
 					projects: [{ name: "web", general: { buildVersion: "1.0.0" } }],
 				},
 				null,
@@ -64,7 +64,7 @@ describe("TopBar and manifest review", () => {
 			),
 			after: JSON.stringify(
 				{
-					domains: { env: "dotenv" },
+					env: { projectId: "new-project" },
 					projects: [{ name: "web", general: { buildVersion: "2.0.0" } }],
 				},
 				null,
@@ -142,26 +142,26 @@ describe("TopBar and manifest review", () => {
 		expect(screen.queryByRole("button", { name: /Save changes/ })).toBeNull();
 	});
 
-	it("reviews and publishes a Workspace environment backend draft", async () => {
+	it("reviews and publishes a Workspace Infisical binding draft", async () => {
 		useManifestDraftStore.getState().stageWorkspaceSection({
 			entryId: "demo-entry",
 			revision: "sha256:base",
 			section: "environment",
-			initial: { backend: "infisical" },
-			next: { backend: "dotenv" },
-			labels: { backend: "overview.workspaceEnv.backend" },
+			initial: { backend: "infisical", projectId: "old-project" },
+			next: { backend: "infisical", projectId: "new-project" },
+			labels: { projectId: "global.project" },
 		});
 		const user = userEvent.setup();
 		renderManifestSaveControl("/workspace/demo-entry?env=dev");
 
 		await user.click(screen.getByRole("button", { name: "Save changes · 1" }));
 		const dialog = await screen.findByRole("alertdialog");
-		expect(await within(dialog).findByText(/"env": "infisical"/)).toBeDefined();
-		expect(within(dialog).getByText(/"env": "dotenv"/)).toBeDefined();
+		expect(await within(dialog).findByText(/"projectId": "old-project"/)).toBeDefined();
+		expect(within(dialog).getByText(/"projectId": "new-project"/)).toBeDefined();
 		expect(previewManifestDraft).toHaveBeenCalledWith(
 			{
 				revision: "sha256:base",
-				workspace: { environment: { backend: "dotenv" } },
+				workspace: { environment: { backend: "infisical", projectId: "new-project" } },
 				changes: [],
 			},
 			"demo-entry",
@@ -170,7 +170,11 @@ describe("TopBar and manifest review", () => {
 		await user.click(within(dialog).getByRole("button", { name: "Save to manifest" }));
 		await waitFor(() =>
 			expect(applyManifestDraft).toHaveBeenCalledWith(
-				{ revision: "sha256:base", workspace: { environment: { backend: "dotenv" } }, changes: [] },
+				{
+					revision: "sha256:base",
+					workspace: { environment: { backend: "infisical", projectId: "new-project" } },
+					changes: [],
+				},
 				"demo-entry",
 			),
 		);
@@ -188,9 +192,9 @@ describe("TopBar and manifest review", () => {
 			entryId: "demo-entry",
 			revision: "sha256:base",
 			section: "environment",
-			initial: { backend: "infisical" },
-			next: { backend: "dotenv" },
-			labels: { backend: "overview.workspaceEnv.backend" },
+			initial: { backend: "infisical", projectId: "old-project" },
+			next: { backend: "infisical", projectId: "new-project" },
+			labels: { projectId: "global.project" },
 		});
 		useManifestDraftStore.getState().stageSection({
 			entryId: "demo-entry",
@@ -213,7 +217,7 @@ describe("TopBar and manifest review", () => {
 		expect(applyManifestDraft).toHaveBeenCalledWith(
 			{
 				revision: "sha256:base",
-				workspace: { environment: { backend: "dotenv" } },
+				workspace: { environment: { backend: "infisical", projectId: "new-project" } },
 				changes: [
 					{
 						project: "web",
@@ -225,7 +229,9 @@ describe("TopBar and manifest review", () => {
 		);
 		const remaining = useManifestDraftStore.getState().drafts["demo-entry"];
 		expect(remaining.revision).toBe("sha256:base");
-		expect(remaining.workspace).toEqual({ environment: { backend: "dotenv" } });
+		expect(remaining.workspace).toEqual({
+			environment: { backend: "infisical", projectId: "new-project" },
+		});
 		expect(Object.keys(remaining.changes)).toEqual(["web"]);
 	});
 });

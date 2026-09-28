@@ -22,7 +22,9 @@ response shapes change.
 
 ## Environment
 
-Viper reads `configs/config.yaml` and process environment variables. For local task commands, copy `.env.example` to `.env`; `go-task` loads it before running Go commands.
+Viper reads `configs/config.yaml` and process environment variables. Use `one env set <KEY>` to configure Infisical variables, then run project tasks through `one run` or commands through `one exec`.
+
+使用 `one env set <KEY>` 配置 Infisical 变量，通过 `one run` 执行项目任务或通过 `one exec` 执行命令时自动注入。
 
 ```bash
 DATABASE_URL=postgresql://postgres:postgres@127.0.0.1:5432/demo?sslmode=disable

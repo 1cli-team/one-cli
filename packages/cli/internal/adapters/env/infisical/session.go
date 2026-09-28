@@ -9,4 +9,3 @@ func sessionCredentials() (*Credentials, string, error) {
 	}
 	return &Credentials{AccessToken: current.Token}, current.SiteURL, nil
 }
-func sessionAvailable() bool { _, err := session.Require(); return err == nil }

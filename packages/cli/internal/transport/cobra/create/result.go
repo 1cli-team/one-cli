@@ -35,7 +35,7 @@ func (r *createResult) RenderTTY(w io.Writer) {
 	if r.PackageManager != "" {
 		fmt.Fprintf(w, i18n.T("create.package_manager")+"\n", r.PackageManager)
 	}
-	if r.SecretsBackend == "" || r.SecretsBackend == workspace.EnvBackendDotenv {
+	if r.SecretsBackend == "" {
 		fmt.Fprintln(w, i18n.T("create.env_local"))
 	} else {
 		fmt.Fprintf(w, i18n.T("create.env_source")+"\n", r.SecretsBackend)

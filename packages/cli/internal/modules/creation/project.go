@@ -151,7 +151,7 @@ func materializeProject(ctx context.Context, projectRoot string, in ProjectInput
 	}
 	dev := workspace.ResolveScaffoldDevCommand(scripts, string(entry.Toolchain), targetDir)
 	if dev != "" {
-		newProject.Domains = &workspace.ProjectDomains{Dev: &workspace.ProjectDevOverride{Command: dev}}
+		newProject.Dev = &workspace.ProjectDevOverride{Command: dev}
 	}
 	for _, p := range manifest.Projects {
 		if p.RelativeDir == newProject.RelativeDir || p.Name == in.Name {

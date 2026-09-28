@@ -43,7 +43,8 @@ coverage
 
 # environment
 .env
-.env.local
+.env.*
+!.env.example
 
 # secrets — private keys must NEVER be committed
 # (the .secrets/.gitignore inside the dir is the primary defense; this is

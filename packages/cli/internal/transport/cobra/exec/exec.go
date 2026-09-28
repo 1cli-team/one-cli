@@ -43,7 +43,6 @@ func newExecCmd(loaders *secrets.Registry) *cobra.Command {
 	cmd.Flags().IntVar(&protocol, "protocol", 0, "Execution protocol version")
 	cmd.Flags().StringVar(&flags.project, "project", "", "Project selector")
 	cmd.Flags().StringVar(&flags.envName, "env", "", "Environment")
-	cmd.Flags().StringVar(&flags.envProvider, "env-provider", "", "Environment provider")
 	cmd.Flags().StringVar(&operation, "operation", "", "Project operation")
 	return cmd
 }

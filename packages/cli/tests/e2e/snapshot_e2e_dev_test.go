@@ -109,12 +109,7 @@ func overrideDevCommand(t *testing.T, workspaceRoot, projectName, cmd string) {
 		if p["name"] != projectName {
 			continue
 		}
-		domains, _ := p["domains"].(map[string]any)
-		if domains == nil {
-			domains = map[string]any{}
-			p["domains"] = domains
-		}
-		domains["dev"] = map[string]any{"command": cmd}
+		p["dev"] = map[string]any{"command": cmd}
 	}
 	out, err := json.MarshalIndent(m, "", "  ")
 	if err != nil {
@@ -141,11 +136,7 @@ func readDevCommandFromManifest(t *testing.T, workspaceRoot, projectName string)
 		if p["name"] != projectName {
 			continue
 		}
-		domains, _ := p["domains"].(map[string]any)
-		if domains == nil {
-			return ""
-		}
-		dev, _ := domains["dev"].(map[string]any)
+		dev, _ := p["dev"].(map[string]any)
 		if dev == nil {
 			return ""
 		}

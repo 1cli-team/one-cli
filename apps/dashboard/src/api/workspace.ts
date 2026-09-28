@@ -34,25 +34,6 @@ export async function getWorkspaceEnvironment(
 	return http.get<WorkspaceEnvironmentSettings>(workspaceEnvironmentKey(entryId, environment));
 }
 
-export function workspaceEnvironmentBackendKey(entryId?: string, environment?: string): string {
-	return withEnvironment(`${workspaceBasePath(entryId)}/environment/backend`, environment);
-}
-
-export async function switchWorkspaceEnvironmentBackend(
-	backend: string,
-	revision: string,
-	entryId?: string,
-	environment?: string,
-): Promise<WorkspaceEnvironmentSettings> {
-	return http.put<WorkspaceEnvironmentSettings>(
-		workspaceEnvironmentBackendKey(entryId, environment),
-		{
-			backend,
-			revision,
-		},
-	);
-}
-
 export async function initializeWorkspaceEnvironmentBackend(
 	entryId: string | undefined,
 	environment: string,

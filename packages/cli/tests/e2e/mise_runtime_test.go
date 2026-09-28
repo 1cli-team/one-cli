@@ -22,7 +22,7 @@ func runtimeFixture(t *testing.T) string {
 	t.Setenv("XDG_STATE_HOME", filepath.Join(root, ".local", "state"))
 	t.Setenv("ONE_RUNTIME", "")
 	files := map[string]string{
-		"one.manifest.json":     `{"version":1,"workspace":{"id":"runtime-test","name":"runtime-test"},"projects":[{"name":"web","relativeDir":"apps/web","toolchain":"node","templateId":"react-spa","domains":{"dev":{"command":"node dev.cjs"}}},{"name":"api","relativeDir":"services/api","toolchain":"go","templateId":"go-api","domains":{"dev":{"command":"node dev.cjs"}}}]}`,
+		"one.manifest.json":     `{"version":1,"workspace":{"id":"runtime-test","name":"runtime-test"},"projects":[{"name":"web","relativeDir":"apps/web","toolchain":"node","templateId":"react-spa","dev":{"command":"node dev.cjs"}},{"name":"api","relativeDir":"services/api","toolchain":"go","templateId":"go-api","dev":{"command":"node dev.cjs"}}]}`,
 		"mise.toml":             "[env]\nONE_MISE_TEST_VALUE = 'root'\nONE_MISE_PARENT = 'root-only'\n",
 		"apps/web/mise.toml":    "[env]\nONE_MISE_TEST_VALUE = 'project'\nONE_MISE_ONLY = 'from-mise'\n",
 		"apps/web/.env":         "ONE_MISE_TEST_VALUE=web-secret\nWEB_ONLY=web-only\n",
@@ -60,7 +60,7 @@ func TestE2E_MiseRuntimeOriginalRunSyntaxAndExitCode(t *testing.T) {
 	installFakeMise(t)
 	args := append([]string{"exec", "web", "--"}, environmentEchoCommand("ONE_MISE_TEST_VALUE")...)
 	out, errOut, code := runBinaryIn(t, root, args...)
-	if code != 0 || strings.TrimSpace(out) != "web-secret" {
+	if code != 0 || strings.TrimSpace(out) != "from-mise" {
 		t.Fatalf("code=%d stdout=%q stderr=%q", code, out, errOut)
 	}
 	args = append([]string{"exec", "web", "--"}, exitWithCodeCommand(42)...)
@@ -119,7 +119,7 @@ ONE_MISE_TEST_VALUE = '{{ exec(command="echo from-mise") }}'
 		}
 	}
 	out, stderr, code := runBinaryIn(t, root, args...)
-	if code != 0 || strings.TrimSpace(out) != "web-secret" {
+	if code != 0 || strings.TrimSpace(out) != "from-mise" {
 		t.Fatalf("trusted run: %d %q %s", code, out, stderr)
 	}
 }
@@ -184,8 +184,8 @@ func TestE2E_MiseRealConfigurationLayering(t *testing.T) {
 	root := runtimeFixture(t)
 	useRealMise(t, root, mise)
 	for _, pair := range []struct{ project, key, want string }{
-		{"web", "ONE_MISE_TEST_VALUE", "web-secret"}, {"web", "ONE_MISE_ONLY", "from-mise"},
-		{"web", "ONE_MISE_PARENT", "root-only"}, {"api", "ONE_MISE_TEST_VALUE", "api-secret"},
+		{"web", "ONE_MISE_TEST_VALUE", "project"}, {"web", "ONE_MISE_ONLY", "from-mise"},
+		{"web", "ONE_MISE_PARENT", "root-only"}, {"api", "ONE_MISE_TEST_VALUE", "root"},
 	} {
 		args := append([]string{"exec", pair.project, "--"}, environmentEchoCommand(pair.key)...)
 		out, stderr, code := runBinaryIn(t, root, args...)

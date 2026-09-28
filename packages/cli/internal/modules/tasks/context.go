@@ -57,20 +57,21 @@ func prepareContext(ctx context.Context, w execution.Workspace, p *Plan, loaders
 	}
 	state.Executable = hex.EncodeToString(h.Sum(nil))
 	provider := workspace.EnvBackend(w.Manifest())
-	if provider == "" {
-		provider = "dotenv"
-	}
 	for _, task := range p.Tasks {
 		if task.Project == "" || !task.Managed {
 			continue
 		}
 		project, ok := state.Projects[task.Project]
 		if !ok {
-			if loaders == nil || loaders.Find(provider) == nil {
+			if provider != "" && (loaders == nil || loaders.Find(provider) == nil) {
 				return nil, nil, i18n.Errorf("exec.provider_unregistered", provider)
 			}
 			entry, _ := w.Project(task.Project)
-			variables, err := loaders.Find(provider).Load(ctx, w.Root(), entry.RelativeDir, environment)
+			variables := map[string]string{}
+			var err error
+			if workspace.EnvironmentEnabled(w.Manifest(), entry.RelativeDir) {
+				variables, err = loaders.Find(provider).Load(ctx, w.Root(), entry.RelativeDir, environment)
+			}
 			if err != nil {
 				return nil, nil, err
 			}

@@ -1,5 +1,5 @@
 // Package environment owns the complete environment-variable feature slice.
-// It composes the built-in dotenv and Infisical adapters behind one workflow
+// It composes the Infisical adapter behind one workflow
 // boundary so transports do not reproduce backend selection or workspace
 // policy.
 package environment
@@ -20,8 +20,6 @@ import (
 type Service struct {
 	catalog       *catalog.Catalog
 	initInfisical func(context.Context, string, infisical.InitInput) (*infisical.InitResult, error)
-	setInfisical  func(context.Context, string, infisical.SetInput) (*infisical.SetResult, error)
-	pullInfisical func(context.Context, string, infisical.PullInput) (*infisical.PullResult, error)
 }
 
 func NewService(
@@ -33,7 +31,7 @@ func NewService(
 
 	return &Service{
 		catalog:       backendCatalog,
-		initInfisical: infisical.Init, setInfisical: infisical.Set, pullInfisical: infisical.Pull,
+		initInfisical: infisical.Init,
 	}, nil
 }
 
@@ -60,7 +58,7 @@ func (s *Service) resolve(input resolveInput) (resolution, error) {
 	manifest := activeWorkspace.Manifest()
 	backendName := workspace.EnvBackend(manifest)
 	if backendName == "" {
-		backendName = workspace.EnvBackendDotenv
+		backendName = workspace.EnvBackendInfisical
 	}
 	backend, ok := s.catalog.Lookup(catalog.DomainEnv, backendName)
 	if !ok {
@@ -100,9 +98,6 @@ func (s *Service) Summary(scope execution.Scope) (*Summary, error) {
 	}
 	manifest := resolution.Workspace.Manifest()
 	source := workspace.EnvBackend(manifest)
-	if source == "" {
-		source = workspace.EnvBackendDotenv
-	}
 	defaultEnvironment := "dev"
 	environments := append([]string(nil), workspace.DefaultEnvironments...)
 	if manifest.Environments != nil {

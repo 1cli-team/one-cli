@@ -45,15 +45,14 @@ func TestBuildOverview_FullyConfigured_NoIssues(t *testing.T) {
 		Version:      ManifestVersion,
 		Workspace:    &ManifestWorkspace{ID: "demo", Name: "demo"},
 		Environments: &Environments{Names: []string{"dev", "prod"}, Default: "dev"},
-		Domains: &WorkspaceDomains{
-			Env: &BackendRef{Kind: EnvBackendDotenv},
-		},
+
+		Env: &EnvironmentConfig{ProjectID: "remote"},
+
 		Projects: []ManifestProject{
 			{
 				Name: "web", RelativeDir: "apps/web", TemplateID: "react-spa", Toolchain: "node",
-				Domains: &ProjectDomains{
-					Dev: &ProjectDevOverride{Command: "pnpm dev"},
-				},
+
+				Dev: &ProjectDevOverride{Command: "pnpm dev"},
 			},
 		},
 	}
@@ -79,11 +78,11 @@ func TestBuildOverview_FullyConfigured_NoIssues(t *testing.T) {
 	if ov.Projects[0].Kind != ProjectKindApp {
 		t.Errorf("kind = %q; want %q", ov.Projects[0].Kind, ProjectKindApp)
 	}
-	if ov.Workspace.Domains["env"] != EnvBackendDotenv {
+	if ov.Workspace.Domains["env"] != EnvBackendInfisical {
 		t.Errorf("workspace env domain = %q", ov.Workspace.Domains["env"])
 	}
-	if len(ov.Projects[0].Domains) != 1 || ov.Projects[0].Domains["env"] != EnvBackendDotenv {
-		t.Errorf("project domains = %#v; want only dotenv", ov.Projects[0].Domains)
+	if len(ov.Projects[0].Domains) != 1 || ov.Projects[0].Domains["env"] != EnvBackendInfisical {
+		t.Errorf("project domains = %#v; want only infisical", ov.Projects[0].Domains)
 	}
 }
 
@@ -97,9 +96,8 @@ func TestBuildOverview_EnvWorkspaceLevelOnly(t *testing.T) {
 		Workspace: &ManifestWorkspace{ID: "demo", Name: "demo"},
 		Projects: []ManifestProject{
 			{Name: "web", RelativeDir: "apps/web", TemplateID: "react-spa", Toolchain: "node",
-				Domains: &ProjectDomains{
-					Dev: &ProjectDevOverride{Command: "pnpm dev"},
-				},
+
+				Dev: &ProjectDevOverride{Command: "pnpm dev"},
 			},
 		},
 	}
@@ -127,9 +125,9 @@ func TestBuildOverview_PackagesSkipDomainChecks(t *testing.T) {
 	m := &Manifest{
 		Version:   ManifestVersion,
 		Workspace: &ManifestWorkspace{ID: "demo", Name: "demo"},
-		Domains: &WorkspaceDomains{
-			Env: &BackendRef{Kind: EnvBackendDotenv},
-		},
+
+		Env: &EnvironmentConfig{ProjectID: "remote"},
+
 		Projects: []ManifestProject{
 			{Name: "utils", RelativeDir: "packages/utils", TemplateID: "ts-lib", Toolchain: "node"},
 		},

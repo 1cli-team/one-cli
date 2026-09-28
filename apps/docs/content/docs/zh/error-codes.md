@@ -233,13 +233,13 @@ The release-flow backend's expected toolchain or repo state does not match the w
 
 ### `ENV_BACKEND_INVALID`
 
-env switch 的 <backend> 不合法，必须是 dotenv 或 infisical。
+The workspace Infisical binding is missing or invalid.
 
 > 没有默认 remediation。具体恢复方式请看错误的 `context` 字段。
 
 ### `ENV_BACKEND_UNCHANGED`
 
-工作区已经在使用目标 backend，无需切换。
+Reserved error code from the retired local environment workflow.
 
 > 没有默认 remediation。具体恢复方式请看错误的 `context` 字段。
 
@@ -263,20 +263,15 @@ Requested env var key does not exist at the given Infisical path/environment.
 
 ### `ENV_MIGRATE_CONFLICT`
 
-目标 backend 已有同名 key 但值不一致；为防止误覆盖，默认拒绝。
+Reserved error code from the retired local environment workflow.
 
-**Remediation**:
-
-- `overwrite` — 确认要覆盖，加 --overwrite 重跑<br />运行：`one env switch infisical --overwrite` *(destructive)*
-- `skip-sync` — 或只切 manifest，不做数据迁移<br />运行：`one env switch infisical --no-sync`
+> 没有默认 remediation。具体恢复方式请看错误的 `context` 字段。
 
 ### `ENV_MIGRATE_PARTIAL`
 
-部分 key 同步失败；manifest 已切换，但未完成的 key 仍只在原 backend。
+Reserved error code from the retired local environment workflow.
 
-**Remediation**:
-
-- `retry` — 检查报错原因（网络 / 权限），修复后再跑同步：one env switch infisical（manifest 已切，等价 sync-only）
+> 没有默认 remediation。具体恢复方式请看错误的 `context` 字段。
 
 ### `ENV_PROFILE_NOT_FOUND`
 
@@ -286,11 +281,9 @@ manifest.environments[<env>] was requested by a backend but is missing or empty.
 
 ### `ENV_PULL_CONFLICT`
 
-Existing on-disk .env differs from the values pulled from Infisical.
+Reserved error code from the retired local environment workflow.
 
-**Remediation**:
-
-- `force-overwrite` — 覆盖本地 .env（destructive）<br />运行：`one env pull --env <env> --force` *(destructive)*
+> 没有默认 remediation。具体恢复方式请看错误的 `context` 字段。
 
 ### `ENV_SET_KEY_REQUIRED`
 
@@ -319,7 +312,7 @@ Non-interactive env set called without <VALUE>.
 **Remediation**:
 
 - `use-existing-env` — 查看 one.manifest.json#environments.names 中已声明的环境，或改用 --env 指定其中一个
-- `create-via-set` — 在 dotenv 后端，用 set 隐式创建：one env set <KEY> <VALUE> --env <name>
+- `create-via-set` — 先在 Infisical 创建环境，再将名称登记到 manifest.environments.names
 - `register-env` — 在 Infisical 后端，先在 UI 创建环境，再把名称加入 one.manifest.json#environments.names
 
 ## Infisical 后端
@@ -384,7 +377,7 @@ Infisical 项目名已被占用；auto-bind 会自动加随机后缀重试，但
 
 **Remediation**:
 
-- `use-explicit-name` — 在 one.manifest.json#domains.env.config.projectName 写一个不冲突的项目名后重试 env 命令
+- `use-explicit-name` — 在 one.manifest.json#env.projectName 写一个不冲突的项目名后重试 env 命令
 
 ### `INFISICAL_PROJECT_NOT_FOUND`
 
@@ -424,11 +417,9 @@ The requested environment backend is not configured.
 
 ### `BACKEND_VERB_NOT_SUPPORTED`
 
-The active backend in this domain does not implement the requested verb (e.g. `one env pull` against the dotenv backend).
+The requested environment operation is not supported.
 
-**Remediation**:
-
-- `switch-backend` — 切换到支持该 verb 的同 domain backend（例如 env 域改用 infisical）
+> 没有默认 remediation。具体恢复方式请看错误的 `context` 字段。
 
 ### `DEPENDENCIES_NOT_INSTALLED`
 
@@ -550,12 +541,9 @@ one exec could not locate the requested executable on PATH.
 
 ### `RUN_DOTENV_MISSING`
 
-one exec could not find a .env file for the resolved subproject.
+Reserved error code from the retired local environment workflow.
 
-**Remediation**:
-
-- `pull-secrets` — 先把 Infisical 环境变量拉到项目 .env<br />运行：`one env pull`
-- `specify-subproject` — 或显式指定项目（按 manifest 里的 name 或相对路径）<br />运行：`one exec <name|path> -- <cmd>`
+> 没有默认 remediation。具体恢复方式请看错误的 `context` 字段。
 
 ### `RUN_USAGE_INVALID`
 

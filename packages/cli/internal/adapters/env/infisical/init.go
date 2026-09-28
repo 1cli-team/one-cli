@@ -82,7 +82,7 @@ func (r *InitResult) RenderTTY(w io.Writer) {
 const maxCreateProjectRetries = 5
 
 // Init writes (or updates) the workspace's Infisical configuration under
-// one.manifest.json#domains.env.config plus manifest.environments.
+// one.manifest.json#env plus manifest.environments.
 //
 // Three branches:
 //
@@ -93,7 +93,7 @@ const maxCreateProjectRetries = 5
 //  3. in.ProjectID empty + no prior config — auto-create on Infisical using
 //     manifest.project.name (or the override --project-name), retrying with
 //     a short random suffix on name collisions, and write the resolved id +
-//     name back into manifest.domains.env.config.
+//     name back into manifest.env.
 //
 // The function is idempotent within each branch.
 func Init(ctx context.Context, projectRoot string, in InitInput) (*InitResult, error) {

@@ -18,7 +18,6 @@ one create [dir] [options]
 | `dir` | 目标目录（位置参数）。传 `.` 在当前目录就地创建（用 `basename(cwd)` 当名字）；目标目录必须不存在或为空 |
 | `-n, --name <name>` | 工作区名称（默认 `basename(dir)`） |
 | `-y, --yes` | 非交互模式：使用默认值；必须显式传 `dir` |
-| `--env-provider <dotenv\|infisical>` | env 后端选择；默认 `dotenv`，需要 Infisical 时显式传 `infisical` |
 | `-o, --output <fmt>` | `json` / `yaml` / `text`（默认按 TTY 检测） |
 
 ## 交互模式
@@ -28,13 +27,11 @@ one create [dir] [options]
 1. 目标目录（例如 `./my-app`，也可以填 `.` 表示当前目录）
 2. 工作区名称（可留空；留空时使用目标目录的 basename）
 
-`one create` 不会在交互模式里询问 deploy / container，也不会再询问是否切换 Infisical。默认 env 后端是 `env/dotenv`；如果要在创建时使用 Infisical，请显式传 `--env-provider infisical`。
 
 脚本、CI、agent 场景用非交互写法：
 
 ```bash
 one create my-app --yes
-one create my-app --yes --env-provider infisical
 ```
 
 ## 默认能力
@@ -45,13 +42,13 @@ one create my-app --yes --env-provider infisical
 
 | 能力 | 默认值 | 行为 |
 |---|---|---|
-| 环境变量 | 本地 `.env` 文件 | 可通过 `--env-provider infisical` 或后续 `one env switch infisical` 切换到 Infisical |
+| 环境变量 | 未绑定 | 需要时绑定 Infisical，否则继承 shell 环境 |
 | 本地开发 | `one dev` | 通过 mise 运行开发任务图 |
 | Git 检查 | hk | 生成 `.config/hk.pkl` 并安装本地 Git 启动器 |
 | 工具环境 | mise | 自动生成根 `mise.toml`；后续 `one add` 自动生成项目 `mise.toml` |
 | Git 检查 | hk | 创建共享检查配置并安装本地提交钩子；后续 `one add` 增量加入语言检查 |
 
-创建和添加项目只生成配置，不下载工具。首次运行时 One 优先使用兼容的系统 mise，否则按需下载并托管；本地没有可用版本时需要联网，正常命令保持不变。工具版本与已有 workspace 的启用方式见 [`one init mise`](/zh/docs/login/#mise-工作区工具配置)。
+创建工作区和添加项目时会准备 mise，并自动信任完全由 One 生成的 `mise.toml`，进入新目录无需再单独执行信任命令。已有自定义配置保留 mise 原有的信任检查。本机没有兼容版本时，One 可能下载托管的 mise 程序；项目工具和依赖仍按需安装。信任失败会保留生成文件并给出恢复命令。工具版本与已有 workspace 的启用方式见 [`one init mise`](/zh/docs/login/#mise-工作区工具配置)。
 
 空工作区先保持语言无关：首次添加 Go 模块时创建根 `go.work` 并登记该模块；首次添加 JS/TS 项目时创建根 `package.json` 和 `pnpm-workspace.yaml`。后续项目增量加入，两套配置可以共存。Git hooks 从创建工作区时就由 hk 提供，纯 Go 工作区不生成 Node 配置；JS 工作区也不再依赖 Husky 或 commitlint。工作区不默认安装版本管理工具或生成 Changesets 配置，发布流程由项目按需配置。
 
@@ -60,21 +57,9 @@ one create my-app --yes --env-provider infisical
 持续集成默认不配置。创建工作区不会写入 `.github/workflows/`；添加项目后如有
 需要，可以手动配置调用 `one run ci` 的工作流。
 
-## --env-provider 语义
+## Infisical 绑定
 
-`--env-provider <dotenv|infisical>` 显式指定 env 后端：
-
-```bash
-one create my-app -y --env-provider infisical
-```
-
-使用 Infisical 前先通过浏览器登录：
-
-```bash
-one login
-```
-
-`one create --env-provider infisical` 会尽量自动绑定 / 创建 Infisical project；如果当时登录、网络或权限没准备好，工作区仍会创建成功，首次 `one env set/get/list/pull` 会再尝试一次 lazy auto-bind。
+创建时不访问 Infisical，也不写入 `env` 绑定。需要托管变量时先通过 `one login` 登录，首次 `one env set`、`get` 或 `list` 会初始化绑定；也可在 Dashboard 选择已有项目。未绑定时执行命令使用 shell 环境。
 
 ## 输出
 
@@ -85,16 +70,14 @@ one login
   "created_path": "/abs/path/my-app",
   "created_in_place": false,
   "package_manager": "",
-  "secrets_backend": "dotenv",
-  "ci_enabled": false,
+  "secrets_backend": "infisical",
   "dev_enabled": true
 }
 ```
 
 `package_manager` 在空工作区或纯 Go 工作区中为空字符串；含 Node 项目的 preset 会返回实际包管理器名称。
 
-`secrets_backend` 是 env 域 backend 名（`dotenv` / `infisical`）；`ci_enabled`
-为兼容 wire format 继续保留，默认是 `false`，`dev_enabled` 是 `true`。部署配置会在首次部署时写入。
+`secrets_backend` 表示支持的来源（`infisical`），不代表已经绑定；`dev_enabled` 是 `true`。
 
 
 ## 示例
@@ -115,7 +98,7 @@ one create my-app --yes
 ### 切换到 Infisical 作为 secrets 后端
 
 ```bash
-one create my-app --yes --env-provider infisical
+one create my-app --yes
 ```
 
 ### 在当前目录就地创建
@@ -141,7 +124,6 @@ one dev -p api
 | `EXISTING_TARGET_NOT_EMPTY` | 换一个空目录，或手动删除目标后重试 |
 | `INVALID_NAME` | 名字必须匹配 `^[a-zA-Z0-9][a-zA-Z0-9_-]*$`；空格替换为 `-` |
 | `PROJECT_NAME_REQUIRED` | 非交互模式必须把工作区目录作为位置参数传入 |
-| `BACKEND_ID_UNKNOWN` | `--env-provider` 值无效（合法值：dotenv / infisical） |
 | `WORKSPACE_NESTED_FORBIDDEN` | 拒绝在已有 workspace 里再 create；换目录或用 `one add` |
 
 完整码表：[错误码大全](/zh/docs/error-codes/)。

@@ -3,7 +3,7 @@
   "created_path": "\u003cvolatile\u003e",
   "dev_enabled": true,
   "env_summary": {
-    "backend": "dotenv",
+    "backend": "infisical",
     "infisical_bound": false
   },
   "package_manager": "pnpm",
@@ -29,5 +29,5 @@
     }
   ],
   "schema": "one-cli/create/v3",
-  "secrets_backend": "dotenv"
+  "secrets_backend": "infisical"
 }

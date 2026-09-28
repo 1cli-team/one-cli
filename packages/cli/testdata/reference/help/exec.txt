@@ -3,19 +3,18 @@ DESCRIPTION
 Load environment variables and run a command
 
 USAGE
-  one exec [project] [-p <name|path>] [--env-provider dotenv|infisical] [--env <name>] -- <cmd> [args...]
+  one exec [project] [-p <name|path>] [--env <name>] -- <cmd> [args...]
 
 TIPS
-Loads project environment variables and runs a command in the project directory. Select a project by name or relative path, or run from inside a project. The positional project and --project must agree when both are used.
+Runs a command in the selected project directory. Select a project by name or relative path, or run from inside a project. The positional project and --project must agree when both are used.
 
-Use -- to separate One options from the child command. --env overrides the workspace default environment; --env-provider selects dotenv or Infisical. Loaded values override existing shell environment variables.
+Use -- to separate One options from the child command. When the workspace has an env binding, variables are fetched from Infisical and injected into the child process. --env selects the environment. Injected values override same-name shell variables. Without a binding, or for a disabled project, the shell environment is used directly. Local .env files are not loaded by One.
 
-With --global, provide --env and --path explicitly. The command keeps the current working directory. Use --keys to select which shared credentials to inject.
+With --global, provide --env and --path explicitly. The command keeps the current working directory. Use --keys to select shared credentials.
 
 COMMON OPTIONS
   --dry-run                Print the execution plan without loading environment values or starting a command
   --env <value>            Environment name (default: manifest.environments.default)
-  --env-provider <value>   Environment source: dotenv or infisical (default: workspace configuration)
   --global                 Use shared credentials, keeping the current working directory
   --keys <value>           Inject only the specified variable names, separated by commas
   -o, --output <value>     Output format: json | yaml | text (default: terminal-friendly text, JSON when piped)

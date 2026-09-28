@@ -4,7 +4,6 @@ import (
 	"context"
 	"strings"
 
-	"github.com/torchstellar-team/one-cli/packages/cli/internal/adapters/env/dotenv"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/adapters/env/infisical"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/application/execution"
 	catalog "github.com/torchstellar-team/one-cli/packages/cli/internal/core/backend"
@@ -35,45 +34,29 @@ func (s *Service) Get(ctx context.Context, input GetInput) (*GetResult, error) {
 	}
 	root := resolution.Workspace.Root()
 	environment := resolution.Scope.Environment()
-	switch resolution.Scope.Backend().Name {
-	case workspace.EnvBackendDotenv:
-		result, err := dotenv.Get(dotenv.GetInput{
-			ProjectRoot: root, SubprojectPath: input.Project,
-			Env: environment, Key: input.Key,
-		})
-		if result == nil || err != nil {
+	if !input.RepositoryReadOnly {
+		if err := s.ensureInfisicalBound(ctx, resolution.Workspace); err != nil {
 			return nil, err
 		}
-		return &GetResult{
-			Schema: result.Schema, Source: result.Source, Environment: result.Env,
-			Key: result.Key, Value: result.Value,
-		}, nil
-	case workspace.EnvBackendInfisical:
-		if !input.RepositoryReadOnly {
-			if err := s.ensureInfisicalBound(ctx, resolution.Workspace); err != nil {
-				return nil, err
-			}
-		}
-		config, credentials, err := s.resolveInfisical()
-		if err != nil {
-			return nil, err
-		}
-		path, err := s.resolveInfisicalFolderPath(resolution.Workspace, config, input.Project)
-		if err != nil {
-			return nil, err
-		}
-		result, err := infisical.Get(ctx, root, infisical.GetInput{
-			Env: environment, Path: path, Key: input.Key, Cfg: config, Creds: credentials,
-		})
-		if result == nil || err != nil {
-			return nil, err
-		}
-		return &GetResult{
-			Schema: result.Schema, Environment: result.Env, Path: result.Path,
-			Key: result.Key, Value: result.Value,
-		}, nil
 	}
-	return nil, unsupportedVerb(resolution.Scope.Backend().Name, "get")
+	config, credentials, err := s.resolveInfisical()
+	if err != nil {
+		return nil, err
+	}
+	path, err := s.resolveInfisicalFolderPath(resolution.Workspace, config, input.Project)
+	if err != nil {
+		return nil, err
+	}
+	result, err := infisical.Get(ctx, root, infisical.GetInput{
+		Env: environment, Path: path, Key: input.Key, Cfg: config, Creds: credentials,
+	})
+	if result == nil || err != nil {
+		return nil, err
+	}
+	return &GetResult{
+		Schema: result.Schema, Environment: result.Env, Path: result.Path,
+		Key: result.Key, Value: result.Value,
+	}, nil
 }
 
 type ListInput struct {
@@ -93,45 +76,30 @@ func (s *Service) List(ctx context.Context, input ListInput) (*ListResult, error
 	}
 	root := resolution.Workspace.Root()
 	environment := resolution.Scope.Environment()
-	switch resolution.Scope.Backend().Name {
-	case workspace.EnvBackendDotenv:
-		result, err := dotenv.List(dotenv.ListInput{
-			ProjectRoot: root, SubprojectPath: input.Project, Env: environment,
-		})
-		if result == nil || err != nil {
+	if !input.RepositoryReadOnly {
+		if err := s.ensureInfisicalBound(ctx, resolution.Workspace); err != nil {
 			return nil, err
 		}
-		return &ListResult{
-			Schema: result.Schema, Sources: result.Sources,
-			Environment: result.Env, Keys: result.Keys,
-		}, nil
-	case workspace.EnvBackendInfisical:
-		if !input.RepositoryReadOnly {
-			if err := s.ensureInfisicalBound(ctx, resolution.Workspace); err != nil {
-				return nil, err
-			}
-		}
-		config, credentials, err := s.resolveInfisical()
-		if err != nil {
-			return nil, err
-		}
-		path, err := s.resolveInfisicalFolderPath(resolution.Workspace, config, input.Project)
-		if err != nil {
-			return nil, err
-		}
-		result, err := infisical.List(ctx, root, infisical.ListInput{
-			Env: environment, Path: path, Cfg: config, Creds: credentials,
-		})
-		if result == nil || err != nil {
-			return nil, err
-		}
-		total := result.Total
-		return &ListResult{
-			Schema: result.Schema, Environment: result.Env, Path: result.Path,
-			Keys: result.Keys, Total: &total,
-		}, nil
 	}
-	return nil, unsupportedVerb(resolution.Scope.Backend().Name, "list")
+	config, credentials, err := s.resolveInfisical()
+	if err != nil {
+		return nil, err
+	}
+	path, err := s.resolveInfisicalFolderPath(resolution.Workspace, config, input.Project)
+	if err != nil {
+		return nil, err
+	}
+	result, err := infisical.List(ctx, root, infisical.ListInput{
+		Env: environment, Path: path, Cfg: config, Creds: credentials,
+	})
+	if result == nil || err != nil {
+		return nil, err
+	}
+	total := result.Total
+	return &ListResult{
+		Schema: result.Schema, Environment: result.Env, Path: result.Path,
+		Keys: result.Keys, Total: &total,
+	}, nil
 }
 
 type PlanSetInput struct {
@@ -229,52 +197,33 @@ func (s *Service) Set(ctx context.Context, input SetInput) (*SetResult, error) {
 		}
 		return nil
 	}
-	switch resolution.Scope.Backend().Name {
-	case workspace.EnvBackendDotenv:
-		result, err := dotenv.Set(dotenv.SetInput{
-			ProjectRoot: root, SubprojectPath: targetSelector,
-			Env: environment, Key: input.Key, Value: input.Value, Overwrite: input.Overwrite,
-		})
-		if result == nil || err != nil {
+	if !input.RepositoryReadOnly {
+		if err := s.ensureInfisicalBound(ctx, resolution.Workspace); err != nil {
 			return nil, err
 		}
-		if err := recordKey(); err != nil {
-			return nil, err
-		}
-		return &SetResult{
-			Schema: result.Schema, Source: result.Source, Environment: result.Env,
-			Key: result.Key, Action: result.Action, CreatedEnvironment: createdEnvironment,
-		}, nil
-	case workspace.EnvBackendInfisical:
-		if !input.RepositoryReadOnly {
-			if err := s.ensureInfisicalBound(ctx, resolution.Workspace); err != nil {
-				return nil, err
-			}
-		}
-		config, credentials, err := s.resolveInfisical()
-		if err != nil {
-			return nil, err
-		}
-		path, err := s.resolveInfisicalFolderPath(resolution.Workspace, config, targetSelector)
-		if err != nil {
-			return nil, err
-		}
-		result, err := infisical.Set(ctx, root, infisical.SetInput{
-			Env: environment, Path: path, Key: input.Key, Value: input.Value,
-			Overwrite: input.Overwrite, Cfg: config, Creds: credentials,
-		})
-		if result == nil || err != nil {
-			return nil, err
-		}
-		if err := recordKey(); err != nil {
-			return nil, err
-		}
-		return &SetResult{
-			Schema: result.Schema, Environment: result.Env, Path: result.Path,
-			Key: result.Key, Action: result.Action, CreatedEnvironment: createdEnvironment,
-		}, nil
 	}
-	return nil, unsupportedVerb(resolution.Scope.Backend().Name, "set")
+	config, credentials, err := s.resolveInfisical()
+	if err != nil {
+		return nil, err
+	}
+	path, err := s.resolveInfisicalFolderPath(resolution.Workspace, config, targetSelector)
+	if err != nil {
+		return nil, err
+	}
+	result, err := infisical.Set(ctx, root, infisical.SetInput{
+		Env: environment, Path: path, Key: input.Key, Value: input.Value,
+		Overwrite: input.Overwrite, Cfg: config, Creds: credentials,
+	})
+	if result == nil || err != nil {
+		return nil, err
+	}
+	if err := recordKey(); err != nil {
+		return nil, err
+	}
+	return &SetResult{
+		Schema: result.Schema, Environment: result.Env, Path: result.Path,
+		Key: result.Key, Action: result.Action, CreatedEnvironment: createdEnvironment,
+	}, nil
 }
 
 type DeleteInput struct {
@@ -313,111 +262,6 @@ func (s *Service) Delete(ctx context.Context, input DeleteInput) (*infisical.Del
 		Env: resolution.Scope.Environment(), Path: path, Key: input.Key,
 		Cfg: config, Creds: credentials,
 	})
-}
-
-type PullInput struct {
-	Scope       execution.Scope
-	Environment string
-	Project     string
-	Force       bool
-	DryRun      bool
-}
-
-func (s *Service) Pull(ctx context.Context, input PullInput) (*PullResult, error) {
-	resolution, err := s.resolve(resolveInput{
-		Scope: input.Scope, Requested: input.Environment,
-		Capability: catalog.CapabilityEnvPull, Verb: "pull",
-	})
-	if err != nil {
-		return nil, err
-	}
-	root := resolution.Workspace.Root()
-	targets, err := infisicalPullTargets(resolution.Workspace, input.Project)
-	if err != nil {
-		return nil, err
-	}
-	if err := s.ensureInfisicalBound(ctx, resolution.Workspace); err != nil {
-		return nil, err
-	}
-	aggregated := &PullResult{
-		Environment: resolution.Scope.Environment(), DryRun: input.DryRun,
-		PerSubproject: []PullEntry{},
-	}
-	for _, target := range targets {
-		config, credentials, err := s.resolveInfisical()
-		if err != nil {
-			return nil, err
-		}
-		result, err := s.pullInfisical(ctx, root, infisical.PullInput{
-			Env: resolution.Scope.Environment(), Project: target.selector,
-			Force: input.Force, DryRun: input.DryRun, Cfg: config, Creds: credentials,
-		})
-		if result == nil || err != nil {
-			return nil, err
-		}
-		appendInfisicalPullResult(aggregated, result)
-	}
-	return aggregated, nil
-}
-
-type infisicalPullTarget struct {
-	selector string
-}
-
-func infisicalPullTargets(
-	activeWorkspace execution.Workspace,
-	selector string,
-) ([]infisicalPullTarget, error) {
-	selector = strings.TrimSpace(selector)
-	if selector != "" {
-		return []infisicalPullTarget{{
-			selector: selector,
-		}}, nil
-	}
-	manifest := activeWorkspace.Manifest()
-	targets := make([]infisicalPullTarget, 0, len(manifest.Projects)+1)
-	if len(workspace.WorkspaceEnvKeys(manifest)) > 0 {
-		targets = append(targets, infisicalPullTarget{selector: "/"})
-	}
-	for _, project := range manifest.Projects {
-		override, err := infisical.LoadSubprojectConfig(
-			activeWorkspace.Root(), project.RelativeDir,
-		)
-		if err != nil {
-			return nil, err
-		}
-		if override != nil && override.Disabled {
-			continue
-		}
-		targets = append(targets, infisicalPullTarget{
-			selector: project.Name,
-		})
-	}
-	if len(targets) == 0 {
-		// Preserve the adapter's MANIFEST_MISSING_OR_EMPTY error for an
-		// empty/all-disabled workspace instead of manufacturing a new error
-		// at the module boundary.
-		targets = append(targets, infisicalPullTarget{})
-	}
-	return targets, nil
-}
-
-func appendInfisicalPullResult(target *PullResult, source *infisical.PullResult) {
-	if target.Schema == "" {
-		target.Schema = source.Schema
-	}
-	if target.Environment == "" {
-		target.Environment = source.Env
-	}
-	target.WrittenCount += source.WrittenCount
-	target.SkippedCount += source.SkippedCount
-	for _, entry := range source.PerSubproject {
-		target.PerSubproject = append(target.PerSubproject, PullEntry{
-			Name: entry.Name, RelativeDir: entry.RelativeDir,
-			InfisicalPath: entry.InfisicalPath, EnvFilePath: entry.EnvFilePath,
-			Status: entry.Status, Reason: entry.Reason, KeysWritten: entry.KeysWritten,
-		})
-	}
 }
 
 func resolveSetTarget(activeWorkspace execution.Workspace, selector string) (*workspace.Project, string) {

@@ -5,7 +5,7 @@ package workspace
 // path-prefix filter — none of which is secrets-, infra-, or
 // product-specific. Originally lived under
 // internal/adapters/env/infisical/paths.go for historical reasons; moved here
-// so that other domains (dotenv, future secrets backends, infra commands
+// so that other callers (environment operations, task commands
 // needing cwd-relative project resolution) can call it without depending
 // on infisical.
 

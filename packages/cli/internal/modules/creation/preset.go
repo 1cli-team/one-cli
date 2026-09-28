@@ -16,8 +16,7 @@ type PresetResult struct {
 	// it back even if the user passed an equivalent form (different
 	// segment order, optional preset: prefix).
 	PresetID string
-	// EnvProvider is the workspace-level env provider id ("dotenv" /
-	// "infisical"). Empty when the preset didn't declare one — caller
+	// EnvProvider is the resolved preset source. Empty when undeclared — caller
 	// treats that as the workspace default.
 	EnvProvider string
 	// Projects is one entry per landed project, in apply order. When
@@ -123,12 +122,4 @@ func projectNameFor(tpl *template.Template, occurrence int) string {
 		return base
 	}
 	return fmt.Sprintf("%s-%d", base, occurrence+1)
-}
-
-// EffectiveEnvProvider returns the workspace env provider that should
-// be written to the manifest. preset's `e<code>` segment wins; absent
-// segment falls through to "" so the caller can layer the
-// --env-provider flag default ("dotenv").
-func (r PresetResult) EffectiveEnvProvider() string {
-	return r.EnvProvider
 }

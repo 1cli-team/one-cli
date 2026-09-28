@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/application/execution"
+	"github.com/torchstellar-team/one-cli/packages/cli/internal/core/workspace"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/ports/secrets"
 )
 
@@ -100,15 +101,14 @@ type countingLoader struct {
 	value string
 }
 
-func (l *countingLoader) ID() string                 { return "dotenv" }
-func (l *countingLoader) Priority() secrets.Priority { return secrets.PriorityFilesystem }
-func (l *countingLoader) Available(string) bool      { return true }
+func (l *countingLoader) ID() string { return "infisical" }
 func (l *countingLoader) Load(_ context.Context, _ string, project, _ string) (map[string]string, error) {
 	l.calls[project]++
 	return map[string]string{"VALUE": l.value + project}, nil
 }
 func TestContextFreezesEachProjectOnceAndCleansUp(t *testing.T) {
 	w := taskWorkspace(t)
+	w.Manifest().Env = &workspace.EnvironmentConfig{ProjectID: "remote"}
 	p, err := NewPlan(w, Options{Name: "build"})
 	if err != nil {
 		t.Fatal(err)

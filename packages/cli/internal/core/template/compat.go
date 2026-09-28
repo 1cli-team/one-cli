@@ -76,7 +76,7 @@ func firstID(ids []string) string {
 //
 // The selection map is keyed by domain ("env" / "ci" / "dev" /
 // "container" / "deploy") with values being namespaced backend ids
-// ("env/dotenv", "deploy/kustomize", ...). A domain missing from
+// ("env/infisical", ...). A domain missing from
 // selection is treated as "user opted out" — never a warning, regardless
 // of the template's compat whitelist.
 //

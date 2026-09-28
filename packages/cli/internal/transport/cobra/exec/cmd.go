@@ -1,7 +1,4 @@
-// Package runcmd contributes `one exec` to the explicit root command.
-// Executes a passthrough command with the resolved subproject's secrets
-// injected into the child environment. Spirit follows `infisical run` /
-// `dotenv run`.
+// Package execcmd executes commands with optional Infisical injection.
 package execcmd
 
 import (
@@ -30,29 +27,12 @@ func Commands(loaders *secrets.Registry, provider runtimeport.Provider) []*cobra
 	return []*cobra.Command{newRunCmd(loaders, provider), newExecCmd(loaders)}
 }
 
-// newRunCmd wires `one exec` — exec a passthrough command with the resolved
-// subproject's secrets injected into the child environment. Spirit follows
-// `infisical run -- <cmd>` / `dotenv -- <cmd>`.
-//
-// Provider resolution (--env-provider):
-//  1. Default = workspace's recorded env provider (manifest.domains.env.kind),
-//     set at `one create --env-provider` time.
-//  2. --env-provider dotenv: read <project>/.env files.
-//  3. --env-provider infisical: live fetch from Infisical.
-//
-// Working directory: always the resolved subproject's TargetDir, so commands
-// like `npm start` find their package.json regardless of cwd.
-//
-// Process model: child stdin/stdout/stderr are wired straight to the parent.
-// SIGINT/SIGTERM are forwarded so Ctrl-C kills the child first; we exit with
-// the child's exit code so scripts and CI can branch normally.
 type runFlags struct {
 	global       bool
 	globalPath   string
 	globalKeys   []string
 	project      string
 	envName      string
-	envProvider  string
 	runtime      string
 	prepared     bool
 	provider     runtimeport.Provider
@@ -63,7 +43,7 @@ type runFlags struct {
 func newRunCmd(loaders *secrets.Registry, provider runtimeport.Provider) *cobra.Command {
 	flags := &runFlags{provider: provider}
 	cmd := &cobra.Command{
-		Use:                   "exec [project] [-p <name|path>] [--env-provider dotenv|infisical] [--env <name>] -- <cmd> [args...]",
+		Use:                   "exec [project] [-p <name|path>] [--env <name>] -- <cmd> [args...]",
 		DisableFlagsInUseLine: true,
 		Long:                  i18n.T("exec.tip"),
 		Args:                  cobra.ArbitraryArgs,
@@ -94,8 +74,6 @@ func newRunCmd(loaders *secrets.Registry, provider runtimeport.Provider) *cobra.
 	i18n.MarkFlagUsage(cmd, "project", "exec.flag.project")
 	cmd.Flags().StringVar(&flags.envName, "env", "", i18n.T("exec.flag.env"))
 	i18n.MarkFlagUsage(cmd, "env", "exec.flag.env")
-	cmd.Flags().StringVar(&flags.envProvider, "env-provider", "", i18n.T("exec.flag.provider"))
-	i18n.MarkFlagUsage(cmd, "env-provider", "exec.flag.provider")
 	cmd.Flags().BoolVar(&flags.dryRun, "dry-run", false, i18n.T("exec.flag.dry_run"))
 	i18n.MarkFlagUsage(cmd, "dry-run", "exec.flag.dry_run")
 	cmd.Flags().BoolVar(&flags.global, "global", false, i18n.T("exec.flag.global"))
@@ -194,9 +172,6 @@ func runRun(ctx context.Context, loaders *secrets.Registry, flags *runFlags, arg
 		if flags.envName != "" {
 			childArgs = append(childArgs, "--env", flags.envName)
 		}
-		if flags.envProvider != "" {
-			childArgs = append(childArgs, "--env-provider", flags.envProvider)
-		}
 		childArgs = append(append(childArgs, "--"), args...)
 		if flags.provider == nil {
 			return cliErrors.New(cliErrors.ONE_CLI_ERROR, i18n.T("exec.mise_missing"))
@@ -217,12 +192,8 @@ func runRun(ctx context.Context, loaders *secrets.Registry, flags *runFlags, arg
 	if err != nil {
 		return err
 	}
-	if output.IsTTY() {
-		if len(vars) == 0 && source == loaderIDDotenv {
-			fmt.Fprintln(os.Stderr, i18n.T("exec.env_empty"))
-		} else {
-			fmt.Fprintf(os.Stderr, i18n.T("exec.injected")+"\n", len(vars), source)
-		}
+	if output.IsTTY() && source != "" {
+		fmt.Fprintf(os.Stderr, i18n.T("exec.injected")+"\n", len(vars), source)
 	}
 
 	childEnv := secrets.MergeIntoEnviron(os.Environ(), vars, true)
@@ -261,21 +232,7 @@ func runRun(ctx context.Context, loaders *secrets.Registry, flags *runFlags, arg
 	return err
 }
 
-// loadRunSecrets resolves the secret source per --env-provider and returns
-// the merged map plus the loader ID used (e.g. "infisical", "dotenv").
-//
-// Provider resolution:
-//   - flag value wins ("dotenv" | "infisical")
-//   - else read manifest.domains.env.kind (set at `one create --env-provider` time)
-//   - fall back to "dotenv" if manifest somehow has no backend recorded
-const (
-	// loaderIDInfisical / loaderIDDotenv MUST stay in lockstep with
-	// the ID() returned by their respective loader implementations
-	// (internal/adapters/env/infisical/loader.go, dotenv/loader.go).
-	loaderIDInfisical = "infisical"
-	loaderIDDotenv    = "dotenv"
-)
-
+// loadRunSecrets fetches Infisical variables only when the project enables injection.
 func loadRunSecrets(
 	ctx context.Context,
 	loaders *secrets.Registry,
@@ -284,17 +241,9 @@ func loadRunSecrets(
 	manifest *workspace.Manifest,
 	relativeDir string,
 ) (map[string]string, string, error) {
-	providerID := strings.ToLower(strings.TrimSpace(flags.envProvider))
-	if providerID == "" {
-		providerID = workspace.EnvBackend(manifest)
-		if providerID == "" {
-			providerID = loaderIDDotenv
-		}
-	}
-
-	if providerID != loaderIDDotenv && providerID != loaderIDInfisical {
-		return nil, "", cliErrors.New(cliErrors.RUN_DOTENV_MISSING,
-			i18n.Tf("exec.provider_invalid", providerID))
+	providerID := workspace.EnvBackend(manifest)
+	if !workspace.EnvironmentEnabled(manifest, relativeDir) {
+		return map[string]string{}, "", nil
 	}
 
 	loader := loaders.Find(providerID)
@@ -310,7 +259,7 @@ func loadRunSecrets(
 	return vars, loader.ID(), nil
 }
 
-// resolveRunSubproject picks which subproject's .env to load.
+// resolveRunSubproject selects the project for command execution.
 //   - explicit -p / --project: pnpm-style selector — first by name, then by
 //     relativeDir, using the command's workspace snapshot.
 //   - else: figure out which subproject the current cwd is inside via
@@ -333,7 +282,7 @@ func resolveRunSubproject(activeWorkspace execution.Workspace, selector string) 
 
 	project, ok := activeWorkspace.ProjectFromWorkingDirectory()
 	if !ok {
-		return "", "", cliErrors.New(cliErrors.RUN_DOTENV_MISSING,
+		return "", "", cliErrors.New(cliErrors.RUN_USAGE_INVALID,
 			i18n.T("exec.project_directory_required"))
 	}
 	return project.TargetDir, project.RelativeDir, nil

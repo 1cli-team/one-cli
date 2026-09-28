@@ -21,7 +21,6 @@ const (
 // not create competing identity vocabularies. A package may still branch on a
 // name when it owns genuinely different compiled behavior.
 const (
-	EnvDotenv    = "dotenv"
 	EnvInfisical = "infisical"
 )
 
@@ -64,7 +63,6 @@ const (
 	CapabilityEnvSet    Capability = "env/set"
 	CapabilityEnvDelete Capability = "env/delete"
 	CapabilityEnvList   Capability = "env/list"
-	CapabilityEnvPull   Capability = "env/pull"
 	CapabilityEnvInject Capability = "env/inject"
 	CapabilityScaffold  Capability = "scaffold"
 )

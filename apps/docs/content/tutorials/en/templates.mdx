@@ -63,18 +63,14 @@ Each picked template appears as a row showing:
 Above the list:
 
 - **Workspace name** — becomes the directory name and the workspace id in `one.manifest.json`. Default is `my-workspace`.
-- **Env provider** — `dotenv` (local `.env` files) or `infisical` (managed env vars). Pick `dotenv` if you're not sure; you can switch later.
+- **Env provider** — Infisical. Bind a project after creation when you need managed variables.
 
 ### Bottom — the generated command
 
 As you add / remove templates, the page renders a single `one create` command in real time. It looks like:
 
 ```bash
-one create my-workspace \
-  --env-provider dotenv \
-  --add nestjs-api:api \
-  --add nextjs-app:web \
-  --add ts-library:shared
+one create my-workspace --preset 1.bne.fna.ltl.ei --project-names api,web,shared --yes
 ```
 
 Hit **Copy** to put it on your clipboard. That's the entire output of this page — a deterministic command you can paste, version, share, or feed to an agent.

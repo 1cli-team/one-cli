@@ -66,6 +66,7 @@ func buildFixture(t *testing.T, mise bool) string {
 
 func TestE2E_BuildOrdersProjectsAndKeepsStructuredOutputClean(t *testing.T) {
 	root := buildFixture(t, true)
+	t.Setenv("BUILD_VALUE", "from-shell")
 	stdout, stderr, code := runBinaryIn(t, filepath.Join(root, "apps/web"), "build", "--env", "prod", "-o", "json")
 	if code != 0 {
 		t.Fatalf("exit=%d stdout=%s stderr=%s", code, stdout, stderr)
@@ -82,7 +83,7 @@ func TestE2E_BuildOrdersProjectsAndKeepsStructuredOutputClean(t *testing.T) {
 			t.Fatal(task)
 		}
 	}
-	if !strings.Contains(stderr, "web-env=production") || !strings.Contains(stderr, "library-output") {
+	if !strings.Contains(stderr, "web-env=from-shell") || !strings.Contains(stderr, "library-output") {
 		t.Fatal(stderr)
 	}
 	order, err := os.ReadFile(filepath.Join(root, "order"))

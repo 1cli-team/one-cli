@@ -32,7 +32,7 @@ func write(t *testing.T, root, path, content string) {
 }
 
 func project(name, dir, language string) workspace.ManifestProject {
-	return workspace.ManifestProject{Name: name, RelativeDir: dir, Toolchain: language, Domains: &workspace.ProjectDomains{Dev: &workspace.ProjectDevOverride{Command: "unused-in-preparation"}}}
+	return workspace.ManifestProject{Name: name, RelativeDir: dir, Toolchain: language, Dev: &workspace.ProjectDevOverride{Command: "unused-in-preparation"}}
 }
 
 func setupGo(t *testing.T) string {

@@ -19,9 +19,8 @@ func TestServiceResolvesScopeFromManifest(t *testing.T) {
 		Environments: &workspace.Environments{
 			Names: []string{"dev", "production"}, Default: "dev",
 		},
-		Domains: &workspace.WorkspaceDomains{
-			Env: &workspace.BackendRef{Kind: workspace.EnvBackendInfisical},
-		},
+
+		Env: &workspace.EnvironmentConfig{ProjectID: "remote"},
 	}); err != nil {
 		t.Fatal(err)
 	}
@@ -55,9 +54,9 @@ func TestPlanSetOwnsEnvironmentAndProjectSelection(t *testing.T) {
 		Environments: &workspace.Environments{
 			Names: []string{"dev"}, Default: "dev",
 		},
-		Domains: &workspace.WorkspaceDomains{
-			Env: &workspace.BackendRef{Kind: workspace.EnvBackendDotenv},
-		},
+
+		Env: &workspace.EnvironmentConfig{ProjectID: "remote"},
+
 		Projects: []workspace.ManifestProject{{Name: "web", RelativeDir: "apps/web"}},
 	}); err != nil {
 		t.Fatal(err)
@@ -94,15 +93,14 @@ func TestServiceRejectsMissingCapability(t *testing.T) {
 	root := t.TempDir()
 	if err := workspace.WriteManifest(root, &workspace.Manifest{
 		Version: workspace.ManifestVersion,
-		Domains: &workspace.WorkspaceDomains{
-			Env: &workspace.BackendRef{Kind: workspace.EnvBackendDotenv},
-		},
+
+		Env: &workspace.EnvironmentConfig{ProjectID: "remote"},
 	}); err != nil {
 		t.Fatal(err)
 	}
 	_, err := newTestService(t).resolve(resolveInput{
 		Scope:      execution.NewScope(context.Background(), root),
-		Capability: catalog.CapabilityEnvPull, Verb: "pull",
+		Capability: catalog.Capability("unsupported"), Verb: "unsupported",
 	})
 	if coded, ok := err.(interface{ ErrorCode() string }); !ok ||
 		coded.ErrorCode() != "BACKEND_VERB_NOT_SUPPORTED" {

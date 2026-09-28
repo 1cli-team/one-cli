@@ -1,252 +1,93 @@
 ---
 title: one env
-description: "Full reference for multi-environment variables: set / get / list / pull."
+description: Manage Infisical variables with set, get, and list; inject them directly into commands.
 ---
 
-`one env` manages monorepo environment variables across environments. There are two backends:
+Infisical is One CLI's only managed environment source. Variables are fetched for command execution and injected into the child process. One CLI does not read, write, or export `.env` files.
 
-- **dotenv** (default): local filesystem. Each project has overlays such as `.env`, `.env.<env>`, `.env.local`, and `.env.<env>.local`.
-- **infisical**: one workspace shares one Infisical project; environments such as dev / preview / prod are sections inside that project.
+## Setup
 
-For the full workflow and mental model, read [Environment variables guide](/en/tutorials/env-vars/).
+New workspaces have no Infisical binding and can run without signing in. Run `one login`, then use `one env set`, `one env get`, or `one env list` to initialize the binding on first use. You can also select an existing Infisical project in Dashboard workspace settings.
 
-## Environment Model
-
-`manifest.environments.names` is the workspace environment list. `one create` defaults to `["dev","preview","prod"]`. `manifest.environments.default` is the fallback when `--env` is omitted; default is `dev`. Existing workspaces that use `staging` remain valid; the Dashboard's Preview binding maps to `staging` when that legacy name is present and `preview` is not.
-
-`--env` resolution:
-
-```text
---env flag -> manifest.environments.default -> environments.names[0]
-```
-
-`one env set FOO bar --env qa` can create a new environment. TTY mode asks for confirmation; non-TTY / `--yes` appends directly to `manifest.environments.names`. `get`, `list`, and `pull` are read-only: unknown env names return `ENV_UNKNOWN_ENVIRONMENT`.
-
-## Usage
-
-```bash
-one env set  <KEY[=VALUE]> [VALUE] [--env <env>] [-p <name|path>] [--yes]
-one env get  <KEY>                 [--env <env>] [-p <name|path>] --reveal
-one env list                       [--env <env>] [-p <name|path>]
-one env pull                       [--env <env>] [-p <name|path>] [--force] [--dry-run]
-```
-
-`-p / --project` accepts a manifest project name or workspace-relative path:
-
-```bash
-one env set FOO=bar -p web
-one env set FOO=bar -p apps/web
-one env set FOO=bar              # auto-detects project from cwd
-one env pull -p api              # only pull api
-one env pull --env staging       # pull staging vars for all projects
-```
-
-The global output flag is `-o / --output`, with `json`, `yaml`, or `text`.
-
-> There is no `one env init` subcommand today. Infisical project binding is attempted by `one create --env-provider infisical`. If login, network, or permissions were not ready during create, the first `set/get/list/pull` retries lazy auto-bind.
-
-Machine-level Infisical credentials are configured with [`one login`](/en/docs/login/). They do not go into the manifest.
-
-## Interactive Mode
-
-Bare `one env` shows the current source, default/available environments,
-current scope, and common commands. `one env set` has a safe TTY flow:
-
-- `one env set KEY` reads the value with hidden input.
-- At the workspace root, it asks whether the variable is shared or belongs to a project.
-- When writing to an environment that is not in `manifest.environments.names`, it asks whether to add that environment to the manifest.
-- When overwriting an existing different value, it asks whether to overwrite.
-
-Declining or cancelling exits successfully without an error-style message.
-Scripts and CI pass the value explicitly and use `--yes` for overwrite/new-environment confirmation.
-
-## dotenv Overlay
-
-The dotenv backend reads files in this order:
-
-```text
-<project>/.env
-<project>/.env.<env>
-<project>/.env.local
-<project>/.env.<env>.local
-```
-
-Later files override earlier files. `one env set` writes `.env.<env>`; `.local` files are read-only from One CLI's perspective and are maintained by developers.
-
-`one create` writes this to `.gitignore` by default:
-
-```text
-.env
-.env.*
-!.env.example
-```
-
-## set
-
-Write one key. Both argument forms work:
-
-```bash
-one env set DATABASE_URL "postgres://localhost/dev" --env dev -p api
-one env set JWT_SECRET=dev-only-secret --env dev -p api --yes
-```
-
-Output schema: `one-cli/env-set/v1`
+The binding lives in the top-level `env` field of `one.manifest.json`:
 
 ```json
 {
-  "schema": "one-cli/env-set/v1",
-  "env": "dev",
-  "key": "DATABASE_URL",
-  "action": "created"
-}
-```
-
-`action` can be `created`, `updated`, or `unchanged`. Existing different values require `--yes` to confirm overwrite.
-
-## get
-
-Read one key:
-
-```bash
-one env get DATABASE_URL --env dev -p api --reveal
-DB_URL=$(one env get DATABASE_URL --env dev -p api -o json | jq -r .value) --reveal
-```
-
-Output schema: `one-cli/env-get/v1`
-
-```json
-{
-  "schema": "one-cli/env-get/v1",
-  "env": "dev",
-  "key": "DATABASE_URL",
-  "value": "postgres://..."
-}
-```
-
-## list
-
-List key names without values:
-
-```bash
-one env list --env dev -p api
-```
-
-Output schema: `one-cli/env-list/v1`
-
-```json
-{
-  "schema": "one-cli/env-list/v1",
-  "env": "dev",
-  "keys": ["DATABASE_URL", "JWT_SECRET"]
-}
-```
-
-## pull
-
-Pull Infisical variables into local `.env`:
-
-```bash
-one env pull --env dev
-one env pull --env dev -p api --dry-run
-one env pull --env dev --force
-```
-
-Without `-p`, One CLI iterates through `manifest.projects[]`. Each project maps to an Infisical folder from `projects[].domains.env.path` or `relativeDir`, merges root -> ancestors -> self inheritance, and writes the resulting `.env` into that project directory.
-
-Output schema: `one-cli/env-pull/v1`
-
-```json
-{
-  "schema": "one-cli/env-pull/v1",
-  "env": "dev",
-  "dry_run": false,
-  "written_count": 1,
-  "skipped_count": 0,
-  "per_subproject": [
-    {
-      "name": "api",
-      "relative_dir": "services/api",
-      "infisical_path": "/services/api",
-      "env_file_path": "/abs/.../services/api/.env",
-      "status": "written",
-      "keys_written": ["DATABASE_URL", "JWT_SECRET"]
-    }
-  ]
-}
-```
-
-## Manifest Configuration
-
-Workspace env backend lives in `one.manifest.json#domains.env`; environments live at top-level `environments`:
-
-```json
-{
-  "environments": {
-    "names": ["dev", "staging", "prod"],
-    "default": "dev"
+  "env": {
+    "siteUrl": "https://app.infisical.com",
+    "projectId": "your-project-id",
+    "projectName": "my-workspace",
+    "rootPath": "/"
   },
-  "domains": {
-    "env": {
-      "kind": "infisical",
-      "config": {
-        "siteUrl": "https://app.infisical.com",
-        "projectId": "...",
-        "projectName": "my-workspace",
-        "rootPath": "/"
-      }
-    }
+  "environments": {
+    "names": ["dev", "preview", "prod"],
+    "default": "dev"
   }
 }
 ```
 
-Project path overrides live in `projects[].domains.env`:
+The manifest records binding information, folder paths, and declared key names. Values stay in Infisical; authentication uses the browser session stored in the system keyring.
+
+## Commands
+
+```bash
+one env
+one env set DATABASE_URL -p api
+one env set API_URL=https://example.com -p web --env dev --yes
+one env get API_URL -p web --env dev --reveal
+one env list -p web --env dev
+```
+
+`set KEY` prompts for a hidden value in a terminal. Scripts pass a value explicitly. `--yes` confirms overwrites and new environment names. `get` requires `--reveal`; `list` returns names only. `-o json` or `-o yaml` provides structured output with the stable schemas `one-cli/env-set/v1`, `one-cli/env-get/v1`, and `one-cli/env-list/v1`.
+
+`-p / --project` accepts a project name or workspace-relative path. Without it, One CLI infers the project from the current directory. At the workspace root, variables are shared; interactive `set` offers a scope selection.
+
+## Environments and folders
+
+`environments.names` declares the available environments. The default is `environments.default`, falling back to the first name. New workspaces declare `dev`, `preview`, and `prod` with `dev` as default. `--env` overrides this choice.
+
+`set` can register a new environment with confirmation. `get` and `list` reject names not declared in the manifest with `ENV_UNKNOWN_ENVIRONMENT`. These commands can still initialize an absent Infisical binding.
+
+Projects use their `relativeDir` as the default Infisical folder. Override this in `projects[].env`:
 
 ```json
 {
-  "projects": [
-    {
-      "name": "charge",
-      "relativeDir": "services/charge",
-      "domains": {
-        "env": {
-          "path": "/teams/payments/charge",
-          "inherits": true
-        }
-      }
-    }
-  ]
+  "name": "api",
+  "relativeDir": "services/api",
+  "env": {
+    "path": "/teams/payments/api",
+    "inherits": true,
+    "keys": ["DATABASE_URL"]
+  }
 }
 ```
 
-Values never enter the Manifest. It records project identity, instance URL, folder paths, and key names. Authentication uses the single browser session in the system keyring.
+With inheritance enabled (the default), variables merge from root through ancestor folders to the project folder; closer folders win. Set `inherits` to `false` to read only the project folder. `disabled: true` disables that project's Infisical injection.
 
-## Credential Safety
+## Run with variables
 
-Use `one login`; the token lives only in the system keyring, outside project and ordinary configuration files.
+```bash
+one exec -p api --env dev -- go run ./cmd/server
+one run dev --env dev
+```
 
-## Common Errors
-
-| Code | Recovery |
-|---|---|
-| `INFISICAL_NOT_CONFIGURED` | Confirm the workspace uses `--env-provider infisical` and you have signed in with `one login` |
-| `INFISICAL_AUTH_MISSING` | Re-run `one login` |
-| `INFISICAL_AUTH_FAILED` | Regenerate the client secret in Infisical |
-| `INFISICAL_PROJECT_NAME_TAKEN` | Change `domains.env.config.projectName` and rerun an env command to trigger lazy bind |
-| `INFISICAL_PROJECT_CREATE_FORBIDDEN` | Grant admin role to the machine identity, or manually create the project and fill `domains.env.config.projectId` |
-| `ENV_PULL_CONFLICT` | Local `.env` exists and differs; add `--force` after confirming overwrite |
-| `ENV_KEY_NOT_FOUND` | Check path, env name, and spelling |
-| `ENV_INVALID_KEY` | Keys must match `^[A-Za-z_][A-Za-z0-9_]*$` |
-| `ENV_SET_OVERWRITE_REQUIRED` | Existing value differs; add `--yes` to confirm |
-| `ENV_UNKNOWN_ENVIRONMENT` | `set` can create; read commands require the env to exist in `manifest.environments.names` |
-
-Full table: [Error codes](/en/docs/error-codes/).
-
-## Next
-
-- [Environment variables guide](/en/tutorials/env-vars/) — mental model and complete workflow
-- [`one create`](/en/docs/create/) — use `--env-provider infisical` during workspace creation
-
+With an `env` binding, generated task adapters and `one exec` fetch Infisical variables and override matching shell variables. Without a binding, or with project injection disabled, they inherit the shell environment. Authentication or fetch failures stop execution; there is no local-file fallback. Custom mise tasks use mise's environment.
 
 ## Shared credentials
 
-Shared credentials are independent of workspaces. Select storage with `one env bind --global`, browse metadata with `one env list --global --env dev --path /`, and inject an explicit scope with `one exec --global --env dev --path /folder -- command`. See [login and shared credentials](/en/docs/login/) for commands and security boundaries.
+Shared credentials are independent of workspaces. Select storage with `one env bind --global`, browse names with `one env list --global --env dev --path /`, and inject an explicit scope with `one exec --global --env dev --path /folder -- command`. See [login and shared credentials](/en/docs/login/).
+
+## Common errors
+
+| Code | Recovery |
+|---|---|
+| `INFISICAL_NOT_CONFIGURED` | Bind an Infisical project in Dashboard or sign in and initialize it through an env command |
+| `INFISICAL_AUTH_MISSING` / `INFISICAL_AUTH_FAILED` | Run `one login` and check access to the bound project |
+| `INFISICAL_PROJECT_NAME_TAKEN` | Set a distinct `env.projectName`, or bind the existing project explicitly |
+| `INFISICAL_PROJECT_CREATE_FORBIDDEN` | Select an existing accessible project in Dashboard |
+| `ENV_KEY_NOT_FOUND` | Check key spelling, environment, and folder |
+| `ENV_INVALID_KEY` | Use names matching `^[A-Za-z_][A-Za-z0-9_]*$` |
+| `ENV_SET_OVERWRITE_REQUIRED` | Confirm the replacement with `--yes` |
+| `ENV_UNKNOWN_ENVIRONMENT` | Register the environment with `set`, or select an existing name |
+
+See [manifest migration](/en/docs/manifest/) for older workspaces and [the walkthrough](/en/tutorials/env-vars/) for a first setup.

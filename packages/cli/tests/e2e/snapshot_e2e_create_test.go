@@ -198,8 +198,8 @@ func TestSnapshot_E2E_Create_DefaultEnablesUniversalSet(t *testing.T) {
 		t.Fatalf("expected exit 0, got %d\n  stdout: %s\n  stderr: %s", code, stdout, stderr)
 	}
 	got := mustParseJSON(t, stdout)
-	if got["secrets_backend"] != "dotenv" {
-		t.Errorf("secrets_backend: want dotenv, got %v", got["secrets_backend"])
+	if got["secrets_backend"] != "infisical" {
+		t.Errorf("secrets_backend: want infisical, got %v", got["secrets_backend"])
 	}
 	if _, exists := got["ci_enabled"]; exists {
 		t.Error("creation still exposes the removed CI feature")
@@ -214,10 +214,11 @@ func TestSnapshot_E2E_Create_DefaultEnablesUniversalSet(t *testing.T) {
 	if _, has := mf["plugins"]; has {
 		t.Errorf("manifest should not carry legacy plugins map, got %v", mf["plugins"])
 	}
-	domains, _ := mf["domains"].(map[string]any)
-	envSec, _ := domains["env"].(map[string]any)
-	if envSec["kind"] != "dotenv" {
-		t.Errorf("manifest.domains.env.kind: want dotenv, got %v", domains["env"])
+	if _, exists := mf["env"]; exists {
+		t.Fatal("creation unexpectedly enabled remote injection before binding")
+	}
+	if _, exists := mf["domains"]; exists {
+		t.Fatal("creation wrote retired domains")
 	}
 	for _, removed := range []string{"ci", "dev"} {
 		if _, has := mf[removed]; has {

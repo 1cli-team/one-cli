@@ -3,12 +3,12 @@ title: one exec
 description: Inject project env vars into any command and execute it from the resolved project directory.
 ---
 
-`one exec` behaves like `infisical run` / `dotenv run`: it resolves a project, loads env vars from the workspace env provider, injects them into a child process, and runs the command you pass.
+`one exec` resolves a project, injects its Infisical variables when configured, and runs your command from the project directory.
 
 ## Usage
 
 ```bash
-one exec [-p <name|path>] [--env-provider dotenv|infisical] [--env <env>] -- <cmd> [args...]
+one exec [-p <name|path>] [--env <env>] -- <cmd> [args...]
 ```
 
 You can omit `--`, but scripts should keep it so child flags are not parsed as One CLI flags.
@@ -18,7 +18,6 @@ You can omit `--`, but scripts should keep it so child flags are not parsed as O
 | option | purpose |
 |---|---|
 | `-p`, `--project <name|path>` | select a project; without it, One CLI infers from cwd |
-| `--env-provider dotenv|infisical` | force a provider instead of using the workspace manifest |
 | `--env <env>` | use a specific environment |
 | `-o`, `--output <fmt>` | affects only One CLI output; child stdout/stderr pass through |
 
@@ -32,7 +31,6 @@ You can omit `--`, but scripts should keep it so child flags are not parsed as O
 one exec -- pnpm test
 one exec -p web -- pnpm run build
 one exec -p apps/web -- pnpm lint
-one exec --env-provider dotenv -- pnpm test
 one exec --env staging -- pnpm run e2e
 ```
 
@@ -49,15 +47,9 @@ The child process always runs from the resolved project directory, so commands f
 
 This lets pnpm / turbo workspaces invoke `vite`, `next`, `astro`, and similar binaries directly.
 
-## Env provider
+## Infisical injection
 
-| provider | behavior |
-|---|---|
-| `dotenv` | read project `.env` overlays |
-| `infisical` | fetch env vars from Infisical |
-| empty | use the provider recorded in the workspace manifest |
-
-`--env-provider infisical` requires browser login with `one login`. Use `--env-provider dotenv` for offline local runs.
+The top-level manifest `env` binding enables Infisical injection. Without a binding, or with `projects[].env.disabled: true`, the command inherits the shell environment. One CLI does not load `.env` files. Authentication or fetch failures stop execution instead of falling back to local files. Use `one login` to authenticate.
 
 ## Common errors
 
@@ -66,7 +58,6 @@ This lets pnpm / turbo workspaces invoke `vite`, `next`, `astro`, and similar bi
 | `NOT_ONE_PROJECT` | run inside a workspace or project directory |
 | `SUBPROJECT_NOT_FOUND` | pass a manifest `name` or `relativeDir` to `-p` |
 | `RUN_COMMAND_NOT_FOUND` | check PATH, project `node_modules/.bin`, and workspace `node_modules/.bin` |
-| `ENV_FILE_NOT_FOUND` | create a project `.env` or use `--env-provider infisical` |
 | `INFISICAL_AUTH_MISSING` | run `one login` |
 
 ## Next

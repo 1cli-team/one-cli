@@ -16,7 +16,7 @@ import (
 	"github.com/creack/pty"
 )
 
-func TestE2E_EnvSetHidesValueInAccessibleTTY(t *testing.T) {
+func TestE2E_EnvSetHidesValueBeforeScopeCancellation(t *testing.T) {
 	tmp := t.TempDir()
 	isolateHome(t, tmp)
 	ws := bootstrapWorkspace(t, tmp, "demo")
@@ -53,8 +53,8 @@ func TestE2E_EnvSetHidesValueInAccessibleTTY(t *testing.T) {
 		t.Fatalf("enter secret: %v", err)
 	}
 	waitForTTYOutput(t, &output, "Where does this variable belong?", 5*time.Second)
-	if _, err := ptmx.Write([]byte("1\r")); err != nil {
-		t.Fatalf("select workspace scope: %v", err)
+	if err := cmd.Process.Signal(os.Interrupt); err != nil {
+		t.Fatalf("cancel scope selection: %v", err)
 	}
 
 	waitDone := make(chan error, 1)
@@ -78,12 +78,10 @@ func TestE2E_EnvSetHidesValueInAccessibleTTY(t *testing.T) {
 	if got := output.String(); strings.Contains(got, secret) {
 		t.Fatalf("secret value leaked into terminal output:\n%s", got)
 	}
-	body, err := os.ReadFile(filepath.Join(ws, ".env.dev"))
-	if err != nil {
-		t.Fatalf("read workspace environment file: %v", err)
-	}
-	if !strings.Contains(string(body), "TEST_KEY="+secret) {
-		t.Fatalf("workspace environment file did not receive TEST_KEY: %q", body)
+	for _, name := range []string{".env", ".env.dev"} {
+		if _, err := os.Stat(filepath.Join(ws, name)); !os.IsNotExist(err) {
+			t.Fatalf("unexpected local variable file %s: %v", name, err)
+		}
 	}
 }
 

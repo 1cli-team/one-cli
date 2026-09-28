@@ -8,7 +8,7 @@ package updatecheck
 // the cache write is lost and we re-fetch next time. That's fine — most
 // commands run >100ms, the GitHub Releases redirect usually
 // responds in <300ms over good network, and long-running commands
-// (`one serve`, `one dev`, `one env pull`) easily give the goroutine
+// (`one serve`, `one dev`) easily give the goroutine
 // time to finish.
 
 import (

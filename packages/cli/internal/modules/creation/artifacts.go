@@ -8,7 +8,6 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/torchstellar-team/one-cli/packages/cli/internal/adapters/env/dotenv"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/core/workspace"
 	"github.com/torchstellar-team/one-cli/packages/cli/pkg/toolchain"
 )
@@ -43,15 +42,6 @@ func syncProject(opts syncProjectOptions) error {
 	if command := workspace.ResolveScaffoldDevCommand(scripts, string(tc), opts.TargetDir); command != "" {
 		if err := workspace.UpdateProjectDev(opts.ProjectRoot, relDir, command); err != nil {
 			return err
-		}
-	}
-
-	if id := opts.Selected["env"]; id != "" {
-		switch backendName(id) {
-		case workspace.EnvBackendDotenv, workspace.EnvBackendInfisical:
-			if err := dotenv.Sync(opts.ProjectRoot); err != nil {
-				return err
-			}
 		}
 	}
 

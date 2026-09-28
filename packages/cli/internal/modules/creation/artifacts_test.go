@@ -3,7 +3,6 @@ package creation
 import (
 	"os"
 	"path/filepath"
-	"strings"
 	"testing"
 
 	internaltoolchain "github.com/torchstellar-team/one-cli/packages/cli/internal/adapters/toolchain"
@@ -11,7 +10,7 @@ import (
 	"github.com/torchstellar-team/one-cli/packages/cli/pkg/toolchain"
 )
 
-func TestSyncProjectOwnsDevAndEnvironmentArtifacts(t *testing.T) {
+func TestSyncProjectOwnsDevArtifacts(t *testing.T) {
 	internaltoolchain.RegisterBundled()
 	root := t.TempDir()
 	targetDir := filepath.Join(root, "apps", "web")
@@ -46,17 +45,8 @@ func TestSyncProjectOwnsDevAndEnvironmentArtifacts(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	dev := manifest.Projects[0].Domains.Dev
+	dev := manifest.Projects[0].Dev
 	if dev == nil || dev.Command != "pnpm run dev" {
 		t.Fatalf("dev override = %#v", dev)
-	}
-	raw, err := os.ReadFile(filepath.Join(root, ".gitignore"))
-	if err != nil {
-		t.Fatal(err)
-	}
-	for _, line := range []string{".env", ".env.*", "!.env.example"} {
-		if !strings.Contains(string(raw), line) {
-			t.Fatalf(".gitignore = %q, missing %q", raw, line)
-		}
 	}
 }

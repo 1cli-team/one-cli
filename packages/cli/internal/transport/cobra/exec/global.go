@@ -17,7 +17,7 @@ import (
 )
 
 func runGlobal(ctx context.Context, f *runFlags, args []string) error {
-	if f.project != "" || f.envProvider != "" {
+	if f.project != "" {
 		return i18n.Errorf("exec.global_conflict")
 	}
 	if f.envName == "" || f.globalPath == "" {

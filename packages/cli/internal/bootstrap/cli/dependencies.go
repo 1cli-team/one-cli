@@ -3,7 +3,6 @@ package cli
 import (
 	"context"
 
-	"github.com/torchstellar-team/one-cli/packages/cli/internal/adapters/env/dotenv"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/adapters/env/infisical"
 	miseruntime "github.com/torchstellar-team/one-cli/packages/cli/internal/adapters/runtime/mise"
 	internaltoolchain "github.com/torchstellar-team/one-cli/packages/cli/internal/adapters/toolchain"
@@ -49,7 +48,7 @@ func composeDependencies() dependencies {
 		creation:     creation,
 		environments: environments,
 		manifest:     manifest,
-		loaders:      secrets.MustRegistry(infisical.Loader(), dotenv.Loader()),
+		loaders:      secrets.MustRegistry(infisical.Loader()),
 		workspaces:   mustWorkspaceService(backendCatalog),
 		registry:     registry,
 	}
@@ -97,6 +96,7 @@ func mustCreationService(
 	if err != nil {
 		panic(err)
 	}
+	service.Runtime = miseruntime.Provider{}
 	return service
 }
 

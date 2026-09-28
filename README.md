@@ -115,7 +115,7 @@ The assistant can read `one.manifest.json` and project README files, then use On
 
 ## Local Settings
 
-One CLI manages local dotenv and Infisical variables. Run `one login` to sign in with your browser; the single session is stored in the OS keyring, with no plaintext fallback. Use `one whoami` to inspect status and `one logout` to remove the local session.
+One CLI manages variables in Infisical and injects them directly into commands. Workspace bindings live in the top-level manifest `env` field; `.env` files are not loaded or exported. Run `one login` to sign in with your browser; the single session is stored in the OS keyring, with no plaintext fallback. Use `one whoami` to inspect status and `one logout` to remove the local session.
 
 Run `one serve` for account settings, workspaces, and shared credentials. Workspace and project configuration changes share one reviewed, revision-checked Manifest draft. Remote variable edits take effect immediately; lists omit values and reveal/copy fetch plaintext only on demand.
 

@@ -1,6 +1,6 @@
 
 DESCRIPTION
-Set an environment variable
+Write a variable to Infisical
 
 USAGE
   one env set <KEY[=VALUE]> [VALUE] [flags]

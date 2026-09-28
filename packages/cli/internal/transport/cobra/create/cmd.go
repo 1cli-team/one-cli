@@ -1,6 +1,6 @@
 // Package createcmd contributes `one create` to the explicit root command.
 // It scaffolds a new workspace (one.manifest.json + folder skeleton),
-// applies the default workspace capabilities (local .env | one dev).
+// scaffolds workspace tooling and development tasks without a remote binding.
 // Projects, CI, and deployment targets are intentionally deferred.
 package createcmd
 
@@ -22,13 +22,9 @@ func buildContributions(deps Dependencies) []*cobra.Command {
 	return []*cobra.Command{newCreateCmd(deps)}
 }
 
-// workspaceDefaultEnables are the default backend ids stamped into
-// the manifest when scaffolding a new workspace. env defaults to dotenv
-// (lowest-friction), while dev uses the built-in process runner. CI is not
-// enabled implicitly. Advanced automation may override the env source with
-// --env-provider.
+// workspaceDefaultEnables records the supported environment source for creation output.
 var workspaceDefaultEnables = []string{
-	"env/dotenv",
+	"env/infisical",
 	"dev/process",
 }
 
@@ -40,7 +36,6 @@ var canonicalDomainOrder = []string{"dev", "ci", "env"}
 type createFlags struct {
 	name         string
 	yes          bool
-	envProvider  string
 	preset       string
 	projectNames string
 }
@@ -62,18 +57,15 @@ func newCreateCmd(deps Dependencies) *cobra.Command {
 	}
 	cmd.Flags().StringVarP(&flags.name, "name", "n", "", i18n.T("create.flag.name"))
 	cmd.Flags().BoolVarP(&flags.yes, "yes", "y", false, i18n.T("create.flag.yes"))
-	cmd.Flags().StringVar(&flags.envProvider, "env-provider", "",
-		i18n.T("create.flag.env_provider"))
 	cmd.Flags().StringVar(&flags.preset, "preset", "",
 		i18n.T("create.flag.preset"))
 	cmd.Flags().StringVar(&flags.projectNames, "project-names", "",
 		i18n.T("create.flag.project_names"))
 	i18n.MarkFlagUsage(cmd, "name", "create.flag.name")
 	i18n.MarkFlagUsage(cmd, "yes", "create.flag.yes")
-	i18n.MarkFlagUsage(cmd, "env-provider", "create.flag.env_provider")
 	i18n.MarkFlagUsage(cmd, "preset", "create.flag.preset")
 	i18n.MarkFlagUsage(cmd, "project-names", "create.flag.project_names")
-	helpui.MarkAdvanced(cmd, "env-provider", "preset", "project-names")
+	helpui.MarkAdvanced(cmd, "preset", "project-names")
 	i18n.MarkShort(cmd, "create.short")
 	i18n.MarkLong(cmd, "create.tip")
 	return cmd

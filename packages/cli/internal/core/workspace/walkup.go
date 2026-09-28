@@ -5,7 +5,7 @@ package workspace
 //
 // Before this lived as 28-line private helpers in internal/bootstrap/cli/run.go,
 // transport and adapter packages,
-// and the old dotenv command adapter. Each copy claimed the duplication
+// and environment command adapters. Each copy claimed the duplication
 // was unavoidable to dodge import cycles. Now there's one canonical
 // implementation everyone imports.
 

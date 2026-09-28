@@ -67,7 +67,8 @@ func TestSnapshot_E2E_Run_NoArgs_PrintsHelp(t *testing.T) {
 	}
 }
 
-func TestSnapshot_E2E_Run_HappyPath(t *testing.T) {
+func TestSnapshot_E2E_Run_DotenvIsIgnored(t *testing.T) {
+	t.Setenv("RUN_TEST_KEY", "from-shell")
 	_, subDir := addSubprojectWithDotenv(t, "user-api",
 		"RUN_TEST_KEY=hello-from-dotenv\n")
 
@@ -79,12 +80,13 @@ func TestSnapshot_E2E_Run_HappyPath(t *testing.T) {
 	if code != 0 {
 		t.Fatalf("run failed: exit %d\n  stdout: %q\n  stderr: %q", code, stdout, stderr)
 	}
-	if got := strings.TrimSpace(stdout); got != "hello-from-dotenv" {
-		t.Errorf("stdout: want %q, got %q", "hello-from-dotenv", got)
+	if got := strings.TrimSpace(stdout); got != "from-shell" {
+		t.Errorf("stdout: want %q, got %q", "from-shell", got)
 	}
 }
 
 func TestSnapshot_E2E_Run_PositionalProjectSelector(t *testing.T) {
+	t.Setenv("RUN_TEST_KEY", "from-shell")
 	ws, _ := addSubprojectWithDotenv(t, "auth",
 		"RUN_TEST_KEY=hello-from-dotenv\n")
 
@@ -93,8 +95,8 @@ func TestSnapshot_E2E_Run_PositionalProjectSelector(t *testing.T) {
 	if code != 0 {
 		t.Fatalf("positional project run failed: exit %d\n  stdout: %q\n  stderr: %q", code, stdout, stderr)
 	}
-	if got := strings.TrimSpace(stdout); got != "hello-from-dotenv" {
-		t.Errorf("stdout: want %q, got %q", "hello-from-dotenv", got)
+	if got := strings.TrimSpace(stdout); got != "from-shell" {
+		t.Errorf("stdout: want %q, got %q", "from-shell", got)
 	}
 }
 
@@ -196,7 +198,7 @@ func TestSnapshot_E2E_Run_UnknownCommand_ReturnsStructuredError(t *testing.T) {
 	}
 }
 
-func TestSnapshot_E2E_Run_DefaultOverwrite(t *testing.T) {
+func TestSnapshot_E2E_Run_PreservesShellWithoutBinding(t *testing.T) {
 	ws, subDir := addSubprojectWithDotenv(t, "auth",
 		"OVERRIDE_KEY=value-from-dotenv\n")
 
@@ -208,8 +210,8 @@ func TestSnapshot_E2E_Run_DefaultOverwrite(t *testing.T) {
 	if code != 0 {
 		t.Fatalf("default run failed: exit %d\n  stderr: %s", code, stderr)
 	}
-	if got := strings.TrimSpace(stdout); got != "value-from-dotenv" {
-		t.Errorf("default merge: want dotenv to win, got %q", got)
+	if got := strings.TrimSpace(stdout); got != "value-from-shell" {
+		t.Errorf("default merge: want inherited shell value, got %q", got)
 	}
 
 	// Sanity: -p resolves the same subproject from workspace root, both by
@@ -219,8 +221,8 @@ func TestSnapshot_E2E_Run_DefaultOverwrite(t *testing.T) {
 	if code != 0 {
 		t.Fatalf("-p path run failed: exit %d\n  stderr: %s", code, stderr)
 	}
-	if got := strings.TrimSpace(stdout); got != "value-from-dotenv" {
-		t.Errorf("-p path resolution: want dotenv to win, got %q", got)
+	if got := strings.TrimSpace(stdout); got != "value-from-shell" {
+		t.Errorf("-p path resolution: want inherited shell value, got %q", got)
 	}
 
 	args = append([]string{"exec", "-p", "auth", "--"}, environmentEchoCommand("OVERRIDE_KEY")...)
@@ -228,8 +230,8 @@ func TestSnapshot_E2E_Run_DefaultOverwrite(t *testing.T) {
 	if code != 0 {
 		t.Fatalf("-p name run failed: exit %d\n  stderr: %s", code, stderr)
 	}
-	if got := strings.TrimSpace(stdout); got != "value-from-dotenv" {
-		t.Errorf("-p name resolution: want dotenv to win, got %q", got)
+	if got := strings.TrimSpace(stdout); got != "value-from-shell" {
+		t.Errorf("-p name resolution: want inherited shell value, got %q", got)
 	}
 }
 
