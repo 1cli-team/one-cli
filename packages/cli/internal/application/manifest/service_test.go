@@ -253,11 +253,8 @@ func TestWorkspaceBindingAndProjectChangesPublishTogether(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	var config map[string]string
-	if err = json.Unmarshal(workspacecore.EnvConfigRaw(manifest), &config); err != nil {
-		t.Fatal(err)
-	}
-	if config["projectId"] != id || config["siteUrl"] != site || config["projectName"] != name {
+	config := manifest.Env
+	if config == nil || config.ProjectID != id || config.SiteURL != site || config.ProjectName != name {
 		t.Fatalf("binding: %#v", config)
 	}
 }

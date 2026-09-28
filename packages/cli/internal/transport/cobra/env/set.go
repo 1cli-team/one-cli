@@ -172,12 +172,3 @@ func confirmCreateEnv(name string, yes bool) error {
 	}
 	return nil
 }
-
-func contains(values []string, target string) bool {
-	for _, value := range values {
-		if value == target {
-			return true
-		}
-	}
-	return false
-}

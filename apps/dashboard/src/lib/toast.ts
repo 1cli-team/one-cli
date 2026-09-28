@@ -216,7 +216,3 @@ const Toast = {
 };
 
 export default Toast;
-
-// 导出常用方法的简写
-export const toast = Toast;
-export const { success, info, warning, error, loading } = Toast;

@@ -3,8 +3,6 @@ package infisical
 import (
 	"context"
 	"errors"
-	"fmt"
-	"io"
 	"sort"
 	"strings"
 
@@ -39,14 +37,6 @@ type SetResult struct {
 	Path   string `json:"path"`
 	Key    string `json:"key"`
 	Action string `json:"action"`
-}
-
-// RenderTTY prints a one-line set confirmation.
-func (r *SetResult) RenderTTY(w io.Writer) {
-	if r == nil {
-		return
-	}
-	fmt.Fprintf(w, i18n.T("env.set_success_remote")+"\n", r.Key, r.Path, r.Env)
 }
 
 // Set writes a single key into Infisical. Auto-detects whether the key
@@ -236,16 +226,6 @@ func Delete(ctx context.Context, projectRoot string, in DeleteInput) (*DeleteRes
 	return &DeleteResult{
 		Schema: "one-cli/env-delete/v1", Env: env, Path: path, Key: in.Key, Status: "deleted",
 	}, nil
-}
-
-// RenderTTY prints the keys, one per line (no values).
-func (r *ListResult) RenderTTY(w io.Writer) {
-	if r == nil {
-		return
-	}
-	for _, k := range r.Keys {
-		fmt.Fprintln(w, k)
-	}
 }
 
 // List returns the keys at a given path/env (without values). Recursive

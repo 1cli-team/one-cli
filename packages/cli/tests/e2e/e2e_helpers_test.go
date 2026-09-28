@@ -303,13 +303,6 @@ func readManifest(t *testing.T, workspaceRoot string) map[string]any {
 	return mustParseJSON(t, string(raw))
 }
 
-// jsonContains reports whether stdout looks like a JSON object that
-// contains the given top-level key. Cheap pre-check before mustParseJSON
-// when the binary may have printed nothing.
-func jsonContains(s, key string) bool {
-	return strings.Contains(s, "\""+key+"\":")
-}
-
 // bootstrapWorkspace runs `one create <tmp>/<name> -y` to produce a
 // fresh workspace under HOME-isolated tempdir, returning the workspace
 // root. The caller is expected to have already called isolateHome(t, tmp).

@@ -24,11 +24,6 @@ const (
 	EnvInfisical = "infisical"
 )
 
-// Domains is the stable product display order.
-func Domains() []Domain {
-	return []Domain{DomainEnv}
-}
-
 // BackendID is the canonical identity of one backend. String renders the
 // transport identity used by the backend catalog.
 type BackendID struct {
@@ -71,8 +66,6 @@ const (
 // capability. It lets typed storage and adapters share implementation details
 // without maintaining a second backend identity list.
 type Trait string
-
-const ()
 
 // RequirementKind describes a dependency that must be satisfied before a
 // backend operation begins.
@@ -160,16 +153,6 @@ func (s BackendSpec) MarshalJSON() ([]byte, error) {
 func (s BackendSpec) Has(capability Capability) bool {
 	for _, item := range s.Capabilities {
 		if item == capability {
-			return true
-		}
-	}
-	return false
-}
-
-// HasTrait reports whether the backend belongs to a shared protocol family.
-func (s BackendSpec) HasTrait(trait Trait) bool {
-	for _, item := range s.Traits {
-		if item == trait {
 			return true
 		}
 	}

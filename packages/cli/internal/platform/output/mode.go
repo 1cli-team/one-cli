@@ -61,9 +61,6 @@ func resolve() resolved {
 // IsJSON reports whether the active output is JSON specifically.
 func IsJSON() bool { return resolve() == resolvedJSON }
 
-// IsYAML reports whether the active output is YAML.
-func IsYAML() bool { return resolve() == resolvedYAML }
-
 // IsTTY reports whether the active output is human-friendly TTY.
 func IsTTY() bool { return resolve() == resolvedTTY }
 

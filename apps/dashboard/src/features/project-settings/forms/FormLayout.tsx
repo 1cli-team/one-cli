@@ -18,16 +18,6 @@ export const ManifestDraftLayout: React.FC<React.PropsWithChildren> = ({ childre
 	<section className="space-y-4">{children}</section>
 );
 
-export const FormLayout: React.FC<
-	React.PropsWithChildren<{
-		title: string;
-	}>
-> = ({ title, children }) => (
-	<section aria-label={title} className="space-y-4">
-		{children}
-	</section>
-);
-
 export const ProjectField: React.FC<
 	React.PropsWithChildren<{ label: string; htmlFor: string }>
 > = ({ label, htmlFor, children }) => (

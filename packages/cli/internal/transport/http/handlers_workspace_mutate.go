@@ -7,7 +7,6 @@ import (
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/application/execution"
 	manifestapp "github.com/torchstellar-team/one-cli/packages/cli/internal/application/manifest"
 	workspaceapp "github.com/torchstellar-team/one-cli/packages/cli/internal/application/workspace"
-	workspacecore "github.com/torchstellar-team/one-cli/packages/cli/internal/core/workspace"
 	cliErrors "github.com/torchstellar-team/one-cli/packages/cli/internal/platform/errors"
 )
 
@@ -143,9 +142,5 @@ func writeNotFound(w http.ResponseWriter, message string) {
 
 func writeManifestErr(w http.ResponseWriter, err error) {
 	message := err.Error()
-	if errors.Is(err, workspacecore.ErrEnvBackendNotConfigured) {
-		writeError(w, http.StatusConflict, cliErrors.ONE_CLI_ERROR, message, nil)
-		return
-	}
 	writeError(w, http.StatusInternalServerError, cliErrors.MANIFEST_INVALID, message, nil)
 }

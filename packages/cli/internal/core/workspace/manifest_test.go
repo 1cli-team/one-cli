@@ -67,9 +67,6 @@ func TestManifest_RoundTrip(t *testing.T) {
 	if got.Env == nil || EnvBackend(got) != EnvBackendInfisical {
 		t.Errorf("env backend not preserved: %+v", got.Env)
 	}
-	if EnvConfigRaw(got) == nil {
-		t.Errorf("env config not preserved")
-	}
 	if len(got.Projects) != 2 {
 		t.Fatalf("projects count = %d; want 2", len(got.Projects))
 	}
@@ -153,63 +150,5 @@ func TestInitWorkspaceEnv_PreservesProjects(t *testing.T) {
 	}
 	if len(got.Projects) != 1 {
 		t.Fatalf("projects wiped: %d", len(got.Projects))
-	}
-}
-
-func TestUpsertManifestProject_PreservesDomainsOverride(t *testing.T) {
-	tmp := t.TempDir()
-
-	// Seed a project with an env override.
-	if err := WriteManifest(tmp, &Manifest{
-		Version: ManifestVersion,
-		Projects: []ManifestProject{{
-			Name:        "api",
-			RelativeDir: "services/api",
-			TemplateID:  "go-api",
-			Toolchain:   "go",
-
-			Env: &ProjectEnvOverride{Disabled: true},
-		}},
-	}); err != nil {
-		t.Fatal(err)
-	}
-
-	// Re-upsert (e.g. `one add` re-running on an existing project).
-	if err := UpsertManifestProject(tmp, ManifestProjectInput{
-		Name:        "api",
-		RelativeDir: "services/api",
-		TemplateID:  "go-api",
-		Toolchain:   "go",
-	}); err != nil {
-		t.Fatalf("UpsertManifestProject: %v", err)
-	}
-
-	got, _ := ReadManifest(tmp)
-	if len(got.Projects) != 1 {
-		t.Fatalf("projects count = %d; want 1", len(got.Projects))
-	}
-	if got.Projects[0].Env == nil ||
-		!got.Projects[0].Env.Disabled {
-		t.Errorf("env override lost on upsert: %+v", got.Projects[0].Env)
-	}
-}
-
-func TestResolveRootDirs_AlwaysReturnsDefaults(t *testing.T) {
-	got, err := ResolveRootDirs(t.TempDir(), nil)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if len(got) != 3 || got[0] != "apps" || got[1] != "services" || got[2] != "packages" {
-		t.Errorf("ResolveRootDirs = %v; want defaults", got)
-	}
-}
-
-func TestResolveRootDirs_HonorsExplicitOverride(t *testing.T) {
-	got, err := ResolveRootDirs(t.TempDir(), []string{"frontend", "backend"})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if len(got) != 2 || got[0] != "frontend" || got[1] != "backend" {
-		t.Errorf("ResolveRootDirs override = %v; want [frontend backend]", got)
 	}
 }

@@ -66,32 +66,34 @@ func TestSetManifestWorkspaceIdentity_OverwritesPrevious(t *testing.T) {
 	}
 }
 
-// TestRebuildManifest_PreservesWorkspace is the regression test for
-// RebuildManifest accidentally wiping the workspace identity.
-// RebuildManifest rewrites the projects list wholesale; Workspace must
-// survive.
-func TestRebuildManifest_PreservesWorkspace(t *testing.T) {
+func TestWriteManifest_PreservesWorkspace(t *testing.T) {
 	tmp := t.TempDir()
 	if err := workspace.SetManifestWorkspaceIdentity(tmp, "demo-abc", "demo"); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := workspace.RebuildManifest(tmp, []workspace.ManifestProjectInput{
-		{Name: "api", RelativeDir: "services/api", TemplateID: "go-api", Toolchain: "go"},
-	}); err != nil {
-		t.Fatalf("RebuildManifest = %v", err)
+	before, err := workspace.ReadManifest(tmp)
+	if err != nil {
+		t.Fatal(err)
 	}
+	before.Projects = []workspace.ManifestProject{
+		{Name: "api", RelativeDir: "services/api", TemplateID: "go-api", Toolchain: "go"},
+	}
+	if err := workspace.WriteManifest(tmp, before); err != nil {
+		t.Fatalf("WriteManifest = %v", err)
+	}
+
 	m, err := workspace.ReadManifest(tmp)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if m.Workspace == nil {
-		t.Fatalf("RebuildManifest dropped Workspace")
+		t.Fatalf("WriteManifest dropped Workspace")
 	}
 	if m.Workspace.ID != "demo-abc" || m.Workspace.Name != "demo" {
-		t.Errorf("workspace mutated by rebuild: %+v", *m.Workspace)
+		t.Errorf("workspace mutated by write: %+v", *m.Workspace)
 	}
 	if len(m.Projects) != 1 || m.Projects[0].Name != "api" {
-		t.Errorf("projects not rebuilt: %+v", m.Projects)
+		t.Errorf("projects not written: %+v", m.Projects)
 	}
 }
 

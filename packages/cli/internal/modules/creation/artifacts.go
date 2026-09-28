@@ -6,7 +6,6 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
-	"strings"
 
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/core/workspace"
 	"github.com/torchstellar-team/one-cli/packages/cli/pkg/toolchain"
@@ -46,14 +45,6 @@ func syncProject(opts syncProjectOptions) error {
 	}
 
 	return nil
-}
-
-func backendName(id string) string {
-	index := strings.IndexByte(id, '/')
-	if index < 0 || index == len(id)-1 {
-		return id
-	}
-	return id[index+1:]
 }
 
 func loadProjectScripts(targetDir string) (map[string]string, error) {

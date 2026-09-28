@@ -1,20 +1,6 @@
 package workspace
 
-// Manifest write/read round-trip + upsert/rebuild invariants.
-//
-// The manifest is the data structure that status / add all converge on;
-// bugs here typically present as "status reports drift on a fresh write"
-// or "add wiped a per-subproject env override". This file pins the
-// load-bearing properties:
-//   1. Read on missing → empty manifest (no error)
-//   2. Write→Read produces matching content
-//   3. Upsert preserves per-subproject env / container / deploy overrides
-//   4. Rebuild preserves overrides for entries that survive
-//   5. RelativeDir is normalized to POSIX form on persist
-//   6. Repeated WriteManifest produces byte-identical output (deterministic)
-//
-// Timestamps (createdAt / updatedAt) were removed in v0.7 — they were
-// merge-conflict bait and git already tells you who changed what.
+// Manifest persistence preserves project overrides, canonical ordering, and deterministic bytes.
 
 import (
 	"os"
@@ -98,10 +84,10 @@ func TestManifest_WriteIsByteDeterministic(t *testing.T) {
 
 func TestManifest_PreservesDevOverride(t *testing.T) {
 	tmp := t.TempDir()
-	if err := UpsertManifestProject(tmp, ManifestProjectInput{
+	if err := WriteManifest(tmp, &Manifest{Projects: []ManifestProject{{
 		Name: "api", RelativeDir: "services/api", TemplateID: "nestjs-api", Toolchain: "node", PackageManager: "pnpm",
-	}); err != nil {
-		t.Fatalf("upsert: %v", err)
+	}}}); err != nil {
+		t.Fatalf("WriteManifest: %v", err)
 	}
 	if err := UpdateProjectDev(tmp, "services/api", "pnpm run start:dev"); err != nil {
 		t.Fatalf("UpdateProjectDev: %v", err)
@@ -110,14 +96,16 @@ func TestManifest_PreservesDevOverride(t *testing.T) {
 		t.Errorf("dev.command after write = %q, want %q", got, "pnpm run start:dev")
 	}
 
-	// Re-upsert the project — Domains must survive.
-	if err := UpsertManifestProject(tmp, ManifestProjectInput{
-		Name: "api", RelativeDir: "services/api", TemplateID: "nestjs-api", Toolchain: "node", PackageManager: "pnpm",
-	}); err != nil {
-		t.Fatalf("re-upsert: %v", err)
+	// Read and persist the manifest again; the dev command must survive.
+	m, err := ReadManifest(tmp)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := WriteManifest(tmp, m); err != nil {
+		t.Fatal(err)
 	}
 	if got := readDevCommand(t, tmp, "api"); got != "pnpm run start:dev" {
-		t.Errorf("dev.command lost on upsert: got %q", got)
+		t.Errorf("dev.command lost on round-trip: got %q", got)
 	}
 
 	// Empty command clears the block.
@@ -131,8 +119,8 @@ func TestManifest_PreservesDevOverride(t *testing.T) {
 	if err != nil {
 		t.Fatalf("ReadManifest after clear: %v", err)
 	}
-	if loaded.Projects[0].Env != nil {
-		t.Errorf("Env should be cleared to nil when all overrides cleared, got %+v", loaded.Projects[0].Env)
+	if loaded.Projects[0].Dev != nil {
+		t.Errorf("Dev should be cleared to nil, got %+v", loaded.Projects[0].Dev)
 	}
 }
 
@@ -145,28 +133,14 @@ func readDevCommand(t *testing.T, root, projectName string) string {
 	return ProjectDev(m, projectName)
 }
 
-func TestManifest_UpsertPreservesEnvOverride(t *testing.T) {
+func TestManifest_WriteReadPreservesOverrides(t *testing.T) {
 	tmp := t.TempDir()
-
-	if err := UpsertManifestProject(tmp, ManifestProjectInput{
+	if err := WriteManifest(tmp, &Manifest{Projects: []ManifestProject{{
 		Name: "billing", RelativeDir: "services/billing", TemplateID: "go-api", Toolchain: "go",
-	}); err != nil {
-		t.Fatalf("first upsert: %v", err)
-	}
-	// Stamp some env metadata so upsert preservation is observable.
-	if err := UpdateManifestProjectEnv(tmp, "services/billing", &ProjectEnvOverride{
-		Path: "/teams/payments/billing", Keys: []string{"DATABASE_URL"},
-	}); err != nil {
-		t.Fatalf("UpdateManifestProjectEnv: %v", err)
-	}
-	if err := SetProjectBuildVersion(tmp, "billing", "1.2.3"); err != nil {
-		t.Fatalf("SetProjectBuildVersion: %v", err)
-	}
-
-	if err := UpsertManifestProject(tmp, ManifestProjectInput{
-		Name: "billing", RelativeDir: "services/billing", TemplateID: "go-api", Toolchain: "go",
-	}); err != nil {
-		t.Fatalf("second upsert: %v", err)
+		BuildVersion: "1.2.3",
+		Env:          &ProjectEnvOverride{Path: "/teams/payments/billing", Keys: []string{"DATABASE_URL"}},
+	}}}); err != nil {
+		t.Fatalf("WriteManifest: %v", err)
 	}
 
 	loaded, err := ReadManifest(tmp)
@@ -178,88 +152,31 @@ func TestManifest_UpsertPreservesEnvOverride(t *testing.T) {
 	}
 	sub := loaded.Projects[0]
 	if sub.Env == nil {
-		t.Fatalf("env override lost on upsert")
+		t.Fatalf("env override lost on round-trip")
 	}
 	if sub.Env.Path != "/teams/payments/billing" {
-		t.Errorf("env.path drifted on upsert: got %q", sub.Env.Path)
+		t.Errorf("env.path drifted on round-trip: got %q", sub.Env.Path)
 	}
 	if len(sub.Env.Keys) != 1 || sub.Env.Keys[0] != "DATABASE_URL" {
-		t.Errorf("env.keys drifted on upsert: got %v", sub.Env.Keys)
+		t.Errorf("env.keys drifted on round-trip: got %v", sub.Env.Keys)
 	}
 	if sub.BuildVersion != "1.2.3" {
-		t.Errorf("buildVersion drifted on upsert: got %q", sub.BuildVersion)
-	}
-}
-
-func TestManifest_RebuildPreservesOverrides(t *testing.T) {
-	tmp := t.TempDir()
-
-	// Step 1: seed two entries with overrides.
-	for _, name := range []string{"a", "b"} {
-		if err := UpsertManifestProject(tmp, ManifestProjectInput{
-			Name: name, RelativeDir: "services/" + name, TemplateID: "go-api", Toolchain: "go",
-		}); err != nil {
-			t.Fatalf("seed %s: %v", name, err)
-		}
-	}
-	if err := UpdateManifestProjectEnv(tmp, "services/a", &ProjectEnvOverride{
-		Keys: []string{"FOO"},
-	}); err != nil {
-		t.Fatalf("seed env: %v", err)
-	}
-	if err := SetProjectBuildVersion(tmp, "a", "2.3.4"); err != nil {
-		t.Fatalf("seed buildVersion: %v", err)
-	}
-
-	// Step 2: rebuild — drop b, keep a, add c.
-	rebuilt, err := RebuildManifest(tmp, []ManifestProjectInput{
-		{Name: "a", RelativeDir: "services/a", TemplateID: "go-api", Toolchain: "go"},
-		{Name: "c", RelativeDir: "services/c", TemplateID: "go-api", Toolchain: "go"},
-	})
-	if err != nil {
-		t.Fatalf("rebuild: %v", err)
-	}
-	if len(rebuilt.Projects) != 2 {
-		t.Fatalf("after rebuild: want 2 entries, got %d", len(rebuilt.Projects))
-	}
-
-	byName := map[string]ManifestProject{}
-	for _, s := range rebuilt.Projects {
-		byName[s.Name] = s
-	}
-
-	a := byName["a"]
-	if a.Env == nil ||
-		len(a.Env.Keys) == 0 || a.Env.Keys[0] != "FOO" {
-		t.Errorf("a.env.keys should survive rebuild, got %+v", a.Env)
-	}
-	if a.BuildVersion != "2.3.4" {
-		t.Errorf("a.buildVersion should survive rebuild, got %q", a.BuildVersion)
-	}
-
-	c := byName["c"]
-	if c.Env != nil {
-		t.Errorf("c (new) should have no env override, got %+v", c.Env)
-	}
-	if c.BuildVersion != DefaultBuildVersion {
-		t.Errorf("c.buildVersion: want %s, got %q", DefaultBuildVersion, c.BuildVersion)
-	}
-
-	if _, exists := byName["b"]; exists {
-		t.Error("b should be dropped — not in rebuild input")
+		t.Errorf("buildVersion drifted on round-trip: got %q", sub.BuildVersion)
 	}
 }
 
 func TestManifest_SubprojectsAlwaysSortedByRelativeDir(t *testing.T) {
 	tmp := t.TempDir()
 
-	// Insert in reverse alphabetical order; expect sorted output.
+	// Persist projects out of order; expect sorted output.
+	m := &Manifest{}
 	for _, name := range []string{"zeta", "alpha", "mu"} {
-		if err := UpsertManifestProject(tmp, ManifestProjectInput{
+		m.Projects = append(m.Projects, ManifestProject{
 			Name: name, RelativeDir: "services/" + name, TemplateID: "go-api", Toolchain: "go",
-		}); err != nil {
-			t.Fatalf("upsert %s: %v", name, err)
-		}
+		})
+	}
+	if err := WriteManifest(tmp, m); err != nil {
+		t.Fatal(err)
 	}
 
 	loaded, err := ReadManifest(tmp)
@@ -277,10 +194,10 @@ func TestManifest_SubprojectsAlwaysSortedByRelativeDir(t *testing.T) {
 
 func TestManifest_RecordProjectEnvKey(t *testing.T) {
 	tmp := t.TempDir()
-	if err := UpsertManifestProject(tmp, ManifestProjectInput{
+	if err := WriteManifest(tmp, &Manifest{Projects: []ManifestProject{{
 		Name: "api", RelativeDir: "services/api", TemplateID: "go-api", Toolchain: "go",
-	}); err != nil {
-		t.Fatalf("upsert: %v", err)
+	}}}); err != nil {
+		t.Fatalf("WriteManifest: %v", err)
 	}
 
 	// Add two keys, dedupe attempt, sorted result.

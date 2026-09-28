@@ -14,25 +14,3 @@ func NormalizeBuildVersion(version string) string {
 	}
 	return version
 }
-
-func BuildTagForVersion(version string) string {
-	version = NormalizeBuildVersion(version)
-	return "v" + version
-}
-
-func BuildVersionForProject(m *Manifest, projectName string) string {
-	if m == nil {
-		return ""
-	}
-	projectName = strings.TrimSpace(projectName)
-	for _, p := range m.Projects {
-		if projectName != "" && p.Name != projectName {
-			continue
-		}
-		if strings.TrimSpace(p.BuildVersion) == "" {
-			return ""
-		}
-		return NormalizeBuildVersion(p.BuildVersion)
-	}
-	return ""
-}

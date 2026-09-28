@@ -73,10 +73,8 @@ func ApplyPreset(ctx context.Context, projectRoot string, resolved preset.Resolv
 
 	// Track template-code occurrence count so duplicate segments
 	// (`fna.fna`) get deterministic project names: nextjs-app, nextjs-app-2, ...
-	// workspace.UpsertManifestProject's existing dedup is overlaid on
-	// the filesystem, but the manifest project name and target dir are
-	// what we hand to materializeProject — and they need to be unique up
-	// front.
+	// The manifest project name and target directory handed to
+	// materializeProject must be unique before writing any files.
 	seenByCode := map[string]int{}
 
 	customNameIndex := 0

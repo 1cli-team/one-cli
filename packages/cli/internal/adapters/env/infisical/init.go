@@ -6,8 +6,6 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"errors"
-	"fmt"
-	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -54,26 +52,6 @@ type InitResult struct {
 	AuthStatus   string   `json:"auth_status"` // "verified" / "skipped" / "created"
 	Created      bool     `json:"created"`     // true when env init created the Infisical project
 	WrittenTo    string   `json:"written_to"`  // absolute path to one.manifest.json
-}
-
-// RenderTTY prints the init outcome.
-func (r *InitResult) RenderTTY(w io.Writer) {
-	if r == nil {
-		return
-	}
-	fmt.Fprintln(w, i18n.T("infisical.init.success"))
-	if r.Created {
-		fmt.Fprintf(w, i18n.T("infisical.init.project_created"), r.ProjectName, r.ProjectID)
-	} else if r.ProjectName != "" {
-		fmt.Fprintf(w, i18n.T("infisical.init.project_named"), r.ProjectName, r.ProjectID)
-	} else {
-		fmt.Fprintf(w, i18n.T("infisical.init.project"), r.ProjectID)
-	}
-	fmt.Fprintf(w, i18n.T("infisical.init.environments"),
-		strings.Join(r.Environments, ", "), r.DefaultEnv)
-	fmt.Fprintf(w, i18n.T("infisical.init.path"), r.RootPath)
-	fmt.Fprintf(w, i18n.T("infisical.init.auth"), r.AuthStatus)
-	fmt.Fprintf(w, i18n.T("infisical.init.written"), r.WrittenTo)
 }
 
 // maxCreateProjectRetries caps the suffix-retry loop. Five 4-char hex

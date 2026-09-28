@@ -380,8 +380,6 @@ func NodeInstallCommand(root, manager string) []string {
 	return []string{"pnpm", "install", "--frozen-lockfile"}
 }
 
-func exists(path string) bool { _, err := os.Stat(path); return err == nil }
-
 func preparationError(project, dir, command string, err error, detail string) *output.Error {
 	code := cliErrors.ONE_CLI_ERROR
 	var missing *exec.Error

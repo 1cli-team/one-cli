@@ -171,13 +171,6 @@ func buildProject(m *Manifest, p *ManifestProject) OverviewProject {
 	return out
 }
 
-func manifestWorkspaceID(m *Manifest) string {
-	if m == nil || m.Workspace == nil {
-		return ""
-	}
-	return strings.TrimSpace(m.Workspace.ID)
-}
-
 func projectResolvedDomains(m *Manifest, p *ManifestProject) map[string]string {
 	out := map[string]string{}
 	if env := EnvBackend(m); env != "" {

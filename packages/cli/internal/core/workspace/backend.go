@@ -1,9 +1,6 @@
 package workspace
 
 import (
-	"encoding/json"
-	"strings"
-
 	catalog "github.com/torchstellar-team/one-cli/packages/cli/internal/core/backend"
 )
 
@@ -18,24 +15,6 @@ func EnvBackend(m *Manifest) string {
 		return ""
 	}
 	return EnvBackendInfisical
-}
-
-// EnvConfigRaw serializes the typed Infisical binding, or returns nil when unset.
-func EnvConfigRaw(m *Manifest) json.RawMessage {
-	if m == nil || m.Env == nil {
-		return nil
-	}
-	raw, _ := json.Marshal(m.Env)
-	return raw
-}
-
-// WorkspaceID returns the workspace identity id, or "" when older
-// manifests have not been back-filled yet.
-func WorkspaceID(m *Manifest) string {
-	if m == nil || m.Workspace == nil {
-		return ""
-	}
-	return strings.TrimSpace(m.Workspace.ID)
 }
 
 // SelectionForProject projects the environment source for template compatibility checks.

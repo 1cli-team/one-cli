@@ -156,11 +156,6 @@ func HasManifest(projectRoot string) bool {
 	return err == nil
 }
 
-// IsOneProjectRoot is an alias for HasManifest.
-func IsOneProjectRoot(projectRoot string) bool {
-	return HasManifest(projectRoot)
-}
-
 // ReadManifest loads and validates the manifest. Returns an empty manifest
 // (no error) when the file does not exist. Only the current ManifestVersion
 // is accepted; older manifests must be migrated by hand (see CHANGELOG).

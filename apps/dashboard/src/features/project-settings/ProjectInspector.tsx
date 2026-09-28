@@ -49,10 +49,11 @@ import { useEnvironmentDirtyStore } from "@/features/environment-context/environ
 import { EnvironmentForm } from "@/features/project-settings/forms/EnvironmentForm";
 import { ServicePanel } from "@/features/services/ServicePanel";
 import { GeneralForm } from "@/features/project-settings/forms/GeneralForm";
-import type { ProjectInspectorTab } from "@/features/project-settings/ProjectMatrix";
 import { WorkspaceSettingsDialog } from "@/features/workspace-settings/WorkspaceSettingsDialog";
 import { cn } from "@/lib/utils";
 import type { OverviewProject, ProjectSettingsResponse } from "@/types/api";
+
+type ProjectInspectorTab = "overview" | "environment" | "runtime";
 
 interface ProjectInspectorProps {
 	projects: OverviewProject[];

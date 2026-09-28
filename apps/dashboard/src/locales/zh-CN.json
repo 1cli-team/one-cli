@@ -1,6 +1,5 @@
 {
 	"sidebar": {
-		"brand": "local control",
 		"home": "首页",
 		"settings": "设置",
 		"themeToDark": "切深色",
@@ -8,25 +7,16 @@
 		"language": "语言",
 		"languageAuto": "跟随系统",
 		"languageZh": "中文",
-		"languageEn": "English",
-		"navigation": "导航",
-		"openNavigation": "打开导航",
-		"closeNavigation": "关闭导航"
+		"languageEn": "English"
 	},
 	"topbar": {
-		"home": "工作台",
 		"workspaces": "主页",
 		"settings": "设置",
 		"profile": "凭据 profile",
-		"sectionsRoot": "配置分区",
-		"devData": {
-			"fixtureLiveProfiles": "Fixture Workspace · 本机真实 Profile"
-		}
+		"sectionsRoot": "配置分区"
 	},
 	"manifestDraft": {
 		"saveButton": "保存更改 · {{count}}",
-		"workspaceScope": "Workspace",
-		"changeCount": "{{count}} 项修改",
 		"title": "要把这些修改写入 Manifest 吗？",
 		"description": "这会修改工作区里的 one.manifest.json。继续前请确认下面的具体差异。",
 		"currentManifest": "当前 Manifest",
@@ -60,19 +50,12 @@
 			"loadFailedTitle": "无法加载工作区",
 			"loadFailedDescription": "无法读取本机工作区注册表。",
 			"retry": "重试",
-			"registryCount": "{{count}} 个工作区",
 			"projectCount": "{{count}} 个项目",
-			"currentSession": "本次 one serve",
-			"workspaceId": "Workspace ID",
-			"idUnavailable": "不可用",
 			"projects": "项目",
-			"projectCountUnavailable": "不可用",
-			"projectCountShort": "{{count}} 个项目",
 			"lastDetected": "最近识别",
 			"emptyTitle": "尚未登记工作区",
 			"emptyDescription": "运行 one create 创建工作区，或在已有工作区中运行 one serve 进行登记。",
 			"listLabel": "已登记的工作区",
-			"registeredOnMachine": "已登记到本机",
 			"registrationHint": "运行 one serve 后，新的 Workspace 会显示在这里。",
 			"refresh": "刷新",
 			"search": "搜索名称、路径或 ID…",
@@ -121,7 +104,6 @@
 			}
 		},
 		"forget": {
-			"short": "移除 Workspace",
 			"action": "移除 {{name}}",
 			"confirm": "要移除 Workspace「{{name}}」吗？这里只会移除本机注册记录，不会删除项目文件或远端变量。",
 			"done": "已移除 {{name}}",
@@ -140,14 +122,9 @@
 			"title": "找不到 Workspace",
 			"description": "这条登记记录已不存在，请返回首页选择其他工作区。",
 			"back": "选择 Workspace"
-		},
-		"noneReady": {
-			"title": "没有可用的 Workspace",
-			"description": "可在左侧选择异常 Workspace 查看修复提示，或进入有效 Workspace 执行 one serve。"
 		}
 	},
 	"notFound": {
-		"message": "404 - 页面未找到",
 		"title": "页面不存在",
 		"description": "当前地址没有对应的管理页面，请返回首页继续。"
 	},
@@ -158,12 +135,6 @@
 		"devDetails": "开发模式错误详情",
 		"reload": "重新加载",
 		"home": "返回首页"
-	},
-	"settings": {
-		"title": "设置",
-		"description": "管理可供 Workspace 和 Project 使用的机器级凭据 Profile。",
-		"loadFailedTitle": "加载设置失败",
-		"manageBackend": "管理 Profile"
 	},
 	"sections": {
 		"groupLabel": {
@@ -179,147 +150,27 @@
 	"home": {
 		"title": "机器级 profile",
 		"loadFailedTitle": "加载 profile 失败",
-		"profileCount_one": "{{count}} 个 profile",
-		"profileCount_other": "{{count}} 个 profile",
-		"default": "default: {{name}}",
-		"noDefault": "无 default",
 		"loading": "加载中…"
 	},
-	"detail": {
-		"unknownSectionTitle": "未知 section",
-		"unknownSectionBody": "{{domain}}/{{backend}} 不是合法 (domain, backend) 对。",
-		"loadFailedTitle": "加载失败",
-		"showSecrets": "显示原文",
-		"hideSecrets": "隐藏凭据原文",
-		"showingSecrets": "已显示原文",
-		"addProfile": "新增 profile",
-		"loading": "加载中…",
-		"empty": "还没有 profile。点击右上「新增 profile」创建第一个。",
-		"default": "default",
-		"tableProfile": "Profile",
-		"tableSummary": "摘要",
-		"tableActions": "操作",
-		"setDefault": "设为 default",
-		"edit": "编辑",
-		"remove": "删除",
-		"confirmRemove": "确认删除 profile \"{{name}}\"？此操作不可撤销。"
-	},
 	"form": {
-		"addTitle": "新增 profile",
-		"editTitle": "编辑 {{name}}",
-		"addDescription": "填好后点保存。第一个 profile 自动成为 default。",
-		"editDescription": "保存会覆盖现有内容；密钥字段留空会保持不变。",
-		"profileName": "profile 名",
-		"profileNamePlaceholder": "如 work / prod / acr-prod",
-		"setDefaultAfterSave": "保存后设为 default",
-		"setDefaultAfterSaveAuto": "保存后设为 default（当前 section 无 default，会自动设）",
 		"cancel": "取消",
-		"save": "保存",
-		"fields": {
-			"siteUrl": "Site URL",
-			"clientId": "Client ID",
-			"clientSecret": "Client Secret",
-			"secretUnchangedPlaceholder": "留空则保持不变",
-			"endpoint": "Endpoint（aws-s3 可留空走 SDK 默认）",
-			"endpointPlaceholder": "https://<vendor-endpoint>",
-			"region": "Region",
-			"regionPlaceholder": "us-east-1 / cn-hangzhou / auto",
-			"forcePathStyle": "force path style（MinIO / RustFS 必需）",
-			"accessKeyId": "Access Key ID",
-			"accessKeySecret": "Access Key Secret",
-			"kubeconfigPath": "Kubeconfig 路径",
-			"kubeconfigContext": "Context 名",
-			"kubeconfigContextPlaceholder": "prod / staging",
-			"teamSlug": "Team slug（留空 = 个人 scope）",
-			"teamSlugPlaceholder": "my-org",
-			"apiToken": "API Token",
-			"accountId": "Account ID（多账号 token 必填，否则留空）",
-			"accountIdPlaceholder": "a1b2c3...",
-			"regionEdgeOne": "Region（如 ap-guangzhou，可空）",
-			"regionEdgeOnePlaceholder": "ap-guangzhou",
-			"registry": "Registry",
-			"registryPlaceholder": "your-harbor.example.com / quay.io / ...",
-			"acrRegion": "ACR Region",
-			"acrRegionPlaceholder": "cn-hangzhou / cn-shanghai（host 派生为 registry.<region>.aliyuncs.com）",
-			"namespace": "Namespace",
-			"namespacePlaceholder": "org / username",
-			"username": "Username",
-			"password": "Password / token"
-		},
-		"summary": {
-			"noFields": "（无字段）",
-			"site": "site: {{site}}",
-			"notSet": "(未填)",
-			"endpointDefault": "(SDK 默认)",
-			"regionDefault": "-",
-			"endpointRegion": "endpoint: {{endpoint}} · region: {{region}}",
-			"contextDefault": "-",
-			"kubeconfigDefault": "(默认)",
-			"contextFile": "context: {{context}} · file: {{file}}",
-			"team": "team: {{team}}",
-			"teamPersonal": "(personal)",
-			"account": "account: {{account}}",
-			"accountTokenDefault": "(token default)",
-			"regionLabel": "region: {{region}}",
-			"regionDefaultLabel": "(default)",
-			"registryUnset": "(未填 registry)",
-			"acrRegionUnset": "(未填 region)"
-		},
 		"close": "关闭",
 		"discardTitle": "放弃未保存的修改？",
 		"discardDescription": "当前修改尚未保存。放弃后将关闭编辑窗口。",
 		"continueEditing": "继续编辑"
 	},
-	"toast": {
-		"updated": "已更新 {{name}}",
-		"created": "已新增 {{name}}",
-		"setDefault": "default 已切换到 {{name}}",
-		"removed": "已删除 {{name}}",
-		"setDefaultAfterSaveHint": "已设为 default"
-	},
 	"http": {
 		"networkError": "网络请求失败，请检查网络连接。"
 	},
 	"projects": {
-		"title": "项目配置矩阵",
-		"description": "从一处查看并配置 manifest 中的全部项目。",
 		"search": "搜索项目、路径或 backend",
-		"showFilters": "显示筛选",
-		"hideFilters": "收起筛选",
-		"kindFilter": "按项目类型筛选",
-		"statusFilter": "按处理状态筛选",
-		"kinds": {
-			"all": "全部类型"
-		},
-		"statuses": {
-			"all": "全部状态",
-			"attention": "仅待处理",
-			"healthy": "仅正常"
-		},
 		"empty": {
-			"title": "没有匹配的项目",
-			"description": "调整搜索词或项目类型筛选。"
-		},
-		"matrix": {
-			"project": "项目",
-			"environment": "Environment",
-			"status": "状态",
-			"notApplicable": "-",
-			"notApplicableTitle": "这个项目不适用该配置",
-			"notConfigured": "未配置",
-			"profileMissing": "凭据待补充",
-			"setupRequired": "需要配置",
-			"ready": "配置可用",
-			"healthy": "正常",
-			"issueCount": "{{count}} 项待处理",
-			"configureDomain": "为 {{project}} 配置 {{domain}}"
+			"title": "没有匹配的项目"
 		}
 	},
 	"projectInspector": {
-		"close": "关闭项目配置",
 		"workspaceTitle": "项目设置",
 		"projectsTitle": "项目",
-		"projectsDescription": "选择项目后在右侧配置",
 		"projectListLabel": "工作区项目",
 		"empty": "这个工作区还没有项目。",
 		"tabs": {
@@ -330,27 +181,17 @@
 		},
 		"loadFailed": "无法加载项目配置",
 		"retry": "重试",
-		"backend": "Backend",
 		"manifestReadOnly": "Manifest · 只读",
 		"manifestDraft": "Manifest 草稿",
-		"saved": "项目 Profile 绑定已保存",
-		"saveFailed": "保存项目 Profile 绑定失败",
-		"values": {
-			"enabled": "已启用",
-			"disabled": "已禁用"
-		},
 		"unsavedChangesTitle": "放弃未保存的修改？",
 		"unsavedChanges": "当前修改尚未保存。要放弃修改并继续吗？",
 		"discardAndContinue": "放弃并继续",
 		"general": {
-			"title": "项目概览",
-			"description": "在这里修改项目运行配置；点击右上角保存前，所有变化只保留为草稿。",
 			"template": "Template",
 			"toolchain": "Toolchain",
 			"path": "项目路径",
 			"buildVersion": "构建版本",
 			"packageManager": "包管理器",
-			"packageManagerAutomatic": "自动检测",
 			"devCommand": "开发命令",
 			"buildCommand": "构建命令",
 			"buildSource": "one build 自动读取 {{source}}，请在该文件中修改构建任务。 工作区依赖与缓存由 mise 管理，one run build 使用相同入口。",
@@ -372,7 +213,6 @@
 		},
 		"environment": {
 			"title": "环境配置",
-			"description": "项目路径、继承和禁用设置保存在清单中，Infisical 项目绑定在工作区层级管理。",
 			"path": "Infisical 文件夹路径",
 			"inherits": "继承工作区环境",
 			"inheritsHint": "项目变量会覆盖同名工作区变量。",
@@ -380,31 +220,14 @@
 			"disabledHint": "运行项目命令时不注入环境变量。",
 			"keys": "已声明变量名"
 		},
-		"profile": {
-			"label": "项目 Profile",
-			"description": "选择仅对这个项目和当前环境生效的机器级凭据。",
-			"notRequired": "这个 Backend 不需要凭据 Profile。",
-			"loading": "正在加载凭据 Profile…",
-			"loadFailed": "无法加载凭据 Profile。",
-			"automatic": "自动解析（工作区 / 默认）",
-			"inherited": "继承 {{name}}（{{source}}）",
-			"none": "尚未解析到 Profile",
-			"manage": "前往设置管理"
-		},
-		"draftHint": "修改将暂存为草稿，预览并保存后生效。",
-		"runtime": {
-			"title": "运行与控制台"
-		}
+		"draftHint": "修改将暂存为草稿，预览并保存后生效。"
 	},
 	"secrets": {
 		"title": "Infisical 密钥",
-		"description": "管理当前环境和作用域中保存于远端的密钥值。",
 		"unavailableTitle": "远端密钥尚未启用",
 		"unavailableDescription": "请在工作区设置中绑定 Infisical 项目，以管理远端变量。",
-		"configureBackend": "配置环境 Backend",
 		"scope": "密钥作用域",
 		"workspaceScope": "Workspace 共享",
-		"directOnly": "这里只能修改当前 folder 直接定义的值，不会改动继承的上层密钥。",
 		"add": "新增密钥",
 		"key": "Key",
 		"value": "值",
@@ -441,121 +264,26 @@
 	},
 	"project": {
 		"fields": {
-			"bucket": "Bucket",
-			"environment": "部署环境",
-			"projectId": "Project ID",
-			"projectName": "项目名称",
-			"workerName": "Worker 名称"
+			"environment": "部署环境"
 		}
 	},
 	"overview": {
-		"untitledWorkspace": "未命名 workspace",
-		"environments": "环境",
 		"projects": "子项目",
-		"empty": "manifest 里没有声明任何子项目。",
-		"allGood": "✓ 配置齐全",
-		"workspaceIssuesTitle": "工作区级配置缺失",
-		"manageProfilesCta": "管理凭据 profile",
-		"profileSafety": "Profile 保存在本机配置中，凭据不会写入 manifest。",
 		"workspaceEnv": {
 			"title": "工作区环境变量",
-			"scope": "Workspace 级",
-			"readOnly": "只读",
 			"description": "配置工作区环境存储，并管理共享密钥。",
-			"localBinding": "机器本地 Profile 绑定",
-			"manifestLegend": "共享 Manifest",
-			"localLegend": "本机配置",
 			"backend": "Backend",
-			"backendDescription": "工作区统一使用 Infisical 管理环境变量。",
-			"backendManifest": "Manifest 配置",
 			"backendPending": "等待审阅",
 			"backendSource": "Infisical 项目绑定变更经审阅后写入 one.manifest.json。",
-			"backendPendingHint": "已加入顶部的待提交改动。保存时 One CLI 会完成 Backend 初始化；完成后即可选择对应的本机 Profile。",
-			"backendMissing": "未配置",
-			"loading": "正在加载 Workspace Profile 绑定…",
-			"loadFailed": "无法加载 Workspace Profile 绑定。",
-			"missingBackendCli": "请先选择环境变量 Backend，再选择 Profile。",
-			"saved": "Workspace Profile 已保存",
-			"saveFailed": "无法保存 Workspace Profile",
-			"profile": {
-				"title": "凭据 Profile",
-				"label": "Profile",
-				"description": "为这个 Workspace 和当前环境选择一个机器本地的凭据 Profile。",
-				"localBadge": "仅本机",
-				"waitTitle": "先应用 Backend 修改",
-				"waitDescription": "目标 Backend 生效后，系统会重新读取它需要的 Profile；这里不会提前保存到错误的 Backend。",
-				"notRequired": "这个 Backend 不需要凭据 Profile。",
-				"loading": "正在加载凭据 Profile…",
-				"loadFailed": "无法加载凭据 Profile。",
-				"automatic": "自动解析（机器默认）",
-				"inherited": "自动 · {{name}}（{{source}}）",
-				"none": "当前未解析到 Profile",
-				"manage": "前往设置管理"
-			},
 			"signInHint": "请先在设置中登录 Infisical，再选择存储项目。",
 			"noProjects": "暂无可用的存储项目，可在共享凭据中创建。"
 		},
 		"tabs": {
-			"label": "工作区分区",
 			"environment": "工作区环境变量",
-			"projects": "项目",
 			"secrets": "Infisical 密钥"
 		},
 		"navigation": {
-			"label": "工作区页面导航",
-			"overview": "待处理",
-			"projects": "项目",
-			"secrets": "密钥",
-			"settings": "工作区设置",
-			"attention": "{{count}} 项需要处理",
-			"ready": "当前没有阻塞项",
-			"projectCount": "{{count}} 个项目",
-			"infisical": "Infisical 已启用",
-			"notEnabled": "尚未启用远端密钥",
-			"backendProfile": "Backend 与 Profile"
-		},
-		"actionCenter": {
-			"eyebrow": "下一步",
-			"pending": "项需要处理",
-			"clear": "项阻塞",
-			"description": "按顺序处理下面的问题，完成后再运行对应的 One CLI 命令。",
-			"clearDescription": "工作区的核心配置已经可以使用。",
-			"title": "优先处理",
-			"hint": "每一项都直接进入对应的配置位置。",
-			"viewProjects": "查看全部项目",
-			"workspaceLabel": "工作区配置",
-			"configureWorkspace": "配置工作区",
-			"resolve": "立即处理",
-			"allGood": "当前没有待处理项",
-			"allGoodDescription": "可以继续管理密钥，或检查各项目的详细配置。"
-		},
-		"command": {
-			"ready": "可以运行",
-			"review": "检查配置"
-		},
-		"metrics": {
-			"projects": "项目",
-			"healthy": "正常",
-			"attention": "待处理"
-		},
-		"kinds": {
-			"app": "App",
-			"service": "Service",
-			"package": "Package"
-		},
-		"issue": {
-			"label": {
-				"env": "env",
-				"profile": "profile"
-			},
-			"missingProfile": "{{section}} 缺少可用凭据 profile{{profile}}，请补齐 API key / token。",
-			"missing": {
-				"env": "workspace 未选择 env backend，请先配置再运行 `one env` 相关命令。"
-			}
-		},
-		"fix": {
-			"profileCta": "补凭据",
-			"cliHint": "请使用 One CLI 配置这个 Backend。"
+			"settings": "工作区设置"
 		}
 	},
 	"session": {

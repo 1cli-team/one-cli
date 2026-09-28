@@ -14,17 +14,6 @@ import (
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/i18n"
 )
 
-// ManifestProjectInput is the upsert payload from `add` and status fixes.
-// PackageManager is optional and absent for Go projects (Go has no
-// package manager concept here — go.mod is the single source of truth).
-type ManifestProjectInput struct {
-	Name           string
-	RelativeDir    string
-	TemplateID     string
-	Toolchain      string
-	PackageManager string
-}
-
 // EnsureManifest creates an empty manifest if missing and returns whatever
 // is on disk.
 func EnsureManifest(projectRoot string) (*Manifest, error) {
@@ -36,49 +25,6 @@ func EnsureManifest(projectRoot string) (*Manifest, error) {
 		return m, nil
 	}
 	return ReadManifest(projectRoot)
-}
-
-// UpsertManifestProject adds or updates the manifest entry for the given
-// project (keyed by relativeDir). Preserves the existing per-project
-// `domains` override block (env / container / deploy).
-func UpsertManifestProject(projectRoot string, input ManifestProjectInput) error {
-	m, err := EnsureManifest(projectRoot)
-	if err != nil {
-		return err
-	}
-	relativeDir := ToPosixPath(input.RelativeDir)
-
-	var preservedEnv *ProjectEnvOverride
-	var preservedDev *ProjectDevOverride
-	buildVersion := DefaultBuildVersion
-	kept := make([]ManifestProject, 0, len(m.Projects))
-	for _, p := range m.Projects {
-		if p.RelativeDir == relativeDir {
-			preservedEnv = p.Env
-			preservedDev = p.Dev
-			buildVersion = NormalizeBuildVersion(p.BuildVersion)
-			continue
-		}
-		kept = append(kept, p)
-	}
-
-	toolchain := input.Toolchain
-	if toolchain == "" {
-		toolchain = "node"
-	}
-	kept = append(kept, ManifestProject{
-		Name:           input.Name,
-		RelativeDir:    relativeDir,
-		TemplateID:     input.TemplateID,
-		Toolchain:      toolchain,
-		BuildVersion:   buildVersion,
-		PackageManager: input.PackageManager,
-		Env:            preservedEnv,
-		Dev:            preservedDev,
-	})
-
-	m.Projects = sortByRelativeDir(kept)
-	return WriteManifest(projectRoot, m)
 }
 
 // MarshalManifest renders the exact bytes WriteManifest publishes: canonical
@@ -105,9 +51,7 @@ func MarshalManifest(m *Manifest) ([]byte, error) {
 // WriteManifest persists the manifest to disk with 2-space indentation and
 // a trailing newline (fs-extra parity). Publication is atomic: bytes are
 // written to a sibling temporary file, synced, closed, and then renamed over
-// the destination. Existing file permissions are preserved. Callers that want
-// to mutate top-level configuration should use the UpdateManifest* helpers
-// below.
+// the destination. Existing file permissions are preserved.
 func WriteManifest(projectRoot string, m *Manifest) error {
 	b, err := MarshalManifest(m)
 	if err != nil {
@@ -230,34 +174,6 @@ func InitWorkspaceEnv(projectRoot string, init EnvInit) error {
 	return WriteManifest(projectRoot, m)
 }
 
-// SetWorkspaceEnvConfig updates only the workspace env backend's config
-// blob, preserving Kind. Returns an error when no env backend
-// has been selected yet (callers must call InitWorkspaceEnv first).
-func SetWorkspaceEnvConfig(projectRoot string, configJSON json.RawMessage) error {
-	m, err := EnsureManifest(projectRoot)
-	if err != nil {
-		return err
-	}
-	if m.Env == nil {
-		return ErrEnvBackendNotConfigured
-	}
-	config := &EnvironmentConfig{}
-	if err := json.Unmarshal(configJSON, config); err != nil {
-		return err
-	}
-	m.Env = config
-	return WriteManifest(projectRoot, m)
-}
-
-// ErrEnvBackendNotConfigured is returned by SetWorkspaceEnvConfig when
-// the manifest has no env backend selected yet.
-var ErrEnvBackendNotConfigured = newErrEnvBackendNotConfigured()
-
-type envBackendNotConfiguredErr struct{}
-
-func newErrEnvBackendNotConfigured() error       { return envBackendNotConfiguredErr{} }
-func (envBackendNotConfiguredErr) Error() string { return "workspace env backend is not configured" }
-
 // EnsureEnvironment guarantees that name is present in
 // manifest.environments.names. Returns added=true when the environment
 // list was modified (i.e. name was not already there). Idempotent —
@@ -284,7 +200,6 @@ func EnsureEnvironment(projectRoot, name string) (added bool, err error) {
 
 // UpdateProjectDev sets projects[].dev.command on the project
 // entry keyed by relativeDir. Empty cmd clears the override block.
-// Mirrors UpdateManifestProjectEnv's read-modify-write pattern.
 //
 // Used by creation during `one add` to persist the derived
 // dev command into the manifest, replacing the legacy Procfile.dev
@@ -306,30 +221,10 @@ func UpdateProjectDev(projectRoot, relativeDir, cmd string) error {
 	return nil
 }
 
-// UpdateManifestProjectEnv sets the env override on a single project
-// entry, keyed by relativeDir. Errors if the entry does not exist (use
-// UpsertManifestProject first to create it).
-func UpdateManifestProjectEnv(projectRoot, relativeDir string, env *ProjectEnvOverride) error {
-	m, err := ReadManifest(projectRoot)
-	if err != nil {
-		return err
-	}
-	relativeDir = ToPosixPath(relativeDir)
-	for i := range m.Projects {
-		if m.Projects[i].RelativeDir == relativeDir {
-			m.Projects[i].Env = env
-			return WriteManifest(projectRoot, m)
-		}
-	}
-	return nil
-}
-
 // RecordWorkspaceEnvKey appends key to the workspace-level env config's
 // keys list (sorted, deduped, idempotent). Use this when a `one env set`
 // runs at workspace-root scope — i.e. without -p and not inside any
-// project. These keys are intended as project-global vars usable by every
-// project. Stored inside m.Domains.Env.Config as a plain {"keys": [...]}
-// blob alongside any backend-specific fields.
+// project. These keys are stored in m.Env.Keys and are usable by every project.
 func RecordWorkspaceEnvKey(projectRoot, key string) error {
 	if key == "" {
 		return nil
@@ -338,7 +233,9 @@ func RecordWorkspaceEnvKey(projectRoot, key string) error {
 	if err != nil {
 		return err
 	}
-	ensureWorkspaceEnv(m)
+	if m.Env == nil {
+		m.Env = &EnvironmentConfig{}
+	}
 	for _, existing := range m.Env.Keys {
 		if existing == key {
 			return nil
@@ -347,16 +244,6 @@ func RecordWorkspaceEnvKey(projectRoot, key string) error {
 	m.Env.Keys = append(m.Env.Keys, key)
 	sort.Strings(m.Env.Keys)
 	return WriteManifest(projectRoot, m)
-}
-
-// WorkspaceEnvKeys returns the sorted union of variable names recorded at
-// workspace-root scope, or nil when none. Reads the "keys" field embedded
-// in m.Domains.Env.Config.
-func WorkspaceEnvKeys(m *Manifest) []string {
-	if m == nil || m.Env == nil {
-		return nil
-	}
-	return m.Env.Keys
 }
 
 // RecordProjectEnvKey appends key to projects[i].env.keys for the
@@ -404,61 +291,6 @@ func newEmptyManifestStub() *Manifest {
 		Version:  ManifestVersion,
 		Projects: []ManifestProject{},
 	}
-}
-
-// RebuildManifest replaces the projects array wholesale with the supplied
-// inputs, preserving each entry's per-project `domains` override block and
-// every workspace-level field. Used by `add` to reconcile drift between
-// the filesystem and the manifest.
-func RebuildManifest(projectRoot string, inputs []ManifestProjectInput) (*Manifest, error) {
-	current, err := ReadManifest(projectRoot)
-	if err != nil {
-		return nil, err
-	}
-	type prior struct {
-		buildVersion string
-		env          *ProjectEnvOverride
-		dev          *ProjectDevOverride
-	}
-	priorByDir := make(map[string]prior, len(current.Projects))
-	for _, p := range current.Projects {
-		priorByDir[p.RelativeDir] = prior{
-			buildVersion: NormalizeBuildVersion(p.BuildVersion),
-			env:          p.Env,
-			dev:          p.Dev,
-		}
-	}
-
-	projects := make([]ManifestProject, 0, len(inputs))
-	for _, in := range inputs {
-		rel := ToPosixPath(in.RelativeDir)
-		toolchain := in.Toolchain
-		if toolchain == "" {
-			toolchain = "node"
-		}
-		p := priorByDir[rel]
-		projects = append(projects, ManifestProject{
-			Name:           in.Name,
-			RelativeDir:    rel,
-			TemplateID:     in.TemplateID,
-			Toolchain:      toolchain,
-			BuildVersion:   NormalizeBuildVersion(p.buildVersion),
-			PackageManager: in.PackageManager,
-			Env:            p.env,
-			Dev:            p.dev,
-		})
-	}
-	m := &Manifest{
-		Version:      ManifestVersion,
-		Workspace:    current.Workspace,
-		Environments: current.Environments,
-		Env:          current.Env,
-		Projects:     sortByRelativeDir(projects),
-	}
-	if err := WriteManifest(projectRoot, m); err != nil {
-		return nil, err
-	}
-	return m, nil
 }
 
 // SetManifestWorkspaceIdentity writes (or overwrites) the workspace

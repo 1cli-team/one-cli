@@ -50,9 +50,6 @@ func invertByteMap(m map[byte]string) map[string]byte {
 // the code is not recognised.
 func EnvProviderForCode(c byte) string { return envCodes[c] }
 
-// CodeForEnvProvider returns the env code for a provider, or 0 if none.
-func CodeForEnvProvider(name string) byte { return envCodeReverse[name] }
-
 // EnvCodesSnapshot returns a stable snapshot of (code, env) pairs.
 func EnvCodesSnapshot() []CodeEntry { return snapshotByteMap(envCodes) }
 
