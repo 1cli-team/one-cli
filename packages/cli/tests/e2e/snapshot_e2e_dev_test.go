@@ -1,12 +1,6 @@
 package cli_test
 
-// E2E coverage of `one dev`. Dev is a leaf verb (no subcommands) that
-// reads projects[].domains.dev.command from the manifest and dispatches
-// each project to the built-in supervisor. Procfile.dev / external
-// runners (overmind etc.) are no longer involved.
-//
-// The tests lock positional and legacy project selectors, dependency gates,
-// and the manifest-driven start path.
+// Development uses the same mise graph and result protocol as other tasks.
 
 import (
 	"encoding/json"
@@ -26,8 +20,8 @@ func TestSnapshot_E2E_DevPositionalSelectorUnknown(t *testing.T) {
 			t.Fatalf("expected unknown positional project %q to fail", sub)
 		}
 		got := mustParseJSON(t, firstJSONLine(stderr))
-		if got["error"].(map[string]any)["code"] != "SUBPROJECT_NOT_FOUND" {
-			t.Fatalf("expected SUBPROJECT_NOT_FOUND for `one dev %s`, got: %s", sub, stderr)
+		if !strings.Contains(got["error"].(map[string]any)["message"].(string), "-p") {
+			t.Fatalf("expected project flag guidance for `one dev %s`, got: %s", sub, stderr)
 		}
 	}
 }
@@ -42,6 +36,7 @@ func TestSnapshot_E2E_DevProjectSelectorUnknown(t *testing.T) {
 		t.Fatalf("add api failed: exit %d\n  stderr: %s", code, stderr)
 	}
 
+	t.Setenv("ONE_MISE_BINARY", filepath.Join(ws, "missing-mise"))
 	_, stderr, code = runBinaryIn(t, ws, "dev", "-p", "nonexistent", "-o", "json")
 	if code == 0 {
 		t.Fatal("expected `one dev -p nonexistent` to fail")
@@ -58,69 +53,16 @@ func TestSnapshot_E2E_DevProjectSelectorUnknown(t *testing.T) {
 	}
 }
 
-// TestSnapshot_E2E_DevFromManifest exercises the new manifest-driven
-// dev path: `one add` writes projects[].domains.dev.command, `one dev`
-// reads that and runs the built-in supervisor. We override the command
-// to a trivial echo to keep the test fast and deterministic — the real
-// `pnpm run dev` / `go run` paths are out of scope for an integration
-// smoke test.
 func TestSnapshot_E2E_DevFromManifest(t *testing.T) {
-	tmp := t.TempDir()
-	isolateHome(t, tmp)
-	ws := bootstrapWorkspace(t, tmp, "ws")
-
-	if _, stderr, code := runBinaryIn(t, ws, "add", "go-api", "--name", "api", "-y", "-o", "json"); code != 0 {
-		t.Fatalf("add api failed: %d\n  stderr: %s", code, stderr)
+	ws := buildFixture(t, true)
+	overrideDevCommand(t, ws, "lib", "echo manifest-development")
+	stdout, stderr, code := runBinaryIn(t, ws, "dev", "-p", "lib", "-o", "json")
+	if code != 0 || !strings.Contains(stderr, "manifest-development") || !json.Valid([]byte(stdout)) {
+		t.Fatalf("exit=%d stdout=%s stderr=%s", code, stdout, stderr)
 	}
-
-	// Patch the resolved dev command to a self-contained echo. The
-	// scaffolded default (`go run ./cmd/server`) would block forever in
-	// the test environment.
-	overrideDevCommand(t, ws, "api", "echo built-in-supervisor-works")
-	// Keep dependency preparation real, but use a dependency-free module so
-	// this supervisor smoke test never installs the API template's toolchain.
-	apiDir := filepath.Join(ws, "services", "api")
-	if err := os.RemoveAll(apiDir); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.MkdirAll(apiDir, 0o755); err != nil {
-		t.Fatal(err)
-	}
-	for file, content := range map[string]string{
-		"go.work":              "go 1.25.0\nuse ./services/api\n",
-		"services/api/go.mod":  "module example.com/api\ngo 1.25.0\n",
-		"services/api/main.go": "package main\nfunc main(){}\n",
-	} {
-		if err := os.WriteFile(filepath.Join(ws, file), []byte(content), 0o644); err != nil {
-			t.Fatal(err)
-		}
-	}
-	t.Setenv("GOTOOLCHAIN", "local")
-	t.Setenv("GOPROXY", "off")
-
-	stdout, stderr, code := runBinaryIn(t, ws, "dev", "api", "-o", "json")
-	if code != 0 {
-		t.Fatalf("dev failed: %d\n  stderr: %s\n  stdout: %s", code, stderr, stdout)
-	}
-	if !strings.Contains(stderr, "built-in-supervisor-works") {
-		t.Errorf("supervisor output missing echo line in stderr:\n%s", stderr)
-	}
-	if !strings.Contains(stderr, "api | ") {
-		t.Errorf("supervisor output missing api prefix in stderr:\n%s", stderr)
-	}
-	if !json.Valid([]byte(stdout)) {
-		t.Fatalf("logs polluted JSON stdout: %s", stdout)
-	}
-	envelope := firstJSONLine(stdout)
-	if envelope == "" {
-		t.Fatalf("no JSON envelope in stdout:\n%s", stdout)
-	}
-	res := mustParseJSON(t, envelope)
-	if res["runner"] != "builtin" {
-		t.Errorf("envelope runner = %v, want %q", res["runner"], "builtin")
-	}
-	if res["schema"] != "one-cli/dev-start/v1" {
-		t.Errorf("schema drift: %v", res["schema"])
+	result := mustParseJSON(t, stdout)
+	if result["schema"] != "one-cli/task-result/v1" || result["status"] != "succeeded" {
+		t.Fatal(result)
 	}
 }
 
@@ -167,12 +109,7 @@ func overrideDevCommand(t *testing.T, workspaceRoot, projectName, cmd string) {
 		if p["name"] != projectName {
 			continue
 		}
-		domains, _ := p["domains"].(map[string]any)
-		if domains == nil {
-			domains = map[string]any{}
-			p["domains"] = domains
-		}
-		domains["dev"] = map[string]any{"command": cmd}
+		p["dev"] = map[string]any{"command": cmd}
 	}
 	out, err := json.MarshalIndent(m, "", "  ")
 	if err != nil {
@@ -199,11 +136,7 @@ func readDevCommandFromManifest(t *testing.T, workspaceRoot, projectName string)
 		if p["name"] != projectName {
 			continue
 		}
-		domains, _ := p["domains"].(map[string]any)
-		if domains == nil {
-			return ""
-		}
-		dev, _ := domains["dev"].(map[string]any)
+		dev, _ := p["dev"].(map[string]any)
 		if dev == nil {
 			return ""
 		}

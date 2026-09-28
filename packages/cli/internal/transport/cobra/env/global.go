@@ -94,10 +94,6 @@ func configureGlobal(parent *cobra.Command, deps Dependencies) {
 		if c == bind {
 			continue
 		}
-		if c.Name() == "get" {
-			c.Flags().Bool("reveal", false, i18n.T("env.flag.reveal"))
-			i18n.MarkFlagUsage(c, "reveal", "env.flag.reveal")
-		}
 		if c.Name() == "set" {
 			c.Flags().Bool("stdin", false, i18n.T("env.flag.stdin"))
 			i18n.MarkFlagUsage(c, "stdin", "env.flag.stdin")
@@ -108,12 +104,6 @@ func configureGlobal(parent *cobra.Command, deps Dependencies) {
 		}
 		c.RunE = func(cmd *cobra.Command, args []string) error {
 			global, _ := cmd.Flags().GetBool("global")
-			if cmd.Name() == "get" {
-				reveal, _ := cmd.Flags().GetBool("reveal")
-				if !reveal {
-					return i18n.Errorf("env.reveal_required")
-				}
-			}
 			if !global {
 				if cmd.Flags().Changed("path") {
 					return i18n.Errorf("env.path_global_required")
@@ -141,10 +131,10 @@ func configureGlobal(parent *cobra.Command, deps Dependencies) {
 				if err != nil {
 					return err
 				}
-				result = map[string]any{"location": l, "environments": environments, "commands": []string{"one env list --global --path /", "one run --global --path /folder --env ENV -- command"}}
+				result = map[string]any{"location": l, "environments": environments, "commands": []string{"one env list --global --path /", "one exec --global --path /folder --env ENV -- command"}}
 			case "list":
 				result, e = remote.ListGlobal(cmd.Context(), env, folder)
-			case "get", "unset":
+			case "unset":
 				result, e = remote.GlobalSecret(cmd.Context(), cmd.Name(), env, folder, args[0], "")
 			case "set":
 				key, value := parseSetArgs(args)

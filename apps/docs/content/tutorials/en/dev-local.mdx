@@ -1,87 +1,21 @@
 ---
-title: Local dev orchestration
-description: Run every project's dev process at once with one dev. Where the command lives, how to run a single project, how it composes with one run.
+title: Local development
+description: Select projects, customize mise tasks, and run development services.
 ---
 
-`one dev` starts every project's local dev process at once. Commands are read from `one.manifest.json` at `projects[].domains.dev.command`, and a built-in supervisor handles the children — **no third-party tool to install**.
+Start the workspace with `one dev`, or select services explicitly:
 
-## 1. Where the dev command lives
-
-When you `one add <template>`, the CLI derives a dev command from the template's stack and writes it into the manifest:
-
-```json
-{
-  "projects": [
-    {
-      "name": "api",
-      "relativeDir": "services/api",
-      "toolchain": "node",
-      "domains": {
-        "dev": { "command": "pnpm run start:dev" }
-      }
-    },
-    {
-      "name": "web",
-      "relativeDir": "apps/web",
-      "toolchain": "node",
-      "domains": {
-        "dev": { "command": "pnpm run dev" }
-      }
-    }
-  ]
-}
+```sh
+one dev -p web -p api
+one dev -p web --ui raw
+one dev -p web -- --port 4300
+one dev --dry-run -o json
 ```
 
-Resolution order:
+One prepares tools and project dependencies, freezes each project's environment, and invokes mise once. mise runs upstream builds before the services that need them. Multiple services use prefixed logs; Ctrl+C stops the group. A failing task stops the invocation and returns its exit code.
 
-- Node projects: `scripts.dev` → `scripts.start:dev` (NestJS) → `scripts.start` (Expo / generic)
-- Go projects: `go run ./cmd/server`
-- Nothing matches: empty string — the project is skipped by `one dev`
+Project commands come from package scripts, Taskfile, or the manifest's development command. Customize task dependencies and commands in `mise.toml`. One updates generated fields incrementally, preserving custom settings and comments. Custom mise commands use mise's environment; generated adapters inject One's project environment.
 
-Want to customise? Edit the field directly. There is **no auto-sync** from `package.json` — the manifest is the source of truth.
+For arbitrary commands, use `one exec -p web -- pnpm add axios`. It runs in the selected project environment without invoking a task graph.
 
-## 2. Run everything
-
-```bash
-one dev
-```
-
-The built-in supervisor starts every project in parallel, multiplexes stdout/stderr line-by-line with a `<name> | ` prefix (colored under a TTY), and forwards Ctrl-C to every workload — including grandchildren forked by npm / node (via POSIX process groups).
-
-## 3. Run just one project
-
-```bash
-one dev -p api
-one dev -p apps/web        # selector also accepts relativeDir
-```
-
-Only the matching project is launched. Use this when:
-
-- You want to restart `api` alone while the rest keeps running in another terminal
-- You only need part of the stack to avoid port conflicts
-
-## 4. Dry-run to inspect the resolved commands
-
-```bash
-one dev --dry-run
-```
-
-Prints the per-project commands that would run without starting any process.
-
-## 5. Composition with `one run`
-
-Each project's command is internally launched as `one run -p <reldir> -- <command>` — so **`one env` variables are auto-injected** (dotenv or Infisical, per workspace backend). No need to wrap your dev script with `one run` in the manifest.
-
-To start one project with full control, you can still call `one run -p <name>` directly; `one dev` is an orchestrator, not a gate.
-
-## Common errors
-
-| Code | Symptom | Fix |
-|---|---|---|
-| `SUBPROJECT_NOT_FOUND` | No projects declared a dev command, or `-p` selector didn't match | Run `one -o json` to list projects; edit the manifest's `projects[].domains.dev.command` |
-
-Full table: [Error codes](/en/docs/error-codes/).
-
-## Next
-
-- Full flag reference → [`one dev`](/en/docs/dev/)
+See [one dev](/en/docs/dev/) for terminal modes and dependency preparation, and [one run](/en/docs/run/) for task shorthand, overrides, and caching.

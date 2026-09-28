@@ -6,8 +6,6 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"errors"
-	"fmt"
-	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -56,33 +54,13 @@ type InitResult struct {
 	WrittenTo    string   `json:"written_to"`  // absolute path to one.manifest.json
 }
 
-// RenderTTY prints the init outcome.
-func (r *InitResult) RenderTTY(w io.Writer) {
-	if r == nil {
-		return
-	}
-	fmt.Fprintln(w, i18n.T("infisical.init.success"))
-	if r.Created {
-		fmt.Fprintf(w, i18n.T("infisical.init.project_created"), r.ProjectName, r.ProjectID)
-	} else if r.ProjectName != "" {
-		fmt.Fprintf(w, i18n.T("infisical.init.project_named"), r.ProjectName, r.ProjectID)
-	} else {
-		fmt.Fprintf(w, i18n.T("infisical.init.project"), r.ProjectID)
-	}
-	fmt.Fprintf(w, i18n.T("infisical.init.environments"),
-		strings.Join(r.Environments, ", "), r.DefaultEnv)
-	fmt.Fprintf(w, i18n.T("infisical.init.path"), r.RootPath)
-	fmt.Fprintf(w, i18n.T("infisical.init.auth"), r.AuthStatus)
-	fmt.Fprintf(w, i18n.T("infisical.init.written"), r.WrittenTo)
-}
-
 // maxCreateProjectRetries caps the suffix-retry loop. Five 4-char hex
 // suffixes give a 20-bit search space — collisions on every attempt would
 // indicate Infisical-side trouble, not legitimate name competition.
 const maxCreateProjectRetries = 5
 
 // Init writes (or updates) the workspace's Infisical configuration under
-// one.manifest.json#domains.env.config plus manifest.environments.
+// one.manifest.json#env plus manifest.environments.
 //
 // Three branches:
 //
@@ -93,7 +71,7 @@ const maxCreateProjectRetries = 5
 //  3. in.ProjectID empty + no prior config — auto-create on Infisical using
 //     manifest.project.name (or the override --project-name), retrying with
 //     a short random suffix on name collisions, and write the resolved id +
-//     name back into manifest.domains.env.config.
+//     name back into manifest.env.
 //
 // The function is idempotent within each branch.
 func Init(ctx context.Context, projectRoot string, in InitInput) (*InitResult, error) {

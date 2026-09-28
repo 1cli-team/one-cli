@@ -110,20 +110,6 @@ func cloneSpec(spec BackendSpec) BackendSpec {
 	return spec
 }
 
-// WithTrait returns descriptors in stable catalog order.
-func (c *Catalog) WithTrait(trait Trait) []BackendSpec {
-	if c == nil {
-		return nil
-	}
-	var out []BackendSpec
-	for _, spec := range c.ordered {
-		if spec.HasTrait(trait) {
-			out = append(out, cloneSpec(spec))
-		}
-	}
-	return out
-}
-
 // All returns descriptors in the stable product order declared by Builtin.
 func (c *Catalog) All() []BackendSpec {
 	if c == nil {
@@ -162,16 +148,6 @@ func (c *Catalog) LookupPair(pair string) (BackendSpec, bool) {
 	}
 	spec, ok := c.byPair[pair]
 	return cloneSpec(spec), ok
-}
-
-// Names returns the bare backend names for a domain in catalog order.
-func (c *Catalog) Names(domain Domain) []string {
-	specs := c.ForDomain(domain)
-	out := make([]string, len(specs))
-	for i, spec := range specs {
-		out[i] = spec.ID.Name
-	}
-	return out
 }
 
 // SortedPairs is intended for diagnostics and golden assertions.

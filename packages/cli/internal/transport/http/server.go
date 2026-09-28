@@ -18,6 +18,8 @@ import (
 	manifestapp "github.com/torchstellar-team/one-cli/packages/cli/internal/application/manifest"
 	workspaceapp "github.com/torchstellar-team/one-cli/packages/cli/internal/application/workspace"
 	catalog "github.com/torchstellar-team/one-cli/packages/cli/internal/core/backend"
+	creationmodule "github.com/torchstellar-team/one-cli/packages/cli/internal/modules/creation"
+	"github.com/torchstellar-team/one-cli/packages/cli/internal/modules/devservice"
 	environmentmodule "github.com/torchstellar-team/one-cli/packages/cli/internal/modules/environment"
 	cliErrors "github.com/torchstellar-team/one-cli/packages/cli/internal/platform/errors"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/i18n"
@@ -44,6 +46,7 @@ type Opts struct {
 	WorkspaceRoot      string
 	Catalog            *catalog.Catalog
 	ManifestService    *manifestapp.Service
+	CreationService    *creationmodule.Service
 	EnvironmentService *environmentmodule.Service
 	WorkspaceService   *workspaceapp.Service
 	RegistryService    *workspaceapp.RegistryService
@@ -114,23 +117,29 @@ func Run(ctx context.Context, opts Opts, ready func(Result)) error {
 		Port:   port,
 	}
 
+	manager := devservice.New()
+	defer manager.Close()
 	mux := BuildMux(MuxOpts{
-		UIDisabled:    opts.UIDisabled,
-		ExpectedHosts: expectedHosts(opts.Host, port),
-		SelfOrigin:    selfOrigin,
-		WorkspaceRoot: opts.WorkspaceRoot,
-		Catalog:       opts.Catalog,
+		ServiceManager: manager,
+		UIDisabled:     opts.UIDisabled,
+		ExpectedHosts:  expectedHosts(opts.Host, port),
+		SelfOrigin:     selfOrigin,
+		WorkspaceRoot:  opts.WorkspaceRoot,
+		Catalog:        opts.Catalog,
 
 		ManifestService:    opts.ManifestService,
+		CreationService:    opts.CreationService,
 		EnvironmentService: opts.EnvironmentService,
 		WorkspaceService:   opts.WorkspaceService,
 		RegistryService:    opts.RegistryService,
 	})
 	server := &http.Server{
 		Handler:           mux,
+		BaseContext:       func(net.Listener) context.Context { return ctx },
 		ReadHeaderTimeout: 5 * time.Second,
 	}
 
+	defer server.Close()
 	if ready != nil {
 		ready(res)
 	}

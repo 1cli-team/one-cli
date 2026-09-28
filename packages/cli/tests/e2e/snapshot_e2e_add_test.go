@@ -219,8 +219,7 @@ func TestSnapshot_E2E_Add_GoLibTemplate(t *testing.T) {
 		t.Fatalf("manifest: want 1 project, got %d", len(projects))
 	}
 	project := projects[0].(map[string]any)
-	domains, _ := project["domains"].(map[string]any)
-	if dev, exists := domains["dev"]; exists {
+	if dev, exists := project["dev"]; exists {
 		t.Fatalf("go-lib must not declare a runnable dev command, got %v", dev)
 	}
 }

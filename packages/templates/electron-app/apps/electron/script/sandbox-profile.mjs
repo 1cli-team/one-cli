@@ -18,7 +18,10 @@ profile ${name} ${quoted} flags=(unconfined) {
 `;
 }
 
-if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+if (
+  process.argv[1] &&
+  resolve(process.argv[1]) === fileURLToPath(import.meta.url)
+) {
   const require = createRequire(import.meta.url);
   process.stdout.write(sandboxProfile(require("electron")));
 }

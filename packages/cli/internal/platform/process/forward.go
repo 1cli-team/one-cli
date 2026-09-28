@@ -29,7 +29,11 @@ func RunForwarded(ctx context.Context, child *exec.Cmd) error {
 			case sig := <-signals:
 				_ = child.Process.Signal(sig)
 			case <-ctx.Done():
-				_ = child.Process.Kill()
+				if child.Cancel != nil {
+					_ = child.Cancel()
+				} else {
+					_ = child.Process.Kill()
+				}
 				return
 			case <-done:
 				return

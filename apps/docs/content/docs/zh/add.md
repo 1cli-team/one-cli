@@ -3,9 +3,9 @@ title: one add
 description: 往工作区里加一个模板化项目。
 ---
 
-工作区已启用 hk 时，`one add` 会同步更新语言检查：Go 加入格式检查，JS/TS 根据项目工具加入 lint 和格式检查。用户的 `hk.pkl` 保留不变。旧工作区可先通过 `one init hooks` 启用，详见 [`one hk`](/zh/docs/hk/)。
+工作区已启用 hk 时，`one add` 会同步更新语言检查：Go 加入格式检查，JS/TS 根据项目工具加入 lint 和格式检查。检查配置直接保存在 `.config/hk.pkl`，用户修改和注释会保留。工作区和项目任务统一登记在根 `mise.toml`，子项目继续使用自己的原生命令文件。旧工作区可先通过 `one init hooks` 启用，详见 [`one hk`](/zh/docs/hk/)。
 
-`one add` 选择技术栈，生成一个可本地开发的项目并登记到 manifest。CI 和部署默认都保持未配置。
+`one add` 可以从技术栈模板生成项目，也可以创建空项目，并登记到工作区 manifest。CI 和部署默认都保持未配置。
 
 有两条入口：
 
@@ -13,6 +13,8 @@ description: 往工作区里加一个模板化项目。
 - 脚本 / 已知模板：先跑 `one templates` 看模板 ID，再执行 `one add <template-id> --name <project-name>`。
 
 `template-id` 是模板 ID，例如 `nestjs-api` / `nextjs-app` / `ts-library`，不是项目名；项目名由 `--name` 决定。
+
+创建工作区和添加项目时会准备 mise，并自动信任完全由 One 生成的 `mise.toml`，进入新目录无需再单独执行信任命令。已有自定义配置保留 mise 原有的信任检查。本机没有兼容版本时，One 可能下载托管的 mise 程序；项目工具和依赖仍按需安装。信任失败会保留生成文件并给出恢复命令。
 
 ## 用法
 
@@ -40,6 +42,20 @@ one add [template-id] --name <project-name> [options]
 ```bash
 one add nestjs-api --name api --yes
 ```
+
+## 创建空项目
+
+在已有工作区中，可以先创建目录并登记项目，之后再选择语言或框架：
+
+```bash
+one add empty-app --name web --yes
+one add empty-service --name api --yes
+one add empty-library --name shared --yes
+```
+
+三个模板分别创建 `apps/web/`、`services/api/`、`packages/shared/`，仅包含用于 Git 跟踪目录的 `.gitkeep`。它们以 `toolchain: "none"` 登记，不生成 `package.json`、`go.mod`、依赖或启动任务。交互式 `one add` 和 Dashboard 的新建项目选择器也提供这三个选项。
+
+如果使用 Node 或 Go，在 `one.manifest.json` 中将项目的 `toolchain` 改为 `node` 或 `go`；Node 项目使用 `packageManager: "pnpm"`，并补齐根工作区的包成员配置，Go 项目则将模块加入根 `go.work`。在 `package.json` / `Taskfile.yml` 中定义任务，或设置项目的 `dev.command`，然后运行 `one init mise` 更新任务配置。使用其他语言时，可以保留 `toolchain: "none"`，在根 `mise.toml` 中自行定义工具和任务，或设置 `dev.command`。配置好命令后再使用 `one dev` / `one build`。
 
 ## 输出
 
@@ -126,6 +142,5 @@ one add nestjs-api --name user-api --yes -o json | jq
 
 - 检查 `one.manifest.json#projects[]` 确认项目登记
 - Agent 文档和本地开发配置会由 `one add` 同步
-- 下一步运行 `one dev <project>` 开发，使用 `one build <project>` 构建
-- 如需持续集成，单独运行 `one ci enable <project>` 生成 GitHub Actions 工作流
-- `one add` 只生成项目和工作区配置；`one dev` 会自动准备工具与应用依赖。JS/TS 在根目录统一安装，Go 按当前模块或 `go.work` 构建图准备依赖。修改 imports 或模块声明需要修复时，显式运行 `one run <project> -- go mod tidy`。
+- 下一步运行 `one dev -p <project>` 开发，使用 `one build -p <project>` 构建
+- `one add` 只生成项目和工作区配置；`one dev` 会自动准备工具与应用依赖。JS/TS 在根目录统一安装，Go 按当前模块或 `go.work` 构建图准备依赖。修改 imports 或模块声明需要修复时，显式运行 `one exec <project> -- go mod tidy`。

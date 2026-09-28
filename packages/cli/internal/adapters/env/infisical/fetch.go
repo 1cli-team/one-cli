@@ -18,7 +18,7 @@ import (
 // workspace-root path is used.
 //
 // Errors propagate raw so callers can branch:
-//   - INFISICAL_NOT_CONFIGURED — workspace's domains.env.config.projectId is unset
+//   - INFISICAL_NOT_CONFIGURED — workspace's env.projectId is unset
 //   - INFISICAL_AUTH_MISSING   — no active browser session
 //   - INFISICAL_AUTH_FAILED / INFISICAL_API_ERROR — network / API-level
 //

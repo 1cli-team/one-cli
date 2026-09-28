@@ -20,7 +20,6 @@ type createResult struct {
 	CreatedInPlace bool     `json:"created_in_place"`
 	PackageManager string   `json:"package_manager"`
 	SecretsBackend string   `json:"secrets_backend,omitempty"`
-	CIEnabled      bool     `json:"ci_enabled"`
 	DevEnabled     bool     `json:"dev_enabled"`
 	Warnings       []string `json:"warnings,omitempty"`
 	displayPath    string
@@ -36,13 +35,10 @@ func (r *createResult) RenderTTY(w io.Writer) {
 	if r.PackageManager != "" {
 		fmt.Fprintf(w, i18n.T("create.package_manager")+"\n", r.PackageManager)
 	}
-	if r.SecretsBackend == "" || r.SecretsBackend == workspace.EnvBackendDotenv {
+	if r.SecretsBackend == "" {
 		fmt.Fprintln(w, i18n.T("create.env_local"))
 	} else {
 		fmt.Fprintf(w, i18n.T("create.env_source")+"\n", r.SecretsBackend)
-	}
-	if r.CIEnabled {
-		fmt.Fprintln(w, i18n.T("create.ci_github"))
 	}
 	if r.DevEnabled {
 		fmt.Fprintln(w, i18n.T("create.dev_enabled"))

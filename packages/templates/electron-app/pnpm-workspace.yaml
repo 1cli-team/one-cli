@@ -1,0 +1,7 @@
+packages:
+  - apps/electron
+  - apps/ui
+  - packages/preload
+
+onlyBuiltDependencies:
+  - electron

@@ -32,7 +32,7 @@ func write(t *testing.T, root, path, content string) {
 }
 
 func project(name, dir, language string) workspace.ManifestProject {
-	return workspace.ManifestProject{Name: name, RelativeDir: dir, Toolchain: language, Domains: &workspace.ProjectDomains{Dev: &workspace.ProjectDevOverride{Command: "unused-in-preparation"}}}
+	return workspace.ManifestProject{Name: name, RelativeDir: dir, Toolchain: language, Dev: &workspace.ProjectDevOverride{Command: "unused-in-preparation"}}
 }
 
 func setupGo(t *testing.T) string {
@@ -328,13 +328,13 @@ func TestNodeLockfileMismatchUsesFrozenInstallAndStops(t *testing.T) {
 	}
 }
 
-func TestPNPMEnvironmentDocumentDoesNotPretendDependenciesAreLocked(t *testing.T) {
+func TestFinitePNPMTasksNeverCreateAnApplicationLockfile(t *testing.T) {
 	root := t.TempDir()
 	environment := "---\nlockfileVersion: '9.0'\nimporters:\n  .:\n    configDependencies: {}\n    packageManagerDependencies:\n      pnpm: {specifier: 12.3.4, version: 12.3.4}\n"
 	graph := "---\nlockfileVersion: '9.0'\nimporters:\n  .: {}\n  apps/web:\n    dependencies:\n      react: {specifier: '19', version: '19.3.0'}\n"
 	for _, fixture := range []struct{ body, flag string }{
-		{environment, "--no-frozen-lockfile"},
-		{environment + "\n---\n", "--no-frozen-lockfile"},
+		{environment, "--frozen-lockfile"},
+		{environment + "\n---\n", "--frozen-lockfile"},
 		{environment + graph, "--frozen-lockfile"},
 		{graph + environment, "--frozen-lockfile"},
 		{"not valid: [", "--frozen-lockfile"},

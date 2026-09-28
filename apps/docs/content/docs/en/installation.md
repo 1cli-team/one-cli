@@ -72,6 +72,16 @@ one --version
 
 On Windows, the archive is `one-cli_windows_amd64.zip`.
 
+## Automatic Updates
+
+Stable release builds start an independent background updater at most once every 24 hours during normal terminal use. It downloads the platform archive and `checksums.txt` from the official GitHub Release, verifies SHA256 and the executable version, then replaces the installed program. The current command keeps running; subsequent invocations use the new version. On Windows, replacement waits for the command that started the update to exit.
+
+Download, verification, or write failures preserve the installed program. When a newer release is known, One shows the failure and a manual update command. If the executable changes during the download, such as after a local rebuild, the updater refuses to overwrite it. Failed attempts also retry on the 24-hour interval.
+
+**Development builds skip update checks, downloads, installation, and notifications entirely.** Builds from `go build`, `mise run build`, `mise run build-local`, and `mise run install` default to updates disabled, even when `RELEASE_VERSION` is set. Only the release packager enables the update marker, and a complete stable version is also required. Development, local, snapshot, and other prerelease versions never update automatically.
+
+CI, structured JSON/YAML output, `--dry-run`, and internal task processes do not start updates. Update state lives at `$XDG_CACHE_HOME/one/update-check.json`, defaulting to `~/.cache/one/update-check.json`.
+
 ## Upgrade And Downgrade
 
 `install.sh` and `install.ps1` check the installed `one --version` before deciding what to do:
@@ -105,9 +115,9 @@ Managed mise updates with One; automatic self-updates are disabled for that chil
 
 **Offline use:** a valid external, managed, or migratable legacy executable can be reused offline. A fresh environment without any of them needs network access. Prepare mise and the required tools/dependencies beforehand, or point `ONE_MISE_BINARY` to a compatible external executable. `ONE_RUNTIME=builtin` is a temporary diagnostic escape hatch using existing tools.
 
-Download, migration, or verification failures return `MISE_INSTALL_FAILED`. Check network/proxy access to GitHub Releases and permissions on One's runtime directory, then retry the same command. Help, dry-run, and static project/configuration generation do not prepare mise.
+Download, migration, or verification failures return `MISE_INSTALL_FAILED`. Check network/proxy access to GitHub Releases and permissions on One's runtime directory, then retry the same command. Help, dry-run, and configuration planning do not prepare mise. Creation and project addition prepare it to trust complete One-generated configurations; a failure returns a warning while preserving the generated files.
 
-Use `one mise --version`, `one mise doctor`, or `one mise trust <config-path>` to work with the same selected runtime. Review configuration before trusting it; `MISE_PARANOID=1` requires explicit trust. Arguments, IO, and exit codes are forwarded, without One project secrets; use `one run` when those secrets are needed.
+Use `one mise --version`, `one mise doctor`, or `one mise trust <config-path>` to work with the same selected runtime. Creation and project addition register file-specific trust for complete One-generated configurations, including with `MISE_PARANOID=1`. Custom configuration still requires review and follows mise’s trust policy. Arguments, IO, and exit codes are forwarded, without One project secrets; use `one exec` when those secrets are needed.
 
 ## Infisical login
 
@@ -157,8 +167,8 @@ If you are changing One CLI itself, read [CONTRIBUTING.md](https://github.com/1c
 ```bash
 git clone https://github.com/1cli-team/one-cli
 cd one-cli
-brew install go go-task     # macOS; adapt for Linux
-task install                 # package Dashboard + CLI, then create a native launcher
+brew install mise     # macOS; adapt for Linux
+mise run install                 # package Dashboard + CLI, then create a native launcher
 hash -r
 which one
 one --version
@@ -173,7 +183,3 @@ For the full contributor flow, see [CONTRIBUTING.md](https://github.com/1cli-tea
 ## Installed?
 
 Go to [Quick start](/en/docs/quick-start/) and create your first workspace.
-
-## Agent skill
-
-Run `one skills install` to install the bundled `one-cli` skill into your coding agent's user skills directory. Use `one skills install --help` for target selection and supported agents. See [Skills](./skills).

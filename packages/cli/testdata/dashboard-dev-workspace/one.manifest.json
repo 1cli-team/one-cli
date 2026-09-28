@@ -12,11 +12,6 @@
     ],
     "default": "dev"
   },
-  "domains": {
-    "env": {
-      "kind": "infisical"
-    }
-  },
   "projects": [
     {
       "name": "web",
@@ -25,18 +20,16 @@
       "toolchain": "node",
       "buildVersion": "1.4.0",
       "packageManager": "pnpm",
-      "domains": {
-        "env": {
-          "path": ".env",
-          "inherits": true,
-          "keys": [
-            "API_URL",
-            "PUBLIC_APP_NAME"
-          ]
-        },
-        "dev": {
-          "command": "pnpm dev"
-        }
+      "env": {
+        "path": ".env",
+        "inherits": true,
+        "keys": [
+          "API_URL",
+          "PUBLIC_APP_NAME"
+        ]
+      },
+      "dev": {
+        "command": "pnpm dev"
       }
     },
     {
@@ -45,18 +38,16 @@
       "templateId": "go-api",
       "toolchain": "go",
       "buildVersion": "2.1.0",
-      "domains": {
-        "env": {
-          "path": ".env",
-          "inherits": true,
-          "keys": [
-            "DATABASE_URL",
-            "PORT"
-          ]
-        },
-        "dev": {
-          "command": "go run ./cmd/server"
-        }
+      "env": {
+        "path": ".env",
+        "inherits": true,
+        "keys": [
+          "DATABASE_URL",
+          "PORT"
+        ]
+      },
+      "dev": {
+        "command": "go run ./cmd/server"
       }
     },
     {
@@ -66,16 +57,14 @@
       "toolchain": "node",
       "buildVersion": "0.8.0",
       "packageManager": "pnpm",
-      "domains": {
-        "env": {
-          "inherits": true,
-          "keys": [
-            "PUBLIC_DOCS_URL"
-          ]
-        },
-        "dev": {
-          "command": "pnpm dev"
-        }
+      "env": {
+        "inherits": true,
+        "keys": [
+          "PUBLIC_DOCS_URL"
+        ]
+      },
+      "dev": {
+        "command": "pnpm dev"
       }
     },
     {
@@ -85,17 +74,16 @@
       "toolchain": "node",
       "buildVersion": "0.5.0",
       "packageManager": "pnpm",
-      "domains": {
-        "env": {
-          "inherits": true,
-          "keys": [
-            "LOG_LEVEL"
-          ]
-        },
-        "dev": {
-          "command": "pnpm build --watch"
-        }
+      "env": {
+        "inherits": true,
+        "keys": [
+          "LOG_LEVEL"
+        ]
+      },
+      "dev": {
+        "command": "pnpm build --watch"
       }
     }
-  ]
+  ],
+  "env": {}
 }

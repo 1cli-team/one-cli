@@ -8,40 +8,10 @@ import (
 	"testing"
 )
 
-// fetchAt is a test-only seam: same code path as fetchLatest but lets us
-// point at an httptest server. We can't override the const URL otherwise.
+// Exercise the production fetch path against a local server.
 func fetchAt(ctx context.Context, url, currentVersion string) (string, error) {
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
-	if err != nil {
-		return "", err
-	}
-	req.Header.Set("User-Agent", "one-cli/"+currentVersion)
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return "", err
-	}
-	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusOK {
-		return "", &httpError{status: resp.StatusCode}
-	}
-	if v := versionFromReleasePath(resp.Request.URL.Path); v != "" {
-		return v, nil
-	}
-	buf := make([]byte, 64)
-	n, _ := resp.Body.Read(buf)
-	v := normalizeTag(strings.TrimSpace(string(buf[:n])))
-	if v == "" {
-		return "", &httpError{status: resp.StatusCode, body: string(buf[:n])}
-	}
-	return v, nil
+	return fetchLatestUsing(ctx, http.DefaultClient, url, currentVersion)
 }
-
-type httpError struct {
-	status int
-	body   string
-}
-
-func (e *httpError) Error() string { return "fetch failed" }
 
 func TestFetch_Happy(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

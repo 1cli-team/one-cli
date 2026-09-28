@@ -7,8 +7,8 @@ USAGE
 EVERYDAY COMMANDS
   create        Create a workspace
   add           Add a project
-  dev           Start local development
-  build         Build projects
+  run           List and execute workspace tasks
+  exec          Execute a command with project variables
   env           Manage environment variables
   login         Sign in to Infisical in your browser
 
@@ -21,7 +21,9 @@ EXAMPLES
   one create demo
   one add
   one dev
-  one build
+  one build -p web
+  one test -p web
 
 All commands: one help --all
+Task shorthand: one <task> = one run <task> (built-ins take precedence)
 Command help: one <command> --help

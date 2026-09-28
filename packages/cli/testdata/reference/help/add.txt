@@ -8,9 +8,11 @@ USAGE
 EXAMPLES
   one add
   one add react-spa --name web --yes
+  one add empty-app --name web --yes
+  one add empty-service --name api --yes
 
 TIPS
-Adds a project ready for local development and builds.
+Add a project from a template, or start empty and configure a technology stack later.
 
 COMMON OPTIONS
   -n, --name <value>       Project name

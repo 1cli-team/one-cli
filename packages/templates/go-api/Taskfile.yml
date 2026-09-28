@@ -1,16 +1,17 @@
 version: "3"
 
-dotenv:
-  - .env
+vars:
+  GOEXE:
+    sh: go env GOEXE
 
 tasks:
   run:
     cmds:
-      - go run ./cmd/server
+      - go run ./cmd/server {{.CLI_ARGS}}
 
   build:
     cmds:
-      - go build -o bin/server ./cmd/server
+      - go build {{.CLI_ARGS}} -o bin/server{{.GOEXE}} ./cmd/server
 
   fmt:
     cmds:
@@ -26,7 +27,7 @@ tasks:
 
   test:
     cmds:
-      - go test ./...
+      - go test ./... {{.CLI_ARGS}}
 
   tidy:
     cmds:
@@ -34,7 +35,5 @@ tasks:
 
   check:
     cmds:
-      - task: tidy
       - task: fmt:check
       - task: vet
-      - task: test

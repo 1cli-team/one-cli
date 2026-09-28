@@ -18,12 +18,22 @@ func TestExampleFlagsRespectResolvedCommandParsing(t *testing.T) {
 	hk := &cobra.Command{Use: "hk", DisableFlagParsing: true}
 	configure := &cobra.Command{Use: "configure"}
 	configure.Flags().Bool("dry-run", false, "")
-	root.AddCommand(hk, configure)
+	run := &cobra.Command{Use: "run [task]"}
+	run.Flags().String("project", "", "")
+	root.AddCommand(hk, configure, run)
 	for _, tt := range []struct {
 		name, example string
 		owner         *cobra.Command
 		wantProblems  int
 	}{
+		{"dev shorthand", "one dev --project web", run, 0},
+		{"build shorthand", "one build --project web", run, 0},
+		{"test shorthand", "one test --project web", run, 0},
+		{"lint shorthand", "one lint --project web", run, 0},
+		{"namespaced shorthand", "one docs:build --project docs", run, 0},
+		{"unknown task flag", "one dev --typo", run, 1},
+		{"task arguments", "one dev --project web -- --port 4300", run, 0},
+		{"built-in precedence", "one configure --project web", run, 1},
 		{"native flag", "one configure --dry-run", configure, 0},
 		{"unknown native flag", "one configure --typo", configure, 1},
 		{"forwarded flag", "one hk check --all", hk, 0},

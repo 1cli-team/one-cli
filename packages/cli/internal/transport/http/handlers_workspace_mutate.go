@@ -3,13 +3,10 @@ package serve
 import (
 	"errors"
 	"net/http"
-	"strings"
 
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/application/execution"
 	manifestapp "github.com/torchstellar-team/one-cli/packages/cli/internal/application/manifest"
 	workspaceapp "github.com/torchstellar-team/one-cli/packages/cli/internal/application/workspace"
-	workspacecore "github.com/torchstellar-team/one-cli/packages/cli/internal/core/workspace"
-	environmentmodule "github.com/torchstellar-team/one-cli/packages/cli/internal/modules/environment"
 	cliErrors "github.com/torchstellar-team/one-cli/packages/cli/internal/platform/errors"
 )
 
@@ -17,7 +14,6 @@ func registerWorkspaceMutateRoutes(mux *http.ServeMux, opts MuxOpts) {
 	// Profile bindings persist in machine-local One configuration. Manifest
 	// publication has its own revision-checked, typed endpoint below.
 
-	mux.HandleFunc("PUT /workspace/environment/backend", handlePutWorkspaceEnvironmentBackend(opts))
 	mux.HandleFunc(
 		"POST /workspace/environment/backend/initialize",
 		handleInitializeWorkspaceEnvironmentBackend(opts),
@@ -47,67 +43,6 @@ func handleInitializeWorkspaceEnvironmentBackend(opts MuxOpts) http.HandlerFunc 
 			r.URL.Query().Get("env"),
 			secretProject(r),
 		); err != nil {
-			writeServiceError(w, err)
-			return
-		}
-		settings, err := opts.WorkspaceService.WorkspaceEnvironment(
-			r.Context(), opts.WorkspaceRoot, r.URL.Query().Get("env"),
-		)
-		if err != nil {
-			writeWorkspaceMutationErr(w, err)
-			return
-		}
-		writeJSON(w, http.StatusOK, settings)
-	}
-}
-
-type workspaceEnvironmentBackendReq struct {
-	Revision string `json:"revision"`
-	Backend  string `json:"backend"`
-}
-
-// handlePutWorkspaceEnvironmentBackend publishes a reviewed backend switch
-// through the same workflow as `one env switch`. In particular, selecting
-// Infisical initializes and persists its project binding before returning.
-func handlePutWorkspaceEnvironmentBackend(opts MuxOpts) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		if opts.WorkspaceRoot == "" {
-			writeNoWorkspace(w)
-			return
-		}
-		var body workspaceEnvironmentBackendReq
-		if err := decodeJSON(r, &body); err != nil {
-			writeBadPayload(w, err.Error())
-			return
-		}
-		body.Revision = strings.TrimSpace(body.Revision)
-		body.Backend = strings.TrimSpace(body.Backend)
-		if body.Revision == "" || body.Backend == "" {
-			writeBadPayload(w, "revision and backend are required")
-			return
-		}
-		_, currentRevision, err := workspacecore.ReadManifestSnapshot(opts.WorkspaceRoot)
-		if err != nil {
-			writeWorkspaceMutationErr(w, err)
-			return
-		}
-		if body.Revision != currentRevision {
-			writeWorkspaceMutationErr(w, &manifestapp.ManifestConflict{
-				Expected: body.Revision,
-				Current:  currentRevision,
-			})
-			return
-		}
-
-		scope := execution.NewScope(r.Context(), opts.WorkspaceRoot)
-		plan, err := opts.EnvironmentService.PlanSwitch(scope, body.Backend)
-		if err != nil {
-			writeServiceError(w, err)
-			return
-		}
-		if _, err := opts.EnvironmentService.Switch(r.Context(), plan, environmentmodule.SwitchOptions{
-			Environment: r.URL.Query().Get("env"),
-		}); err != nil {
 			writeServiceError(w, err)
 			return
 		}
@@ -207,9 +142,5 @@ func writeNotFound(w http.ResponseWriter, message string) {
 
 func writeManifestErr(w http.ResponseWriter, err error) {
 	message := err.Error()
-	if errors.Is(err, workspacecore.ErrEnvBackendNotConfigured) {
-		writeError(w, http.StatusConflict, cliErrors.ONE_CLI_ERROR, message, nil)
-		return
-	}
 	writeError(w, http.StatusInternalServerError, cliErrors.MANIFEST_INVALID, message, nil)
 }

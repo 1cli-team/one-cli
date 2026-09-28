@@ -1,18 +1,10 @@
 package cli_test
 
-// E2E coverage of `one env`. Post-profile-refactor: endpoint setup
-// moved to `one configure add env/infisical`, so this file only locks
-// the help surface + offline gates. Profile-driven verbs (set / get /
-// list / pull) need a real or stubbed Infisical server, covered by
-// unit tests in internal/adapters/env/infisical/.
+// E2E coverage for the CLI environment-management surface.
 
 import (
-	"os"
-	"path/filepath"
 	"strings"
 	"testing"
-
-	"github.com/torchstellar-team/one-cli/packages/cli/internal/core/workspace"
 )
 
 func TestSnapshot_E2E_Env_HelpListsSubcommands(t *testing.T) {
@@ -22,97 +14,58 @@ func TestSnapshot_E2E_Env_HelpListsSubcommands(t *testing.T) {
 	}
 	// Each Available Command must show up in --help. Drift here means
 	// somebody renamed or removed a subcommand without updating callers.
-	for _, sub := range []string{"set", "get", "list", "pull", "switch"} {
+	for _, sub := range []string{"set", "unset", "list"} {
 		if !strings.Contains(stdout, sub) {
 			t.Errorf("`one env --help` does not mention subcommand %q", sub)
 		}
 	}
 }
 
-// TestSnapshot_E2E_Env_DotenvBackend_SetWritesToOverlay locks the
-// post-v0.7 contract for env/dotenv set: writing creates the per-env
-// overlay file (.env.<env>) with the supplied key + value, and the
-// JSON envelope reports schema=one-cli/env-set/v1 with action=created.
-func TestSnapshot_E2E_Env_DotenvBackend_SetWritesToOverlay(t *testing.T) {
-	tmp := t.TempDir()
-	isolateHome(t, tmp)
-	ws := bootstrapWorkspace(t, tmp, "ws")
-
-	subRel := "apps/web"
-	subDir := filepath.Join(ws, subRel)
-	if err := os.MkdirAll(subDir, 0o755); err != nil {
-		t.Fatalf("mkdir subproject: %v", err)
-	}
-	manifestPath := filepath.Join(ws, "one.manifest.json")
-	raw, err := os.ReadFile(manifestPath)
-	if err != nil {
-		t.Fatalf("read manifest: %v", err)
-	}
-	patched := strings.Replace(string(raw),
-		`"projects": []`,
-		`"projects": [{"name":"web","relativeDir":"`+subRel+`","templateId":"react-spa","toolchain":"node","buildVersion":"0.1.0"}]`,
-		1)
-	if patched == string(raw) {
-		t.Fatalf("could not find subprojects array in manifest: %s", raw)
-	}
-	if err := os.WriteFile(manifestPath, []byte(patched), 0o644); err != nil {
-		t.Fatalf("write manifest: %v", err)
-	}
-
-	stdout, stderr, code := runBinaryIn(t, ws,
-		"env", "set", "FOO", "bar",
-		"-p", subRel, "--env", "dev",
-		"-o", "json",
-	)
-	if code != 0 {
-		t.Fatalf("expected exit 0, got %d\n  stdout: %s\n  stderr: %s", code, stdout, stderr)
-	}
-	got := mustParseJSON(t, stdout)
-	if got["schema"] != "one-cli/env-set/v1" {
-		t.Errorf("schema: want one-cli/env-set/v1, got %v", got["schema"])
-	}
-	if got["action"] != "created" {
-		t.Errorf("action: want created, got %v", got["action"])
-	}
-	body, err := os.ReadFile(filepath.Join(subDir, ".env.dev"))
-	if err != nil {
-		t.Fatalf("read .env.dev: %v", err)
-	}
-	if !strings.Contains(string(body), "FOO=bar") {
-		t.Errorf(".env.dev missing expected line; got: %q", body)
+func TestSnapshot_E2E_Env_RemovedCommands(t *testing.T) {
+	for _, command := range []string{"get", "pull", "switch"} {
+		_, _, code := runBinary(t, "env", command, "-o", "json")
+		if code == 0 {
+			t.Fatalf("removed command %s still accepted", command)
+		}
 	}
 }
 
-func TestSnapshot_E2E_Env_DotenvBackend_SetPreservesRawProjectPath(t *testing.T) {
-	tmp := t.TempDir()
-	isolateHome(t, tmp)
-	ws := bootstrapWorkspace(t, tmp, "ws")
+func TestE2E_PlaintextReadUnavailableInEveryOutputMode(t *testing.T) {
+	root := t.TempDir()
+	isolateHome(t, root)
+	for _, locale := range []string{"en_US.UTF-8", "zh_CN.UTF-8"} {
+		t.Setenv("LC_ALL", locale)
+		for _, format := range []string{"text", "json", "yaml"} {
+			for _, scope := range [][]string{nil, {"--global", "--path", "/"}} {
+				for _, reveal := range [][]string{nil, {"--reveal"}} {
+					args := append([]string{"env", "get", "TOKEN", "--env", "dev", "-o", format}, scope...)
+					args = append(args, reveal...)
+					_, _, code := runBinaryIn(t, root, args...)
+					if code == 0 {
+						t.Fatalf("plaintext read still accepted: %v", args)
+					}
+				}
+			}
+		}
+	}
+}
 
-	stdout, stderr, code := runBinaryIn(t, ws,
-		"env", "set", "SHARED_KEY", "shared-value",
-		"-p", "shared", "--env", "dev",
-		"-o", "json",
-	)
-	if code != 0 {
-		t.Fatalf("expected exit 0, got %d\n  stdout: %s\n  stderr: %s", code, stdout, stderr)
-	}
-
-	body, err := os.ReadFile(filepath.Join(ws, "shared", ".env.dev"))
-	if err != nil {
-		t.Fatalf("read raw-path .env.dev: %v", err)
-	}
-	if !strings.Contains(string(body), "SHARED_KEY=shared-value") {
-		t.Fatalf("raw-path .env.dev missing expected line; got: %q", body)
-	}
-	if _, err := os.Stat(filepath.Join(ws, ".env.dev")); !os.IsNotExist(err) {
-		t.Fatalf("raw project selector must not write the workspace-root .env.dev: %v", err)
-	}
-
-	manifest, err := workspace.ReadManifest(ws)
-	if err != nil {
-		t.Fatalf("read manifest: %v", err)
-	}
-	if keys := workspace.WorkspaceEnvKeys(manifest); len(keys) != 0 {
-		t.Fatalf("ad-hoc raw paths must not be recorded as workspace keys: %v", keys)
+func TestE2E_MalformedSecretAssignmentDoesNotEchoValues(t *testing.T) {
+	root := t.TempDir()
+	isolateHome(t, root)
+	for _, locale := range []string{"en_US.UTF-8", "zh_CN.UTF-8"} {
+		t.Setenv("LC_ALL", locale)
+		for _, format := range []string{"text", "json", "yaml"} {
+			for _, scope := range [][]string{nil, {"--global", "--path", "/"}} {
+				for _, input := range [][]string{{"TOKEN=private-assignment-value", "second-private-value"}, {"=private-assignment-value"}} {
+					args := append([]string{"env", "set", "--env", "dev", "-o", format}, scope...)
+					args = append(args, input...)
+					out, errOut, code := runBinaryIn(t, root, args...)
+					if code == 0 || strings.Contains(out+errOut, "private-assignment-value") || strings.Contains(out+errOut, "second-private-value") {
+						t.Fatalf("unsafe error output: %s %s", out, errOut)
+					}
+				}
+			}
+		}
 	}
 }

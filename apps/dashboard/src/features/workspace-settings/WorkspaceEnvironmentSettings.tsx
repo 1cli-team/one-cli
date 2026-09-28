@@ -23,7 +23,6 @@ import {
 import { SessionStatus } from "@/features/infisical-session/AccountSettings";
 import type { WorkspaceEnvironmentPatch } from "@/types/api";
 export function WorkspaceEnvironmentSettings({
-	currentBackend,
 	environment,
 	workspaceEntryId,
 	readOnly = false,
@@ -47,7 +46,7 @@ export function WorkspaceEnvironmentSettings({
 	);
 	const stage = useManifestDraftStore((s) => s.stageWorkspaceSection);
 	const initial: WorkspaceEnvironmentPatch = {
-		backend: settings.data?.backend ?? currentBackend ?? "dotenv",
+		backend: "infisical",
 		...(settings.data?.projectId
 			? {
 					projectId: settings.data.projectId,
@@ -92,21 +91,7 @@ export function WorkspaceEnvironmentSettings({
 				<div data-testid="workspace-backend-settings" className="grid gap-6 ud-sm:grid-cols-2">
 					<div className="space-y-2">
 						<Label>{t("overview.workspaceEnv.backend")}</Label>
-						<Select
-							value={value.backend}
-							disabled={readOnly || !settings.data}
-							onValueChange={(backend) =>
-								change(backend === "dotenv" ? { backend } : { ...initial, backend })
-							}
-						>
-							<SelectTrigger aria-label={t("overview.workspaceEnv.backend")}>
-								<SelectValue />
-							</SelectTrigger>
-							<SelectContent>
-								<SelectItem value="dotenv">dotenv</SelectItem>
-								<SelectItem value="infisical">Infisical</SelectItem>
-							</SelectContent>
-						</Select>
+						<p className="text-sm">Infisical</p>
 					</div>
 					{value.backend === "infisical" ? (
 						<div className="space-y-2">

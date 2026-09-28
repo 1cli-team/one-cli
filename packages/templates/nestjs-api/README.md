@@ -149,7 +149,7 @@ graph LR
 nest-template/
 ├── Dockerfile                 # 多阶段构建，PM2 生产运行
 ├── docker-compose.yml         # 本地编排 (app + postgres)
-├── .env                       # 环境变量配置
+├── .env.example               # 变量名参考；运行时由 Infisical 注入 / Variable reference; injected from Infisical at runtime
 ├── drizzle.config.ts          # Drizzle Kit 迁移配置
 ├── drizzle/                   # 数据库迁移文件 & seed
 ├── package.json               # 项目依赖与脚本

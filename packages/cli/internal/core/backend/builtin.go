@@ -2,7 +2,6 @@ package backend
 
 func builtinSpecs() []BackendSpec {
 	return []BackendSpec{
-		envDotenvSpec(),
 		envInfisicalSpec(),
 	}
 }
@@ -16,16 +15,9 @@ func spec(id BackendID, capabilities []Capability, requirements ...Requirement) 
 	}
 }
 
-func envDotenvSpec() BackendSpec {
-	return spec(
-		BackendID{Domain: DomainEnv, Name: EnvDotenv},
-		[]Capability{CapabilityEnvGet, CapabilityEnvSet, CapabilityEnvList, CapabilityEnvInject, CapabilityScaffold},
-	)
-}
-
 func envInfisicalSpec() BackendSpec {
 	return spec(
 		BackendID{Domain: DomainEnv, Name: EnvInfisical},
-		[]Capability{CapabilityEnvGet, CapabilityEnvSet, CapabilityEnvDelete, CapabilityEnvList, CapabilityEnvPull, CapabilityEnvInject, CapabilityScaffold},
+		[]Capability{CapabilityEnvGet, CapabilityEnvSet, CapabilityEnvDelete, CapabilityEnvList, CapabilityEnvInject, CapabilityScaffold},
 	)
 }

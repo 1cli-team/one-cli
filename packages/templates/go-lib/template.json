@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "go": {
+    "modulePrefix": "github.com/example/"
+  },
+  "text": [
+    {
+      "files": [
+        "README.md"
+      ],
+      "from": "one-template-go-lib",
+      "value": "projectNameKebabCase"
+    },
+    {
+      "files": [
+        "pkg/greeter/greeter.go"
+      ],
+      "from": "one-template-go-lib",
+      "value": "projectNameKebabCase"
+    }
+  ]
+}

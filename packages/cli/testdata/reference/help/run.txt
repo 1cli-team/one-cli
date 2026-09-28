@@ -1,23 +1,26 @@
 
 DESCRIPTION
-Load environment variables and run a command
+Run named workspace tasks with mise
 
 USAGE
-  one run [project] [-p <name|path>] [--env-provider dotenv|infisical] [--env <name>] -- <cmd> [args...]
+  one run [task] [flags]
+
+EXAMPLES
+  one run
+  one run build -p web
+  one run test -p api
+  one run build --dry-run
 
 TIPS
-Loads project environment variables and runs a command in the project directory. Select a project by name or relative path, or run from inside a project. The positional project and --project must agree when both are used.
-
-Use -- to separate One options from the child command. --env overrides the workspace default environment; --env-provider selects dotenv or Infisical. Loaded values override existing shell environment variables.
-
-With --global, provide --env and --path explicitly. The command keeps the current working directory. Use --keys to select which shared credentials to inject.
+Lists tasks with no arguments. Runs root tasks or selected project tasks with their dependencies. one <task> is shorthand for one run <task>, including dev, build, test, and lint. Built-in commands take precedence; use one run <task> for a conflicting name.
 
 COMMON OPTIONS
-  --dry-run                Print the execution plan without loading environment values or starting a command
-  --env <value>            Environment name (default: manifest.environments.default)
-  --env-provider <value>   Environment source: dotenv or infisical (default: workspace configuration)
-  --global                 Use shared credentials, keeping the current working directory
-  --keys <value>           Inject only the specified variable names, separated by commas
+  --cache <value>          Cache access: local-only, read-write, read-only, write-only, off
+  --concurrency <value>    Maximum parallel tasks (dev allocates automatically when omitted)
+  --dry-run                Preview tasks without preparing tools, dependencies, secrets, or caches
+  --env <value>            One project environment name
+  --force                  Bypass freshness checks; combine with --cache off to ensure execution
+  --list                   List available tasks
   -o, --output <value>     Output format: json | yaml | text (default: terminal-friendly text, JSON when piped)
-  --path <value>           Shared credential folder (must be explicit)
-  -p, --project <value>    Project name or relative path; inferred from the current directory by default
+  -p, --project <value>    Project name or relative path (repeatable)
+  --ui <value>             Output mode: auto, stream, raw

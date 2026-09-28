@@ -1,6 +1,5 @@
 {
 	"sidebar": {
-		"brand": "local control",
 		"home": "Home",
 		"settings": "Settings",
 		"themeToDark": "Switch to dark mode",
@@ -8,25 +7,16 @@
 		"language": "Language",
 		"languageAuto": "Follow system",
 		"languageZh": "中文",
-		"languageEn": "English",
-		"navigation": "Navigation",
-		"openNavigation": "Open navigation",
-		"closeNavigation": "Close navigation"
+		"languageEn": "English"
 	},
 	"topbar": {
-		"home": "Workbench",
 		"workspaces": "Home",
 		"settings": "Settings",
 		"profile": "Credential profiles",
-		"sectionsRoot": "Sections",
-		"devData": {
-			"fixtureLiveProfiles": "Fixture Workspace · Live local Profiles"
-		}
+		"sectionsRoot": "Sections"
 	},
 	"manifestDraft": {
 		"saveButton": "Save changes · {{count}}",
-		"workspaceScope": "Workspace",
-		"changeCount": "{{count}} changed",
 		"title": "Write these changes to the manifest?",
 		"description": "This updates one.manifest.json in the Workspace. Review the exact changes before continuing.",
 		"currentManifest": "Current manifest",
@@ -60,19 +50,12 @@
 			"loadFailedTitle": "Could not load Workspaces",
 			"loadFailedDescription": "The local Workspace registry could not be read.",
 			"retry": "Retry",
-			"registryCount": "{{count}} registered Workspaces",
 			"projectCount": "{{count}} Projects",
-			"currentSession": "This one serve session",
-			"workspaceId": "Workspace ID",
-			"idUnavailable": "Not available",
 			"projects": "Projects",
-			"projectCountUnavailable": "Unavailable",
-			"projectCountShort": "{{count}} projects",
 			"lastDetected": "Last detected",
 			"emptyTitle": "No Workspaces yet",
 			"emptyDescription": "Run one create to create a Workspace, or run one serve inside an existing Workspace to register it.",
 			"listLabel": "Registered Workspaces",
-			"registeredOnMachine": "Registered on this machine",
 			"registrationHint": "New Workspaces appear here after you run one serve.",
 			"refresh": "Refresh",
 			"search": "Search name, path or ID…",
@@ -121,7 +104,6 @@
 			}
 		},
 		"forget": {
-			"short": "Remove Workspace",
 			"action": "Remove {{name}}",
 			"confirm": "Remove Workspace \"{{name}}\"? This only removes the local registry entry; no project files or remote variables will be deleted.",
 			"done": "Removed {{name}}",
@@ -140,14 +122,9 @@
 			"title": "Workspace not found",
 			"description": "This registry entry no longer exists. Return home to choose another workspace.",
 			"back": "Choose a Workspace"
-		},
-		"noneReady": {
-			"title": "No available Workspaces",
-			"description": "Select an unavailable Workspace in the left rail for repair guidance, or run one serve inside a valid Workspace."
 		}
 	},
 	"notFound": {
-		"message": "404 - Page not found",
 		"title": "Page not found",
 		"description": "This address does not match a dashboard page. Return home to continue."
 	},
@@ -158,12 +135,6 @@
 		"devDetails": "Development error details",
 		"reload": "Reload",
 		"home": "Back home"
-	},
-	"settings": {
-		"title": "Settings",
-		"description": "Manage the machine-level credential profiles available to your Workspaces and Projects.",
-		"loadFailedTitle": "Failed to load Settings",
-		"manageBackend": "Manage Profiles"
 	},
 	"sections": {
 		"groupLabel": {
@@ -179,218 +150,84 @@
 	"home": {
 		"title": "Machine-level profiles",
 		"loadFailedTitle": "Failed to load profiles",
-		"profileCount_one": "{{count}} profile",
-		"profileCount_other": "{{count}} profiles",
-		"default": "default: {{name}}",
-		"noDefault": "no default",
 		"loading": "Loading…"
 	},
-	"detail": {
-		"unknownSectionTitle": "Unknown section",
-		"unknownSectionBody": "{{domain}}/{{backend}} is not a valid (domain, backend) pair.",
-		"loadFailedTitle": "Load failed",
-		"showSecrets": "Show secrets",
-		"hideSecrets": "Hide secrets",
-		"showingSecrets": "Showing secrets",
-		"addProfile": "New profile",
-		"loading": "Loading…",
-		"empty": "No profiles yet. Click 'New profile' to create the first one.",
-		"default": "default",
-		"tableProfile": "Profile",
-		"tableSummary": "Summary",
-		"tableActions": "Actions",
-		"setDefault": "Set default",
-		"edit": "Edit",
-		"remove": "Delete",
-		"confirmRemove": "Delete profile \"{{name}}\"? This cannot be undone."
-	},
 	"form": {
-		"addTitle": "New profile",
-		"editTitle": "Edit {{name}}",
-		"addDescription": "Fill in and save. The first profile in a section is set default automatically.",
-		"editDescription": "Saving overwrites existing values; leave secret fields blank to keep them unchanged.",
-		"profileName": "Profile name",
-		"profileNamePlaceholder": "e.g. work / prod / acr-prod",
-		"setDefaultAfterSave": "Set default after save",
-		"setDefaultAfterSaveAuto": "Set default after save (this section has no default yet, so it will be set automatically)",
 		"cancel": "Cancel",
-		"save": "Save",
-		"fields": {
-			"siteUrl": "Site URL",
-			"clientId": "Client ID",
-			"clientSecret": "Client Secret",
-			"secretUnchangedPlaceholder": "Leave blank to keep unchanged",
-			"endpoint": "Endpoint (leave blank for AWS S3 to use SDK defaults)",
-			"endpointPlaceholder": "https://<vendor-endpoint>",
-			"region": "Region",
-			"regionPlaceholder": "us-east-1 / cn-hangzhou / auto",
-			"forcePathStyle": "force path style (MinIO / RustFS need this)",
-			"accessKeyId": "Access Key ID",
-			"accessKeySecret": "Access Key Secret",
-			"kubeconfigPath": "Kubeconfig path",
-			"kubeconfigContext": "Context name",
-			"kubeconfigContextPlaceholder": "prod / staging",
-			"teamSlug": "Team slug (leave blank for personal scope)",
-			"teamSlugPlaceholder": "my-org",
-			"apiToken": "API Token",
-			"accountId": "Account ID (required for multi-account tokens, otherwise leave blank)",
-			"accountIdPlaceholder": "a1b2c3...",
-			"regionEdgeOne": "Region (e.g. ap-guangzhou; optional)",
-			"regionEdgeOnePlaceholder": "ap-guangzhou",
-			"registry": "Registry",
-			"registryPlaceholder": "your-harbor.example.com / quay.io / ...",
-			"acrRegion": "ACR Region",
-			"acrRegionPlaceholder": "cn-hangzhou / cn-shanghai (host derives to registry.<region>.aliyuncs.com)",
-			"namespace": "Namespace",
-			"namespacePlaceholder": "org / username",
-			"username": "Username",
-			"password": "Password / token"
-		},
-		"summary": {
-			"noFields": "(no fields)",
-			"site": "site: {{site}}",
-			"notSet": "(not set)",
-			"endpointDefault": "(SDK default)",
-			"regionDefault": "-",
-			"endpointRegion": "endpoint: {{endpoint}} · region: {{region}}",
-			"contextDefault": "-",
-			"kubeconfigDefault": "(default)",
-			"contextFile": "context: {{context}} · file: {{file}}",
-			"team": "team: {{team}}",
-			"teamPersonal": "(personal)",
-			"account": "account: {{account}}",
-			"accountTokenDefault": "(token default)",
-			"regionLabel": "region: {{region}}",
-			"regionDefaultLabel": "(default)",
-			"registryUnset": "(no registry)",
-			"acrRegionUnset": "(no region)"
-		},
 		"close": "Close",
 		"discardTitle": "Discard unsaved changes?",
 		"discardDescription": "Your changes have not been saved. Discard them to close this editor.",
 		"continueEditing": "Keep editing"
 	},
-	"toast": {
-		"updated": "Updated {{name}}",
-		"created": "Created {{name}}",
-		"setDefault": "Default switched to {{name}}",
-		"removed": "Deleted {{name}}",
-		"setDefaultAfterSaveHint": "Set as default"
-	},
 	"http": {
 		"networkError": "Network request failed. Check your connection."
 	},
 	"projects": {
-		"title": "Project configuration",
-		"description": "Review and configure every project declared in the manifest from one place.",
 		"search": "Search project, path, or backend",
-		"showFilters": "Show filters",
-		"hideFilters": "Hide filters",
-		"kindFilter": "Filter by project kind",
-		"statusFilter": "Filter by resolution status",
-		"kinds": {
-			"all": "All kinds"
-		},
-		"statuses": {
-			"all": "All statuses",
-			"attention": "Needs attention",
-			"healthy": "Healthy only"
-		},
 		"empty": {
-			"title": "No matching projects",
-			"description": "Adjust the search or project-kind filter."
-		},
-		"matrix": {
-			"project": "Project",
-			"environment": "Environment",
-			"status": "Status",
-			"notApplicable": "-",
-			"notApplicableTitle": "This configuration does not apply to the project",
-			"notConfigured": "Not configured",
-			"profileMissing": "Credentials required",
-			"setupRequired": "Setup required",
-			"ready": "Configured",
-			"healthy": "Healthy",
-			"issueCount": "{{count}} to resolve",
-			"configureDomain": "Configure {{domain}} for {{project}}"
+			"title": "No matching projects"
 		}
 	},
 	"projectInspector": {
-		"close": "Close",
 		"workspaceTitle": "Project settings",
 		"projectsTitle": "Projects",
-		"projectsDescription": "Select a project to configure",
 		"projectListLabel": "Workspace projects",
 		"empty": "This workspace has no projects.",
 		"tabs": {
 			"label": "Project configuration sections",
 			"overview": "Overview",
-			"environment": "Environment"
+			"environment": "Environment",
+			"runtime": "Run"
 		},
 		"loadFailed": "Unable to load project configuration",
 		"retry": "Retry",
-		"backend": "Backend",
 		"manifestReadOnly": "Manifest · read-only",
 		"manifestDraft": "Manifest draft",
-		"saved": "Project Profile binding saved",
-		"saveFailed": "Could not save the project Profile binding",
-		"values": {
-			"enabled": "Enabled",
-			"disabled": "Disabled"
-		},
 		"unsavedChangesTitle": "Discard unsaved changes?",
 		"unsavedChanges": "You have unsaved changes. Discard them and continue?",
 		"discardAndContinue": "Discard and continue",
 		"general": {
-			"title": "Project overview",
-			"description": "Edit runtime project settings here. Changes remain a draft until you save them from the top bar.",
 			"template": "Template",
 			"toolchain": "Toolchain",
 			"path": "Project path",
 			"buildVersion": "Build version",
 			"packageManager": "Package manager",
-			"packageManagerAutomatic": "Detect automatically",
 			"devCommand": "Development command",
 			"buildCommand": "Build command",
-			"buildSource": "one build reads {{source}}. Edit that file to change the build task.",
+			"buildSource": "one build reads {{source}}. Edit that file to change the build task. Workspace dependencies and caching are managed by mise; one run build uses the same entry point.",
 			"buildMissing": "No build task configured",
 			"buildUnavailable": "Unable to read build configuration",
 			"buildUnsupported": "No build task is available for this project.",
 			"metadata": "Project information",
-			"runtime": "Development and build"
+			"runtime": "Development and build",
+			"tasks": "Configured tasks",
+			"tasksUnavailable": "Task configuration could not be read. Check it with one run.",
+			"tasksEmpty": "No project tasks are configured.",
+			"taskSource": "Source: {{source}}",
+			"taskCacheOn": "Artifact caching is configured.",
+			"taskCacheOff": "Artifact caching is not configured.",
+			"taskDepends": "Dependencies: {{tasks}}",
+			"taskOutputs": "Outputs: {{outputs}}",
+			"devURL": "Development URL (optional)",
+			"devURLHint": "Leave empty to detect from logs. Use a local HTTP(S) URL without credentials or query parameters."
 		},
 		"environment": {
 			"title": "Environment configuration",
-			"description": "Project path, inheritance, and disable settings are staged as Manifest overrides. The environment Backend and Profile are managed at Workspace level; Infisical values can be managed below.",
-			"path": "Environment file path",
+			"path": "Infisical folder path",
 			"inherits": "Inherit workspace environment",
 			"inheritsHint": "Project variables override workspace variables with the same name.",
 			"disabled": "Disable project environment",
 			"disabledHint": "Do not inject environment variables into project commands.",
 			"keys": "Declared variable names"
 		},
-		"profile": {
-			"label": "Project profile",
-			"description": "Choose machine-level credentials scoped to this project and environment.",
-			"notRequired": "This backend does not require a credential profile.",
-			"loading": "Loading credential profiles…",
-			"loadFailed": "Could not load credential profiles.",
-			"automatic": "Resolve automatically (workspace / default)",
-			"inherited": "Inherit {{name}} ({{source}})",
-			"none": "No profile currently resolves",
-			"manage": "Manage in Settings"
-		},
 		"draftHint": "Changes are kept in a draft. Review and save them to apply."
 	},
 	"secrets": {
 		"title": "Infisical secrets",
-		"description": "Manage values stored remotely for the selected environment and scope.",
 		"unavailableTitle": "Remote secrets are not enabled",
-		"unavailableDescription": "The current environment Backend is not Infisical. Switch it to manage remote secrets here.",
-		"configureBackend": "Configure environment Backend",
+		"unavailableDescription": "Bind an Infisical project in workspace settings to manage remote variables.",
 		"scope": "Secret scope",
 		"workspaceScope": "Workspace shared",
-		"directOnly": "Only values defined directly in this folder are editable; inherited values stay untouched.",
 		"add": "Add secret",
 		"key": "Key",
 		"value": "Value",
@@ -427,121 +264,26 @@
 	},
 	"project": {
 		"fields": {
-			"bucket": "Bucket",
-			"environment": "Deployment environment",
-			"projectId": "Project ID",
-			"projectName": "Project name",
-			"workerName": "Worker name"
+			"environment": "Deployment environment"
 		}
 	},
 	"overview": {
-		"untitledWorkspace": "Untitled workspace",
-		"environments": "Environments",
 		"projects": "Projects",
-		"empty": "The manifest declares no sub-projects.",
-		"allGood": "✓ All set",
-		"workspaceIssuesTitle": "Workspace-level configuration missing",
-		"manageProfilesCta": "Manage credential profiles",
-		"profileSafety": "Profiles stay in machine-local configuration; credentials never enter the manifest.",
 		"workspaceEnv": {
 			"title": "Workspace environment",
-			"scope": "Workspace scope",
-			"readOnly": "Read-only",
 			"description": "Configure workspace environment storage and manage shared secrets.",
-			"localBinding": "Machine-local Profile binding",
-			"manifestLegend": "Shared manifest",
-			"localLegend": "This machine",
 			"backend": "Backend",
-			"backendDescription": "Controls where one env reads variables. A switch is staged for review before publication.",
-			"backendManifest": "Manifest setting",
 			"backendPending": "Pending review",
-			"backendSource": "Backend changes are reviewed before they are written to one.manifest.json. Existing secret data is not migrated.",
-			"backendPendingHint": "This is now in Pending changes above. When saved, One CLI initializes the Backend; then you can select its machine Profile.",
-			"backendMissing": "Not configured",
-			"loading": "Loading workspace Profile binding…",
-			"loadFailed": "Could not load the workspace Profile binding.",
-			"missingBackendCli": "Choose an environment Backend before selecting a Profile.",
-			"saved": "Workspace Profile saved",
-			"saveFailed": "Could not save the workspace Profile",
-			"profile": {
-				"title": "Credential Profile",
-				"label": "Profile",
-				"description": "Choose a machine-local credential Profile for this workspace and environment.",
-				"localBadge": "This machine",
-				"waitTitle": "Apply the Backend change first",
-				"waitDescription": "After the target Backend is active, its Profile requirements are loaded again. This prevents saving a Profile against the wrong Backend.",
-				"notRequired": "This backend does not require a credential profile.",
-				"loading": "Loading credential profiles…",
-				"loadFailed": "Could not load credential profiles.",
-				"automatic": "Resolve automatically (machine default)",
-				"inherited": "Automatic · {{name}} ({{source}})",
-				"none": "No Profile currently resolves",
-				"manage": "Manage in Settings"
-			},
+			"backendSource": "Infisical project binding changes are reviewed before being written to one.manifest.json.",
 			"signInHint": "Sign in to Infisical in Settings to choose a storage project.",
 			"noProjects": "No storage projects available. Create one from Shared credentials."
 		},
 		"tabs": {
-			"label": "Workspace sections",
 			"environment": "Workspace environment",
-			"projects": "Projects",
 			"secrets": "Infisical secrets"
 		},
 		"navigation": {
-			"label": "Workspace page navigation",
-			"overview": "Attention",
-			"projects": "Projects",
-			"secrets": "Secrets",
-			"settings": "Workspace settings",
-			"attention": "{{count}} items to resolve",
-			"ready": "No blocking items",
-			"projectCount": "{{count}} projects",
-			"infisical": "Infisical enabled",
-			"notEnabled": "Remote secrets not enabled",
-			"backendProfile": "Backend and Profile"
-		},
-		"actionCenter": {
-			"eyebrow": "Next actions",
-			"pending": "items to resolve",
-			"clear": "blocking items",
-			"description": "Resolve these items in order before running the corresponding One CLI commands.",
-			"clearDescription": "The workspace's core configuration is ready to use.",
-			"title": "Resolve first",
-			"hint": "Each item opens the exact configuration that needs attention.",
-			"viewProjects": "View all projects",
-			"workspaceLabel": "Workspace configuration",
-			"configureWorkspace": "Configure workspace",
-			"resolve": "Resolve now",
-			"allGood": "Nothing needs attention",
-			"allGoodDescription": "Continue managing secrets or inspect detailed project settings."
-		},
-		"command": {
-			"ready": "ready",
-			"review": "review setup"
-		},
-		"metrics": {
-			"projects": "Projects",
-			"healthy": "Healthy",
-			"attention": "Attention"
-		},
-		"kinds": {
-			"app": "App",
-			"service": "Service",
-			"package": "Package"
-		},
-		"issue": {
-			"label": {
-				"env": "env",
-				"profile": "profile"
-			},
-			"missingProfile": "{{section}} is missing a usable credential profile{{profile}}. Fill in the API key / token.",
-			"missing": {
-				"env": "Workspace has no env backend selected. Set one before using `one env`."
-			}
-		},
-		"fix": {
-			"profileCta": "Add credentials",
-			"cliHint": "Configure this Backend with One CLI."
+			"settings": "Workspace settings"
 		}
 	},
 	"session": {
@@ -562,7 +304,11 @@
 		"settingsHint": "Manage your connected account and dashboard preferences.",
 		"connected": "Connected",
 		"account": "Account",
-		"languageHint": "Choose a language or follow your system setting."
+		"languageHint": "Choose a language or follow your system setting.",
+		"theme": "Appearance",
+		"themeHint": "Choose a light or dark theme. Your choice is saved in this browser.",
+		"themeLight": "Light",
+		"themeDark": "Dark"
 	},
 	"global": {
 		"title": "Shared credentials",
@@ -618,5 +364,235 @@
 		"noMatches": "No matching variables",
 		"noMatchesHint": "Try another name or clear the search.",
 		"emptyHint": "Add a variable to share it across your projects."
+	},
+	"projectCreate": {
+		"title": "New project",
+		"description": "Create a project from a template in this workspace.",
+		"name": "Project name",
+		"nameHint": "Start with a letter or number. Use letters, numbers, hyphens or underscores.",
+		"nameInvalid": "Enter a name starting with a letter or number, using only letters, numbers, hyphens or underscores.",
+		"nameExists": "A project with this name already exists in the workspace.",
+		"template": "Technology stack or empty project",
+		"templatesFailed": "Could not load templates",
+		"loadingTemplates": "Loading templates…",
+		"noTemplates": "No templates available",
+		"location": "Project directory",
+		"locationHint": "Relative to this workspace. Creating the project also updates the workspace configuration.",
+		"submit": "Create project",
+		"creating": "Creating project…",
+		"failed": "Could not create project",
+		"success": "Project {{name}} created",
+		"refreshFailed": "Project created. Refresh the page to load the updated workspace.",
+		"connectionLost": "The connection was interrupted. Refresh the project list to check whether the project was created before trying again.",
+		"categories": {
+			"frontend": "Applications",
+			"backend": "Services",
+			"library": "Libraries"
+		},
+		"templates": {
+			"nestjs-api": {
+				"name": "NestJS API service",
+				"description": "NestJS + TypeScript for APIs and backend services"
+			},
+			"go-api": {
+				"name": "Go API service",
+				"description": "Gin + Gorm + Viper + Zap for APIs and backend services"
+			},
+			"astro-site": {
+				"name": "Astro static site",
+				"description": "Static site template for company, marketing, and content websites"
+			},
+			"starlight-docs": {
+				"name": "Starlight documentation",
+				"description": "Documentation project based on Astro + Starlight"
+			},
+			"nextjs-app": {
+				"name": "Next.js application",
+				"description": "Next.js application for SEO and fast initial page loads"
+			},
+			"react-spa": {
+				"name": "React single-page application",
+				"description": "React + Vite template for interactive applications"
+			},
+			"expo-mobile": {
+				"name": "Expo mobile app",
+				"description": "React Native + Expo template for iOS and Android"
+			},
+			"ts-library": {
+				"name": "TypeScript library",
+				"description": "Publishable library with tsdown, vitest, and oxlint/oxfmt"
+			},
+			"go-lib": {
+				"name": "Go library",
+				"description": "Go library following golang-standards/project-layout, ready to publish and import"
+			},
+			"electron-app": {
+				"name": "Electron desktop app",
+				"description": "Electron + React + Vite with inversify, electron-log, electron-store, and electron-updater"
+			},
+			"empty-app": {
+				"name": "Empty application",
+				"description": "Create an empty project under apps/ and configure a technology stack later."
+			},
+			"empty-service": {
+				"name": "Empty service",
+				"description": "Create an empty project under services/ and configure a technology stack later."
+			},
+			"empty-library": {
+				"name": "Empty library",
+				"description": "Create an empty project under packages/ and configure a technology stack later."
+			}
+		}
+	},
+	"appMenu": {
+		"label": "One CLI navigation menu"
+	},
+	"templateCatalog": {
+		"title": "Project templates",
+		"description": "Explore the built-in starters and compare their use cases, technology stacks, and included features.",
+		"getStarted": "Start a project from a template",
+		"getStartedHint": "Open a workspace, click New project, then choose a template and enter a project name.",
+		"chooseWorkspace": "Choose a workspace",
+		"filter": "Filter templates by category",
+		"all": "All templates",
+		"search": "Search templates, stacks, or features…",
+		"resultCount": "Showing {{count}} of {{total}} templates",
+		"includes": "Included features",
+		"noResults": "No matching templates",
+		"noResultsHint": "Try another search term or select a different category.",
+		"reset": "Clear filters",
+		"templates": {
+			"nestjs-api": {
+				"description": "Build TypeScript APIs and business backends with a modular NestJS structure.",
+				"stack": "NestJS · TypeScript · Drizzle",
+				"feature1": "JWT authentication and user modules",
+				"feature2": "Drizzle data access and database migrations",
+				"feature3": "Swagger documentation, health checks, and metrics"
+			},
+			"go-api": {
+				"description": "Build Go APIs with separate HTTP, service, and data-access layers.",
+				"stack": "Go · Gin · Gorm · Viper · Zap",
+				"feature1": "JWT authentication and user endpoints",
+				"feature2": "Gorm data access and SQL migrations",
+				"feature3": "OpenAPI documentation, configuration, and logging"
+			},
+			"astro-site": {
+				"description": "Create company websites, landing pages, and content sites with static page output.",
+				"stack": "Astro · TypeScript · Tailwind CSS",
+				"feature1": "File-based pages and shared layouts",
+				"feature2": "Shared design tokens and Tailwind styles",
+				"feature3": "Type checking, linting, and formatting"
+			},
+			"starlight-docs": {
+				"description": "Publish product documentation, developer guides, and team knowledge bases.",
+				"stack": "Astro · Starlight · Markdown / MDX",
+				"feature1": "Markdown and MDX documentation pages",
+				"feature2": "Guide and reference sections with a configured sidebar",
+				"feature3": "Customizable documentation theme"
+			},
+			"nextjs-app": {
+				"description": "Build web applications with server rendering, API routes, and search-friendly pages.",
+				"stack": "Next.js · React · TypeScript",
+				"feature1": "App Router pages and route handlers",
+				"feature2": "shadcn/ui components and theme switching",
+				"feature3": "SWR data fetching and Zustand state management"
+			},
+			"react-spa": {
+				"description": "Create interactive dashboards, admin panels, and browser-based business applications.",
+				"stack": "React · Vite · TypeScript",
+				"feature1": "Client-side routing and error boundaries",
+				"feature2": "shadcn/ui components and light / dark themes",
+				"feature3": "SWR data fetching and Zustand state management"
+			},
+			"expo-mobile": {
+				"description": "Build iOS and Android apps with React Native and a shared Expo project.",
+				"stack": "Expo · React Native · NativeWind",
+				"feature1": "Expo Router navigation and tab pages",
+				"feature2": "SWR, Zustand, and MMKV local storage",
+				"feature3": "Native modules use an Expo development build"
+			},
+			"ts-library": {
+				"description": "Create reusable TypeScript modules and packages for publishing to npm.",
+				"stack": "TypeScript · tsdown · Vitest",
+				"feature1": "Library builds and type declarations with tsdown",
+				"feature2": "Unit tests and coverage with Vitest",
+				"feature3": "Linting, formatting, and publishing scripts"
+			},
+			"go-lib": {
+				"description": "Create reusable Go modules with a public package layout for other projects to import.",
+				"stack": "Go · Go modules · go-task",
+				"feature1": "Public API starter in pkg/greeter",
+				"feature2": "Example package and unit tests",
+				"feature3": "Build, format, vet, and test tasks"
+			},
+			"electron-app": {
+				"description": "Create desktop applications with an Electron main process and a React user interface.",
+				"stack": "Electron · React · Vite · Inversify",
+				"feature1": "Separate main, renderer, and preload packages",
+				"feature2": "Typed IPC bridge and dependency injection",
+				"feature3": "Logging, local settings, and updater modules"
+			},
+			"empty-app": {
+				"description": "Create an empty project under apps/ and configure a technology stack later.",
+				"stack": "Choose your own technology stack",
+				"feature1": "Only a .gitkeep file for Git tracking",
+				"feature2": "Registered in the workspace",
+				"feature3": "Configure a development command after adding code"
+			},
+			"empty-service": {
+				"description": "Create an empty project under services/ and configure a technology stack later.",
+				"stack": "Choose your own technology stack",
+				"feature1": "Only a .gitkeep file for Git tracking",
+				"feature2": "Registered in the workspace",
+				"feature3": "Configure a development command after adding code"
+			},
+			"empty-library": {
+				"description": "Create an empty project under packages/ and configure a technology stack later.",
+				"stack": "Choose your own technology stack",
+				"feature1": "Only a .gitkeep file for Git tracking",
+				"feature2": "Registered in the workspace",
+				"feature3": "Configure a development command after adding code"
+			}
+		},
+		"noToolchain": "Not configured"
+	},
+	"services": {
+		"title": "Development service",
+		"description": "Start the project, view its output, and open it for testing.",
+		"start": "Start service",
+		"stop": "Stop",
+		"restart": "Restart",
+		"open": "Open",
+		"console": "Console",
+		"live": "Connected",
+		"reconnecting": "Connecting…",
+		"search": "Search logs",
+		"pause": "Pause scrolling",
+		"follow": "Follow logs",
+		"copy": "Copy",
+		"copied": "Logs copied",
+		"copyFailed": "Could not copy. Select and copy text in the console.",
+		"actionFailed": "Action failed. Try again.",
+		"saveFirst": "Save or discard pending configuration changes before starting or restarting.",
+		"noDev": "No dev task is configured. Set a dev command in Overview or add a dev task to the project’s mise.toml.",
+		"environmentMismatch": "This service uses {{environment}}. Restart to use the selected {{next}} environment.",
+		"exitCode": "Exit code: {{code}}",
+		"reachable": "Local port is reachable",
+		"unreachable": "Local port is not reachable",
+		"waitingURL": "Waiting for a local URL in the output. Services without a web page can still run.",
+		"urlHint": "Local URLs are detected after startup. You can also set one in Overview.",
+		"waitingLogs": "Preparing the runtime. Waiting for output…",
+		"emptyLogs": "Start a service to see its output here.",
+		"noMatches": "No matching logs.",
+		"consoleHint": "Logs are redacted; up to 256 KiB is retained. Closing this page keeps services running; closing one serve stops them.",
+		"truncated": "Older logs were removed. Only recent output is shown.",
+		"status": {
+			"preparing": "Preparing",
+			"running": "Running",
+			"stopping": "Stopping",
+			"stopped": "Stopped",
+			"exited": "Exited",
+			"failed": "Failed"
+		}
 	}
 }

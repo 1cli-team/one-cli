@@ -21,6 +21,7 @@ import (
 	workspaceapp "github.com/torchstellar-team/one-cli/packages/cli/internal/application/workspace"
 	catalog "github.com/torchstellar-team/one-cli/packages/cli/internal/core/backend"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/core/workspace"
+	creationmodule "github.com/torchstellar-team/one-cli/packages/cli/internal/modules/creation"
 	environmentmodule "github.com/torchstellar-team/one-cli/packages/cli/internal/modules/environment"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/i18n"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/output"
@@ -30,6 +31,7 @@ import (
 type Dependencies struct {
 	Catalog      *catalog.Catalog
 	Manifest     *manifestapp.Service
+	Creation     *creationmodule.Service
 	Environments *environmentmodule.Service
 	Workspaces   *workspaceapp.Service
 	Registry     *workspaceapp.RegistryService
@@ -73,6 +75,7 @@ func newServeCmd(deps Dependencies) *cobra.Command {
 				Catalog:       deps.Catalog,
 
 				ManifestService:    deps.Manifest,
+				CreationService:    deps.Creation,
 				EnvironmentService: deps.Environments,
 				WorkspaceService:   deps.Workspaces,
 				RegistryService:    deps.Registry,
@@ -164,7 +167,11 @@ func maybeOpenBrowser(stderr io.Writer, res serve.Result, open bool) {
 	// keep our own friendly stderr line below).
 	browser.Stderr = io.Discard
 	browser.Stdout = io.Discard
-	if err := browser.OpenURL(res.URL); err != nil {
-		fmt.Fprintf(stderr, i18n.T("serve.browser_failed")+"\n", err)
-	}
+	// Desktop openers can wait for the browser to close or retain its output
+	// pipes. Never let that wait block HTTP startup or context cancellation.
+	go func() {
+		if err := browser.OpenURL(res.URL); err != nil {
+			fmt.Fprintf(stderr, i18n.T("serve.browser_failed")+"\n", err)
+		}
+	}()
 }

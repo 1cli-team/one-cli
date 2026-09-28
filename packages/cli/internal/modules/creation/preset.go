@@ -16,8 +16,7 @@ type PresetResult struct {
 	// it back even if the user passed an equivalent form (different
 	// segment order, optional preset: prefix).
 	PresetID string
-	// EnvProvider is the workspace-level env provider id ("dotenv" /
-	// "infisical"). Empty when the preset didn't declare one — caller
+	// EnvProvider is the resolved preset source. Empty when undeclared — caller
 	// treats that as the workspace default.
 	EnvProvider string
 	// Projects is one entry per landed project, in apply order. When
@@ -43,13 +42,11 @@ type PresetOptions struct {
 var applyOrder = []preset.Kind{preset.KindBackend, preset.KindFrontend, preset.KindLibrary}
 
 // ApplyPreset renders every project segment in resolved into projectRoot,
-// upserts the manifest, and runs local/deployment infra sync per project. CI
-// is not generated implicitly.
+// upserts the manifest, and synchronizes workspace tooling per project.
 //
 // Apply assumes:
 //   - resolved came from Resolve() against the current registry, so
-//     every Item.Template is non-nil and every Item.Deploy is either
-//     "" (template default) or already compat-checked.
+//     every Item.Template is non-nil.
 //   - The workspace skeleton and Backend selection already exist.
 //
 // On mid-flight failure, Apply returns the partial ApplyResult plus the
@@ -76,10 +73,8 @@ func ApplyPreset(ctx context.Context, projectRoot string, resolved preset.Resolv
 
 	// Track template-code occurrence count so duplicate segments
 	// (`fna.fna`) get deterministic project names: nextjs-app, nextjs-app-2, ...
-	// workspace.UpsertManifestProject's existing dedup is overlaid on
-	// the filesystem, but the manifest project name and target dir are
-	// what we hand to materializeProject — and they need to be unique up
-	// front.
+	// The manifest project name and target directory handed to
+	// materializeProject must be unique before writing any files.
 	seenByCode := map[string]int{}
 
 	customNameIndex := 0
@@ -125,12 +120,4 @@ func projectNameFor(tpl *template.Template, occurrence int) string {
 		return base
 	}
 	return fmt.Sprintf("%s-%d", base, occurrence+1)
-}
-
-// EffectiveEnvProvider returns the workspace env provider that should
-// be written to the manifest. preset's `e<code>` segment wins; absent
-// segment falls through to "" so the caller can layer the
-// --env-provider flag default ("dotenv").
-func (r PresetResult) EffectiveEnvProvider() string {
-	return r.EnvProvider
 }

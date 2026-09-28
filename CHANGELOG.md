@@ -7,14 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Changed — 精简 One CLI skill 与显式安装
+### Changed — 工作区任务统一到 mise / Workspace tasks use mise
 
-- `one skills install` 安装单个内置 `one-cli` skill：遵循 One Workspace Convention，并通过当前 CLI 的 help 查询命令。日常 CLI 升级无需同步更新 skill。
-- 支持交互选择、`--agent` / `-a` 和 `--yes`；非交互安装到检测到的 Agent，无目标时提示显式选择。支持 JSON / YAML / text 输出及离线安装。
-- skill 直接复制到 Agent 的用户级目录。重复安装替换 `one-cli` 目录；兼容旧符号链接，不修改旧共享 store 或其他 skills。
-- 普通与 preset 创建均生成简短的根 `AGENTS.md`，要求使用 skill，缺失时运行 `one skills install`。创建项目不自动安装 skill，`one add` 保留已有指引。
-- 旧的 `one-migrate`、详细 playbook、共享 store 安装器和公开 Go 包 `packages/cli/pkg/agentskills` 保持移除。旧机器上的其他安装不自动清理。
-- `create` / `add` 输出不恢复旧 `skills` / `ai_guides` 字段；模板仍跳过独立的 `CLAUDE.md`、`AGENTS.md` 和 `.one` 元数据。
+- `one exec` 执行任意命令，`one run` 执行具名任务；`one build` 复用同一任务服务。Node 使用 pnpm，Go 使用 Task，工作区依赖与实验性产物缓存由 mise 调度。
+- `one exec` runs arbitrary commands; `one run` executes named tasks, and `one build` shares the same service. pnpm and Task own project commands; mise owns workspace scheduling and experimental artifact caching.
+- 项目环境在缓存查找前冻结并参与指纹；自定义构建需要显式缓存规则。开发进程保留现有终端管理，上游构建使用 mise。
+- Project environments are frozen before cache lookup and included in fingerprints. Custom builds need explicit cache declarations. Development keeps its terminal supervisor and uses mise for prerequisite builds.
+- 删除 `one ci`、工作流生成器和现有 skills 功能；保留仓库 Actions、hooks 和 preset。仓库贡献入口改为 `mise run check`。
+- Removed `one ci`, workflow generation, and the current skills feature. Repository Actions, hooks, and presets remain. The contributor gate is now `mise run check`.
 
 ### Removed (BREAKING — `one serve` session token)
 

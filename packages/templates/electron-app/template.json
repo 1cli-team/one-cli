@@ -1,0 +1,26 @@
+{
+  "schemaVersion": 1,
+  "node": {
+    "scope": "@one-template-electron",
+    "sourceFiles": [
+      "apps/electron/src/utils/index.ts",
+      "apps/electron/src/types/events.ts",
+      "apps/ui/src/nodes/HomePage/index.tsx",
+      "apps/ui/src/renderer.d.ts",
+      "apps/ui/src/hooks/electron.ts"
+    ]
+  },
+  "text": [
+    {
+      "files": ["README.md"],
+      "from": "OneTemplateElectron",
+      "value": "projectName"
+    },
+    {
+      "files": ["README.md"],
+      "from": "one-template-electron",
+      "value": "projectNameKebabCase"
+    }
+  ],
+  "exclude": ["pnpm-workspace.yaml"]
+}

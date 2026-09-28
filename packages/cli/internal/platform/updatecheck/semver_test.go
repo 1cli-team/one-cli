@@ -57,9 +57,9 @@ func TestNormalizeTag(t *testing.T) {
 		{"0.8.0", "v0.8.0"},
 		{"v0.8.0\n", "v0.8.0"},
 		{"  v0.8.0  ", "v0.8.0"},
-		{"v0.8.0-rc1", "v0.8.0"}, // suffix stripped
-		{"v1", "v1.0.0"},         // missing segments filled
-		{"v1.2", "v1.2.0"},
+		{"v0.8.0-rc1", ""}, // never turn a prerelease into a stable download
+		{"v1", ""},         // incomplete versions are not release tags
+		{"v1.2", ""},
 		{"", ""},
 		{"abc", ""},
 		{"v9.9.9.9", ""}, // too many segments

@@ -80,7 +80,7 @@ func nodePackageManager(p *fsutil.FilePlan) (string, error) {
 		manager = "pnpm"
 	}
 	switch manager {
-	case "pnpm", "npm", "yarn", "bun":
+	case "pnpm":
 		return manager, nil
 	default:
 		return "", i18n.Errorf("workspace.package_manager_unsupported", manager)
@@ -121,26 +121,6 @@ func configureNodePackage(p *fsutil.FilePlan, dir, name, manager string) error {
 	} else {
 		updates["packageManager"] = nil
 	}
-	if manager != "pnpm" {
-		var scripts map[string]string
-		if raw := pkg["scripts"]; len(raw) > 0 {
-			if err := json.Unmarshal(raw, &scripts); err != nil {
-				return err
-			}
-		}
-		scriptUpdates := make(map[string]json.RawMessage)
-		for key, command := range scripts {
-			if updated := strings.ReplaceAll(command, "pnpm run ", manager+" run "); updated != command {
-				scriptUpdates[key], _ = marshalJSONValue(updated)
-			}
-		}
-		if len(scriptUpdates) > 0 {
-			updates["scripts"], err = updateJSONFields(pkg["scripts"], scriptUpdates)
-			if err != nil {
-				return err
-			}
-		}
-	}
 	after, err := updateJSONFields(raw, updates)
 	if err != nil {
 		return err
@@ -149,7 +129,7 @@ func configureNodePackage(p *fsutil.FilePlan, dir, name, manager string) error {
 }
 
 func planNodeWorkspace(p *fsutil.FilePlan, m *workspace.Manifest, dirs []string) error {
-	manager, err := nodePackageManager(p)
+	_, err := nodePackageManager(p)
 	if err != nil {
 		return err
 	}
@@ -184,43 +164,11 @@ func planNodeWorkspace(p *fsutil.FilePlan, m *workspace.Manifest, dirs []string)
 	if _, ok := pkg["private"]; !ok {
 		updates["private"] = json.RawMessage("true")
 	}
-	if newRoot && manager != "pnpm" {
-		updates["packageManager"] = nil
+	if _, ok := pkg["packageManager"]; !ok {
+		updates["packageManager"], _ = marshalJSONValue(packageManagerSpec)
 	}
-	if manager == "pnpm" {
-		if _, ok := pkg["packageManager"]; !ok {
-			updates["packageManager"], _ = marshalJSONValue(packageManagerSpec)
-		}
-		if err := planPNPMWorkspace(p, dirs); err != nil {
-			return err
-		}
-	} else {
-		var patterns []string
-		var object map[string]json.RawMessage
-		if b := pkg["workspaces"]; len(b) > 0 {
-			if err := json.Unmarshal(b, &patterns); err != nil {
-				if err := json.Unmarshal(b, &object); err != nil || object == nil {
-					return i18n.Errorf("creation.workspaces_invalid")
-				}
-				if err := json.Unmarshal(object["packages"], &patterns); err != nil {
-					return i18n.Errorf("creation.workspace_packages_invalid", err)
-				}
-			}
-		}
-		updated, err := includeProjects(patterns, dirs)
-		if err != nil {
-			return err
-		}
-		if len(updated) != len(patterns) {
-			b, _ := marshalJSONValue(updated)
-			if object != nil {
-				b, err = updateJSONFields(pkg["workspaces"], map[string]json.RawMessage{"packages": b})
-				if err != nil {
-					return err
-				}
-			}
-			updates["workspaces"] = b
-		}
+	if err := planPNPMWorkspace(p, dirs); err != nil {
+		return err
 	}
 	if len(updates) > 0 {
 		raw, err = updateJSONFields(raw, updates)

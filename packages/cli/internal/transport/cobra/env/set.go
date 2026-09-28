@@ -11,6 +11,7 @@ import (
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/i18n"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/output"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/prompt"
+	"github.com/torchstellar-team/one-cli/packages/cli/internal/ports/secrets"
 )
 
 func newSetCmd(deps Dependencies) *cobra.Command {
@@ -22,7 +23,7 @@ func newSetCmd(deps Dependencies) *cobra.Command {
 		Use:   "set <KEY[=VALUE]> [VALUE]",
 		Short: i18n.T("env.set.short"),
 		Long:  i18n.T("env.set.tip"),
-		Args:  i18n.RangeArgs(1, 2),
+		Args:  validateSetArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			plan, err := deps.Service.PlanSet(environmentmodule.PlanSetInput{
 				Scope: commandScope(cmd), Environment: environment, Project: project,
@@ -106,19 +107,32 @@ func chooseSetProject(
 	return plan.WithProject(project), nil
 }
 
+// Reject ambiguous assignment syntax before prompts or remote access. Echoing
+// an invalid key here could expose a value accidentally supplied as KEY=VALUE.
+func validateSetArgs(cmd *cobra.Command, args []string) error {
+	if err := i18n.RangeArgs(1, 2)(cmd, args); err != nil {
+		return err
+	}
+	if len(args) == 2 && strings.Contains(args[0], "=") {
+		return i18n.Errorf("env.set_syntax_conflict")
+	}
+	key, _ := parseSetArgs(args)
+	return secrets.AssertValidKey(key)
+}
+
 func parseSetArgs(args []string) (string, string) {
 	if len(args) == 2 {
 		return args[0], args[1]
 	}
 	first := args[0]
-	if index := strings.IndexByte(first, '='); index > 0 {
+	if index := strings.IndexByte(first, '='); index >= 0 {
 		return first[:index], first[index+1:]
 	}
 	return first, ""
 }
 
 func setValueProvided(args []string) bool {
-	return len(args) >= 2 || (len(args) == 1 && strings.IndexByte(args[0], '=') > 0)
+	return len(args) >= 2 || (len(args) == 1 && strings.IndexByte(args[0], '=') >= 0)
 }
 
 func confirmOverwrite(setErr error, key string, yes bool) (bool, error) {
@@ -157,13 +171,4 @@ func confirmCreateEnv(name string, yes bool) error {
 		return cliErrors.New(cliErrors.PROMPT_CANCELLED, i18n.T("env.create_environment_cancelled")).WithExit0()
 	}
 	return nil
-}
-
-func contains(values []string, target string) bool {
-	for _, value := range values {
-		if value == target {
-			return true
-		}
-	}
-	return false
 }

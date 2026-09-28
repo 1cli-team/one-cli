@@ -18,9 +18,8 @@ type ResolvedItem struct {
 type ResolvedSpec struct {
 	Spec  Spec
 	Items []ResolvedItem
-	// EnvProvider is the workspace-level env backend id ("dotenv" or
-	// "infisical"). "" when the spec didn't declare one — callers should
-	// treat that as the workspace default ("dotenv").
+	// EnvProvider resolves a frozen preset code. Empty means Infisical.
+	// Retired codes remain decodable but creation rejects unsupported sources.
 	EnvProvider string
 }
 

@@ -60,8 +60,8 @@ func TestE2E_LocalePreferenceAndImmediateConfirmation(t *testing.T) {
 			t.Fatalf("Chinese %v: %s %s", args, out, errText)
 		}
 	}
-	_, stderr, code = runBinaryIn(t, root, "env", "get", "-o", "text")
-	if code == 0 || !strings.Contains(stderr, "参数") || !strings.Contains(stderr, "one env get") {
+	_, stderr, code = runBinaryIn(t, root, "env", "unset", "-o", "text")
+	if code == 0 || !strings.Contains(stderr, "参数") || !strings.Contains(stderr, "one env unset") {
 		t.Fatalf("Chinese argument error: %s", stderr)
 	}
 	_, stderr, code = runBinaryIn(t, root, "serve", "--port=invalid", "-o", "text")

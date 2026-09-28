@@ -18,6 +18,7 @@ import { Overview } from "@/pages/Overview";
 import { AccountSettings } from "@/features/infisical-session/AccountSettings";
 import { GlobalVariables } from "@/features/global-variables/GlobalVariables";
 
+import { ProjectTemplates } from "@/pages/ProjectTemplates";
 import { WorkspaceHome } from "@/pages/WorkspaceHome";
 import type { WorkspaceRegistryEntry } from "@/types/api";
 
@@ -250,6 +251,7 @@ const UnknownWorkspace: React.FC = () => {
 
 const routes: RouteObject[] = [
 	{ path: "/", element: <WorkspaceHome /> },
+	{ path: "/templates", element: <ProjectTemplates /> },
 	{ path: "/workspace/:entryId", element: <WorkspaceRoute /> },
 	{ path: "/settings", element: <AccountSettings /> },
 	{ path: "/global", element: <GlobalVariables /> },

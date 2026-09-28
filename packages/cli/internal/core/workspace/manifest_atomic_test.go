@@ -90,22 +90,15 @@ func TestAtomicManifestRenameFailurePreservesPublishedFile(t *testing.T) {
 	assertNoManifestTemps(t, root)
 }
 
-func TestWriteManifestMarshalFailurePreservesPublishedFile(t *testing.T) {
+func TestMalformedEnvironmentConfigPreservesPublishedFile(t *testing.T) {
 	root := t.TempDir()
 	path := ManifestPath(root)
 	original := []byte(`{"version":1,"projects":[]}` + "\n")
 	if err := os.WriteFile(path, original, 0o644); err != nil {
 		t.Fatal(err)
 	}
-	manifest := &Manifest{
-		Version: ManifestVersion,
-		Domains: &WorkspaceDomains{Env: &BackendRef{
-			Kind: EnvBackendInfisical, Config: []byte(`{"broken"`),
-		}},
-		Projects: []ManifestProject{},
-	}
-	if err := WriteManifest(root, manifest); err == nil {
-		t.Fatal("expected malformed raw config to fail marshaling")
+	if err := InitWorkspaceEnv(root, EnvInit{Kind: EnvBackendInfisical, ConfigJSON: []byte(`{"broken"`)}); err == nil {
+		t.Fatal("expected malformed environment configuration to fail")
 	}
 	raw, err := os.ReadFile(path)
 	if err != nil {

@@ -3,21 +3,18 @@ package cli
 import (
 	"context"
 
-	"github.com/torchstellar-team/one-cli/packages/cli/internal/adapters/ci/githubactions"
-	"github.com/torchstellar-team/one-cli/packages/cli/internal/adapters/env/dotenv"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/adapters/env/infisical"
 	miseruntime "github.com/torchstellar-team/one-cli/packages/cli/internal/adapters/runtime/mise"
 	internaltoolchain "github.com/torchstellar-team/one-cli/packages/cli/internal/adapters/toolchain"
 	workspaceregistrylocal "github.com/torchstellar-team/one-cli/packages/cli/internal/adapters/workspaceregistry/local"
-	ciapp "github.com/torchstellar-team/one-cli/packages/cli/internal/application/ci"
 	manifestapp "github.com/torchstellar-team/one-cli/packages/cli/internal/application/manifest"
 	workspaceapp "github.com/torchstellar-team/one-cli/packages/cli/internal/application/workspace"
 	catalog "github.com/torchstellar-team/one-cli/packages/cli/internal/core/backend"
 	creationmodule "github.com/torchstellar-team/one-cli/packages/cli/internal/modules/creation"
 	environmentmodule "github.com/torchstellar-team/one-cli/packages/cli/internal/modules/environment"
+	tasksmodule "github.com/torchstellar-team/one-cli/packages/cli/internal/modules/tasks"
 	runtimeport "github.com/torchstellar-team/one-cli/packages/cli/internal/ports/runtime"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/ports/secrets"
-	pkgci "github.com/torchstellar-team/one-cli/packages/cli/pkg/ci"
 )
 
 // dependencies is the process composition graph. Transports receive
@@ -30,7 +27,6 @@ type dependencies struct {
 	environments *environmentmodule.Service
 	manifest     *manifestapp.Service
 	loaders      *secrets.Registry
-	ci           *ciapp.Service
 	workspaces   *workspaceapp.Service
 	registry     *workspaceapp.RegistryService
 }
@@ -52,8 +48,7 @@ func composeDependencies() dependencies {
 		creation:     creation,
 		environments: environments,
 		manifest:     manifest,
-		loaders:      secrets.MustRegistry(infisical.Loader(), dotenv.Loader()),
-		ci:           mustCIService(pkgci.MustRegistry(githubactions.Provider{})),
+		loaders:      secrets.MustRegistry(infisical.Loader()),
 		workspaces:   mustWorkspaceService(backendCatalog),
 		registry:     registry,
 	}
@@ -82,7 +77,7 @@ func mustWorkspaceRegistryService() *workspaceapp.RegistryService {
 func mustWorkspaceService(
 	backendCatalog *catalog.Catalog,
 ) *workspaceapp.Service {
-	service, err := workspaceapp.NewService(backendCatalog)
+	service, err := workspaceapp.NewService(backendCatalog, tasksmodule.ProjectSettings)
 	if err != nil {
 		panic(err)
 	}
@@ -101,14 +96,7 @@ func mustCreationService(
 	if err != nil {
 		panic(err)
 	}
-	return service
-}
-
-func mustCIService(providers *pkgci.Registry) *ciapp.Service {
-	service, err := ciapp.NewService(providers)
-	if err != nil {
-		panic(err)
-	}
+	service.Runtime = miseruntime.Provider{}
 	return service
 }
 

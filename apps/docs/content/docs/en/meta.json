@@ -6,7 +6,6 @@
     "manifest",
     "templates",
     "ai-native",
-    "skills",
     "cli-overview",
     "create",
     "add",
@@ -15,8 +14,9 @@
     "templates-cmd",
     "dev",
     "build",
-    "ci",
     "run",
+    "exec",
+    "hk",
     "serve",
     "error-codes"
   ]

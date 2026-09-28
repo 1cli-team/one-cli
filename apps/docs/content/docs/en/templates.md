@@ -117,3 +117,83 @@ must be adjusted at the root. For concurrent desktop development, set a differen
 
 These rules apply to newly generated projects. Existing Electron projects are not
 automatically rewritten or migrated.
+
+
+## Develop directly in a template directory
+
+Bundled templates contain ordinary source files that you can run and debug in
+`packages/templates/<id>`. Go templates have a local `go.work` to isolate them
+from the repository workspace. Electron has a `pnpm-workspace.yaml` for template
+development. These development files are excluded from generated projects,
+which use the destination One workspace's configuration.
+
+For example, inside the One CLI source repository:
+
+```sh
+cd packages/templates/go-api
+go test ./...
+go run ./cmd/server
+```
+
+The Go API defaults to in-memory SQLite. Configure environment variables as
+described by the template when using PostgreSQL or other runtime settings.
+
+```sh
+cd packages/templates/electron-app
+pnpm install
+pnpm run dev
+```
+
+Electron builds preload first, then starts the main process and Vite UI. The
+host still needs Electron's graphical environment and system sandbox support.
+Use `pnpm run build` for a build without launching the application.
+
+For a single-package Node template such as React, isolate the parent workspace:
+
+```sh
+cd packages/templates/react-spa
+pnpm --ignore-workspace install
+pnpm --ignore-workspace run dev
+```
+
+Template development uses the pnpm version in its `package.json`. Generated
+projects inherit the destination workspace's version. Local dependencies,
+lockfiles and build artifacts are excluded from the CLI bundle.
+
+## Configure template generation
+
+Files are copied verbatim by default. Only starters needing parameterization
+include a `template.json` file, with these supported settings:
+
+| Setting | Purpose |
+| --- | --- |
+| `schemaVersion: 1` | Declare the descriptor version |
+| `go.modulePrefix` | Set the generated module path and rewrite its Go imports |
+| `node.scope`, `node.sourceFiles` | Rename internal Node packages, dependency keys, scripts and the scope in listed source files |
+| `text` | Replace example text in explicitly listed files |
+| `exclude` | Exclude files or directories used only for template development |
+
+Each `text` rule contains `files`, `from` and `value`. The supported values are
+`projectName` and `projectNameKebabCase`. Optional `minMatches` defaults to 1;
+every listed file must meet that count. Paths are exact, template-relative paths.
+No scripts or expressions are executed. Unknown fields, missing files,
+insufficient matches and overlapping replacements fail before destination writes.
+
+Go templates maintain one normal `go.mod` and a `go.sum` when needed. Bundling
+temporarily renames `go.mod` to `_go.mod` to avoid Go's nested-module embedding
+restriction; generation restores the filename. Do not edit the generated
+resources in `packages/cli/internal/resources/bundled/` manually.
+
+After editing, run these commands from the repository root:
+
+```sh
+mise run sync-bundled
+mise run check
+mise run check:templates
+```
+
+`check:templates` installs the Electron template dependencies, builds the Go and
+Electron sources, checks generated formatting for every Node template, and
+builds two differently named Electron projects plus two Go projects in a
+temporary workspace. It requires network access and the corresponding
+toolchains, and does not change the developer's global language preference.

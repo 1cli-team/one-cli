@@ -6,9 +6,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
-	"strings"
 
-	"github.com/torchstellar-team/one-cli/packages/cli/internal/adapters/env/dotenv"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/core/workspace"
 	"github.com/torchstellar-team/one-cli/packages/cli/pkg/toolchain"
 )
@@ -30,10 +28,6 @@ func syncProject(opts syncProjectOptions) error {
 	if tc == "" {
 		tc = toolchain.Node
 	}
-	pm := opts.PackageManager
-	if pm == "" && tc == toolchain.Node {
-		pm = toolchain.PMpnpm
-	}
 
 	scripts, err := loadProjectScripts(opts.TargetDir)
 	if err != nil {
@@ -45,32 +39,12 @@ func syncProject(opts syncProjectOptions) error {
 	}
 	relDir = filepath.ToSlash(relDir)
 	if command := workspace.ResolveScaffoldDevCommand(scripts, string(tc), opts.TargetDir); command != "" {
-		if tc == toolchain.Node && pm != toolchain.PMpnpm {
-			command = strings.Replace(command, "pnpm run ", string(pm)+" run ", 1)
-		}
 		if err := workspace.UpdateProjectDev(opts.ProjectRoot, relDir, command); err != nil {
 			return err
 		}
 	}
 
-	if id := opts.Selected["env"]; id != "" {
-		switch backendName(id) {
-		case workspace.EnvBackendDotenv, workspace.EnvBackendInfisical:
-			if err := dotenv.Sync(opts.ProjectRoot); err != nil {
-				return err
-			}
-		}
-	}
-
 	return nil
-}
-
-func backendName(id string) string {
-	index := strings.IndexByte(id, '/')
-	if index < 0 || index == len(id)-1 {
-		return id
-	}
-	return id[index+1:]
 }
 
 func loadProjectScripts(targetDir string) (map[string]string, error) {

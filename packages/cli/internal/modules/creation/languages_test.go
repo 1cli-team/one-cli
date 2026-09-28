@@ -95,7 +95,7 @@ func TestFirstProjectInitializesLanguageWorkspaceInEitherOrder(t *testing.T) {
 				}
 			}
 			rootMise, _ := os.ReadFile(filepath.Join(root, workspace.MiseConfigFilename))
-			if strings.Contains(string(rootMise), "go =") || !strings.Contains(string(rootMise), "pnpm =") {
+			if !strings.Contains(string(rootMise), "go = '1.27.0'") || !strings.Contains(string(rootMise), "pnpm =") {
 				t.Fatalf("wrong root tools: %s", rootMise)
 			}
 			hk, err := os.ReadFile(filepath.Join(root, workspace.HooksConfigFilename))
@@ -121,9 +121,10 @@ func TestFirstProjectInitializesLanguageWorkspaceInEitherOrder(t *testing.T) {
 					t.Errorf("obsolete workspace file %s", obsolete)
 				}
 			}
-			goMise, _ := os.ReadFile(filepath.Join(root, "services/api", workspace.MiseConfigFilename))
-			if !strings.Contains(string(goMise), "go = '1.27.0'") {
-				t.Fatalf("Go tool not configured: %s", goMise)
+			for _, project := range m.Projects {
+				if _, err := os.Stat(filepath.Join(root, project.RelativeDir, workspace.MiseConfigFilename)); !os.IsNotExist(err) {
+					t.Fatalf("unexpected project mise configuration for %s: %v", project.Name, err)
+				}
 			}
 		})
 	}
@@ -133,8 +134,8 @@ func TestAddConflictLeavesManifestAndRootConfigurationsUnchanged(t *testing.T) {
 	for _, conflict := range []struct{ file, content, template string }{
 		{"go.work", "invalid Go syntax", "go-api"},
 		{"pnpm-workspace.yaml", "packages: [ '!apps/*' ]\n", "react-spa"},
-		{workspace.MiseConfigFilename, "# user's modified configuration", "go-api"},
-		{workspace.HooksConfigFilename, "// user's modified configuration", "go-api"},
+		{workspace.MiseConfigFilename, "# one:managed-v1 invalid", "go-api"},
+		{workspace.HooksConfigFilename, "// one:managed-v1 invalid", "go-api"},
 	} {
 		t.Run(conflict.file, func(t *testing.T) {
 			s := newCreationService(t)
@@ -166,7 +167,7 @@ func TestAddConflictLeavesManifestAndRootConfigurationsUnchanged(t *testing.T) {
 	}
 }
 
-func TestExistingNodeManagerAndUserFilesArePreserved(t *testing.T) {
+func TestUnsupportedNodeManagerIsRejectedWithoutMutation(t *testing.T) {
 	s := newCreationService(t)
 	root := filepath.Join(t.TempDir(), "demo")
 	if _, err := s.CreateWorkspace(context.Background(), WorkspaceInput{TargetDir: root, Name: "demo"}); err != nil {
@@ -176,24 +177,21 @@ func TestExistingNodeManagerAndUserFilesArePreserved(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(root, "package.json"), []byte(user), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	if err := addLanguageProject(t, s, root, "react-spa", "web"); err != nil {
-		t.Fatal(err)
+	if err := addLanguageProject(t, s, root, "react-spa", "web"); err == nil {
+		t.Fatal("unsupported package manager accepted")
 	}
 	pkg, _ := os.ReadFile(filepath.Join(root, "package.json"))
-	for _, keep := range []string{"npm@11.0.0", "echo keep", "custom/*", "apps/web"} {
-		if !strings.Contains(string(pkg), keep) {
-			t.Fatalf("lost %s: %s", keep, pkg)
-		}
+	if string(pkg) != user {
+		t.Fatalf("user package.json changed: %s", pkg)
 	}
 	if _, err := os.Stat(filepath.Join(root, "pnpm-workspace.yaml")); !os.IsNotExist(err) {
 		t.Fatal("npm workspace converted to pnpm")
 	}
 	m, _ := workspace.ReadManifest(root)
-	if m.Projects[0].PackageManager != "npm" || workspace.ProjectDev(m, "web") != "npm run dev" {
-		t.Fatalf("wrong runtime: %+v", m.Projects[0])
+	if len(m.Projects) != 0 {
+		t.Fatal("failed add published a project")
 	}
-	projectPkg, _ := os.ReadFile(filepath.Join(root, "apps/web/package.json"))
-	if strings.Contains(string(projectPkg), "pnpm") || !strings.Contains(string(projectPkg), "npm@11.0.0") {
-		t.Fatalf("generated project uses another manager: %s", projectPkg)
+	if _, err := os.Stat(filepath.Join(root, "apps/web")); !os.IsNotExist(err) {
+		t.Fatal("failed add left a generated project")
 	}
 }

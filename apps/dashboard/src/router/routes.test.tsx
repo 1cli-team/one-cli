@@ -18,6 +18,7 @@ import type {
 } from "@/types/api";
 
 const server = setupServer(
+	http.get(/\/api\/workspaces?(?:\/[^/]+)?\/services$/, () => HttpResponse.json({ services: [] })),
 	http.get("http://localhost/api/session", () =>
 		HttpResponse.json({ session: { loggedIn: false, expired: false } }),
 	),
@@ -72,7 +73,7 @@ function workspaceOverview(workspace: WorkspaceRegistryEntry): Overview {
 			manifestVersion: 1,
 			environments: ["dev"],
 			defaultEnvironment: "dev",
-			domains: { env: "dotenv" },
+			domains: { env: "infisical" },
 		},
 		projects: [
 			{
@@ -81,7 +82,7 @@ function workspaceOverview(workspace: WorkspaceRegistryEntry): Overview {
 				kind: "app",
 				templateId: "react-spa",
 				toolchain: "node",
-				domains: { env: "dotenv" },
+				domains: { env: "infisical" },
 			},
 		],
 	};
@@ -124,7 +125,7 @@ function registerCatalogHandler() {
 				root: entry.root,
 				environment: new URL(request.url).searchParams.get("env") ?? "dev",
 				domain: "env",
-				backend: "dotenv",
+				backend: "infisical",
 				configurable: false,
 			});
 		}),
@@ -149,7 +150,7 @@ function registerCatalogHandler() {
 						devCommand: "pnpm dev",
 						availableEnvironments: ["dev", "preview", "prod"],
 						environment: {
-							backend: "dotenv",
+							backend: "infisical",
 							path: ".env",
 							inherits: true,
 							disabled: false,
@@ -330,7 +331,8 @@ describe("multi-workspace routing", () => {
 		await user.click(within(inspector).getByRole("button", { name: "Workspace settings" }));
 		const dialog = await screen.findByRole("dialog", { name: "Workspace settings" });
 		expect(
-			(within(dialog).getByRole("combobox", { name: "Backend" }) as HTMLButtonElement).disabled,
+			(within(dialog).getByRole("combobox", { name: "Storage project" }) as HTMLButtonElement)
+				.disabled,
 		).toBe(true);
 	});
 
@@ -385,8 +387,8 @@ describe("multi-workspace routing", () => {
 				</MemoryRouter>
 			</SWRConfig>,
 		);
-		const navigation = await screen.findAllByRole("link", { name: "Shared credentials" });
-		await user.click(navigation[0]);
+		await user.click(screen.getByRole("button", { name: "One CLI navigation menu" }));
+		await user.click(await screen.findByRole("menuitem", { name: "Shared credentials" }));
 		await screen.findByRole("heading", { name: "Shared credentials" });
 		await user.click(screen.getByRole("link", { name: "Sign in with browser" }));
 		await screen.findByRole("heading", { name: "Infisical" });

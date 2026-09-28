@@ -6,8 +6,8 @@ package cli_test
 // logic; this file tests the actual CLI surface (cobra, error envelopes,
 // stdout/stderr partitioning, exit codes).
 //
-// Tests are skipped if the binary hasn't been built yet (run `task build`).
-// CI should run `task build && task test` so the binary is present.
+// Tests are skipped if the binary hasn't been built yet (run `mise run build`).
+// CI should run `mise run build && mise run test` so the binary is present.
 // Shared helpers live in e2e_helpers_test.go.
 
 import (
@@ -46,7 +46,7 @@ func TestSnapshot_E2E_TemplatesJSON(t *testing.T) {
 func TestSnapshot_E2E_UnknownCommand(t *testing.T) {
 	isolateHome(t, t.TempDir())
 	t.Setenv("LC_ALL", "en_US.UTF-8")
-	_, stderr, code := runBinary(t, "unknown-cmd", "-o", "json")
+	_, stderr, code := runBinary(t, "__unknown-cmd", "-o", "json")
 	if code != 1 {
 		t.Fatalf("expected exit 1, got %d", code)
 	}

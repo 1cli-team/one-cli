@@ -1,86 +1,133 @@
 ---
 title: one run
-description: Inject project env vars into any command and execute it from the resolved project directory.
+description: Discover and execute workspace tasks with mise.
 ---
 
-`one run` behaves like `infisical run` / `dotenv run`: it resolves a project, loads env vars from the workspace env provider, injects them into a child process, and runs the command you pass.
+One selects projects and freezes their environment variables. mise schedules the task graph. Node projects define commands in `package.json` scripts and run them with pnpm; Go projects define them in Taskfile and run them with Task.
 
-## Usage
-
-```bash
-one run [-p <name|path>] [--env-provider dotenv|infisical] [--env <env>] -- <cmd> [args...]
+```sh
+one run                          # List tasks without executing them
+one run --list -p web -o json
+one run build                    # Build the workspace and local dependencies
+one run build -p web -p api
+one run test -p api -- -run TestHandler
+one run check --env prod
+one run ci
+one run build --dry-run -o json
 ```
 
-You can omit `--`, but scripts should keep it so child flags are not parsed as One CLI flags.
+## Task shorthand
 
-## Options
+`one <task>` is shorthand for `one run <task>`. `dev`, `build`, `test`, and `lint` are ordinary task names and all follow this rule. For example, `one test -p api` and `one run test -p api` execute the same task. Built-in commands and aliases take precedence: `one env` opens environment management, while `one run env` executes a task named `env`. Unknown names resolve as tasks and report a missing-task error when absent. `one <task> --help` shows One's common task flags; use `-- --help` to forward help to the underlying command.
 
-| option | purpose |
-|---|---|
-| `-p`, `--project <name|path>` | select a project; without it, One CLI infers from cwd |
-| `--env-provider dotenv|infisical` | force a provider instead of using the workspace manifest |
-| `--env <env>` | use a specific environment |
-| `-o`, `--output <fmt>` | affects only One CLI output; child stdout/stderr pass through |
+## Selection and arguments
 
-## Interactive Mode
+Without `-p`, a task selects the workspace aggregate. Repeat `-p` to select project names or workspace-relative paths. Everything after `--` is forwarded to one selected task; forwarding arguments to multiple projects is rejected. `one build -p web` shares the execution path of `one run build -p web`.
 
-`one run` has no wizard. It only resolves the project, environment, and child command from arguments. Keep the `--` separator in scripts because the child command can have its own flags.
+`one exec web -- pnpm add axios` runs an arbitrary command. It does not invoke a task graph or install application dependencies.
 
-## Examples
+`:::` is reserved by mise for separating tasks and cannot be forwarded as a task argument.
 
-```bash
-one run -- npm test
-one run -p web -- npm run build
-one run -p apps/web -- pnpm lint
-one run --env-provider dotenv -- npm test
-one run --env staging -- npm run e2e
-```
+## Configuration
 
-The child process always runs from the resolved project directory, so commands find that project's `package.json`, `Taskfile.yml`, or Go module files.
+One writes tool versions, task adapters, aggregates, and local Node build dependencies into a single `mise.toml` at the workspace root. Project directories keep their native command files; One does not generate project-level mise configurations. Edit the root file directly to add tasks or adjust settings. Running tasks, adding projects, or calling `one init mise` adds missing configuration and updates generated fields that you have not changed. Custom fields and comments are preserved. Root `dev`, `build`, `check`, and `test` aggregate only available project tasks; `ci` combines build, check, and test.
 
-## PATH and env
-
-`one run` merges loaded variables into the child environment, overriding same-name shell variables. It also prepends:
+Keep the `# one:managed-v1` comment at the end of the file. It records the last generated fields for incremental updates. If you and One change the same field to different values, One reports `MISE_CONFIG_CONFLICT` with the field name. Adding comments, custom tasks, or changing defaults does not trigger a whole-file ownership error.
 
 ```text
-<project>/node_modules/.bin
-<workspace>/node_modules/.bin
+workspace/
+  one.manifest.json
+  mise.toml             # Tools, project task adapters, aggregates, cache settings
+  .config/hk.pkl        # Workspace Git checks
+  apps/web/
+    package.json        # pnpm scripts
+  services/api/
+    Taskfile.yml        # Go project commands
 ```
 
-This lets pnpm / turbo workspaces invoke `vite`, `next`, `astro`, and similar binaries directly.
-
-## Env provider
-
-| provider | behavior |
-|---|---|
-| `dotenv` | read project `.env` overlays |
-| `infisical` | fetch env vars from Infisical |
-| empty | use the provider recorded in the workspace manifest |
-
-`--env-provider infisical` requires browser login with `one login`. Use `--env-provider dotenv` for offline local runs.
-
-## Common errors
-
-| code | fix |
-|---|---|
-| `NOT_ONE_PROJECT` | run inside a workspace or project directory |
-| `SUBPROJECT_NOT_FOUND` | pass a manifest `name` or `relativeDir` to `-p` |
-| `RUN_COMMAND_NOT_FOUND` | check PATH, project `node_modules/.bin`, and workspace `node_modules/.bin` |
-| `ENV_FILE_NOT_FOUND` | create a project `.env` or use `--env-provider infisical` |
-| `INFISICAL_AUTH_MISSING` | run `one login` |
-
-## Next
-
-- [Run with env vars](/en/tutorials/run-passthrough/)
-- [one env](/en/docs/env-vars/)
-- [one dev](/en/docs/dev/)
-
-
-## Global credentials
+Preview and refresh configuration:
 
 ```bash
-one run --global --env dev --path /oss --keys OSS_ACCESS_KEY_ID,OSS_ACCESS_KEY_SECRET -- upload-assets
-one run --global --env dev --path /oss --dry-run -- upload-assets
+one init mise --dry-run -o json
+one init mise
 ```
 
-Environment and folder must be explicit. Only that folder is read; `--keys` fetches only selected variables. Dry-run does not read credentials. Global mode does not load project environments or implicitly resolve repository binaries. It preserves the current directory. Exact-value output masking is best effort, not a sandbox.
+Project tasks use root names such as `web:build` (canonical name `//:web:build`), with `dir = "apps/web"`. Tool versions are pinned at the root; Go defaults to the highest version required by workspace modules. Local Node dependencies with a build task run before dependent build, check, test, typecheck, and dev tasks. Go resolves module dependencies through `go.work` and its compiler. New Node workspaces use pnpm exclusively.
+
+List and dry-run use static configuration and never execute mise, install tools, read secrets, or write files. Dynamic task expressions and parameterized dependencies cannot be previewed. Actual runs also read mise's effective task catalogue. Native mise tasks with their own commands use mise's environment; generated project adapters use One's project environment.
+
+## Define a task
+
+Keep project commands in `package.json` scripts or a Taskfile. For example, adding `"docs:build": "typedoc"` makes `one run docs:build -p lib` available. Define workspace tasks in the root `mise.toml`:
+
+```toml
+[tasks.verify]
+depends = ["//:web:check", "//:api:test"]
+
+[tasks.hello]
+description = "Print a greeting"
+run = "echo hello"
+```
+
+Run the aggregate with `one run verify`, or the custom command with `one run hello`. You can also put executable scripts in `.mise/tasks/`, or load a separate task file with `[task_config] includes = ["tasks.toml"]`.
+
+Inspect native configuration with `one mise tasks ls --all --local` and `one mise tasks info //:web:build --json`. Custom native tasks can run directly with `mise run hello`; generated project tasks need `one run` to prepare their environment context.
+
+## Cache
+
+Generated configuration enables mise's experimental features. Known template **build** tasks receive `sources`, `outputs`, and an environment fingerprint. Other tasks stay uncached until they have an explicit cache contract. Changing a template build script or build configuration disables automatic caching; declare the actual inputs and outputs under the project task in the root `mise.toml` to enable it again. Cache storage and artifact restoration belong to mise.
+
+```sh
+one run build --cache local-only
+one run build --cache off --force
+one run build --cache read-only
+one run build --concurrency 4
+```
+
+`--cache off --force` ensures execution even if source freshness checks would skip a task. Cache modes also include `read-write` and `write-only`; remote access requires your own mise cache backend configuration. One does not provision a remote service.
+
+To opt a generated task into caching, declare its complete inputs and outputs under the project task in the root `mise.toml`, including One's fingerprint command:
+
+```toml
+[tasks."web:build"]
+dir = "apps/web"
+sources = ["src/**/*", "package.json", "tsconfig.json", "../../pnpm-lock.yaml"]
+outputs = ["dist"]
+cache = { enabled = true, env = ["NODE_ENV"], command_inputs = ['one __task-input --project "web" --task "build"'] }
+```
+
+Source and output paths are relative to the task’s `dir`. mise also hashes the defining configuration, so editing the root `mise.toml` invalidates caches for tasks defined there.
+
+`outputs = []` is appropriate for a deterministic task that only verifies inputs. Declare every upstream source, external file, configuration value, and compiler input that affects a custom task. Outputs must stay inside the task directory and must not overlap another selected task's outputs. Use `--cache off --force` while checking a new cache declaration.
+
+One loads each managed project's environment once per invocation, before cache lookup, into a temporary context. The fingerprint and command consume that same snapshot. Environment values remain out of generated TOML and structured results. Every injected project variable contributes to the fingerprint; authentication credentials used only to fetch variables do not. Directly invoking a generated adapter through `mise run` requires that context, so use `one run` for these tasks.
+
+## Terminals and output
+
+Tasks use streamed mise output. `--ui raw` preserves native terminal input and disables artifact caching. Multiple development services use prefixed logs and automatically allocated concurrency; raw/interactive services must run separately. `--ui tui` is unavailable. `one dev` and `one run dev` share the same execution path, including upstream builds. See [one dev](/en/docs/dev/) for development behavior.
+
+JSON/YAML previews use `one-cli/task-plan/v1`; execution uses `one-cli/task-result/v1`. Child logs go to stderr in structured mode. The result reports the overall status and exit code. Per-task status remains `unknown` because the selected mise version does not provide reliable structured completion events. One does not infer cache hits from console text.
+
+## GitHub Actions
+
+Keep your workflow in the repository and invoke the same tasks as local development. Once One is installed, a minimal job can use:
+
+```yaml
+- uses: actions/checkout@v7
+- uses: jdx/mise-action@v4
+  with:
+    version: 2026.9.7
+    experimental: true
+- uses: actions/cache@v4
+  with:
+    path: .cache/mise-task-artifacts
+    key: tasks-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('**/pnpm-lock.yaml', '**/go.sum', '**/mise.toml') }}-${{ github.sha }}
+    restore-keys: tasks-${{ runner.os }}-${{ runner.arch }}-
+- run: one run ci --ui stream
+  env:
+    MISE_TASK_CACHE_DIR: ${{ github.workspace }}/.cache/mise-task-artifacts
+```
+
+The cache directory must be excluded from task sources and version control. Cache keys isolate runner platforms; mise validates individual artifact keys. For workflows reading secrets, apply the repository's normal permissions and branch trust rules.
+
+See [mise task caching](https://mise.jdx.dev/tasks/caching.html) and [mise configuration](https://mise.jdx.dev/tasks/task-configuration.html) for native options.

@@ -38,13 +38,8 @@ func NewClient(ctx context.Context, cfg *WorkspaceConfig, creds *Credentials) (*
 // that has it, and the secrets layer doesn't need it for any decision.
 var clientVersion = "0.0.0-dev"
 
-// SetVersion lets the cobra root inject the build-time version into the
-// HTTP user-agent header so Infisical-side observability can spot specific
-// CLI revisions (helpful when triaging a regression).
-func SetVersion(v string) { clientVersion = v }
-
 // ListSecrets reads every key at the given path/environment, optionally
-// recursively (for `env pull` which fetches a folder subtree).
+// recursively when the caller requests a folder subtree.
 func (c *Client) ListSecrets(env, secretPath string, recursive bool) ([]models.Secret, error) {
 	out, err := c.sdk.Secrets().List(infisical.ListSecretsOptions{
 		ProjectID:              c.cfg.ProjectID,
@@ -208,7 +203,6 @@ func (c *Client) VerifyProjectExists(env string) error {
 
 // ----- error helpers below -----
 
-func mapAuthError(err error) error { return mapAPIError(err) }
 func mapAPIError(err error) error {
 	if err == nil {
 		return nil

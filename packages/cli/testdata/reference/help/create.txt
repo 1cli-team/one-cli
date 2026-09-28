@@ -19,6 +19,5 @@ COMMON OPTIONS
   -y, --yes                Use defaults without prompting
 
 AUTOMATION AND ADVANCED OPTIONS
-  --env-provider <value>   Environment-variable source ID (dotenv or infisical; default: dotenv)
   --preset <value>         Automation preset ID; implies --yes and may create projects
   --project-names <value>  Comma-separated project names for --preset expansion

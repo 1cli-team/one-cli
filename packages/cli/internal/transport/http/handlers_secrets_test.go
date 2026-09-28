@@ -8,13 +8,13 @@ import (
 	workspacecore "github.com/torchstellar-team/one-cli/packages/cli/internal/core/workspace"
 )
 
-func TestSecretRoutesRejectDotenvBackend(t *testing.T) {
+func TestSecretRoutesRejectUnconfiguredEnvironment(t *testing.T) {
 	root := seedWorkspace(t)
 	manifest, err := workspacecore.ReadManifest(root)
 	if err != nil {
 		t.Fatal(err)
 	}
-	manifest.Domains.Env.Kind = workspacecore.EnvBackendDotenv
+	manifest.Env = nil
 	if err := workspacecore.WriteManifest(root, manifest); err != nil {
 		t.Fatal(err)
 	}

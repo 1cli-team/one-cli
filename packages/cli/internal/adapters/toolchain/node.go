@@ -4,8 +4,6 @@
 package adapters
 
 import (
-	"strings"
-
 	"github.com/torchstellar-team/one-cli/packages/cli/pkg/toolchain"
 )
 
@@ -17,7 +15,7 @@ func (nodeAdapter) ID() toolchain.Toolchain  { return toolchain.Node }
 func (nodeAdapter) UsesPackageManager() bool { return true }
 
 func (nodeAdapter) InstallPlan(in toolchain.PlanInput) toolchain.CommandStep {
-	pm := resolvePackageManager(in.PackageManager)
+	pm := toolchain.PMpnpm
 	return toolchain.CommandStep{
 		Kind:    "install",
 		Command: string(pm),
@@ -32,39 +30,5 @@ func (nodeAdapter) PackageManagerForManifest(pm toolchain.PackageManager) toolch
 	if pm == "" {
 		return toolchain.PMpnpm
 	}
-	return pm
-}
-
-func (nodeAdapter) RenderWorkflow(in toolchain.WorkflowInput) string {
-	pm := resolvePackageManager(in.PackageManager)
-	lockfile := resolveLockfileByPM(pm)
-	installCmd := resolveNodeInstallCommand(pm, true)
-	ciCmds := resolveNodeCiCommands(in.Scripts, pm)
-
-	lines := workflowHeader(in.ProjectName, in.RelativeDir, in.WorkflowFilePath)
-
-	if pm == toolchain.PMpnpm {
-		lines = append(lines,
-			"      - uses: pnpm/action-setup@v6",
-			"        with:",
-			"          version: 12.3.4",
-		)
-	}
-
-	lines = append(lines,
-		"      - uses: actions/setup-node@v7",
-		"        with:",
-		"          node-version: 24",
-		"          cache: "+string(pm),
-		"          cache-dependency-path: ./"+in.RelativeDir+"/"+lockfile,
-		"      - name: Install dependencies",
-		"        run: "+installCmd,
-	)
-	for _, cmd := range ciCmds {
-		lines = append(lines,
-			"      - name: Run "+cmd,
-			"        run: "+cmd,
-		)
-	}
-	return strings.Join(lines, "\n") + "\n"
+	return toolchain.PMpnpm
 }

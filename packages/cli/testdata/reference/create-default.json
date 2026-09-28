@@ -1,10 +1,9 @@
 {
-  "ci_enabled": false,
   "created_in_place": false,
   "created_path": "\u003cvolatile\u003e",
   "dev_enabled": true,
   "package_manager": "",
   "project_name": "my-app",
   "schema": "one-cli/create/v2",
-  "secrets_backend": "dotenv"
+  "secrets_backend": "infisical"
 }

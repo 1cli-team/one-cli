@@ -1,21 +1,8 @@
 import builder from "electron-builder";
-import { dirname, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
-import { existsSync } from "node:fs";
-import dotenv from "dotenv";
-
-const __dirname = dirname(fileURLToPath(import.meta.url));
-// const mainResolve = (r) => resolve(__dirname, "..", r);
-const rootResolve = (r) => resolve(__dirname, "../../..", r);
 const Platform = builder.Platform;
 
 const nodeEnv = process.env.NODE_ENV;
 console.log("当前的环境是： ", nodeEnv);
-
-const env = existsSync(rootResolve(`.env.${nodeEnv}.local`))
-  ? rootResolve(`.env.${nodeEnv}.local`)
-  : rootResolve(`.env.${nodeEnv}`);
-dotenv.config({ path: env });
 
 // Let's get that intellisense working
 /**

@@ -2,7 +2,6 @@ package workspace
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"regexp"
 	"strings"
@@ -30,18 +29,10 @@ func (s *Service) WorkspaceEnvironment(_ context.Context, root, environment stri
 		return WorkspaceEnvironmentSettings{}, e
 	}
 	result := WorkspaceEnvironmentSettings{Schema: "one-cli/workspace-environment/v1", Revision: revision, Backend: workspacecore.EnvBackend(manifest)}
-	if manifest.Domains != nil && manifest.Domains.Env != nil {
-		var cfg struct {
-			ProjectID   string `json:"projectId"`
-			ProjectName string `json:"projectName"`
-			SiteURL     string `json:"siteUrl"`
-		}
-		if e = json.Unmarshal(manifest.Domains.Env.Config, &cfg); len(manifest.Domains.Env.Config) > 0 && e != nil {
-			return result, e
-		}
-		result.ProjectID = cfg.ProjectID
-		result.ProjectName = cfg.ProjectName
-		result.SiteURL = cfg.SiteURL
+	if manifest.Env != nil {
+		result.ProjectID = manifest.Env.ProjectID
+		result.ProjectName = manifest.Env.ProjectName
+		result.SiteURL = manifest.Env.SiteURL
 	}
 	return result, nil
 }

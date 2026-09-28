@@ -1,12 +1,12 @@
 # PR-time test gate with native Linux, Windows, macOS, and Go race coverage.
 #
-# Two PR jobs call the same subtasks used by the local `task check` entrypoint:
-#  - lint: `task check:static` covers documentation drift, Go vet/gofmt, and
+# Two PR jobs call the same subtasks used by the local `mise run check` entrypoint:
+#  - lint: `mise run check:static` covers documentation drift, Go vet/gofmt, and
 #    Dashboard lint/format. The whole bundled
 #    tree (registry/_templates/_web) is gitignored and regenerated
-#    via `task sync-bundled` + `task sync-web`, both of which run as deps
-#    of `task vet` — so vet implicitly bootstraps the bundle here.
-#  - test: `task check:test` builds bin/one then runs Go + Dashboard tests.
+#    via `mise run sync-bundled` + `mise run sync-web`, both of which run as deps
+#    of `mise run vet` — so vet implicitly bootstraps the bundle here.
+#  - test: `mise run check:test` builds bin/one then runs Go + Dashboard tests.
 #    Build is required because tests/e2e snapshot tests skip when
 #    bin/one is missing.
 # Native Windows, macOS, and Go race jobs also run on every PR. The master
@@ -36,7 +36,8 @@ permissions:
   contents: read
 
 env:
-  # GitHub-hosted runners are outside China; the default Taskfile proxy
+  MISE_TASK_CACHE_DIR: ${{ github.workspace }}/.cache/mise-task-artifacts
+  # GitHub-hosted runners are outside China; the default Go proxy
   # (goproxy.cn) is slower/flakier there and has caused CI download failures.
   GOPROXY: https://proxy.golang.org,direct
   GOTOOLCHAIN: local
@@ -47,34 +48,18 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      - name: Set up Go
-        uses: actions/setup-go@v7
+      - name: Set up mise
+        uses: jdx/mise-action@v4
         with:
-          go-version-file: packages/cli/go.mod
-          cache: true
-          cache-dependency-path: |
-            go.work
-            go.work.sum
-            packages/cli/go.sum
-            packages/kernel/go.mod
+          version: 2026.9.7
+          experimental: true
 
-      - name: Set up pnpm
-        uses: pnpm/action-setup@v4
+      - name: Restore task artifacts
+        uses: actions/cache@v4
         with:
-          # The root packageManager pin drives version selection for every workspace app.
-          run_install: false
-
-      - name: Set up Node
-        uses: actions/setup-node@v6
-        with:
-          node-version: 24
-          cache: pnpm
-          cache-dependency-path: pnpm-lock.yaml
-
-      - name: Set up Task
-        uses: go-task/setup-task@v2
-        with:
-          version: 3.53.1
+          path: .cache/mise-task-artifacts
+          key: tasks-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('mise.toml', 'pnpm-lock.yaml', 'packages/cli/go.sum') }}-${{ github.sha }}
+          restore-keys: tasks-${{ runner.os }}-${{ runner.arch }}-
 
       - name: Download Go modules
         run: |
@@ -101,41 +86,26 @@ jobs:
           fi
 
       - name: Run static gate
-        # Calls the same static subtask as local `task check`.
-        run: task check:static
+        # Calls the same static subtask as local `mise run check`.
+        run: mise run check:static
 
   test:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
 
-      - name: Set up Go
-        uses: actions/setup-go@v7
+      - name: Set up mise
+        uses: jdx/mise-action@v4
         with:
-          go-version-file: packages/cli/go.mod
-          cache: true
-          cache-dependency-path: |
-            go.work
-            go.work.sum
-            packages/cli/go.sum
-            packages/kernel/go.mod
+          version: 2026.9.7
+          experimental: true
 
-      - name: Set up pnpm
-        uses: pnpm/action-setup@v4
+      - name: Restore task artifacts
+        uses: actions/cache@v4
         with:
-          run_install: false
-
-      - name: Set up Node
-        uses: actions/setup-node@v6
-        with:
-          node-version: 24
-          cache: pnpm
-          cache-dependency-path: pnpm-lock.yaml
-
-      - name: Set up Task
-        uses: go-task/setup-task@v2
-        with:
-          version: 3.53.1
+          path: .cache/mise-task-artifacts
+          key: tasks-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('mise.toml', 'pnpm-lock.yaml', 'packages/cli/go.sum') }}-${{ github.sha }}
+          restore-keys: tasks-${{ runner.os }}-${{ runner.arch }}-
 
       - name: Download Go modules
         run: |
@@ -162,41 +132,29 @@ jobs:
           fi
 
       - name: Run test gate
-        # Calls the same test subtask as local `task check`.
-        run: task check:test
+        # Calls the same test subtask as local `mise run check`.
+        run: mise run check:test
+
+      - name: Build template sources and generated projects
+        run: mise run check:templates
 
   test-windows:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v7
 
-      - name: Set up Go
-        uses: actions/setup-go@v7
+      - name: Set up mise
+        uses: jdx/mise-action@v4
         with:
-          go-version-file: packages/cli/go.mod
-          cache: true
-          cache-dependency-path: |
-            go.work
-            go.work.sum
-            packages/cli/go.sum
-            packages/kernel/go.mod
+          version: 2026.9.7
+          experimental: true
 
-      - name: Set up pnpm
-        uses: pnpm/action-setup@v4
+      - name: Restore task artifacts
+        uses: actions/cache@v4
         with:
-          run_install: false
-
-      - name: Set up Node
-        uses: actions/setup-node@v6
-        with:
-          node-version: 24
-          cache: pnpm
-          cache-dependency-path: pnpm-lock.yaml
-
-      - name: Set up Task
-        uses: go-task/setup-task@v2
-        with:
-          version: 3.53.1
+          path: .cache/mise-task-artifacts
+          key: tasks-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('mise.toml', 'pnpm-lock.yaml', 'packages/cli/go.sum') }}-${{ github.sha }}
+          restore-keys: tasks-${{ runner.os }}-${{ runner.arch }}-
 
       - name: Download Go modules
         shell: pwsh
@@ -208,7 +166,7 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Run native Windows PR gate
-        run: task check
+        run: mise run check
 
   test-race:
     # Catch Go data races before merging, alongside the other required jobs.
@@ -216,33 +174,18 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      - name: Set up Go
-        uses: actions/setup-go@v7
+      - name: Set up mise
+        uses: jdx/mise-action@v4
         with:
-          go-version-file: packages/cli/go.mod
-          cache: true
-          cache-dependency-path: |
-            go.work
-            go.work.sum
-            packages/cli/go.sum
-            packages/kernel/go.mod
+          version: 2026.9.7
+          experimental: true
 
-      - name: Set up pnpm
-        uses: pnpm/action-setup@v4
+      - name: Restore task artifacts
+        uses: actions/cache@v4
         with:
-          run_install: false
-
-      - name: Set up Node
-        uses: actions/setup-node@v6
-        with:
-          node-version: 24
-          cache: pnpm
-          cache-dependency-path: pnpm-lock.yaml
-
-      - name: Set up Task
-        uses: go-task/setup-task@v2
-        with:
-          version: 3.53.1
+          path: .cache/mise-task-artifacts
+          key: tasks-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('mise.toml', 'pnpm-lock.yaml', 'packages/cli/go.sum') }}-${{ github.sha }}
+          restore-keys: tasks-${{ runner.os }}-${{ runner.arch }}-
 
       - name: Download Go modules
         run: |
@@ -270,7 +213,7 @@ jobs:
 
       - name: Run Go race tests
         # test:go builds the CLI for E2E coverage; Dashboard tests run in test.
-        run: task test:go
+        run: mise run test:go
 
   test-macos:
     # Run before merging so macOS path and process regressions block PRs.
@@ -278,33 +221,18 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      - name: Set up Go
-        uses: actions/setup-go@v7
+      - name: Set up mise
+        uses: jdx/mise-action@v4
         with:
-          go-version-file: packages/cli/go.mod
-          cache: true
-          cache-dependency-path: |
-            go.work
-            go.work.sum
-            packages/cli/go.sum
-            packages/kernel/go.mod
+          version: 2026.9.7
+          experimental: true
 
-      - name: Set up pnpm
-        uses: pnpm/action-setup@v4
+      - name: Restore task artifacts
+        uses: actions/cache@v4
         with:
-          run_install: false
-
-      - name: Set up Node
-        uses: actions/setup-node@v6
-        with:
-          node-version: 24
-          cache: pnpm
-          cache-dependency-path: pnpm-lock.yaml
-
-      - name: Set up Task
-        uses: go-task/setup-task@v2
-        with:
-          version: 3.53.1
+          path: .cache/mise-task-artifacts
+          key: tasks-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('mise.toml', 'pnpm-lock.yaml', 'packages/cli/go.sum') }}-${{ github.sha }}
+          restore-keys: tasks-${{ runner.os }}-${{ runner.arch }}-
 
       - name: Download Go modules
         run: |
@@ -331,4 +259,4 @@ jobs:
           fi
 
       - name: Run test gate
-        run: task check:test
+        run: mise run check:test

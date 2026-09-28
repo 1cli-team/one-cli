@@ -25,12 +25,11 @@ func seedWorkspace(t *testing.T) string {
 		Version:      workspacecore.ManifestVersion,
 		Workspace:    &workspacecore.ManifestWorkspace{ID: "demo", Name: "demo"},
 		Environments: &workspacecore.Environments{Names: []string{"dev", "staging", "prod"}, Default: "dev"},
-		Domains: &workspacecore.WorkspaceDomains{
-			Env: &workspacecore.BackendRef{Kind: workspacecore.EnvBackendInfisical},
-		},
+
+		Env: &workspacecore.EnvironmentConfig{ProjectID: "remote"},
+
 		Projects: []workspacecore.ManifestProject{{
 			Name: "web", RelativeDir: "apps/web", TemplateID: "react-spa", Toolchain: "node",
-			Domains: &workspacecore.ProjectDomains{},
 		}},
 	}
 	if err := workspacecore.WriteManifest(root, manifest); err != nil {
@@ -191,20 +190,10 @@ func TestManifestDraftRouteRequiresCurrentRevisionAndWritesAllowlistedFields(t *
 		t.Fatal("project settings omitted manifest revision")
 	}
 
-	switched := workspaceRequest(t, handler, http.MethodPut,
-		"/api/workspace/environment/backend?env=dev",
-		strings.NewReader(fmt.Sprintf(`{"revision":%q,"backend":"dotenv"}`, settings.Revision)))
-	if switched.Code != http.StatusOK {
-		t.Fatalf("backend PUT status = %d; body = %s", switched.Code, switched.Body.String())
+	removed := workspaceRequest(t, handler, http.MethodPut, "/api/workspace/environment/backend?env=dev", strings.NewReader(`{"backend":"dotenv"}`))
+	if removed.Code == http.StatusOK {
+		t.Fatal("removed backend switch is still available")
 	}
-	var switchedSettings workspaceProfileSettingsWire
-	if err := json.Unmarshal(switched.Body.Bytes(), &switchedSettings); err != nil {
-		t.Fatal(err)
-	}
-	if switchedSettings.Backend != "dotenv" || switchedSettings.Revision == settings.Revision {
-		t.Fatalf("switched settings = %#v", switchedSettings)
-	}
-
 	body := fmt.Sprintf(`{
 		"revision": %q,
 		"changes": [{
@@ -212,7 +201,7 @@ func TestManifestDraftRouteRequiresCurrentRevisionAndWritesAllowlistedFields(t *
 			"general": {"buildVersion": "v2.0.0", "devCommand": "pnpm dev --host"},
 			"environment": {"path": "/frontend", "inherits": false, "disabled": false}
 		}]
-	}`, switchedSettings.Revision)
+	}`, settings.Revision)
 	written := workspaceRequest(t, handler, http.MethodPut, "/api/workspace/manifest", strings.NewReader(body))
 	if written.Code != http.StatusOK {
 		t.Fatalf("PUT status = %d; body = %s", written.Code, written.Body.String())
@@ -222,13 +211,13 @@ func TestManifestDraftRouteRequiresCurrentRevisionAndWritesAllowlistedFields(t *
 		t.Fatal(err)
 	}
 	if manifest.Projects[0].BuildVersion != "2.0.0" ||
-		manifest.Projects[0].Domains.Dev.Command != "pnpm dev --host" ||
-		manifest.Projects[0].Domains.Env.Path != "/frontend" {
+		manifest.Projects[0].Dev.Command != "pnpm dev --host" ||
+		manifest.Projects[0].Env.Path != "/frontend" {
 		t.Fatalf("manifest = %#v", manifest.Projects[0])
 	}
-	if manifest.Domains == nil || manifest.Domains.Env == nil ||
-		manifest.Domains.Env.Kind != "dotenv" {
-		t.Fatalf("workspace env backend = %#v", manifest.Domains)
+	if manifest.Env == nil ||
+		workspacecore.EnvBackend(manifest) != "infisical" {
+		t.Fatalf("workspace env backend = %#v", manifest.Env)
 	}
 
 	stale := workspaceRequest(t, handler, http.MethodPut, "/api/workspace/manifest", strings.NewReader(body))

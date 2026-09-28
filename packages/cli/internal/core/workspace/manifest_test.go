@@ -12,14 +12,6 @@ func TestManifest_RoundTrip(t *testing.T) {
 
 	disabled := true
 	inheritsTrue := true
-	infisicalCfg, err := json.Marshal(map[string]any{
-		"projectId":   "proj-123",
-		"rootPath":    "/",
-		"projectName": "demo",
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
 	original := &Manifest{
 		Version:   ManifestVersion,
 		Workspace: &ManifestWorkspace{ID: "demo-id", Name: "demo"},
@@ -27,21 +19,17 @@ func TestManifest_RoundTrip(t *testing.T) {
 			Names:   []string{"dev", "prod"},
 			Default: "dev",
 		},
-		Domains: &WorkspaceDomains{
-			Env: &BackendRef{
-				Kind:   EnvBackendInfisical,
-				Config: infisicalCfg,
-			},
-		},
+
+		Env: &EnvironmentConfig{ProjectID: "proj-123", RootPath: "/", ProjectName: "demo"},
+
 		Projects: []ManifestProject{
 			{
 				Name:        "api",
 				RelativeDir: "services/api",
 				TemplateID:  "go-api",
 				Toolchain:   "go",
-				Domains: &ProjectDomains{
-					Env: &ProjectEnvOverride{Disabled: disabled},
-				},
+
+				Env: &ProjectEnvOverride{Disabled: disabled},
 			},
 			{
 				Name:           "web",
@@ -49,11 +37,10 @@ func TestManifest_RoundTrip(t *testing.T) {
 				TemplateID:     "react-spa",
 				Toolchain:      "node",
 				PackageManager: "pnpm",
-				Domains: &ProjectDomains{
-					Env: &ProjectEnvOverride{
-						Path:     "/web-secrets",
-						Inherits: &inheritsTrue,
-					},
+
+				Env: &ProjectEnvOverride{
+					Path:     "/web-secrets",
+					Inherits: &inheritsTrue,
 				},
 			},
 		},
@@ -77,23 +64,20 @@ func TestManifest_RoundTrip(t *testing.T) {
 	if got.Environments == nil || len(got.Environments.Names) != 2 || got.Environments.Default != "dev" {
 		t.Errorf("environments not preserved: %+v", got.Environments)
 	}
-	if got.Domains == nil || got.Domains.Env == nil || got.Domains.Env.Kind != EnvBackendInfisical {
-		t.Errorf("env backend not preserved: %+v", got.Domains)
-	}
-	if EnvConfigRaw(got) == nil {
-		t.Errorf("env config not preserved")
+	if got.Env == nil || EnvBackend(got) != EnvBackendInfisical {
+		t.Errorf("env backend not preserved: %+v", got.Env)
 	}
 	if len(got.Projects) != 2 {
 		t.Fatalf("projects count = %d; want 2", len(got.Projects))
 	}
 	// Sorted by relativeDir, so apps/web comes first.
 	web := got.Projects[0]
-	if web.Domains == nil || web.Domains.Env == nil || web.Domains.Env.Path != "/web-secrets" {
-		t.Errorf("apps/web env override not preserved: %+v", web.Domains)
+	if web.Env == nil || web.Env.Path != "/web-secrets" {
+		t.Errorf("apps/web env override not preserved: %+v", web.Env)
 	}
 	api := got.Projects[1]
-	if api.Domains == nil || api.Domains.Env == nil || !api.Domains.Env.Disabled {
-		t.Errorf("services/api env.disabled not preserved: %+v", api.Domains)
+	if api.Env == nil || !api.Env.Disabled {
+		t.Errorf("services/api env.disabled not preserved: %+v", api.Env)
 	}
 }
 
@@ -159,71 +143,12 @@ func TestInitWorkspaceEnv_PreservesProjects(t *testing.T) {
 		t.Fatal(err)
 	}
 	if EnvBackend(got) != EnvBackendInfisical {
-		t.Errorf("env backend not written: %+v", got.Domains)
+		t.Errorf("env backend not written: %+v", got.Env)
 	}
 	if got.Environments == nil || got.Environments.Default != "dev" {
 		t.Errorf("environments not written: %+v", got.Environments)
 	}
 	if len(got.Projects) != 1 {
 		t.Fatalf("projects wiped: %d", len(got.Projects))
-	}
-}
-
-func TestUpsertManifestProject_PreservesDomainsOverride(t *testing.T) {
-	tmp := t.TempDir()
-
-	// Seed a project with an env override.
-	if err := WriteManifest(tmp, &Manifest{
-		Version: ManifestVersion,
-		Projects: []ManifestProject{{
-			Name:        "api",
-			RelativeDir: "services/api",
-			TemplateID:  "go-api",
-			Toolchain:   "go",
-			Domains: &ProjectDomains{
-				Env: &ProjectEnvOverride{Disabled: true},
-			},
-		}},
-	}); err != nil {
-		t.Fatal(err)
-	}
-
-	// Re-upsert (e.g. `one add` re-running on an existing project).
-	if err := UpsertManifestProject(tmp, ManifestProjectInput{
-		Name:        "api",
-		RelativeDir: "services/api",
-		TemplateID:  "go-api",
-		Toolchain:   "go",
-	}); err != nil {
-		t.Fatalf("UpsertManifestProject: %v", err)
-	}
-
-	got, _ := ReadManifest(tmp)
-	if len(got.Projects) != 1 {
-		t.Fatalf("projects count = %d; want 1", len(got.Projects))
-	}
-	if got.Projects[0].Domains == nil || got.Projects[0].Domains.Env == nil ||
-		!got.Projects[0].Domains.Env.Disabled {
-		t.Errorf("env override lost on upsert: %+v", got.Projects[0].Domains)
-	}
-}
-
-func TestResolveRootDirs_AlwaysReturnsDefaults(t *testing.T) {
-	got, err := ResolveRootDirs(t.TempDir(), nil)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if len(got) != 3 || got[0] != "apps" || got[1] != "services" || got[2] != "packages" {
-		t.Errorf("ResolveRootDirs = %v; want defaults", got)
-	}
-}
-
-func TestResolveRootDirs_HonorsExplicitOverride(t *testing.T) {
-	got, err := ResolveRootDirs(t.TempDir(), []string{"frontend", "backend"})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if len(got) != 2 || got[0] != "frontend" || got[1] != "backend" {
-		t.Errorf("ResolveRootDirs override = %v; want [frontend backend]", got)
 	}
 }

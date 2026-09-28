@@ -1,5 +1,5 @@
 import { templates, type TemplateMeta } from "@/data/templates";
-import { encodePreset, type PresetEnv, type PresetItem } from "@/lib/preset";
+import { encodePreset, type PresetItem } from "@/lib/preset";
 
 type PresetKind = PresetItem["kind"];
 
@@ -62,25 +62,17 @@ export function projectsFromPresetId(presetId: string): CommandProject[] {
   return sortCommandProjects(projects);
 }
 
-export function envFromPresetId(presetId: string): "dotenv" | "infisical" {
-  const id = presetId.trim().replace(/^preset:/, "");
-  const envSegment = id.split(".").find((segment) => segment[0] === "e");
-  return envSegment === "ei" ? "infisical" : "dotenv";
-}
-
 export function buildCustomPresetCommand(input: {
   workspaceName: string;
-  env: "dotenv" | "infisical";
   projects: CommandProject[];
 }) {
   const sorted = sortCommandProjects(input.projects);
-  const envCode: PresetEnv = input.env === "infisical" ? "i" : "d";
   const presetId = encodePreset(
     sorted.map((project) => ({
       kind: project.kind,
       tcode: project.tcode,
     })),
-    envCode,
+    "i",
   );
   return buildCreateCommand({
     workspaceName: input.workspaceName,

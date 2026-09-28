@@ -21,8 +21,8 @@ const (
 	ManifestFilename  = "one.manifest.json"
 )
 
-// generateWorkspaceFiles writes the workspace skeleton. Project-level
-// container and deployment artifacts are materialised from Templates later.
+// generateWorkspaceFiles writes the workspace skeleton. Project files are
+// materialised from templates later.
 func generateWorkspaceFiles(targetDir string, opts workspaceFilesOptions) error {
 	if err := os.MkdirAll(targetDir, 0o755); err != nil {
 		return err

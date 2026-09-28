@@ -22,12 +22,12 @@ func runtimeFixture(t *testing.T) string {
 	t.Setenv("XDG_STATE_HOME", filepath.Join(root, ".local", "state"))
 	t.Setenv("ONE_RUNTIME", "")
 	files := map[string]string{
-		"one.manifest.json":              `{"version":1,"workspace":{"id":"runtime-test","name":"runtime-test"},"projects":[{"name":"web","relativeDir":"apps/web","toolchain":"node","templateId":"react-spa","domains":{"dev":{"command":"node dev.cjs"}}},{"name":"api","relativeDir":"services/api","toolchain":"go","templateId":"go-api","domains":{"dev":{"command":"node dev.cjs"}}}]}`,
-		".mise/conf.d/one.toml":          "[env]\nONE_MISE_TEST_VALUE = 'root'\nONE_MISE_PARENT = 'root-only'\n",
-		"apps/web/.mise/conf.d/one.toml": "[env]\nONE_MISE_TEST_VALUE = 'project'\nONE_MISE_ONLY = 'from-mise'\n",
-		"apps/web/.env":                  "ONE_MISE_TEST_VALUE=web-secret\nWEB_ONLY=web-only\n",
-		"services/api/.env":              "ONE_MISE_TEST_VALUE=api-secret\nAPI_ONLY=api-only\n",
-		"apps/web/package.json":          `{"scripts":{"dev":"node dev.cjs"}}`,
+		"one.manifest.json":     `{"version":1,"workspace":{"id":"runtime-test","name":"runtime-test"},"projects":[{"name":"web","relativeDir":"apps/web","toolchain":"node","templateId":"react-spa","dev":{"command":"node dev.cjs"}},{"name":"api","relativeDir":"services/api","toolchain":"go","templateId":"go-api","dev":{"command":"node dev.cjs"}}]}`,
+		"mise.toml":             "[env]\nONE_MISE_TEST_VALUE = 'root'\nONE_MISE_PARENT = 'root-only'\n",
+		"apps/web/mise.toml":    "[env]\nONE_MISE_TEST_VALUE = 'project'\nONE_MISE_ONLY = 'from-mise'\n",
+		"apps/web/.env":         "ONE_MISE_TEST_VALUE=web-secret\nWEB_ONLY=web-only\n",
+		"services/api/.env":     "ONE_MISE_TEST_VALUE=api-secret\nAPI_ONLY=api-only\n",
+		"apps/web/package.json": `{"scripts":{"dev":"node dev.cjs"}}`,
 	}
 	for rel, content := range files {
 		path := filepath.Join(root, rel)
@@ -58,18 +58,18 @@ func installFakeMise(t *testing.T) {
 func TestE2E_MiseRuntimeOriginalRunSyntaxAndExitCode(t *testing.T) {
 	root := runtimeFixture(t)
 	installFakeMise(t)
-	args := append([]string{"run", "web", "--"}, environmentEchoCommand("ONE_MISE_TEST_VALUE")...)
+	args := append([]string{"exec", "web", "--"}, environmentEchoCommand("ONE_MISE_TEST_VALUE")...)
 	out, errOut, code := runBinaryIn(t, root, args...)
-	if code != 0 || strings.TrimSpace(out) != "web-secret" {
+	if code != 0 || strings.TrimSpace(out) != "from-mise" {
 		t.Fatalf("code=%d stdout=%q stderr=%q", code, out, errOut)
 	}
-	args = append([]string{"run", "web", "--"}, exitWithCodeCommand(42)...)
+	args = append([]string{"exec", "web", "--"}, exitWithCodeCommand(42)...)
 	_, _, code = runBinaryIn(t, root, args...)
 	if code != 42 {
 		t.Fatalf("exit code = %d, want 42", code)
 	}
 	// Literal argv must survive mise and the terminal One execution leaf.
-	args = []string{"run", "web", "--", "sh", "-c", `printf '<%s>\n' "$@"`, "probe", "a b", "", `$(not-a-command)`, "中文", `a'b"c`}
+	args = []string{"exec", "web", "--", "sh", "-c", `printf '<%s>\n' "$@"`, "probe", "a b", "", `$(not-a-command)`, "中文", `a'b"c`}
 	out, errOut, code = runBinaryIn(t, root, args...)
 	if code != 0 || out != "<a b>\n<>\n<$(not-a-command)>\n<中文>\n<a'b\"c>\n" {
 		t.Fatalf("argv: code=%d stdout=%q stderr=%q", code, out, errOut)
@@ -103,23 +103,23 @@ func TestE2E_MiseTrustThroughOneBeforeRunningProject(t *testing.T) {
 	t.Setenv("MISE_TRUSTED_CONFIG_PATHS", "")
 	t.Setenv("MISE_PARANOID", "1")
 	// Static env values need no trust; command templates deliberately do.
-	if err := os.WriteFile(filepath.Join(root, "apps/web/.mise/conf.d/one.toml"), []byte(`[env]
+	if err := os.WriteFile(filepath.Join(root, "apps/web/mise.toml"), []byte(`[env]
 ONE_MISE_TEST_VALUE = '{{ exec(command="echo from-mise") }}'
 `), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	args := append([]string{"run", "web", "--"}, environmentEchoCommand("ONE_MISE_TEST_VALUE")...)
+	args := append([]string{"exec", "web", "--"}, environmentEchoCommand("ONE_MISE_TEST_VALUE")...)
 	if _, _, code := runBinaryIn(t, root, args...); code == 0 {
 		t.Fatal("untrusted configuration ran")
 	}
-	for _, rel := range []string{".mise/conf.d/one.toml", "apps/web/.mise/conf.d/one.toml"} {
+	for _, rel := range []string{"mise.toml", "apps/web/mise.toml"} {
 		out, stderr, code := runBinaryIn(t, root, "mise", "trust", filepath.Join(root, rel))
 		if code != 0 {
 			t.Fatalf("trust: %d %q %s", code, out, stderr)
 		}
 	}
 	out, stderr, code := runBinaryIn(t, root, args...)
-	if code != 0 || strings.TrimSpace(out) != "web-secret" {
+	if code != 0 || strings.TrimSpace(out) != "from-mise" {
 		t.Fatalf("trusted run: %d %q %s", code, out, stderr)
 	}
 }
@@ -128,15 +128,15 @@ func TestE2E_MiseMissingReportsErrorAndLegacyStillRuns(t *testing.T) {
 	root := runtimeFixture(t)
 	t.Setenv("PATH", t.TempDir())
 	t.Setenv("ONE_MISE_BINARY", filepath.Join(t.TempDir(), "missing-mise"))
-	out, stderr, code := runBinaryIn(t, root, "run", "web", "--", "unavailable-command")
+	out, stderr, code := runBinaryIn(t, root, "exec", "web", "--", "unavailable-command")
 	if code == 0 || !strings.Contains(out+stderr, "MISE_NOT_FOUND") {
 		t.Fatalf("missing mise: %d %s %s", code, out, stderr)
 	}
 	// Removing only the One-generated root configuration models an old workspace.
-	if err := os.Remove(filepath.Join(root, ".mise/conf.d/one.toml")); err != nil {
+	if err := os.Remove(filepath.Join(root, "mise.toml")); err != nil {
 		t.Fatal(err)
 	}
-	out, stderr, code = runBinaryIn(t, root, "run", "web", "--dry-run", "--", "unavailable-command")
+	out, stderr, code = runBinaryIn(t, root, "exec", "web", "--dry-run", "--", "unavailable-command")
 	if code != 0 || !strings.Contains(out, `"runtime": "builtin"`) {
 		t.Fatalf("legacy runtime: %d %s %s", code, out, stderr)
 	}
@@ -152,7 +152,7 @@ func TestE2E_MiseDryRunDoesNotRunHooksOrNeedMise(t *testing.T) {
 		t.Setenv("PATH", filepath.Dir(probe)+string(os.PathListSeparator)+os.Getenv("PATH"))
 		t.Setenv("ONE_MISE_BINARY", probe)
 	}
-	out, errOut, code := runBinaryIn(t, root, "run", "web", "--dry-run", "--", "does-not-exist")
+	out, errOut, code := runBinaryIn(t, root, "exec", "web", "--dry-run", "--", "does-not-exist")
 	if code != 0 {
 		t.Fatalf("dry run: %d %s", code, errOut)
 	}
@@ -184,19 +184,20 @@ func TestE2E_MiseRealConfigurationLayering(t *testing.T) {
 	root := runtimeFixture(t)
 	useRealMise(t, root, mise)
 	for _, pair := range []struct{ project, key, want string }{
-		{"web", "ONE_MISE_TEST_VALUE", "web-secret"}, {"web", "ONE_MISE_ONLY", "from-mise"},
-		{"web", "ONE_MISE_PARENT", "root-only"}, {"api", "ONE_MISE_TEST_VALUE", "api-secret"},
+		{"web", "ONE_MISE_TEST_VALUE", "project"}, {"web", "ONE_MISE_ONLY", "from-mise"},
+		{"web", "ONE_MISE_PARENT", "root-only"}, {"api", "ONE_MISE_TEST_VALUE", "root"},
 	} {
-		args := append([]string{"run", pair.project, "--"}, environmentEchoCommand(pair.key)...)
+		args := append([]string{"exec", pair.project, "--"}, environmentEchoCommand(pair.key)...)
 		out, stderr, code := runBinaryIn(t, root, args...)
 		if code != 0 || strings.TrimSpace(out) != pair.want {
 			t.Fatalf("%+v: code=%d stdout=%q stderr=%q", pair, code, out, stderr)
 		}
 	}
-	if _, err := exec.LookPath("node"); err != nil {
-		t.Skip("node required for environment isolation assertion")
+	probe := []string{"sh", "-c", `printf '%s' "${WEB_ONLY:-isolated}"`}
+	if runtime.GOOS == "windows" {
+		probe = []string{"cmd.exe", "/d", "/s", "/c", "if defined WEB_ONLY (echo leaked) else (echo isolated)"}
 	}
-	out, stderr, code := runBinaryIn(t, root, "run", "api", "--", "node", "-p", "process.env.WEB_ONLY || 'isolated'")
+	out, stderr, code := runBinaryIn(t, root, append([]string{"exec", "api", "--"}, probe...)...)
 	if code != 0 || strings.TrimSpace(out) != "isolated" {
 		t.Fatalf("project leak: %d %q %s", code, out, stderr)
 	}
@@ -305,7 +306,7 @@ func TestE2E_MiseManagedLegacyMigrationAndOfflineReuse(t *testing.T) {
 	// real mise directory settings and update flags through its exec environment.
 	shell := "/bin/sh"
 	if runtime.GOOS != "windows" {
-		args := []string{"run", "web", "--", shell, "-c", `printf '%s|%s|%s|%s|%s|%s' "$MISE_DATA_DIR" "$MISE_CONFIG_DIR" "$MISE_STATE_DIR" "$MISE_CACHE_DIR" "$MISE_AUTO_UPDATE" "$MISE_DISABLE_UPDATE_WARNING"`}
+		args := []string{"exec", "web", "--", shell, "-c", `printf '%s|%s|%s|%s|%s|%s' "$MISE_DATA_DIR" "$MISE_CONFIG_DIR" "$MISE_STATE_DIR" "$MISE_CACHE_DIR" "$MISE_AUTO_UPDATE" "$MISE_DISABLE_UPDATE_WARNING"`}
 		out, stderr, code = runBinaryIn(t, root, args...)
 		want := strings.Join([]string{filepath.Join(root, ".local/share/one/mise"), filepath.Join(root, ".config/one/mise"), filepath.Join(root, ".local/state/one/mise"), filepath.Join(root, ".cache/one/mise"), "false", "true"}, "|")
 		if code != 0 || out != want {
@@ -325,24 +326,29 @@ func TestE2E_MiseCreateAddAndRefreshWithoutNewFlags(t *testing.T) {
 			t.Fatalf("add %s: %d %s %s", p.name, code, out, stderr)
 		}
 	}
-	for _, rel := range []string{".mise/conf.d/one.toml", "apps/web/.mise/conf.d/one.toml", "services/api/.mise/conf.d/one.toml"} {
+	for _, rel := range []string{"mise.toml"} {
 		raw, err := os.ReadFile(filepath.Join(root, rel))
-		if err != nil || !strings.Contains(string(raw), "Managed by One CLI") {
+		if err != nil || !strings.Contains(string(raw), "# one:managed-v1") {
 			t.Fatalf("configuration %s: %v %s", rel, err, raw)
+		}
+	}
+	for _, rel := range []string{"apps/web/mise.toml", "services/api/mise.toml"} {
+		if fileExists(t, filepath.Join(root, rel)) {
+			t.Fatalf("unexpected project configuration: %s", rel)
 		}
 	}
 	out, stderr, code := runBinaryIn(t, root, "init", "mise", "--dry-run", "-o", "json")
 	if code != 0 || !strings.Contains(out, `"changes": []`) {
 		t.Fatalf("refresh: %d %s %s", code, out, stderr)
 	}
-	out, stderr, code = runBinaryIn(t, root, "run", "web", "--dry-run", "--", "node", "--version")
+	out, stderr, code = runBinaryIn(t, root, "exec", "web", "--dry-run", "--", "node", "--version")
 	if code != 0 || !strings.Contains(out, `"runtime": "mise"`) {
 		t.Fatalf("automatic runtime: %d %s %s", code, out, stderr)
 	}
-	// A modified generated fragment must fail before rendering a new project.
-	path := filepath.Join(root, ".mise/conf.d/one.toml")
+	// A conflicting aggregate task edit must fail before rendering a new project.
+	path := filepath.Join(root, "mise.toml")
 	raw, _ := os.ReadFile(path)
-	if err := os.WriteFile(path, append(raw, []byte("\n# edited\n")...), 0o644); err != nil {
+	if err := os.WriteFile(path, []byte(strings.Replace(string(raw), "//:web:build", "//:custom:build", 1)), 0o644); err != nil {
 		t.Fatal(err)
 	}
 	manifest, _ := os.ReadFile(filepath.Join(root, "one.manifest.json"))
@@ -359,7 +365,7 @@ func TestE2E_MiseCreateAddAndRefreshWithoutNewFlags(t *testing.T) {
 	}
 }
 
-func TestE2E_MiseRealGeneratedTasksUseLiveCommands(t *testing.T) {
+func TestE2E_MiseRealGeneratedTasksRequireOneContext(t *testing.T) {
 	mise := os.Getenv("ONE_TEST_MISE_BINARY")
 	if mise == "" {
 		t.Skip("set ONE_TEST_MISE_BINARY for real task integration")
@@ -372,15 +378,26 @@ func TestE2E_MiseRealGeneratedTasksUseLiveCommands(t *testing.T) {
 	if out, stderr, code := runBinaryIn(t, root, "add", "react-spa", "--name", "web", "-y"); code != 0 {
 		t.Fatalf("add: %d %s %s", code, out, stderr)
 	}
-	// User overrides have higher priority than generated defaults. This test
-	// exercises real mise without downloading Node or package managers.
-	if err := os.WriteFile(filepath.Join(root, "mise.toml"), []byte("[tools]\nnode = 'system'\npnpm = 'system'\n[env]\nTASK_DEFAULT = 'mise'\n"), 0o644); err != nil {
+	// Edit the generated configuration in place, preserving monorepo fields.
+	configPath := filepath.Join(root, "mise.toml")
+	configRaw, err := os.ReadFile(configPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	configText := strings.ReplaceAll(string(configRaw), "node = '24.15.0'", "node = 'system'")
+	configText = strings.ReplaceAll(configText, "pnpm = '12.3.4'", "pnpm = 'system'")
+	configText += "\n[env]\nTASK_DEFAULT = 'mise'\n"
+	if err := os.WriteFile(configPath, []byte(configText), 0o644); err != nil {
 		t.Fatal(err)
 	}
 	if err := os.WriteFile(filepath.Join(root, "apps/web/.env"), []byte("TASK_DEFAULT=one\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	bin := filepath.Join(t.TempDir(), "one with spaces")
+	binDir := filepath.Join(t.TempDir(), "one with spaces")
+	if err := os.MkdirAll(binDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+	bin := filepath.Join(binDir, "one")
 	if runtime.GOOS == "windows" {
 		bin += ".exe"
 	}
@@ -391,13 +408,13 @@ func TestE2E_MiseRealGeneratedTasksUseLiveCommands(t *testing.T) {
 	if err := os.WriteFile(bin, raw, 0o755); err != nil {
 		t.Fatal(err)
 	}
-	t.Setenv("ONE_BINARY_PATH", bin)
+	t.Setenv("PATH", binDir+string(os.PathListSeparator)+os.Getenv("PATH"))
 	for _, command := range []string{"echo live-first", "echo live-second"} {
 		overrideDevCommand(t, root, "web", command)
-		cmd := exec.Command(mise, "run", "//apps/web:one:dev")
+		cmd := exec.Command(mise, "run", "//:web:dev")
 		cmd.Dir = root
 		out, err := cmd.CombinedOutput()
-		if err != nil || !strings.Contains(string(out), strings.TrimPrefix(command, "echo ")) {
+		if err == nil || !strings.Contains(string(out), "one run") {
 			t.Fatalf("generated task: %v %s", err, out)
 		}
 	}

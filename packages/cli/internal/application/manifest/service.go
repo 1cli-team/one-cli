@@ -4,7 +4,6 @@ package manifest
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"net/url"
 	"strings"
@@ -12,6 +11,7 @@ import (
 
 	catalog "github.com/torchstellar-team/one-cli/packages/cli/internal/core/backend"
 	workspacecore "github.com/torchstellar-team/one-cli/packages/cli/internal/core/workspace"
+	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/localurl"
 )
 
 const (
@@ -49,8 +49,9 @@ func (e *ManifestConflict) Error() string {
 func (e *ManifestConflict) Unwrap() error { return ErrManifestConflict }
 
 type ProjectGeneralPatch struct {
-	BuildVersion string `json:"buildVersion"`
-	DevCommand   string `json:"devCommand"`
+	BuildVersion string  `json:"buildVersion"`
+	DevCommand   string  `json:"devCommand"`
+	DevURL       *string `json:"devURL,omitempty"`
 }
 
 type ProjectEnvironmentPatch struct {
@@ -195,51 +196,30 @@ func (s *Service) PreviewManifestDraft(
 	}, nil
 }
 
-func applyWorkspaceEnvironmentPatch(
-	manifest *workspacecore.Manifest,
-	patch *WorkspaceEnvironmentPatch,
-) error {
+func applyWorkspaceEnvironmentPatch(manifest *workspacecore.Manifest, patch *WorkspaceEnvironmentPatch) error {
 	backend := strings.TrimSpace(patch.Backend)
-	if backend != workspacecore.EnvBackendDotenv && backend != workspacecore.EnvBackendInfisical {
+	if backend != workspacecore.EnvBackendInfisical {
 		return fmt.Errorf("%w: unknown environment backend %q", ErrInvalidInput, backend)
 	}
-	if manifest.Domains == nil {
-		manifest.Domains = &workspacecore.WorkspaceDomains{}
-	}
-	if manifest.Domains.Env == nil {
-		manifest.Domains.Env = &workspacecore.BackendRef{}
+	if manifest.Env == nil {
+		manifest.Env = &workspacecore.EnvironmentConfig{}
 	}
 	if patch.ProjectID != nil {
-		if backend != workspacecore.EnvBackendInfisical {
-			return fmt.Errorf("%w: project binding requires Infisical", ErrInvalidInput)
-		}
 		if strings.TrimSpace(*patch.ProjectID) == "" {
 			return fmt.Errorf("%w: projectId is required", ErrInvalidInput)
 		}
-		config := map[string]any{}
-		if len(manifest.Domains.Env.Config) > 0 {
-			if err := json.Unmarshal(manifest.Domains.Env.Config, &config); err != nil {
-				return err
-			}
-		}
-		config["projectId"] = *patch.ProjectID
-		if patch.ProjectName != nil {
-			config["projectName"] = *patch.ProjectName
-		}
-		if patch.SiteURL != nil {
-			u, err := url.Parse(*patch.SiteURL)
-			if err != nil || u.Host == "" || u.User != nil || u.RawQuery != "" || u.Fragment != "" || u.Path != "" || (u.Scheme != "https" && !(u.Scheme == "http" && (u.Hostname() == "localhost" || u.Hostname() == "127.0.0.1" || u.Hostname() == "::1"))) {
-				return fmt.Errorf("%w: invalid Infisical instance URL", ErrInvalidInput)
-			}
-			config["siteUrl"] = u.String()
-		}
-		data, err := json.Marshal(config)
-		if err != nil {
-			return err
-		}
-		manifest.Domains.Env.Config = data
+		manifest.Env.ProjectID = strings.TrimSpace(*patch.ProjectID)
 	}
-	manifest.Domains.Env.Kind = backend
+	if patch.ProjectName != nil {
+		manifest.Env.ProjectName = *patch.ProjectName
+	}
+	if patch.SiteURL != nil {
+		u, err := url.Parse(*patch.SiteURL)
+		if err != nil || u.Host == "" || u.User != nil || u.RawQuery != "" || u.Fragment != "" || u.Path != "" || (u.Scheme != "https" && !(u.Scheme == "http" && (u.Hostname() == "localhost" || u.Hostname() == "127.0.0.1" || u.Hostname() == "::1"))) {
+			return fmt.Errorf("%w: invalid Infisical instance URL", ErrInvalidInput)
+		}
+		manifest.Env.SiteURL = u.String()
+	}
 	return nil
 }
 
@@ -268,13 +248,23 @@ func (s *Service) applyProjectChanges(
 		}
 
 		if change.General != nil {
-			ensureProjectDomains(project)
 			project.BuildVersion = workspacecore.NormalizeBuildVersion(change.General.BuildVersion)
 			command := strings.TrimSpace(change.General.DevCommand)
-			if command == "" {
-				project.Domains.Dev = nil
+			url := ""
+			if project.Dev != nil {
+				url = project.Dev.URL
+			}
+			if change.General.DevURL != nil {
+				var err error
+				url, err = localurl.Normalize(*change.General.DevURL)
+				if err != nil {
+					return 0, fmt.Errorf("%w: %w", ErrInvalidInput, err)
+				}
+			}
+			if command == "" && url == "" {
+				project.Dev = nil
 			} else {
-				project.Domains.Dev = &workspacecore.ProjectDevOverride{Command: command}
+				project.Dev = &workspacecore.ProjectDevOverride{Command: command, URL: url}
 			}
 			applied++
 		}
@@ -282,13 +272,12 @@ func (s *Service) applyProjectChanges(
 			if strings.Contains(change.Environment.Path, "\x00") || unsafeSecretPath(change.Environment.Path) {
 				return 0, fmt.Errorf("%w: project %q has an unsafe environment path", ErrInvalidInput, name)
 			}
-			ensureProjectDomains(project)
 			inherits := change.Environment.Inherits
 			keys := []string(nil)
-			if project.Domains.Env != nil {
-				keys = append(keys, project.Domains.Env.Keys...)
+			if project.Env != nil {
+				keys = append(keys, project.Env.Keys...)
 			}
-			project.Domains.Env = &workspacecore.ProjectEnvOverride{
+			project.Env = &workspacecore.ProjectEnvOverride{
 				Path: strings.TrimSpace(change.Environment.Path), Inherits: &inherits,
 				Disabled: change.Environment.Disabled, Keys: keys,
 			}
@@ -296,12 +285,6 @@ func (s *Service) applyProjectChanges(
 		}
 	}
 	return applied, nil
-}
-
-func ensureProjectDomains(project *workspacecore.ManifestProject) {
-	if project.Domains == nil {
-		project.Domains = &workspacecore.ProjectDomains{}
-	}
 }
 
 func findProject(manifest *workspacecore.Manifest, name string) *workspacecore.ManifestProject {

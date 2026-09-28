@@ -11,7 +11,6 @@ func TestBuiltinPairs(t *testing.T) {
 
 	got := Builtin().SortedPairs()
 	want := []string{
-		"env/dotenv",
 		"env/infisical",
 	}
 	if !reflect.DeepEqual(got, want) {
@@ -44,11 +43,11 @@ func TestCatalogReturnsDefensiveCopies(t *testing.T) {
 	specs := c.All()
 	specs[0].Capabilities[0] = "mutated"
 	envSpecs := c.ForDomain(DomainEnv)
-	envSpecs[1].Capabilities[0] = "mutated"
+	envSpecs[0].Capabilities[0] = "mutated"
 
-	got, ok := c.LookupPair("env/dotenv")
+	got, ok := c.LookupPair("env/infisical")
 	if !ok {
-		t.Fatal("env/dotenv not found")
+		t.Fatal("env/infisical not found")
 	}
 	if got.Capabilities[0] == "mutated" {
 		t.Fatal("All() leaked mutable catalog storage")

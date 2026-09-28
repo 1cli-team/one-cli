@@ -35,7 +35,7 @@ func Commands(deps Dependencies) []*cobra.Command {
 		},
 	}
 	children := []*cobra.Command{
-		newGetCmd(deps), newSetCmd(deps), newListCmd(deps), newPullCmd(deps), newSwitchCmd(deps),
+		newSetCmd(deps), newListCmd(deps),
 	}
 	for _, child := range children {
 		helpui.MarkAdvanced(child)
@@ -53,4 +53,11 @@ func commandScope(cmd *cobra.Command) execution.Scope {
 	}
 	workingDirectory, _ := os.Getwd()
 	return execution.NewScope(cmd.Context(), workingDirectory)
+}
+
+func markEnvFlagUsage(cmd *cobra.Command, names ...string) {
+	keys := map[string]string{"project": "env.flag.project", "env": "env.flag.environment", "yes": "env.flag.yes"}
+	for _, name := range names {
+		i18n.MarkFlagUsage(cmd, name, keys[name])
+	}
 }

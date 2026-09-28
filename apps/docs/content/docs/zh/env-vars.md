@@ -1,250 +1,92 @@
 ---
 title: one env
-description: 多环境环境变量 — set / get / list / pull 子命令的完整参考。
+description: 使用 set、unset、list 管理 Infisical 变量，并在命令执行时直接注入。
 ---
 
-`one env` 管 monorepo 多环境变量。两种后端：
+Infisical 是 One CLI 唯一管理的环境变量来源。变量在执行命令时拉取并注入子进程，One CLI 不读取、写入或导出 `.env` 文件。
 
-- **dotenv**（默认）：本地文件系统。每个项目持有 `.env` + `.env.<env>` + `.env.local` + `.env.<env>.local` 的 overlay。
-- **infisical**：[Infisical](https://infisical.com/)。同一个工作区共享一个 Infisical project，环境（dev / preview / prod / ...）是 project 内分区。
+## 绑定工作区
 
-完整工作流和心智模型见 [环境变量指南](/zh/tutorials/env-vars/)。
+新工作区没有 Infisical 绑定，无需登录即可运行。先执行 `one login`，首次使用 `one env set` 或 `one env list` 时会初始化绑定。也可以在 Dashboard 的工作区设置中选择已有 Infisical 项目。
 
-## 环境模型
-
-`manifest.environments.names` 是工作区的环境列表（`one create` 默认 `["dev","preview","prod"]`），`manifest.environments.default` 是不传 `--env` 时的回退值（默认 `dev`）。已有 Workspace 里的 `staging` 仍然有效；当 Manifest 只声明 `staging` 而没有 `preview` 时，Dashboard 的“预览环境”绑定会映射到 `staging`。
-
-`--env` 解析链：
-
-```text
---env flag → manifest.environments.default → environments.names[0]
-```
-
-`one env set FOO bar --env qa` 可以创建新环境。TTY 模式会确认，非 TTY / `--yes` 会直接追加到 `manifest.environments.names`。`get` / `list` / `pull` 是只读语义，未知环境直接报 `ENV_UNKNOWN_ENVIRONMENT`。
-
-## 用法
-
-```bash
-one env set  <KEY[=VALUE]> [VALUE] [--env <env>] [-p <name|path>] [--yes]
-one env get  <KEY>                 [--env <env>] [-p <name|path>] --reveal
-one env list                       [--env <env>] [-p <name|path>]
-one env pull                       [--env <env>] [-p <name|path>] [--force] [--dry-run]
-```
-
-`-p / --project` 接受 manifest 里的项目名或相对路径：
-
-```bash
-one env set FOO=bar -p web
-one env set FOO=bar -p apps/web
-one env set FOO=bar              # cwd 在项目里时自动识别
-one env pull -p api              # 只拉 api 项目
-one env pull --env staging       # 拉所有项目的 staging 环境变量
-```
-
-通用输出 flag 是 `-o / --output`，取值 `json` / `yaml` / `text`。
-
-> 当前没有 `one env init` 子命令。Infisical project binding 由 `one create --env-provider infisical` 自动尝试；如果 create 时登录、网络或权限还没准备好，首次 `set/get/list/pull` 会再尝试 lazy auto-bind。
-
-机器级 Infisical 凭据通过 [`one login`](/zh/docs/login/) 配，不进入 manifest。
-
-## 交互模式
-
-直接运行 `one env` 会显示当前来源、默认/可用环境、当前作用域和常用命令。`one env set` 在 TTY 下提供安全流程：
-
-- `one env set KEY` 使用隐藏输入读取值。
-- 在工作区根执行时，询问变量是工作区共享还是属于某个项目。
-- 写入一个不在 `manifest.environments.names` 里的新环境时，会确认是否把该环境加入 manifest。
-- 覆盖已有不同值时，会确认是否覆盖。
-
-拒绝或取消会正常退出，不显示错误样式。脚本和 CI 显式传值，并用 `--yes` 确认覆盖或新环境。
-
-## dotenv overlay
-
-dotenv 后端读取顺序：
-
-```text
-<project>/.env
-<project>/.env.<env>
-<project>/.env.local
-<project>/.env.<env>.local
-```
-
-后面的文件覆盖前面的文件。`one env set` 写 `.env.<env>`；`.local` 文件只读，由开发者自己维护。
-
-`one create` 默认写入 `.gitignore`：
-
-```text
-.env
-.env.*
-!.env.example
-```
-
-## set
-
-写入单个 key。两种参数形式都支持：
-
-```bash
-one env set DATABASE_URL "postgres://localhost/dev" --env dev -p api
-one env set JWT_SECRET=dev-only-secret --env dev -p api --yes
-```
-
-输出 schema：`one-cli/env-set/v1`
+绑定保存在 `one.manifest.json` 顶层的 `env`：
 
 ```json
 {
-  "schema": "one-cli/env-set/v1",
-  "env": "dev",
-  "key": "DATABASE_URL",
-  "action": "created"
-}
-```
-
-`action` 可能是 `created` / `updated` / `unchanged`。已有不同值时需要 `--yes` 确认覆盖。
-
-## get
-
-读取单个 key：
-
-```bash
-one env get DATABASE_URL --env dev -p api --reveal
-DB_URL=$(one env get DATABASE_URL --env dev -p api -o json | jq -r .value) --reveal
-```
-
-输出 schema：`one-cli/env-get/v1`
-
-```json
-{
-  "schema": "one-cli/env-get/v1",
-  "env": "dev",
-  "key": "DATABASE_URL",
-  "value": "postgres://..."
-}
-```
-
-## list
-
-列出 key 名，不显示值：
-
-```bash
-one env list --env dev -p api
-```
-
-输出 schema：`one-cli/env-list/v1`
-
-```json
-{
-  "schema": "one-cli/env-list/v1",
-  "env": "dev",
-  "keys": ["DATABASE_URL", "JWT_SECRET"]
-}
-```
-
-## pull
-
-把 Infisical 的环境变量拉到本地 `.env`：
-
-```bash
-one env pull --env dev
-one env pull --env dev -p api --dry-run
-one env pull --env dev --force
-```
-
-默认不传 `-p` 时遍历 `manifest.projects[]`。每个项目按 `projects[].domains.env.path` 或 `relativeDir` 映射到 Infisical folder，并把 root → ancestors → self 的继承链合并后写入该项目目录的 `.env`。
-
-输出 schema：`one-cli/env-pull/v1`
-
-```json
-{
-  "schema": "one-cli/env-pull/v1",
-  "env": "dev",
-  "dry_run": false,
-  "written_count": 1,
-  "skipped_count": 0,
-  "per_subproject": [
-    {
-      "name": "api",
-      "relative_dir": "services/api",
-      "infisical_path": "/services/api",
-      "env_file_path": "/abs/.../services/api/.env",
-      "status": "written",
-      "keys_written": ["DATABASE_URL", "JWT_SECRET"]
-    }
-  ]
-}
-```
-
-## manifest 配置
-
-Workspace 级 env 后端写在 `one.manifest.json#domains.env`，环境列表写在顶层 `environments`：
-
-```json
-{
-  "environments": {
-    "names": ["dev", "staging", "prod"],
-    "default": "dev"
+  "env": {
+    "siteUrl": "https://app.infisical.com",
+    "projectId": "your-project-id",
+    "projectName": "my-workspace",
+    "rootPath": "/"
   },
-  "domains": {
-    "env": {
-      "kind": "infisical",
-      "config": {
-        "siteUrl": "https://app.infisical.com",
-        "projectId": "...",
-        "projectName": "my-workspace",
-        "rootPath": "/"
-      }
-    }
+  "environments": {
+    "names": ["dev", "preview", "prod"],
+    "default": "dev"
   }
 }
 ```
 
-项目级 path 覆盖写在 `projects[].domains.env`：
+Manifest 只记录绑定信息、目录路径和变量名。值保存在 Infisical，登录使用系统 keyring 中的浏览器会话。
+
+## 命令
+
+```bash
+one env
+one env set DATABASE_URL -p api
+one env set API_URL=https://example.com -p web --env dev --yes
+one env list -p web --env dev
+```
+
+终端中的 `set KEY` 会隐藏输入值；脚本显式传入值。`--yes` 确认覆盖已有值或新增环境名。`list` 只返回变量名。CLI 不提供明文读取命令；通过 `one exec` 将值注入子进程。`-o json` 或 `-o yaml` 输出结构化结果，保留 `one-cli/env-set/v1`、`one-cli/env-list/v1` 协议。
+
+`-p / --project` 接受项目名或工作区相对路径。不传时按当前目录推断项目；在工作区根目录操作共享变量，交互式 `set` 会提供作用域选择。
+
+## 环境与目录
+
+`environments.names` 声明可用环境，默认使用 `environments.default`，缺省时取第一个名称。新工作区声明 `dev`、`preview`、`prod`，默认 `dev`。`--env` 可覆盖选择。
+
+`set` 可以经确认登记新环境。`list` 对未声明名称返回 `ENV_UNKNOWN_ENVIRONMENT`；这些命令仍可能初始化尚未存在的 Infisical 绑定。
+
+项目默认使用 `relativeDir` 对应的 Infisical 目录，也可通过 `projects[].env` 覆盖：
 
 ```json
 {
-  "projects": [
-    {
-      "name": "charge",
-      "relativeDir": "services/charge",
-      "domains": {
-        "env": {
-          "path": "/teams/payments/charge",
-          "inherits": true
-        }
-      }
-    }
-  ]
+  "name": "api",
+  "relativeDir": "services/api",
+  "env": {
+    "path": "/teams/payments/api",
+    "inherits": true,
+    "keys": ["DATABASE_URL"]
+  }
 }
 ```
 
-变量值不进入 Manifest；Manifest 记录项目 ID、实例地址、目录和 key 名。认证使用系统钥匙串中的单一浏览器会话。
+默认启用继承，变量按根目录、祖先目录、项目目录合并，越靠近项目的值优先。`inherits: false` 只读项目目录；`disabled: true` 停用该项目的 Infisical 注入。
 
-## 凭据安全
+## 带变量执行
 
-通过 `one login` 登录，令牌只保存在系统钥匙串，不落入项目或普通配置文件。
+```bash
+one exec -p api --env dev -- go run ./cmd/server
+one run dev --env dev
+```
 
-## 错误恢复
+配置 `env` 后，生成的任务适配器与 `one exec` 会拉取 Infisical 变量，并覆盖同名 shell 变量。未绑定或项目停用注入时，继承 shell 环境。认证或拉取失败会停止执行，不回退到本地文件。自定义 mise 任务使用 mise 的环境。One 会遮盖 stdout、stderr 和任务缓存回放中的已知注入值，覆盖多行值及其 JSON 转义形式。
 
-| 错误码 | 处理 |
+## 全局共享凭据
+
+共享凭据独立于工作区。通过 `one env bind --global` 选择存储项目，使用 `one env list --global --env dev --path /` 查看名称，使用 `one exec --global --env dev --path /folder -- command` 注入明确作用域。详见[登录与共享凭据](/zh/docs/login/)。
+
+## 常见错误
+
+| 错误码 | 恢复方法 |
 |---|---|
-| `INFISICAL_NOT_CONFIGURED` | 确认工作区用了 `--env-provider infisical`，并已通过 `one login` 登录 |
-| `INFISICAL_AUTH_MISSING` | 重新跑 `one login` |
-| `INFISICAL_AUTH_FAILED` | Infisical 后台重新生成 client secret |
-| `INFISICAL_PROJECT_NAME_TAKEN` | 修改 `domains.env.config.projectName` 后重跑 env 命令触发 lazy bind |
-| `INFISICAL_PROJECT_CREATE_FORBIDDEN` | 给 machine identity 加 admin 角色，或手动建项目后填 `domains.env.config.projectId` |
-| `ENV_PULL_CONFLICT` | 本地 `.env` 已存在且不同；确认后加 `--force` |
-| `ENV_KEY_NOT_FOUND` | 核对 path / env / 拼写 |
-| `ENV_INVALID_KEY` | KEY 必须匹配 `^[A-Za-z_][A-Za-z0-9_]*$` |
-| `ENV_SET_OVERWRITE_REQUIRED` | 已存在不同值；加 `--yes` 确认 |
-| `ENV_UNKNOWN_ENVIRONMENT` | `set` 可创建；读命令需要先在 `manifest.environments.names` 声明 |
+| `INFISICAL_NOT_CONFIGURED` | 在 Dashboard 绑定 Infisical 项目，或登录后通过 env 命令初始化 |
+| `INFISICAL_AUTH_MISSING` / `INFISICAL_AUTH_FAILED` | 执行 `one login` 并检查绑定项目的访问权限 |
+| `INFISICAL_PROJECT_NAME_TAKEN` | 设置不同的 `env.projectName`，或显式绑定已有项目 |
+| `INFISICAL_PROJECT_CREATE_FORBIDDEN` | 在 Dashboard 选择已有且可访问的项目 |
+| `ENV_KEY_NOT_FOUND` | 检查变量名、环境和目录 |
+| `ENV_INVALID_KEY` | 变量名须匹配 `^[A-Za-z_][A-Za-z0-9_]*$` |
+| `ENV_SET_OVERWRITE_REQUIRED` | 确认替换后添加 `--yes` |
+| `ENV_UNKNOWN_ENVIRONMENT` | 通过 `set` 登记新环境，或选择已有名称 |
 
-完整码表：[错误码大全](/zh/docs/error-codes/)。
-
-## 进一步阅读
-
-- [环境变量指南](/zh/tutorials/env-vars/) — 心智模型 + 完整工作流
-- [`one create`](/zh/docs/create/) — 起骨架时用 `--env-provider infisical` 接 Infisical
-
-
-## 共享凭据
-
-共享凭据独立于工作区。使用 `one env bind --global` 选择存放位置，`one env list --global --env dev --path /` 浏览元数据，`one run --global --env dev --path /folder -- command` 注入明确范围的变量。完整的命令和安全边界见[登录与共享凭据](/zh/docs/login/)。
+旧工作区参阅 [Manifest 迁移](/zh/docs/manifest/)，初次配置参阅[操作教程](/zh/tutorials/env-vars/)。

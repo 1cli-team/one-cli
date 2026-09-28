@@ -1,6 +1,5 @@
 import type React from "react";
 import { useMatch } from "react-router-dom";
-import { AppSidebar } from "@/components/AppSidebar";
 import { TopBar } from "@/components/TopBar";
 import { AppRoutes } from "@/router/routes";
 import { cn } from "@/lib/utils";
@@ -10,7 +9,6 @@ export const App: React.FC = () => {
 
 	return (
 		<div className="flex h-dvh min-w-0 overflow-hidden bg-background text-foreground">
-			<AppSidebar />
 			<div className="flex min-w-0 flex-1 flex-col">
 				<TopBar />
 				<main

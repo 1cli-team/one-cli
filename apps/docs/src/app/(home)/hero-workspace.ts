@@ -175,8 +175,8 @@ const moduleConfigs: ModuleConfig[] = [
     id: "env",
     labels: { zh: "Env", en: "Env" },
     spotlight: {
-      zh: { title: "Env", subtitle: "dotenv / Infisical 环境" },
-      en: { title: "Env", subtitle: "dotenv and Infisical" },
+      zh: { title: "Env", subtitle: "Infisical 环境" },
+      en: { title: "Env", subtitle: "Infisical environments" },
     },
     x: 0.52,
     y: -0.72,

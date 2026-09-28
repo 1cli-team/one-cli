@@ -1,6 +1,4 @@
-// LanguageSwitcher: globe-icon dropdown with three options
-// (auto / zh-CN / en-US). Mirrors the theme toggle's footprint in
-// the sidebar — same Button size, same icon-only collapsed state.
+// Language controls share the existing auto / zh-CN / en-US preference.
 //
 // Uses Radix DropdownMenu so the menu inherits the design system's
 // focus/keyboard behaviour for free.
@@ -28,12 +26,8 @@ const OPTIONS: Option[] = [
 	{ mode: "en-US", labelKey: "sidebar.languageEn" },
 ];
 
-const MENU_WIDTH = 160;
-const TRIGGER_WIDTH = 28;
-const CENTERED_END_OFFSET = -(MENU_WIDTH - TRIGGER_WIDTH) / 2;
-
 export function LanguageSwitcher({ showLabel = false }: { showLabel?: boolean }) {
-	const { mode, setMode } = useLocaleStore();
+	const { mode } = useLocaleStore();
 	const { t } = useTranslation();
 	return (
 		<DropdownMenu>
@@ -41,7 +35,6 @@ export function LanguageSwitcher({ showLabel = false }: { showLabel?: boolean })
 				<Button
 					variant={showLabel ? "outline" : "ghost"}
 					size={showLabel ? "default" : "icon"}
-
 					title={t("sidebar.language")}
 					aria-label={t("sidebar.language")}
 				>
@@ -50,23 +43,33 @@ export function LanguageSwitcher({ showLabel = false }: { showLabel?: boolean })
 				</Button>
 			</DropdownMenuTrigger>
 			<DropdownMenuContent
-				side={showLabel ? "bottom" : "top"}
+				side="bottom"
 				align="end"
-				alignOffset={showLabel ? 0 : CENTERED_END_OFFSET}
+				collisionPadding={12}
 				sideOffset={8}
 				className="w-40"
 			>
-				<DropdownMenuRadioGroup
-					value={mode}
-					onValueChange={(value) => setMode(value as LocaleMode)}
-				>
-					{OPTIONS.map((option) => (
-						<DropdownMenuRadioItem key={option.mode} value={option.mode}>
-							{t(option.labelKey)}
-						</DropdownMenuRadioItem>
-					))}
-				</DropdownMenuRadioGroup>
+				<LanguageMenuItems />
 			</DropdownMenuContent>
 		</DropdownMenu>
+	);
+}
+
+function LanguageMenuItems() {
+	const { mode, setMode } = useLocaleStore();
+	const { t } = useTranslation();
+	return (
+		<DropdownMenuRadioGroup
+			value={mode}
+			onValueChange={(value) => setMode(value as LocaleMode)}
+			aria-label={t("sidebar.language")}
+			className="space-y-1"
+		>
+			{OPTIONS.map((option) => (
+				<DropdownMenuRadioItem key={option.mode} value={option.mode}>
+					{t(option.labelKey)}
+				</DropdownMenuRadioItem>
+			))}
+		</DropdownMenuRadioGroup>
 	);
 }

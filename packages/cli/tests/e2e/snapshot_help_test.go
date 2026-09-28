@@ -74,7 +74,7 @@ func snapshotName(path []string) string {
 // renderHelp returns the same output a user gets from `one <path...> --help`.
 // We capture cobra's default HelpFunc into a buffer rather than exec'ing
 // the binary — same template, deterministic across machines, doesn't
-// require `task build` first.
+// require `mise run build` first.
 func renderHelp(t *testing.T, cmd *cobra.Command) string {
 	t.Helper()
 	buf := &bytes.Buffer{}

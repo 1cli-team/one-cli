@@ -24,9 +24,15 @@ import (
 // the door open for future additions (release notes URL, breaking-change
 // flag, channel) without forcing a migration today.
 type Cache struct {
-	Schema        string    `json:"schema"`
-	LastChecked   time.Time `json:"last_checked"`
-	LatestVersion string    `json:"latest_version,omitempty"`
+	Schema              string    `json:"schema"`
+	LastChecked         time.Time `json:"last_checked"`
+	LatestVersion       string    `json:"latest_version,omitempty"`
+	CurrentVersion      string    `json:"current_version,omitempty"`
+	TargetPath          string    `json:"target_path,omitempty"`
+	Status              string    `json:"status,omitempty"`
+	InstalledVersion    string    `json:"installed_version,omitempty"`
+	Error               string    `json:"error,omitempty"`
+	NotificationPending bool      `json:"notification_pending,omitempty"`
 }
 
 const cacheSchema = "one-cli/update-check/v1"

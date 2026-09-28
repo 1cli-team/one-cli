@@ -171,7 +171,7 @@ func checkGoFormat(root string) error {
 		return nil
 	}
 	sort.Strings(changed)
-	return fmt.Errorf("files need gofmt — run 'task fmt' first:\n%s", displayPaths(root, changed))
+	return fmt.Errorf("files need gofmt — run 'mise run fmt' first:\n%s", displayPaths(root, changed))
 }
 
 func displayPaths(root string, paths []string) string {

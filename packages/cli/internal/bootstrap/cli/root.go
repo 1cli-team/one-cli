@@ -30,18 +30,15 @@ import (
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/updatecheck"
 	addcmd "github.com/torchstellar-team/one-cli/packages/cli/internal/transport/cobra/add"
 	authcmd "github.com/torchstellar-team/one-cli/packages/cli/internal/transport/cobra/auth"
-	buildcmd "github.com/torchstellar-team/one-cli/packages/cli/internal/transport/cobra/build"
-	cicmd "github.com/torchstellar-team/one-cli/packages/cli/internal/transport/cobra/ci"
 	createcmd "github.com/torchstellar-team/one-cli/packages/cli/internal/transport/cobra/create"
-	devcmd "github.com/torchstellar-team/one-cli/packages/cli/internal/transport/cobra/dev"
 	envcmd "github.com/torchstellar-team/one-cli/packages/cli/internal/transport/cobra/env"
+	execcmd "github.com/torchstellar-team/one-cli/packages/cli/internal/transport/cobra/exec"
 	hookscmd "github.com/torchstellar-team/one-cli/packages/cli/internal/transport/cobra/hooks"
 	initcmd "github.com/torchstellar-team/one-cli/packages/cli/internal/transport/cobra/init"
 	localecmd "github.com/torchstellar-team/one-cli/packages/cli/internal/transport/cobra/locale"
 	misecmd "github.com/torchstellar-team/one-cli/packages/cli/internal/transport/cobra/mise"
 	runcmd "github.com/torchstellar-team/one-cli/packages/cli/internal/transport/cobra/run"
 	servecmd "github.com/torchstellar-team/one-cli/packages/cli/internal/transport/cobra/serve"
-	skillscmd "github.com/torchstellar-team/one-cli/packages/cli/internal/transport/cobra/skills"
 	templatescmd "github.com/torchstellar-team/one-cli/packages/cli/internal/transport/cobra/templates"
 )
 
@@ -54,22 +51,19 @@ func newRootCommand() *cobra.Command {
 	}
 	groups := [][]*cobra.Command{
 		addcmd.Commands(deps.creation),
-		buildcmd.Commands(deps.runtime),
-		cicmd.Commands(deps.ci),
 		authcmd.Commands(),
 		{localecmd.Command(), initcmd.Command()},
 		createcmd.Commands(createcmd.Dependencies{Creation: deps.creation}),
-		devcmd.Commands(deps.runtime),
 		misecmd.RuntimeCommands(deps.runtime),
 		hookscmd.Commands(deps.runtime),
 		envcmd.Commands(envcmd.Dependencies{Service: deps.environments}),
+		execcmd.Commands(deps.loaders, deps.runtime),
 		runcmd.Commands(deps.loaders, deps.runtime),
 		servecmd.Commands(servecmd.Dependencies{
-			Catalog: deps.catalog, Workspaces: deps.workspaces,
+			Catalog: deps.catalog, Workspaces: deps.workspaces, Creation: deps.creation,
 			Registry: deps.registry, Manifest: deps.manifest, Environments: deps.environments,
 		}),
 		templatescmd.Commands(),
-		skillscmd.Commands(),
 	}
 	for _, commands := range groups {
 		root.AddCommand(commands...)
@@ -119,6 +113,7 @@ func Execute(version string, args []string) (resultErr error) {
 	}()
 
 	rootCmd.Version = version
+	args = expandTaskShorthand(args, isKnownSubcommand)
 	rootCmd.SetArgs(args)
 
 	// Output mode detection runs before cobra so subcommands can already
@@ -139,11 +134,9 @@ func Execute(version string, args []string) (resultErr error) {
 	_ = i18n.Init(i18n.Resolve(stored))
 	i18n.RefreshTree(rootCmd)
 
-	// Background update check kicks off here so its goroutine has the
-	// whole command runtime to finish; the notification (if any) prints
-	// in the defer below from cached state. Both calls are no-ops on
-	// CI / -o json / dev builds / opt-out, so this is free in those
-	// paths. See internal/platform/updatecheck.
+	// Official releases may start an independent update worker. The command
+	// never waits for a download; cached completion/failure notices are printed
+	// on exit. Development builds, CI, and structured output skip this path.
 	if shouldCheckUpdates(args) {
 		updatecheck.MaybeRefreshAsync(version)
 		defer updatecheck.Notify(version)
@@ -220,7 +213,7 @@ func Execute(version string, args []string) (resultErr error) {
 
 // Execution leaves and previews must not start another background network check.
 func shouldCheckUpdates(args []string) bool {
-	if first, _ := firstPositional(args); first == "__exec" || first == "mise" || first == "hk" || first == "__hook-gofmt" {
+	if first, _ := firstPositional(args); strings.HasPrefix(first, "__") || first == "mise" || first == "hk" {
 		return false
 	}
 	for _, arg := range args {
@@ -370,6 +363,9 @@ func detectOutputMode(args []string) {
 func scanOutputValue(args []string) string {
 	for i := 0; i < len(args); i++ {
 		a := args[i]
+		if a == "--" {
+			break
+		}
 		switch {
 		case a == "-o" || a == "--output":
 			if i+1 < len(args) {

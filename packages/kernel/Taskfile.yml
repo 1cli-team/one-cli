@@ -1,0 +1,14 @@
+version: '3'
+tasks:
+  build:
+    cmds: ['go build ./...']
+  check:
+    cmds: ['go vet ./...']
+  test:
+    cmds: ['go test ./... {{.CLI_ARGS}}']
+  test:race:
+    cmds: ['go test -race ./... {{.CLI_ARGS}}']
+  fmt:
+    cmds: ['go fmt ./...']
+  tidy:
+    cmds: ['go mod tidy']

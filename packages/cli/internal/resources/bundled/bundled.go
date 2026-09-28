@@ -1,22 +1,22 @@
 // Package bundled exposes the assets the CLI ships with: the template
-// registry, the templates themselves, the one-cli skill,
+// registry, the templates themselves,
 // and the built `one serve` web UI.
 //
 // The files in this directory are physical copies of canonical sources
-// elsewhere in the monorepo (packages/templates/, skills/,
+// elsewhere in the monorepo (packages/templates/,
 // apps/dashboard/dist/). Go's embed directive cannot traverse upward
 // with "../" and rejects symlinks ("cannot embed irregular file"), so
 // the copies have to live inside this package directory.
 //
 // The whole tree is gitignored. Two tasks regenerate it:
-//   - `task sync-bundled` — copy templates and the skill to registry.json / _templates/ / _skills/.
-//   - `task sync-web`     — pnpm install + vite build of
+//   - `mise run sync-bundled` — copy templates and registry.json.
+//   - `mise run sync-web`     — pnpm install + vite build of
 //     apps/dashboard/ → _web/.
 //
-// Both run as deps of `task vet`, `task test`, and `task build`, so
-// the normal Taskfile-driven workflow keeps the embed sources in sync
+// Both run as deps of `mise run vet`, `mise run test`, and `mise run build`, so
+// the normal mise workflow keeps the embed sources in sync
 // without committing duplicate state. A fresh clone needs
-// `task sync-bundled && task sync-web` once before the Go toolchain
+// `mise run sync-bundled ::: sync-web` once before the Go toolchain
 // (gopls / direct `go build`) stops complaining about the missing
 // embed paths.
 //
@@ -36,7 +36,8 @@ var RegistryBytes []byte
 
 // TemplatesFS is the bundled templates tree consumed by `one add` when the
 // registry entry uses the local: prefix. internal/core/template walks this fs
-// and renders handlebars files into the user's workspace.
+// and copies runnable starter projects into the user's workspace. Go module
+// files travel as _go.mod so embed does not cross a nested module boundary.
 //
 // The directory is named "_templates" (leading underscore) so the Go toolchain
 // skips it during `go build ./...` / `go test ./...` — the literal *.go files
@@ -53,14 +54,8 @@ var TemplatesFS embed.FS
 // template directory.
 const TemplatesRoot = "_templates"
 
-// OneCLISkill is the complete, version-independent skill installed by
-// `one skills install`. Its canonical source is skills/one-cli/SKILL.md.
-//
-//go:embed _skills/one-cli/SKILL.md
-var OneCLISkill []byte
-
-// WebDistFS is the built React UI for `one serve` (sources at web/, built
-// via `task build-web`, copied to internal/resources/bundled/_web by `task sync-bundled`).
+// WebDistFS is the built React UI for `one serve` (sources at apps/dashboard,
+// built via `mise run build-web`, copied into this package by `mise run sync-web`).
 // internal/transport/http walks this filesystem to serve index.html + hashed assets.
 //
 // The directory is named "_web" (leading underscore) so the Go toolchain

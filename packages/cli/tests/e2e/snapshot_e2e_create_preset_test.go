@@ -113,17 +113,16 @@ func TestSnapshot_E2E_Create_Preset_InvalidNoProject(t *testing.T) {
 	}
 }
 
-// TestSnapshot_E2E_Create_Preset_FlagConflict locks the
+// TestSnapshot_E2E_Create_Preset_RejectsRetiredDotenv locks the
 // PRESET_FLAG_CONFLICT path: preset declares env=dotenv but the user
 // also passed --env-provider infisical.
-func TestSnapshot_E2E_Create_Preset_FlagConflict(t *testing.T) {
+func TestSnapshot_E2E_Create_Preset_RejectsRetiredDotenv(t *testing.T) {
 	tmp := t.TempDir()
 	isolateHome(t, tmp)
 
 	target := filepath.Join(tmp, "bad")
 	_, stderr, code := runBinary(t, "create", target,
 		"--preset", "1.bgo.ed",
-		"--env-provider", "infisical",
 		"-y", "-o", "json")
 	if code == 0 {
 		t.Fatalf("expected non-zero exit, got 0\n  stderr: %s", stderr)
@@ -135,8 +134,8 @@ func TestSnapshot_E2E_Create_Preset_FlagConflict(t *testing.T) {
 	if !ok {
 		t.Fatalf("envelope missing error object: %s", envelope)
 	}
-	if errMap["code"] != "PRESET_FLAG_CONFLICT" {
-		t.Errorf("expected error.code=PRESET_FLAG_CONFLICT, got %v", errMap["code"])
+	if errMap["code"] != "BACKEND_ID_UNKNOWN" {
+		t.Errorf("expected error.code=BACKEND_ID_UNKNOWN, got %v", errMap["code"])
 	}
 }
 
@@ -168,7 +167,7 @@ func TestSnapshot_E2E_Create_Preset_ProjectNames(t *testing.T) {
 
 	target := filepath.Join(tmp, "custom-names")
 	stdout, stderr, code := runBinary(t, "create", target,
-		"--preset", "1.bne.frs.ltl.ed",
+		"--preset", "1.bne.frs.ltl.ei",
 		"--project-names", "api,admin,shared",
 		"-y", "-o", "json")
 	if code != 0 {

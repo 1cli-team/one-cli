@@ -15,7 +15,7 @@ import (
 	"testing"
 	"time"
 
-	buildmodule "github.com/torchstellar-team/one-cli/packages/cli/internal/modules/build"
+	buildmodule "github.com/torchstellar-team/one-cli/packages/cli/internal/modules/tasks"
 )
 
 func TestE2E_BuildSignalStopsProcessTree(t *testing.T) {
@@ -67,7 +67,7 @@ func TestE2E_BuildSignalStopsProcessTree(t *testing.T) {
 			if err := json.Unmarshal(out.Bytes(), &result); err != nil {
 				t.Fatal(err, out.String())
 			}
-			if result.Tasks[0].Status != "stopped" || result.Tasks[1].Status != "not_run" {
+			if result.Status != "cancelled" {
 				t.Fatal(result.Tasks)
 			}
 			deadline = time.Now().Add(3 * time.Second)

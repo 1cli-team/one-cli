@@ -24,14 +24,12 @@ The simplest form prompts you interactively for everything:
 one create my-workspace
 ```
 
-If you came from the [templates page](/en/tutorials/templates/) with a generated command, you can paste it directly — it has `--add` / `--env-provider` already filled in.
+If you came from the [templates page](/en/tutorials/templates/) with a generated command, you can paste it directly — it has `--preset` / `--project-names` already filled in.
 
 Non-interactive form (for scripts and CI):
 
 ```bash
-one create my-workspace \
-  --yes \
-  --env-provider dotenv
+one create my-workspace --yes
 ```
 
 Key flags:
@@ -40,8 +38,7 @@ Key flags:
 |---|---|
 | `--name <name>` | Workspace name (overrides positional arg's basename) |
 | `--yes` | Skip all prompts; accept defaults |
-| `--env-provider dotenv \| infisical` | Choose the env backend (default: `dotenv`; switch later with `one env switch infisical`) |
-| `--add <template-id>[:<project-name>]` | Pre-add a project; repeatable |
+| `--preset <id>` | Create the projects encoded by the template picker |
 
 For the full list, see the [`one create` reference](/en/docs/create/).
 
@@ -56,7 +53,7 @@ You'll see something like:
 
 ```
 .git/
-.github/
+.config/
 apps/
 one.manifest.json
 packages/
@@ -74,18 +71,17 @@ Key parts of the produced manifest:
 - `version: 1` — required schema version
 - `workspace.id` — generated UUID
 - `environments.names: ["dev", "preview", "prod"]` and `default: "dev"`
-- `domains.env` — the env backend you chose (`dotenv` or `infisical`)
-- `domains.deploy` and `domains.container` — left unset at this stage; filled in when individual projects opt into deploy / container backends
-- `projects: []` — empty unless you passed `--add`
+- `env` — optional Infisical binding, absent until configured
+- `projects: []` — empty unless you passed `--preset`
 
 ## 4. Defaults wired by `one create`
 
 Every new workspace gets two baseline capabilities without prompting:
 
-| Domain | Backend | What it gives you |
+| Capability | Implementation | What it gives you |
 |---|---|---|
-| `env` | `dotenv` (or `infisical` if you chose it) | `.env` file management for every project |
-| `dev` | `process` | Each `one add` records a dev command at `projects[].domains.dev.command`, run by [`one dev`](/en/tutorials/dev-local/) via the built-in supervisor |
+| `env` | Infisical | Direct process injection after binding; shell environment before binding |
+| `dev` | mise | Each `one add` records a dev command at `projects[].dev.command`, run by [`one dev`](/en/tutorials/dev-local/) through mise |
 
 CI is not configured by `one create` or `one add`, and no workflow file is generated automatically.
 
@@ -106,7 +102,7 @@ git commit -m "chore: scaffold workspace"
 | `INVALID_NAME` | Workspace name has unsupported characters | Use `^[a-zA-Z0-9][a-zA-Z0-9_-]*$` (kebab-case is safe) |
 | `WORKSPACE_NESTED_FORBIDDEN` | Tried to `one create` inside an existing workspace | Run from a non-workspace directory |
 | `TARGET_EXISTS` | The target directory already exists and is non-empty | Pick a different name, or empty the directory first |
-| `TEMPLATE_NOT_FOUND` | `--add <id>` used an unknown template id | Run [`one templates list`](/en/docs/templates-cmd/) or visit the [templates page](/en/tutorials/templates/) |
+| `TEMPLATE_NOT_FOUND` | The preset refers to an unavailable template | Run [`one templates list`](/en/docs/templates-cmd/) or visit the [templates page](/en/tutorials/templates/) |
 
 Full table: [error codes](/en/docs/error-codes/).
 

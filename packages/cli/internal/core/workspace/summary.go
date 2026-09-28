@@ -52,9 +52,6 @@ func BuildSummary(root string) (Summary, error) {
 		name = strings.TrimSpace(m.Workspace.Name)
 	}
 	envSource := EnvBackend(m)
-	if envSource == "" {
-		envSource = "dotenv"
-	}
 	defaultEnv := "dev"
 	environments := append([]string(nil), DefaultEnvironments...)
 	if m.Environments != nil {
@@ -80,6 +77,15 @@ func BuildSummary(root string) (Summary, error) {
 		devCommand := strings.TrimSpace(ProjectDev(m, p.Name))
 		projectDir := filepath.Join(root, filepath.FromSlash(p.RelativeDir))
 		canDevelop := devCommand != ""
+		if !canDevelop {
+			native, _ := DiscoverTasks(root, Project{Name: p.Name, RelativeDir: p.RelativeDir, Toolchain: p.Toolchain, PackageManager: p.PackageManager}, nil)
+			for _, task := range native {
+				if task.Name == "dev" {
+					canDevelop = true
+					break
+				}
+			}
+		}
 		dependenciesInstalled := ProjectDependenciesInstalled(root, projectDir, p.Toolchain)
 		dependencyStatus := ""
 		if p.Toolchain == "go" {
@@ -164,7 +170,7 @@ func bestNextCommand(projects []SummaryProject) string {
 	}
 	for _, p := range projects {
 		if p.CanStartDevelopment {
-			return "one dev " + p.Name
+			return "one dev -p " + p.Name
 		}
 	}
 	return "one add"
@@ -204,8 +210,8 @@ func (s *Summary) RenderTTY(w io.Writer) {
 }
 
 func environmentSourceLabel(source string) string {
-	if source == EnvBackendDotenv {
-		return i18n.T("workspace.env_dotenv")
+	if source == "" {
+		return i18n.T("env.not_configured")
 	}
 	return source
 }

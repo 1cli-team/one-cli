@@ -1,43 +1,42 @@
 package workspace
 
 import (
+	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/i18n"
 	"os"
 	"path/filepath"
 	"strings"
-
-	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/i18n"
 )
 
-// ResolvePackageManager shares one choice between dependency preparation and
-// operation execution: workspace declaration, project declaration, lockfile,
-// then the default used by newly created workspaces.
+// ResolvePackageManager validates both project and workspace declarations.
+// One manages pnpm projects; it never converts other package managers implicitly.
 func ResolvePackageManager(root, fallback string) (string, error) {
-	manager := strings.TrimSpace(fallback)
+	validate := func(value string) error {
+		name, _, _ := strings.Cut(strings.TrimSpace(value), "@")
+		if name != "" && name != "pnpm" {
+			return i18n.Errorf("workspace.package_manager_unsupported", name)
+		}
+		return nil
+	}
+	if err := validate(fallback); err != nil {
+		return "", err
+	}
 	pkg, err := ReadPackageJSON(root)
 	if err != nil {
 		return "", err
 	}
-	if pkg != nil && strings.TrimSpace(pkg.PackageManager) != "" {
-		manager = strings.TrimSpace(pkg.PackageManager)
+	if pkg != nil {
+		if err := validate(pkg.PackageManager); err != nil {
+			return "", err
+		}
 	}
-	manager, _, _ = strings.Cut(manager, "@")
-	if manager == "" {
-		for _, item := range []struct{ file, manager string }{{"pnpm-lock.yaml", "pnpm"}, {"bun.lock", "bun"}, {"bun.lockb", "bun"}, {"yarn.lock", "yarn"}, {"package-lock.json", "npm"}} {
-			if _, err := os.Stat(filepath.Join(root, item.file)); err == nil {
-				manager = item.manager
-				break
+	if (pkg == nil || pkg.PackageManager == "") && fallback == "" {
+		for _, name := range []string{"package-lock.json", "npm-shrinkwrap.json", "yarn.lock", "bun.lock", "bun.lockb"} {
+			if _, err := os.Stat(filepath.Join(root, name)); err == nil {
+				return "", i18n.Errorf("workspace.package_manager_unsupported", name)
 			} else if !os.IsNotExist(err) {
 				return "", err
 			}
 		}
 	}
-	if manager == "" {
-		manager = "pnpm"
-	}
-	switch manager {
-	case "pnpm", "npm", "yarn", "bun":
-		return manager, nil
-	default:
-		return "", i18n.Errorf("workspace.package_manager_unsupported", manager)
-	}
+	return "pnpm", nil
 }

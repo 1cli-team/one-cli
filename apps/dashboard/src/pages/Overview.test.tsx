@@ -19,22 +19,16 @@ import {
 import i18n from "@/lib/i18n";
 import { Overview } from "@/pages/Overview";
 import type {
-	BackendDomain,
 	BackendSpec,
 	Overview as OverviewPayload,
 	ProjectSettingsResponse,
 } from "@/types/api";
 
-const server = setupServer();
+const server = setupServer(
+	http.get(/\/api\/workspaces?(?:\/[^/]+)?\/services$/, () => HttpResponse.json({ services: [] })),
+);
 
 const catalogBackends: BackendSpec[] = [
-	{
-		id: "env/dotenv",
-		domain: "env",
-		name: "dotenv",
-		capabilities: ["env-load"],
-		project: { configurable: false },
-	},
 	{
 		id: "env/infisical",
 		domain: "env",
@@ -54,7 +48,7 @@ const overview: OverviewPayload = {
 		manifestVersion: 1,
 		defaultEnvironment: "dev",
 		environments: ["dev", "preview", "prod"],
-		domains: { env: "dotenv" },
+		domains: { env: "infisical" },
 	},
 	projects: [
 		{
@@ -63,7 +57,7 @@ const overview: OverviewPayload = {
 			kind: "app",
 			templateId: "react-spa",
 			toolchain: "node",
-			domains: { env: "dotenv" },
+			domains: { env: "infisical" },
 		},
 		{
 			name: "api",
@@ -71,7 +65,7 @@ const overview: OverviewPayload = {
 			kind: "service",
 			templateId: "go-api",
 			toolchain: "go",
-			domains: { env: "dotenv" },
+			domains: { env: "infisical" },
 		},
 		{
 			name: "shared",
@@ -79,7 +73,7 @@ const overview: OverviewPayload = {
 			kind: "package",
 			templateId: "typescript-package",
 			toolchain: "node",
-			domains: { env: "dotenv" },
+			domains: { env: "infisical" },
 		},
 	],
 };
@@ -164,15 +158,6 @@ function renderOverview(
 	);
 }
 
-async function chooseSelect(
-	user: ReturnType<typeof userEvent.setup>,
-	trigger: HTMLElement,
-	optionName: string,
-) {
-	await user.click(trigger);
-	await user.click(await screen.findByRole("option", { name: optionName }));
-}
-
 async function openProjectSettings() {
 	return screen.findByRole("region", { name: "Project settings" });
 }
@@ -197,19 +182,6 @@ async function openWorkspaceEnvironmentSettings(user: ReturnType<typeof userEven
 	return within(dialog).findByRole("region", { name: "Workspace environment" });
 }
 
-function sectionResponse(domain: BackendDomain, backend: string, profiles: string[]) {
-	return {
-		schema: "one-cli/serve-configure-section/v1",
-		domain,
-		backend,
-		reveal: false,
-		section: {
-			default: profiles[0],
-			profiles: Object.fromEntries(profiles.map((name) => [name, {}])),
-		},
-	};
-}
-
 describe("workspace overview Profile-only configuration", () => {
 	beforeAll(async () => {
 		server.listen({ onUnhandledRequest: "error" });
@@ -226,7 +198,7 @@ describe("workspace overview Profile-only configuration", () => {
 					root: "/workspace/demo",
 					environment: new URL(request.url).searchParams.get("env") ?? "",
 					domain: "env",
-					backend: "dotenv",
+					backend: "infisical",
 					configurable: false,
 				}),
 			),
@@ -236,7 +208,7 @@ describe("workspace overview Profile-only configuration", () => {
 					root: "/workspace/demo",
 					environment: new URL(request.url).searchParams.get("env") ?? "",
 					domain: "env",
-					backend: "dotenv",
+					backend: "infisical",
 					configurable: false,
 				}),
 			),
@@ -285,6 +257,53 @@ describe("workspace overview Profile-only configuration", () => {
 		vi.restoreAllMocks();
 	});
 	afterAll(() => server.close());
+
+	it("creates a project from the empty workspace and selects it after refreshing", async () => {
+		const user = userEvent.setup();
+		let created = false;
+		server.use(
+			http.get("http://localhost/api/project-templates", () =>
+				HttpResponse.json({
+					templates: [
+						{
+							id: "react-spa",
+							name: "React",
+							description: "React",
+							category: "frontend",
+							directory: "apps",
+							toolchain: "node",
+						},
+					],
+				}),
+			),
+			http.post("http://localhost/api/workspaces/demo-entry/projects", async ({ request }) => {
+				expect(await request.json()).toEqual({ name: "web", templateId: "react-spa" });
+				created = true;
+				return HttpResponse.json(
+					{ name: "web", relativeDir: "apps/web", templateId: "react-spa" },
+					{ status: 201 },
+				);
+			}),
+			http.get("http://localhost/api/workspaces/demo-entry/overview", () =>
+				HttpResponse.json({ ...overview, projects: created ? [overview.projects![0]] : [] }),
+			),
+			http.get("http://localhost/api/workspaces", () => HttpResponse.json({ workspaces: [] })),
+		);
+		renderOverview({ ...overview, projects: [] }, "demo-entry", false, true);
+		const navigation = screen.getByRole("navigation", { name: "Workspace projects" });
+		await user.click(within(navigation).getByRole("button", { name: "New project" }));
+		const dialog = await screen.findByRole("dialog", { name: "New project" });
+		await user.type(within(dialog).getByLabelText("Project name"), "web");
+		await user.click(within(dialog).getByRole("button", { name: "Create project" }));
+		const project = await within(navigation).findByRole("button", { name: "web apps/web" });
+		expect(project.getAttribute("aria-current")).toBe("page");
+		expect(screen.queryByRole("dialog", { name: "New project" })).toBeNull();
+	});
+
+	it("hides project creation for an identity-conflicted workspace", () => {
+		renderOverview({ ...overview, projects: [] }, "demo-entry", true);
+		expect(screen.queryByRole("button", { name: "New project" })).toBeNull();
+	});
 
 	it("shows projects in a persistent left-hand list with project settings tabs", async () => {
 		renderOverview();
@@ -342,56 +361,13 @@ describe("workspace overview Profile-only configuration", () => {
 		);
 	});
 
-	it("stages a Workspace env backend change for Manifest review", async () => {
-		let backendWrites = 0;
-		const configurableOverview: OverviewPayload = {
-			...overview,
-			workspace: {
-				...overview.workspace!,
-				domains: { ...overview.workspace?.domains, env: "infisical" },
-			},
-		};
-		server.use(
-			http.get("http://localhost/api/workspaces/demo-entry/environment", () =>
-				HttpResponse.json({
-					schema: "one-cli/workspace-profile/v1",
-					root: "/workspace/demo",
-					environment: "dev",
-					revision: "sha256:test-revision",
-					domain: "env",
-					backend: "infisical",
-					configurable: true,
-				}),
-			),
-			http.get("http://localhost/api/configure/env/infisical", () =>
-				HttpResponse.json(sectionResponse("env", "infisical", ["work"])),
-			),
-			http.put("http://localhost/api/workspaces/demo-entry/manifest", () => {
-				backendWrites += 1;
-				return HttpResponse.json({
-					schema: "one-cli/workspace-manifest-apply/v1",
-					revision: "sha256:next",
-					applied: 1,
-				});
-			}),
-		);
+	it("shows Infisical without a backend switch", async () => {
 		const user = userEvent.setup();
-		renderOverview(configurableOverview, "demo-entry");
-
+		renderOverview(overview, "demo-entry");
 		const region = await openWorkspaceEnvironmentSettings(user);
-		await chooseSelect(user, within(region).getByRole("combobox", { name: "Backend" }), "dotenv");
-
-		expect(useManifestDraftStore.getState().drafts[manifestDraftKey("demo-entry")]).toMatchObject({
-			revision: "sha256:test-revision",
-			workspace: { environment: { backend: "dotenv" } },
-		});
-		expect(within(region).getByText("Pending review")).toBeDefined();
-		expect(backendWrites).toBe(0);
-		expect(
-			within(screen.getByRole("dialog", { name: "Workspace settings" })).getByRole("button", {
-				name: "Save changes · 1",
-			}),
-		).toBeDefined();
+		expect(within(region).getByText("Infisical")).toBeDefined();
+		expect(within(region).queryByRole("combobox", { name: "Backend" })).toBeNull();
+		expect(useManifestDraftStore.getState().drafts[manifestDraftKey("demo-entry")]).toBeUndefined();
 	});
 
 	it("keeps identity fields read-only and stages editable General manifest fields", async () => {
@@ -424,7 +400,7 @@ describe("workspace overview Profile-only configuration", () => {
 		await user.type(within(inspector).getByLabelText("Build version"), "2.0.0");
 		expect(
 			useManifestDraftStore.getState().drafts[manifestDraftKey()]?.changes.web?.general,
-		).toEqual({ buildVersion: "2.0.0", devCommand: "pnpm dev" });
+		).toEqual({ buildVersion: "2.0.0", devCommand: "pnpm dev", devURL: "" });
 		expect(within(inspector).queryByRole("button", { name: "Save local binding" })).toBeNull();
 		expect(receivedEnvironment).toBe("dev");
 	});
@@ -460,6 +436,38 @@ describe("workspace overview Profile-only configuration", () => {
 			).toBe(false);
 		},
 	);
+
+	it("shows configured task dependencies and cache settings without claiming cache hits", async () => {
+		server.use(
+			http.get("http://localhost/api/workspace/projects/web", () =>
+				HttpResponse.json({
+					...webSettings,
+					project: {
+						...webSettings.project,
+						tasks: {
+							status: "ready",
+							entries: [
+								{
+									name: "//apps/web:build",
+									source: "apps/web/mise.toml",
+									depends: ["//packages/lib:build"],
+									outputs: ["dist"],
+									cacheEnabled: true,
+								},
+							],
+						},
+					},
+				}),
+			),
+		);
+		renderOverview();
+		const inspector = await openProjectSettings();
+		const tasks = await within(inspector).findByRole("region", { name: "Configured tasks" });
+		expect(within(tasks).getByText("//apps/web:build")).toBeDefined();
+		expect(within(tasks).getByText("Dependencies: //packages/lib:build")).toBeDefined();
+		expect(within(tasks).getByText("Artifact caching is configured.")).toBeDefined();
+		expect(within(tasks).queryByRole("button")).toBeNull();
+	});
 
 	it("keeps project environment configuration separate from remote secret operations", async () => {
 		const user = userEvent.setup();

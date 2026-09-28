@@ -110,32 +110,6 @@ func Select[T comparable](title string, options []Option[T]) (T, error) {
 	return value, nil
 }
 
-// MultiSelect lets the user toggle multiple options. preSelected values
-// are checked when the prompt opens; pass nil for "nothing pre-checked".
-//
-// Description, when present on an option, is appended to the label as
-// "<label> — <description>". Same encoding rationale as
-// SelectWithDescriptions: keep accessible-mode output coherent.
-func MultiSelect[T comparable](title string, options []Option[T], preSelected []T) ([]T, error) {
-	values := append([]T{}, preSelected...)
-	huhOpts := make([]huh.Option[T], 0, len(options))
-	for _, opt := range options {
-		label := opt.Label
-		if opt.Description != "" {
-			label = fmt.Sprintf("%s — %s", opt.Label, opt.Description)
-		}
-		huhOpts = append(huhOpts, huh.NewOption(label, opt.Value))
-	}
-	field := huh.NewMultiSelect[T]().
-		Title(title).
-		Options(huhOpts...).
-		Value(&values)
-	if err := runField(field); err != nil {
-		return nil, mapErr(err)
-	}
-	return values, nil
-}
-
 // SelectWithDescriptions is like Select but renders a per-option description
 // line below each entry. Useful for template pickers where the user needs
 // to read what each option actually does.

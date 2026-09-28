@@ -9,6 +9,7 @@ import (
 	"runtime"
 
 	"charm.land/lipgloss/v2"
+	"github.com/gofrs/flock"
 
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/i18n"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/output"
@@ -38,17 +39,28 @@ func Notify(currentVersion string) {
 	if shouldSkip(currentVersion) {
 		return
 	}
-	// Block briefly if MaybeRefreshAsync started a fetch that hasn't
-	// finished yet — necessary for short-lived commands (--help /
-	// --version) that would otherwise outrun the goroutine and never
-	// see a populated cache.
-	waitForRefresh()
 	c, err := loadCache()
-	if err != nil || c == nil || c.LatestVersion == "" {
+	if err != nil || c == nil {
 		return
 	}
-	if !isNewer(c.LatestVersion, currentVersion) {
+	if c.TargetPath != "" {
+		target, err := os.Executable()
+		if err != nil || target != c.TargetPath {
+			return
+		}
+	}
+	if c.Status == "checking" {
 		return
+	}
+	if c.Status == "updated" && c.NotificationPending && claimNotification(c) {
+		lipgloss.Fprintln(os.Stderr, i18n.Tf("update.installed", c.InstalledVersion))
+		return
+	}
+	if !isNewer(c.LatestVersion, currentVersion) || c.Status == "updated" {
+		return
+	}
+	if c.Status == "failed" && c.Error != "" {
+		lipgloss.Fprintln(os.Stderr, i18n.Tf("update.failed", c.Error))
 	}
 	printWarning(os.Stderr, c.LatestVersion, currentVersion)
 }
@@ -74,13 +86,16 @@ func printWarning(w *os.File, latest, current string) {
 // The order is: cheapest checks first, so the common case (CI, JSON
 // output) never touches the filesystem.
 func shouldSkip(currentVersion string) bool {
+	if buildChannel != "release" {
+		return true
+	}
 	if isCI() {
 		return true
 	}
 	if !output.IsTTY() {
 		return true
 	}
-	if currentVersion == "" || currentVersion == "0.0.0-dev" {
+	if !isStableRelease(currentVersion) {
 		return true
 	}
 	return false
@@ -97,4 +112,24 @@ func isCI() bool {
 		}
 	}
 	return false
+}
+
+// Only one interactive process consumes a completed update notification.
+func claimNotification(c *Cache) bool {
+	path, err := cachePath()
+	if err != nil {
+		return false
+	}
+	lock := flock.New(path + ".lock")
+	locked, err := lock.TryLock()
+	if err != nil || !locked {
+		return false
+	}
+	defer lock.Unlock()
+	current, err := loadCache()
+	if err != nil || current == nil || !current.NotificationPending || current.TargetPath != c.TargetPath || current.InstalledVersion != c.InstalledVersion {
+		return false
+	}
+	current.NotificationPending = false
+	return saveCache(current) == nil
 }

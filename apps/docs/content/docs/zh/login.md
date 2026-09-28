@@ -28,12 +28,12 @@ one env bind --global --project-id PROJECT_ID --env dev
 one env --global
 one env list --global --env dev --path /
 one env list --global --env dev --path /docker
-one run --global --env dev --path /docker --keys REGISTRY_USER,REGISTRY_PASSWORD -- docker-push-script
+one exec --global --env dev --path /docker --keys REGISTRY_USER,REGISTRY_PASSWORD -- docker-push-script
 ```
 
 列表返回当前层目录、变量名和说明，不返回值。执行时必须显式提供环境与目录；不会递归读取子目录、导入变量或展开跨目录引用。`--keys` 可进一步缩小注入范围。命令可在工作区之外使用，保留当前目录；普通 `one dev`、`one build` 和项目模式不会自动加载共享凭据。
 
-明文读取需要 `one env get KEY --global --env dev --path /docker --reveal`。写入可使用交互式密码输入，或 `one env set KEY --global --env dev --path /docker --stdin` 从标准输入读取；覆盖已有值需要 `--yes`。`one env unset KEY --global --env dev --path /docker` 删除远端变量。
+CLI 不展示密钥值。通过 `one exec --global --env dev --path /docker -- command` 注入共享凭据。写入可使用交互式密码输入，或 `one env set KEY --global --env dev --path /docker --stdin` 从标准输入读取；覆盖已有值需要 `--yes`。`one env unset KEY --global --env dev --path /docker` 删除远端变量。
 
 ## Dashboard
 

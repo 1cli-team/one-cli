@@ -6,7 +6,6 @@ import (
 
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/adapters/env/infisical"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/application/execution"
-	"github.com/torchstellar-team/one-cli/packages/cli/internal/core/workspace"
 	cliErrors "github.com/torchstellar-team/one-cli/packages/cli/internal/platform/errors"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/i18n"
 	session "github.com/torchstellar-team/one-cli/packages/cli/internal/platform/infisicalsession"
@@ -34,7 +33,7 @@ func (s *Service) ensureInfisicalBound(
 }
 
 func requireInfisicalBackend(resolution resolution) error {
-	if resolution.Scope.Backend().Name != workspace.EnvBackendInfisical {
+	if resolution.Workspace.Manifest().Env == nil {
 		return cliErrors.New(
 			cliErrors.ENV_BACKEND_INVALID,
 			i18n.T("env.infisical_required"),

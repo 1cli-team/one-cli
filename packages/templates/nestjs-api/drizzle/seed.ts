@@ -1,5 +1,4 @@
 /// <reference types="node" />
-import "dotenv/config";
 import { drizzle } from "drizzle-orm/node-postgres";
 import { Pool } from "pg";
 import { users } from "../src/service/drizzle/schema";

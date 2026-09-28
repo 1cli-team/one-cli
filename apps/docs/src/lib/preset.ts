@@ -3,11 +3,11 @@
 // Grammar: 1[.<kind><tcode>]+[.e<envCode>]
 //   kind: 'f' (frontend) | 'b' (backend) | 'l' (library)
 //   tcode: 2-char [a-z0-9] template code
-//   envCode: 1-char env code (optional; empty = workspace default dotenv)
+//   envCode: 1-char env code (optional; empty = Infisical)
 // Canonical ordering: items sorted by kind (b < f < l), then template code.
 
 export type PresetKind = "f" | "b" | "l";
-export type PresetEnv = "d" | "i";
+export type PresetEnv = "i";
 
 export type PresetItem = {
   kind: PresetKind;

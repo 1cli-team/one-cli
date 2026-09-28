@@ -3,7 +3,7 @@ version: "3"
 tasks:
   build:
     cmds:
-      - go build ./...
+      - go build {{.CLI_ARGS}} ./...
 
   fmt:
     cmds:
@@ -19,7 +19,7 @@ tasks:
 
   test:
     cmds:
-      - go test -race ./...
+      - go test -race ./... {{.CLI_ARGS}}
 
   test:cover:
     cmds:
@@ -32,7 +32,5 @@ tasks:
 
   check:
     cmds:
-      - task: tidy
       - task: fmt:check
       - task: vet
-      - task: test

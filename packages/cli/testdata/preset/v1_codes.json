@@ -41,6 +41,18 @@
     {
       "code": "tl",
       "template_id": "ts-library"
+    },
+    {
+      "code": "xa",
+      "template_id": "empty-app"
+    },
+    {
+      "code": "xl",
+      "template_id": "empty-library"
+    },
+    {
+      "code": "xs",
+      "template_id": "empty-service"
     }
   ],
   "envs": [

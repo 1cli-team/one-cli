@@ -11,6 +11,8 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/templatefiles"
 )
 
 func main() {
@@ -65,24 +67,37 @@ func syncBundled(root string) error {
 	if err := copyFile(filepath.Join(templates, "registry.json"), filepath.Join(bundled, "registry.json")); err != nil {
 		return err
 	}
-	if err := replaceDir(root, templates, filepath.Join(bundled, "_templates"), func(rel string, entry fs.DirEntry) bool {
-		if rel == "registry.json" {
-			return false
+	if err := filepath.WalkDir(templates, func(name string, entry fs.DirEntry, err error) error {
+		if err != nil {
+			return err
 		}
-		// Workspace guidance and skills are distributed separately from templates.
-		switch strings.TrimSuffix(entry.Name(), ".hbs") {
-		case ".one", ".agents", "AGENTS.md", "CLAUDE.md", "SKILL.md",
-			"pnpm-lock.yaml", "package-lock.json", "npm-shrinkwrap.json", "yarn.lock", "bun.lock", "bun.lockb":
-			return false
+		rel, err := filepath.Rel(templates, name)
+		if err != nil {
+			return err
 		}
-		return entry.Name() != "go.mod"
+		if templatefiles.Excluded(filepath.ToSlash(rel)) {
+			if entry.IsDir() {
+				return filepath.SkipDir
+			}
+			return nil
+		}
+		if entry.Type()&os.ModeSymlink != 0 {
+			return fmt.Errorf("template symlinks are not supported: %s", name)
+		}
+		if entry.Name() == templatefiles.PackedGoMod || strings.HasSuffix(entry.Name(), ".hbs") {
+			return fmt.Errorf("reserved template filename: %s", name)
+		}
+		return nil
 	}); err != nil {
 		return err
 	}
-	return replaceDir(root, filepath.Join(root, "skills"), filepath.Join(bundled, "_skills"), func(rel string, entry fs.DirEntry) bool {
-		rel = filepath.ToSlash(rel)
-		return rel == "one-cli" && entry.IsDir() || rel == "one-cli/SKILL.md" && entry.Type().IsRegular()
-	})
+	if err := replaceDir(root, templates, filepath.Join(bundled, "_templates"), func(rel string, entry fs.DirEntry) bool {
+		return rel != "registry.json" && !templatefiles.Excluded(filepath.ToSlash(rel))
+	}, true); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func syncWeb(root string) error {
@@ -91,7 +106,7 @@ func syncWeb(root string) error {
 	if _, err := os.Stat(filepath.Join(source, "index.html")); err != nil {
 		return fmt.Errorf("dashboard build is missing: %w", err)
 	}
-	return replaceDir(root, source, target, nil)
+	return replaceDir(root, source, target, nil, false)
 }
 
 // ensureGeneratedTarget prevents a future path typo from turning RemoveAll
@@ -113,17 +128,17 @@ func ensureGeneratedTarget(root, target string) error {
 	return nil
 }
 
-func replaceDir(root, source, target string, include func(string, fs.DirEntry) bool) error {
+func replaceDir(root, source, target string, include func(string, fs.DirEntry) bool, pack bool) error {
 	if err := ensureGeneratedTarget(root, target); err != nil {
 		return err
 	}
 	if err := os.RemoveAll(target); err != nil {
 		return err
 	}
-	return copyTree(source, target, include)
+	return copyTree(source, target, include, pack)
 }
 
-func copyTree(source, target string, include func(string, fs.DirEntry) bool) error {
+func copyTree(source, target string, include func(string, fs.DirEntry) bool, pack bool) error {
 	return filepath.WalkDir(source, func(path string, entry fs.DirEntry, walkErr error) error {
 		if walkErr != nil {
 			return walkErr
@@ -140,6 +155,9 @@ func copyTree(source, target string, include func(string, fs.DirEntry) bool) err
 		}
 		dest := target
 		if rel != "." {
+			if pack {
+				rel = filepath.FromSlash(templatefiles.PackPath(filepath.ToSlash(rel)))
+			}
 			dest = filepath.Join(target, rel)
 		}
 		info, err := entry.Info()

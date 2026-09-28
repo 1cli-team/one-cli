@@ -61,15 +61,14 @@ func TestOverview_PopulatedWorkspace(t *testing.T) {
 		Version:      workspace.ManifestVersion,
 		Workspace:    &workspace.ManifestWorkspace{ID: "demo", Name: "demo"},
 		Environments: &workspace.Environments{Names: []string{"dev"}, Default: "dev"},
-		Domains: &workspace.WorkspaceDomains{
-			Env: &workspace.BackendRef{Kind: workspace.EnvBackendDotenv},
-		},
+
+		Env: &workspace.EnvironmentConfig{ProjectID: "remote"},
+
 		Projects: []workspace.ManifestProject{
 			{
 				Name: "web", RelativeDir: "apps/web", TemplateID: "react-spa", Toolchain: "node",
-				Domains: &workspace.ProjectDomains{
-					Dev: &workspace.ProjectDevOverride{Command: "pnpm dev"},
-				},
+
+				Dev: &workspace.ProjectDevOverride{Command: "pnpm dev"},
 			},
 		},
 	}

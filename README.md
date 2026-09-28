@@ -41,7 +41,7 @@ Create a workspace and add a project:
 one create my-app
 cd my-app
 one add react-spa --name web
-one dev web
+one dev -p web
 ```
 
 That gives you a workspace, a first app, and a local way to run it.
@@ -89,26 +89,19 @@ one add nestjs-api --name api
 |---|---|
 | `one create <workspace>` | Create an empty workspace |
 | `one add <starter>` | Add another app, service, docs site, or library |
-| `one dev [projects...]` | Run all or selected projects; native output for one task, TUI for multiple tasks |
-| `one build [projects...]` | Build all or selected projects in dependency order; optional bounded concurrency |
 | `one env` | Review and manage environment variables |
 | `one login` | Sign in to Infisical with your browser |
 | `one serve` | Inspect workspaces, manage the current account and shared credentials |
-| `one ci [enable\|sync\|disable]` | Optionally manage generated GitHub Actions workflows |
+| `one run [task]` | Discover and execute workspace tasks through mise |
+| `one exec <project> -- <command>` | Execute a command with the selected project environment |
+
+`dev`, `build`, `test`, and `lint` are task names. They all use the same shorthand: `one <task>` → `one run <task>`. For example, `one dev` runs `one run dev`, and `one build -p web` runs `one run build -p web`.
 
 Full command docs live at [1cli.dev](https://1cli.dev).
 
 ## Work With AI Assistants
 
-Install the bundled `one-cli` skill for your coding agent:
-
-```bash
-one skills install
-```
-
-Use `--agent <id>` to choose an agent directly, or `--yes` to install into every detected agent. Installation works offline and only writes the selected agents' user skills directories.
-
-New workspaces include an `AGENTS.md` asking agents to use this skill and run `one skills install` if it is missing. The [skill](./skills/one-cli/SKILL.md) stays small: follow [One Workspace Convention](https://github.com/1cli-team/one-workspace-convention), then consult `one --help` and the relevant command help. Ordinary CLI upgrades do not require reinstalling it.
+New workspaces include bilingual `AGENTS.md` guidance. Agents can inspect `one run --list -o json`, preview tasks with `one run build --dry-run`, and consult command-specific help.
 
 You can ask an assistant for project-level changes in natural language, for example:
 
@@ -122,11 +115,11 @@ The assistant can read `one.manifest.json` and project README files, then use On
 
 ## Local Settings
 
-One CLI manages local dotenv and Infisical variables. Run `one login` to sign in with your browser; the single session is stored in the OS keyring, with no plaintext fallback. Use `one whoami` to inspect status and `one logout` to remove the local session.
+One CLI manages variables in Infisical and injects them directly into commands. Workspace bindings live in the top-level manifest `env` field; `.env` files are not loaded or exported. Run `one login` to sign in with your browser; the single session is stored in the OS keyring, with no plaintext fallback. Use `one whoami` to inspect status and `one logout` to remove the local session.
 
 Run `one serve` for account settings, workspaces, and shared credentials. Workspace and project configuration changes share one reviewed, revision-checked Manifest draft. Remote variable edits take effect immediately; lists omit values and reveal/copy fetch plaintext only on demand.
 
-Choose shared credential storage with `one env bind --global`. Agents discover environments and folders through `one env --global` and `one env list --global`, then execute with `one run --global --env dev --path /folder --keys KEY -- command`. Explicit scope and best-effort masking reduce accidental exposure; they do not isolate arbitrary programs running as the same OS user. Use least-privilege remote permissions.
+Choose shared credential storage with `one env bind --global`. Agents discover environments and folders through `one env --global` and `one env list --global`, then execute with `one exec --global --env dev --path /folder --keys KEY -- command`. Explicit scope and best-effort masking reduce accidental exposure; they do not isolate arbitrary programs running as the same OS user. Use least-privilege remote permissions.
 
 ## Project Map
 
@@ -140,22 +133,41 @@ If you want to work on One CLI itself, the repository is organized like this:
 
 | Path | Purpose |
 |---|---|
-| `packages/cli` | The One CLI app |
+| `one.manifest.json` | The four projects managed by One CLI itself |
+| `packages/cli` | The One CLI app and its public Go packages |
+| `packages/kernel` | Shared Go kernel |
 | `packages/templates` | Starters used by `one add` |
-| `skills/one-cli` | Minimal workspace guidance installed by `one skills install` |
+| `mise.toml` | Workspace scheduling, tools, and artifact cache declarations |
 | `apps/docs` | Documentation website |
 | `apps/dashboard` | Local workspace, account, and global-variable Dashboard opened by `one serve` |
 | `assets` | Brand assets, including the logo |
 
-Common contributor commands:
+This repository is also a One CLI workspace: `dashboard`, `docs`, `cli`, and `kernel`. Template directories under `packages/templates` and test fixtures are source assets, not registered projects. `packages/cli` keeps its existing location because it also exports Go packages with that module path.
+
+Bootstrap a fresh checkout without requiring an installed `one`:
 
 ```bash
-pnpm install
-task check
-task build
-task test
-task verify-docs
+mise trust
+mise install
+mise run install
 ```
+
+Then use the workspace commands:
+
+```bash
+one                             # Inspect this workspace
+one run                         # List root and project tasks
+one dev                         # Dashboard API + Vite UI, using the development fixture
+one dev -p docs                  # Documentation at http://localhost:3000
+one build -p cli                 # Prepare embedded resources and build the CLI
+one test -p kernel               # Test the shared Go kernel
+one run check                   # The complete repository gate; one check is shorthand
+one serve                       # Manage this repository in the Dashboard
+```
+
+`one dev -p dashboard` starts the Vite UI; run `one dev -p cli` in another terminal for its API, or use the combined `one dev` task. `one serve` opens this repository as a real workspace, while the contributor development API uses the existing test fixture. No Infisical binding is required to build, test, or start these projects.
+
+Root tasks remain native mise commands, so CI and first-time installation can still use `mise run build`, `mise run check`, and `mise run install`. Project tasks come from package scripts and Taskfiles. Only the root `mise.toml` is used: project tasks are namespaced as `cli:build` or `dashboard:dev` and select their directory with `dir`. CLI tasks declare their embedded-resource prerequisites there; CLI tests also build the binary used by E2E tests. Run `one init mise` after changing the project task catalogue to refresh the tracked task adapters.
 
 Read [CONTRIBUTING.md](./CONTRIBUTING.md) before opening a pull request.
 
@@ -171,35 +183,18 @@ Read [CONTRIBUTING.md](./CONTRIBUTING.md) before opening a pull request.
 
 MIT.
 
-### Development and build terminals
+### Tasks and development
+
+`one <task>` is shorthand for `one run <task>`. Built-in commands take precedence; use `one run env` for a task that shares a built-in name.
 
 ```sh
-one dev web api                   # Run a selected set of projects in parallel
-one dev --select                  # Search and select projects interactively
-one dev web                       # Keep the project's native colors, progress, and input
-one dev web api --keep-going      # Keep peers running if a project exits
-one dev web api --ui=stream       # Use continuous prefixed logs
-one build web api --concurrency=4 # Build ready tasks concurrently, respecting local dependencies
+one run test -p api               # Explicit task entry
+one test -p api                   # Same task through shorthand
+one dev -p web -p api             # Concurrent development services
+one dev -p web --ui raw           # Native terminal input for the selected service
+one build -p web -p api --concurrency 4
 ```
 
-`--ui=auto` uses a native terminal for one task and a TUI for multiple tasks.
-Override it with `raw`, `tui`, or `stream`. TUI and raw require an interactive
-terminal with text output; CI, pipes, and JSON/YAML output use streaming logs.
-Structured results remain on stdout and task logs go to stderr. `--dry-run`
-only prints the selected execution plan.
+All tasks use mise for scheduling, including development and user overrides. Multiple services use prefixed logs; Ctrl+C or a task failure stops the invocation and its child processes. Raw mode preserves terminal input and disables artifact caching. The previous development TUI and single-service restart controls have been removed. Structured results stay on stdout and child logs go to stderr.
 
-In the TUI, use ↑/↓ to select a project, Enter to send it keyboard input, and
-Ctrl+] to return to navigation. PgUp/PgDn scroll history, f resumes following,
-/ searches projects, and h hides the project list. In dev, r restarts the selected
-project and s stops it. Ctrl+C in navigation stops the session and its process
-trees. Ctrl+C in input mode is sent to the selected application. By default any
-dev process exiting stops the group; `--keep-going` keeps the other projects alive.
-
-Build concurrency defaults to 1. Selected local Node dependencies run first;
-project selection does not implicitly add unselected dependencies. Failed builds
-stop new scheduling, finish already running independent builds, and block tasks
-that depend on the failure. Build sessions return to the shell automatically.
-
-Interactive task terminals currently support Unix (including Linux and macOS).
-Windows supports native single-task output and streaming multiple tasks; auto
-falls back to streaming until a ConPTY adapter is available.
+Build concurrency defaults to 1; development allocates it automatically. Local Node dependencies build before their consumers. `one run build --cache off --force` always executes the build. See the [task guide](apps/docs/content/docs/en/run.md) for configuration, cache declarations, and Actions examples.

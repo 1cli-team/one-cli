@@ -26,7 +26,7 @@ func TestCreateWorkspaceObservesOnlyAfterSuccessfulCreation(t *testing.T) {
 	})
 
 	result, err := service.CreateWorkspace(context.Background(), WorkspaceInput{
-		TargetDir: target, Name: "observed", EnvBackend: workspace.EnvBackendDotenv,
+		TargetDir: target, Name: "observed", EnvBackend: workspace.EnvBackendInfisical,
 	})
 	if err != nil {
 		t.Fatalf("CreateWorkspace() error = %v", err)
@@ -46,19 +46,19 @@ func TestServiceOwnsWorkspaceAndProjectCreation(t *testing.T) {
 	created, err := service.CreateWorkspace(context.Background(), WorkspaceInput{
 		TargetDir:  target,
 		Name:       "demo",
-		EnvBackend: workspace.EnvBackendDotenv,
+		EnvBackend: workspace.EnvBackendInfisical,
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if created.TargetDir != target || created.PackageManager != "" || created.EnvBackend != "dotenv" {
+	if created.TargetDir != target || created.PackageManager != "" || created.EnvBackend != "infisical" {
 		t.Fatalf("CreateWorkspace() = %+v", created)
 	}
 	manifest, err := workspace.ReadManifest(target)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got := workspace.EnvBackend(manifest); got != workspace.EnvBackendDotenv {
+	if got := workspace.EnvBackend(manifest); got != "" {
 		t.Fatalf("environment backend = %q", got)
 	}
 	if _, err := os.Stat(filepath.Join(target, ".gitignore")); err != nil {
@@ -93,7 +93,7 @@ func TestServiceOwnsWorkspaceAndProjectCreation(t *testing.T) {
 		t.Fatal(err)
 	}
 	if len(manifest.Projects) != 1 || manifest.Projects[0].Name != "web" ||
-		manifest.Projects[0].Domains == nil || manifest.Projects[0].Domains.Dev == nil {
+		manifest.Projects[0].Dev == nil {
 		t.Fatalf("manifest projects = %+v", manifest.Projects)
 	}
 }
@@ -111,7 +111,7 @@ func TestCreateWorkspaceRechecksTargetBeforeMutation(t *testing.T) {
 	}
 
 	_, err := service.CreateWorkspace(context.Background(), WorkspaceInput{
-		TargetDir: target, Name: "demo", EnvBackend: workspace.EnvBackendDotenv,
+		TargetDir: target, Name: "demo", EnvBackend: workspace.EnvBackendInfisical,
 	})
 	if coded, ok := err.(interface{ ErrorCode() string }); !ok || coded.ErrorCode() != "EXISTING_TARGET_NOT_EMPTY" {
 		t.Fatalf("error = %v", err)

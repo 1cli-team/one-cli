@@ -14,6 +14,7 @@ func withIsolatedCache(t *testing.T) string {
 	t.Helper()
 	tmp := t.TempDir()
 	t.Setenv("XDG_CACHE_HOME", tmp)
+	t.Setenv("XDG_CONFIG_HOME", filepath.Join(tmp, "config"))
 	t.Setenv("HOME", tmp)
 	return tmp
 }

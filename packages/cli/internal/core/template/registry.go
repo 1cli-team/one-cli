@@ -24,6 +24,8 @@ type Toolchain string
 const (
 	ToolchainNode Toolchain = "node"
 	ToolchainGo   Toolchain = "go"
+	// Empty projects keep an explicit value because legacy manifests default an empty toolchain to Node.
+	ToolchainNone Toolchain = "none"
 )
 
 // Category groups templates in --help and `templates` output.
@@ -267,6 +269,7 @@ var validCategories = map[Category]struct{}{
 var validToolchains = map[Toolchain]struct{}{
 	ToolchainNode: {},
 	ToolchainGo:   {},
+	ToolchainNone: {},
 }
 
 func validateTemplate(raw map[string]json.RawMessage, index int) (Template, error) {

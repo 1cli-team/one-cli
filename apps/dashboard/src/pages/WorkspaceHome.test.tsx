@@ -183,13 +183,17 @@ describe("Workspace discovery and recovery", () => {
 		);
 	}
 
+	// This multi-step jsdom interaction shares CI CPUs with the cold Go build.
 	it("combines path search with attention filtering and restores the list on clear", async () => {
 		serveRegistry();
 		const user = userEvent.setup();
 		renderHome("/?env=preview");
 		await screen.findByRole("link", { name: /Alpha/ });
 		const search = screen.getByRole("textbox", { name: "Search name, path or ID…" });
-		await user.type(search, " /WORKSPACES/ALPHA ");
+		// The case/whitespace filter assertion only needs the final query. Pasting
+		// avoids a full workspace-card render for every character on CI runners.
+		await user.click(search);
+		await user.paste(" /WORKSPACES/ALPHA ");
 		expect(screen.getAllByRole("article")).toHaveLength(1);
 		expect(screen.getByRole("link", { name: /Alpha/ }).getAttribute("href")).toBe(
 			"/workspace/alpha-entry?env=preview",
@@ -202,7 +206,7 @@ describe("Workspace discovery and recovery", () => {
 		await user.click(screen.getByRole("button", { name: /Needs attention/ }));
 		expect(screen.getAllByRole("article")).toHaveLength(4);
 		expect(screen.queryByRole("link", { name: /Alpha/ })).toBeNull();
-	});
+	}, 10_000);
 
 	it("keeps existing workspaces during a failed refresh and supports retry", async () => {
 		serveRegistry();

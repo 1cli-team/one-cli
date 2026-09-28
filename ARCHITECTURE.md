@@ -36,7 +36,7 @@ The built-in catalog currently contains 16 backends:
 
 | Domain | Backends | Count |
 | --- | --- | ---: |
-| Environment | dotenv, infisical | 2 |
+| Environment | infisical | 1 |
 | Deploy | aliyun-oss, tencent-cos, aws-s3, minio, rustfs, r2, kustomize, vercel, cloudflare, edgeone | 10 |
 | Container | docker, dockerhub, ghcr, acr | 4 |
 
@@ -102,28 +102,27 @@ packages/cli/internal/
     cli/               constructs adapters and injects all dependencies
   core/
     backend/          backend identity, capabilities, profile type, and form policy
-    container/        OCI image workflow inputs, results, and registry value
     profile/          machine profile model and persistence primitives
     template/         template registry and selection model
     workspace/        manifest and workspace model
   ports/
-    deploy/           deployment provider contract
     secrets/          command environment loader contract
   application/
-    ci/ configure/ deployment/ execution/ workspace/
+    configure/ execution/ workspace/
   adapters/
-    ci/ container/ deploy/ env/ shared/ toolchain/
+    env/ shared/ toolchain/ runtime/
   modules/
-    container/         compiled Docker/OCI workflow and manifest publication
     creation/          Template-to-Workspace/Project materialisation
     development/       local development process orchestration
-    environment/       dotenv/Infisical workflows and workspace setup
+    environment/       Infisical variables and workspace bindings
     preset/            pure preset encoding, parsing, and resolution
-    skills/            bundled one-cli skill installation into agent user directories
+    tasks/             finite task plans and environment snapshots
+    miseconfig/        additive task and tool configuration
+    hooks/             staged-file checks and Git integration
   platform/
     errors/ helpui/ i18n/ output/ preferences/ process/ prompt/ updatecheck/
   resources/
-    bundled/           embedded templates, registry, one-cli skill, and Dashboard
+    bundled/           embedded templates, registry, and Dashboard
   transport/
     cobra/             one directory per command family
     http/              local Dashboard API
@@ -173,7 +172,7 @@ Rules:
 9. Cleanup is LIFO, idempotent, and best-effort. It covers local temporary
    resources; it does not pretend that an external cloud deployment is a
    reversible transaction.
-10. Command, deploy, secrets, and CI provider sets are constructed explicitly.
+10. Command, runtime, toolchain, and secrets provider sets are constructed explicitly.
     Provider packages do not register themselves through `init()`.
 11. `internal/architecture/dependencies_test.go` enforces these boundaries for
     production Go files, including leaf-layer and transport/adapter rules.
@@ -224,7 +223,7 @@ execution.Workspace            root + manifest snapshot + project lookup
       `--> infer Project from the command working directory
 ```
 
-Deploy, container, dev, CI, configure, run, add, and environment commands use
+Dev, configure, run, exec, add, and environment commands use
 this same boundary. Helpers receive the snapshot rather than a root string that
 would let them rediscover the workspace. A workflow that intentionally writes
 `one.manifest.json` must call `Workspace.Reload` before relying on the new
@@ -234,15 +233,12 @@ outside a workspace renders help instead of producing a workspace error.
 Creation is one Template-driven compiled workflow:
 
 - `modules/creation.Service` is the single mutation boundary shared by ordinary
-  `one create`, `one create --preset`, `one add`, and first-deploy artifact
-  configuration;
+  `one create`, `one create --preset`, and `one add`;
 - workspace target revalidation, skeleton generation, Backend selection,
   environment preparation, Template rendering, manifest publication, project
   artifact generation and best-effort Git initialization
   stay behind that boundary;
-- its private `syncProject` step owns container artifacts, the persisted dev
-  command, deploy configuration, and environment safety rules in dependency
-  order;
+- its private `syncProject` step owns the persisted dev command and environment safety rules;
 - `modules/preset` is a pure plan format: it owns only preset codes, parsing,
   canonical encoding, registry resolution, and flag-conflict validation;
 - there is no top-level `modules/scaffold`: workspace-file generation is an
@@ -254,7 +250,7 @@ Creation is one Template-driven compiled workflow:
 
 Dashboard Workspace reads and machine-local Profile selections enter through
 `application/workspace.Service`. The service owns Overview construction,
-Backend validation, Project lookup, Template/deployment compatibility, and
+Backend validation, Project lookup, Template compatibility, and
 Profile-binding policy, but has no manifest-publication capability.
 `one.manifest.json` is a read-only fact source for that projection service:
 the Project projection exposes its values, a SHA-256 revision, and resolved
@@ -305,62 +301,24 @@ clients never submit an arbitrary filesystem root. Existing singular
 `/api/workspace/*` routes remain pinned to
 the launch Workspace for wire compatibility.
 
-CI is an application workflow with a public provider compatibility seam:
+Finite workspace tasks are owned by `modules/tasks` and `modules/miseconfig`:
 
-- `application/ci.Service` owns workspace/project selection, provider
-  validation, workflow path and enabled-state detection, enable/sync/disable
-  execution, result construction, and delete-confirmation enforcement;
-- `PlanDisable` exposes only the enabled count needed for a prompt and carries
-  its workspace snapshot privately into `Disable`; `Disable` rechecks the
-  current workflow files so a stale plan cannot bypass confirmation;
-- `pkg/ci.Provider` remains the stable out-of-tree rendering contract, while
-  bootstrap constructs the instance registry used by the service;
-- Cobra owns positional/flag conflict parsing, confirmation prompts, and TTY
-  rendering. Workflow files remain the CI state; the manifest is not mutated.
-
-Deployment is the reference deep module for this flow:
-
-- `application/deployment` owns configured-target discovery, project/backend
-  target planning, template compatibility, environment validation and
-  overrides, profile resolution, secret injection ordering, pre-deploy build
-  ordering, provider dispatch, and result publication;
-- target discovery and compatibility helpers stay package-private; transports
-  enter through the `PlanTargets` and `Execute` workflow surfaces instead of
-  assembling deployment policy from low-level functions;
-- `ports/deploy.Provider` and `ports/deploy.Builder` are the narrow execution
-  seams used by the workflow;
-- deploy adapters own vendor commands and the local project build process;
-- Cobra consumes the application's ready/setup/choose-project plan and owns
-  only flag/argument parsing, interactive project/backend/profile choices,
-  progress presentation, and dry-run/result rendering.
-
-This boundary is intentional: adding another deployment transport must be able
-to reuse the same workflow without importing Cobra, while adding another deploy
-backend must not modify the workflow.
-
-Container is a vertical compiled module rather than a provider ecosystem:
-
-- `docker`, `dockerhub`, `ghcr`, and `acr` remain four user-visible Backend
-  identities because they have different profile and registry-host policy;
-- all four use one Docker/OCI execution implementation, so
-  `modules/container.Service` validates Catalog capabilities, resolves registry
-  profiles, invokes the Docker adapter, and publishes image/build state back to
-  the manifest;
-- `core/container` contains only transport-neutral values and result envelopes;
-- Cobra owns project selection, version prompts, flags, dry-run display, and
-  result rendering;
-- there is deliberately no `container.Provider` or `ProviderRegistry`. A real
-  execution seam should be introduced only when a second independent engine
-  exists, not when another registry profile is added.
+- `core/workspace.DiscoverTasks` reads pnpm scripts and Go Taskfiles. Commands stay in their native project files.
+- `modules/miseconfig` generates additive mise fragments, tool pins, local dependency edges, and explicit cache declarations. User overrides stay in `mise.toml`.
+- `modules/tasks` validates selection and dependencies, freezes each project's environment before cache lookup, then invokes mise once for the finite graph.
+- Hidden task adapters consume the same temporary context for cache fingerprints and execution. Context values never enter generated configuration or result envelopes.
+- mise owns task concurrency and artifact storage. One reports overall success/failure and leaves unsupported per-task event state unknown.
+- `one build` and `one run build` share this implementation. `one exec` handles arbitrary commands, while development keeps the existing terminal supervisor after finite prerequisite builds.
+- GitHub Actions files stay repository-owned and call the ordinary `ci` aggregate. Hooks and preset remain supported.
 
 Environment is a vertical deep module because its two built-in backends are
 compiled implementation components rather than independently distributed
 plugins:
 
 - `modules/environment.Service` owns environment/backend resolution, profile
-  resolution, project/path targeting, set planning, get/list/set/pull,
+  resolution, project/path targeting, set planning, list/set/delete, explicit Dashboard reads,
   backend switching, manifest bookkeeping, and create-time environment setup;
-- the module composes the concrete dotenv and Infisical adapters directly;
+- the module composes the Infisical adapter directly;
 - create enters through `PrepareWorkspace`; Cobra does not sequence backend
   sync/bind functions, and the Infisical adapter exposes no no-op `Sync` API;
 - `env set` enters through `PlanSet` and `Set`; the workspace resolution carried
@@ -444,9 +402,9 @@ view layer. `src/architecture/dependencies.test.ts` enforces these rules and
 rejects local TypeScript barrel entrypoints so imports stay directly
 analyzable.
 
-Repository verification has one public contract: `task check` (also exposed as
+Repository verification has one public contract: `mise run check` (also exposed as
 root `pnpm check`). It composes `check:static` and `check:test`; CI runs those
-same two subtasks in parallel. `task pre-push` adds Go race detection without
+same two subtasks in parallel. `mise run pre-push` adds Go race detection without
 creating a separate definition of the PR gate.
 
 Node dependency resolution is likewise repository-owned: root
@@ -460,14 +418,14 @@ remain independently installable after leaving this repository.
 
 Internal migration must preserve:
 
-- current command names, flags, help contracts, and exit behavior;
+- command exit behavior, except for explicitly approved command removals and renames;
 - `one.manifest.json` v1;
 - `~/.config/one/config.json` and `credentials.json` v1;
 - the legacy profile resolution order, extended ahead of it by optional
   Project+Environment and Workspace+Environment bindings from the additive
   machine-local `profile-bindings.json` v1 store;
 - structured success envelopes and `one-cli/error/v1` error codes;
-- existing public packages under `packages/cli/pkg`.
+- remaining public toolchain packages under `packages/cli/pkg`; the CI rendering contract has been removed.
 
 New HTTP endpoints may be added. Existing read and Profile-management payloads
 remain compatible; historical Dashboard routes that wrote a repository are a

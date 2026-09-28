@@ -22,6 +22,8 @@ import (
 	manifestapp "github.com/torchstellar-team/one-cli/packages/cli/internal/application/manifest"
 	workspaceapp "github.com/torchstellar-team/one-cli/packages/cli/internal/application/workspace"
 	catalog "github.com/torchstellar-team/one-cli/packages/cli/internal/core/backend"
+	creationmodule "github.com/torchstellar-team/one-cli/packages/cli/internal/modules/creation"
+	"github.com/torchstellar-team/one-cli/packages/cli/internal/modules/devservice"
 	environmentmodule "github.com/torchstellar-team/one-cli/packages/cli/internal/modules/environment"
 	cliErrors "github.com/torchstellar-team/one-cli/packages/cli/internal/platform/errors"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/output"
@@ -31,9 +33,10 @@ import (
 // MuxOpts is the static configuration for one running server. Tests
 // construct it directly; production goes through Run.
 type MuxOpts struct {
-	UIDisabled    bool
-	ExpectedHosts map[string]struct{}
-	SelfOrigin    string
+	ServiceManager *devservice.Manager
+	UIDisabled     bool
+	ExpectedHosts  map[string]struct{}
+	SelfOrigin     string
 	// WorkspaceRoot is the absolute path to the workspace `one serve` was
 	// launched in, or "" when launched outside a workspace. Handlers read
 	// it through opts capture; we don't auto-detect per request because
@@ -45,6 +48,8 @@ type MuxOpts struct {
 	// ManifestService is the explicit repository-publication boundary. It only
 	// accepts typed, revision-checked project setting patches.
 	ManifestService *manifestapp.Service
+	// CreationService reuses the CLI template-to-project workflow.
+	CreationService *creationmodule.Service
 	// EnvironmentService powers Infisical secret operations through the same
 	// workspace/session/path resolution used by the CLI.
 	EnvironmentService *environmentmodule.Service
@@ -86,7 +91,15 @@ func BuildMux(opts MuxOpts) http.Handler {
 		}
 		opts.EnvironmentService = service
 	}
+	if opts.CreationService == nil {
+		service, err := creationmodule.NewService(opts.EnvironmentService)
+		if err != nil {
+			panic(err)
+		}
+		opts.CreationService = service
+	}
 	api := http.NewServeMux()
+	api.HandleFunc("GET /project-templates", handleProjectTemplates())
 	registerSessionRoutes(api)
 	registerGlobalRoutes(api)
 	registerCatalogRoutes(api, opts)
@@ -95,6 +108,7 @@ func BuildMux(opts MuxOpts) http.Handler {
 	registerWorkspaceMutateRoutes(api, opts)
 	registerSecretRoutes(api, opts)
 	registerWorkspacesRoutes(api, opts)
+	registerServiceRoutes(api, opts)
 
 	root := http.NewServeMux()
 	root.Handle("/api/", http.StripPrefix("/api", api))
@@ -177,7 +191,7 @@ func spaHandler() http.Handler {
 	if err != nil {
 		// Programmer error: the binary was built without the bundled
 		// dist. Fail loudly at startup rather than serve a 404 storm.
-		panic("serve: bundled web dist missing (run `task sync-bundled`): " + err.Error())
+		panic("serve: bundled web dist missing (run `mise run sync-web`): " + err.Error())
 	}
 	indexHTML, err := fs.ReadFile(distFS, "index.html")
 	if err != nil {

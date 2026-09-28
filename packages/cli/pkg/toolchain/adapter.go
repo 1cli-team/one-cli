@@ -11,5 +11,4 @@ type Adapter interface {
 	UsesPackageManager() bool
 	InstallPlan(in PlanInput) CommandStep
 	PackageManagerForManifest(pm PackageManager) PackageManager
-	RenderWorkflow(in WorkflowInput) string
 }

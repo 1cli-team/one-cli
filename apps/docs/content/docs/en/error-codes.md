@@ -37,12 +37,6 @@ Field meanings:
 - **`error.context`**: structured data from the failure site. It often already contains the data needed for recovery.
 - **`error.remediation`**: recovery actions. Each item has `action`, `hint`, and sometimes `command`; agents should prefer these before guessing.
 
-## Agent Skill Installation
-
-### `SKILLS_INSTALL_FAILED`
-
-The bundled `one-cli` skill could not be installed. Check the agent ID and destination permissions with `one skills install --help`. If some targets were installed before a failure, `context.installed_to` lists those directories. Retrying is safe.
-
 ## Generic / Lifecycle
 
 Command-level failures, user cancellation, and internal serialization failures.
@@ -160,25 +154,6 @@ A backend sync failed or rolled back after manifest write. Re-run the command af
 
 Backend selection and generated workspace configuration.
 
-### `CI_DISABLE_CONFIRMATION_REQUIRED`
-
-A non-interactive `one ci disable` call did not pass `--yes`. Review the
-selected projects and rerun with explicit confirmation; no workflow was removed.
-
-### `CI_PROVIDER_UNKNOWN`
-
-The requested CI provider is not implemented by this build. Use the IDs in
-`error.context.available_providers`.
-
-### `CI_NOT_ENABLED`
-
-The selected project has no generated CI workflow. Run the command in
-`error.remediation`, usually `one ci enable <project>`, before syncing it.
-
-### `CI_RENDER_FAILED`
-
-CI backend failed while rendering workflow files.
-
 ### `LOCAL_ORCH_PORT_CONFLICT`
 
 Two projects requested the same dev port and the runner could not auto-allocate another.
@@ -218,7 +193,7 @@ Requested environment profile is missing or empty.
 
 ### `ENV_PULL_CONFLICT`
 
-Existing `.env` differs from pulled values. Inspect first or use `--force` intentionally.
+Reserved error code from the removed local environment-file workflow.
 
 ### `ENV_SET_KEY_REQUIRED`
 
@@ -238,20 +213,19 @@ Env name is not registered. `set` can create it; read commands require it to exi
 
 ### `ENV_BACKEND_INVALID`
 
-Env backend is not `dotenv` or `infisical`.
+The Infisical binding is invalid.
 
 ### `ENV_BACKEND_UNCHANGED`
 
-Workspace is already on the requested env backend. No action needed.
+Reserved error code from the removed local environment-file workflow.
 
 ### `ENV_MIGRATE_CONFLICT`
 
-Target backend has a same-name key with a different value. Use overwrite or no-sync intentionally.
+Reserved error code from the removed local environment-file workflow.
 
 ### `ENV_MIGRATE_PARTIAL`
 
-Some keys synced and others failed. Fix the cause and retry.
-
+Reserved error code from the removed local environment-file workflow.
 
 ## Infisical Backend
 
@@ -344,7 +318,7 @@ Two backend patches conflict on the same target.
 
 ### `RUN_DOTENV_MISSING`
 
-Local dotenv file required by `one run` is missing.
+Reserved error code from the removed local environment-file workflow.
 
 ### `SERVE_BIND_FORBIDDEN`
 

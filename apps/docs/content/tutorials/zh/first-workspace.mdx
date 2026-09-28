@@ -24,14 +24,12 @@ one --version
 one create my-workspace
 ```
 
-如果你从[模板页](/zh/tutorials/templates/)拿到了一条 `one create` 命令，直接粘贴 — 它已经填好了 `--add` / `--env-provider`。
+如果你从[模板页](/zh/tutorials/templates/)拿到了一条 `one create` 命令，直接粘贴 — 它已经填好了 `--preset` / `--project-names`。
 
 非交互式（脚本 / CI 用）：
 
 ```bash
-one create my-workspace \
-  --yes \
-  --env-provider dotenv
+one create my-workspace --yes
 ```
 
 关键 flag：
@@ -40,8 +38,7 @@ one create my-workspace \
 |---|---|
 | `--name <name>` | 工作区名（覆盖位置参数的 basename） |
 | `--yes` | 跳过所有交互，全部走默认 |
-| `--env-provider dotenv \| infisical` | 选 env 后端（默认 `dotenv`，要 Infisical 也可后期 one env switch infisical） |
-| `--add <template-id>[:<project-name>]` | 预先加一个项目，可重复 |
+| `--preset <id>` | 创建模板选择器编码的项目组合 |
 
 完整 flag 列表见 [`one create` 参考](/zh/docs/create/)。
 
@@ -56,7 +53,7 @@ ls -la
 
 ```
 .git/
-.github/
+.config/
 apps/
 one.manifest.json
 packages/
@@ -74,18 +71,17 @@ manifest 关键字段：
 - `version: 1` — schema 版本必须是 1
 - `workspace.id` — 自动生成的 UUID
 - `environments.names: ["dev", "preview", "prod"]`、`default: "dev"`
-- `domains.env` — 你选的 secrets backend (`dotenv` 或 `infisical`)
-- `domains.deploy`、`domains.container` — 此阶段还没设；后面给单个项目启用 deploy/container backend 时才会写
-- `projects: []` — 空数组（除非你传了 `--add`）
+- `env` — 可选 Infisical 绑定，配置前不存在
+- `projects: []` — 空数组（除非你传了 `--preset`）
 
 ## 4. `one create` 默认接上的能力
 
 每个新工作区都会默认接上两项基础能力，不用你选：
 
-| Domain | Backend | 给你啥 |
+| Capability | Implementation | 给你啥 |
 |---|---|---|
-| `env` | `dotenv`（或 `infisical`，看你选的） | 每个项目自己的 `.env` 管理 |
-| `dev` | `process` | `one add` 时把每个项目的 dev 命令写到 `projects[].domains.dev.command`，[`one dev`](/zh/tutorials/dev-local/) 用内置 supervisor 启动 |
+| `env` | Infisical | 绑定后直接注入进程，绑定前使用 shell 环境 |
+| `dev` | mise | `one add` 时把每个项目的 dev 命令写到 `projects[].dev.command`，[`one dev`](/zh/tutorials/dev-local/) 通过 mise 调度 |
 
 `one create` 和 `one add` 都不会默认配置 CI，也不会自动生成 workflow 文件。
 
@@ -106,7 +102,7 @@ git commit -m "chore: scaffold workspace"
 | `INVALID_NAME` | 名字有非法字符 | 用 `^[a-zA-Z0-9][a-zA-Z0-9_-]*$`（kebab-case 最稳） |
 | `WORKSPACE_NESTED_FORBIDDEN` | 在已有工作区里 `one create` | 退出去再起 |
 | `TARGET_EXISTS` | 目标目录已经存在且非空 | 换个名字，或清空目录 |
-| `TEMPLATE_NOT_FOUND` | `--add <id>` 的模板 id 不存在 | 跑 [`one templates list`](/zh/docs/templates-cmd/) 或回 [模板页](/zh/tutorials/templates/) |
+| `TEMPLATE_NOT_FOUND` | Preset 引用了不存在的模板 | 跑 [`one templates list`](/zh/docs/templates-cmd/) 或回 [模板页](/zh/tutorials/templates/) |
 
 完整码表：[错误码大全](/zh/docs/error-codes/)。
 

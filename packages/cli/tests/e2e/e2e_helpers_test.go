@@ -5,7 +5,7 @@ package cli_test
 // exec it, and compare JSON output against testdata/reference/ fixtures.
 //
 // Tests that depend on bin/one being present must call binaryPath; it
-// t.Skip's if the binary isn't built yet (CI runs `task build` first).
+// t.Skip's if the binary isn't built yet (CI runs `mise run build` first).
 
 import (
 	"bytes"
@@ -42,7 +42,7 @@ func expectedBuildVersion(t *testing.T) string {
 }
 
 // binaryPath returns the path to bin/one (bin/one.exe on Windows), skipping the test if the
-// binary hasn't been built. Run `task build` first.
+// binary hasn't been built. Run `mise run build` first.
 func binaryPath(t *testing.T) string {
 	t.Helper()
 	name := "one"
@@ -51,20 +51,9 @@ func binaryPath(t *testing.T) string {
 	}
 	bin := filepath.Join(repoRoot(t), "bin", name)
 	if _, err := os.Stat(bin); err != nil {
-		t.Skipf("binary not built; run `task build` first (%v)", err)
+		t.Skipf("binary not built; run `mise run build` first (%v)", err)
 	}
 	return bin
-}
-
-// indexByteString is the test-helper local copy of strings.IndexByte
-// (avoids pulling strings just for this).
-func indexByteString(s string, b byte) int {
-	for i := 0; i < len(s); i++ {
-		if s[i] == b {
-			return i
-		}
-	}
-	return -1
 }
 
 // runBinary execs bin/one with the given args from the current cwd.
@@ -288,6 +277,9 @@ func isolateHome(t *testing.T, dir string) {
 	t.Setenv("XDG_CACHE_HOME", filepath.Join(dir, ".cache"))
 	t.Setenv("HOME", dir)
 	t.Setenv("XDG_CONFIG_HOME", "")
+	for _, key := range []string{"XDG_DATA_HOME", "XDG_STATE_HOME", "MISE_CONFIG_DIR", "MISE_DATA_DIR", "MISE_STATE_DIR", "MISE_CACHE_DIR"} {
+		t.Setenv(key, filepath.Join(dir, key))
+	}
 	for _, key := range []string{"CODEX_HOME", "CLAUDE_CONFIG_DIR", "VIBE_HOME"} {
 		t.Setenv(key, "")
 	}
@@ -311,20 +303,13 @@ func readManifest(t *testing.T, workspaceRoot string) map[string]any {
 	return mustParseJSON(t, string(raw))
 }
 
-// jsonContains reports whether stdout looks like a JSON object that
-// contains the given top-level key. Cheap pre-check before mustParseJSON
-// when the binary may have printed nothing.
-func jsonContains(s, key string) bool {
-	return strings.Contains(s, "\""+key+"\":")
-}
-
 // bootstrapWorkspace runs `one create <tmp>/<name> -y` to produce a
 // fresh workspace under HOME-isolated tempdir, returning the workspace
 // root. The caller is expected to have already called isolateHome(t, tmp).
 //
 // Used by add / status E2E tests that need a real workspace to operate on but
-// don't themselves test create's output. Current defaults enable env/dotenv
-// and local development; CI, deployment, and container remain unset.
+// don't themselves test create's output. Infisical remains unbound and
+// the generated mise configuration is trusted in the isolated test home.
 func bootstrapWorkspace(t *testing.T, tmp, name string) string {
 	t.Helper()
 	target := filepath.Join(tmp, name)
@@ -334,87 +319,4 @@ func bootstrapWorkspace(t *testing.T, tmp, name string) string {
 			name, code, stdout, stderr)
 	}
 	return target
-}
-
-// patchManifestDomain rewrites one.manifest.json to set the workspace's
-// kind for one of the polymorphic domains (env / container) to a specific
-// backend. Used by tests that need to switch the selected backend (e.g. flip
-// env from dotenv to infisical for init/set/get tests) without going
-// through the configure flow (which would trigger preset project sync
-// side-effects).
-//
-// The current manifest stores backend selections under m.domains.<domain>.kind. ci / dev are
-// always-on and have no on-disk representation, so they're not
-// supported here.
-func patchManifestDomain(t *testing.T, ws, domain, pluginID string) {
-	t.Helper()
-	mp := filepath.Join(ws, "one.manifest.json")
-	raw, err := os.ReadFile(mp)
-	if err != nil {
-		t.Fatalf("read manifest: %v", err)
-	}
-	var doc map[string]any
-	if err := json.Unmarshal(raw, &doc); err != nil {
-		t.Fatalf("parse manifest: %v", err)
-	}
-	// Strip "<domain>/" prefix to get the bare backend name (kind).
-	kind := pluginID
-	if i := indexByteString(pluginID, '/'); i > 0 {
-		kind = pluginID[i+1:]
-	}
-	switch domain {
-	case "env", "container":
-		domains, _ := doc["domains"].(map[string]any)
-		if domains == nil {
-			domains = map[string]any{}
-		}
-		entry, _ := domains[domain].(map[string]any)
-		if entry == nil {
-			entry = map[string]any{}
-		}
-		entry["kind"] = kind
-		domains[domain] = entry
-		doc["domains"] = domains
-	default:
-		t.Fatalf("patchManifestDomain: unsupported domain %q in manifest", domain)
-	}
-	out, err := json.MarshalIndent(doc, "", "  ")
-	if err != nil {
-		t.Fatalf("marshal manifest: %v", err)
-	}
-	if err := os.WriteFile(mp, out, 0o644); err != nil {
-		t.Fatalf("write manifest: %v", err)
-	}
-}
-
-// clearManifestDomain rewrites one.manifest.json to drop the given domain
-// from the current schema. The manifest only persists env / container / deploy under
-// m.domains.<domain>; ci / dev are always-on and have no on-disk
-// representation, so passing them is a no-op.
-func clearManifestDomain(t *testing.T, ws, domain string) {
-	t.Helper()
-	mp := filepath.Join(ws, "one.manifest.json")
-	raw, err := os.ReadFile(mp)
-	if err != nil {
-		t.Fatalf("read manifest: %v", err)
-	}
-	var doc map[string]any
-	if err := json.Unmarshal(raw, &doc); err != nil {
-		t.Fatalf("parse manifest: %v", err)
-	}
-	if domains, ok := doc["domains"].(map[string]any); ok {
-		delete(domains, domain)
-		if len(domains) == 0 {
-			delete(doc, "domains")
-		} else {
-			doc["domains"] = domains
-		}
-	}
-	out, err := json.MarshalIndent(doc, "", "  ")
-	if err != nil {
-		t.Fatalf("marshal manifest: %v", err)
-	}
-	if err := os.WriteFile(mp, out, 0o644); err != nil {
-		t.Fatalf("write manifest: %v", err)
-	}
 }

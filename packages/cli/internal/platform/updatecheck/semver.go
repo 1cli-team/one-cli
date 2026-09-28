@@ -72,13 +72,33 @@ func parseTriple(v string) ([3]int, bool) {
 	return out, true
 }
 
-// normalizeTag re-shapes a release tag into a canonical `vX.Y.Z` (no
-// pre-release suffix). Empty / unparseable input → "" so the caller can
-// short-circuit cache writes.
+// normalizeTag accepts only stable, complete release tags from the update feed.
 func normalizeTag(raw string) string {
-	t, ok := parseTriple(raw)
-	if !ok {
+	raw = strings.TrimSpace(raw)
+	if !isStableRelease(raw) {
 		return ""
 	}
-	return "v" + strconv.Itoa(t[0]) + "." + strconv.Itoa(t[1]) + "." + strconv.Itoa(t[2])
+	return "v" + strings.TrimPrefix(raw, "v")
+}
+
+// isStableRelease admits only complete release versions. Development, local,
+// snapshot, prerelease, and unknown builds must never join the update pipeline.
+func isStableRelease(version string) bool {
+	version = strings.TrimPrefix(version, "v")
+	parts := strings.Split(version, ".")
+	if len(parts) != 3 {
+		return false
+	}
+	for _, part := range parts {
+		if part == "" || (len(part) > 1 && part[0] == '0') {
+			return false
+		}
+		for _, r := range part {
+			if r < '0' || r > '9' {
+				return false
+			}
+		}
+	}
+	triple, ok := parseTriple(version)
+	return ok && triple != [3]int{}
 }

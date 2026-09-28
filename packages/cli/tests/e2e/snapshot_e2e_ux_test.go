@@ -20,7 +20,7 @@ func TestSnapshot_E2E_CreateDailyText(t *testing.T) {
 	if code != 0 {
 		t.Fatalf("create text flow failed: exit=%d stderr=%q", code, stderr)
 	}
-	want := "✓ 工作区已创建：demo\n  位置：~/demo\n  环境变量来源：本地 .env 文件\n  本地开发：one dev\n\n下一步：\n  cd demo\n  one add\n"
+	want := "✓ 工作区已创建：demo\n  位置：~/demo\n  环境变量来源：infisical\n  本地开发：one dev\n\n下一步：\n  cd demo\n  one add\n"
 	if stdout != want {
 		t.Fatalf("unexpected create success text:\n--- want\n%s--- got\n%s", want, stdout)
 	}
@@ -45,32 +45,41 @@ func TestSnapshot_E2E_HelpDailyAndCompleteCatalogues(t *testing.T) {
 	tmp := t.TempDir()
 	isolateHome(t, tmp)
 
-	daily, stderr, code := runBinaryIn(t, tmp, "--help")
-	if code != 0 || stderr != "" {
-		t.Fatalf("one --help failed: exit=%d stderr=%q", code, stderr)
-	}
-	for _, command := range []string{"create", "add", "dev", "build", "env", "login"} {
-		if !strings.Contains(daily, "  "+command) {
-			t.Errorf("daily help missing %q:\n%s", command, daily)
-		}
-	}
-	for _, command := range []string{"ci", "templates", "run", "serve"} {
-		if strings.Contains(daily, "\n  "+command) {
-			t.Errorf("daily help should not advertise advanced command %q:\n%s", command, daily)
-		}
-	}
+	for _, locale := range []string{"en_US.UTF-8", "zh_CN.UTF-8"} {
+		t.Run(locale, func(t *testing.T) {
+			t.Setenv("LC_ALL", locale)
+			daily, stderr, code := runBinaryIn(t, tmp, "--help")
+			if code != 0 || stderr != "" {
+				t.Fatalf("one --help failed: exit=%d stderr=%q", code, stderr)
+			}
+			for _, command := range []string{"create", "add", "env", "login", "run", "exec"} {
+				if !strings.Contains(daily, "\n  "+command+" ") {
+					t.Errorf("daily help missing %q:\n%s", command, daily)
+				}
+			}
+			for _, command := range []string{"templates", "serve"} {
+				if strings.Contains(daily, "\n  "+command+" ") {
+					t.Errorf("daily help should not advertise advanced command %q:\n%s", command, daily)
+				}
+			}
 
-	all, stderr, code := runBinaryIn(t, tmp, "help", "--all")
-	if code != 0 || stderr != "" {
-		t.Fatalf("one help --all failed: exit=%d stderr=%q", code, stderr)
-	}
-	for _, command := range []string{"create", "add", "dev", "build", "env", "login", "ci", "templates", "run", "serve"} {
-		if !strings.Contains(all, "  "+command) {
-			t.Errorf("complete help missing %q:\n%s", command, all)
-		}
-	}
-	if !strings.Contains(all, "\n  skills") || !strings.Contains(all, "install") {
-		t.Errorf("complete help is missing skills install:\n%s", all)
+			all, stderr, code := runBinaryIn(t, tmp, "help", "--all")
+			if code != 0 || stderr != "" {
+				t.Fatalf("one help --all failed: exit=%d stderr=%q", code, stderr)
+			}
+			for _, command := range []string{"create", "add", "env", "login", "logout", "whoami", "run", "exec", "templates", "serve", "init", "locale", "mise", "hk"} {
+				if !strings.Contains(all, "\n  "+command+" ") {
+					t.Errorf("complete help missing %q:\n%s", command, all)
+				}
+			}
+			for _, command := range []string{"dev", "build", "test", "lint", "ci", "skills"} {
+				for _, help := range []string{daily, all} {
+					if strings.Contains(help, "\n  "+command+" ") {
+						t.Errorf("help advertises task or removed command %q as built-in:\n%s", command, help)
+					}
+				}
+			}
+		})
 	}
 }
 
@@ -97,7 +106,7 @@ func TestSnapshot_E2E_WorkspaceOverviewAndDeferredDeployment(t *testing.T) {
 	}
 	m := readManifest(t, ws)
 	projects := m["projects"].([]any)
-	domains := projects[0].(map[string]any)["domains"].(map[string]any)
+	domains, _ := projects[0].(map[string]any)["domains"].(map[string]any)
 	if _, exists := domains["deploy"]; exists {
 		t.Fatalf("ordinary add configured deployment: %v", domains["deploy"])
 	}
@@ -111,13 +120,13 @@ func TestSnapshot_E2E_WorkspaceOverviewAndDeferredDeployment(t *testing.T) {
 	}
 	summary := mustParseJSON(t, stdout)
 	project := summary["projects"].([]any)[0].(map[string]any)
-	if project["deployment_configured"] != nil || summary["next_command"] != "one dev web" {
+	if project["deployment_configured"] != nil || summary["next_command"] != "one dev -p web" {
 		t.Fatalf("unexpected project summary: %v", summary)
 	}
 
 	savedPath := os.Getenv("PATH")
 	t.Setenv("PATH", t.TempDir())
-	_, stderr, code = runBinaryIn(t, ws, "dev", "web", "-o", "json")
+	_, stderr, code = runBinaryIn(t, ws, "exec", "-p", "web", "-o", "json", "--", "pnpm", "dev")
 	t.Setenv("PATH", savedPath)
 	if code == 0 {
 		t.Fatal("dev should report that the native package manager is unavailable")
@@ -127,12 +136,12 @@ func TestSnapshot_E2E_WorkspaceOverviewAndDeferredDeployment(t *testing.T) {
 		t.Fatalf("unexpected missing-tool error: %v", devErr)
 	}
 
-	_, stderr, code = runBinaryIn(t, ws, "deploy", "-o", "json")
+	_, stderr, code = runBinaryIn(t, ws, "deploy", "--dry-run", "-o", "json")
 	if code == 0 {
 		t.Fatal("removed deploy command should fail")
 	}
 	deployErr := mustParseJSON(t, firstJSONLine(stderr))
-	if deployErr["error"].(map[string]any)["code"] != "UNKNOWN_COMMAND" {
+	if !strings.Contains(deployErr["error"].(map[string]any)["message"].(string), "//:deploy") {
 		t.Fatalf("unexpected removed-command error: %v", deployErr)
 	}
 	manifestAfter, err := os.ReadFile(filepath.Join(ws, "one.manifest.json"))
@@ -144,7 +153,7 @@ func TestSnapshot_E2E_WorkspaceOverviewAndDeferredDeployment(t *testing.T) {
 	}
 }
 
-func TestSnapshot_E2E_EnvSummarySafeSetAndList(t *testing.T) {
+func TestSnapshot_E2E_EnvSummaryRequiresExplicitValue(t *testing.T) {
 	tmp := t.TempDir()
 	isolateHome(t, tmp)
 	ws := bootstrapWorkspace(t, tmp, "demo")
@@ -154,7 +163,7 @@ func TestSnapshot_E2E_EnvSummarySafeSetAndList(t *testing.T) {
 		t.Fatalf("env summary failed: exit=%d stderr=%q", code, stderr)
 	}
 	summary := mustParseJSON(t, stdout)
-	if summary["schema"] != "one-cli/env-summary/v1" || summary["source"] != "dotenv" || summary["default_environment"] != "dev" {
+	if summary["schema"] != "one-cli/env-summary/v1" || summary["source"] != "" || summary["default_environment"] != "dev" {
 		t.Fatalf("unexpected env summary: %v", summary)
 	}
 
@@ -167,16 +176,6 @@ func TestSnapshot_E2E_EnvSummarySafeSetAndList(t *testing.T) {
 		t.Fatalf("unexpected missing-value error: %v", setErr)
 	}
 
-	if _, stderr, code = runBinaryIn(t, ws, "env", "set", "TEST_KEY", "super-secret", "--yes", "-o", "json"); code != 0 {
-		t.Fatalf("env set failed: exit=%d stderr=%s", code, stderr)
-	}
-	stdout, stderr, code = runBinaryIn(t, ws, "env", "list", "-o", "text")
-	if code != 0 || stderr != "" {
-		t.Fatalf("env list failed: exit=%d stderr=%q", code, stderr)
-	}
-	if !strings.Contains(stdout, "TEST_KEY") || strings.Contains(stdout, "super-secret") {
-		t.Fatalf("env list must show names only: %q", stdout)
-	}
 }
 
 func TestSnapshot_E2E_EnvSummaryYAMLKeepsStableProtocolFields(t *testing.T) {
@@ -192,7 +191,7 @@ func TestSnapshot_E2E_EnvSummaryYAMLKeepsStableProtocolFields(t *testing.T) {
 	if err := yaml.Unmarshal([]byte(stdout), &summary); err != nil {
 		t.Fatalf("decode env YAML output: %v\n%s", err, stdout)
 	}
-	if summary["schema"] != "one-cli/env-summary/v1" || summary["source"] != "dotenv" || summary["default_environment"] != "dev" {
+	if summary["schema"] != "one-cli/env-summary/v1" || summary["source"] != "" || summary["default_environment"] != "dev" {
 		t.Fatalf("unexpected env YAML contract: %v", summary)
 	}
 }

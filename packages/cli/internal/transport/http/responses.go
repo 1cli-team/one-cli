@@ -77,6 +77,12 @@ func statusForCode(code string) int {
 		return http.StatusNotFound
 	case string(cliErrors.INFISICAL_FOLDER_NOT_FOUND), string(cliErrors.INFISICAL_PROJECT_NOT_FOUND):
 		return http.StatusNotFound
+	case string(cliErrors.TEMPLATE_NOT_FOUND):
+		return http.StatusNotFound
+	case string(cliErrors.TARGET_EXISTS):
+		return http.StatusConflict
+	case string(cliErrors.INVALID_NAME), string(cliErrors.TEMPLATE_REQUIRED), string(cliErrors.SUBPROJECT_NAME_REQUIRED):
+		return http.StatusBadRequest
 	case string(cliErrors.ENV_SET_OVERWRITE_REQUIRED):
 		return http.StatusConflict
 	case string(cliErrors.ENV_BACKEND_UNCHANGED):

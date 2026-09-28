@@ -81,7 +81,7 @@ func PlanInstall(ctx context.Context, root, binary string, migrateHusky bool) (*
 				return nil, err
 			}
 		}
-		body := "[ -f hk.pkl ] || exit 0\n" +
+		body := "[ -f .config/hk.pkl ] || exit 0\n" +
 			"if [ -x " + shellQuote(filepath.ToSlash(binary)) + " ]; then\n  exec " + shellQuote(filepath.ToSlash(binary)) + " hk run " + hook + " \"$@\"\nfi\n" +
 			"exec one hk run " + hook + " \"$@\"\n"
 		content := fmt.Sprintf("#!/bin/sh\n%s%x\n# One supplies mise; no shell activation is needed.\n%s", launcherHeader, sha256.Sum256([]byte(body)), body)

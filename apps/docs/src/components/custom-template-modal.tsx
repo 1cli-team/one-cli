@@ -29,7 +29,6 @@ import {
 } from "@/lib/create-command";
 
 type ModalLocale = "zh" | "en";
-type EnvProvider = "dotenv" | "infisical";
 type KindFilter = "all" | TemplateKind;
 
 type Selection = {
@@ -51,7 +50,7 @@ const copy = {
   zh: {
     title: "自定义模板",
     subtitle:
-      "选择需要的模板与环境来源，右侧会实时生成单条 one create 命令。",
+      "选择需要的模板，右侧会实时生成单条 one create 命令。",
     close: "关闭",
     kinds: {
       all: "全部",
@@ -73,7 +72,7 @@ const copy = {
   en: {
     title: "Build your own",
     subtitle:
-      "Pick templates and an environment source; a single one create command appears live on the right.",
+      "Pick templates; a single one create command appears live on the right.",
     close: "Close",
     kinds: {
       all: "All",
@@ -107,7 +106,6 @@ export function CustomTemplateModal({
   const [activeKind, setActiveKind] = useState<KindFilter>("all");
   const [selection, setSelection] = useState<Selection[]>([]);
   const [workspaceName, setWorkspaceName] = useState("my-workspace");
-  const [env, setEnv] = useState<EnvProvider>("dotenv");
   const [copied, setCopied] = useState(false);
 
   const visibleTemplates = useMemo<TemplateMeta[]>(() => {
@@ -132,10 +130,9 @@ export function CustomTemplateModal({
     });
     return buildCustomPresetCommand({
       workspaceName,
-      env,
       projects,
     });
-  }, [selection, env, workspaceName]);
+  }, [selection, workspaceName]);
 
   function attemptAdd(template: TemplateMeta) {
     addToSelection(template);
@@ -301,23 +298,7 @@ export function CustomTemplateModal({
                   <label className="block text-xs font-semibold uppercase tracking-wide text-stone-500">
                     {text.envLabel}
                   </label>
-                  <div className="mt-1.5 inline-flex rounded-md border border-stone-200 bg-white p-0.5 text-xs">
-                    {(["dotenv", "infisical"] as const).map((opt) => (
-                      <button
-                        key={opt}
-                        type="button"
-                        onClick={() => setEnv(opt)}
-                        className={[
-                          "h-8 rounded px-3 font-medium transition",
-                          env === opt
-                            ? "bg-stone-900 text-white"
-                            : "text-stone-600 hover:text-stone-900",
-                        ].join(" ")}
-                      >
-                        {opt}
-                      </button>
-                    ))}
-                  </div>
+                  <p className="mt-1.5 text-sm text-stone-900">Infisical</p>
                 </div>
 
                 <div>

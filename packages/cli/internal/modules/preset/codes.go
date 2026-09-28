@@ -29,7 +29,7 @@ const PresetIDPrefix = "preset:"
 
 // Env provider codes (v1). Single ASCII char.
 var envCodes = map[byte]string{
-	'd': "dotenv",
+	'd': "dotenv", // Reserved historical code; creation rejects this source.
 	'i': "infisical",
 }
 
@@ -49,9 +49,6 @@ func invertByteMap(m map[byte]string) map[string]byte {
 // EnvProviderForCode returns the env provider id for a code, or "" if
 // the code is not recognised.
 func EnvProviderForCode(c byte) string { return envCodes[c] }
-
-// CodeForEnvProvider returns the env code for a provider, or 0 if none.
-func CodeForEnvProvider(name string) byte { return envCodeReverse[name] }
 
 // EnvCodesSnapshot returns a stable snapshot of (code, env) pairs.
 func EnvCodesSnapshot() []CodeEntry { return snapshotByteMap(envCodes) }

@@ -7,16 +7,8 @@ import (
 	"path/filepath"
 )
 
-// DefaultRootDirs are the directories `discoverProjects` walks when
-// scanning a workspace. These are hard-wired: workspaces always
-// follow the layout produced by `one create`. (User overrides via
-// `manifest.workspace.roots` were dropped from the manifest.)
-var DefaultRootDirs = []string{"apps", "services", "packages"}
-
 // PackageJSON captures the slice of package.json that One CLI cares about.
-// As of manifest v2 the workspace marker / configuration moved out of
-// package.json entirely; this struct only keeps the fields needed for
-// dependency-based project classification.
+// These fields identify the package manager and dependencies used by project summaries.
 type PackageJSON struct {
 	Name            string            `json:"name"`
 	PackageManager  string            `json:"packageManager,omitempty"`
@@ -40,29 +32,4 @@ func ReadPackageJSON(projectRoot string) (*PackageJSON, error) {
 		return nil, err
 	}
 	return &p, nil
-}
-
-// ResolveRootDirs returns the workspace scan-root dirs. The current manifest hard-wires the
-// list to DefaultRootDirs; the override parameter is preserved only for
-// backwards-compatible call sites passing nil. Non-nil override is honored
-// (it lets `--roots` flag work for ad-hoc invocations) but the manifest
-// itself never carries a roots override.
-func ResolveRootDirs(_ string, override []string) ([]string, error) {
-	if len(override) > 0 {
-		return dedupe(override), nil
-	}
-	return append([]string{}, DefaultRootDirs...), nil
-}
-
-func dedupe(in []string) []string {
-	seen := make(map[string]struct{}, len(in))
-	out := make([]string, 0, len(in))
-	for _, v := range in {
-		if _, ok := seen[v]; ok {
-			continue
-		}
-		seen[v] = struct{}{}
-		out = append(out, v)
-	}
-	return out
 }

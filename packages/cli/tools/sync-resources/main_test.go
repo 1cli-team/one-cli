@@ -6,17 +6,18 @@ import (
 	"testing"
 )
 
-func TestSyncBundledCopiesCanonicalAssetsAndStripsNestedModules(t *testing.T) {
+func TestSyncBundledCopiesCanonicalAssetsAndMapsModuleFiles(t *testing.T) {
 	root := t.TempDir()
 	writeTestFile(t, root, "packages/templates/registry.json", "{}")
 	writeTestFile(t, root, "packages/templates/go-api/go.mod", "module example")
 	writeTestFile(t, root, "packages/templates/go-api/main.go", "package main")
 	retiredAssets := []string{
-		"AGENTS.md", "CLAUDE.md", "SKILL.md", "CLAUDE.md.hbs",
+		"AGENTS.md", "CLAUDE.md", "SKILL.md",
 		".one/agents/conventions.md", ".agents/skills/example/references/guide.md",
-		"nested/AGENTS.md.hbs",
-		"pnpm-lock.yaml", "nested/package-lock.json", "yarn.lock.hbs",
+		"nested/AGENTS.md",
+		"pnpm-lock.yaml", "nested/package-lock.json", "yarn.lock",
 		"bun.lock", "bun.lockb", "npm-shrinkwrap.json",
+		"node_modules/p/a.js", "dist/app.js", "apps/ui/build/app.js", "go.work", "go.work.sum", "tsconfig.tsbuildinfo",
 	}
 	for _, rel := range retiredAssets {
 		writeTestFile(t, root, "packages/templates/go-api/"+rel, "retired agent guidance")
@@ -29,12 +30,12 @@ func TestSyncBundledCopiesCanonicalAssetsAndStripsNestedModules(t *testing.T) {
 		t.Fatalf("syncBundled: %v", err)
 	}
 	bundled := filepath.Join(root, "packages", "cli", "internal", "resources", "bundled")
-	for _, rel := range []string{"registry.json", "_templates/go-api/main.go", "_skills/one-cli/SKILL.md"} {
+	for _, rel := range []string{"registry.json", "_templates/go-api/main.go", "_templates/go-api/_go.mod"} {
 		if _, err := os.Stat(filepath.Join(bundled, filepath.FromSlash(rel))); err != nil {
 			t.Errorf("expected %s: %v", rel, err)
 		}
 	}
-	for _, rel := range []string{"_templates/registry.json", "_templates/go-api/go.mod", "_skills/one-migrate", "_skills/one-cli/references"} {
+	for _, rel := range []string{"_templates/registry.json", "_templates/go-api/go.mod", "_skills"} {
 		if _, err := os.Stat(filepath.Join(bundled, filepath.FromSlash(rel))); !os.IsNotExist(err) {
 			t.Errorf("expected %s to be stripped, stat err=%v", rel, err)
 		}
@@ -68,5 +69,23 @@ func writeTestFile(t *testing.T, root, rel, content string) {
 	}
 	if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
 		t.Fatal(err)
+	}
+}
+
+func TestSyncBundledRejectsReservedNamesBeforeReplacingTemplates(t *testing.T) {
+	for _, bad := range []string{"_go.mod", "main.go.hbs"} {
+		t.Run(bad, func(t *testing.T) {
+			root := t.TempDir()
+			writeTestFile(t, root, "packages/templates/registry.json", "{}")
+			writeTestFile(t, root, "packages/templates/go-api/"+bad, "invalid")
+			writeTestFile(t, root, "packages/cli/internal/resources/bundled/_templates/keep", "previous bundle")
+			if err := syncBundled(root); err == nil {
+				t.Fatal("reserved source name accepted")
+			}
+			data, err := os.ReadFile(filepath.Join(root, "packages/cli/internal/resources/bundled/_templates/keep"))
+			if err != nil || string(data) != "previous bundle" {
+				t.Fatal("replaced previous bundle on validation failure")
+			}
+		})
 	}
 }

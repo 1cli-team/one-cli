@@ -1,5 +1,7 @@
 # mise 按需获取与 One 托管 Implementation Plan
 
+> 2026-09-28：runtime 获取策略仍保留；命令与任务执行路径以 [工作区任务统一方案](2026-09-28-workspace-task-unification.md) 为准。
+
 > 使用 `executing-plans` 分步执行。用户已授权实施；验证结果记录在文末。
 
 **Goal:** One 发布包不包含 mise 程序或压缩包；优先使用系统中可用的 mise，否则按需从官方获取，并能在外部安装或托管程序被删除后恢复运行。

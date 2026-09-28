@@ -72,6 +72,16 @@ one --version
 
 Windows 归档名是 `one-cli_windows_amd64.zip`。
 
+## 自动更新
+
+正式稳定版在普通终端使用时，每 24 小时最多启动一次独立后台更新进程。它从官方 GitHub Release 下载对应平台归档和 `checksums.txt`，校验 SHA256 与程序版本后替换当前安装。当前命令继续运行，新版本从下一次调用生效；Windows 会等发起更新的命令退出后再替换程序。
+
+下载、校验或写入失败时保留当前程序；已发现新版本时会提示失败原因和手动更新命令。如果下载期间程序已被重新构建或替换，更新器会放弃覆盖。更新失败也按 24 小时间隔重试。
+
+**开发构建完全跳过更新检查、下载、安装和提示。** `go build`、`mise run build`、`mise run build-local`、`mise run install` 生成的包默认关闭更新，即使设置了 `RELEASE_VERSION`。只有发布打包流程启用更新标记，并且版本必须是完整的稳定版本号；`-dev`、`-local`、snapshot 和其他预发布版本都不会自动更新。
+
+CI、JSON/YAML 等结构化输出、`--dry-run` 以及内部任务进程不启动更新。更新状态位于 `$XDG_CACHE_HOME/one/update-check.json`，默认是 `~/.cache/one/update-check.json`。
+
 ## 升级与降级
 
 `install.sh` 和 `install.ps1` 都会先读已装 `one --version` 再决定怎么处理：
@@ -87,11 +97,11 @@ Windows 归档名是 `one-cli_windows_amd64.zip`。
 
 ## One 自动管理 mise
 
-新建 workspace 的 `one run` 和 `one dev` 使用 mise 管理工具环境。**One 安装包不包含 mise；实际使用时优先采用 PATH 中兼容的 mise，否则复用或从官方 GitHub Release 下载固定版本 2026.9.7。** 下载后校验压缩包和程序 SHA256，再原子安装。支持 macOS、Linux 的 x64 / arm64 和 Windows x64；Linux 使用 musl 资源。[官方二进制分发说明](https://mise.jdx.dev/installing-mise.html)。
+新建 workspace 的 `one exec` 和 `one dev` 使用 mise 管理工具环境。**One 安装包不包含 mise；实际使用时优先采用 PATH 中兼容的 mise，否则复用或从官方 GitHub Release 下载固定版本 2026.9.7。** 下载后校验压缩包和程序 SHA256，再原子安装。支持 macOS、Linux 的 x64 / arm64 和 Windows x64；Linux 使用 musl 资源。[官方二进制分发说明](https://mise.jdx.dev/installing-mise.html)。
 
 每次需要 runtime 时重新检查：系统 mise 被删除、版本过旧或不可执行时，One 转用托管版本；托管程序缺失或损坏时自动恢复。系统版本重新可用后恢复系统优先。显式设置 `ONE_MISE_BINARY` 的路径或版本有误时直接报错，不自动回退。
 
-不需要激活 shell。配置信任遵循 mise 自身规则；设置 `MISE_PARANOID=1` 后需先显式审查并信任配置。旧 workspace 在显式启用前继续沿用已有工具，详见 [`one init mise`](/zh/docs/login/#mise-工作区工具配置)。
+不需要激活 shell。创建工作区和添加项目会为完整的 One 生成配置登记文件级信任，包括 `MISE_PARANOID=1` 模式；自定义配置仍按 mise 规则审查和信任。旧 workspace 在显式启用前继续沿用已有工具，详见 [`one init mise`](/zh/docs/login/#mise-工作区工具配置)。
 
 | 托管内容 | 默认目录 | 自定义根目录 |
 |---|---|---|
@@ -112,19 +122,19 @@ One 仅修改子进程 PATH。托管版本随 One 更新，自动升级和更新
 | `ONE_MISE_BINARY` | 显式指定 mise 可执行文件的绝对路径，外部程序最低支持版本为 2026.9.7 |
 | `ONE_RUNTIME=builtin` | 临时诊断时使用机器原有工具，跳过 mise |
 
-下载、迁移、写入或校验失败返回 `MISE_INSTALL_FAILED`；检查到 GitHub Releases 的网络/代理及托管目录权限后重试原命令。显式外部文件不存在时返回 `MISE_NOT_FOUND`。帮助、`--dry-run`、创建项目和生成配置不准备 runtime。
+下载、迁移、写入或校验失败返回 `MISE_INSTALL_FAILED`；检查到 GitHub Releases 的网络/代理及托管目录权限后重试原命令。显式外部文件不存在时返回 `MISE_NOT_FOUND`。帮助、`--dry-run` 和配置规划不准备 runtime。创建工作区和添加项目会准备 runtime 以信任完整的 One 生成配置；失败时保留文件并返回警告。
 
 需要访问 mise 的原生命令时，使用 `one mise`，无需把托管程序目录加入 PATH：
 
 ```bash
 one mise --version
 one mise doctor
-one mise trust .mise/conf.d/one.toml
-one mise trust apps/web/.mise/conf.d/one.toml
+one mise trust mise.toml
+one mise trust apps/web/mise.toml
 one mise exec -- pnpm install
 ```
 
-`trust` 请在审查对应配置后运行；自定义配置同样遵循 mise 的信任规则。安装依赖的例子应在 workspace 根目录执行。`one mise` 原样转发参数、IO 和退出码，不额外注入 One 项目密钥；需要项目密钥时继续使用 `one run`。`one mise --help` 展示 One 的入口说明，不探测或下载 mise。
+`trust` 请在审查对应配置后运行；自定义配置同样遵循 mise 的信任规则。安装依赖的例子应在 workspace 根目录执行。`one mise` 原样转发参数、IO 和退出码，不额外注入 One 项目密钥；需要项目密钥时继续使用 `one exec`。`one mise --help` 展示 One 的入口说明，不探测或下载 mise。
 
 ## Infisical 登录
 
@@ -174,8 +184,8 @@ rm ~/.local/bin/one
 ```bash
 git clone https://github.com/1cli-team/one-cli
 cd one-cli
-brew install go go-task     # macOS；Linux 类比
-task install                 # 打包 Dashboard + CLI，再创建当前平台的本地启动器
+brew install mise     # macOS；Linux 类比
+mise run install                 # 打包 Dashboard + CLI，再创建当前平台的本地启动器
 hash -r
 which one
 one --version
@@ -189,7 +199,3 @@ Windows 会创建 `~/.local/bin/one.exe`；如果系统不允许创建文件符�
 ## 装完了？
 
 跳到 [快速开始](/zh/docs/quick-start/) 跑通第一个工作区。
-
-## Agent skill
-
-运行 `one skills install`，将内置 `one-cli` skill 安装到 coding agent 的用户级 skills 目录。目标选择和支持的 Agent 见 `one skills install --help`，详见 [Skills](./skills)。

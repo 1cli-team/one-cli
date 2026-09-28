@@ -29,6 +29,7 @@ export const GeneralForm: React.FC<ProjectSettingsFormProps> = ({
 	const initial: ProjectGeneralPatch = {
 		buildVersion: project.buildVersion ?? "",
 		devCommand: project.devCommand ?? "",
+		devURL: project.devURL ?? "",
 	};
 	const value = staged ?? initial;
 	const build = project.build;
@@ -44,6 +45,7 @@ export const GeneralForm: React.FC<ProjectSettingsFormProps> = ({
 			labels: {
 				buildVersion: "projectInspector.general.buildVersion",
 				devCommand: "projectInspector.general.devCommand",
+				devURL: "projectInspector.general.devURL",
 			},
 		});
 	}
@@ -102,6 +104,19 @@ export const GeneralForm: React.FC<ProjectSettingsFormProps> = ({
 							readOnly={readOnly}
 						/>
 					</ProjectField>
+					<ProjectField label={t("projectInspector.general.devURL")} htmlFor="project-dev-url">
+						<Input
+							id="project-dev-url"
+							value={value.devURL ?? ""}
+							placeholder="http://localhost:3000"
+							readOnly={readOnly}
+							onChange={(event) => update({ ...value, devURL: event.target.value })}
+							aria-describedby="project-dev-url-hint"
+						/>
+						<p id="project-dev-url-hint" className="text-xs text-muted-foreground">
+							{t("projectInspector.general.devURLHint")}
+						</p>
+					</ProjectField>
 					<div className="@xl:col-span-2">
 						<ProjectField
 							label={t("projectInspector.general.buildCommand")}
@@ -128,6 +143,54 @@ export const GeneralForm: React.FC<ProjectSettingsFormProps> = ({
 					</div>
 				</div>
 			</div>
+			{project.tasks && (
+				<section
+					className="space-y-3 rounded-lg border border-border bg-card p-5"
+					aria-label={t("projectInspector.general.tasks")}
+				>
+					<SectionHeading icon={Terminal} title={t("projectInspector.general.tasks")} />
+					{project.tasks.status === "unavailable" ? (
+						<p className="text-sm text-muted-foreground">
+							{t("projectInspector.general.tasksUnavailable")}
+						</p>
+					) : project.tasks.entries.length === 0 ? (
+						<p className="text-sm text-muted-foreground">
+							{t("projectInspector.general.tasksEmpty")}
+						</p>
+					) : (
+						project.tasks.entries.map((task) => (
+							<div
+								key={task.name}
+								className="space-y-1 border-t border-border pt-3 text-sm break-words"
+							>
+								<p className="font-mono">{task.name}</p>
+								<p className="text-muted-foreground">
+									{t("projectInspector.general.taskSource", { source: task.source })}
+								</p>
+								<p>
+									{t(
+										task.cacheEnabled
+											? "projectInspector.general.taskCacheOn"
+											: "projectInspector.general.taskCacheOff",
+									)}
+								</p>
+								{!!task.depends?.length && (
+									<p>
+										{t("projectInspector.general.taskDepends", { tasks: task.depends.join(", ") })}
+									</p>
+								)}
+								{!!task.outputs?.length && (
+									<p>
+										{t("projectInspector.general.taskOutputs", {
+											outputs: task.outputs.join(", "),
+										})}
+									</p>
+								)}
+							</div>
+						))
+					)}
+				</section>
+			)}
 		</ManifestDraftLayout>
 	);
 };

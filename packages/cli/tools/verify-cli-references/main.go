@@ -1,6 +1,6 @@
 // verify-cli-references walks every prose / template doc in the repo and
 // asserts that any `one <subcommand>` reference inside a code-span or
-// fenced code block names a real, currently-registered subcommand.
+// fenced code block names a registered command or a documented task shorthand.
 //
 // Run via Taskfile: `task verify-cli-references`. Exits non-zero with a
 // list of file:line offenders on any drift.
@@ -12,7 +12,7 @@
 // What we scan:
 //   - Top-level: README.md, CONTRIBUTING.md
 //   - apps/docs/content/docs/**/*.{md,mdx}
-//   - packages/templates/<id>/README.md and README.md.hbs
+//   - packages/templates/<id>/README.md
 //
 // Where we look (intentional):
 //   - Inside `inline code spans` and ```fenced code blocks```.
@@ -54,17 +54,24 @@ func run() error {
 	if err != nil {
 		return err
 	}
-	var problems []string
+	contents := make(map[string][]byte, len(files))
 	for _, f := range files {
 		b, err := os.ReadFile(f)
 		if err != nil {
 			return fmt.Errorf("read %s: %w", f, err)
 		}
-		problems = append(problems, scanFile(f, b, valid)...)
+		contents[f] = b
+	}
+	// Task guides declare names with one run <task>. Their shorthand may
+	// also appear in quick starts and template READMEs elsewhere in the docs.
+	references := collectReferences(valid, contents)
+	var problems []string
+	for _, f := range files {
+		problems = append(problems, scanFile(f, contents[f], references)...)
 	}
 	if len(problems) > 0 {
 		return fmt.Errorf(
-			"found unknown `one <subcommand>` references in docs:\n  %s\n\nFix one of:\n  - Rename to a registered command (see `one --help`).\n  - If the reference is intentional (migration guide / changelog), wrap the section in:\n      <!-- verify-cli:ignore-start -->\n      ... section with deprecated command names ...\n      <!-- verify-cli:ignore-end -->",
+			"found unknown `one <subcommand>` references in docs:\n  %s\n\nFix one of:\n  - Rename to a registered command (see `one --help`) or a documented task (one run <task>).\n  - If the reference is intentional (migration guide / changelog), wrap the section in:\n      <!-- verify-cli:ignore-start -->\n      ... section with deprecated command names ...\n      <!-- verify-cli:ignore-end -->",
 			strings.Join(problems, "\n  "),
 		)
 	}
@@ -126,7 +133,6 @@ func docFiles() ([]string, error) {
 	}
 	roots := []walkSpec{
 		{repoRel("apps", "docs", "content", "docs"), []string{".md", ".mdx"}},
-		{repoRel("skills"), []string{".md"}},
 	}
 	for _, w := range roots {
 		if err := filepath.WalkDir(w.root, func(path string, d fs.DirEntry, err error) error {
@@ -150,7 +156,6 @@ func docFiles() ([]string, error) {
 
 	for _, glob := range []string{
 		filepath.Join(repoRel("packages", "templates"), "*", "README.md"),
-		filepath.Join(repoRel("packages", "templates"), "*", "README.md.hbs"),
 	} {
 		matches, err := filepath.Glob(glob)
 		if err != nil {
@@ -168,12 +173,28 @@ var (
 	// that could plausibly be a subcommand. The token must start with
 	// a-z to filter out flags (`-h`), placeholders (`<dir>`), and meta
 	// (`--version`).
-	oneCmdRE = regexp.MustCompile(`\bone\s+([a-z][a-z0-9-]*)`)
+	oneCmdRE = regexp.MustCompile(`\bone\s+([a-z][a-z0-9:-]*)`)
 
 	// codeSpanRE matches inline `code spans` (single backticks). Avoids
 	// crossing newlines.
 	codeSpanRE = regexp.MustCompile("`([^`\n]+)`")
 )
+
+// collectReferences adds documented task names without changing the command
+// catalogue. Undeclared names still fail the reference check to catch typos.
+func collectReferences(commands map[string]struct{}, documents map[string][]byte) map[string]struct{} {
+	valid := make(map[string]struct{}, len(commands))
+	for name := range commands {
+		valid[name] = struct{}{}
+	}
+	taskRE := regexp.MustCompile(`\bone run ([a-z][a-z0-9:-]*)`)
+	for _, content := range documents {
+		for _, match := range taskRE.FindAllSubmatch(content, -1) {
+			valid[string(match[1])] = struct{}{}
+		}
+	}
+	return valid
+}
 
 func scanFile(path string, content []byte, valid map[string]struct{}) []string {
 	var problems []string
@@ -218,7 +239,7 @@ func scanFile(path string, content []byte, valid map[string]struct{}) []string {
 				cmd := m[1]
 				if _, ok := valid[cmd]; !ok {
 					problems = append(problems, fmt.Sprintf(
-						"%s:%d: `one %s …` — `%s` is not a registered subcommand",
+						"%s:%d: `one %s …` — `%s` is not a registered command or documented task",
 						path, i+1, cmd, cmd,
 					))
 				}

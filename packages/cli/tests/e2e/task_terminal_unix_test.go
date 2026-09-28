@@ -105,7 +105,7 @@ func devTerminalFixture(t *testing.T, mise bool) string {
 	for _, v := range m["projects"].([]any) {
 		p := v.(map[string]any)
 		if p["name"] != "mobile" {
-			p["domains"] = map[string]any{"dev": map[string]any{"command": "sh dev.sh"}}
+			p["dev"] = map[string]any{"command": "sh dev.sh"}
 		}
 	}
 	raw, _ = json.Marshal(m)
@@ -118,7 +118,8 @@ func TestE2E_SingleDevAndBuildKeepNativeTTY(t *testing.T) {
 			root := devTerminalFixture(t, false)
 			script := "test -t 0 && test -t 1 && test -t 2 || exit 91\nprintf '\\033[35mNATIVE_READY\\033[0m'\nread value\nprintf '\\rNATIVE_REPLY:%s\\n' \"$value\"\n"
 			buildWrite(t, root, "packages/lib/"+command+".sh", script)
-			tt := startTaskTerminal(t, root, command, "lib", "-o", "text")
+			args := []string{command, "-p", "lib", "-o", "text", "--ui", "raw"}
+			tt := startTaskTerminal(t, root, args...)
 			waitForTTYOutput(t, tt.out, "NATIVE_READY", 8*time.Second)
 			_, _ = tt.pty.Write([]byte("hello\r"))
 			tt.wait(t, 0)
@@ -142,7 +143,8 @@ func TestE2E_SingleDevAndBuildExitWithIdleTerminalInput(t *testing.T) {
 				// reading stdin. Exiting must cancel that read and keep the exit code.
 				script := fmt.Sprintf("test -t 0 && test -t 1 && test -t 2 || exit 91\nprintf 'NATIVE_DONE\\n'\nexit %d\n", tc.code)
 				buildWrite(t, root, "packages/lib/"+command+".sh", script)
-				tt := startTaskTerminal(t, root, command, "lib", "-o", "text")
+				args := []string{command, "-p", "lib", "-o", "text", "--ui", "raw"}
+				tt := startTaskTerminal(t, root, args...)
 				tt.wait(t, tc.code)
 				if !strings.Contains(tt.out.String(), "NATIVE_DONE") {
 					t.Fatal(tt.out.String())
@@ -152,48 +154,31 @@ func TestE2E_SingleDevAndBuildExitWithIdleTerminalInput(t *testing.T) {
 	}
 }
 
-func TestE2E_DevTUIInputResizeAndStop(t *testing.T) {
-	root := devTerminalFixture(t, true)
-	buildWrite(t, root, "apps/web/dev.sh", "test -t 0 && test -t 1 || exit 91\necho run >> runs\necho WEB_READY\nwhile read value; do printf 'web:%s\\n' \"$value\"; done\n")
-	buildWrite(t, root, "packages/lib/dev.sh", "echo LIB_READY\nsleep 60\n")
-	tt := startTaskTerminal(t, root, "dev", "web", "lib", "--keep-going", "-o", "text")
-	waitForTTYOutput(t, tt.out, "WEB_READY", 8*time.Second)
-	if !strings.Contains(tt.out.String(), "\x1b[?1049h") {
-		t.Fatal("TUI did not enter alternate screen")
-	}
-	_, _ = tt.pty.Write([]byte("\r"))
-	waitForTTYOutput(t, tt.out, "INPUT", 5*time.Second)
-	_, _ = tt.pty.Write([]byte("hello\r"))
-	waitForTTYOutput(t, tt.out, "web:hello", 5*time.Second)
-	_ = pty.Setsize(tt.pty, &pty.Winsize{Rows: 24, Cols: 80})
-	_, _ = tt.pty.Write([]byte{29}) // Ctrl+] leaves input mode.
-	_, _ = tt.pty.Write([]byte("r"))
-	deadline := time.Now().Add(5 * time.Second)
-	restarted := false
-	for time.Now().Before(deadline) {
-		raw, _ := os.ReadFile(filepath.Join(root, "apps/web/runs"))
-		if strings.Count(string(raw), "run") == 2 {
-			restarted = true
-			break
-		}
-		time.Sleep(10 * time.Millisecond)
-	}
-	if !restarted {
-		t.Fatalf("selected project did not restart: %s", tt.out.String())
-	}
-	_, _ = tt.pty.Write([]byte{3})
-	tt.wait(t, 130)
-	if !strings.Contains(tt.out.String(), "\x1b[?1049l") {
-		t.Fatal("terminal was not restored")
-	}
-}
-func TestE2E_BuildTUIAutoFinishesAndKeepsFailure(t *testing.T) {
+func TestE2E_BuildRawKeepsFailure(t *testing.T) {
 	root := devTerminalFixture(t, false)
 	buildWrite(t, root, "packages/lib/build.sh", "test -t 1 || exit 91\nprintf '\\033[31mBUILD_FAILURE\\033[0m\\n'\nexit 42\n")
-	tt := startTaskTerminal(t, root, "build", "--ui=tui", "-o", "text")
+	tt := startTaskTerminal(t, root, "build", "--ui=raw", "-o", "text")
 	tt.wait(t, 42)
 	got := tt.out.String()
-	if !strings.Contains(got, "BUILD_FAILURE") || !strings.Contains(got, "blocked") || !strings.Contains(got, "\x1b[?1049l") {
+	if !strings.Contains(got, "BUILD_FAILURE") {
 		t.Fatal(got)
+	}
+}
+
+func TestE2E_DevHonorsMiseProjectOverrideAndRawTerminal(t *testing.T) {
+	root := devTerminalFixture(t, true)
+	appendRootTaskConfig(t, root, `[tasks."lib:dev"]
+dir = "packages/lib"
+run = "sh override.sh"
+raw = true
+`)
+	buildWrite(t, root, "packages/lib/override.sh", "test -t 0 && test -t 1 && test -t 2 || exit 91\necho USER_DEV_READY\nread value\necho USER_DEV_REPLY:$value\n")
+	buildWrite(t, root, "packages/lib/dev.sh", "echo WRONG_MANIFEST_COMMAND\nexit 92\n")
+	tt := startTaskTerminal(t, root, "dev", "-p", "lib", "-o", "text")
+	waitForTTYOutput(t, tt.out, "USER_DEV_READY", 8*time.Second)
+	_, _ = tt.pty.Write([]byte("hello\r"))
+	tt.wait(t, 0)
+	if !strings.Contains(tt.out.String(), "USER_DEV_REPLY:hello") || strings.Contains(tt.out.String(), "WRONG_MANIFEST_COMMAND") {
+		t.Fatal(tt.out.String())
 	}
 }

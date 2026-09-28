@@ -18,7 +18,7 @@ import (
 
 // ProjectInput names everything the creation workflow needs to materialise one
 // Project from a Template into an existing Workspace.
-// fully resolve the template + chosen deploy before calling here.
+// Resolve the template before calling here.
 type ProjectInput struct {
 	// Template is the resolved registry entry (caller did the lookup).
 	Template *template.Template
@@ -27,9 +27,7 @@ type ProjectInput struct {
 	Name string
 }
 
-// ProjectResult is the transport-neutral outcome of materialising a Template,
-// plus the resolved deploy backend (so the preset engine can aggregate
-// deploy_summary across projects).
+// ProjectResult is the transport-neutral outcome of materialising a Template.
 type ProjectResult struct {
 	Name           string
 	TargetPath     string
@@ -40,9 +38,7 @@ type ProjectResult struct {
 }
 
 // materializeProject renders the template into projectRoot, upserts the
-// manifest, applies template defaults (with the optional deploy
-// override), and runs infra sync. CI is intentionally not generated as a
-// side effect of adding a project. The Service owns AI-guide refresh timing.
+// manifest, applies template defaults, and synchronizes workspace tooling.
 //
 // On render failure, materializeProject only rolls back directories it
 // created itself (mirrors cbb95a1's guard) — never touches a
@@ -138,9 +134,7 @@ func materializeProject(ctx context.Context, projectRoot string, in ProjectInput
 		if err != nil {
 			return ProjectResult{}, err
 		}
-		if len(dirs) > 1 && packageManager != "pnpm" {
-			return ProjectResult{}, i18n.Errorf("creation.composite_requires_pnpm", entry.ID, packageManager)
-		}
+		_ = dirs
 	}
 
 	manifestPM := manifestPackageManagerFor(string(entry.Toolchain), packageManager)
@@ -156,15 +150,13 @@ func materializeProject(ctx context.Context, projectRoot string, in ProjectInput
 		return ProjectResult{}, err
 	}
 	dev := workspace.ResolveScaffoldDevCommand(scripts, string(entry.Toolchain), targetDir)
-	if entry.Toolchain == "node" && packageManager != "pnpm" {
-		dev = strings.Replace(dev, "pnpm run ", packageManager+" run ", 1)
-	}
 	if dev != "" {
-		newProject.Domains = &workspace.ProjectDomains{Dev: &workspace.ProjectDevOverride{Command: dev}}
+		newProject.Dev = &workspace.ProjectDevOverride{Command: dev}
 	}
 	for _, p := range manifest.Projects {
 		if p.RelativeDir == newProject.RelativeDir || p.Name == in.Name {
-			return ProjectResult{}, i18n.Errorf("creation.project_registered", in.Name)
+			return ProjectResult{}, cliErrors.New(cliErrors.TARGET_EXISTS,
+				i18n.Tf("creation.project_registered", in.Name))
 		}
 	}
 	manifest.Projects = append(manifest.Projects, newProject)
@@ -296,14 +288,14 @@ func categoryDirFor(category string) (string, error) {
 }
 
 func defaultPackageManagerFor(tc string) string {
-	if tc == "go" {
+	if tc == "go" || tc == string(template.ToolchainNone) {
 		return ""
 	}
 	return "pnpm"
 }
 
 func manifestPackageManagerFor(tc, pm string) string {
-	if tc == "go" {
+	if tc == "go" || tc == string(template.ToolchainNone) {
 		return ""
 	}
 	return pm

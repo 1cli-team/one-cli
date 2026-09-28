@@ -25,11 +25,10 @@ const (
 // Issue domains and severities the dashboard knows how to render.
 //
 // Note: dev command is intentionally NOT a domain here. `one add` writes
-// projects[].domains.dev.command from a package.json-scripts heuristic
+// projects[].dev.command from a package.json-scripts heuristic
 // (see workspace.ResolveDevCommand); an empty Command is a *valid* state
-// meaning "this project does not participate in `one dev`" (the supervisor
-// skips it silently). Flagging that as a missing-config issue would be a
-// false positive.
+// that allows native task discovery. Projects without any development task
+// are omitted from the generated dev aggregate.
 const (
 	IssueDomainEnv = "env"
 
@@ -119,7 +118,7 @@ func BuildOverview(root string, environments ...string) (Overview, error) {
 		Projects:    make([]OverviewProject, 0, len(m.Projects)),
 	}
 
-	if m.Domains == nil || m.Domains.Env == nil || strings.TrimSpace(m.Domains.Env.Kind) == "" {
+	if m.Env == nil {
 		ov.Issues = append(ov.Issues, OverviewIssue{
 			Domain:   IssueDomainEnv,
 			Severity: IssueSeverityMissing,
@@ -146,10 +145,10 @@ func buildWorkspaceSummary(m *Manifest) *OverviewWorkspace {
 			s.Environments = append([]string(nil), m.Environments.Names...)
 		}
 	}
-	if m.Domains != nil {
+	if m.Env != nil {
 		domains := map[string]string{}
-		if m.Domains.Env != nil && m.Domains.Env.Kind != "" {
-			domains[IssueDomainEnv] = m.Domains.Env.Kind
+		if m.Env != nil {
+			domains[IssueDomainEnv] = EnvBackend(m)
 		}
 		if len(domains) > 0 {
 			s.Domains = domains
@@ -170,13 +169,6 @@ func buildProject(m *Manifest, p *ManifestProject) OverviewProject {
 	}
 
 	return out
-}
-
-func manifestWorkspaceID(m *Manifest) string {
-	if m == nil || m.Workspace == nil {
-		return ""
-	}
-	return strings.TrimSpace(m.Workspace.ID)
 }
 
 func projectResolvedDomains(m *Manifest, p *ManifestProject) map[string]string {
