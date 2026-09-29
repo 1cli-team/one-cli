@@ -36,7 +36,7 @@ permissions:
   contents: read
 
 env:
-  MISE_TASK_CACHE_DIR: ${{ github.workspace }}/.cache/mise-task-artifacts
+  MISE_TASK_CACHE: "off"
   # GitHub-hosted runners are outside China; the default Go proxy
   # (goproxy.cn) is slower/flakier there and has caused CI download failures.
   GOPROXY: https://proxy.golang.org,direct
@@ -52,14 +52,7 @@ jobs:
         uses: jdx/mise-action@v4
         with:
           version: 2026.9.7
-          experimental: true
-
-      - name: Restore task artifacts
-        uses: actions/cache@v4
-        with:
-          path: .cache/mise-task-artifacts
-          key: tasks-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('mise.toml', 'pnpm-lock.yaml', 'packages/cli/go.sum') }}-${{ github.sha }}
-          restore-keys: tasks-${{ runner.os }}-${{ runner.arch }}-
+          experimental: false
 
       - name: Download Go modules
         run: |
@@ -98,14 +91,7 @@ jobs:
         uses: jdx/mise-action@v4
         with:
           version: 2026.9.7
-          experimental: true
-
-      - name: Restore task artifacts
-        uses: actions/cache@v4
-        with:
-          path: .cache/mise-task-artifacts
-          key: tasks-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('mise.toml', 'pnpm-lock.yaml', 'packages/cli/go.sum') }}-${{ github.sha }}
-          restore-keys: tasks-${{ runner.os }}-${{ runner.arch }}-
+          experimental: false
 
       - name: Download Go modules
         run: |
@@ -132,8 +118,8 @@ jobs:
           fi
 
       - name: Run test gate
-        # Calls the same test subtask as local `mise run check`.
-        run: mise run check:test
+        # Avoid running Go builds/tests alongside jsdom on the same runner.
+        run: mise run --jobs 1 check:test
 
       - name: Build template sources and generated projects
         run: mise run check:templates
@@ -147,14 +133,7 @@ jobs:
         uses: jdx/mise-action@v4
         with:
           version: 2026.9.7
-          experimental: true
-
-      - name: Restore task artifacts
-        uses: actions/cache@v4
-        with:
-          path: .cache/mise-task-artifacts
-          key: tasks-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('mise.toml', 'pnpm-lock.yaml', 'packages/cli/go.sum') }}-${{ github.sha }}
-          restore-keys: tasks-${{ runner.os }}-${{ runner.arch }}-
+          experimental: false
 
       - name: Download Go modules
         shell: pwsh
@@ -166,7 +145,7 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Run native Windows PR gate
-        run: mise run check
+        run: mise run --jobs 1 check
 
   test-race:
     # Catch Go data races before merging, alongside the other required jobs.
@@ -178,14 +157,7 @@ jobs:
         uses: jdx/mise-action@v4
         with:
           version: 2026.9.7
-          experimental: true
-
-      - name: Restore task artifacts
-        uses: actions/cache@v4
-        with:
-          path: .cache/mise-task-artifacts
-          key: tasks-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('mise.toml', 'pnpm-lock.yaml', 'packages/cli/go.sum') }}-${{ github.sha }}
-          restore-keys: tasks-${{ runner.os }}-${{ runner.arch }}-
+          experimental: false
 
       - name: Download Go modules
         run: |
@@ -225,14 +197,7 @@ jobs:
         uses: jdx/mise-action@v4
         with:
           version: 2026.9.7
-          experimental: true
-
-      - name: Restore task artifacts
-        uses: actions/cache@v4
-        with:
-          path: .cache/mise-task-artifacts
-          key: tasks-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('mise.toml', 'pnpm-lock.yaml', 'packages/cli/go.sum') }}-${{ github.sha }}
-          restore-keys: tasks-${{ runner.os }}-${{ runner.arch }}-
+          experimental: false
 
       - name: Download Go modules
         run: |
@@ -259,4 +224,4 @@ jobs:
           fi
 
       - name: Run test gate
-        run: mise run check:test
+        run: mise run --jobs 1 check:test

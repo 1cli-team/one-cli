@@ -157,7 +157,7 @@ func Start(ctx context.Context, site string) (*Attempt, error) {
 		defer close(a.done)
 		defer cancel()
 		defer lock.Unlock()
-		defer server.Close()
+		defer shutdownLoginServer(ctx, server)
 		var s *Session
 		select {
 		case s = <-results:
@@ -178,4 +178,15 @@ func Start(ctx context.Context, site string) (*Attempt, error) {
 		a.info = s.Info
 	}()
 	return a, nil
+}
+
+func shutdownLoginServer(ctx context.Context, server *http.Server) {
+	// Receiving a verified session does not mean its HTTP response has been
+	// flushed yet. Drain active callbacks before signalling that login is done.
+	shutdownCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+	if err := server.Shutdown(shutdownCtx); err != nil {
+		// Cancellation and stalled requests must still release the listener.
+		_ = server.Close()
+	}
 }
