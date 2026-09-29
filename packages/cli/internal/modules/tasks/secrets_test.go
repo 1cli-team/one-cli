@@ -18,6 +18,7 @@ import (
 	"time"
 
 	"github.com/pelletier/go-toml/v2"
+	"github.com/torchstellar-team/one-cli/packages/cli/internal/application/execution"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/core/workspace"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/modules/dependencies"
 	runtimeport "github.com/torchstellar-team/one-cli/packages/cli/internal/ports/runtime"
@@ -89,6 +90,15 @@ func TestNativeEnvironmentChild(t *testing.T) {
 	time.Sleep(40 * time.Millisecond)
 }
 func TestNativeMiseProjectEnvironmentsAndCache(t *testing.T) {
+	for _, name := range []string{"direct_workspace", "symlinked_workspace"} {
+		t.Run(name, func(t *testing.T) {
+			testNativeMiseProjectEnvironmentsAndCache(t, name == "symlinked_workspace")
+		})
+	}
+}
+
+func testNativeMiseProjectEnvironmentsAndCache(t *testing.T, symlinked bool) {
+	t.Helper()
 	binary, err := exec.LookPath("mise")
 	if err != nil {
 		t.Skip("mise is not installed")
@@ -97,6 +107,23 @@ func TestNativeMiseProjectEnvironmentsAndCache(t *testing.T) {
 		binary = value
 	}
 	w := taskWorkspace(t)
+	if symlinked {
+		// Reproduce macOS /var -> /private/var path aliases on other platforms.
+		link := filepath.Join(t.TempDir(), "workspace")
+		if err := os.Symlink(w.Root(), link); err != nil {
+			if runtime.GOOS == "windows" {
+				t.Skipf("symlink creation unavailable: %v", err)
+			}
+			t.Fatal(err)
+		}
+		w, err = execution.ResolveWorkspaceScope(execution.NewScope(context.Background(), link))
+		if err != nil {
+			t.Fatal(err)
+		}
+		if w.Root() != link {
+			t.Fatalf("workspace did not retain symlink path: %s", w.Root())
+		}
+	}
 	w.Manifest().Env = &workspace.EnvironmentConfig{ProjectID: "synthetic", Environments: []string{"dev", "staging", "prod"}}
 	isolated := t.TempDir()
 	for _, key := range []string{"MISE_DATA_DIR", "MISE_STATE_DIR", "MISE_CACHE_DIR", "MISE_CONFIG_DIR", "MISE_SYSTEM_CONFIG_DIR"} {

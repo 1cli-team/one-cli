@@ -232,10 +232,25 @@ func (s Service) configPaths(ctx context.Context, directory string, env, ignored
 	if err = json.Unmarshal(out.Bytes(), &entries); err != nil {
 		return nil, err
 	}
+	// mise resolves symlinks in config paths, while session directories retain
+	// the workspace spelling (for example, /var vs /private/var on macOS).
+	// Compare physical paths on both sides without changing config precedence.
+	ignoredDirs := make(map[string]bool, len(ignored))
+	for _, dir := range ignored {
+		path, err := filepath.EvalSymlinks(dir)
+		if err != nil {
+			return nil, err
+		}
+		ignoredDirs[path] = true
+	}
 	paths := []string{}
 	for _, entry := range entries {
-		if !slices.Contains(ignored, filepath.Dir(entry.Path)) {
-			paths = append(paths, entry.Path)
+		path, err := filepath.EvalSymlinks(entry.Path)
+		if err != nil {
+			return nil, err
+		}
+		if !ignoredDirs[filepath.Dir(path)] {
+			paths = append(paths, path)
 		}
 	}
 	return paths, nil
