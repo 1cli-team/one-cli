@@ -87,7 +87,7 @@ func readFile(path string) ([]byte, error) {
 func readFileShared(path string) ([]byte, error) {
 	name, err := windows.UTF16PtrFromString(path)
 	if err != nil {
-		return nil, err
+		return nil, &os.PathError{Op: "open", Path: path, Err: err}
 	}
 	handle, err := windows.CreateFile(
 		name,
@@ -99,12 +99,12 @@ func readFileShared(path string) ([]byte, error) {
 		0,
 	)
 	if err != nil {
-		return nil, err
+		return nil, &os.PathError{Op: "open", Path: path, Err: err}
 	}
 	file := os.NewFile(uintptr(handle), path)
 	if file == nil {
 		_ = windows.CloseHandle(handle)
-		return nil, errors.New(i18n.T("file.windows_handle"))
+		return nil, &os.PathError{Op: "open", Path: path, Err: errors.New(i18n.T("file.windows_handle"))}
 	}
 	data, readErr := io.ReadAll(file)
 	closeErr := file.Close()
