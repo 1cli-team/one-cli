@@ -28,8 +28,7 @@ func seedRegistryWorkspace(t *testing.T, id, name, projectName string) string {
 	}
 	if projectName != "" {
 		manifest.Projects = []workspacecore.ManifestProject{{
-			Name: projectName, RelativeDir: "apps/" + projectName,
-			TemplateID: "react-spa", Toolchain: "node",
+			Name: projectName, RelativeDir: "apps/" + projectName, Toolchain: "node",
 		}}
 	}
 	if err := workspacecore.WriteManifest(root, manifest); err != nil {

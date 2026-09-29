@@ -18,11 +18,7 @@ export const GeneralForm: React.FC<ProjectSettingsFormProps> = ({ project }) => 
 		<ManifestDraftLayout>
 			<div className="space-y-5 rounded-lg border border-border bg-card p-5">
 				<SectionHeading icon={Blocks} title={t("projectInspector.general.metadata")} />
-				<div className="grid gap-x-6 gap-y-5 ud-sm:grid-cols-2 @xl:grid-cols-4">
-					<ReadOnlyDatum
-						label={t("projectInspector.general.template")}
-						value={project.templateId}
-					/>
+				<div className="grid gap-x-6 gap-y-5 ud-sm:grid-cols-2 @xl:grid-cols-3">
 					<ReadOnlyDatum
 						label={t("projectInspector.general.toolchain")}
 						value={project.toolchain}

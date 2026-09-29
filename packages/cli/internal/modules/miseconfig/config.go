@@ -65,7 +65,6 @@ type config struct {
 	Monorepo     *monorepo         `toml:"monorepo,omitempty"`
 	Tools        map[string]string `toml:"tools,omitempty"`
 	Tasks        map[string]Task   `toml:"tasks,omitempty"`
-	Settings     map[string]bool   `toml:"settings,omitempty"`
 }
 type monorepo struct {
 	ConfigRoots []string `toml:"config_roots"`
@@ -74,21 +73,13 @@ type monorepo struct {
 
 // Task is the generated mise declaration. User overrides remain in mise.toml.
 type Task struct {
-	Directory   string    `toml:"dir,omitempty" json:"dir,omitempty"`
-	Description string    `toml:"description,omitempty" json:"description,omitempty"`
-	Run         string    `toml:"run,omitempty" json:"run,omitempty"`
-	RunWindows  string    `toml:"run_windows,omitempty" json:"run_windows,omitempty"`
-	RawArgs     bool      `toml:"raw_args,omitempty" json:"raw_args,omitempty"`
-	Interactive bool      `toml:"interactive,omitempty" json:"interactive,omitempty"`
-	Depends     []string  `toml:"depends,omitempty" json:"depends,omitempty"`
-	Sources     []string  `toml:"sources,omitempty" json:"sources,omitempty"`
-	Outputs     *[]string `toml:"outputs,omitempty" json:"outputs,omitempty"`
-	Cache       *Cache    `toml:"cache,omitempty" json:"cache,omitempty"`
-}
-type Cache struct {
-	Enabled       bool     `toml:"enabled" json:"enabled"`
-	Env           []string `toml:"env,omitempty" json:"env,omitempty"`
-	CommandInputs []string `toml:"command_inputs,omitempty" json:"command_inputs,omitempty"`
+	Directory   string   `toml:"dir,omitempty" json:"dir,omitempty"`
+	Description string   `toml:"description,omitempty" json:"description,omitempty"`
+	Run         string   `toml:"run,omitempty" json:"run,omitempty"`
+	RunWindows  string   `toml:"run_windows,omitempty" json:"run_windows,omitempty"`
+	RawArgs     bool     `toml:"raw_args,omitempty" json:"raw_args,omitempty"`
+	Interactive bool     `toml:"interactive,omitempty" json:"interactive,omitempty"`
+	Depends     []string `toml:"depends,omitempty" json:"depends,omitempty"`
 }
 
 func Enabled(root string) bool {
@@ -162,7 +153,7 @@ func BuildWithFiles(root string, opts Options, files map[string][]byte) (*Plan, 
 	if opts.GoVersion != "" && !exactVersion.MatchString(opts.GoVersion) {
 		return nil, i18n.Errorf("miseconfig.go_version")
 	}
-	rootConfig := config{MinVersion: runtimeport.MinimumMiseVersion, MonorepoRoot: true, Monorepo: &monorepo{ConfigRoots: []string{}}, Tools: map[string]string{}, Tasks: map[string]Task{}, Settings: map[string]bool{"experimental": true}}
+	rootConfig := config{MinVersion: runtimeport.MinimumMiseVersion, MonorepoRoot: true, Monorepo: &monorepo{ConfigRoots: []string{}}, Tools: map[string]string{}, Tasks: map[string]Task{}}
 	hooks, err := p.readOptional(workspace.HooksConfigFilename)
 	if err != nil {
 		return nil, err
@@ -223,7 +214,7 @@ func BuildWithFiles(root string, opts Options, files map[string][]byte) (*Plan, 
 	configs := map[string]config{}
 	projects := []workspace.Project{}
 	for _, mp := range m.Projects {
-		projects = append(projects, workspace.Project{Name: mp.Name, RelativeDir: mp.RelativeDir, TargetDir: filepath.Join(root, mp.RelativeDir), Toolchain: mp.Toolchain, TemplateID: mp.TemplateID})
+		projects = append(projects, workspace.Project{Name: mp.Name, RelativeDir: mp.RelativeDir, TargetDir: filepath.Join(root, mp.RelativeDir), Toolchain: mp.Toolchain})
 	}
 	for _, project := range m.Projects {
 		if !workspace.IsValidProjectName(project.Name) {
@@ -234,7 +225,7 @@ func BuildWithFiles(root string, opts Options, files map[string][]byte) (*Plan, 
 			return nil, conflict(rel, i18n.T("config.project_path"))
 		}
 		pc := config{MinVersion: runtimeport.MinimumMiseVersion, Tasks: map[string]Task{}, Tools: map[string]string{}}
-		nativeProject := workspace.Project{Name: project.Name, RelativeDir: rel, TargetDir: filepath.Join(root, rel), Toolchain: project.Toolchain, TemplateID: project.TemplateID}
+		nativeProject := workspace.Project{Name: project.Name, RelativeDir: rel, TargetDir: filepath.Join(root, rel), Toolchain: project.Toolchain}
 		operations, err := workspace.DiscoverTasks(root, nativeProject, p.readOptional)
 		if err != nil {
 			return nil, err
@@ -270,12 +261,9 @@ func BuildWithFiles(root string, opts Options, files map[string][]byte) (*Plan, 
 			if project.Toolchain == "go" {
 				argv = append(argv, "--")
 			}
-			task := Task{Directory: rel, Description: op.Description, Run: nativeCommand(argv, false), RawArgs: true, Interactive: op.Interactive, Cache: &Cache{Enabled: false}}
+			task := Task{Directory: rel, Description: op.Description, Run: nativeCommand(argv, false), RawArgs: true, Interactive: op.Interactive}
 			if windows := nativeCommand(argv, true); windows != task.Run {
 				task.RunWindows = windows
-			}
-			if !op.Interactive {
-				p.configureCache(root, nativeProject, op, &task)
 			}
 			pc.Tasks[op.Name] = task
 			if op.Name == "build" || op.Name == "check" || op.Name == "test" || op.Name == "dev" {
@@ -291,10 +279,6 @@ func BuildWithFiles(root string, opts Options, files map[string][]byte) (*Plan, 
 	if err != nil {
 		return nil, err
 	}
-	byName := map[string]workspace.Project{}
-	for _, project := range projects {
-		byName[project.Name] = project
-	}
 	for _, project := range projects {
 		pc := configs[project.Name]
 		upstreamNames, err := dependencyClosure(project.Name, edges)
@@ -303,23 +287,11 @@ func BuildWithFiles(root string, opts Options, files map[string][]byte) (*Plan, 
 		}
 		for name, task := range pc.Tasks {
 			for _, dep := range upstreamNames {
-				upstream := byName[dep]
 				if name == "build" || name == "dev" || name == "check" || name == "test" || name == "typecheck" {
 					if _, ok := configs[dep].Tasks["build"]; ok {
 						task.Depends = append(task.Depends, "//:"+dep+":build")
 					}
 				}
-				if task.Cache != nil && task.Cache.Enabled {
-					relative, _ := filepath.Rel(project.TargetDir, upstream.TargetDir)
-					task.Sources = append(task.Sources, filepath.ToSlash(relative)+"/**", "!"+filepath.ToSlash(relative)+"/node_modules/**")
-				}
-			}
-			if project.Toolchain == "go" && task.Cache != nil && task.Cache.Enabled {
-				inputs, err := p.goCacheSources(root, project.TargetDir, goWorkspace.Modules)
-				if err != nil {
-					return nil, err
-				}
-				task.Sources = append(task.Sources, inputs...)
 			}
 			rootConfig.Tasks[project.Name+":"+name] = task
 		}

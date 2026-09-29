@@ -65,7 +65,7 @@ func TestOverview_PopulatedWorkspace(t *testing.T) {
 
 		Projects: []workspace.ManifestProject{
 			{
-				Name: "web", RelativeDir: "apps/web", TemplateID: "react-spa", Toolchain: "node",
+				Name: "web", RelativeDir: "apps/web", Toolchain: "node",
 			},
 		},
 	}

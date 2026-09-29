@@ -22,15 +22,15 @@ environments = ["dev", "staging", "prod"]
 [projects.web]
 path = "apps/web"
 toolchain = "node"
-template = "react-spa"
 
 [projects.api]
 path = "services/api"
 toolchain = "go"
-template = "go-api"
 ```
 
 新工作区只生成版本和身份信息。添加项目时增加对应的项目表，绑定 Infisical 后增加 `[env.infisical]`。实际生成的文件不带注释。你可以自行添加 TOML 注释；后续修改会保留注释、表顺序和未改动的内容。
+
+模板只在创建项目时使用，不记录在 manifest 中。项目区块只包含 `path` 和 `toolchain`。
 
 ## 字段
 
@@ -45,7 +45,6 @@ template = "go-api"
 | `projects.<name>` | 表名中的项目名称，工作区内唯一 |
 | `projects.<name>.path` | 必填，规范化的工作区相对目录，不能与其他项目重复 |
 | `projects.<name>.toolchain` | 必填，可选 `node`、`go` 或 `none` |
-| `projects.<name>.template` | 可选，创建项目时使用的模板 ID |
 
 项目目录不能是绝对路径，也不能越出工作区。未知字段、不支持的版本或无效字段返回 `MANIFEST_INVALID`。TOML 语法错误会标明文件和位置。
 

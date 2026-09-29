@@ -69,7 +69,9 @@ One 内置 mise 环境适配器，在对应配置作用域创建临时 `.one-run
 
 ## 缓存与并行
 
-普通原生任务保留 mise 的缓存声明。已知确定性的模板构建任务会声明 sources、outputs 和环境输入，不需要 One 指纹命令：
+通过 One 执行任务时，产物缓存保持关闭，不提供 `--cache` 参数。新工作区和 `one init mise` 不再开启 mise 实验性功能，也不再根据模板推导缓存输入和输出。用户手动编写的 mise 配置会保留。
+
+普通的 `sources` / `outputs` 新鲜度检查不需要实验性功能。对输入和输出明确的任务，可以在 `mise.toml` 中自行声明：
 
 ```toml
 [tasks."web:build"]
@@ -77,19 +79,19 @@ dir = "apps/web"
 run = "pnpm run build"
 sources = ["src/**/*", "package.json", "tsconfig.json", "../../pnpm-lock.yaml"]
 outputs = ["dist"]
-cache = { enabled = true, env = ["NODE_ENV"] }
 ```
 
-注入远端变量的任务及其下游可执行任务会跳过产物缓存和新鲜度跳过，并显示简短提示。这样变量更新、删除或变为空字符串时，不会复用旧产物。One 不跨运行缓存密钥快照。
+注入远端变量的任务及其下游可执行任务会跳过产物缓存和新鲜度检查，并显示简短提示。这样变量更新、删除或变为空字符串时，不会复用旧产物。One 不跨运行缓存密钥快照。
 
 ```sh
-one run build --cache local-only
-one run build --cache off --force
-one run build --cache read-only
+one run build
+one run build --force
 one run build --concurrency 4
 ```
 
-缓存模式还包括 `read-write`、`write-only`；远端后端直接在 mise 中配置。source / output 路径相对于 `dir`，选中任务的产物位置不能重叠。透传额外命令参数会关闭产物缓存并强制执行。
+使用 `--force` 可以跳过新鲜度检查，重新执行任务。
+
+source / output 路径相对于 `dir`，选中任务的产物位置不能重叠。透传额外命令参数会关闭产物缓存并强制执行。
 
 默认按任务图节点数分配并行额度，不对 dev 名称特殊处理。显式并行上限会被保留，常驻前置任务仍遵循 mise 的依赖语义。
 

@@ -15,6 +15,7 @@ import (
 
 func TestManifestV2RejectsUnknownAndRemovedFields(t *testing.T) {
 	for _, raw := range []string{
+		"version = 2\n[projects.web]\npath='apps/web'\ntoolchain='node'\ntemplate='react-spa'\n",
 		`{"version":2,"projects":[]}`, "version = 1\n", "version = 3\n",
 		"version = 2\n[env]\nenvironments = ['dev']\n",
 		"version = 2\n[env.infisical]\nprojectId='p'\nenvironments=['dev']\ndefault='dev'\n",
@@ -40,13 +41,13 @@ func TestManifestV2RoundTripAndNoGeneratedComments(t *testing.T) {
 	root := t.TempDir()
 	m := &Manifest{Version: ManifestVersion, Workspace: &ManifestWorkspace{ID: "demo", Name: "示例"}, Env: &EnvironmentConfig{ProjectID: "remote", Environments: []string{"prod", "dev", "staging"}}, Projects: []ManifestProject{
 		{Name: "api", RelativeDir: "services/api", Toolchain: "go"},
-		{Name: "web", RelativeDir: "apps/web", Toolchain: "node", TemplateID: "react-spa"},
+		{Name: "web", RelativeDir: "apps/web", Toolchain: "node"},
 	}}
 	if err := WriteManifest(root, m); err != nil {
 		t.Fatal(err)
 	}
 	raw, _ := os.ReadFile(ManifestPath(root))
-	for _, removed := range []string{"#", "relativeDir", "templateId", "buildVersion", "packageManager", "default =", "[env]", "[projects]"} {
+	for _, removed := range []string{"#", "relativeDir", "template", "templateId", "buildVersion", "packageManager", "default =", "[env]", "[projects]"} {
 		if bytes.Contains(raw, []byte(removed)) {
 			t.Errorf("generated unwanted %q: %s", removed, raw)
 		}
@@ -58,7 +59,7 @@ func TestManifestV2RoundTripAndNoGeneratedComments(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got.Workspace.Name != "示例" || got.Env.ProjectID != "remote" || got.Projects[0].Name != "web" || got.Projects[0].TemplateID != "react-spa" || rev == "" {
+	if got.Workspace.Name != "示例" || got.Env.ProjectID != "remote" || got.Projects[0].Name != "web" || rev == "" {
 		t.Fatalf("bad roundtrip: %+v", got)
 	}
 	if err := WriteManifest(root, got); err != nil {

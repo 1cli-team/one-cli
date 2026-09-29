@@ -22,15 +22,15 @@ environments = ["dev", "staging", "prod"]
 [projects.web]
 path = "apps/web"
 toolchain = "node"
-template = "react-spa"
 
 [projects.api]
 path = "services/api"
 toolchain = "go"
-template = "go-api"
 ```
 
 A fresh workspace contains its version and identity. Adding a project adds its table; binding Infisical adds `[env.infisical]`. Generated files contain no comments. You can add your own TOML comments: subsequent edits preserve comments, table order, and unchanged text.
+
+Templates are used only when creating projects and are not recorded in the manifest. A project table contains only `path` and `toolchain`.
 
 ## Fields
 
@@ -45,7 +45,6 @@ A fresh workspace contains its version and identity. Adding a project adds its t
 | `projects.<name>` | Project name as a table key; unique within the workspace |
 | `projects.<name>.path` | Required, unique, normalized workspace-relative directory |
 | `projects.<name>.toolchain` | Required: `node`, `go`, or `none` |
-| `projects.<name>.template` | Optional template ID used to create the project |
 
 Project paths cannot be absolute or escape the workspace. Unknown fields, unsupported versions, and invalid field values produce `MANIFEST_INVALID`. TOML syntax errors include the file path and source location.
 

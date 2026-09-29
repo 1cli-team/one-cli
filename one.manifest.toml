@@ -7,19 +7,15 @@ name = "One CLI"
 [projects.dashboard]
 path = "apps/dashboard"
 toolchain = "node"
-template = "react-spa"
 
 [projects.docs]
 path = "apps/docs"
 toolchain = "node"
-template = "nextjs-app"
 
 [projects.cli]
 path = "packages/cli"
 toolchain = "go"
-template = "custom"
 
 [projects.kernel]
 path = "packages/kernel"
 toolchain = "go"
-template = "custom"

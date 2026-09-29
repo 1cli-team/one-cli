@@ -49,7 +49,7 @@ func TestBuildOverview_FullyConfigured_NoIssues(t *testing.T) {
 
 		Projects: []ManifestProject{
 			{
-				Name: "web", RelativeDir: "apps/web", TemplateID: "react-spa", Toolchain: "node",
+				Name: "web", RelativeDir: "apps/web", Toolchain: "node",
 			},
 		},
 	}
@@ -92,7 +92,7 @@ func TestBuildOverview_EnvWorkspaceLevelOnly(t *testing.T) {
 		Version:   ManifestVersion,
 		Workspace: &ManifestWorkspace{ID: "demo", Name: "demo"},
 		Projects: []ManifestProject{
-			{Name: "web", RelativeDir: "apps/web", TemplateID: "react-spa", Toolchain: "node"},
+			{Name: "web", RelativeDir: "apps/web", Toolchain: "node"},
 		},
 	}
 	if err := WriteManifest(tmp, m); err != nil {
@@ -123,7 +123,7 @@ func TestBuildOverview_PackagesSkipDomainChecks(t *testing.T) {
 		Env: &EnvironmentConfig{ProjectID: "remote", Environments: []string{"dev", "staging", "prod"}},
 
 		Projects: []ManifestProject{
-			{Name: "utils", RelativeDir: "packages/utils", TemplateID: "ts-lib", Toolchain: "node"},
+			{Name: "utils", RelativeDir: "packages/utils", Toolchain: "node"},
 		},
 	}
 	if err := WriteManifest(tmp, m); err != nil {

@@ -24,12 +24,10 @@ name = "fixture"
 [projects."web"]
 path = "apps/web"
 toolchain = "node"
-template = "react-spa"
 
 [projects."api"]
 path = "services/api"
 toolchain = "go"
-template = "go-api"
 `,
 		"package.json":              `{"packageManager":"pnpm@10.14.0"}`,
 		"apps/web/package.json":     `{"scripts":{"dev":"vite","build":"vite build","test":"vitest run"}}`,

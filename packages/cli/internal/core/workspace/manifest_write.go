@@ -64,7 +64,7 @@ func MarshalManifest(m *Manifest) ([]byte, error) {
 	for _, p := range sortByRelativeDir(m.Projects) {
 		key, _ := toml.Marshal(map[string]int{p.Name: 0})
 		name := strings.TrimSpace(strings.SplitN(string(key), " = ", 2)[0])
-		if err := table("projects."+name, manifestProjectDocument{Path: p.RelativeDir, Toolchain: p.Toolchain, Template: p.TemplateID}); err != nil {
+		if err := table("projects."+name, manifestProjectDocument{Path: p.RelativeDir, Toolchain: p.Toolchain}); err != nil {
 			return nil, err
 		}
 	}

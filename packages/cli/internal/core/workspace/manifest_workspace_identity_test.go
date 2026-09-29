@@ -73,7 +73,7 @@ func TestWriteManifest_PreservesWorkspace(t *testing.T) {
 		t.Fatal(err)
 	}
 	before.Projects = []workspace.ManifestProject{
-		{Name: "api", RelativeDir: "services/api", TemplateID: "go-api", Toolchain: "go"},
+		{Name: "api", RelativeDir: "services/api", Toolchain: "go"},
 	}
 	if err := workspace.WriteManifest(tmp, before); err != nil {
 		t.Fatalf("WriteManifest = %v", err)

@@ -187,7 +187,6 @@
 		"unsavedChanges": "当前修改尚未保存。要放弃修改并继续吗？",
 		"discardAndContinue": "放弃并继续",
 		"general": {
-			"template": "Template",
 			"toolchain": "Toolchain",
 			"path": "项目路径",
 			"buildVersion": "构建版本",

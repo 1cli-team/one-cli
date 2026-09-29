@@ -393,7 +393,6 @@ func writeRegistryTestManifest(t *testing.T, root string, id string, name string
 		projects = append(projects, workspacecore.ManifestProject{
 			Name:        fmt.Sprintf("project-%d", index),
 			RelativeDir: fmt.Sprintf("apps/project-%d", index),
-			TemplateID:  "react-spa",
 			Toolchain:   "node",
 		})
 	}

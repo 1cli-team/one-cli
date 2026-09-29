@@ -29,7 +29,6 @@ type ProjectSettingsProject struct {
 	Name                  string                     `json:"name"`
 	RelativeDir           string                     `json:"relativeDir"`
 	Kind                  string                     `json:"kind"`
-	TemplateID            string                     `json:"templateId,omitempty"`
 	Toolchain             string                     `json:"toolchain,omitempty"`
 	PackageManager        string                     `json:"packageManager,omitempty"`
 	DevAvailable          bool                       `json:"devAvailable"`
@@ -116,7 +115,6 @@ func (s *Service) projectSettings(
 			Name:                  project.Name,
 			RelativeDir:           project.RelativeDir,
 			Kind:                  projectKind(project.RelativeDir),
-			TemplateID:            project.TemplateID,
 			Toolchain:             project.Toolchain,
 			PackageManager:        packageManager,
 			DevAvailable:          devAvailable,
@@ -139,9 +137,8 @@ func projectBuildSettings(root string, project workspacecore.ManifestProject) Pr
 	}
 	args, err := execution.ProjectOperationArgs(root, workspacecore.Project{
 		Name: project.Name, RelativeDir: project.RelativeDir,
-		TargetDir:  filepath.Join(root, filepath.FromSlash(project.RelativeDir)),
-		Toolchain:  project.Toolchain,
-		TemplateID: project.TemplateID,
+		TargetDir: filepath.Join(root, filepath.FromSlash(project.RelativeDir)),
+		Toolchain: project.Toolchain,
 	}, "build")
 	if err != nil {
 		var taskError *output.Error

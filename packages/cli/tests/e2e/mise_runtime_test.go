@@ -31,12 +31,10 @@ name = "runtime-test"
 [projects."web"]
 path = "apps/web"
 toolchain = "node"
-template = "react-spa"
 
 [projects."api"]
 path = "services/api"
 toolchain = "go"
-template = "go-api"
 `,
 		"mise.toml":             "[env]\nONE_MISE_TEST_VALUE = 'root'\nONE_MISE_PARENT = 'root-only'\n",
 		"apps/web/mise.toml":    "[env]\nONE_MISE_TEST_VALUE = 'project'\nONE_MISE_ONLY = 'from-mise'\n",

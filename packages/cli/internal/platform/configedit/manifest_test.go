@@ -12,7 +12,7 @@ func TestManifestTOMLEditsPreserveLayouts(t *testing.T) {
 		"# header\nversion = 2\n[workspace]\nid = 'demo'\nname = 'Old' # identity\n[env.infisical]\nprojectId = 'p'\nenvironments = [\n # chosen environment\n 'dev',\n]\n[projects.web]\npath = 'apps/web'\ntoolchain = 'node'\n[projects.api]\npath = 'services/api'\ntoolchain = 'go'\n",
 	} {
 		t.Run(before[:min(35, len(before))], func(t *testing.T) {
-			desired := []byte("version = 2\n[workspace]\nid = 'demo'\nname = 'New'\n[projects.web]\npath = 'apps/web'\ntoolchain = 'node'\ntemplate = 'react-spa'\n")
+			desired := []byte("version = 2\n[workspace]\nid = 'demo'\nname = 'New'\n[projects.web]\npath = 'apps/web'\ntoolchain = 'node'\n")
 			got, err := UpdateTOML([]byte(before), desired)
 			if err != nil {
 				t.Fatal(err)

@@ -187,7 +187,6 @@
 		"unsavedChanges": "You have unsaved changes. Discard them and continue?",
 		"discardAndContinue": "Discard and continue",
 		"general": {
-			"template": "Template",
 			"toolchain": "Toolchain",
 			"path": "Project path",
 			"buildVersion": "Build version",

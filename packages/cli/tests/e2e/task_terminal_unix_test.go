@@ -232,7 +232,7 @@ func TestE2E_TaskTUIFullHistoryStylesAndResize(t *testing.T) {
  printf 'LAST_HISTORY_MARKER\n'
  sleep 60
  `)
-	tt := startTaskTerminal(t, root, "run", "build", "-p", "lib", "--ui", "tui", "--cache", "off", "-o", "text")
+	tt := startTaskTerminal(t, root, "run", "build", "-p", "lib", "--ui", "tui", "-o", "text")
 	waitForTTYOutput(t, tt.out, "LAST_HISTORY_MARKER", 15*time.Second)
 	// Browse all history while the task is still running, including logs that
 	// exceed the former 4,000-line buffer.

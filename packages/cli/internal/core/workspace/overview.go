@@ -67,7 +67,6 @@ type OverviewProject struct {
 	Name        string            `json:"name"`
 	RelativeDir string            `json:"relativeDir"`
 	Kind        string            `json:"kind"`
-	TemplateID  string            `json:"templateId,omitempty"`
 	Toolchain   string            `json:"toolchain,omitempty"`
 	Domains     map[string]string `json:"domains,omitempty"`
 	Issues      []OverviewIssue   `json:"issues,omitempty"`
@@ -155,7 +154,6 @@ func buildProject(m *Manifest, p *ManifestProject) OverviewProject {
 		Name:        p.Name,
 		RelativeDir: p.RelativeDir,
 		Kind:        kind,
-		TemplateID:  p.TemplateID,
 		Toolchain:   p.Toolchain,
 		Domains:     projectResolvedDomains(m, p),
 	}

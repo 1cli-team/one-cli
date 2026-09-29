@@ -53,7 +53,6 @@ type EnvironmentConfig struct {
 type ManifestProject struct {
 	Name        string `json:"name"`
 	RelativeDir string `json:"relativeDir"`
-	TemplateID  string `json:"templateId,omitempty"`
 	Toolchain   string `json:"toolchain"`
 }
 
@@ -69,7 +68,6 @@ type manifestEnvironment struct {
 type manifestProjectDocument struct {
 	Path      string `toml:"path"`
 	Toolchain string `toml:"toolchain"`
-	Template  string `toml:"template,omitempty"`
 }
 
 // EnvironmentNames returns a copy; the default environment is always dev.
@@ -91,7 +89,7 @@ func ParseManifest(raw []byte) (*Manifest, error) {
 		m.Env = doc.Env.Infisical
 	}
 	for name, p := range doc.Projects {
-		m.Projects = append(m.Projects, ManifestProject{Name: name, RelativeDir: p.Path, Toolchain: p.Toolchain, TemplateID: p.Template})
+		m.Projects = append(m.Projects, ManifestProject{Name: name, RelativeDir: p.Path, Toolchain: p.Toolchain})
 	}
 	sort.Slice(m.Projects, func(i, j int) bool { return m.Projects[i].RelativeDir < m.Projects[j].RelativeDir })
 	if err := ValidateManifest(m); err != nil {

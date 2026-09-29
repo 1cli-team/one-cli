@@ -15,11 +15,10 @@ TIPS
 Lists tasks with no arguments. Runs root tasks or selected project tasks with their dependencies. one <task> is shorthand for one run <task>, including dev, build, test, and lint. Built-in commands take precedence; use one run <task> for a conflicting name.
 
 COMMON OPTIONS
-  --cache <value>          Cache access: local-only, read-write, read-only, write-only, off
   --concurrency <value>    Maximum parallel tasks (allocated automatically when omitted)
   --dry-run                Preview tasks without preparing tools, dependencies, secrets, or caches
   --env <value>            One project environment name
-  --force                  Bypass freshness checks; combine with --cache off to ensure execution
+  --force                  Bypass freshness checks and execute tasks
   --list                   List available tasks
   -o, --output <value>     Output format: json | yaml | text (default: terminal-friendly text, JSON when piped)
   -p, --project <value>    Project name or relative path (repeatable)

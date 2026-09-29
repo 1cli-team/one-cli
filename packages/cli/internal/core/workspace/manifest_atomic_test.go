@@ -21,7 +21,7 @@ func TestWriteManifestAtomicallyPreservesPermissionsAndFormat(t *testing.T) {
 	manifest := &Manifest{
 		Version: ManifestVersion,
 		Projects: []ManifestProject{{
-			Name: "web", RelativeDir: "apps/web", TemplateID: "react-spa", Toolchain: "node",
+			Name: "web", RelativeDir: "apps/web", Toolchain: "node",
 		}},
 	}
 	if err := WriteManifest(root, manifest); err != nil {
@@ -162,7 +162,6 @@ func TestAtomicManifestConcurrentReadersNeverObservePartialTOML(t *testing.T) {
 			projects = append(projects, ManifestProject{
 				Name:        fmt.Sprintf("service-%03d", index),
 				RelativeDir: fmt.Sprintf("services/service-%03d", index),
-				TemplateID:  "go-api",
 				Toolchain:   "go",
 			})
 		}

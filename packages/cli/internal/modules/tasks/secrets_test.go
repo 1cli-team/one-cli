@@ -105,6 +105,7 @@ func TestNativeMiseProjectEnvironmentsAndCache(t *testing.T) {
 	t.Setenv("MISE_GLOBAL_CONFIG_FILE", filepath.Join(isolated, "global.toml"))
 	t.Setenv("MISE_TRUSTED_CONFIG_PATHS", w.Root())
 	t.Setenv("MISE_AUTO_INSTALL", "0")
+	t.Setenv("MISE_EXPERIMENTAL", "0")
 	t.Setenv("MISE_TASK_RUN_AUTO_INSTALL", "0")
 	t.Setenv("MISE_TASK_CACHE_DIR", filepath.Join(isolated, "task-cache"))
 	t.Setenv("ONE_NATIVE_CHILD", "1")
@@ -124,7 +125,7 @@ func TestNativeMiseProjectEnvironmentsAndCache(t *testing.T) {
 	local, _ := toml.Marshal(map[string]any{"tasks": map[string]any{"web:build": map[string]any{"dir": "apps/web", "run": quote(os.Args[0]) + " -test.run=^TestNativeEnvironmentChild$", "sources": []string{"package.json"}, "outputs": []string{"dist"}, "cache": map[string]any{"enabled": true}}}})
 	writeTaskFile(t, w.Root(), "mise.local.toml", string(local))
 	service := Service{Provider: nativeProvider{binary}, Loaders: secrets.MustRegistry(loader), Prepare: func(context.Context, dependencies.Input) error { return nil }}
-	opts := Options{Name: "build", UI: "stream", Cache: "local-only", Jobs: 2}
+	opts := Options{Name: "build", UI: "stream", Cache: "off", Jobs: 2}
 	for round := 0; round < 3; round++ {
 		if round == 1 {
 			loader.values["apps/web"]["ONE_TEST_SHARED"] = "rotated"

@@ -69,7 +69,9 @@ Before launching, One checks that commands, directories, dependencies and bindin
 
 ## Cache and concurrency
 
-Ordinary native tasks retain mise's cache declarations. Known deterministic template builds receive sources, outputs and declared environment inputs. No One fingerprint command is required:
+Task artifact caching is disabled when running through One. There is no `--cache` option. New workspaces and `one init mise` do not enable mise's experimental features or infer cache inputs and outputs from templates. Existing user-authored mise settings are preserved.
+
+Ordinary `sources` / `outputs` freshness checks remain available without experimental features. Declare them in `mise.toml` for tasks with known inputs and outputs:
 
 ```toml
 [tasks."web:build"]
@@ -77,19 +79,19 @@ dir = "apps/web"
 run = "pnpm run build"
 sources = ["src/**/*", "package.json", "tsconfig.json", "../../pnpm-lock.yaml"]
 outputs = ["dist"]
-cache = { enabled = true, env = ["NODE_ENV"] }
 ```
 
 Tasks with injected remote variables, and executable tasks downstream of them, bypass artifact caching and freshness skipping. One prints a short notice. This ensures changed, removed and empty variables cannot reuse stale outputs. One does not keep a cross-invocation secret cache.
 
 ```sh
-one run build --cache local-only
-one run build --cache off --force
-one run build --cache read-only
+one run build
+one run build --force
 one run build --concurrency 4
 ```
 
-Cache modes also include `read-write` and `write-only`; configure remote cache backends directly in mise. Source and output paths are relative to `dir`, and output locations must not overlap across selected tasks. Extra command arguments disable artifact caching and force execution.
+Use `--force` to bypass freshness checks and rerun tasks.
+
+Source and output paths are relative to `dir`, and output locations must not overlap across selected tasks. Extra command arguments disable artifact caching and force execution.
 
 Automatic concurrency allocates a slot per graph node, independently of the task name. An explicit limit is respected; long-running prerequisites still follow mise's dependency semantics.
 

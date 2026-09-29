@@ -21,7 +21,7 @@ func Commands(loaders *secrets.Registry, provider runtimeport.Provider) []*cobra
 	return []*cobra.Command{command(service), serviceWorker(service)}
 }
 func command(service tasks.Service) *cobra.Command {
-	opts := tasks.Options{Jobs: 1, Cache: "local-only", UI: "auto"}
+	opts := tasks.Options{Jobs: 1, Cache: "off", UI: "auto"}
 	var list, dry, verbose bool
 	cmd := &cobra.Command{Use: "run [task]", Args: cobra.ArbitraryArgs, Example: "  one run\n  one run build -p web\n  one run test -p api\n  one run build --dry-run", RunE: func(cmd *cobra.Command, args []string) (resultErr error) {
 		dash := cmd.ArgsLenAtDash()
@@ -107,14 +107,13 @@ func command(service tasks.Service) *cobra.Command {
 	}}
 	cmd.Flags().StringArrayVarP(&opts.Projects, "project", "p", nil, "")
 	cmd.Flags().StringVar(&opts.Environment, "env", "", "")
-	cmd.Flags().StringVar(&opts.Cache, "cache", "local-only", "")
 	cmd.Flags().StringVar(&opts.UI, "ui", "auto", "")
 	cmd.Flags().IntVar(&opts.Jobs, "concurrency", 1, "")
 	cmd.Flags().BoolVar(&opts.Force, "force", false, "")
 	cmd.Flags().BoolVar(&dry, "dry-run", false, "")
 	cmd.Flags().BoolVar(&list, "list", false, "")
 	cmd.Flags().BoolVar(&verbose, "verbose", false, "")
-	for _, name := range []string{"project", "env", "cache", "ui", "concurrency", "force", "dry-run", "list", "verbose"} {
+	for _, name := range []string{"project", "env", "ui", "concurrency", "force", "dry-run", "list", "verbose"} {
 		i18n.MarkFlagUsage(cmd, name, "tasks.flag."+strings.ReplaceAll(name, "-", "_"))
 	}
 	i18n.MarkShort(cmd, "tasks.run.short")

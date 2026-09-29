@@ -24,7 +24,7 @@ func seedProjectSettingsWorkspace(t *testing.T) string {
 		Env: &workspacecore.EnvironmentConfig{ProjectID: "remote", Environments: []string{"dev", "staging", "prod"}},
 
 		Projects: []workspacecore.ManifestProject{{
-			Name: "web", RelativeDir: "apps/web", TemplateID: "react-spa", Toolchain: "node",
+			Name: "web", RelativeDir: "apps/web", Toolchain: "node",
 		}},
 	}
 	if err := workspacecore.WriteManifest(root, manifest); err != nil {

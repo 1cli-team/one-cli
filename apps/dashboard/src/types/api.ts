@@ -100,7 +100,6 @@ export interface OverviewProject {
 	name: string;
 	relativeDir: string;
 	kind: OverviewProjectKind;
-	templateId?: string;
 	toolchain?: string;
 	domains?: Partial<Record<OverviewIssueDomain, string>>;
 	issues?: OverviewIssue[];
@@ -162,7 +161,6 @@ export interface ProjectSettings {
 	name: string;
 	relativeDir: string;
 	kind: OverviewProjectKind;
-	templateId?: string;
 	toolchain?: string;
 	packageManager?: string;
 	devAvailable?: boolean;

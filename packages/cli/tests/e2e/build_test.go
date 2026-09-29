@@ -44,6 +44,7 @@ func buildFixture(t *testing.T, mise bool) string {
 	// mise does not discover a monorepo rooted at HOME.
 	isolateHome(t, t.TempDir())
 	t.Setenv("ONE_RUNTIME", "builtin")
+	t.Setenv("MISE_EXPERIMENTAL", "0")
 	buildWrite(t, root, "one.manifest.toml", `version = 2
 
 [workspace]

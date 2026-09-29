@@ -140,7 +140,6 @@ func materializeProject(ctx context.Context, projectRoot string, in ProjectInput
 	newProject := workspace.ManifestProject{
 		Name:        in.Name,
 		RelativeDir: filepath.ToSlash(relDir),
-		TemplateID:  entry.ID,
 		Toolchain:   string(entry.Toolchain),
 	}
 	for _, p := range manifest.Projects {
