@@ -103,9 +103,10 @@ You can also pick one of the recommended combos above, get it running, and chang
 
 ## Template dependencies and Electron workspaces
 
-Node templates do not copy pre-generated lockfiles. `one dev` creates or updates the
-repository's root lockfile when needed; commit it to Git. `one build` validates an
-existing lockfile without rewriting it.
+Node templates do not copy pre-generated lockfiles. Tasks such as `one dev` and
+`one build` share dependency preparation: matching installations are reused, and
+installation may create or update the root lockfile. Review and commit those changes.
+For strict lockfile validation in CI, explicitly run `one mise exec -- pnpm install --frozen-lockfile`.
 
 `electron-app` requires a pnpm workspace. It remains one One project, while its main,
 UI, and preload packages join the root `pnpm-workspace.yaml` and share the root lockfile.

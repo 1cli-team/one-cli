@@ -1,6 +1,6 @@
 ---
 title: Manual workspace
-description: Run one create yourself in the terminal. See what gets written to disk, what manifest it produces, and what default backends get wired.
+description: Create an empty workspace with one create, inspect its files and task configuration, and add your first project.
 ---
 
 <VideoEmbed provider="youtube" videoId="aWwMxfFQW1g" title="Create a One CLI workspace manually" />
@@ -18,7 +18,7 @@ Manual options live in [installation](/en/docs/installation/).
 
 ## 2. Run `one create`
 
-The simplest form prompts you interactively for everything:
+Pass a target directory to create an empty workspace, or omit it to enter the directory interactively:
 
 ```bash
 one create my-workspace
@@ -51,7 +51,9 @@ You'll see something like:
 ```
 .git/
 .config/
+AGENTS.md
 apps/
+mise.toml
 one.manifest.toml
 packages/
 services/
@@ -107,7 +109,7 @@ git commit -m "chore: scaffold workspace"
 |---|---|---|
 | `INVALID_NAME` | Workspace name has unsupported characters | Use `^[a-zA-Z0-9][a-zA-Z0-9_-]*$` (kebab-case is safe) |
 | `WORKSPACE_NESTED_FORBIDDEN` | Tried to `one create` inside an existing workspace | Run from a non-workspace directory |
-| `TARGET_EXISTS` | The target directory already exists and is non-empty | Pick a different name, or empty the directory first |
+| `EXISTING_TARGET_NOT_EMPTY` | The target directory already exists and is non-empty | Pick a different name, or empty the directory first |
 | `TEMPLATE_NOT_FOUND` | one add refers to an unavailable template | Run [`one templates list`](/en/docs/templates-cmd/) or visit the [templates page](/en/tutorials/templates/) |
 
 Full table: [error codes](/en/docs/error-codes/).

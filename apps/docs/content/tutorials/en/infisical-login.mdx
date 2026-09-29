@@ -37,7 +37,7 @@ Run `one serve`. Settings manages browser login, pending callbacks, cancellation
 
 ## Security boundaries
 
-Injection and output masking reduce accidental exposure; they do not isolate an Agent running arbitrary programs as the same OS user. Such an Agent can still retrieve or exfiltrate credentials. Descriptions are untrusted data. Limit Infisical and cloud permissions, environments, paths, and credential lifetime. Output masking is best effort for exact known values and cannot cover transformed output or files written by child processes. External tools such as Docker may persist credentials themselves.
+One's own messages and structured results omit injected values. Child logs pass through unchanged, with no secret scanning or replacement; values printed by a child can appear in the terminal, Dashboard, and log files. Injection does not isolate an Agent running as the same OS user. Limit Infisical and cloud permissions, folders, environments, and credential lifetime to the task. External tools such as Docker may persist credentials themselves.
 
 ## Preferences and workspace tools
 

@@ -6,7 +6,7 @@ description: One CLI error-code reference for code, context, and remediation han
 import { Callout } from "fumadocs-ui/components/callout";
 
 <Callout type="info">
-This page mirrors the generated Chinese reference from `internal/platform/errors/codes.go`. When adding codes, update the source registry and regenerate the docs.
+This reference follows `internal/platform/errors/codes.go`. When codes change, regenerate the Chinese reference with `mise run gen-error-codes` from the repository root and update the English reference to match.
 </Callout>
 
 ## What This Is
@@ -58,9 +58,43 @@ User cancelled a terminal interaction with Ctrl-C / ESC. Treat as graceful cance
 Positional argument did not match a command. Run `one --help`.
 
 
+## Tools and tasks
+
+### `RUNTIME_INVALID`
+
+The selected execution runtime is not supported. Use a documented runtime setting.
+
+### `MISE_NOT_FOUND`
+
+The explicitly selected mise executable is unavailable. Check `ONE_MISE_BINARY`.
+
+### `MISE_INSTALL_FAILED`
+
+One could not download, migrate, verify, or prepare managed mise. Check the reported network, checksum, or filesystem error and retry.
+
+### `MISE_VERSION_UNSUPPORTED`
+
+The selected mise version is unsupported or could not be read. Use a compatible version or let One manage mise.
+
+### `MISE_CONFIG_CONFLICT`
+
+Generated mise configuration conflicts with local edits or changed during generation. Review the conflicting file before regenerating it.
+
+### `HOOKS_CONFIG_CONFLICT`
+
+Existing Git hooks or hk configuration conflict with the generated setup. Preserve custom rules and integrate the reported changes manually.
+
+### `RUNTIME_TASK_NOT_FOUND`
+
+The project has no matching task. Use `one run` to inspect tasks; define the task in its source configuration and run `one init mise` when needed.
+
 ## Workspace / Project
 
 Workspace detection, naming rules, and target-directory conflicts.
+
+### `DEPENDENCIES_NOT_INSTALLED`
+
+Required Node dependencies are missing. Run the project task through `one run` to prepare dependencies, or inspect the reported installation failure.
 
 ### `EXISTING_TARGET_NOT_EMPTY`
 
@@ -209,7 +243,7 @@ Non-interactive `env set` was called without a value.
 
 ### `ENV_UNKNOWN_ENVIRONMENT`
 
-Env name is not registered. `set` can create it; read commands require it to exist first.
+The environment slug is not declared in the binding. It must already exist in Infisical; a successful `set` can register it locally after confirmation. Read commands require an existing declaration.
 
 ### `ENV_BACKEND_INVALID`
 
@@ -314,7 +348,11 @@ Two backend patches conflict on the same target.
 
 ### `RUN_COMMAND_NOT_FOUND`
 
-`one run` child command was not found.
+The command passed to `one exec` was not found in its execution PATH.
+
+### `RUN_USAGE_INVALID`
+
+`one exec` arguments are invalid. Use `--` before the child command and provide at most one positional project; positional and `--project` selections must agree.
 
 ### `RUN_DOTENV_MISSING`
 
@@ -323,6 +361,10 @@ Reserved error code from the removed local environment-file workflow.
 ### `SERVE_BIND_FORBIDDEN`
 
 `one serve` only allows loopback bind. Use `127.0.0.1` or SSH forwarding.
+
+### `SERVE_MANIFEST_CONFLICT`
+
+The Manifest changed after a Dashboard draft was loaded. Reload the current file, review the new draft, and save again.
 
 ### `SERVE_PAYLOAD_INVALID`
 

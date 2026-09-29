@@ -18,7 +18,7 @@ One CLI 不只生成项目文件，也会在 monorepo 里留下可持续执行�
 1. **自动化接口**：agent 和 CI 读取结构化输出，不抓终端文本
 2. **错误恢复**：agent 按稳定错误码、上下文和恢复建议处理失败
 3. **项目上下文**：agent 读取 manifest、项目 README 和团队自行维护的说明
-4. **权限边界**：本机凭据、环境和部署配置有明确归属，不交给 agent 猜
+4. **权限边界**：登录会话、项目变量和共享凭据有明确归属，不交给 agent 猜
 
 ## 规则一：命令输出必须可解析
 
@@ -33,7 +33,7 @@ one templates -o json
 ```json
 {
   "schema": "one-cli/templates/v1",
-  "total": 10,
+  "total": 13,
   "templates": [
     {
       "id": "nestjs-api",
@@ -69,7 +69,10 @@ One CLI 的错误使用统一 envelope：
         "expo-mobile",
         "ts-library",
         "go-lib",
-        "electron-app"
+        "electron-app",
+        "empty-app",
+        "empty-service",
+        "empty-library"
       ],
       "requested_template": "api-fastify"
     },
@@ -103,11 +106,11 @@ agent 的处理顺序应该是：
 
 ## 规则四：配置和凭据有边界
 
-One CLI 可以管理 env、container、deploy 等机器级配置，但 agent 不应该接触真实凭据。
+One CLI 通过 Infisical 管理项目变量与共享凭据，并在运行命令时注入。登录会话保存在系统钥匙串，变量值留在远端。
 
 推荐边界：
 
-- `one.manifest.toml` 记录可审查的 Workspace/Project/Backend 配置；密钥值与会话令牌不进 Manifest
+- `one.manifest.toml` 记录可审查的 工作区身份、项目路径、工具链和 Infisical 绑定；密钥值与会话令牌不进 Manifest
 - `one login` 管理系统钥匙串中的单一浏览器会话；`one serve` 提供账号设置、共享凭据元数据和经审阅的 Manifest 草稿。
 - `.env*`、私钥、云厂商 token 不进 Git，也不写进 agent 可复用文档
 - agent 可以读取结构化状态、执行缺失依赖安装和项目生成，但涉及发布、删除、覆盖凭据时应回到团队策略或人工确认

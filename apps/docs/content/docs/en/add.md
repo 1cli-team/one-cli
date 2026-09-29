@@ -145,6 +145,6 @@ Not sure which one to use? Read the [template decision tree](/en/docs/templates/
 ## After Adding
 
 - Check `one.manifest.toml#projects.<name>` to confirm registration
-- Agent docs and local-development configuration are synced by `one add`
+- `one add` updates task configuration and preserves existing `AGENTS.md` files and team edits
 - Run `one dev -p <project>` for development and `one build -p <project>` to build
-- `one add` does not install dependencies: JS / TS workspaces install from the root with the package manager; Go projects run `go mod download` in the project directory, then `go mod tidy` only after changing imports or when module metadata needs repair
+- `one add` generates project and workspace configuration; `one dev` prepares tools and dependencies automatically. Node dependencies are installed at the workspace root; Go dependencies follow the module or `go.work` build graph. After changing imports or module declarations, use `one exec <project> -- go mod tidy` when repairs are needed

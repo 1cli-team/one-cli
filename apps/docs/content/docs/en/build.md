@@ -14,6 +14,6 @@ one build --force
 one build -p web --ui raw
 ```
 
-Node commands come from `package.json` and use pnpm. Go commands come from Taskfile. Full builds include available build tasks; explicitly selecting a project without one fails. Local Node dependencies build before their consumers. Default concurrency is one; `--concurrency 4` allows independent tasks to run in parallel.
+Node commands come from `package.json` and use the workspace package manager (pnpm for new workspaces). Go commands come from Taskfile. Full builds include available build tasks; explicitly selecting a project without one fails. Local Node dependencies build before their consumers. Concurrency is allocated automatically from the task graph; `--concurrency 4` sets an explicit limit.
 
-The Dashboard displays the project build command and its source. Edit the source file to change it. Workspace dependencies and cache settings live in mise configuration. See [one run](/en/docs/run/) for task management, custom caching, terminal modes, and Actions examples.
+The Dashboard displays the project build command and its source. Edit the source file to change it. Workspace dependencies and sources / outputs freshness checks live in mise configuration. Artifact caching is disabled through One; `--force` bypasses freshness checks. See [one run](/en/docs/run/) for task management and terminal modes.

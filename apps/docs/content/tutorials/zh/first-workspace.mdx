@@ -1,6 +1,6 @@
 ---
 title: 手动创建工作区
-description: 直接在终端跑 one create。看清它往磁盘写了什么、生成的 manifest 长什么样、默认接了哪些 backend。
+description: 使用 one create 创建空工作区，了解生成文件与任务配置，再添加第一个项目。
 ---
 
 <VideoEmbed provider="bilibili" videoId="BV1RALn6REq3" title="手动创建工作区（one create）" />
@@ -18,7 +18,7 @@ one --version
 
 ## 2. 跑 `one create`
 
-最简形式，所有都交互式问你：
+指定目标目录创建空工作区；省略目录时会提示输入：
 
 ```bash
 one create my-workspace
@@ -51,7 +51,9 @@ ls -la
 ```
 .git/
 .config/
+AGENTS.md
 apps/
+mise.toml
 one.manifest.toml
 packages/
 services/
@@ -107,7 +109,7 @@ git commit -m "chore: scaffold workspace"
 |---|---|---|
 | `INVALID_NAME` | 名字有非法字符 | 用 `^[a-zA-Z0-9][a-zA-Z0-9_-]*$`（kebab-case 最稳） |
 | `WORKSPACE_NESTED_FORBIDDEN` | 在已有工作区里 `one create` | 退出去再起 |
-| `TARGET_EXISTS` | 目标目录已经存在且非空 | 换个名字，或清空目录 |
+| `EXISTING_TARGET_NOT_EMPTY` | 目标目录已经存在且非空 | 换个名字，或清空目录 |
 | `TEMPLATE_NOT_FOUND` | one add 指定的模板不存在 | 跑 [`one templates list`](/zh/docs/templates-cmd/) 或回 [模板页](/zh/tutorials/templates/) |
 
 完整码表：[错误码大全](/zh/docs/error-codes/)。

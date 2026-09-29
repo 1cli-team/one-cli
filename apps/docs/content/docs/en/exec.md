@@ -13,19 +13,28 @@ One does not print fetched variable values. Child stdout, stderr, colors, format
 one exec [-p <name|path>] [--env <env>] -- <cmd> [args...]
 ```
 
-You can omit `--`, but scripts should keep it so child flags are not parsed as One CLI flags.
+The `--` separator is required. You can also select the project with a positional argument, such as `one exec web -- pnpm build`.
 
 ## Options
 
 | option | purpose |
 |---|---|
 | `-p`, `--project <name|path>` | select a project; without it, One CLI infers from cwd |
-| `--env <env>` | use a specific environment |
+| `--env <env>` | select an environment; project mode defaults to `dev` |
+| `--dry-run` | show the directory, arguments, and runtime without preparing tools, fetching secrets, or running the command |
 | `-o`, `--output <fmt>` | affects only One CLI output; child stdout/stderr pass through |
 
 ## Interactive Mode
 
-`one exec` has no wizard. It only resolves the project, environment, and child command from arguments. Keep the `--` separator in scripts because the child command can have its own flags.
+`one exec` has no wizard. It only resolves the project, environment, and child command from arguments. Use the required `--` separator before the child command and its flags.
+
+## mise tool environment
+
+With a One-generated root `mise.toml`, `one exec` prepares the project tool environment through mise. One uses a compatible system mise or downloads its managed version when needed. It does not install project dependencies; use `one run` for tasks that need dependency preparation.
+
+The environment order is shell → mise → One project variables, with later values taking precedence. Project directory, arguments, standard IO, and the child exit code are preserved. No shell activation is needed.
+
+See [runtime installation](/en/docs/installation/) and [workspace tools](/en/docs/login/) for setup and offline use.
 
 ## Examples
 
@@ -47,7 +56,7 @@ The child process always runs from the resolved project directory, so commands f
 <workspace>/node_modules/.bin
 ```
 
-This lets pnpm / turbo workspaces invoke `vite`, `next`, `astro`, and similar binaries directly.
+This lets Node workspaces invoke `vite`, `next`, `astro`, and similar binaries directly.
 
 ## Infisical injection
 
@@ -64,7 +73,7 @@ The manifest `[env.infisical]` binding enables Infisical injection. Without a bi
 
 ## Next
 
-- [Run with env vars](/en/tutorials/run-passthrough/)
+- [Run with env vars](/en/tutorials/env-vars/)
 - [one env](/en/docs/env-vars/)
 - [one dev](/en/docs/dev/)
 
@@ -76,4 +85,4 @@ one exec --global --env dev --path /oss --keys OSS_ACCESS_KEY_ID,OSS_ACCESS_KEY_
 one exec --global --env dev --path /oss --dry-run -- upload-assets
 ```
 
-Environment and folder must be explicit. Only that folder is read; `--keys` fetches only selected variables. Dry-run does not read credentials. Global mode does not load project environments or implicitly resolve repository binaries. It preserves the current directory. Exact-value output masking is best effort, not a sandbox.
+Environment and folder must be explicit. Only that folder is read; `--keys` fetches only selected variables. Dry-run does not read credentials. Global mode does not load project environments or implicitly resolve repository binaries. It preserves the current directory. One does not print injected values; child output passes through unchanged, including any variable values the child prints.

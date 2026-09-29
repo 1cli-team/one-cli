@@ -20,9 +20,9 @@ one exec [-p <name|path>] [--env <env>] -- <cmd> [args...]
 | 参数 | 说明 |
 |---|---|
 | `-p, --project <name|path>` | 选择项目；不传时从当前目录推导 |
-| `--env <env>` | 使用指定环境；默认取 manifest 的默认环境 |
+| `--env <env>` | 使用指定环境；项目模式默认固定为 `dev` |
 | `--dry-run` | 仅输出目录、原始参数和 runtime，不执行 mise、不读取密钥、不启动命令 |
-| `-o, --output <fmt>` | 只影响 One CLI 自己的输出；子进程 stdout/stderr 保留格式并遮盖已知注入密钥 |
+| `-o, --output <fmt>` | 只影响 One CLI 自己的输出；子进程 stdout/stderr 原样传递，包括其主动打印的变量值 |
 
 ## 交互模式
 
@@ -34,7 +34,7 @@ one exec [-p <name|path>] [--env <env>] -- <cmd> [args...]
 
 覆盖顺序为：父进程环境 → mise 环境 → 当前项目的 One 环境变量。项目目录、参数边界、标准 IO 和应用退出码保持原有语义，不需要 `mise activate`。
 
-无需单独安装 mise：One 优先使用兼容的系统版本，否则复用或从官方下载到自己的目录；本地没有可用程序时首次运行需要联网，程序被删后会按需恢复。创建工作区和添加项目时自动信任完整的 One 生成配置；自定义配置继续遵循 mise 规则，审查后通过 `one mise trust` 授权。离线配置见 [One 自动管理 mise](/zh/docs/installation/#one-自动管理-mise)，旧项目启用和版本调整见 [`one init mise`](/zh/docs/login/#mise-工作区工具配置)。
+无需单独安装 mise：One 优先使用兼容的系统版本，否则复用或从官方下载到自己的目录；本地没有可用程序时首次运行需要联网，程序被删后会按需恢复。创建工作区和添加项目时自动信任完整的 One 生成配置；自定义配置继续遵循 mise 规则，审查后通过 `one mise trust` 授权。离线配置见 [One 自动管理 mise](/zh/docs/installation/#one-自动管理-mise)，旧项目启用和版本调整见 [`one init mise`](/zh/docs/login/#本机偏好与工作区工具)。
 
 ## 示例
 
@@ -75,7 +75,7 @@ Manifest 的 `[env.infisical]` 绑定启用 Infisical 注入。未绑定时，�
 
 ## 进一步阅读
 
-- [环境变量注入命令](/zh/tutorials/run-passthrough/) — 真实使用场景
+- [环境变量注入命令](/zh/tutorials/env-vars/) — 真实使用场景
 - [`one env`](/zh/docs/env-vars/) — 管理 Infisical 环境变量
 - [`one dev`](/zh/docs/dev/) — 启动全部可开发项目
 
@@ -87,4 +87,4 @@ one exec --global --env dev --path /oss --keys OSS_ACCESS_KEY_ID,OSS_ACCESS_KEY_
 one exec --global --env dev --path /oss --dry-run -- upload-assets
 ```
 
-环境和目录必须显式指定。只读取该层目录，指定 `--keys` 时只获取所选变量；dry-run 不读取凭据。全局模式不加载项目环境或仓库内的隐式命令路径。命令在当前目录运行；输出遮盖仅尽力匹配原始密钥值，不是安全沙箱。
+环境和目录必须显式指定。只读取该层目录，指定 `--keys` 时只获取所选变量；dry-run 不读取凭据。全局模式不加载项目环境或仓库内的隐式命令路径。命令在当前目录运行。One 不打印注入值；子进程输出保持原样，子进程主动打印的变量值不会被遮盖。
