@@ -20,14 +20,14 @@ const sectionsByLocale: Record<Locale, SidebarSection[]> = {
     {
       label: "基础教程",
       items: [
-        { label: "一键创建工作区", href: "/tutorials/templates/" },
+        { label: "浏览项目模板", href: "/tutorials/templates/" },
         { label: "手动创建工作区", href: "/tutorials/first-workspace/" },
       ],
     },
     {
       label: "进阶教程",
       items: [
-        { label: "管理多平台密钥", href: "/tutorials/configure-profiles/" },
+        { label: "登录与共享凭据", href: "/tutorials/infisical-login/" },
         { label: "配置环境变量", href: "/tutorials/env-vars/" },
         { label: "多环境变量", href: "/tutorials/env-multi-env/" },
         { label: "本地开发编排", href: "/tutorials/dev-local/" },
@@ -42,7 +42,7 @@ const sectionsByLocale: Record<Locale, SidebarSection[]> = {
     {
       label: "BASICS",
       items: [
-        { label: "One-click workspace", href: "/tutorials/templates/" },
+        { label: "Browse project templates", href: "/tutorials/templates/" },
         { label: "Manual workspace", href: "/tutorials/first-workspace/" },
       ],
     },
@@ -50,8 +50,8 @@ const sectionsByLocale: Record<Locale, SidebarSection[]> = {
       label: "ADVANCED",
       items: [
         {
-          label: "Manage multi-platform secrets",
-          href: "/tutorials/configure-profiles/",
+          label: "Login and shared credentials",
+          href: "/tutorials/infisical-login/",
         },
         { label: "Configure env vars", href: "/tutorials/env-vars/" },
         { label: "Multi-env vars", href: "/tutorials/env-multi-env/" },

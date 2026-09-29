@@ -103,8 +103,9 @@ one add ts-library     --name shared
 
 ## 模板依赖和 Electron 工作区
 
-Node 模板不复制预生成的锁文件。`one dev` 会按需生成或更新仓库根锁文件，
-请将它提交 Git；`one build` 对已有锁文件执行严格校验。
+Node 模板不复制预生成的锁文件。`one dev`、`one build` 等任务共用依赖准备流程：
+复用匹配的依赖，需要安装时允许生成或更新根锁文件。请审阅并提交锁文件变更。
+需要严格校验锁文件的 CI，可显式执行 `one mise exec -- pnpm install --frozen-lockfile`。
 
 `electron-app` 需要 pnpm 工作区。它仍是一个 One 项目，内部的主进程、UI 和 preload
 包会自动加入根 `pnpm-workspace.yaml`，共享根锁文件。包名以项目名作为 scope，

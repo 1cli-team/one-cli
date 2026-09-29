@@ -108,7 +108,7 @@ const moduleConfigs: ModuleConfig[] = [
   },
   {
     id: "build",
-    labels: { zh: "Deploy", en: "Deploy" },
+    labels: { zh: "Build", en: "Build" },
     spotlight: {
       zh: { title: "Build", subtitle: "统一项目构建" },
       en: { title: "Build", subtitle: "Build workspace projects" },

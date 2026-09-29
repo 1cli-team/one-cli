@@ -1,71 +1,59 @@
 ---
 title: 快速开始
-description: 5 分钟跑通一个能用的 one 工作区 — create / add / 启动第一个项目。
+description: 创建工作区、添加 Web 项目，用 one dev 准备依赖并启动开发服务。
 ---
 
-5 分钟跑出第一个能用的 one 工作区，并把第一个项目启动起来。
+从空工作区开始，添加一个 React Web 项目，再用 One CLI 启动它。
 
-**适合读这页的人**：装好 one 之后第一次跑；想验证环境 OK 的人；想快速体验概念的人。
+> 还没安装？先看[安装说明](/zh/docs/installation/)。
 
-**读完会**：手上有一个能启动的 Web 项目，并能在浏览器打开它。
-
-> 还没装？先看 [安装](/zh/docs/installation/)。
-> 想做生产级别的端到端流程？跳到 [创建生产可用的工作区](/zh/tutorials/first-workspace/)。
-
-## Step 1：创建工作区
+## 1. 创建工作区
 
 ```bash
 one create my-app
 cd my-app
 ```
 
-这一步会创建 `my-app/` 目录。接下来所有命令都在这个目录里执行。
+One 会生成工作区目录、`one.manifest.toml`、`mise.toml` 和 `AGENTS.md`。接下来的命令都在 `my-app/` 中运行。
 
-## Step 2：加一个 Web 项目
-
-快速开始固定用一个能直接在浏览器里打开的 Web 项目：
+## 2. 添加 Web 项目
 
 ```bash
 one add react-spa --name web
 ```
 
-`one add` 不自动下载项目用到的包，下一步会下载。
+项目位于 `apps/web/`。One 将它登记到 Manifest，并把模板已有的任务加入根 `mise.toml`。需要浏览其他模板时，运行 `one templates`。
 
-## Step 3：下载依赖并启动项目
-
-项目第一次运行前，需要先下载它用到的包。复制这条命令，在 workspace 根目录执行即可；第一次会稍微久一点：
+## 3. 启动开发服务
 
 ```bash
-pnpm install
+one dev -p web
 ```
 
-下载完成后启动 Web 项目：
+One 按需准备 mise、项目工具和依赖，然后启动 Web 项目。首次运行需要联网，下载可能需要一些时间；后续会复用匹配的依赖。无需提前手动安装 pnpm 或激活 mise。
+
+用浏览器打开日志中的 `Local: http://localhost:.../` 地址。这个示例不需要登录 Infisical 或绑定变量。按 Ctrl+C 停止服务。
+
+## 4. 查看任务与构建
 
 ```bash
-pnpm -C apps/web dev
+one run
+one build -p web
 ```
 
-看到终端打印的 `Local: http://localhost:.../` 后，用浏览器打开即可。这个 Web 示例本身不要求预置 `.env`，所以快速开始不需要配置 env。
+`one run` 列出当前工作区任务。`one dev` 和 `one build` 分别是 `one run dev` 和 `one run build` 的简写。
 
-## 完了
+想在浏览器里管理项目和开发服务，可以运行：
 
-你已经创建并启动了第一个 Web 项目：
+```bash
+one serve
+```
 
-| 命令 | 干了什么 |
-|---|---|
-| `one create` | 创建工作区 |
-| `one add` | 加一个 Web 项目 |
-| `pnpm install` | 下载项目用到的包 |
-| `pnpm -C apps/web dev` | 启动第一个 Web 项目 |
-
-后续使用 `one env` 管理环境变量，使用 `one build` 构建项目。
+Dashboard 支持添加项目、管理变量、启动开发服务与查看控制台。
 
 ## 下一步
 
-按你的目标选一条：
-
-- **想真上生产？** → [创建生产可用的工作区](/zh/tutorials/first-workspace/)（端到端 30 分钟）
-- **想接 Infisical secrets？** → [环境变量指南](/zh/tutorials/env-vars/)
-- **想让 Claude 帮你跑 one？** → [AI 项目说明](/zh/docs/ai-native/)
-- **想查每个命令细节？** → [CLI 命令](/zh/docs/cli-overview/)
-- **不想用？** 删掉 `my-app/` 文件夹就是。
+- [第一个工作区](/zh/tutorials/first-workspace/)：了解生成文件和目录约定。
+- [任务管理](/zh/docs/run/)：选择多个项目、自定义任务和查看日志。
+- [环境变量](/zh/tutorials/env-vars/)：登录 Infisical，再保存项目变量。
+- [与 AI 协作](/zh/docs/ai-native/)：使用项目说明、命令帮助和结构化结果。

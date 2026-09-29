@@ -19,7 +19,7 @@ one templates [-o <fmt>]
 
 ## 交互模式
 
-`one templates` 本身没有交互式向导：它只列模板。人类在终端直接运行会看到易读列表；脚本和 agent 用 `-o json` 读取模板 ID、分类和兼容 backend。
+`one templates` 本身没有交互式向导：它只列模板。人类在终端直接运行会看到易读列表；脚本和 agent 用 `-o json` 读取模板 ID、分类和工具链。
 
 如果你想边看边选模板，请运行 [`one add`](/zh/docs/add/) 的交互模式。
 
@@ -36,10 +36,7 @@ one templates [-o <fmt>]
       "description": "NestJS + TypeScript，适合 API 服务与业务后台",
       "toolchain": "node",
       "tags": ["api", "nestjs", "typescript", "backend"],
-      "domains": {
-        "container": { "default": "docker", "compat": ["docker"] },
-        "deploy": { "default": "kustomize", "compat": ["kustomize"] }
-      }
+      "repo": "local:nestjs-api"
     },
     {
       "id": "go-api",

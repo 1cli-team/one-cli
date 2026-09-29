@@ -30,7 +30,7 @@ const sectionsByLocale: Record<Locale, SidebarSection[]> = {
       items: [
         { label: "工作区清单", href: "/docs/manifest/" },
         { label: "模板", href: "/docs/templates/" },
-        { label: "治理规则", href: "/docs/ai-native/" },
+        { label: "与 AI 协作", href: "/docs/ai-native/" },
       ],
     },
     {
@@ -41,8 +41,8 @@ const sectionsByLocale: Record<Locale, SidebarSection[]> = {
         { label: "one add", href: "/docs/add/", mono: true },
         { label: "one env", href: "/docs/env-vars/", mono: true },
         {
-          label: "one configure",
-          href: "/docs/configure/",
+          label: "one login",
+          href: "/docs/login/",
           mono: true,
         },
         {
@@ -52,6 +52,9 @@ const sectionsByLocale: Record<Locale, SidebarSection[]> = {
         },
         { label: "one dev", href: "/docs/dev/", mono: true },
         { label: "one run", href: "/docs/run/", mono: true },
+        { label: "one build", href: "/docs/build/", mono: true },
+        { label: "one exec", href: "/docs/exec/", mono: true },
+        { label: "one hk", href: "/docs/hk/", mono: true },
         { label: "one serve", href: "/docs/serve/", mono: true },
         { label: "错误码", href: "/docs/error-codes/" },
       ],
@@ -70,7 +73,7 @@ const sectionsByLocale: Record<Locale, SidebarSection[]> = {
       items: [
         { label: "Workspace manifest", href: "/docs/manifest/" },
         { label: "Templates", href: "/docs/templates/" },
-        { label: "Governance rules", href: "/docs/ai-native/" },
+        { label: "Work with AI", href: "/docs/ai-native/" },
       ],
     },
     {
@@ -81,8 +84,8 @@ const sectionsByLocale: Record<Locale, SidebarSection[]> = {
         { label: "one add", href: "/docs/add/", mono: true },
         { label: "one env", href: "/docs/env-vars/", mono: true },
         {
-          label: "one configure",
-          href: "/docs/configure/",
+          label: "one login",
+          href: "/docs/login/",
           mono: true,
         },
         {
@@ -92,6 +95,9 @@ const sectionsByLocale: Record<Locale, SidebarSection[]> = {
         },
         { label: "one dev", href: "/docs/dev/", mono: true },
         { label: "one run", href: "/docs/run/", mono: true },
+        { label: "one build", href: "/docs/build/", mono: true },
+        { label: "one exec", href: "/docs/exec/", mono: true },
+        { label: "one hk", href: "/docs/hk/", mono: true },
         { label: "one serve", href: "/docs/serve/", mono: true },
         {
           label: "error codes",

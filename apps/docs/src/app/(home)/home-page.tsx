@@ -36,9 +36,9 @@ import {
 const homeCopy = {
   zh: {
     meta: {
-      title: "One CLI | 从产品想法到能上线的项目",
+      title: "One CLI | 创建工作区，运行每个项目",
       description:
-        "One CLI 让 AI 从标准工程底座开始开发：网站、后台、文档、环境配置和上线流程一次准备好。",
+        "One CLI 帮助你创建多项目工作区，统一运行开发、构建和测试，通过 Dashboard 管理项目、变量与开发服务。",
     },
     nav: {
       docs: "文档",
@@ -51,16 +51,16 @@ const homeCopy = {
       byline: "来自 · TORCHSTELLAR",
       title: (
         <>
-          从一个产品想法
+          从第一个项目
           <br />
-          到能上线的项目。
+          到整个工作区。
           <br />
-          一条命令开始。
+          用同一套命令。
         </>
       ),
-      body: "让 AI 从标准工程底座开始开发：网站、后台、文档、环境配置和上线流程，一次准备好。",
+      body: "创建多项目工作区，统一运行开发、构建和测试。通过 Dashboard 管理项目、变量与开发服务，让人和 AI 使用同一套项目约定。",
       canvasAria:
-        "One CLI 工作区模块画布，展示应用、API、文档、Packages、Manifest、Env、Deploy 和 CLI 接口模块",
+        "One CLI 工作区模块画布，展示应用、API、文档、Packages、Manifest、Env、Build 和 CLI 接口模块",
       install: "开始使用",
       github: "查看 GitHub",
       copy: "复制",
@@ -71,14 +71,14 @@ const homeCopy = {
     },
     workflow: {
       eyebrow: "常用命令",
-      title: "把复杂建项目，拆成几步。",
-      body: "人可以直接输入命令，按提示选择；脚本和 AI 再补全模板名、项目名、--yes、-o json 这些明确参数。",
+      title: "从创建项目，到日常开发。",
+      body: "创建和添加项目时按提示选择，日常开发用 one run 执行任务。脚本和 AI 可以通过明确参数与 JSON 输出完成操作。",
       commandBodies: [
         "创建空工作区",
         "追加一个模板项目",
-        "保存环境与上线账号",
-        "查看模板清单",
-        "打开本地配置页",
+        "运行开发、构建与测试",
+        "管理项目环境变量",
+        "打开工作区 Dashboard",
         "查阅完整命令",
       ],
       createEyebrow: "one create",
@@ -94,7 +94,7 @@ const homeCopy = {
       bullets: [
         ["直接创建", "one create my-app --yes 会写入基础项目文件。"],
         ["添加项目", "通过 one add 选择模板，为工作区添加项目。"],
-        ["结果可查", "完成后会说明项目创建在哪里、用了哪种环境方式。"],
+        ["结果可查", "完成后返回工作区位置和生成的文件，方便继续添加项目。"],
       ],
       explore: "查看 one create",
       details: [
@@ -137,10 +137,10 @@ const homeCopy = {
               也能继续加。
             </>
           ),
-          body: "one add 只在已有 One 项目里使用。你可以直接输入 one add 进入交互式选择，也可以在脚本里写明模板名和项目名。",
+          body: "one add 在已有 One 工作区里添加项目。你可以直接输入 one add 进入交互式选择，也可以在脚本里写明模板名和项目名。",
           bullets: [
             ["交互添加", "直接输入 one add，会让你选择模板和项目名。"],
-            ["自动化模式", "CI 或 AI 才需要写 one add nextjs-app --name web --yes。"],
+            ["自动化模式", "脚本或 AI 可使用 one add nextjs-app --name web --yes。"],
             ["同步默认值", "按模板生成项目代码，并登记本地开发命令。"],
           ],
           href: ["add"],
@@ -153,83 +153,81 @@ const homeCopy = {
           ],
         },
         {
-          command: "one configure",
-          navBody: "保存环境与上线账号",
-          eyebrow: "one configure",
+          command: "one run",
+          navBody: "运行开发、构建与测试",
+          eyebrow: "one run",
           title: (
             <>
-              把密钥和上线信息，
+              不同项目，
               <br />
-              放在安全位置。
+              同一套运行方式。
             </>
           ),
-          body: "one configure 保存本机的 Infisical 凭据和偏好设置。直接运行会进入配置向导；脚本里使用 env/infisical 路径。",
+          body: "one run 列出工作区任务，通过 mise 执行开发、构建和测试。用 -p 选择项目，One 会按需准备工具和依赖。",
           bullets: [
-            ["本机保存", "配置写到 ~/.config/one；密钥文件只有本人可读。"],
-            ["远程环境", "远程 env 指 Infisical 云服务或你自己的 Infisical；不需要额外启动 One CLI 服务。"],
-            ["后续复用", "one env、one run 会自动读取当前配置。"],
+            ["发现任务", "运行 one run 查看可用任务，再选择要执行的操作。"],
+            ["日常开发", "one dev -p web 启动项目；one build -p web 构建项目。"],
+            ["查看日志", "多任务支持树形日志界面，可搜索、滚动和切换任务。"],
           ],
-          href: ["cli-overview"],
-          cta: "查看 CLI 参考",
-          sample: "one configure",
+          href: ["run"],
+          cta: "查看任务管理",
+          sample: "one dev -p web",
           output: [
-            "打开 Infisical 配置向导",
-            "保存本机配置档和凭据",
-            "供 one env、one run 后续读取",
+            "解析项目任务与依赖关系",
+            "准备工具、依赖和已绑定的项目变量",
+            "启动开发服务并显示原始日志",
           ],
         },
         {
-          command: "one templates",
-          navBody: "查看模板清单",
-          eyebrow: "one templates",
+          command: "one env",
+          navBody: "管理项目环境变量",
+          eyebrow: "one env",
           title: (
             <>
-              选一个起点，
+              变量集中管理，
               <br />
-              不用猜模板名。
+              运行时按需注入。
             </>
           ),
-          body: "one templates 会在终端里列出当前内置模板清单，适合人先看有哪些后端、前端、文档、移动端、桌面端和库模板。",
+          body: "通过 one login 在浏览器登录 Infisical，再用 one env 管理项目变量。新工作区可先直接运行，需要托管变量时再绑定。",
           bullets: [
-            ["完整目录", "包含应用、服务、共享库，以及尚未选择技术栈的空项目。"],
-            ["人类可读", "直接运行会显示模板名、分类和用途。"],
-            ["按需添加", "通过模板 ID 使用 one add 添加项目。"],
+            ["浏览器登录", "登录会话保存在系统钥匙串，使用 one whoami 查看状态。"],
+            ["项目变量", "首次保存变量时初始化工作区绑定，按环境与项目目录组织变量。"],
+            ["共享凭据", "在 Dashboard 配置共享凭据，通过 one exec --global 显式注入。"],
           ],
-          href: ["templates-cmd"],
-          cta: "查看 templates",
-          secondaryCta: "查看模板指南",
-          secondaryHref: "templates",
-          sample: "one templates",
+          href: ["env-vars"],
+          cta: "查看环境变量",
+          sample: "one env set API_URL -p web",
           output: [
-            "列出可以直接使用的模板",
-            "显示模板 ID、分类和用途",
-            "复制模板名给 one add 使用",
+            "先通过 one login 登录",
+            "在终端隐藏输入变量值",
+            "运行项目时从 Infisical 拉取并注入变量",
           ],
         },
         {
           command: "one serve",
-          navBody: "打开本地配置页",
+          navBody: "打开工作区 Dashboard",
           eyebrow: "one serve",
           title: (
             <>
-              用浏览器，
+              项目和开发服务，
               <br />
-              手动填写敏感配置。
+              在浏览器里管理。
             </>
           ),
-          body: "one serve 启动只绑定 127.0.0.1 的本地配置页，用来编辑 one configure 管理的配置档。它适合让人手动录入密钥，避免把明文暴露给 agent 对话。",
+          body: "one serve 打开本机 Dashboard，浏览工作区、添加项目、管理环境变量和共享凭据，也能启动开发服务并查看控制台。",
           bullets: [
-            ["仅本机访问", "默认随机端口，只监听 loopback，不会直接暴露到局域网。"],
-            ["校验 Host", "拒绝未知 Host header，封住通向 loopback 的 DNS rebinding 路径。"],
-            ["远程机器", "在远端跑 one serve，再用 ssh -L 做端口转发访问。"],
+            ["项目管理", "查看项目配置、选择模板添加项目，审阅 Manifest 修改后保存。"],
+            ["开发服务", "启动、停止或重启服务，查看原始日志与本机访问入口。"],
+            ["账号与变量", "在设置中登录 Infisical，按环境和目录管理变量。"],
           ],
           href: ["serve"],
-          cta: "查看 one serve",
+          cta: "查看 Dashboard",
           sample: "one serve",
           output: [
-            "打开本机浏览器里的配置页",
-            "使用无需登录 token 的普通 loopback URL",
-            "按 Ctrl-C 停止本地进程",
+            "在本机浏览器中打开 Dashboard",
+            "管理工作区、项目与共享凭据",
+            "运行开发服务并查看控制台",
           ],
         },
         {
@@ -274,14 +272,14 @@ const homeCopy = {
         {
           icon: ClipboardCheck,
           title: "Manifest 记录项目事实",
-          body: "`one.manifest.toml` 记录项目、模板、toolchain 和环境边界。agent 先读这份事实，再决定进入哪个子项目、调用哪个命令。",
+          body: "`one.manifest.toml` 记录工作区身份、项目路径、工具链和 Infisical 绑定。agent 先读这份事实，再决定进入哪个子项目、调用哪个命令。",
           chip: "one.manifest.toml",
         },
         {
           icon: Wrench,
           title: "项目说明由团队维护",
           body: "one create 按当前 CLI 语言生成 AGENTS.md。之后由团队维护，添加项目不会覆盖已有内容。",
-          chip: "AGENTS.md / CLAUDE.md",
+          chip: "AGENTS.md",
         },
         {
           icon: FileJson2,
@@ -292,21 +290,21 @@ const homeCopy = {
       ],
     },
     json: {
-      eyebrow: "所有命令都有下一步",
+      eyebrow: "可读的错误与恢复建议",
       title: "命令没跑通，不用自己猜。",
-      body: "从创建、添加，到运行、上线，One CLI 遇到问题时都会先说明卡在哪里，再给你下一步可以做什么。新手能直接照着走，AI 工具也能接着处理。",
+      body: "创建、添加和运行项目遇到问题时，One CLI 会保留具体原因，并为常见错误提供恢复建议。人和 AI 可以根据相同的信息继续处理。",
       cards: [
         ["创建项目", "目录不对或目标已存在，会告诉你怎么继续"],
         ["添加项目", "模板、名称、位置不对，会给出修复命令"],
-        ["运行和上线", "缺少配置或工具，会提示先补什么"],
+        ["运行任务", "缺少配置或工具，会提示先补什么"],
         ["接给 AI", "同样结果可以输出 JSON，方便工具处理"],
       ],
-      sampleLabel: "one add --name web --yes",
+      sampleLabel: "one add react-spa --name web --yes",
       sampleOutput: `未检测到 One CLI 项目，请在项目根目录执行。
   - 当前目录缺少 one.manifest.toml；
     请先创建工作区，或 cd 到已有工作区：
     one create <dir>`,
-      automationNote: "这只是其中一个例子。创建、添加、运行、上线等命令遇到问题时，也会用同样的方式给出原因和下一步。",
+      automationNote: "结构化错误包含错误码和上下文；提供恢复建议时，脚本和 AI 可读取 remediation 字段。",
     },
     startWays: {
       eyebrow: "开始方式",
@@ -334,19 +332,19 @@ const homeCopy = {
         label: "方式三",
         title: "交给 AI 执行",
         body: "把目标和 One CLI 命令交给 Codex、Claude Code、Cursor 等 AI 编程工具；已有工作区先阅读 README 和 one.manifest.toml。",
-        bullets: ["直接描述要做什么", "AI 使用 One CLI 创建工作区或追加模板", "按项目类型补依赖"],
+        bullets: ["直接描述要做什么", "AI 使用 One CLI 创建工作区或追加模板", "通过 one run 准备依赖并运行任务"],
         cta: "查看 AI 指南",
         promptLabel: "给 agent 的一句话",
-        prompt: "请使用 One CLI，帮我创建一个名为 media-stack 的移动端项目，并安装依赖。",
+        prompt: "请使用 One CLI 创建 media-stack 工作区，添加一个 Expo 移动应用，再通过 one dev 启动它。",
       },
     },
     final: {
-      title: "停止手工拼工程底座。",
-      body: "安装一个 Go 二进制，选择模板，把清晰的项目上下文交给人和 AI agent。",
+      title: "把项目放在一起，把开发跑起来。",
+      body: "从一个空工作区开始，按需添加项目，用相同的命令完成每天的开发。",
       install: "开始使用",
     },
     footer: {
-      body: "面向 agent 的项目脚手架与治理 CLI。",
+      body: "面向人和 AI 的工作区开发工具。",
       docs: "文档",
       tutorials: "教程",
       templates: "模板",
@@ -354,7 +352,7 @@ const homeCopy = {
       links: {
         installation: "安装",
         quickStart: "一条命令开始",
-        tutorialsHome: "教程总览",
+        tutorialsHome: "项目模板教程",
         firstWorkspace: "第一个工作区",
         envVars: "配置环境变量",
         templateCommand: "查看模板命令",
@@ -367,9 +365,9 @@ const homeCopy = {
   },
   en: {
     meta: {
-      title: "One CLI | From product idea to launch-ready project",
+      title: "One CLI | Create workspaces. Run your projects.",
       description:
-        "One CLI gives AI a real product foundation: website, backend, docs, environment config, and build commands.",
+        "Create workspaces, run development, builds, and tests, and manage projects, variables, and dev services in Dashboard.",
     },
     nav: {
       docs: "Docs",
@@ -382,14 +380,14 @@ const homeCopy = {
       byline: "BY · TORCHSTELLAR",
       title: (
         <>
-          From product idea to
+          Every project.
           <br />
-          launch-ready project.
+          One workspace.
           <br />
-          Start with one command.
+          One workflow.
         </>
       ),
-      body: "Give AI a real product foundation: website, backend, docs, environment config, and build commands, ready from day one.",
+      body: "Create workspaces and run development, builds, and tests. Manage projects, variables, and dev services in Dashboard, with shared conventions for people and AI.",
       canvasAria:
         "One CLI workspace module canvas showing apps, API, docs, packages, manifest, env, build, and CLI interface modules",
       install: "Start building",
@@ -402,14 +400,14 @@ const homeCopy = {
     },
     workflow: {
       eyebrow: "Common commands",
-      title: "Complex project setup, split into simple steps.",
-      body: "Humans can run commands directly and follow prompts; scripts and AI can add template names, project names, --yes, and -o json.",
+      title: "From project setup to daily development.",
+      body: "Follow prompts to create workspaces and add projects, then use one run for daily tasks. Scripts and AI can use explicit arguments and JSON output.",
       commandBodies: [
         "create an empty workspace",
         "add a template project",
-        "save env and launch accounts",
-        "inspect the template list",
-        "open the local config UI",
+        "run development, builds, and tests",
+        "manage project variables",
+        "open the workspace Dashboard",
         "find the right command",
       ],
       createEyebrow: "ONE CREATE",
@@ -425,7 +423,7 @@ const homeCopy = {
       bullets: [
         ["DIRECT CREATE", "one create my-app --yes writes the base project files."],
         ["ADD PROJECTS", "Use one add to select a template and add a project."],
-        ["CHECKABLE", "The result tells you where the project was created and which env mode it uses."],
+        ["CHECKABLE", "The result includes the workspace location and generated files so you can add projects next."],
       ],
       explore: "Explore one create",
       details: [
@@ -468,7 +466,7 @@ const homeCopy = {
               after the project exists.
             </>
           ),
-          body: "one add is for an existing One project. You can run one add directly to use the picker, or pass the template name and project name in scripts.",
+          body: "one add adds a project to an existing One workspace. You can run one add directly to use the picker, or pass the template name and project name in scripts.",
           bullets: [
             ["PROMPTED ADD", "Run one add to choose the template and project name."],
             ["AUTOMATION", "CI and AI use one add nextjs-app --name web --yes."],
@@ -484,83 +482,81 @@ const homeCopy = {
           ],
         },
         {
-          command: "one configure",
-          navBody: "save env and launch accounts",
-          eyebrow: "ONE CONFIGURE",
+          command: "one run",
+          navBody: "run development, builds, and tests",
+          eyebrow: "ONE RUN",
           title: (
             <>
-              Keep secrets
+              Different projects.
               <br />
-              in the right place.
+              One way to run them.
             </>
           ),
-          body: "one configure saves this machine's Infisical credentials and preferences. Run it directly for the wizard; scripts use the env/infisical path.",
+          body: "one run lists workspace tasks and uses mise to run development, builds, and tests. Select a project with -p; One prepares tools and dependencies as needed.",
           bullets: [
-            ["LOCAL FILES", "Writes under ~/.config/one; secret files are readable only by you."],
-            ["REMOTE ENV", "Remote env means Infisical Cloud or your own Infisical. You do not run a separate One CLI service."],
-            ["REUSED LATER", "one env and one run read the default profile automatically."],
+            ["DISCOVER TASKS", "Run one run to see available tasks and choose what to execute."],
+            ["DAILY DEVELOPMENT", "one dev -p web starts a project; one build -p web builds it."],
+            ["FOLLOW LOGS", "Multi-task runs offer a log tree with search, scrolling, and task selection."],
           ],
-          href: ["cli-overview"],
-          cta: "Explore CLI reference",
-          sample: "one configure",
+          href: ["run"],
+          cta: "Explore task management",
+          sample: "one dev -p web",
           output: [
-            "open Infisical profile prompts",
-            "save local profile and credential files",
-            "feed later one env and one run commands",
+            "resolve project tasks and dependencies",
+            "prepare tools, dependencies, and bound project variables",
+            "start the dev service and show its original logs",
           ],
         },
         {
-          command: "one templates",
-          navBody: "inspect the template list",
-          eyebrow: "ONE TEMPLATES",
+          command: "one env",
+          navBody: "manage project variables",
+          eyebrow: "ONE ENV",
           title: (
             <>
-              Pick a starting point
+              Manage variables.
               <br />
-              without guessing.
+              Inject them when needed.
             </>
           ),
-          body: "one templates prints the bundled template list in a human-readable terminal format, so people can see the available backend, frontend, docs, mobile, desktop, and library templates first.",
+          body: "Sign in to Infisical in your browser with one login, then manage project variables with one env. New workspaces can run before you connect variable storage.",
           bullets: [
-            ["FULL CATALOG", "Apps, services, shared libraries, and empty projects for choosing a stack later."],
-            ["HUMAN READABLE", "Bare output shows template names, categories, and what each template is for."],
-            ["ADD BY ID", "Use a template ID with one add to add a project."],
+            ["BROWSER LOGIN", "The system keyring stores your session. Check its status with one whoami."],
+            ["PROJECT VARIABLES", "Saving the first variable initializes the binding. Organize values by environment and project folder."],
+            ["SHARED CREDENTIALS", "Configure shared credentials in Dashboard and inject them explicitly with one exec --global."],
           ],
-          href: ["templates-cmd"],
-          cta: "Explore templates",
-          secondaryCta: "Read the template guide",
-          secondaryHref: "templates",
-          sample: "one templates",
+          href: ["env-vars"],
+          cta: "Explore environment variables",
+          sample: "one env set API_URL -p web",
           output: [
-            "lists templates you can use directly",
-            "shows template ID, category, and purpose",
-            "copy a template name for one add",
+            "sign in first with one login",
+            "enter the value in a hidden terminal prompt",
+            "fetch and inject variables from Infisical when the project runs",
           ],
         },
         {
           command: "one serve",
-          navBody: "open the local config UI",
+          navBody: "open the workspace Dashboard",
           eyebrow: "ONE SERVE",
           title: (
             <>
-              Fill sensitive config
+              Manage projects
               <br />
               in your browser.
             </>
           ),
-          body: "one serve starts a loopback-only local config page for the same profiles managed by one configure. It is meant for human secret entry, so cleartext credentials do not need to pass through an agent chat.",
+          body: "one serve opens your local Dashboard to browse workspaces, add projects, manage variables and shared credentials, and run dev services with a console.",
           bullets: [
-            ["LOCAL ONLY", "Uses a random local port by default and never listens for LAN access."],
-            ["HOST CHECKED", "Rejects unknown Host headers to close the DNS-rebinding path into loopback."],
-            ["REMOTE HOSTS", "Run one serve on the remote machine, then use ssh -L port forwarding from your laptop."],
+            ["PROJECTS", "Inspect configuration, add projects from templates, and review Manifest changes before saving."],
+            ["DEV SERVICES", "Start, stop, or restart services. View original logs and local access links."],
+            ["ACCOUNTS AND VARIABLES", "Sign in to Infisical in Settings and manage variables by environment and folder."],
           ],
           href: ["serve"],
-          cta: "Explore one serve",
+          cta: "Explore Dashboard",
           sample: "one serve",
           output: [
-            "opens the local config page in your browser",
-            "uses a plain loopback URL without a login token",
-            "Ctrl-C stops the local process",
+            "open Dashboard in your local browser",
+            "manage workspaces, projects, and shared credentials",
+            "run dev services and follow their console output",
           ],
         },
         {
@@ -605,14 +601,14 @@ const homeCopy = {
         {
           icon: ClipboardCheck,
           title: "Manifest records project facts",
-          body: "`one.manifest.toml` records projects, templates, toolchains, and environment boundaries. Agents read those facts before choosing a subproject or command.",
+          body: "`one.manifest.toml` records workspace identity, project paths, toolchains, and the Infisical binding. Agents read those facts before choosing a subproject or command.",
           chip: "one.manifest.toml",
         },
         {
           icon: Wrench,
           title: "Teams own project instructions",
           body: "one create generates AGENTS.md in the current CLI language. Teams maintain it afterward; adding projects does not overwrite it.",
-          chip: "AGENTS.md / CLAUDE.md",
+          chip: "AGENTS.md",
         },
         {
           icon: FileJson2,
@@ -623,21 +619,21 @@ const homeCopy = {
       ],
     },
     json: {
-      eyebrow: "Next steps for every command",
+      eyebrow: "Clear errors and recovery hints",
       title: "When a command fails, you do not have to guess.",
-      body: "From creating and adding projects to running and shipping them, One CLI explains where you are stuck and what to do next. Beginners can follow the message, and AI tools can continue from the same result.",
+      body: "When creating, adding, or running projects fails, One CLI preserves the cause and provides recovery hints for common errors. People and AI can use the same details to continue.",
       cards: [
         ["Create projects", "Wrong folder or existing target: it tells you how to continue"],
         ["Add projects", "Template, name, or location issues come with a fix command"],
-        ["Run and ship", "Missing config or tools are called out before you continue"],
+        ["Run tasks", "Missing config or tools are called out before you continue"],
         ["Connect AI", "The same result can be emitted as JSON for tools"],
       ],
-      sampleLabel: "one add --name web --yes",
+      sampleLabel: "one add react-spa --name web --yes",
       sampleOutput: `No One CLI workspace found. Run this from a workspace root.
   - This folder is missing one.manifest.toml.
     Create a workspace first, or cd into an existing one:
     one create <dir>`,
-      automationNote: "This is one example. Create, add, run, and ship commands use the same pattern when something needs attention.",
+      automationNote: "Structured errors include a code and context. Scripts and AI can read the remediation field when recovery hints are available.",
     },
     startWays: {
       eyebrow: "Start here",
@@ -665,19 +661,19 @@ const homeCopy = {
         label: "Option three",
         title: "Hand it to AI",
         body: "Give your goal and One CLI commands to an AI coding tool. In an existing workspace, have it read README files and one.manifest.toml first.",
-        bullets: ["Describe what you want to build", "AI uses One CLI to create workspaces or add templates", "Dependencies are handled by project type"],
+        bullets: ["Describe what you want to build", "AI uses One CLI to create workspaces or add templates", "Use one run to prepare dependencies and execute tasks"],
         cta: "Explore AI guide",
         promptLabel: "one-line agent prompt",
-        prompt: "Please use One CLI to create a mobile project named media-stack and install dependencies.",
+        prompt: "Please use One CLI to create a media-stack workspace, add an Expo mobile app, and start it with one dev.",
       },
     },
     final: {
-      title: "Stop hand-assembling the project foundation.",
-      body: "Install one Go binary, choose templates, and hand clear project context to humans and AI agents.",
+      title: "Bring your projects together. Get them running.",
+      body: "Start with an empty workspace, add projects as you need them, and use the same commands for daily development.",
       install: "Start building",
     },
     footer: {
-      body: "Agent-native project scaffolding and governance CLI.",
+      body: "Workspace development for people and AI.",
       docs: "Docs",
       tutorials: "Tutorials",
       templates: "Templates",
@@ -685,7 +681,7 @@ const homeCopy = {
       links: {
         installation: "Installation",
         quickStart: "Start with one command",
-        tutorialsHome: "Tutorials home",
+        tutorialsHome: "Template tutorial",
         firstWorkspace: "First workspace",
         envVars: "Configure env vars",
         templateCommand: "List templates",
@@ -704,8 +700,8 @@ type WorkflowDetail = HomeText["workflow"]["details"][number];
 const commandNames = [
   "one create",
   "one add",
-  "one configure",
-  "one templates",
+  "one run",
+  "one env",
   "one serve",
   "one help",
 ] as const;
@@ -1270,7 +1266,7 @@ function Footer({ lang, text }: { lang: Locale; text: HomeText }) {
           <FooterLinks
             title={text.footer.tutorials}
             links={[
-              [text.footer.links.tutorialsHome, localizedTutorialsPath(lang)],
+              [text.footer.links.tutorialsHome, localizedTutorialsPath(lang, ["templates"])],
               [text.footer.links.firstWorkspace, localizedTutorialsPath(lang, ["first-workspace"])],
               [text.footer.links.envVars, localizedTutorialsPath(lang, ["env-vars"])],
             ]}

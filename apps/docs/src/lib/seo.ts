@@ -4,7 +4,7 @@ import { htmlLang, type Locale } from "@/i18n";
 export const siteUrl = "https://www.1cli.dev";
 export const siteName = "One CLI";
 export const defaultDescription =
-  "One CLI is a scaffolding and governance tool for AI-native monorepo workspaces, templates, manifests, local configuration, and agent-ready command flows.";
+  "One CLI helps people and AI create workspaces, run project tasks, and manage variables and development services.";
 
 type PageMetadataInput = {
   title: string;
@@ -111,7 +111,7 @@ export function softwareApplicationJsonLd(locale: Locale) {
     "@id": `${siteUrl}/#software`,
     name: siteName,
     applicationCategory: "DeveloperApplication",
-    operatingSystem: "macOS, Linux",
+    operatingSystem: "macOS, Linux, Windows",
     url: siteUrl,
     inLanguage: htmlLang[locale],
     description: defaultDescription,

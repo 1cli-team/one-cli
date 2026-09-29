@@ -101,7 +101,7 @@ CI、JSON/YAML 等结构化输出、`--dry-run` 以及内部任务进程不启�
 
 每次需要 runtime 时重新检查：系统 mise 被删除、版本过旧或不可执行时，One 转用托管版本；托管程序缺失或损坏时自动恢复。系统版本重新可用后恢复系统优先。显式设置 `ONE_MISE_BINARY` 的路径或版本有误时直接报错，不自动回退。
 
-不需要激活 shell。创建工作区和添加项目会为完整的 One 生成配置登记文件级信任，包括 `MISE_PARANOID=1` 模式；自定义配置仍按 mise 规则审查和信任。旧 workspace 在显式启用前继续沿用已有工具，详见 [`one init mise`](/zh/docs/login/#mise-工作区工具配置)。
+不需要激活 shell。创建工作区和添加项目会为完整的 One 生成配置登记文件级信任，包括 `MISE_PARANOID=1` 模式；自定义配置仍按 mise 规则审查和信任。旧 workspace 在显式启用前继续沿用已有工具，详见 [`one init mise`](/zh/docs/login/#本机偏好与工作区工具)。
 
 | 托管内容 | 默认目录 | 自定义根目录 |
 |---|---|---|
@@ -130,7 +130,6 @@ One 仅修改子进程 PATH。托管版本随 One 更新，自动升级和更新
 one mise --version
 one mise doctor
 one mise trust mise.toml
-one mise trust apps/web/mise.toml
 one mise exec -- pnpm install
 ```
 

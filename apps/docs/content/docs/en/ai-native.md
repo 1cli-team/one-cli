@@ -18,7 +18,7 @@ That layer covers four boundaries:
 1. **Automation interface**: agents and CI read structured output instead of scraping terminal text.
 2. **Error recovery**: agents recover from stable codes, context, and remediation hints.
 3. **Project context**: agents read the manifest, project README files, and any team-maintained instructions.
-4. **Permission boundaries**: local credentials, environment setup, and deployment configuration have explicit owners instead of being guessed by agents.
+4. **Permission boundaries**: login sessions, project variables, and shared credentials have explicit owners instead of being guessed by agents.
 
 ## Rule 1: Command Output Must Be Parseable
 
@@ -33,7 +33,7 @@ The result uses a stable schema:
 ```json
 {
   "schema": "one-cli/templates/v1",
-  "total": 10,
+  "total": 13,
   "templates": [
     {
       "id": "nestjs-api",
@@ -69,7 +69,10 @@ One CLI errors use a single envelope:
         "expo-mobile",
         "ts-library",
         "go-lib",
-        "electron-app"
+        "electron-app",
+        "empty-app",
+        "empty-service",
+        "empty-library"
       ],
       "requested_template": "api-fastify"
     },
@@ -103,11 +106,11 @@ The generated instructions require `one run` for tests and project commands. Com
 
 ## Rule 4: Configuration And Credentials Have Boundaries
 
-One CLI can manage env, container, and deploy configuration, but agents should not handle real credentials.
+One CLI manages project variables and shared credentials through Infisical and injects them when commands run. Login sessions live in the system keyring; variable values stay in remote storage.
 
 Recommended boundary:
 
-- `one.manifest.toml` records reviewable Workspace/Project/Backend configuration; secret values and session tokens never enter it.
+- `one.manifest.toml` records reviewable workspace identity, project paths, toolchains, and the Infisical binding; secret values and session tokens never enter it.
 - `one login` manages one browser session in the system keyring. `one serve` exposes account settings, global-variable metadata, and reviewed Manifest drafts.
 - `.env*`, private keys, and cloud tokens stay out of Git and out of reusable agent-facing docs.
 - Agents can read structured state, install missing dependencies, and scaffold projects, but publishing, deletion, and credential overwrites should go through team policy or human confirmation.

@@ -19,7 +19,7 @@ one templates [-o <fmt>]
 
 ## Interactive Mode
 
-`one templates` does not have a wizard. It only lists templates. Humans see readable terminal output; scripts and agents use `-o json` to read template IDs, categories, and compatible backends.
+`one templates` does not have a wizard. It only lists templates. Humans see readable terminal output; scripts and agents use `-o json` to read template IDs, categories, and toolchains.
 
 To choose a template interactively, use [`one add`](/en/docs/add/).
 
@@ -36,10 +36,7 @@ To choose a template interactively, use [`one add`](/en/docs/add/).
       "description": "NestJS + TypeScript for API services and business backends",
       "toolchain": "node",
       "tags": ["api", "nestjs", "typescript", "backend"],
-      "domains": {
-        "container": { "default": "docker", "compat": ["docker"] },
-        "deploy": { "default": "kustomize", "compat": ["kustomize"] }
-      }
+      "repo": "local:nestjs-api"
     },
     {
       "id": "go-api",

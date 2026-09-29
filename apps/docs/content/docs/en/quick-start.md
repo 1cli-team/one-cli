@@ -1,71 +1,59 @@
 ---
 title: Quick start
-description: Create and start a usable One workspace in five minutes with create / add / the first project.
+description: Create a workspace, add a Web project, and let one dev prepare dependencies and start it.
 ---
 
-Use this page to get a first usable One workspace and start the first project.
+Start with an empty workspace, add a React Web project, and run it with One CLI.
 
-**For**: first-time users after installation, anyone checking whether the environment works, and people who want a fast feel for the concepts.
+> Not installed yet? See [Installation](/en/docs/installation/).
 
-**You will finish with**: a Web project you can open in your browser.
-
-> Not installed yet? Start with [Installation](/en/docs/installation/).
-> Want the production-grade end-to-end path? Jump to [Create a production-ready workspace](/en/tutorials/first-workspace/).
-
-## Step 1: Create The Workspace
+## 1. Create a workspace
 
 ```bash
 one create my-app
 cd my-app
 ```
 
-This creates the `my-app/` directory. Run the remaining commands from inside that directory.
+One generates workspace directories, `one.manifest.toml`, `mise.toml`, and `AGENTS.md`. Run the remaining commands from `my-app/`.
 
-## Step 2: Add A Web Project
-
-The quick start uses one Web project that can be opened directly in a browser:
+## 2. Add a Web project
 
 ```bash
 one add react-spa --name web
 ```
 
-`one add` does not download the packages the project uses. The next step does that.
+The project lives in `apps/web/`. One registers it in the Manifest and adds its template tasks to the root `mise.toml`. Run `one templates` to browse other starters.
 
-## Step 3: Download Dependencies And Start The Project
-
-Before the project can run for the first time, download the packages it uses. Copy this command and run it from the workspace root; the first run can take a little while:
+## 3. Start the dev service
 
 ```bash
-pnpm install
+one dev -p web
 ```
 
-After the download finishes, start the Web project:
+One prepares mise, project tools, and dependencies as needed, then starts the Web project. The first run needs a network connection and downloads may take some time; later runs reuse matching dependencies. You do not need to install pnpm manually or activate mise first.
+
+Open the `Local: http://localhost:.../` address from the logs in your browser. This example needs no Infisical login or variable binding. Press Ctrl+C to stop the service.
+
+## 4. Discover tasks and build
 
 ```bash
-pnpm -C apps/web dev
+one run
+one build -p web
 ```
 
-Open the `Local: http://localhost:.../` URL printed by the terminal. This Web example does not require preconfigured environment variables, so the quick start does not need env setup.
+`one run` lists workspace tasks. `one dev` and `one build` are shorthand for `one run dev` and `one run build`.
 
-## Done
+To manage projects and dev services in your browser, run:
 
-You now have your first Web project running:
+```bash
+one serve
+```
 
-| Command | What it did |
-|---|---|
-| `one create` | Created the workspace |
-| `one add` | Added one Web project |
-| `pnpm install` | Downloaded the packages the project uses |
-| `pnpm -C apps/web dev` | Started the first Web project |
-
-Continue with `one env` for environment variables and `one build` to build your projects.
+Dashboard lets you add projects, manage variables, start dev services, and view their consoles.
 
 ## Next
 
-Pick the path that matches your goal:
-
-- **Going to production?** -> [Create a production-ready workspace](/en/tutorials/first-workspace/)
-- **Need Infisical secrets?** -> [Environment variables guide](/en/tutorials/env-vars/)
-- **Want Claude to run One CLI for you?** -> [AI project guidance](/en/docs/ai-native/)
-- **Need exact command details?** -> [CLI commands](/en/docs/cli-overview/)
-- **Do not want it?** Delete the `my-app/` folder.
+- [Your first workspace](/en/tutorials/first-workspace/): understand generated files and directory conventions.
+- [Task management](/en/docs/run/): select multiple projects, customize tasks, and follow logs.
+- [Environment variables](/en/tutorials/env-vars/): sign in to Infisical and save project variables.
+- [Work with AI](/en/docs/ai-native/): use project guidance, command help, and structured results.
