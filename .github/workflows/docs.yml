@@ -39,7 +39,7 @@ jobs:
         uses: jdx/mise-action@v4
         with:
           version: 2026.9.7
-          experimental: true
+          experimental: false
 
       - name: Build docs site
         run: mise run docs:build

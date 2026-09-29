@@ -25,7 +25,7 @@ permissions:
   contents: write
 
 env:
-  MISE_TASK_CACHE_DIR: ${{ github.workspace }}/.cache/mise-task-artifacts
+  MISE_TASK_CACHE: "off"
   GOPROXY: https://proxy.golang.org,direct
   GOTOOLCHAIN: local
 
@@ -259,15 +259,7 @@ jobs:
         uses: jdx/mise-action@v4
         with:
           version: 2026.9.7
-          experimental: true
-
-      - name: Restore task artifacts
-        if: steps.release.outputs.already_published != 'true'
-        uses: actions/cache@v4
-        with:
-          path: .cache/mise-task-artifacts
-          key: tasks-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('mise.toml', 'pnpm-lock.yaml', 'packages/cli/go.sum') }}-${{ github.sha }}
-          restore-keys: tasks-${{ runner.os }}-${{ runner.arch }}-
+          experimental: false
 
       - name: Download Go modules without mutating the workspace
         if: steps.release.outputs.already_published != 'true'

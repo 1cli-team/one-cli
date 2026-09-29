@@ -282,8 +282,8 @@ func isolateHome(t *testing.T, dir string) {
 	for _, key := range []string{"XDG_DATA_HOME", "XDG_STATE_HOME", "MISE_CONFIG_DIR", "MISE_DATA_DIR", "MISE_STATE_DIR", "MISE_CACHE_DIR"} {
 		t.Setenv(key, filepath.Join(dir, key))
 	}
-	// CI shares task artifacts across runs, independently of MISE_CACHE_DIR.
-	// Keep that outer cache from restoring outputs into a fresh test fixture.
+	// Keep ambient task artifact caches separate from each fixture, even when
+	// a test explicitly enables native mise caching.
 	t.Setenv("MISE_TASK_CACHE_DIR", filepath.Join(dir, "mise-task-artifacts"))
 	for _, key := range []string{"CODEX_HOME", "CLAUDE_CONFIG_DIR", "VIBE_HOME"} {
 		t.Setenv(key, "")
