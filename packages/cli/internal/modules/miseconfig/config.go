@@ -17,7 +17,6 @@ import (
 	"strings"
 
 	"github.com/pelletier/go-toml/v2"
-
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/core/workspace"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/modules/gowork"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/configedit"
@@ -120,45 +119,9 @@ func BuildWithFiles(root string, opts Options, files map[string][]byte) (*Plan, 
 	if err != nil {
 		return nil, err
 	}
-	var m workspace.Manifest
-	if err := json.Unmarshal(raw, &m); err != nil {
+	m, err := workspace.ParseManifest(raw)
+	if err != nil {
 		return nil, err
-	}
-	if _, err := workspace.ReadManifest(root); err != nil {
-		return nil, err
-	}
-	// Explicit initialization retires old dev execution metadata. Preserve
-	// unrelated JSON fields and migrate only the service URL.
-	var document map[string]any
-	if err = json.Unmarshal(raw, &document); err != nil {
-		return nil, err
-	}
-	migrated := false
-	if entries, ok := document["projects"].([]any); ok {
-		for _, value := range entries {
-			entry, ok := value.(map[string]any)
-			if !ok {
-				continue
-			}
-			if dev, exists := entry["dev"]; exists {
-				if fields, ok := dev.(map[string]any); ok {
-					if url, ok := fields["url"].(string); ok && url != "" {
-						if _, present := entry["service"]; !present {
-							entry["service"] = map[string]any{"url": url}
-						}
-					}
-				}
-				delete(entry, "dev")
-				migrated = true
-			}
-		}
-	}
-	if migrated {
-		after, e := json.MarshalIndent(document, "", "  ")
-		if e != nil {
-			return nil, e
-		}
-		p.Changes = append(p.Changes, Change{Path: workspace.ManifestFilename, Before: string(raw), After: string(append(after, '\n'))})
 	}
 	ignore, err := p.readOptional(".gitignore")
 	if err != nil {
@@ -260,7 +223,7 @@ func BuildWithFiles(root string, opts Options, files map[string][]byte) (*Plan, 
 	configs := map[string]config{}
 	projects := []workspace.Project{}
 	for _, mp := range m.Projects {
-		projects = append(projects, workspace.Project{Name: mp.Name, RelativeDir: mp.RelativeDir, TargetDir: filepath.Join(root, mp.RelativeDir), Toolchain: mp.Toolchain, PackageManager: mp.PackageManager, TemplateID: mp.TemplateID})
+		projects = append(projects, workspace.Project{Name: mp.Name, RelativeDir: mp.RelativeDir, TargetDir: filepath.Join(root, mp.RelativeDir), Toolchain: mp.Toolchain, TemplateID: mp.TemplateID})
 	}
 	for _, project := range m.Projects {
 		if !workspace.IsValidProjectName(project.Name) {
@@ -271,7 +234,7 @@ func BuildWithFiles(root string, opts Options, files map[string][]byte) (*Plan, 
 			return nil, conflict(rel, i18n.T("config.project_path"))
 		}
 		pc := config{MinVersion: runtimeport.MinimumMiseVersion, Tasks: map[string]Task{}, Tools: map[string]string{}}
-		nativeProject := workspace.Project{Name: project.Name, RelativeDir: rel, TargetDir: filepath.Join(root, rel), Toolchain: project.Toolchain, PackageManager: project.PackageManager, TemplateID: project.TemplateID}
+		nativeProject := workspace.Project{Name: project.Name, RelativeDir: rel, TargetDir: filepath.Join(root, rel), Toolchain: project.Toolchain, TemplateID: project.TemplateID}
 		operations, err := workspace.DiscoverTasks(root, nativeProject, p.readOptional)
 		if err != nil {
 			return nil, err

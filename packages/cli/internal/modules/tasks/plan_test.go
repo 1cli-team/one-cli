@@ -23,7 +23,20 @@ func writeTaskFile(t *testing.T, root, path, content string) {
 func taskWorkspace(t *testing.T) execution.Workspace {
 	t.Helper()
 	root := t.TempDir()
-	writeTaskFile(t, root, "one.manifest.json", `{"version":1,"workspace":{"id":"test","name":"test"},"environments":{"names":["dev","prod"],"default":"dev"},"projects":[{"name":"web","relativeDir":"apps/web","toolchain":"none"},{"name":"lib","relativeDir":"packages/lib","toolchain":"none"}]}`)
+	writeTaskFile(t, root, "one.manifest.toml", `version = 2
+
+[workspace]
+id = "test"
+name = "test"
+
+[projects."web"]
+path = "apps/web"
+toolchain = "none"
+
+[projects."lib"]
+path = "packages/lib"
+toolchain = "none"
+`)
 	writeTaskFile(t, root, "apps/web/package.json", `{"scripts":{"dev":"echo web","start":"echo start","build":"echo build"}}`)
 	writeTaskFile(t, root, "packages/lib/package.json", `{"scripts":{"build":"echo lib"}}`)
 	writeTaskFile(t, root, "mise.toml", `[tasks.build]

@@ -135,12 +135,8 @@ func buildWorkspaceSummary(m *Manifest) *OverviewWorkspace {
 		s.ID = m.Workspace.ID
 		s.Name = m.Workspace.Name
 	}
-	if m.Environments != nil {
-		s.DefaultEnvironment = m.Environments.Default
-		if len(m.Environments.Names) > 0 {
-			s.Environments = append([]string(nil), m.Environments.Names...)
-		}
-	}
+	s.DefaultEnvironment = "dev"
+	s.Environments = EnvironmentNames(m)
 	if m.Env != nil {
 		domains := map[string]string{}
 		if m.Env != nil {

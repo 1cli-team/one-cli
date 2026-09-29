@@ -8,9 +8,9 @@ tags: ["agent", "dependencies", "workspace"]
 
 ## Start from the workspace contract
 
-When a coding agent is asked to prepare a project to run, the first step should not be a package install. The first step is finding the workspace contract. In a One CLI workspace, that contract is `one.manifest.json`.
+When a coding agent is asked to prepare a project to run, the first step should not be a package install. The first step is finding the workspace contract. In a One CLI workspace, that contract is `one.manifest.toml`.
 
-The manifest tells the agent whether it is inside a One workspace, which package manager belongs at the root, and which subprojects exist. That is safer than guessing from `apps/`, `services/`, or package scripts.
+The manifest tells the agent whether it is inside a One workspace, which subprojects exist, and which toolchains they use; the root package.json supplies the package manager. That is safer than guessing from `apps/`, `services/`, or package scripts.
 
 ## Install by toolchain, not habit
 

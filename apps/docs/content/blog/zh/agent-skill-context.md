@@ -18,7 +18,7 @@ One CLI 的 bundled `one-cli` skill 面向的是 Codex、Claude Code、Cursor �
 
 第一类是命令契约。One CLI 的命令输出支持 JSON envelope，错误也有稳定的 `error.code`。skill 应该要求 agent 使用 `-o json`，并从 `error.context` 读取恢复所需的数据，而不是解析自由文本。
 
-第二类是 workspace 事实源。只要目录里有 `one.manifest.json`，就应该把它当成 One workspace 的根。agent 不能靠 `apps/`、`packages/` 或 package.json 猜根目录，因为这些结构在不同模板组合里可能变化。
+第二类是 workspace 事实源。只要目录里有 `one.manifest.toml`，就应该把它当成 One workspace 的根。agent 不能靠 `apps/`、`packages/` 或 package.json 猜根目录，因为这些结构在不同模板组合里可能变化。
 
 第三类是依赖补齐规则。JS、TS、Node 项目应在 workspace root 按声明的包管理器安装；Go 项目应进入对应 Go subproject 后运行 module 命令。这个差异必须写清楚，否则 agent 很容易在错误目录里运行安装命令。
 
@@ -37,7 +37,7 @@ One CLI 的 bundled `one-cli` skill 面向的是 Codex、Claude Code、Cursor �
 
 当用户让 agent 准备运行一个 One workspace 时，推荐顺序是：
 
-1. 向上寻找最近的 `one.manifest.json`。
+1. 向上寻找最近的 `one.manifest.toml`。
 2. 读取 manifest，确认 package manager 和 subprojects。
 3. 对 JS/TS/Node 依赖在 workspace root 执行安装。
 4. 对 Go subproject 进入子目录执行 `go mod download`，修改 imports 或需要修复模块元数据时再执行 `go mod tidy`。

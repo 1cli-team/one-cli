@@ -18,12 +18,11 @@ func TestDashboardDevelopmentFixture(t *testing.T) {
 	if manifest.Workspace == nil || manifest.Workspace.ID != "one-dashboard-dev" {
 		t.Fatalf("workspace identity = %#v", manifest.Workspace)
 	}
-	if manifest.Environments == nil || manifest.Environments.Default != "dev" ||
-		!reflect.DeepEqual(manifest.Environments.Names, []string{"dev", "preview", "prod"}) {
-		t.Fatalf("environments = %#v", manifest.Environments)
+	if !reflect.DeepEqual(EnvironmentNames(manifest), []string{"dev", "staging", "prod"}) {
+		t.Fatal(EnvironmentNames(manifest))
 	}
-	if got := EnvBackend(manifest); got != "infisical" {
-		t.Fatalf("env backend = %q, want infisical", got)
+	if EnvBackend(manifest) != "" {
+		t.Fatal("development fixture should not bind a real remote project")
 	}
 
 	projects := make(map[string]*ManifestProject, len(manifest.Projects))

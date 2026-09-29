@@ -105,7 +105,7 @@ func TestEmptyTargetGitValidation(t *testing.T) {
 			if (err == nil) != allowed {
 				t.Fatalf("allowed=%v error=%v", allowed, err)
 			}
-			if _, err := os.Stat(filepath.Join(root, "one.manifest.json")); !os.IsNotExist(err) {
+			if _, err := os.Stat(filepath.Join(root, "one.manifest.toml")); !os.IsNotExist(err) {
 				t.Fatal("validation wrote files")
 			}
 		})

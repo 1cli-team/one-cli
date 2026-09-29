@@ -11,7 +11,6 @@ import (
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/modules/devservice"
 	cliErrors "github.com/torchstellar-team/one-cli/packages/cli/internal/platform/errors"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/i18n"
-	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/localurl"
 )
 
 func registerServiceRoutes(mux *http.ServeMux, opts MuxOpts) {
@@ -75,16 +74,11 @@ func handleService(opts MuxOpts, action string) http.HandlerFunc {
 			writeWorkspaceMutationErr(w, err)
 			return
 		}
-		url, err := localurl.Normalize(settings.Project.DevURL)
-		if err != nil {
-			writeBadPayload(w, err.Error())
-			return
-		}
 		environment := settings.Environment
 		if environment == "" {
 			environment = settings.Project.DefaultEnvironment
 		}
-		input := devservice.Input{Root: opts.WorkspaceRoot, Project: settings.Project.Name, Environment: environment, URL: url}
+		input := devservice.Input{Root: opts.WorkspaceRoot, Project: settings.Project.Name, Environment: environment}
 		var state devservice.Snapshot
 		if action == "restart" {
 			state, err = m.Restart(input)

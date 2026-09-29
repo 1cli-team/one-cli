@@ -61,7 +61,7 @@ Generated tasks can run directly through `mise run`; they no longer call private
 
 `one run` determines ownership from each task's effective working directory, using the deepest registered project path. A custom root task named `serve-backend` can receive the api environment by declaring `dir = "services/api"`. A root aggregate does not receive a union of its children's variables.
 
-One loads each enabled project's Infisical values once per invocation, using the existing `--env`, path, inheritance and disabled settings. Each task receives only its project's snapshot; values override matching shell and mise variables. Values remain in memory, including transmission through an authenticated loopback session. No secret values are written to TOML, `.env` or context JSON.
+With an Infisical binding, One loads each project's values once per invocation. `--env` selects a declared environment, defaulting to `dev`. Remote folders derive from project paths and include shared and ancestor variables. Each task receives only its project's snapshot; values override matching shell and mise variables. Values remain in memory, including transmission through an authenticated loopback session. No secret values are written to TOML, `.env` or context JSON.
 
 One bundles the mise environment adapter and creates temporary `.one-run-*/bindings.toml` metadata in the relevant config scopes. These files contain task references, never variable values, and are removed on exit. `one init mise` and new workspaces ignore `.one-run-*/` in Git. No plugin rows need to be maintained in user task definitions.
 

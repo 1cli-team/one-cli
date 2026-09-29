@@ -60,42 +60,13 @@ type PathResolution struct {
 	Chain    []string // root → ancestors → self, for merge order
 }
 
-// ResolveSubprojectPath returns the Infisical folder path a given subproject
-// maps to. Resolution order:
-//  1. one.manifest.json subproject entry's env.path (explicit override)
-//  2. derive from relativeDir (default: "/" + relativeDir)
-//
-// For workspace-root operations, pass relativeDir="" to use the workspace's
-// rootPath verbatim.
-func ResolveSubprojectPath(workspaceCfg *WorkspaceConfig, sub *workspace.Project, override *SubprojectConfig) PathResolution {
+// ResolveSubprojectPath derives the remote folder from the local project path.
+func ResolveSubprojectPath(sub *workspace.Project) PathResolution {
 	if sub == nil {
-		// Workspace-root scope: just the configured rootPath.
-		return PathResolution{
-			Path:     NormalizePath(workspaceCfg.RootPathOrDefault()),
-			Inherits: false,
-			Chain:    []string{NormalizePath(workspaceCfg.RootPathOrDefault())},
-		}
+		return PathResolution{Path: "/", Chain: []string{"/"}}
 	}
-	inherits := true
-	path := ""
-	if override != nil {
-		if override.Inherits != nil {
-			inherits = *override.Inherits
-		}
-		path = strings.TrimSpace(override.Path)
-	}
-	if path == "" {
-		// Default: derive from relativeDir. e.g. "services/user-api" →
-		// "/services/user-api". On Windows, relativeDir is already POSIX
-		// (DiscoverSubprojects normalizes it).
-		path = "/" + sub.RelativeDir
-	}
-	path = NormalizePath(path)
-	return PathResolution{
-		Path:     path,
-		Inherits: inherits,
-		Chain:    pathInheritanceChain(workspaceCfg.RootPathOrDefault(), path, inherits),
-	}
+	path := NormalizePath("/" + sub.RelativeDir)
+	return PathResolution{Path: path, Inherits: true, Chain: pathInheritanceChain("/", path, true)}
 }
 
 // pathInheritanceChain returns the merge order for a pull. With inherits

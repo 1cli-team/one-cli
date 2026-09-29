@@ -14,7 +14,7 @@ tags: ["manifest", "scaffold", "monorepo"]
 
 ## manifest 解释意图
 
-One CLI 写入 `one.manifest.json`，让 workspace 保留一份结构化的自身描述。后续命令和 agent 都可以从 manifest 读取项目清单和运行意图。
+One CLI 写入 `one.manifest.toml`，让 workspace 保留一份结构化的自身描述。后续命令和 agent 都可以从 manifest 读取项目清单和运行意图。
 
 这对很多常见任务都有用：
 

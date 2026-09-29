@@ -1,6 +1,6 @@
 ---
 title: "Why One CLI Treats the Manifest as the Contract"
-description: "one.manifest.json is not just scaffold output. It is the shared contract read by humans, the CLI, and coding agents."
+description: "one.manifest.toml is not just scaffold output. It is the shared contract read by humans, the CLI, and coding agents."
 date: "2026-05-12"
 author: "One CLI Team"
 tags: ["manifest", "agent", "monorepo"]
@@ -8,7 +8,7 @@ tags: ["manifest", "agent", "monorepo"]
 
 ## The manifest is the workspace source of truth
 
-In a One CLI workspace, `one.manifest.json` is one of the most important files. It is not a temporary cache for the CLI. It describes the apps, packages, preset, and operational boundaries that make up the workspace.
+In a One CLI workspace, `one.manifest.toml` is one of the most important files. It is not a temporary cache for the CLI. It describes the apps, packages, preset, and operational boundaries that make up the workspace.
 
 Traditional scaffolding tools usually stop after writing files. After that, the project structure becomes a pile of conventions, and later tooling has to infer intent from folders, package scripts, or README text. One CLI writes those decisions into the manifest so future commands and agents can read the same structured context.
 

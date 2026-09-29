@@ -1,106 +1,69 @@
 ---
-title: one.manifest.json 是什么
-description: 工作区的项目登记表、环境变量来源和本地开发配置。
+title: one.manifest.toml
+description: Manifest v2 的完整结构：工作区身份、项目与 Infisical 绑定。
 ---
 
-每个 One CLI 工作区根目录都有 `one.manifest.json`。它记录工作区身份、项目路径、工具链、环境和环境变量来源，供命令定位项目并选择执行方式。
+`one.manifest.toml` 是工作区配置文件。Manifest v2 使用 TOML，以表名登记项目。One CLI 只读取这个文件，不读取原来的 JSON 格式，也不提供迁移命令。
 
-## 示例
+## 完整结构
 
-```json
-{
-  "version": 1,
-  "workspace": {
-    "id": "demo-app-2bb61e",
-    "name": "demo-app"
-  },
-  "environments": {
-    "names": [
-      "dev",
-      "preview",
-      "prod"
-    ],
-    "default": "dev"
-  },
-  "projects": [
-    {
-      "name": "web",
-      "templateId": "react-spa",
-      "relativeDir": "apps/web",
-      "toolchain": "node",
-      "buildVersion": "0.1.0",
-      "packageManager": "pnpm",
-      "env": {
-        "path": "/apps/web",
-        "inherits": true,
-        "keys": [
-          "API_URL"
-        ]
-      },
-      "service": {
-        "url": "http://localhost:5173"
-      }
-    },
-    {
-      "name": "api",
-      "templateId": "go-api",
-      "relativeDir": "services/api",
-      "toolchain": "go"
-    }
-  ],
-  "env": {
-    "siteUrl": "https://app.infisical.com",
-    "projectId": "your-project-id",
-    "rootPath": "/"
-  }
-}
+```toml
+version = 2
+
+[workspace]
+id = "my-workspace"
+name = "My Workspace"
+
+[env.infisical]
+siteUrl = "https://app.infisical.com"
+projectId = "your-project-id"
+environments = ["dev", "staging", "prod"]
+
+[projects.web]
+path = "apps/web"
+toolchain = "node"
+template = "react-spa"
+
+[projects.api]
+path = "services/api"
+toolchain = "go"
+template = "go-api"
 ```
 
-实际文件使用严格 JSON，不接受注释和未知字段。
+新工作区只生成版本和身份信息。添加项目时增加对应的项目表，绑定 Infisical 后增加 `[env.infisical]`。实际生成的文件不带注释。你可以自行添加 TOML 注释；后续修改会保留注释、表顺序和未改动的内容。
 
-## 主要字段
+## 字段
 
 | 字段 | 含义 |
 |---|---|
-| `version` | Manifest 版本，当前为 `1` |
-| `workspace` | 稳定的工作区 `id` 与名称 `name` |
-| `environments` | 环境名称和默认环境 |
-| `env` | 可选 Infisical 绑定：`siteUrl`、`projectId`、`projectName`、`rootPath` 和 `keys` |
-| `projects[]` | 项目名称、路径、模板、工具链，可选的 `packageManager` 和 `buildVersion` |
-| `projects[].env` | 项目覆盖项：`path`、`inherits`、`disabled` 和变量名 `keys`；后端继承工作区 |
-| `projects[].service.url` | Dashboard 可选本机访问地址；执行命令由 mise 任务定义 |
+| `version` | 必填，固定为 `2` |
+| `workspace.id` | 工作区的稳定标识 |
+| `workspace.name` | 工作区展示名称，也是创建远程存储时的初始名称 |
+| `env.infisical.siteUrl` | 可选，Infisical 实例地址；默认 `https://app.infisical.com` |
+| `env.infisical.projectId` | 配置绑定时必填，远程项目 ID |
+| `env.infisical.environments` | 配置绑定时必填，远程环境 slug 列表；名称唯一且必须包含 `dev` |
+| `projects.<name>` | 表名中的项目名称，工作区内唯一 |
+| `projects.<name>.path` | 必填，规范化的工作区相对目录，不能与其他项目重复 |
+| `projects.<name>.toolchain` | 必填，可选 `node`、`go` 或 `none` |
+| `projects.<name>.template` | 可选，创建项目时使用的模板 ID |
 
-Infisical 的 `env` 可以包含 `projectId`、`projectName`、`rootPath` 和 `keys`。Manifest 不保存变量值或本机 Profile 名；凭据保存在系统 keyring，变量值交给 Infisical。
+项目目录不能是绝对路径，也不能越出工作区。未知字段、不支持的版本或无效字段返回 `MANIFEST_INVALID`。TOML 语法错误会标明文件和位置。
 
-## 谁会修改它
+## 环境变量约定
 
-| 操作 | 修改内容 |
-|---|---|
-| `one create` | 创建工作区身份、默认环境、环境来源和空项目列表 |
-| `one add` | 登记项目元数据 |
-| `one env set` | 登记变量名；Infisical 可初始化项目绑定 |
-| `one serve` | 用户审阅后，经过 revision 校验保存项目配置或环境来源变更 |
+未配置 `[env.infisical]` 时，任务继承现有进程环境。Manifest 不保存变量值，也不登记变量名。
 
-`one run` 读取已经存在的 mise 任务。创建工作区、添加项目或显式执行 `one init mise` 时，将包脚本和 Taskfile 任务投影为原生 mise 命令；执行任务不会重新生成配置。
+默认环境固定为 `dev`，不受 `environments` 中的排列顺序影响。通过 `--env staging` 或其他已声明 slug 指定环境。这里填写 Infisical 的环境标识，例如 `dev`、`staging`、`prod`；界面展示名可以是 Development、Staging、Production。把 slug 写入列表不会自动创建远程环境。
 
-## 手动修改
+共享变量目录固定为 `/`。`path = "services/api"` 的项目依次合并 `/`、`/services`、`/services/api`，更具体的目录优先。并行任务分别接收所属项目的变量。目录和继承规则按约定执行，不提供项目级覆盖配置。
 
-重命名或删除项目时，应同时维护登记信息和磁盘目录。项目命令变化后，更新对应的 mise 任务。目录约定保持 `apps/`、`services/`、`packages/`。
+## 配置各归其位
 
-如果清单与磁盘不一致，检查登记路径，恢复缺少的项目文件或修正登记项。业务变量值、依赖、缓存和构建产物不应写入 Manifest。
+- `mise.toml` 定义任务、依赖、工具版本和缓存；存在对应 mise 任务时，才可以使用 `one run dev` 或 `one dev` 任务快捷入口。
+- `package.json` 保存包管理器信息；项目版本保留在各自原生文件中。
+- Dashboard 从进程输出发现服务访问地址。
+- stream 或 TUI 输出模式由 One CLI 个人偏好控制。
 
-## 已移除的部署配置
+`one env set` 将变量值保存到 Infisical。首次使用会保存绑定，成功写入后可登记新的环境名，但不会把变量名写入 Manifest。Dashboard 发布绑定修改前展示实际 TOML，并通过文件 revision 拒绝过期草稿。项目设置展示约定，不再提供项目级环境覆盖开关。
 
-`deploy` 和 `container` 域已下线。清单中仍有这些字段时返回 `MANIFEST_INVALID`，并提示手动删除对应字段。CLI 不提供迁移，也不会清理已有 Dockerfile、平台配置或 CI 文件。
-
-无效 JSON 或未知字段同样返回 `MANIFEST_INVALID`。详见[错误码](/zh/docs/error-codes/)。
-
-## 从 domains 迁移
-
-不再接受 `domains` 包装层。将工作区 Infisical 的 `domains.env.config` 提到顶层 `env`，项目的 `domains.env` 提到项目的 `env`。开发命令移入 mise 任务，本机访问地址移入 `service.url`，移除 `kind` 和 `config` 包装。原 dotenv 工作区删除旧绑定及本地文件 `path` 覆盖，需要时再绑定 Infisical。
-
-旧清单返回 `MANIFEST_INVALID` 并提示迁移。One CLI 不会自动改写清单，也不会导入或删除已有 `.env` 文件；需要的值应显式写入 Infisical。env 的 `pull`、`switch` 子命令及 `--env-provider` 参数已删除。旧 preset 代码 `d` 保留占位但不再接受，请使用 `i` 或省略环境段。
-
-## 已停用的 dev 配置
-
-旧 `projects[].dev.command` 不再执行。读取旧 `dev.url` 时兼容为 `service.url`；`one init mise --dry-run` 可预览迁移，`one init mise` 会删除旧 dev 对象并保留 URL。Manifest 继续使用 JSON。
+具体命令参阅[环境变量](/zh/docs/env-vars/)，项目登记参阅[添加项目](/zh/docs/add/)。

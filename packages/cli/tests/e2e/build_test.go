@@ -1,6 +1,7 @@
 package cli_test
 
 import (
+	"context"
 	"encoding/json"
 	"os"
 	"os/exec"
@@ -9,7 +10,6 @@ import (
 	"strings"
 	"testing"
 
-	"context"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/modules/miseconfig"
 	buildmodule "github.com/torchstellar-team/one-cli/packages/cli/internal/modules/tasks"
 	"gopkg.in/yaml.v3"
@@ -44,7 +44,24 @@ func buildFixture(t *testing.T, mise bool) string {
 	// mise does not discover a monorepo rooted at HOME.
 	isolateHome(t, t.TempDir())
 	t.Setenv("ONE_RUNTIME", "builtin")
-	buildWrite(t, root, "one.manifest.json", `{"version":1,"workspace":{"id":"build-test","name":"build-test"},"environments":{"names":["dev","prod"],"default":"dev"},"projects":[{"name":"web","relativeDir":"apps/web","toolchain":"node"},{"name":"lib","relativeDir":"packages/lib","toolchain":"node"},{"name":"mobile","relativeDir":"apps/mobile","toolchain":"node"}]}`)
+	buildWrite(t, root, "one.manifest.toml", `version = 2
+
+[workspace]
+id = "build-test"
+name = "build-test"
+
+[projects."web"]
+path = "apps/web"
+toolchain = "node"
+
+[projects."lib"]
+path = "packages/lib"
+toolchain = "node"
+
+[projects."mobile"]
+path = "apps/mobile"
+toolchain = "node"
+`)
 	buildWrite(t, root, "package.json", `{"packageManager":"pnpm@12.3.4"}`)
 	buildWrite(t, root, "apps/web/package.json", `{"name":"@build/web","scripts":{"build":"sh build.sh"},"dependencies":{"@build/lib":"workspace:*"}}`)
 	buildWrite(t, root, "packages/lib/package.json", `{"name":"@build/lib","scripts":{"build":"sh build.sh"}}`)

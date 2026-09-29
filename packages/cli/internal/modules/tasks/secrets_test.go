@@ -97,7 +97,7 @@ func TestNativeMiseProjectEnvironmentsAndCache(t *testing.T) {
 		binary = value
 	}
 	w := taskWorkspace(t)
-	w.Manifest().Env = &workspace.EnvironmentConfig{ProjectID: "synthetic"}
+	w.Manifest().Env = &workspace.EnvironmentConfig{ProjectID: "synthetic", Environments: []string{"dev", "staging", "prod"}}
 	isolated := t.TempDir()
 	for _, key := range []string{"MISE_DATA_DIR", "MISE_STATE_DIR", "MISE_CACHE_DIR", "MISE_CONFIG_DIR", "MISE_SYSTEM_CONFIG_DIR"} {
 		t.Setenv(key, filepath.Join(isolated, key))
@@ -300,7 +300,7 @@ depends=["//apps/web:build","//packages/lib:build"]
 }
 func TestEnvironmentSessionContainsNoValuesOnDiskAndCleansUp(t *testing.T) {
 	w := taskWorkspace(t)
-	w.Manifest().Env = &workspace.EnvironmentConfig{ProjectID: "synthetic"}
+	w.Manifest().Env = &workspace.EnvironmentConfig{ProjectID: "synthetic", Environments: []string{"dev", "staging", "prod"}}
 	plan, err := NewPlan(w, Options{Name: "build"})
 	if err != nil {
 		t.Fatal(err)

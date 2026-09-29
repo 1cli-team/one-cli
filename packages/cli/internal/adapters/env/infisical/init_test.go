@@ -7,88 +7,22 @@ package infisical
 // manifest back-fill behavior.
 
 import (
-	"context"
-	"encoding/json"
-	"net/http"
-	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"reflect"
 	"testing"
 
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/core/workspace"
-	"github.com/zalando/go-keyring"
 )
 
 func TestApplyInitDefaults(t *testing.T) {
-	cases := []struct {
-		name string
-		in   InitInput
-		want InitInput
-	}{
-		{
-			name: "empty input fills every default",
-			in:   InitInput{},
-			want: InitInput{
-				Environments: append([]string{}, DefaultEnvironments...),
-				DefaultEnv:   DefaultEnvironments[0],
-				RootPath:     "/",
-			},
-		},
-		{
-			name: "explicit environments pin DefaultEnv to first when DefaultEnv blank",
-			in: InitInput{
-				Environments: []string{"qa", "prod"},
-			},
-			want: InitInput{
-				Environments: []string{"qa", "prod"},
-				DefaultEnv:   "qa",
-				RootPath:     "/",
-			},
-		},
-		{
-			name: "explicit DefaultEnv preserved",
-			in: InitInput{
-				Environments: []string{"qa", "prod"},
-				DefaultEnv:   "prod",
-			},
-			want: InitInput{
-				Environments: []string{"qa", "prod"},
-				DefaultEnv:   "prod",
-				RootPath:     "/",
-			},
-		},
-		{
-			name: "explicit RootPath preserved",
-			in: InitInput{
-				RootPath: "/teams/web",
-			},
-			want: InitInput{
-				Environments: append([]string{}, DefaultEnvironments...),
-				DefaultEnv:   DefaultEnvironments[0],
-				RootPath:     "/teams/web",
-			},
-		},
-		{
-			name: "whitespace-only DefaultEnv treated as blank",
-			in: InitInput{
-				Environments: []string{"qa", "prod"},
-				DefaultEnv:   "   ",
-			},
-			want: InitInput{
-				Environments: []string{"qa", "prod"},
-				DefaultEnv:   "qa",
-				RootPath:     "/",
-			},
-		},
+	got := applyInitDefaults(InitInput{})
+	if !reflect.DeepEqual(got.Environments, []string{"dev", "staging", "prod"}) {
+		t.Fatal(got)
 	}
-	for _, tc := range cases {
-		t.Run(tc.name, func(t *testing.T) {
-			got := applyInitDefaults(tc.in)
-			if !reflect.DeepEqual(got, tc.want) {
-				t.Errorf("got %+v\n  want %+v", got, tc.want)
-			}
-		})
+	custom := applyInitDefaults(InitInput{Environments: []string{"prod", "dev"}})
+	if !reflect.DeepEqual(custom.Environments, []string{"prod", "dev"}) {
+		t.Fatal(custom)
 	}
 }
 
@@ -291,33 +225,9 @@ func TestEnsureManifestProject_PreservesExisting(t *testing.T) {
 	}
 }
 
-func TestEnsureManifestProject_BackfillsMissingIDOnly(t *testing.T) {
-	// Project block has Name but no ID — back-fill the ID, keep the Name.
-	tmp := t.TempDir()
-	mustWriteManifest(t, tmp, &workspace.Manifest{
-		Version:   workspace.ManifestVersion,
-		Workspace: &workspace.ManifestWorkspace{ID: "", Name: "name-was-set"},
-		Projects:  []workspace.ManifestProject{},
-	})
-
-	if err := ensureManifestProject(tmp, "fallback-name"); err != nil {
-		t.Fatal(err)
-	}
-
-	loaded, _ := workspace.ReadManifest(tmp)
-	if loaded.Workspace.Name != "name-was-set" {
-		t.Errorf("Name should be preserved: got %q", loaded.Workspace.Name)
-	}
-	if loaded.Workspace.ID == "" {
-		t.Error("ID should be back-filled")
-	}
-}
-
-// --- helpers ---
-
 func mustWriteManifest(t *testing.T, dir string, m *workspace.Manifest) {
 	t.Helper()
-	b, err := json.MarshalIndent(m, "", "  ")
+	b, err := workspace.MarshalManifest(m)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -330,62 +240,5 @@ func mustWritePackageJSON(t *testing.T, dir string, body string) {
 	t.Helper()
 	if err := os.WriteFile(filepath.Join(dir, "package.json"), []byte(body), 0o644); err != nil {
 		t.Fatal(err)
-	}
-}
-
-func TestInitPreservesUnboundWorkspacePreferences(t *testing.T) {
-	for name, configured := range map[string]bool{"without binding": false, "with preferences": true} {
-		t.Run(name, func(t *testing.T) {
-			root := t.TempDir()
-			manifest := &workspace.Manifest{
-				Version:      workspace.ManifestVersion,
-				Workspace:    &workspace.ManifestWorkspace{ID: "local", Name: "demo"},
-				Environments: &workspace.Environments{Names: []string{"qa", "prod"}, Default: "qa"},
-			}
-			wantName, wantPath := "demo", "/"
-			if configured {
-				wantName, wantPath = "other-name", "/team"
-				manifest.Env = &workspace.EnvironmentConfig{ProjectName: wantName, RootPath: wantPath, Keys: []string{"TOKEN"}}
-			}
-			if err := workspace.WriteManifest(root, manifest); err != nil {
-				t.Fatal(err)
-			}
-			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				if r.Method != http.MethodPost || r.URL.Path != "/api/v2/workspace" {
-					t.Errorf("unexpected request: %s %s", r.Method, r.URL)
-					http.NotFound(w, r)
-					return
-				}
-				var body map[string]string
-				if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-					t.Error(err)
-				}
-				if body["projectName"] != wantName {
-					t.Errorf("name=%q, want %q", body["projectName"], wantName)
-				}
-				w.Header().Set("Content-Type", "application/json")
-				_ = json.NewEncoder(w).Encode(map[string]any{"project": map[string]string{"id": "remote", "name": wantName}})
-			}))
-			defer server.Close()
-			keyring.MockInit()
-			sharedTestSession(t, server.URL, "test")
-			result, err := Init(context.Background(), root, InitInput{})
-			if err != nil {
-				t.Fatal(err)
-			}
-			if !result.Created || result.ProjectName != wantName || result.RootPath != wantPath || result.DefaultEnv != "qa" || !reflect.DeepEqual(result.Environments, []string{"qa", "prod"}) {
-				t.Fatalf("initialization lost preferences: %+v", result)
-			}
-			after, err := workspace.ReadManifest(root)
-			if err != nil {
-				t.Fatal(err)
-			}
-			if after.Workspace.Name != "demo" || after.Env.ProjectID != "remote" || after.Env.RootPath != wantPath || !reflect.DeepEqual(after.Environments, manifest.Environments) {
-				t.Fatalf("manifest lost preferences: %+v", after)
-			}
-			if configured && !reflect.DeepEqual(after.Env.Keys, []string{"TOKEN"}) {
-				t.Fatalf("keys=%v", after.Env.Keys)
-			}
-		})
 	}
 }

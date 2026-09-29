@@ -25,16 +25,6 @@ export interface WorkspaceManifestDraft {
 
 export const WORKSPACE_DRAFT_SUBJECT = "__workspace__";
 
-interface StageSectionInput {
-	entryId?: string;
-	revision: string;
-	project: string;
-	section: ManifestDraftSection;
-	initial: object;
-	next: object;
-	labels: Record<string, string>;
-}
-
 interface StageWorkspaceSectionInput {
 	entryId?: string;
 	revision: string;
@@ -46,7 +36,6 @@ interface StageWorkspaceSectionInput {
 
 interface ManifestDraftState {
 	drafts: Readonly<Record<string, WorkspaceManifestDraft>>;
-	stageSection(input: StageSectionInput): void;
 	stageWorkspaceSection(input: StageWorkspaceSectionInput): void;
 	commitWorkspaceSection(
 		entryId: string | undefined,
@@ -67,7 +56,7 @@ function flatten(prefix: string, value: unknown, output: Record<string, DraftVal
 		}
 		return;
 	}
-	output[prefix] = value as DraftValue;
+	output[prefix] = Array.isArray(value) ? JSON.stringify(value) : (value as DraftValue);
 }
 
 function equivalent(left: object, right: object): boolean {
@@ -109,43 +98,6 @@ function summariesFor(
 export const useManifestDraftStore = createStore<ManifestDraftState>(
 	(set) => ({
 		drafts: {},
-		stageSection: ({ entryId, revision, project, section, initial, next, labels }) => {
-			const key = manifestDraftKey(entryId);
-			set((state) => {
-				const existing = state.drafts[key];
-				const changes = { ...existing?.changes };
-				const projectPatch = { ...(changes[project] ?? { project }) };
-				const summaries = (existing?.summaries ?? []).filter(
-					(summary) => !summary.id.startsWith(`${project}:${section}:`),
-				);
-
-				if (equivalent(initial, next)) {
-					delete projectPatch[section];
-				} else {
-					projectPatch[section] = next as never;
-					summaries.push(...summariesFor(project, section, initial, next, labels));
-				}
-
-				const hasProjectChange = ["general", "environment"].some(
-					(name) => projectPatch[name as ManifestDraftSection] !== undefined,
-				);
-				if (hasProjectChange) changes[project] = projectPatch;
-				else delete changes[project];
-
-				const drafts = { ...state.drafts };
-				if (Object.keys(changes).length === 0 && !existing?.workspace) {
-					delete drafts[key];
-				} else {
-					drafts[key] = {
-						revision: existing?.revision || revision,
-						workspace: existing?.workspace,
-						changes,
-						summaries,
-					};
-				}
-				return { drafts };
-			});
-		},
 		stageWorkspaceSection: ({ entryId, revision, section, initial, next, labels }) => {
 			const key = manifestDraftKey(entryId);
 			set((state) => {

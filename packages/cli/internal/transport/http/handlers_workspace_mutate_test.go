@@ -22,11 +22,10 @@ func seedWorkspace(t *testing.T) string {
 	t.Helper()
 	root := t.TempDir()
 	manifest := &workspacecore.Manifest{
-		Version:      workspacecore.ManifestVersion,
-		Workspace:    &workspacecore.ManifestWorkspace{ID: "demo", Name: "demo"},
-		Environments: &workspacecore.Environments{Names: []string{"dev", "staging", "prod"}, Default: "dev"},
+		Version:   workspacecore.ManifestVersion,
+		Workspace: &workspacecore.ManifestWorkspace{ID: "demo", Name: "demo"},
 
-		Env: &workspacecore.EnvironmentConfig{ProjectID: "remote"},
+		Env: &workspacecore.EnvironmentConfig{ProjectID: "remote", Environments: []string{"dev", "staging", "prod"}},
 
 		Projects: []workspacecore.ManifestProject{{
 			Name: "web", RelativeDir: "apps/web", TemplateID: "react-spa", Toolchain: "node",
@@ -194,14 +193,7 @@ func TestManifestDraftRouteRequiresCurrentRevisionAndWritesAllowlistedFields(t *
 	if removed.Code == http.StatusOK {
 		t.Fatal("removed backend switch is still available")
 	}
-	body := fmt.Sprintf(`{
-		"revision": %q,
-		"changes": [{
-			"project": "web",
-			"general": {"buildVersion": "v2.0.0", "devURL": "http://localhost:3001/"},
-			"environment": {"path": "/frontend", "inherits": false, "disabled": false}
-		}]
-	}`, settings.Revision)
+	body := fmt.Sprintf(`{"revision":%q,"workspace":{"environment":{"backend":"infisical","projectId":"updated"}},"changes":[]}`, settings.Revision)
 	written := workspaceRequest(t, handler, http.MethodPut, "/api/workspace/manifest", strings.NewReader(body))
 	if written.Code != http.StatusOK {
 		t.Fatalf("PUT status = %d; body = %s", written.Code, written.Body.String())
@@ -210,11 +202,10 @@ func TestManifestDraftRouteRequiresCurrentRevisionAndWritesAllowlistedFields(t *
 	if err != nil {
 		t.Fatal(err)
 	}
-	if manifest.Projects[0].BuildVersion != "2.0.0" ||
-		manifest.Projects[0].Service.URL != "http://localhost:3001/" ||
-		manifest.Projects[0].Env.Path != "/frontend" {
-		t.Fatalf("manifest = %#v", manifest.Projects[0])
+	if manifest.Env.ProjectID != "updated" {
+		t.Fatalf("binding = %+v", manifest.Env)
 	}
+
 	if manifest.Env == nil ||
 		workspacecore.EnvBackend(manifest) != "infisical" {
 		t.Fatalf("workspace env backend = %#v", manifest.Env)

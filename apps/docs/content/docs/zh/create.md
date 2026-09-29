@@ -132,4 +132,8 @@ one dev -p api
 ## Agent 指引
 
 
-新工作区生成精简的中英文 `AGENTS.md`，各用 7 条规则覆盖工作区定位、CLI 帮助、添加项目、任务与验证、依赖、环境变量和自动化错误处理。命令细节通过 `one <command> --help` 按需查询，不内嵌完整命令手册。该文件由团队维护，后续 `one add` 保留修改。
+新工作区只生成一份单语言 `AGENTS.md`，跟随 One CLI 当前生效语言。使用 `one locale zh-CN` 或 `one locale en-US` 设置偏好；`auto` 跟随终端语言，无法识别时使用英文。后续切换语言或运行 `one add` 都不会重写已有文件。
+
+源码模板直接使用 Markdown，位于 `packages/cli/internal/modules/creation/templates/` 下的 `AGENTS.zh-CN.md` 和 `AGENTS.en-US.md`。修改后重新构建 CLI，即可应用到以后创建的工作区。
+
+指引要求 Agent 通过 `one run` 执行测试及项目命令，将复杂 TypeScript 脚本放在 `scripts/*.mts` 并登记为任务，统一通过 One 管理环境变量。Docker 镜像上传账号等发布、运维凭据放在全局变量中；缺少时提示用户到 Dashboard 的“共享凭据”页面配置，然后由任务内部通过 `one exec --global` 注入。

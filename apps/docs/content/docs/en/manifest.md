@@ -1,106 +1,69 @@
 ---
-title: What is one.manifest.json
-description: The workspace's project registry, environment configuration, and local development settings.
+title: one.manifest.toml
+description: The complete Manifest v2 structure for workspace identity, projects, and Infisical bindings.
 ---
 
-Every One CLI workspace has a `one.manifest.json` at its root. It records the workspace identity, projects, environments, and environment-variable source. Commands use it to find projects and select their toolchains.
+`one.manifest.toml` is the workspace's configuration file. Manifest v2 uses TOML and names each project with a table key. One CLI reads this file only; it does not load the former JSON format or provide a migration command.
 
-## Example
+## Complete structure
 
-```json
-{
-  "version": 1,
-  "workspace": {
-    "id": "demo-app-2bb61e",
-    "name": "demo-app"
-  },
-  "environments": {
-    "names": [
-      "dev",
-      "preview",
-      "prod"
-    ],
-    "default": "dev"
-  },
-  "projects": [
-    {
-      "name": "web",
-      "templateId": "react-spa",
-      "relativeDir": "apps/web",
-      "toolchain": "node",
-      "buildVersion": "0.1.0",
-      "packageManager": "pnpm",
-      "env": {
-        "path": "/apps/web",
-        "inherits": true,
-        "keys": [
-          "API_URL"
-        ]
-      },
-      "service": {
-        "url": "http://localhost:5173"
-      }
-    },
-    {
-      "name": "api",
-      "templateId": "go-api",
-      "relativeDir": "services/api",
-      "toolchain": "go"
-    }
-  ],
-  "env": {
-    "siteUrl": "https://app.infisical.com",
-    "projectId": "your-project-id",
-    "rootPath": "/"
-  }
-}
+```toml
+version = 2
+
+[workspace]
+id = "my-workspace"
+name = "My Workspace"
+
+[env.infisical]
+siteUrl = "https://app.infisical.com"
+projectId = "your-project-id"
+environments = ["dev", "staging", "prod"]
+
+[projects.web]
+path = "apps/web"
+toolchain = "node"
+template = "react-spa"
+
+[projects.api]
+path = "services/api"
+toolchain = "go"
+template = "go-api"
 ```
 
-The real file is strict JSON; comments and unknown fields are rejected.
+A fresh workspace contains its version and identity. Adding a project adds its table; binding Infisical adds `[env.infisical]`. Generated files contain no comments. You can add your own TOML comments: subsequent edits preserve comments, table order, and unchanged text.
 
 ## Fields
 
 | Field | Meaning |
 |---|---|
-| `version` | Manifest schema version, currently `1` |
-| `workspace` | Stable `id` and display `name` |
-| `environments` | Environment names and default environment |
-| `env` | Optional Infisical binding: `siteUrl`, `projectId`, `projectName`, `rootPath`, and `keys` |
-| `projects[]` | Project names, paths, templates, toolchains, optional `packageManager` and `buildVersion` |
-| `projects[].env` | Environment overrides: `path`, `inherits`, `disabled`, and declared key names; inherits the workspace backend |
-| `projects[].service.url` | Optional local Dashboard access URL; commands live in mise tasks |
+| `version` | Required schema version: `2` |
+| `workspace.id` | Stable workspace identifier |
+| `workspace.name` | Display name; also the initial name when creating remote storage |
+| `env.infisical.siteUrl` | Optional Infisical instance URL; defaults to `https://app.infisical.com` |
+| `env.infisical.projectId` | Required remote project ID when a binding is present |
+| `env.infisical.environments` | Required list of unique remote environment slugs when bound; must contain `dev` |
+| `projects.<name>` | Project name as a table key; unique within the workspace |
+| `projects.<name>.path` | Required, unique, normalized workspace-relative directory |
+| `projects.<name>.toolchain` | Required: `node`, `go`, or `none` |
+| `projects.<name>.template` | Optional template ID used to create the project |
 
-For Infisical, `env` can contain `projectId`, `projectName`, `rootPath`, and `keys`. Key values and local Profile names never belong in the manifest. Keep credentials in the system keyring and values in Infisical.
+Project paths cannot be absolute or escape the workspace. Unknown fields, unsupported versions, and invalid field values produce `MANIFEST_INVALID`. TOML syntax errors include the file path and source location.
 
-## Who writes it
+## Environment conventions
 
-| Action | Change |
-|---|---|
-| `one create` | Writes workspace identity, default environments, and an empty project list; leaves `env` unset |
-| `one add` | Registers project metadata |
-| `one env set` | Records declared key names; Infisical can initialize its project binding |
-| `one serve` | Applies explicitly reviewed project or environment-source changes with revision checks |
+Omit `[env.infisical]` to run with the existing process environment. The manifest never contains variable values or a variable-name registry.
 
-`one run` reads existing mise tasks. Creating a workspace, adding a project, or explicitly running `one init mise` projects package scripts and Taskfile tasks into native mise commands. Running tasks does not regenerate configuration.
+The default environment is always `dev`, regardless of the order of `environments`. Use `--env staging` or another declared slug to select a different environment. Slugs match Infisical identifiers, such as `dev`, `staging`, and `prod`; the UI may display Development, Staging, and Production. Listing a slug here does not create that environment remotely.
 
-## Manual edits
+The shared remote folder is `/`. A project with `path = "services/api"` receives variables from `/`, `/services`, and `/services/api`, with the closest folder taking precedence. Each parallel task receives its own project's values. These folder and inheritance rules are conventions, with no per-project overrides.
 
-Keep paths and names consistent when renaming or removing projects. Update the task in mise if the project's command changes. The workspace layout remains `apps/`, `services/`, and `packages/`.
+## Configuration ownership
 
-If the manifest and filesystem disagree, inspect the declared paths and restore the missing project files or fix the registry entry. Do not put business values, dependencies, caches, or build outputs in the manifest.
+- `mise.toml` owns tasks, dependencies, tools, and caching. `one run dev` or the `one dev` task shortcut works when mise defines that task.
+- `package.json` owns package-manager metadata; project versions stay in their native files.
+- Dashboard discovers service URLs from process output.
+- Personal One CLI preferences select stream or TUI output.
 
-## Removed deployment configuration
+`one env set` stores values in Infisical. It persists a binding on first use and can register an environment locally after a successful write, but never writes variable names to the manifest. Dashboard previews the actual TOML before publishing binding changes and checks the file revision to reject stale drafts. Project settings display the conventions without per-project environment controls.
 
-The `deploy` and `container` domains have been removed. A manifest containing those fields returns `MANIFEST_INVALID` with a removal hint. Delete the corresponding fields manually; no migration or cleanup of existing Dockerfiles, platform configuration, or CI files is performed.
-
-Invalid JSON or unknown fields also produce `MANIFEST_INVALID`. See [error codes](/en/docs/error-codes/).
-
-## Migration from domains
-
-The `domains` wrapper is no longer accepted. Move an Infisical workspace binding from `domains.env.config` to top-level `env`, and move project `domains.env` to `env`. Move development commands into mise tasks and local access URLs into `service.url`. Remove `kind` and `config` wrappers. For a former dotenv workspace, remove the old binding and any local-file `path` overrides; bind Infisical when needed.
-
-Old manifests return `MANIFEST_INVALID` with a migration hint. One CLI does not rewrite manifests or import/delete existing `.env` files. Move required values to Infisical explicitly. The env `pull` and `switch` subcommands and the `--env-provider` flag have been removed. Legacy preset code `d` remains reserved and is rejected; use `i` or omit the environment segment.
-
-## Retired dev settings
-
-Legacy `projects[].dev.command` is ignored. `dev.url` remains readable as `service.url`; `one init mise --dry-run` previews the migration and `one init mise` removes the old dev object while preserving the URL. The manifest remains JSON.
+See [environment variables](/en/docs/env-vars/) for commands and [adding projects](/en/docs/add/) for project registration.

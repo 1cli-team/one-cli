@@ -150,8 +150,8 @@ func (w Workspace) ProjectFromWorkingDirectory() (*workspace.Project, bool) {
 func (w Workspace) project(project workspace.ManifestProject) workspace.Project {
 	return workspace.Project{
 		Name: project.Name, RelativeDir: project.RelativeDir,
-		TargetDir: filepath.Join(w.root, filepath.FromSlash(project.RelativeDir)),
-		Toolchain: project.Toolchain, PackageManager: project.PackageManager,
+		TargetDir:  filepath.Join(w.root, filepath.FromSlash(project.RelativeDir)),
+		Toolchain:  project.Toolchain,
 		TemplateID: project.TemplateID,
 	}
 }

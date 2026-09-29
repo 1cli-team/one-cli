@@ -3,11 +3,11 @@ title: Multiple environments and folder inheritance
 description: Use Infisical environments and project folders to share and override values.
 ---
 
-One workspace binds to one Infisical project. `environments.names` declares environment names, while folder paths separate shared and project-specific variables.
+One workspace binds to one Infisical project. `env.infisical.environments` declares environment names, while folder paths separate shared and project-specific variables.
 
 ## Environment names
 
-New workspaces use `dev`, `preview`, and `prod`. To add `qa`:
+New bindings use `dev`, `staging`, and `prod`. Create `qa` in Infisical first, then save a variable:
 
 ```bash
 one env set API_URL=https://qa.example.com -p web --env qa --yes
@@ -15,35 +15,25 @@ one env list -p web --env qa
 one exec -p web --env qa -- pnpm test
 ```
 
-`set` registers the environment name. `list` rejects undeclared names. Omit `--env` to use the manifest default.
+After a successful remote write, `set` registers the environment name locally. `list` rejects undeclared names. Omit `--env` to use the fixed default `dev`.
 
 ## Folder inheritance
 
-The workspace `env.rootPath` defaults to `/`. Projects default to folders matching `relativeDir`. For `services/api`, the merge order is:
+Shared variables use `/`. Project folders always match their manifest `path`. For `services/api`, the merge order is:
 
 ```text
 / → /services → /services/api
 ```
 
-Closer folders override matching keys. Configure a custom path in the project's `env` field:
-
-```json
-{
-  "name": "api",
-  "relativeDir": "services/api",
-  "env": { "path": "/teams/payments/api", "inherits": true }
-}
-```
-
-Set `inherits: false` to use only that folder. Set `disabled: true` to skip Infisical injection for the project and inherit the shell environment.
+Closer folders override matching keys. These rules are fixed; projects do not have custom path, inheritance, or disable switches.
 
 ## Execution
 
 ```bash
-one run build --env preview
+one run build --env staging
 one exec -p api --env prod -- go run ./cmd/server
 ```
 
-Generated task adapters and project commands receive fetched variables directly. No local variable files are synchronized. Authentication and fetch failures stop execution. Custom mise tasks continue to use mise's environment.
+`one run` and `one exec` inject values into the corresponding project process. Parallel projects have separate environments. No local variable files are synchronized; authentication or fetch failures stop execution.
 
 See [one env](/en/docs/env-vars/) for binding and error handling, and [global credentials](/en/docs/login/) for storage independent of a workspace.

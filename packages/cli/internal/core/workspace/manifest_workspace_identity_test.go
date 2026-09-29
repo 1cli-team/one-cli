@@ -1,11 +1,11 @@
 package workspace_test
 
 import (
-	"encoding/json"
 	"os"
 	"path/filepath"
 	"testing"
 
+	"github.com/pelletier/go-toml/v2"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/core/workspace"
 )
 
@@ -15,12 +15,9 @@ import (
 // that were created before the field existed.
 func TestReadManifest_WithoutWorkspaceField(t *testing.T) {
 	tmp := t.TempDir()
-	bare := `{
-  "version": 1,
-  "projects": []
-}
+	bare := `version = 2
 `
-	if err := os.WriteFile(filepath.Join(tmp, "one.manifest.json"), []byte(bare), 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(tmp, "one.manifest.toml"), []byte(bare), 0o644); err != nil {
 		t.Fatal(err)
 	}
 	m, err := workspace.ReadManifest(tmp)
@@ -108,12 +105,12 @@ func TestWorkspaceField_OmitemptyOnDisk(t *testing.T) {
 	}); err != nil {
 		t.Fatal(err)
 	}
-	raw, err := os.ReadFile(filepath.Join(tmp, "one.manifest.json"))
+	raw, err := os.ReadFile(filepath.Join(tmp, "one.manifest.toml"))
 	if err != nil {
 		t.Fatal(err)
 	}
 	var doc map[string]any
-	if err := json.Unmarshal(raw, &doc); err != nil {
+	if err := toml.Unmarshal(raw, &doc); err != nil {
 		t.Fatal(err)
 	}
 	if _, has := doc["workspace"]; has {

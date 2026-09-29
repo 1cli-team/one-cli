@@ -94,7 +94,7 @@ func TestE2E_CreatePreservesFilesWhenMiseTrustFails(t *testing.T) {
 			if strings.HasPrefix(locale, "zh") && !strings.Contains(warnings[0].(string), "自动信任") {
 				t.Fatal(warnings)
 			}
-			if !fileExists(t, filepath.Join(root, "mise.toml")) || !fileExists(t, filepath.Join(root, "one.manifest.json")) {
+			if !fileExists(t, filepath.Join(root, "mise.toml")) || !fileExists(t, filepath.Join(root, "one.manifest.toml")) {
 				t.Fatal("creation was rolled back")
 			}
 		})

@@ -180,25 +180,14 @@ func TestRegistryCopiedWorkspaceCreatesIdentityConflict(t *testing.T) {
 	}
 }
 
-func TestRegistryLegacyIdentityCanBeListedButNotResolved(t *testing.T) {
-	root := createRegistryTestWorkspace(t, "", "legacy", 1)
-	service := newRegistryTestService(
-		t,
-		registrylocal.NewAt(filepath.Join(t.TempDir(), "workspaces.json")),
-		time.Now,
-		sequenceEntryIDs(),
-	)
-
-	registered, err := service.Observe(context.Background(), root, "serve")
-	if err != nil {
-		t.Fatalf("legacy Observe: %v", err)
+func TestRegistryRejectsInvalidIdentity(t *testing.T) {
+	root := t.TempDir()
+	if err := os.WriteFile(workspacecore.ManifestPath(root), []byte("version=2\n[workspace]\nid=''\nname='Invalid'\n"), 0644); err != nil {
+		t.Fatal(err)
 	}
-	if registered.Status != WorkspaceStatusIdentityMissing || registered.ID != "" {
-		t.Fatalf("legacy registration = %#v", registered)
-	}
-	_, err = service.Resolve(context.Background(), registered.EntryID)
-	if !errors.Is(err, ErrRegistryUnavailable) {
-		t.Fatalf("legacy Resolve error = %v, want unavailable", err)
+	service := newRegistryTestService(t, registrylocal.NewAt(filepath.Join(t.TempDir(), "workspaces.json")), time.Now, sequenceEntryIDs())
+	if _, err := service.Observe(context.Background(), root, "serve"); err == nil {
+		t.Fatal("invalid identity accepted")
 	}
 }
 
@@ -402,11 +391,10 @@ func writeRegistryTestManifest(t *testing.T, root string, id string, name string
 	projects := make([]workspacecore.ManifestProject, 0, projectCount)
 	for index := 0; index < projectCount; index++ {
 		projects = append(projects, workspacecore.ManifestProject{
-			Name:         fmt.Sprintf("project-%d", index),
-			RelativeDir:  fmt.Sprintf("apps/project-%d", index),
-			TemplateID:   "react-spa",
-			Toolchain:    "node",
-			BuildVersion: workspacecore.DefaultBuildVersion,
+			Name:        fmt.Sprintf("project-%d", index),
+			RelativeDir: fmt.Sprintf("apps/project-%d", index),
+			TemplateID:  "react-spa",
+			Toolchain:   "node",
 		})
 	}
 	manifest := &workspacecore.Manifest{

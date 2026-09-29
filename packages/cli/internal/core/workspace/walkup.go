@@ -1,7 +1,7 @@
 package workspace
 
 // walkup.go centralises "given a possibly-empty -d / --dir flag, find
-// the workspace root by walking upward looking for one.manifest.json".
+// the workspace root by walking upward looking for one.manifest.toml".
 //
 // Before this lived as 28-line private helpers in internal/bootstrap/cli/run.go,
 // transport and adapter packages,
@@ -20,7 +20,7 @@ import (
 
 // WalkUpToManifest resolves a possibly-empty --dir flag to an absolute
 // workspace root, walking upward from the resolved start directory
-// until a one.manifest.json is found. Returns the absolute path on
+// until a one.manifest.toml is found. Returns the absolute path on
 // success, or a NOT_ONE_PROJECT structured error if the walk reaches
 // the filesystem root without finding the manifest.
 //

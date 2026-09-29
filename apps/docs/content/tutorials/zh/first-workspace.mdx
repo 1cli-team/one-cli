@@ -55,7 +55,7 @@ ls -la
 .git/
 .config/
 apps/
-one.manifest.json
+one.manifest.toml
 packages/
 services/
 ```
@@ -63,16 +63,15 @@ services/
 看 manifest：
 
 ```bash
-cat one.manifest.json | jq
+cat one.manifest.toml
 ```
 
 manifest 关键字段：
 
-- `version: 1` — schema 版本必须是 1
-- `workspace.id` — 自动生成的 UUID
-- `environments.names: ["dev", "preview", "prod"]`、`default: "dev"`
-- `env` — 可选 Infisical 绑定，配置前不存在
-- `projects: []` — 空数组（除非你传了 `--preset`）
+- `version = 2` — TOML 结构版本
+- `[workspace]` — 工作区 ID 与展示名称
+- `[env.infisical]` — 可选绑定与环境 slug，配置前不存在
+- `[projects.<name>]` — 每个项目一张表，空工作区不生成项目表
 
 ## 4. `one create` 默认接上的能力
 

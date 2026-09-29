@@ -112,14 +112,13 @@ func TestSnapshot_E2E_Add_DefersDeploymentDefaults(t *testing.T) {
 		}
 	}
 
-	// Manifest lists the project and its dev command, but deployment/container
-	// remain absent until first deploy.
+	// Manifest lists project identity only; commands stay in mise.
 	mf := readManifest(t, ws)
-	subs, _ := mf["projects"].([]any)
+	subs, _ := mf["projects"].(map[string]any)
 	if len(subs) != 1 {
 		t.Fatalf("manifest: want 1 subproject, got %d", len(subs))
 	}
-	sub0 := subs[0].(map[string]any)
+	sub0 := subs["user-api"].(map[string]any)
 	domains, _ := sub0["domains"].(map[string]any)
 	if _, ok := domains["container"]; ok {
 		t.Errorf("subproject.domains.container should be absent, got %v", domains["container"])
@@ -127,8 +126,8 @@ func TestSnapshot_E2E_Add_DefersDeploymentDefaults(t *testing.T) {
 	if _, ok := domains["deploy"]; ok {
 		t.Errorf("subproject.domains.deploy should be absent, got %v", domains["deploy"])
 	}
-	if sub0["buildVersion"] != "0.1.0" {
-		t.Errorf("subproject.buildVersion: want 0.1.0, got %v", sub0["buildVersion"])
+	if _, exists := sub0["buildVersion"]; exists {
+		t.Fatal("retired buildVersion persisted")
 	}
 }
 
@@ -214,11 +213,14 @@ func TestSnapshot_E2E_Add_GoLibTemplate(t *testing.T) {
 	// fallback here would make the workspace overview claim it can start and
 	// make `one dev` run a cmd/server directory the template does not contain.
 	mf := readManifest(t, ws)
-	projects, _ := mf["projects"].([]any)
+	projects, _ := mf["projects"].(map[string]any)
 	if len(projects) != 1 {
 		t.Fatalf("manifest: want 1 project, got %d", len(projects))
 	}
-	project := projects[0].(map[string]any)
+	var project map[string]any
+	for _, entry := range projects {
+		project = entry.(map[string]any)
+	}
 	if dev, exists := project["dev"]; exists {
 		t.Fatalf("go-lib must not declare a runnable dev command, got %v", dev)
 	}

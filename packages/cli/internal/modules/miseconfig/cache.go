@@ -86,7 +86,7 @@ func (p *Plan) configureCache(root string, project workspace.Project, op workspa
 	}
 	relative, _ := filepath.Rel(project.TargetDir, root)
 	relative = filepath.ToSlash(relative)
-	t.Sources = []string{"**/*", "!node_modules/**", "!.git/**", "!.mise/**", "!.cache/**", "!coverage/**", "!dist/**", "!bin/**", "!.next/**", "!.astro/**", relative + "/one.manifest.json", relative + "/package.json", relative + "/pnpm-lock.yaml", relative + "/pnpm-workspace.yaml", relative + "/go.work", relative + "/go.work.sum"}
+	t.Sources = []string{"**/*", "!node_modules/**", "!.git/**", "!.mise/**", "!.cache/**", "!coverage/**", "!dist/**", "!bin/**", "!.next/**", "!.astro/**", relative + "/one.manifest.toml", relative + "/package.json", relative + "/pnpm-lock.yaml", relative + "/pnpm-workspace.yaml", relative + "/go.work", relative + "/go.work.sum"}
 	for _, input := range op.Inputs {
 		rel, _ := filepath.Rel(project.TargetDir, filepath.Join(root, input))
 		t.Sources = append(t.Sources, filepath.ToSlash(rel))

@@ -50,8 +50,8 @@ export function WorkspaceEnvironmentSettings({
 		...(settings.data?.projectId
 			? {
 					projectId: settings.data.projectId,
-					projectName: settings.data.projectName,
 					siteUrl: settings.data.siteUrl,
+					environments: settings.data.environments,
 				}
 			: {}),
 	};
@@ -67,8 +67,8 @@ export function WorkspaceEnvironmentSettings({
 			labels: {
 				backend: "overview.workspaceEnv.backend",
 				projectId: "global.project",
-				projectName: "global.project",
 				siteUrl: "session.site",
+				environments: "environmentSwitcher.label",
 			},
 		});
 	}
@@ -110,13 +110,19 @@ export function WorkspaceEnvironmentSettings({
 										change({
 											...value,
 											projectId: p.id,
-											projectName: p.name,
+											environments: p.environments?.map((entry) => entry.slug),
 											siteUrl: session.data?.session.siteUrl,
 										});
 								}}
 							>
 								<SelectTrigger aria-label={t("global.project")}>
-									<SelectValue placeholder={value.projectName || t("global.selectProject")} />
+									<SelectValue
+										placeholder={
+											projects.data?.find((p) => p.id === value.projectId)?.name ||
+											value.projectId ||
+											t("global.selectProject")
+										}
+									/>
 								</SelectTrigger>
 								<SelectContent>
 									{projects.data?.map((p) => (

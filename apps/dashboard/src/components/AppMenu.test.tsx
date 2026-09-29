@@ -40,7 +40,7 @@ function LocationProbe() {
 function show(withHeader = false) {
 	return render(
 		<SWRConfig value={{ provider: () => new Map(), shouldRetryOnError: false }}>
-			<MemoryRouter initialEntries={["/workspace/alpha?env=preview"]}>
+			<MemoryRouter initialEntries={["/workspace/alpha?env=staging"]}>
 				<ThemeProvider>{withHeader ? <TopBar /> : <AppMenu />}</ThemeProvider>
 				<LocationProbe />
 			</MemoryRouter>
@@ -77,12 +77,12 @@ describe("brand navigation menu", () => {
 			const selected = await within(menu).findByRole("menuitem", { name: /Alpha/ });
 			expect(selected.getAttribute("aria-current")).toBe("page");
 			expect(within(menu).getByRole("menuitem", { name: /Beta/ }).getAttribute("href")).toBe(
-				"/workspace/beta?env=preview",
+				"/workspace/beta?env=staging",
 			);
 			expect(await within(menu).findByText("test@example.com")).toBeDefined();
 			await user.click(within(menu).getByRole("menuitem", { name: /Beta/ }));
 			await waitFor(() => expect(screen.queryByRole("menu")).toBeNull());
-			expect(screen.getByTestId("location").textContent).toBe("/workspace/beta?env=preview");
+			expect(screen.getByTestId("location").textContent).toBe("/workspace/beta?env=staging");
 		},
 	);
 
@@ -143,7 +143,7 @@ describe("brand navigation menu", () => {
 		await user.click(screen.getByRole("menuitem", { name: "Retry" }));
 		expect(await screen.findByRole("menuitem", { name: /Alpha/ })).toBeDefined();
 		expect(screen.getByRole("menuitem", { name: "Home" }).getAttribute("href")).toBe(
-			"/?env=preview",
+			"/?env=staging",
 		);
 	});
 });

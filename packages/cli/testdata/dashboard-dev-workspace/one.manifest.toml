@@ -1,0 +1,25 @@
+version = 2
+
+[workspace]
+id = "one-dashboard-dev"
+name = "Dashboard Development"
+
+[projects.web]
+path = "apps/web"
+toolchain = "node"
+template = "react-spa"
+
+[projects.api]
+path = "services/api"
+toolchain = "go"
+template = "go-api"
+
+[projects.docs]
+path = "apps/docs"
+toolchain = "node"
+template = "starlight-docs"
+
+[projects.shared]
+path = "packages/shared"
+toolchain = "node"
+template = "ts-library"

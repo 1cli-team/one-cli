@@ -14,7 +14,7 @@ Without a manifest, later tooling has to infer intent from directory names and s
 
 ## The manifest explains intent
 
-One CLI writes `one.manifest.json` so the workspace keeps a structured record of its own shape. The manifest gives future commands and agents a place to read project inventory and operational intent.
+One CLI writes `one.manifest.toml` so the workspace keeps a structured record of its own shape. The manifest gives future commands and agents a place to read project inventory and operational intent.
 
 That matters for common tasks:
 

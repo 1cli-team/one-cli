@@ -4,49 +4,15 @@ import type React from "react";
 import { useTranslation } from "react-i18next";
 import { Input } from "@/components/ui/input";
 import {
-	manifestDraftKey,
-	useManifestDraftStore,
-} from "@/features/manifest-draft/manifest-draft-store";
-import {
 	ProjectField,
 	type ProjectSettingsFormProps,
 	ManifestDraftLayout,
 	ReadOnlyDatum,
 } from "@/features/project-settings/forms/FormLayout";
-import type { ProjectGeneralPatch } from "@/types/api";
 
-export const GeneralForm: React.FC<ProjectSettingsFormProps> = ({
-	project,
-	revision,
-	workspaceEntryId,
-	readOnly,
-}) => {
+export const GeneralForm: React.FC<ProjectSettingsFormProps> = ({ project }) => {
 	const { t } = useTranslation();
-	const staged = useManifestDraftStore(
-		(state) => state.drafts[manifestDraftKey(workspaceEntryId)]?.changes[project.name]?.general,
-	);
-	const stageSection = useManifestDraftStore((state) => state.stageSection);
-	const initial: ProjectGeneralPatch = {
-		buildVersion: project.buildVersion ?? "",
-		devURL: project.devURL ?? "",
-	};
-	const value = staged ?? initial;
 	const build = project.build;
-
-	function update(next: ProjectGeneralPatch) {
-		stageSection({
-			entryId: workspaceEntryId,
-			revision,
-			project: project.name,
-			section: "general",
-			initial,
-			next,
-			labels: {
-				buildVersion: "projectInspector.general.buildVersion",
-				devURL: "projectInspector.general.devURL",
-			},
-		});
-	}
 
 	return (
 		<ManifestDraftLayout>
@@ -73,36 +39,8 @@ export const GeneralForm: React.FC<ProjectSettingsFormProps> = ({
 				</div>
 			</div>
 			<div className="space-y-5 rounded-lg border border-border bg-card p-5">
-				<SectionHeading
-					icon={Terminal}
-					title={t("projectInspector.general.runtime")}
-					description={t("projectInspector.draftHint")}
-				/>
+				<SectionHeading icon={Terminal} title={t("projectInspector.general.runtime")} />
 				<div className="grid gap-x-6 gap-y-5 @xl:grid-cols-2">
-					<ProjectField
-						label={t("projectInspector.general.buildVersion")}
-						htmlFor="project-build-version"
-					>
-						<Input
-							id="project-build-version"
-							value={value.buildVersion}
-							onChange={(event) => update({ ...value, buildVersion: event.target.value })}
-							readOnly={readOnly}
-						/>
-					</ProjectField>
-					<ProjectField label={t("projectInspector.general.devURL")} htmlFor="project-dev-url">
-						<Input
-							id="project-dev-url"
-							value={value.devURL ?? ""}
-							placeholder="http://localhost:3000"
-							readOnly={readOnly}
-							onChange={(event) => update({ ...value, devURL: event.target.value })}
-							aria-describedby="project-dev-url-hint"
-						/>
-						<p id="project-dev-url-hint" className="text-xs text-muted-foreground">
-							{t("projectInspector.general.devURLHint")}
-						</p>
-					</ProjectField>
 					<div className="@xl:col-span-2">
 						<ProjectField
 							label={t("projectInspector.general.buildCommand")}

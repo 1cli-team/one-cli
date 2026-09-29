@@ -4,11 +4,12 @@ package cli_test
 
 import (
 	"encoding/json"
-	"github.com/pelletier/go-toml/v2"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/pelletier/go-toml/v2"
 )
 
 func TestSnapshot_E2E_DevPositionalSelectorUnknown(t *testing.T) {
@@ -67,10 +68,7 @@ func TestSnapshot_E2E_DevFromMise(t *testing.T) {
 	}
 }
 
-// TestSnapshot_E2E_ManifestDoesNotStoreDevCommand asserts the schema
-// invariant: after `one add`, the manifest contains a non-empty
-// projects[].domains.dev.command for the new project. This lock the
-// contract so a future change can't quietly stop persisting the field.
+// Adding a project must never persist task commands in its manifest.
 func TestSnapshot_E2E_ManifestDoesNotStoreDevCommand(t *testing.T) {
 	tmp := t.TempDir()
 	isolateHome(t, tmp)
@@ -92,54 +90,38 @@ func TestSnapshot_E2E_ManifestDoesNotStoreDevCommand(t *testing.T) {
 // overrideDevCommand defines a native mise task with a deterministic child.
 func overrideDevCommand(t *testing.T, root, projectName, command string) {
 	t.Helper()
-	raw, err := os.ReadFile(filepath.Join(root, "one.manifest.json"))
+	raw, err := os.ReadFile(filepath.Join(root, "one.manifest.toml"))
 	if err != nil {
 		t.Fatal(err)
 	}
 	var manifest struct {
-		Projects []struct {
-			Name      string `json:"name"`
-			Directory string `json:"relativeDir"`
-		} `json:"projects"`
+		Projects map[string]struct {
+			Path string `toml:"path"`
+		} `toml:"projects"`
 	}
-	if err = json.Unmarshal(raw, &manifest); err != nil {
+	if err = toml.Unmarshal(raw, &manifest); err != nil {
 		t.Fatal(err)
 	}
-	for _, project := range manifest.Projects {
-		if project.Name == projectName {
-			raw, err = toml.Marshal(map[string]any{"tasks": map[string]any{projectName + ":dev": map[string]any{"dir": project.Directory, "run": command, "run_windows": command, "raw_args": true}}})
-			if err != nil {
-				t.Fatal(err)
-			}
-			appendRootTaskConfig(t, root, string(raw))
-			return
+	if project, ok := manifest.Projects[projectName]; ok {
+		raw, err = toml.Marshal(map[string]any{"tasks": map[string]any{projectName + ":dev": map[string]any{"dir": project.Path, "run": command, "run_windows": command, "raw_args": true}}})
+		if err != nil {
+			t.Fatal(err)
 		}
+		appendRootTaskConfig(t, root, string(raw))
+		return
 	}
 	t.Fatal("project missing")
 }
 
 func readDevCommandFromManifest(t *testing.T, workspaceRoot, projectName string) string {
 	t.Helper()
-	raw, err := os.ReadFile(filepath.Join(workspaceRoot, "one.manifest.json"))
-	if err != nil {
-		t.Fatalf("read manifest: %v", err)
+	m := readManifest(t, workspaceRoot)
+	projects, _ := m["projects"].(map[string]any)
+	p, _ := projects[projectName].(map[string]any)
+	if p == nil {
+		t.Fatalf("project %s missing", projectName)
 	}
-	var m map[string]any
-	if err := json.Unmarshal(raw, &m); err != nil {
-		t.Fatalf("parse manifest: %v", err)
-	}
-	projects, _ := m["projects"].([]any)
-	for _, raw := range projects {
-		p, _ := raw.(map[string]any)
-		if p["name"] != projectName {
-			continue
-		}
-		dev, _ := p["dev"].(map[string]any)
-		if dev == nil {
-			return ""
-		}
-		cmd, _ := dev["command"].(string)
-		return cmd
-	}
-	return ""
+	dev, _ := p["dev"].(map[string]any)
+	cmd, _ := dev["command"].(string)
+	return cmd
 }

@@ -36,7 +36,7 @@ Use it when a coding agent or engineer needs a predictable workspace contract in
 
 ## AI and agent usage
 
-The site explains how agents should work from `one.manifest.json`, prefer JSON output, respect stable error codes, and install only missing dependencies according to project type.
+The site explains how agents should work from `one.manifest.toml`, prefer JSON output, respect stable error codes, and install only missing dependencies according to project type.
 
 Recommended entry points for AI summarizers:
 

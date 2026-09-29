@@ -55,7 +55,7 @@ You'll see something like:
 .git/
 .config/
 apps/
-one.manifest.json
+one.manifest.toml
 packages/
 services/
 ```
@@ -63,16 +63,15 @@ services/
 Inspect the manifest:
 
 ```bash
-cat one.manifest.json | jq
+cat one.manifest.toml
 ```
 
 Key parts of the produced manifest:
 
-- `version: 1` — required schema version
-- `workspace.id` — generated UUID
-- `environments.names: ["dev", "preview", "prod"]` and `default: "dev"`
-- `env` — optional Infisical binding, absent until configured
-- `projects: []` — empty unless you passed `--preset`
+- `version = 2` — TOML schema version
+- `[workspace]` — workspace ID and display name
+- `[env.infisical]` — optional binding and environment slugs; absent until configured
+- `[projects.<name>]` — one table per project; absent in an empty workspace
 
 ## 4. Defaults wired by `one create`
 

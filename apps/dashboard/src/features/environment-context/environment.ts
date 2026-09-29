@@ -1,11 +1,11 @@
 import type { To } from "react-router-dom";
 
-export const DASHBOARD_ENVIRONMENTS = ["dev", "preview", "prod"] as const;
+export const DASHBOARD_ENVIRONMENTS = ["dev", "staging", "prod"] as const;
 
-export type DashboardEnvironment = (typeof DASHBOARD_ENVIRONMENTS)[number];
+export type DashboardEnvironment = string;
 
 export function isDashboardEnvironment(value: string | null): value is DashboardEnvironment {
-	return DASHBOARD_ENVIRONMENTS.some((environment) => environment === value);
+	return value !== null && /^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$/.test(value);
 }
 
 export function environmentFromSearch(search: string): DashboardEnvironment {

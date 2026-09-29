@@ -44,24 +44,7 @@ func findProject(m *Manifest, projectName string) *ManifestProject {
 	return nil
 }
 
-// ProjectEnv returns the per-project env override, or nil when unset.
-func ProjectEnv(m *Manifest, projectName string) *ProjectEnvOverride {
-	d := findProject(m, projectName)
-	if d == nil {
-		return nil
-	}
-	return d.Env
-}
-
-// EnvironmentEnabled reports whether a command should fetch remote variables.
+// EnvironmentEnabled reports whether the workspace has an Infisical binding.
 func EnvironmentEnabled(m *Manifest, relativeDir string) bool {
-	if m == nil || m.Env == nil {
-		return false
-	}
-	for _, project := range m.Projects {
-		if project.RelativeDir == relativeDir {
-			return project.Env == nil || !project.Env.Disabled
-		}
-	}
-	return true
+	return m != nil && m.Env != nil && m.Env.ProjectID != ""
 }

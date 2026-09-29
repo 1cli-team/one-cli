@@ -100,13 +100,13 @@ func TestSnapshot_E2E_WorkspaceOverviewAndDeferredDeployment(t *testing.T) {
 	if _, stderr, code = runBinaryIn(t, ws, "add", "react-spa", "--name", "web", "--yes", "-o", "json"); code != 0 {
 		t.Fatalf("add failed: exit=%d stderr=%s", code, stderr)
 	}
-	manifestBefore, err := os.ReadFile(filepath.Join(ws, "one.manifest.json"))
+	manifestBefore, err := os.ReadFile(filepath.Join(ws, "one.manifest.toml"))
 	if err != nil {
 		t.Fatal(err)
 	}
 	m := readManifest(t, ws)
-	projects := m["projects"].([]any)
-	domains, _ := projects[0].(map[string]any)["domains"].(map[string]any)
+	projects := m["projects"].(map[string]any)
+	domains, _ := projects["web"].(map[string]any)["domains"].(map[string]any)
 	if _, exists := domains["deploy"]; exists {
 		t.Fatalf("ordinary add configured deployment: %v", domains["deploy"])
 	}
@@ -144,7 +144,7 @@ func TestSnapshot_E2E_WorkspaceOverviewAndDeferredDeployment(t *testing.T) {
 	if !strings.Contains(deployErr["error"].(map[string]any)["message"].(string), "//:deploy") {
 		t.Fatalf("unexpected removed-command error: %v", deployErr)
 	}
-	manifestAfter, err := os.ReadFile(filepath.Join(ws, "one.manifest.json"))
+	manifestAfter, err := os.ReadFile(filepath.Join(ws, "one.manifest.toml"))
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -18,7 +18,7 @@ For an agent, the skill reduces guessing. It turns implicit project conventions 
 
 The first category is the command contract. One CLI commands support JSON envelopes, and errors include stable `error.code` values. The skill should tell agents to use `-o json` and read `error.context` rather than parsing free-text messages.
 
-The second category is the workspace source of truth. A directory is a One workspace when it contains `one.manifest.json`. Agents should not infer the root from `apps/`, `packages/`, or package.json because those structures vary by template combination.
+The second category is the workspace source of truth. A directory is a One workspace when it contains `one.manifest.toml`. Agents should not infer the root from `apps/`, `packages/`, or package.json because those structures vary by template combination.
 
 The third category is dependency bootstrap. JS, TS, and Node projects install from the workspace root with the declared package manager. Go projects run module commands inside each Go subproject. This difference must be explicit, otherwise agents will run install commands in the wrong directory.
 
@@ -37,7 +37,7 @@ The external surface stays small while the internal rules stay specific.
 
 When a user asks an agent to prepare a One workspace to run, a good sequence is:
 
-1. Walk upward to find the nearest `one.manifest.json`.
+1. Walk upward to find the nearest `one.manifest.toml`.
 2. Read the manifest to confirm package manager and subprojects.
 3. Install JS/TS/Node dependencies at the workspace root.
 4. Run `go mod download` inside each Go subproject, and use `go mod tidy` after changing imports or when module metadata needs repair.

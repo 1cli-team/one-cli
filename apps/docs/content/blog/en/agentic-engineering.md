@@ -31,7 +31,7 @@ That contract reduces the number of guesses in the agent's plan. It also gives r
 
 Manifest-driven CLI workflows turn project setup into durable state. Instead of asking an agent to infer everything from folder names, the workspace records decisions in a file that both humans and tools can read.
 
-In a One CLI workspace, that file is [`one.manifest.json`](/en/docs/manifest/). It records the workspace identity, projects, template origins, toolchains, environments, and project-level domains. The point is not to add ceremony. The point is to make intent explicit enough that later commands and agent sessions can start from facts.
+In a One CLI workspace, that file is [`one.manifest.toml`](/en/docs/manifest/). It records the workspace identity, projects, template origins, toolchains, and Infisical environment bindings. The point is not to add ceremony. The point is to make intent explicit enough that later commands and agent sessions can start from facts.
 
 This matters most when the work is repetitive:
 
@@ -65,10 +65,10 @@ one create agentic-product --yes
 cd agentic-product
 one add nextjs-app --name web --yes -o json
 one add nestjs-api --name api --yes -o json
-cat one.manifest.json | jq
+cat one.manifest.toml
 ```
 
-At that point, the workspace has a recorded structure. A coding agent can inspect `one.manifest.json`, see that `web` and `api` are separate projects, and avoid guessing whether a command belongs at the root or inside a subdirectory.
+At that point, the workspace has a recorded structure. A coding agent can inspect `one.manifest.toml`, see that `web` and `api` are separate projects, and avoid guessing whether a command belongs at the root or inside a subdirectory.
 
 The next prompt to an agent can be concrete:
 

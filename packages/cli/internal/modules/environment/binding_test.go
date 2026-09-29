@@ -216,7 +216,7 @@ func TestBindingInitializationIsSerializedAndMalformedConfigIsRejected(t *testin
 		if err != nil {
 			return nil, err
 		}
-		manifest.Env = &workspace.EnvironmentConfig{ProjectID: "remote", ProjectName: "demo"}
+		manifest.Env = &workspace.EnvironmentConfig{ProjectID: "remote", Environments: []string{"dev", "staging", "prod"}}
 		if err := workspace.WriteManifest(root, manifest); err != nil {
 			return nil, err
 		}

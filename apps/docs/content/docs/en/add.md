@@ -57,9 +57,9 @@ one add empty-service --name api --yes
 one add empty-library --name shared --yes
 ```
 
-These templates create `apps/web/`, `services/api/`, and `packages/shared/`, respectively, containing only a `.gitkeep` file so Git tracks the directory. They register `toolchain: "none"` and generate no `package.json`, `go.mod`, dependencies, or startup tasks. Interactive `one add` and the Dashboard's new-project picker also offer these choices.
+These templates create `apps/web/`, `services/api/`, and `packages/shared/`, respectively, containing only a `.gitkeep` file so Git tracks the directory. They register `toolchain = "none"` and generate no `package.json`, `go.mod`, dependencies, or startup tasks. Interactive `one add` and the Dashboard's new-project picker also offer these choices.
 
-For Node or Go code, set the project's `toolchain` in `one.manifest.json` to `node` or `go`. Node projects use `packageManager: "pnpm"` and need membership in the root package workspace; Go modules need membership in the root `go.work`. Define tasks in `package.json` / `Taskfile.yml`, then run `one init mise` to update task configuration. For other languages, keep `toolchain: "none"` and define your own tools and tasks in the root `mise.toml`. Configure the commands before using `one dev` / `one build`.
+For Node or Go code, set the project's `toolchain` in `one.manifest.toml` to `node` or `go`. Node projects declare `packageManager` in the root `package.json` and need membership in the root package workspace; Go modules need membership in the root `go.work`. Define tasks in `package.json` / `Taskfile.yml`, then run `one init mise` to update task configuration. For other languages, keep `toolchain = "none"` and define your own tools and tasks in the root `mise.toml`. Configure the commands before using `one dev` / `one build`.
 
 ## Output
 
@@ -118,7 +118,7 @@ one add nestjs-api --name user-api --yes -o json | jq
 
 ## What Gets Synced
 
-- Registers the project in `one.manifest.json#projects[]`
+- Registers the project in `one.manifest.toml#projects.<name>`
 - Projects existing package scripts and Taskfile tasks into native mise configuration
 - Leaves continuous integration unconfigured
 
@@ -144,7 +144,7 @@ Not sure which one to use? Read the [template decision tree](/en/docs/templates/
 
 ## After Adding
 
-- Check `one.manifest.json#projects[]` to confirm registration
+- Check `one.manifest.toml#projects.<name>` to confirm registration
 - Agent docs and local-development configuration are synced by `one add`
 - Run `one dev -p <project>` for development and `one build -p <project>` to build
 - `one add` does not install dependencies: JS / TS workspaces install from the root with the package manager; Go projects run `go mod download` in the project directory, then `go mod tidy` only after changing imports or when module metadata needs repair

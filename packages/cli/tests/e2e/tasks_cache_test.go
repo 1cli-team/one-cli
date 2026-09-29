@@ -1,12 +1,13 @@
 package cli_test
 
 import (
-	"github.com/pelletier/go-toml/v2"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/pelletier/go-toml/v2"
 )
 
 func appendRootTaskConfig(t *testing.T, root, value string) {
@@ -221,7 +222,17 @@ func TestE2E_GoTaskBuildRestoresExecutableAndForwardsArguments(t *testing.T) {
 		t.Fatal(err)
 	}
 	t.Setenv("CGO_ENABLED", "0")
-	buildWrite(t, root, "one.manifest.json", `{"version":1,"workspace":{"id":"go-test","name":"go-test"},"projects":[{"name":"api","relativeDir":"services/api","toolchain":"go","templateId":"go-api"}]}`)
+	buildWrite(t, root, "one.manifest.toml", `version = 2
+
+[workspace]
+id = "go-test"
+name = "go-test"
+
+[projects."api"]
+path = "services/api"
+toolchain = "go"
+template = "go-api"
+`)
 	buildWrite(t, root, "mise.toml", "[tools]\ngo='system'\ntask='system'\nnode='system'\npnpm='system'\n")
 	buildWrite(t, root, "services/api/go.mod", "module example.com/task-test\n\ngo 1.25.0\n")
 	buildWrite(t, root, "services/api/cmd/server/main.go", "package main\nimport \"fmt\"\nvar message=\"default\"\nfunc main(){fmt.Print(message)}\n")

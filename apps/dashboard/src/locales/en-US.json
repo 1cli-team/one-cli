@@ -18,7 +18,7 @@
 	"manifestDraft": {
 		"saveButton": "Save changes · {{count}}",
 		"title": "Write these changes to the manifest?",
-		"description": "This updates one.manifest.json in the Workspace. Review the exact changes before continuing.",
+		"description": "This updates one.manifest.toml in the Workspace. Review the exact changes before continuing.",
 		"currentManifest": "Current manifest",
 		"updatedManifest": "After changes",
 		"confirm": "Save to manifest",
@@ -28,15 +28,15 @@
 		"discard": "Discard draft",
 		"saved": "Manifest changes saved",
 		"saveFailed": "Could not save manifest changes",
-		"conflict": "one.manifest.json changed after this draft was opened. Discard the draft, review the latest configuration, and try again.",
+		"conflict": "one.manifest.toml changed after this draft was opened. Discard the draft, review the latest configuration, and try again.",
 		"changedFields": "Changed fields",
 		"jumpToChange": "Go to first change"
 	},
 	"environmentSwitcher": {
 		"label": "Environment",
 		"dev": "Development",
-		"preview": "Preview",
-		"prod": "Production"
+		"prod": "Production",
+		"staging": "Staging"
 	},
 	"workspaces": {
 		"workspaceLabel": "Workspace",
@@ -92,11 +92,11 @@
 			},
 			"invalid": {
 				"title": "The Workspace manifest is invalid",
-				"description": "Repair one.manifest.json at this path, then run one serve in the Workspace again."
+				"description": "Repair one.manifest.toml at this path, then run one serve in the Workspace again."
 			},
 			"identity-missing": {
 				"title": "This Workspace has no stable ID",
-				"description": "Add workspace.id to one.manifest.json before configuring project-scoped Profiles."
+				"description": "Add workspace.id to one.manifest.toml before configuring project-scoped Profiles."
 			},
 			"identity-conflict": {
 				"title": "This Workspace ID is duplicated",
@@ -217,7 +217,8 @@
 			"inheritsHint": "Project variables override workspace variables with the same name.",
 			"disabled": "Disable project environment",
 			"disabledHint": "Do not inject environment variables into project commands.",
-			"keys": "Declared variable names"
+			"keys": "Declared variable names",
+			"conventionHint": "Variables follow the project directory and inherit parent folders. More specific folders take precedence."
 		},
 		"draftHint": "Changes are kept in a draft. Review and save them to apply."
 	},
@@ -276,7 +277,7 @@
 			"description": "Configure workspace environment storage and manage shared secrets.",
 			"backend": "Backend",
 			"backendPending": "Pending review",
-			"backendSource": "Infisical project binding changes are reviewed before being written to one.manifest.json.",
+			"backendSource": "Infisical project binding changes are reviewed before being written to one.manifest.toml.",
 			"signInHint": "Sign in to Infisical in Settings to choose a storage project.",
 			"noProjects": "No storage projects available. Create one from Shared credentials."
 		},

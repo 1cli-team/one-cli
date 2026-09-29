@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed — Agent instructions / Agent 指引
+
+- `one create` 按当前 CLI 语言生成单语言 `AGENTS.md`，中英文模板改为独立 Markdown 文件维护；后续添加项目或切换语言保留已有文件。
+- `one create` generates a single-language `AGENTS.md` from separate English and Chinese Markdown sources, preserving existing files during later project additions or language changes.
+- 指引明确使用 `one run` 执行任务、使用 `scripts/*.mts` 编写复杂脚本、通过 One 管理变量，并引导用户在 Dashboard 配置全局操作凭据。
+- Guidance requires `one run` for tasks, supports complex scripts in `scripts/*.mts`, manages variables through One, and directs users to Dashboard for global operation credentials.
+
+### Changed — Manifest v2 (TOML)
+
+- 工作区配置改为无自动注释的 `one.manifest.toml`，`version = 2`；项目使用 `[projects.<name>]`，字段收敛为 `path`、`toolchain` 和可选 `template`。不提供 JSON 兼容或迁移命令。
+- Workspaces now use `one.manifest.toml` with `version = 2`, without generated comments. Projects use `[projects.<name>]` with `path`, `toolchain`, and optional `template`. JSON compatibility and migration commands are not provided.
+- Infisical 绑定放在 `[env.infisical]`，环境列表随绑定保存；默认固定 `dev`，保留 `--env`。共享目录固定 `/`，项目目录从本地路径推导并继承父级变量，移除变量名清单和项目覆盖字段。
+- Infisical bindings and environment slugs live under `[env.infisical]`. The default is always `dev`, with `--env` retained. Shared variables use `/`; project folders derive from local paths and inherit ancestors. Key registries and project overrides are removed.
+- Dashboard 展示派生的项目设置，从日志发现服务地址；绑定草稿预览和发布使用 TOML，保留手写注释与未修改的格式。
+- Dashboard displays derived project settings and discovers service URLs from logs. Binding drafts preview and publish TOML while preserving user comments and unchanged formatting.
+
+
 ### Changed — 工作区任务统一到 mise / Workspace tasks use mise
 
 - `one exec` 执行任意命令，`one run` 执行具名任务；`one build` 复用同一任务服务。Node 使用 pnpm，Go 使用 Task，工作区依赖与实验性产物缓存由 mise 调度。

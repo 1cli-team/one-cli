@@ -22,6 +22,6 @@ Run `one serve` in a terminal, then open a project's **Run** tab to start, stop,
 
 The console streams the original child output, with ANSI colors, search, copy, and paused scrolling. One does not print injected variable values. It retains up to 256 KiB / 2,048 chunks. Refreshing reconnects; closing the page leaves services running. Interactive or raw tasks still need an external terminal; this console does not accept command input.
 
-Local HTTP(S) addresses are detected from logs. An optional URL can also be set in Overview (`projects[].dev.url`), without credentials, query parameters, or fragments. Access links become available when the port is reachable; this is a connectivity check, not an application health check. Services without a web page can run too.
+Local HTTP(S) addresses are detected from logs. Access links become available when the port is reachable; this is a connectivity check, not an application health check. Services without a web page can run too.
 
 The environment selector affects the next start or restart; existing instances retain their environment. Stopping cleans up the process tree. Ctrl-C stops the Dashboard and every service it started. State and logs are held in memory; restarting the Dashboard does not restore services.

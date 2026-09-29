@@ -9,24 +9,16 @@ Infisical 是 One CLI 唯一管理的环境变量来源。变量在执行命令�
 
 新工作区没有 Infisical 绑定，无需登录即可运行。先执行 `one login`，首次使用 `one env set` 保存变量时会初始化绑定。Dashboard 也仅在首次点击保存时初始化；打开页面、刷新和取消编辑不会创建项目。
 
-绑定保存在 `one.manifest.json` 顶层的 `env`：
+绑定保存在 `one.manifest.toml` 中的 `[env.infisical]` 表：
 
-```json
-{
-  "env": {
-    "siteUrl": "https://app.infisical.com",
-    "projectId": "your-project-id",
-    "projectName": "my-workspace",
-    "rootPath": "/"
-  },
-  "environments": {
-    "names": ["dev", "preview", "prod"],
-    "default": "dev"
-  }
-}
+```toml
+[env.infisical]
+siteUrl = "https://app.infisical.com"
+projectId = "your-project-id"
+environments = ["dev", "staging", "prod"]
 ```
 
-Manifest 只记录绑定信息、目录路径和变量名。值保存在 Infisical，登录使用系统 keyring 中的浏览器会话。
+Manifest 只记录绑定信息和环境 slug。值保存在 Infisical，登录使用系统 keyring 中的浏览器会话。
 
 ## 命令
 
@@ -43,25 +35,11 @@ one env list -p web --env dev
 
 ## 环境与目录
 
-`environments.names` 声明可用环境，默认使用 `environments.default`，缺省时取第一个名称。新工作区声明 `dev`、`preview`、`prod`，默认 `dev`。`--env` 可覆盖选择。
+`env.infisical.environments` 声明远程环境 slug。默认固定使用 `dev`，通过 `--env` 选择其他已声明环境。新绑定默认声明 `dev`、`staging`、`prod`，对应 Infisical 的环境标识，而不是界面展示名称。声明名称不会自动创建远程环境。
 
-`set` 可以经确认登记新环境。`list` 对未声明名称返回 `ENV_UNKNOWN_ENVIRONMENT`；`list`、读取与 `unset` 都只使用已有绑定；未绑定时会提示先保存第一个变量。
+`set` 经确认且远程写入成功后，可以在本地登记新环境名；对应环境必须已存在于 Infisical。`list` 对未声明名称返回 `ENV_UNKNOWN_ENVIRONMENT`。`list`、读取与 `unset` 只使用已有绑定，未绑定时提示先保存第一个变量。
 
-项目默认使用 `relativeDir` 对应的 Infisical 目录，也可通过 `projects[].env` 覆盖：
-
-```json
-{
-  "name": "api",
-  "relativeDir": "services/api",
-  "env": {
-    "path": "/teams/payments/api",
-    "inherits": true,
-    "keys": ["DATABASE_URL"]
-  }
-}
-```
-
-默认启用继承，变量按根目录、祖先目录、项目目录合并，越靠近项目的值优先。`inherits: false` 只读项目目录；`disabled: true` 停用该项目的 Infisical 注入。
+共享目录固定为 `/`。项目目录从 `path` 推导：`services/api` 对应 `/services/api`。变量依次合并 `/`、`/services` 和 `/services/api`，更具体的目录优先。并行任务各自接收所属项目的变量，不提供项目级目录、继承、变量名清单或停用设置。
 
 ## 带变量执行
 
@@ -70,7 +48,7 @@ one exec -p api --env dev -- go run ./cmd/server
 one run dev --env dev
 ```
 
-配置 `env` 后，生成的任务适配器与 `one exec` 会拉取 Infisical 变量，并覆盖同名 shell 变量。未绑定或项目停用注入时，继承 shell 环境。认证或拉取失败会停止执行，不回退到本地文件。自定义 mise 任务使用 mise 的环境。One 会遮盖 stdout、stderr 和任务缓存回放中的已知注入值，覆盖多行值及其 JSON 转义形式。
+配置 `[env.infisical]` 后，`one run` 和 `one exec` 按项目拉取变量，覆盖同名 shell 变量。未绑定时继承 shell 环境；认证或拉取失败会停止执行。One 不输出拉取到的变量值；子进程的 stdout、stderr、ANSI 色彩和格式保持原样。
 
 ## 全局共享凭据
 
@@ -82,15 +60,15 @@ one run dev --env dev
 |---|---|
 | `INFISICAL_NOT_CONFIGURED` | 登录后保存第一个变量，One 会自动创建并绑定存储项目 |
 | `INFISICAL_AUTH_MISSING` / `INFISICAL_AUTH_FAILED` | 执行 `one login` 并检查绑定项目的访问权限 |
-| `INFISICAL_PROJECT_NAME_TAKEN` | 设置不同的 `env.projectName`，或显式绑定已有项目 |
+| `INFISICAL_PROJECT_NAME_TAKEN` | 在 Dashboard 选择已有项目，或使用不同的工作区名称 |
 | `INFISICAL_PROJECT_CREATE_FORBIDDEN` | 在 Dashboard 选择已有且可访问的项目 |
 | `ENV_KEY_NOT_FOUND` | 检查变量名、环境和目录 |
 | `ENV_INVALID_KEY` | 变量名须匹配 `^[A-Za-z_][A-Za-z0-9_]*$` |
 | `ENV_SET_OVERWRITE_REQUIRED` | 确认替换后添加 `--yes` |
 | `ENV_UNKNOWN_ENVIRONMENT` | 通过 `set` 登记新环境，或选择已有名称 |
 
-旧工作区参阅 [Manifest 迁移](/zh/docs/manifest/)，初次配置参阅[操作教程](/zh/tutorials/env-vars/)。
+配置结构参阅 [Manifest v2](/zh/docs/manifest/)，初次配置参阅[操作教程](/zh/tutorials/env-vars/)。
 
 ## 同名工作区
 
-远程项目默认使用工作区名称；名称冲突时自动添加短后缀，并显示实际名称。不同工作区不会仅因同名而共用变量，写入目标由 `env.projectId` 确定。复制或克隆包含绑定的配置会继续使用同一远程项目。创建后变量保存失败时，绑定会保留，重试复用该项目。
+远程项目默认使用工作区名称；名称冲突时自动添加短后缀，并显示实际名称。不同工作区不会仅因同名而共用变量，写入目标由 `env.infisical.projectId` 确定。复制或克隆包含绑定的配置会继续使用同一远程项目。创建后变量保存失败时，绑定会保留，重试复用该项目。

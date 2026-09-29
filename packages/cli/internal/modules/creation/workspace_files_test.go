@@ -5,12 +5,12 @@ package creation
 // captured separately by the e2e snapshot suite.
 
 import (
-	"encoding/json"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 
+	"github.com/pelletier/go-toml/v2"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/core/workspace"
 )
 
@@ -25,7 +25,7 @@ func TestGenerateWorkspaceFiles(t *testing.T) {
 		t.Fatalf("generateWorkspaceFiles() = %v", err)
 	}
 
-	for _, rel := range []string{"one.manifest.json", ".gitignore", "AGENTS.md", "apps", "services", "packages"} {
+	for _, rel := range []string{"one.manifest.toml", ".gitignore", "AGENTS.md", "apps", "services", "packages"} {
 		if _, err := os.Stat(filepath.Join(target, rel)); err != nil {
 			t.Fatalf("missing %s: %v", rel, err)
 		}
@@ -40,15 +40,15 @@ func TestGenerateWorkspaceFiles(t *testing.T) {
 	// workspace identity, and an empty projects array. The current schema dropped
 	// top-level packageManager and ai blocks (per-project still has
 	// packageManager).
-	manifestRaw, err := os.ReadFile(filepath.Join(target, "one.manifest.json"))
+	manifestRaw, err := os.ReadFile(filepath.Join(target, "one.manifest.toml"))
 	if err != nil {
 		t.Fatal(err)
 	}
 	var m map[string]any
-	if err := json.Unmarshal(manifestRaw, &m); err != nil {
+	if err := toml.Unmarshal(manifestRaw, &m); err != nil {
 		t.Fatalf("manifest parse: %v", err)
 	}
-	if v, _ := m["version"].(float64); v != float64(workspace.ManifestVersion) {
+	if v, _ := m["version"].(int64); v != int64(workspace.ManifestVersion) {
 		t.Errorf("manifest version=%v; want %d", m["version"], workspace.ManifestVersion)
 	}
 	if _, has := m["packageManager"]; has {

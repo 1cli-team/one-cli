@@ -148,7 +148,7 @@ function registerCatalogHandler() {
 						packageManager: "pnpm",
 						buildVersion: "1.0.0",
 						devAvailable: true,
-						availableEnvironments: ["dev", "preview", "prod"],
+						availableEnvironments: ["dev", "staging", "prod"],
 						environment: {
 							backend: "infisical",
 							path: ".env",
@@ -246,14 +246,14 @@ describe("multi-workspace routing", () => {
 			),
 		);
 
-		renderDashboard("/?env=preview");
+		renderDashboard("/?env=staging");
 
 		const content = within(screen.getByTestId("route-content"));
 		expect(await content.findByRole("heading", { name: "Workspaces" })).toBeDefined();
 		expect(content.getByRole("heading", { name: "No Workspaces yet" })).toBeDefined();
 		expect(content.queryByRole("heading", { name: "Infisical" })).toBeNull();
 		expect(screen.getByTestId("location").textContent).toBe("/");
-		expect(screen.getByTestId("location-search").textContent).toBe("?env=preview");
+		expect(screen.getByTestId("location-search").textContent).toBe("?env=staging");
 	});
 
 	it("switches the scoped overview and forgets only an unavailable registry entry", async () => {
@@ -359,10 +359,10 @@ describe("multi-workspace routing", () => {
 	it("redirects legacy section URLs to the corresponding Settings backend", async () => {
 		registerSettingsHandlers();
 
-		renderDashboard("/section/env/infisical?env=preview");
+		renderDashboard("/section/env/infisical?env=staging");
 
 		await waitFor(() => expect(screen.getByTestId("location").textContent).toBe("/settings"));
-		expect(screen.getByTestId("location-search").textContent).toBe("?env=preview");
+		expect(screen.getByTestId("location-search").textContent).toBe("?env=staging");
 		expect(await screen.findByRole("heading", { name: "Infisical" })).toBeDefined();
 	});
 

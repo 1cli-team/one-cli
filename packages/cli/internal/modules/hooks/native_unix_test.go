@@ -48,7 +48,7 @@ esac
 	file := "apps/web/src/file with spaces.ts"
 	write(t, root, file, "unformatted\n")
 	p := fsutil.NewFilePlan(root)
-	m := &workspace.Manifest{Projects: []workspace.ManifestProject{{Name: "web", RelativeDir: "apps/web", Toolchain: "node", PackageManager: "pnpm"}}}
+	m := &workspace.Manifest{Projects: []workspace.ManifestProject{{Name: "web", RelativeDir: "apps/web", Toolchain: "node"}}}
 	if err := PlanFiles(p, m); err != nil {
 		t.Fatal(err)
 	}

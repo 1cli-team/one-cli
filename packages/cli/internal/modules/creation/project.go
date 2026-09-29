@@ -138,11 +138,10 @@ func materializeProject(ctx context.Context, projectRoot string, in ProjectInput
 
 	manifestPM := manifestPackageManagerFor(string(entry.Toolchain), packageManager)
 	newProject := workspace.ManifestProject{
-		Name:           in.Name,
-		RelativeDir:    filepath.ToSlash(relDir),
-		TemplateID:     entry.ID,
-		Toolchain:      string(entry.Toolchain),
-		PackageManager: manifestPM,
+		Name:        in.Name,
+		RelativeDir: filepath.ToSlash(relDir),
+		TemplateID:  entry.ID,
+		Toolchain:   string(entry.Toolchain),
 	}
 	for _, p := range manifest.Projects {
 		if p.RelativeDir == newProject.RelativeDir || p.Name == in.Name {

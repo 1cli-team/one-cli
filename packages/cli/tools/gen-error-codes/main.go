@@ -47,7 +47,7 @@ var groups = []group{
 	},
 	{
 		title:  "Manifest",
-		intro:  "`one.manifest.json` 的格式 / 缺失 / 内容问题。",
+		intro:  "`one.manifest.toml` 的格式 / 缺失 / 内容问题。",
 		prefix: []string{"MANIFEST_"},
 	},
 	{

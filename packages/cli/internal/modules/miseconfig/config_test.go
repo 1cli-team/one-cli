@@ -15,7 +15,22 @@ func fixture(t *testing.T) string {
 	t.Helper()
 	root := t.TempDir()
 	files := map[string]string{
-		"one.manifest.json":         `{"version":1,"workspace":{"id":"mise-fixture","name":"fixture"},"projects":[{"name":"web","relativeDir":"apps/web","toolchain":"node","templateId":"react-spa"},{"name":"api","relativeDir":"services/api","toolchain":"go","templateId":"go-api"}]}`,
+		"one.manifest.toml": `version = 2
+
+[workspace]
+id = "mise-fixture"
+name = "fixture"
+
+[projects."web"]
+path = "apps/web"
+toolchain = "node"
+template = "react-spa"
+
+[projects."api"]
+path = "services/api"
+toolchain = "go"
+template = "go-api"
+`,
 		"package.json":              `{"packageManager":"pnpm@10.14.0"}`,
 		"apps/web/package.json":     `{"scripts":{"dev":"vite","build":"vite build","test":"vitest run"}}`,
 		"services/api/go.mod":       "module example.com/api\n\ngo 1.25.0\n",

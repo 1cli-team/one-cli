@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/torchstellar-team/one-cli/packages/cli/internal/core/workspace"
 	cliErrors "github.com/torchstellar-team/one-cli/packages/cli/internal/platform/errors"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/i18n"
 )
@@ -23,7 +24,7 @@ type workspaceFilesOptions struct {
 // time, not at runtime.
 const (
 	WorkspaceFilename = "pnpm-workspace.yaml"
-	ManifestFilename  = "one.manifest.json"
+	ManifestFilename  = workspace.ManifestFilename
 )
 
 // generateWorkspaceFiles writes the workspace skeleton. Project files are
@@ -37,13 +38,13 @@ func generateWorkspaceFiles(targetDir string, opts workspaceFilesOptions) error 
 			return err
 		}
 	}
-	if err := writeJSON(filepath.Join(targetDir, ManifestFilename), emptyManifest(opts.ProjectName)); err != nil {
+	if err := workspace.WriteManifest(targetDir, emptyManifest(opts.ProjectName)); err != nil {
 		return err
 	}
 	if err := os.WriteFile(filepath.Join(targetDir, ".gitignore"), []byte(gitignoreContent), 0o644); err != nil {
 		return err
 	}
-	if err := os.WriteFile(filepath.Join(targetDir, "AGENTS.md"), []byte(agentsContent), 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(targetDir, "AGENTS.md"), []byte(agentsContent()), 0o644); err != nil {
 		return err
 	}
 

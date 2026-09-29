@@ -7,8 +7,6 @@ package cli_test
 // must not bleed back into create-default.json.
 
 import (
-	"encoding/json"
-	"os"
 	"path/filepath"
 	"testing"
 )
@@ -22,7 +20,7 @@ var presetFullstackPaths = []string{
 	"services/go-api",
 	"services/go-api/Taskfile.yml",
 	"apps/nextjs-app",
-	"one.manifest.json",
+	"one.manifest.toml",
 }
 
 // TestSnapshot_E2E_Create_Preset_Fullstack covers the happy path:
@@ -49,35 +47,16 @@ func TestSnapshot_E2E_Create_Preset_Fullstack(t *testing.T) {
 		}
 	}
 
-	rawManifest, err := os.ReadFile(filepath.Join(target, "one.manifest.json"))
-	if err != nil {
-		t.Fatalf("read manifest: %v", err)
+	manifest := readManifest(t, target)
+	projects, _ := manifest["projects"].(map[string]any)
+	project, ok := projects["go-api"].(map[string]any)
+	if !ok {
+		t.Fatal("go-api project missing")
 	}
-	var manifest struct {
-		Projects []struct {
-			Name    string `json:"name"`
-			Domains *struct {
-				Container *struct {
-					Kind string `json:"kind"`
-				} `json:"container,omitempty"`
-			} `json:"domains,omitempty"`
-		} `json:"projects"`
+	if _, exists := project["domains"]; exists {
+		t.Fatal("retired domains persisted")
 	}
-	if err := json.Unmarshal(rawManifest, &manifest); err != nil {
-		t.Fatalf("parse manifest: %v", err)
-	}
-	foundGoAPI := false
-	for _, project := range manifest.Projects {
-		if project.Name == "go-api" {
-			foundGoAPI = true
-			if project.Domains != nil && project.Domains.Container != nil {
-				t.Fatalf("go-api includes retired container domain: %s", rawManifest)
-			}
-		}
-	}
-	if !foundGoAPI {
-		t.Fatalf("go-api project missing from manifest: %s", rawManifest)
-	}
+
 }
 
 // TestSnapshot_E2E_Create_Preset_InvalidNoProject locks the

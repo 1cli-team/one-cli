@@ -101,7 +101,7 @@ Full command docs live at [1cli.dev](https://1cli.dev).
 
 ## Work With AI Assistants
 
-New workspaces include bilingual `AGENTS.md` guidance. Agents can inspect `one run --list -o json`, preview tasks with `one run build --dry-run`, and consult command-specific help.
+New workspaces include one `AGENTS.md` in the active One CLI language. The editable [English](packages/cli/internal/modules/creation/templates/AGENTS.en-US.md) and [Chinese](packages/cli/internal/modules/creation/templates/AGENTS.zh-CN.md) Markdown templates cover execution through `one run`, complex scripts in `scripts/*.mts`, and variable management through One. Publishing credentials belong in global variables configured on the Dashboard’s Shared credentials page; tasks inject them with `one exec --global`. Existing guidance remains team-owned when the language changes or projects are added.
 
 You can ask an assistant for project-level changes in natural language, for example:
 
@@ -111,19 +111,19 @@ You can ask an assistant for project-level changes in natural language, for exam
 
 > Add a mobile app next to the existing backend.
 
-The assistant can read `one.manifest.json` and project README files, then use One CLI commands with `-o json` to make project changes.
+The assistant can read `one.manifest.toml` and project README files, then use One CLI commands with `-o json` to make project changes.
 
 ## Local Settings
 
-One CLI manages variables in Infisical and injects them directly into commands. Workspace bindings live in the top-level manifest `env` field; `.env` files are not loaded or exported. Run `one login` to sign in with your browser; the single session is stored in the OS keyring, with no plaintext fallback. Use `one whoami` to inspect status and `one logout` to remove the local session.
+One CLI manages variables in Infisical and injects them directly into commands. Workspace bindings live in the manifest `[env.infisical]` table; `.env` files are not loaded or exported. Run `one login` to sign in with your browser; the single session is stored in the OS keyring, with no plaintext fallback. Use `one whoami` to inspect status and `one logout` to remove the local session.
 
-Run `one serve` for account settings, workspaces, and shared credentials. Workspace and project configuration changes share one reviewed, revision-checked Manifest draft. Remote variable edits take effect immediately; lists omit values and reveal/copy fetch plaintext only on demand.
+Run `one serve` for account settings, workspaces, and shared credentials. Workspace binding changes use a reviewed, revision-checked TOML draft; project settings display derived configuration. Remote variable edits take effect immediately; lists omit values and reveal/copy fetch plaintext only on demand.
 
-Choose shared credential storage with `one env bind --global`. Agents discover environments and folders through `one env --global` and `one env list --global`, then execute with `one exec --global --env dev --path /folder --keys KEY -- command`. Explicit scope and best-effort masking reduce accidental exposure; they do not isolate arbitrary programs running as the same OS user. Use least-privilege remote permissions.
+Choose shared credential storage with `one env bind --global`. Agents discover environments and folders through `one env --global` and `one env list --global`, then execute with `one exec --global --env dev --path /folder --keys KEY -- command`. One does not print injected values. Child logs preserve their original content and formatting.
 
 ## Project Map
 
-Every One CLI project has a `one.manifest.json` file at the root. Most users do not need to edit it by hand.
+Every One CLI project has a `one.manifest.toml` file at the root. Most users do not need to edit it by hand.
 
 Think of it as the project map. It records which parts exist, where they live, and which starter created them. One CLI reads it when you add, run, build, or inspect parts of the project. `one serve` writes it only after an explicit reviewed, revision-checked Dashboard action; other repository changes stay in the normal code-review workflow.
 
@@ -133,7 +133,7 @@ If you want to work on One CLI itself, the repository is organized like this:
 
 | Path | Purpose |
 |---|---|
-| `one.manifest.json` | The four projects managed by One CLI itself |
+| `one.manifest.toml` | The four projects managed by One CLI itself |
 | `packages/cli` | The One CLI app and its public Go packages |
 | `packages/kernel` | Shared Go kernel |
 | `packages/templates` | Starters used by `one add` |
@@ -169,7 +169,7 @@ one serve                       # Manage this repository in the Dashboard
 
 `one run dev -p dashboard` starts the Vite UI; run `one run dev -p cli` in another terminal for its API, or use the combined `one run dev` task. Both the development API and `one serve` use this repository as their workspace. No Infisical binding is required to build, test, or start these projects.
 
-Root tasks remain native mise commands, so CI and first-time installation can still use `mise run build`, `mise run check`, and `mise run install`. Project tasks come from package scripts and Taskfiles. Only the root `mise.toml` is used: project tasks are namespaced as `cli:build` or `dashboard:dev` and select their directory with `dir`. CLI tasks declare their embedded-resource prerequisites there; CLI tests also build the binary used by E2E tests. Run `one init mise` after changing the project task catalogue to refresh the tracked native tasks. Running or listing tasks does not regenerate configuration. `projects[].service.url` stores access links; dev commands live exclusively in mise.
+Root tasks remain native mise commands, so CI and first-time installation can still use `mise run build`, `mise run check`, and `mise run install`. Project tasks come from package scripts and Taskfiles. Only the root `mise.toml` is used: project tasks are namespaced as `cli:build` or `dashboard:dev` and select their directory with `dir`. CLI tasks declare their embedded-resource prerequisites there; CLI tests also build the binary used by E2E tests. Run `one init mise` after changing the project task catalogue to refresh the tracked native tasks. Running or listing tasks does not regenerate configuration. Dashboard discovers access links from process output; dev commands live exclusively in mise.
 
 Read [CONTRIBUTING.md](./CONTRIBUTING.md) before opening a pull request.
 

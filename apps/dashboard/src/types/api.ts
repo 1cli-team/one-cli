@@ -156,8 +156,6 @@ export interface ProjectEnvironmentSettings {
 	backend?: string;
 	path?: string;
 	inherits: boolean;
-	disabled: boolean;
-	keys?: string[];
 }
 
 export interface ProjectSettings {
@@ -167,9 +165,7 @@ export interface ProjectSettings {
 	templateId?: string;
 	toolchain?: string;
 	packageManager?: string;
-	buildVersion?: string;
 	devAvailable?: boolean;
-	devURL?: string;
 	build?: {
 		command?: string;
 		source?: string;
@@ -201,21 +197,10 @@ export interface ProjectSettingsResponse {
 
 // ───────────────────────── manifest draft publication ──────────────────
 
-export interface ProjectGeneralPatch {
-	buildVersion: string;
-	devURL?: string;
-}
-
-export interface ProjectEnvironmentPatch {
-	path: string;
-	inherits: boolean;
-	disabled: boolean;
-}
-
 export interface WorkspaceEnvironmentPatch {
+	environments?: string[];
 	backend: string;
 	projectId?: string;
-	projectName?: string;
 	siteUrl?: string;
 }
 
@@ -225,8 +210,6 @@ export interface WorkspaceManifestPatch {
 
 export interface ProjectManifestPatch {
 	project: string;
-	general?: ProjectGeneralPatch;
-	environment?: ProjectEnvironmentPatch;
 }
 
 export interface ApplyManifestRequest {
@@ -280,11 +263,11 @@ export interface SecretMutationResponse {
 }
 
 export interface WorkspaceEnvironmentSettings {
+	environments: string[];
 	schema: string;
 	revision: string;
 	backend: string;
 	projectId: string;
-	projectName: string;
 	siteUrl: string;
 }
 

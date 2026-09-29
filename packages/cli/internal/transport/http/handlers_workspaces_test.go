@@ -169,7 +169,7 @@ func TestWorkspacesLegacyProjectMutationIsReadOnlyWithoutResolvingBodyRoot(t *te
 	if err != nil {
 		t.Fatal(err)
 	}
-	beforeBuildVersion := before.Projects[0].BuildVersion
+	beforeProject := before.Projects[0]
 
 	recorder := registryRequest(t, handler, http.MethodPut,
 		"/api/workspaces/"+selected.EntryID+"/projects/selected-web",
@@ -184,7 +184,7 @@ func TestWorkspacesLegacyProjectMutationIsReadOnlyWithoutResolvingBodyRoot(t *te
 	if err != nil {
 		t.Fatal(err)
 	}
-	if manifest.Projects[0].BuildVersion != beforeBuildVersion {
+	if manifest.Projects[0] != beforeProject {
 		t.Fatal("rejected root injection changed the selected workspace")
 	}
 }

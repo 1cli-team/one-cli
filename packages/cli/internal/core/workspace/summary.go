@@ -53,15 +53,7 @@ func BuildSummary(root string) (Summary, error) {
 	}
 	envSource := EnvBackend(m)
 	defaultEnv := "dev"
-	environments := append([]string(nil), DefaultEnvironments...)
-	if m.Environments != nil {
-		if strings.TrimSpace(m.Environments.Default) != "" {
-			defaultEnv = strings.TrimSpace(m.Environments.Default)
-		}
-		if len(m.Environments.Names) > 0 {
-			environments = append([]string(nil), m.Environments.Names...)
-		}
-	}
+	environments := EnvironmentNames(m)
 
 	s := Summary{
 		Schema:                SummarySchema,

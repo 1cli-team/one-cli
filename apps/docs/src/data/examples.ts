@@ -38,7 +38,7 @@ function makePrompt(input: {
     "【一键脚手架】",
     `  one create ${input.workspaceName} --preset ${input.presetId} --yes -o json`,
     `这会按 preset 一次性创建 workspace（${input.stackZh}）。`,
-    "请读取命令的 JSON 输出，并校验 one.manifest.json。",
+    "请读取命令的 JSON 输出，并校验 one.manifest.toml。",
     "",
     "脚手架就绪后告诉我，我会根据需要补充业务逻辑。",
   ].join("\n");
@@ -49,7 +49,7 @@ function makePrompt(input: {
     "[Scaffold in one shot]",
     `  one create ${input.workspaceName} --preset ${input.presetId} --yes -o json`,
     `This applies the preset (${input.stackEn}).`,
-    "Read the JSON command output, verify one.manifest.json.",
+    "Read the JSON command output, verify one.manifest.toml.",
     "",
     "Let me know when the scaffold is ready and I'll layer business logic on top.",
   ].join("\n");

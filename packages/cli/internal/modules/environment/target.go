@@ -48,9 +48,6 @@ func (s *Service) ensureInfisicalBound(
 	if identity := activeWorkspace.Manifest().Workspace; identity != nil {
 		requestedName = identity.Name
 	}
-	if config != nil && strings.TrimSpace(config.ProjectName) != "" {
-		requestedName = config.ProjectName
-	}
 	if requestedName != result.ProjectName {
 		binding.RequestedName = requestedName
 	}
@@ -110,29 +107,10 @@ func (s *Service) resolveInfisicalFolderPath(
 	config *infisical.WorkspaceConfig,
 	selector string,
 ) (string, error) {
-	projectRoot := activeWorkspace.Root()
-	// Path metadata always comes from the workspace, independently of session credentials.
-	stored, err := infisical.LoadWorkspaceConfig(projectRoot)
-	if err != nil {
-		return "", err
-	}
-	pathConfig := &infisical.WorkspaceConfig{}
-	if config != nil {
-		*pathConfig = *config
-	}
-	if stored != nil {
-		pathConfig.RootPath = stored.RootPath
-	}
-	config = pathConfig
-
 	selector = strings.TrimSpace(selector)
 	if selector != "" {
 		if project, ok := activeWorkspace.Project(selector); ok {
-			override, err := infisical.LoadSubprojectConfig(projectRoot, project.RelativeDir)
-			if err != nil {
-				return "", err
-			}
-			return infisical.ResolveSubprojectPath(config, project, override).Path, nil
+			return infisical.ResolveSubprojectPath(project).Path, nil
 		}
 		if strings.HasPrefix(selector, "/") {
 			return infisical.NormalizePath(selector), nil
@@ -141,11 +119,7 @@ func (s *Service) resolveInfisicalFolderPath(
 			i18n.Tf("workspace.project_selector_missing", selector, strings.Join(activeWorkspace.ProjectNames(), ", ")))
 	}
 	if project, ok := activeWorkspace.ProjectFromWorkingDirectory(); ok {
-		override, err := infisical.LoadSubprojectConfig(projectRoot, project.RelativeDir)
-		if err != nil {
-			return "", err
-		}
-		return infisical.ResolveSubprojectPath(config, project, override).Path, nil
+		return infisical.ResolveSubprojectPath(project).Path, nil
 	}
-	return infisical.NormalizePath(config.RootPathOrDefault()), nil
+	return "/", nil
 }

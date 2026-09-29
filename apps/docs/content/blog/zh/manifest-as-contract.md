@@ -1,6 +1,6 @@
 ---
 title: "为什么 One CLI 把 manifest 放在中心"
-description: "one.manifest.json 不只是脚手架产物，它是人、CLI 和 agent 共同读取的工程契约。"
+description: "one.manifest.toml 不只是脚手架产物，它是人、CLI 和 agent 共同读取的工程契约。"
 date: "2026-05-12"
 author: "One CLI Team"
 tags: ["manifest", "agent", "monorepo"]
@@ -8,7 +8,7 @@ tags: ["manifest", "agent", "monorepo"]
 
 ## manifest 是工程事实源
 
-One CLI 生成的工作区里，`one.manifest.json` 是最重要的文件之一。它不是给 CLI 自己看的临时缓存，而是描述整个 workspace 的事实源：有哪些 app、有哪些 package、使用什么 preset、当前项目依赖哪些运行边界。
+One CLI 生成的工作区里，`one.manifest.toml` 是最重要的文件之一。它不是给 CLI 自己看的临时缓存，而是描述整个 workspace 的事实源：有哪些 app、有哪些 package、使用什么 preset、当前项目依赖哪些运行边界。
 
 传统脚手架通常只负责把文件写出来。生成完成后，项目结构变成一堆约定，后续工具只能靠目录名、package script 或 README 猜测真实意图。One CLI 的做法是把这些决定写进 manifest，让后续命令和 agent 都能读取同一份结构化上下文。
 

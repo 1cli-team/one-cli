@@ -92,8 +92,7 @@ func TestServiceOwnsWorkspaceAndProjectCreation(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(manifest.Projects) != 1 || manifest.Projects[0].Name != "web" ||
-		manifest.Projects[0].Service != nil {
+	if len(manifest.Projects) != 1 || manifest.Projects[0].Name != "web" {
 		t.Fatalf("manifest projects = %+v", manifest.Projects)
 	}
 }

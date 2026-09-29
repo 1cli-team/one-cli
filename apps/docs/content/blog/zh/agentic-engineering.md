@@ -31,7 +31,7 @@ AI coding agents 可以检查文件，但“能看文件”和“理解工程意
 
 Manifest-driven CLI workflow 会把项目 setup 里的关键决策写成持久状态。这样 agent 不需要从目录名里推断所有事情，而是可以先读取人和工具共同维护的结构化事实。
 
-在 One CLI workspace 里，这个文件就是 [`one.manifest.json`](/zh/docs/manifest/)。它记录 workspace identity、projects、template 来源、toolchain、environments 和 project-level domains。多一个 manifest 的目的不是增加仪式感，而是把工程意图显式化，让后续命令和 agent session 都能从事实开始。
+在 One CLI workspace 里，这个文件就是 [`one.manifest.toml`](/zh/docs/manifest/)。它记录 workspace identity、projects、template 来源、toolchain、environments 和 project-level domains。多一个 manifest 的目的不是增加仪式感，而是把工程意图显式化，让后续命令和 agent session 都能从事实开始。
 
 这在重复性工作里尤其重要：
 
@@ -65,10 +65,10 @@ one create agentic-product --yes
 cd agentic-product
 one add nextjs-app --name web --yes -o json
 one add nestjs-api --name api --yes -o json
-cat one.manifest.json | jq
+cat one.manifest.toml
 ```
 
-到这一步，workspace 结构已经被记录下来。coding agent 可以先检查 `one.manifest.json`，看到 `web` 和 `api` 是两个独立 project，而不是猜某条命令应该在根目录跑，还是进某个子目录跑。
+到这一步，workspace 结构已经被记录下来。coding agent 可以先检查 `one.manifest.toml`，看到 `web` 和 `api` 是两个独立 project，而不是猜某条命令应该在根目录跑，还是进某个子目录跑。
 
 接下来给 agent 的任务就可以更具体：
 

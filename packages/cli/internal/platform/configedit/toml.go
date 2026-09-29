@@ -446,3 +446,85 @@ func pruneTOML(raw []byte, removed map[string]bool) ([]byte, error) {
 	}
 	return raw, nil
 }
+
+// UpdateTOML applies an explicit complete document update without ownership markers.
+// Only changed leaves are edited; user comments, table order and untouched text survive.
+func UpdateTOML(before, desired []byte) ([]byte, error) {
+	var current, target map[string]any
+	if err := toml.Unmarshal(before, &current); err != nil {
+		return nil, err
+	}
+	if err := toml.Unmarshal(desired, &target); err != nil {
+		return nil, err
+	}
+	old, next := map[string]any{}, map[string]any{}
+	flatten(nil, current, old)
+	flatten(nil, target, next)
+	keys := map[string]bool{}
+	for k := range old {
+		keys[k] = true
+	}
+	for k := range next {
+		keys[k] = true
+	}
+	ordered := make([]string, 0, len(keys))
+	for k := range keys {
+		ordered = append(ordered, k)
+	}
+	sort.Strings(ordered)
+	raw := bytes.Clone(before)
+	// Remove an obsolete inline table as a whole, including empty containers.
+	// Removing only its leaves would leave an unwanted `env = {}` behind.
+	doc, err := parseTOML(before)
+	if err != nil {
+		return nil, err
+	}
+	entries := make([]string, 0, len(doc.entries))
+	for key := range doc.entries {
+		entries = append(entries, key)
+	}
+	sort.Strings(entries)
+	for _, key := range entries {
+		var path []string
+		_ = json.Unmarshal([]byte(key), &path)
+		if _, exists := lookup(target, path); !exists {
+			raw, err = editTOML(raw, path, nil, false)
+			if err != nil {
+				return nil, err
+			}
+		}
+	}
+	for _, k := range ordered {
+		a, hasA := old[k]
+		b, hasB := next[k]
+		if fingerprint(a, hasA) == fingerprint(b, hasB) {
+			continue
+		}
+		var path []string
+		_ = json.Unmarshal([]byte(k), &path)
+		var err error
+		raw, err = editTOML(raw, path, b, hasB)
+		if err != nil {
+			return nil, err
+		}
+	}
+	// Remove obsolete headers as well as values, retaining adjacent user comments.
+	doc, err = parseTOML(raw)
+	if err != nil {
+		return nil, err
+	}
+	for i := len(doc.tables) - 1; i > 0; i-- {
+		t := doc.tables[i]
+		if _, exists := lookup(target, t.path); !exists {
+			raw = splice(raw, t.start, t.end, nil)
+		}
+	}
+	var verify map[string]any
+	if err := toml.Unmarshal(raw, &verify); err != nil {
+		return nil, err
+	}
+	if fingerprint(verify, true) != fingerprint(target, true) {
+		return nil, i18n.Errorf("config.entry_conflict", "manifest")
+	}
+	return raw, nil
+}

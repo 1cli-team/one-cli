@@ -177,7 +177,6 @@ func (s *Service) Set(ctx context.Context, input SetInput) (*SetResult, error) {
 	if err := validateWriteEnvironment(resolution); err != nil {
 		return nil, err
 	}
-	project, targetSelector := resolveSetTarget(resolution.Workspace, input.Plan.project)
 	// Validate selectors before authentication, local writes, or remote creation.
 	path, err := s.resolveInfisicalFolderPath(resolution.Workspace, nil, input.Plan.project)
 	if err != nil {
@@ -203,25 +202,6 @@ func (s *Service) Set(ctx context.Context, input SetInput) (*SetResult, error) {
 			return nil, err
 		}
 	}
-	createdEnvironment := false
-	if !input.RepositoryReadOnly && environment != "" && !contains(resolution.Declared, environment) {
-		if _, err := workspace.EnsureEnvironment(root, environment); err != nil {
-			return nil, bindingFailure(err, binding)
-		}
-		createdEnvironment = true
-	}
-	recordKey := func() error {
-		if input.RepositoryReadOnly {
-			return nil
-		}
-		if project != nil {
-			return workspace.RecordProjectEnvKey(root, project.Name, input.Key)
-		}
-		if targetSelector == "" {
-			return workspace.RecordWorkspaceEnvKey(root, input.Key)
-		}
-		return nil
-	}
 
 	result, err := infisical.Set(ctx, root, infisical.SetInput{
 		Env: environment, Path: path, Key: input.Key, Value: input.Value,
@@ -230,9 +210,14 @@ func (s *Service) Set(ctx context.Context, input SetInput) (*SetResult, error) {
 	if result == nil || err != nil {
 		return nil, bindingFailure(err, binding)
 	}
-	if err := recordKey(); err != nil {
-		return nil, bindingFailure(err, binding)
+	createdEnvironment := false
+	if !input.RepositoryReadOnly && environment != "" && !contains(resolution.Declared, environment) {
+		if _, err := workspace.EnsureEnvironment(root, environment); err != nil {
+			return nil, bindingFailure(err, binding)
+		}
+		createdEnvironment = true
 	}
+
 	return &SetResult{
 		Schema: result.Schema, Environment: result.Env, Path: result.Path, Binding: binding,
 		Key: result.Key, Action: result.Action, CreatedEnvironment: createdEnvironment,

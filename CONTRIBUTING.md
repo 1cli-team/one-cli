@@ -27,7 +27,7 @@ one --version                   # 验证装好
 
 ## 日常开发
 
-仓库本身也是 One CLI 工作区，`one.manifest.json` 登记了四个项目：
+仓库本身也是 One CLI 工作区，`one.manifest.toml` 登记了四个项目：
 
 | 项目 | 目录 | 用途 |
 |---|---|---|
@@ -70,7 +70,7 @@ mise run install                # 打包并安装本地启动器，无需预先�
 mise run pre-push               # 推送前检查，包含 race 测试
 ```
 
-项目任务来自各自的 `package.json` 或 `Taskfile.yml`，只在根 `mise.toml` 登记 `cli:build`、`dashboard:dev` 这样的任务入口，并通过 `dir` 指定子项目目录。根文件也声明 Dashboard、模板和嵌入资源的前置步骤，CLI 测试会先构建 E2E 使用的二进制。新增或修改任务目录后，运行 `one init mise` 同步这些受版本控制的原生任务。执行和查询不会重新生成配置；manifest 的 `service.url` 只保存访问链接，dev 命令只由 mise 定义。
+项目任务来自各自的 `package.json` 或 `Taskfile.yml`，只在根 `mise.toml` 登记 `cli:build`、`dashboard:dev` 这样的任务入口，并通过 `dir` 指定子项目目录。根文件也声明 Dashboard、模板和嵌入资源的前置步骤，CLI 测试会先构建 E2E 使用的二进制。新增或修改任务目录后，运行 `one init mise` 同步这些受版本控制的原生任务。执行和查询不会重新生成配置；Dashboard 从进程输出发现访问地址，dev 命令只由 mise 定义。
 
 ## 提交流程
 

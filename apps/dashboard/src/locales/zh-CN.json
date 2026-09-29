@@ -18,7 +18,7 @@
 	"manifestDraft": {
 		"saveButton": "保存更改 · {{count}}",
 		"title": "要把这些修改写入 Manifest 吗？",
-		"description": "这会修改工作区里的 one.manifest.json。继续前请确认下面的具体差异。",
+		"description": "这会修改工作区里的 one.manifest.toml。继续前请确认下面的具体差异。",
 		"currentManifest": "当前 Manifest",
 		"updatedManifest": "修改后",
 		"confirm": "保存到 Manifest",
@@ -28,15 +28,15 @@
 		"discard": "放弃草稿",
 		"saved": "Manifest 修改已保存",
 		"saveFailed": "无法保存 Manifest 修改",
-		"conflict": "草稿打开后 one.manifest.json 已发生变化。请放弃草稿、检查最新配置后再修改。",
+		"conflict": "草稿打开后 one.manifest.toml 已发生变化。请放弃草稿、检查最新配置后再修改。",
 		"changedFields": "修改字段",
 		"jumpToChange": "定位首处修改"
 	},
 	"environmentSwitcher": {
 		"label": "环境",
 		"dev": "开发",
-		"preview": "预览",
-		"prod": "生产"
+		"prod": "生产",
+		"staging": "预发布"
 	},
 	"workspaces": {
 		"workspaceLabel": "Workspace",
@@ -92,11 +92,11 @@
 			},
 			"invalid": {
 				"title": "Workspace Manifest 无效",
-				"description": "修复该目录中的 one.manifest.json，然后重新在 Workspace 内执行 one serve。"
+				"description": "修复该目录中的 one.manifest.toml，然后重新在 Workspace 内执行 one serve。"
 			},
 			"identity-missing": {
 				"title": "Workspace 缺少稳定 ID",
-				"description": "请先在 one.manifest.json 中补齐 workspace.id，再配置 Project 级 Profile。"
+				"description": "请先在 one.manifest.toml 中补齐 workspace.id，再配置 Project 级 Profile。"
 			},
 			"identity-conflict": {
 				"title": "Workspace ID 重复",
@@ -217,7 +217,8 @@
 			"inheritsHint": "项目变量会覆盖同名工作区变量。",
 			"disabled": "禁用项目环境",
 			"disabledHint": "运行项目命令时不注入环境变量。",
-			"keys": "已声明变量名"
+			"keys": "已声明变量名",
+			"conventionHint": "变量目录由项目路径确定，自动继承父级目录；同名变量以更具体的目录为准。"
 		},
 		"draftHint": "修改将暂存为草稿，预览并保存后生效。"
 	},
@@ -276,7 +277,7 @@
 			"description": "配置工作区环境存储，并管理共享密钥。",
 			"backend": "Backend",
 			"backendPending": "等待审阅",
-			"backendSource": "Infisical 项目绑定变更经审阅后写入 one.manifest.json。",
+			"backendSource": "Infisical 项目绑定变更经审阅后写入 one.manifest.toml。",
 			"signInHint": "请先在设置中登录 Infisical，再选择存储项目。",
 			"noProjects": "暂无可用的存储项目，可在共享凭据中创建。"
 		},

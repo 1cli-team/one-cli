@@ -76,11 +76,11 @@ First positional argument did not match any known subcommand.
 
 ### `EXISTING_TARGET_NOT_EMPTY`
 
-目标目录含有文件，或 Git 仓库存在尚未提交的删除。请检查错误中列出的冲突。
+Target directory exists and is non-empty; create only writes into empty / new directories.
 
 **Remediation**:
 
-- `use-different-dir` — 选择空目录或空 Git 仓库
+- `use-different-dir` — 换一个空的目标目录
 
 ### `INVALID_NAME`
 
@@ -92,7 +92,7 @@ Project / subproject name fails the ^[a-zA-Z0-9][a-zA-Z0-9_-]*$ pattern.
 
 ### `INVALID_WORKSPACE_ROOTS`
 
-one.manifest.json#workspace.roots is malformed.
+one.manifest.toml#workspace.roots is malformed.
 
 > 没有默认 remediation。具体恢复方式请看错误的 `context` 字段。
 
@@ -106,11 +106,11 @@ Local Node version is below the supported minimum.
 
 ### `NOT_ONE_PROJECT`
 
-Current directory is not a One workspace (one.manifest.json is missing).
+Current directory is not a One workspace (one.manifest.toml is missing).
 
 **Remediation**:
 
-- `create-workspace` — 当前目录缺少 one.manifest.json；请先创建工作区，或 cd 到已有工作区<br />运行：`one create <dir>`
+- `create-workspace` — 当前目录缺少 one.manifest.toml；请先创建工作区，或 cd 到已有工作区<br />运行：`one create <dir>`
 
 ### `PROJECT_NAME_REQUIRED`
 
@@ -130,11 +130,11 @@ Subproject directory already exists.
 
 ## Manifest
 
-`one.manifest.json` 的格式 / 缺失 / 内容问题。
+`one.manifest.toml` 的格式 / 缺失 / 内容问题。
 
 ### `MANIFEST_INVALID`
 
-one.manifest.json is malformed.
+one.manifest.toml is malformed.
 
 > 没有默认 remediation。具体恢复方式请看错误的 `context` 字段。
 
@@ -306,11 +306,11 @@ Non-interactive env set called without <VALUE>.
 
 ### `ENV_UNKNOWN_ENVIRONMENT`
 
-请求的环境名不在 manifest.environments.names 列表中。
+请求的环境名不在 env.infisical.environments 列表中。
 
 **Remediation**:
 
-- `use-existing-env` — 查看可用环境，并使用 `--env` 选择其中一个。CLI 的 `set` 可以创建新环境，读取操作要求环境已经存在。<br />运行：`one env`
+- `use-existing-env` — Choose an available environment with --env.<br />运行：`one env`
 
 ## Infisical 后端
 
@@ -356,11 +356,11 @@ Network error reaching the Infisical API. Check siteUrl + connectivity.
 
 ### `INFISICAL_NOT_CONFIGURED`
 
-当前工作区尚未连接 Infisical 项目。读取、刷新和删除不会初始化存储。
+The workspace has no Infisical project binding.
 
 **Remediation**:
 
-- `set-first-variable` — 使用 CLI 或 Dashboard 保存第一个变量时，会创建并连接 Infisical 项目。<br />运行：`one env set <KEY>`
+- `set-first-variable` — Save the first variable to create and connect an Infisical project.<br />运行：`one env set <KEY>`
 
 ### `INFISICAL_PROJECT_CREATE_FORBIDDEN`
 
@@ -370,11 +370,11 @@ Network error reaching the Infisical API. Check siteUrl + connectivity.
 
 ### `INFISICAL_PROJECT_NAME_TAKEN`
 
-遇到同名项目并添加短后缀重试后，仍无法创建。One 不会根据名称连接已有项目。
+Infisical 项目名已被占用；auto-bind 会自动加随机后缀重试，但重试次数耗尽后会冒泡此错误。
 
 **Remediation**:
 
-- `use-explicit-name` — 在 one.manifest.json#env.projectName 写一个不冲突的项目名后重试 env 命令
+- `use-explicit-name` — 在 Dashboard 选择已有项目，或修改工作区名称后重试
 
 ### `INFISICAL_PROJECT_NOT_FOUND`
 
@@ -388,7 +388,7 @@ Infisical project id does not exist or the current account has no access to it.
 
 ### `BACKEND_ID_UNKNOWN`
 
-one.manifest.json refers to a backend id that this build does not recognise.
+one.manifest.toml refers to a backend id that this build does not recognise.
 
 > 没有默认 remediation。具体恢复方式请看错误的 `context` 字段。
 
@@ -410,7 +410,7 @@ The requested environment backend is not configured.
 
 **Remediation**:
 
-- `configure-domain` — Configure the environment backend with one env bind.
+- `configure-domain` — Save the first environment variable to set up storage.<br />运行：`one env set <KEY>`
 
 ### `BACKEND_VERB_NOT_SUPPORTED`
 
@@ -446,7 +446,7 @@ Domain is recognised but this build has no backend implementation for it.
 
 ### `DOMAIN_REQUIRED`
 
-The environment configuration is missing in one.manifest.json.
+The environment configuration is missing in one.manifest.toml.
 
 > 没有默认 remediation。具体恢复方式请看错误的 `context` 字段。
 
@@ -560,7 +560,7 @@ one serve 拒绝绑定到非 loopback 地址（本地接口可操作敏感凭据
 
 ### `SERVE_MANIFEST_CONFLICT`
 
-one.manifest.json changed after the Dashboard draft was opened; the stale draft was not written.
+one.manifest.toml changed after the Dashboard draft was opened; the stale draft was not written.
 
 **Remediation**:
 
@@ -593,7 +593,7 @@ Dashboard only writes explicitly allowlisted Project fields and env Backend swit
 
 **Remediation**:
 
-- `list-projects` — 查看现有项目<br />运行：`cat one.manifest.json`
+- `list-projects` — Check the project name or switch to its directory.
 
 ### `WORKSPACE_NESTED_FORBIDDEN`
 

@@ -53,9 +53,9 @@ one add empty-service --name api --yes
 one add empty-library --name shared --yes
 ```
 
-三个模板分别创建 `apps/web/`、`services/api/`、`packages/shared/`，仅包含用于 Git 跟踪目录的 `.gitkeep`。它们以 `toolchain: "none"` 登记，不生成 `package.json`、`go.mod`、依赖或启动任务。交互式 `one add` 和 Dashboard 的新建项目选择器也提供这三个选项。
+三个模板分别创建 `apps/web/`、`services/api/`、`packages/shared/`，仅包含用于 Git 跟踪目录的 `.gitkeep`。它们以 `toolchain = "none"` 登记，不生成 `package.json`、`go.mod`、依赖或启动任务。交互式 `one add` 和 Dashboard 的新建项目选择器也提供这三个选项。
 
-如果使用 Node 或 Go，在 `one.manifest.json` 中将项目的 `toolchain` 改为 `node` 或 `go`；Node 项目使用 `packageManager: "pnpm"`，并补齐根工作区的包成员配置，Go 项目则将模块加入根 `go.work`。在 `package.json` / `Taskfile.yml` 中定义任务，然后运行 `one init mise` 更新任务配置。使用其他语言时，可以保留 `toolchain: "none"`，在根 `mise.toml` 中自行定义工具和任务。配置好命令后再使用 `one dev` / `one build`。
+如果使用 Node 或 Go，在 `one.manifest.toml` 中将项目的 `toolchain` 改为 `node` 或 `go`；Node 项目在根 `package.json` 中声明 `packageManager`，并补齐根工作区的包成员配置，Go 项目则将模块加入根 `go.work`。在 `package.json` / `Taskfile.yml` 中定义任务，然后运行 `one init mise` 更新任务配置。使用其他语言时，可以保留 `toolchain = "none"`，在根 `mise.toml` 中自行定义工具和任务。配置好命令后再使用 `one dev` / `one build`。
 
 ## 输出
 
@@ -113,7 +113,7 @@ one add nestjs-api --name user-api --yes -o json | jq
 
 ## 加完会自动做的事
 
-- 把项目登记到 `one.manifest.json#projects[]`
+- 把项目登记到 `one.manifest.toml#projects.<name>`
 - 将已有包脚本和 Taskfile 任务投影到原生 mise 配置
 - 持续集成保持未配置
 
@@ -139,7 +139,7 @@ one add nestjs-api --name user-api --yes -o json | jq
 
 ## 加完之后
 
-- 检查 `one.manifest.json#projects[]` 确认项目登记
+- 检查 `one.manifest.toml#projects.<name>` 确认项目登记
 - Agent 文档和本地开发配置会由 `one add` 同步
 - 下一步运行 `one dev -p <project>` 开发，使用 `one build -p <project>` 构建
 - `one add` 只生成项目和工作区配置；`one dev` 会自动准备工具与应用依赖。JS/TS 在根目录统一安装，Go 按当前模块或 `go.work` 构建图准备依赖。修改 imports 或模块声明需要修复时，显式运行 `one exec <project> -- go mod tidy`。

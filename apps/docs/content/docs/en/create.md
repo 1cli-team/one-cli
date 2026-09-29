@@ -122,7 +122,11 @@ Full table: [Error codes](/en/docs/error-codes/).
 ## Agent instructions
 
 
-New workspaces include a concise bilingual `AGENTS.md` with 7 rules per language covering workspace discovery, CLI help, adding projects, tasks and verification, dependencies, environment variables, and automation error handling. Command details are discovered through `one <command> --help` instead of embedding a full command manual. The file is team-owned; later `one add` operations preserve edits.
+New workspaces receive a single-language `AGENTS.md` matching the active One CLI language. Set the preference with `one locale zh-CN` or `one locale en-US`; `auto` follows the terminal language and falls back to English. Existing files are not rewritten when the language changes or `one add` runs.
+
+The source templates are editable Markdown files in `packages/cli/internal/modules/creation/templates/`: `AGENTS.en-US.md` and `AGENTS.zh-CN.md`. Rebuild the CLI after editing them to update future workspaces.
+
+The instructions require agents to run tests and project commands through `one run`, place complex TypeScript scripts in `scripts/*.mts` and register them as tasks, and manage environment variables through One. Publishing and operations credentials, such as Docker registry accounts, belong in global variables. When missing, agents direct users to the Dashboard’s Shared credentials page and then inject the configured variables with `one exec --global` inside the task.
 
 ## Existing empty Git repositories
 

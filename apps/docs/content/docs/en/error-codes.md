@@ -72,7 +72,7 @@ Project / subproject name does not match `^[a-zA-Z0-9][a-zA-Z0-9_-]*$`. Use keba
 
 ### `INVALID_WORKSPACE_ROOTS`
 
-`one.manifest.json#workspace.roots` is malformed. Inspect the manifest.
+`one.manifest.toml#workspace.roots` is malformed. Inspect the manifest.
 
 ### `NODE_VERSION_UNSUPPORTED`
 
@@ -80,7 +80,7 @@ Local Node.js is too old. Upgrade to Node.js 18+.
 
 ### `NOT_ONE_PROJECT`
 
-Current directory has no `one.manifest.json`. Run `one create <dir>` or `cd` to a workspace.
+Current directory has no `one.manifest.toml`. Run `one create <dir>` or `cd` to a workspace.
 
 ### `PROJECT_NAME_REQUIRED`
 
@@ -97,11 +97,11 @@ Refused to create a workspace inside another workspace. Use `one add` or create 
 
 ## Manifest
 
-`one.manifest.json` shape, missing file, or empty project registry.
+`one.manifest.toml` shape, missing file, or empty project registry.
 
 ### `MANIFEST_INVALID`
 
-Manifest is malformed. Fix JSON and schema fields.
+Manifest is malformed. Fix TOML and schema fields.
 
 ### `MANIFEST_MISSING_OR_EMPTY`
 
@@ -261,7 +261,7 @@ The signed-in account cannot create projects. Ask an administrator for permissio
 
 ### `INFISICAL_PROJECT_NAME_TAKEN`
 
-Creation still failed after retrying name conflicts with short suffixes. Set a different `env.projectName` in `one.manifest.json` and retry. One never connects to an existing project by matching its name.
+Creation still failed after retrying name conflicts with short suffixes. Select an existing project in Dashboard, or change the workspace name and retry. One never connects to an existing project by matching its name.
 
 ### `INFISICAL_PROJECT_NOT_FOUND`
 

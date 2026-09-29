@@ -8,9 +8,9 @@ tags: ["agent", "dependencies", "workspace"]
 
 ## 先找工程契约
 
-当用户让 coding agent 准备一个项目运行时，第一步不应该是安装依赖。第一步应该是找到 workspace 契约。在 One CLI 工作区里，这个契约就是 `one.manifest.json`。
+当用户让 coding agent 准备一个项目运行时，第一步不应该是安装依赖。第一步应该是找到 workspace 契约。在 One CLI 工作区里，这个契约就是 `one.manifest.toml`。
 
-manifest 会告诉 agent：当前目录是不是 One workspace、根目录使用什么包管理器、有哪些子项目。它比根据 `apps/`、`services/` 或 package script 猜测要安全得多。
+manifest 会告诉 agent：当前目录是不是 One workspace、有哪些子项目及其工具链；根 package.json 提供包管理器信息。它比根据 `apps/`、`services/` 或 package script 猜测要安全得多。
 
 ## 按工具链补依赖，而不是按习惯
 

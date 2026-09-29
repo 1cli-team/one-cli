@@ -1,6 +1,7 @@
 package workspace
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -9,7 +10,10 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"strings"
 
+	"github.com/pelletier/go-toml/v2"
+	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/configedit"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/fsutil"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/i18n"
 )
@@ -27,29 +31,50 @@ func EnsureManifest(projectRoot string) (*Manifest, error) {
 	return ReadManifest(projectRoot)
 }
 
-// MarshalManifest renders the exact bytes WriteManifest publishes: canonical
-// ordering, 2-space indentation, and a trailing newline.
+// MarshalManifest renders TOML, preserving existing comments and unrelated formatting.
+// Fresh manifests contain only configuration, with no generated comments.
 func MarshalManifest(m *Manifest) ([]byte, error) {
-	out := *m
-	out.Version = ManifestVersion
-	out.Projects = sortByRelativeDir(out.Projects)
-	for i := range out.Projects {
-		out.Projects[i].RelativeDir = ToPosixPath(out.Projects[i].RelativeDir)
-		if out.Projects[i].Toolchain == "" {
-			out.Projects[i].Toolchain = "node"
-		}
-		out.Projects[i].BuildVersion = NormalizeBuildVersion(out.Projects[i].BuildVersion)
-	}
-
-	b, err := json.MarshalIndent(out, "", "  ")
-	if err != nil {
+	copy := *m
+	copy.Version = ManifestVersion
+	m = &copy
+	if err := ValidateManifest(m); err != nil {
 		return nil, err
 	}
-	return append(b, '\n'), nil
+	var out bytes.Buffer
+	fmt.Fprintf(&out, "version = %d\n", ManifestVersion)
+	table := func(header string, value any) error {
+		raw, err := toml.Marshal(value)
+		if err != nil {
+			return err
+		}
+		fmt.Fprintf(&out, "\n[%s]\n", header)
+		out.Write(raw)
+		return nil
+	}
+	if m.Workspace != nil {
+		if err := table("workspace", m.Workspace); err != nil {
+			return nil, err
+		}
+	}
+	if m.Env != nil {
+		if err := table("env.infisical", m.Env); err != nil {
+			return nil, err
+		}
+	}
+	for _, p := range sortByRelativeDir(m.Projects) {
+		key, _ := toml.Marshal(map[string]int{p.Name: 0})
+		name := strings.TrimSpace(strings.SplitN(string(key), " = ", 2)[0])
+		if err := table("projects."+name, manifestProjectDocument{Path: p.RelativeDir, Toolchain: p.Toolchain, Template: p.TemplateID}); err != nil {
+			return nil, err
+		}
+	}
+	if len(m.source) > 0 {
+		return configedit.UpdateTOML(m.source, out.Bytes())
+	}
+	return out.Bytes(), nil
 }
 
-// WriteManifest persists the manifest to disk with 2-space indentation and
-// a trailing newline (fs-extra parity). Publication is atomic: bytes are
+// WriteManifest persists the TOML manifest. Publication is atomic: bytes are
 // written to a sibling temporary file, synced, closed, and then renamed over
 // the destination. Existing file permissions are preserved.
 func WriteManifest(projectRoot string, m *Manifest) error {
@@ -130,12 +155,8 @@ type EnvInit struct {
 	Kind             string
 	ConfigJSON       json.RawMessage
 	EnvironmentNames []string
-	DefaultEnv       string
 }
 
-// InitWorkspaceEnv writes the workspace-level env backend selection and
-// (optionally) updates the workspace-level environments list. Replaces
-// the legacy UpdateManifestEnv helper.
 func InitWorkspaceEnv(projectRoot string, init EnvInit) error {
 	m, err := EnsureManifest(projectRoot)
 	if err != nil {
@@ -153,106 +174,31 @@ func InitWorkspaceEnv(projectRoot string, init EnvInit) error {
 				return err
 			}
 		}
-	}
-
-	if init.EnvironmentNames != nil {
-		if m.Environments == nil {
-			m.Environments = &Environments{}
+		if init.EnvironmentNames != nil {
+			m.Env.Environments = append([]string(nil), init.EnvironmentNames...)
 		}
-		m.Environments.Names = append([]string{}, init.EnvironmentNames...)
-		if init.DefaultEnv != "" {
-			m.Environments.Default = init.DefaultEnv
-		} else if m.Environments.Default == "" && len(m.Environments.Names) > 0 {
-			m.Environments.Default = m.Environments.Names[0]
+		if len(m.Env.Environments) == 0 {
+			m.Env.Environments = append([]string(nil), DefaultEnvironments...)
 		}
-	} else if init.DefaultEnv != "" {
-		if m.Environments == nil {
-			m.Environments = &Environments{}
-		}
-		m.Environments.Default = init.DefaultEnv
 	}
 	return WriteManifest(projectRoot, m)
 }
 
-// EnsureEnvironment guarantees that name is present in
-// manifest.environments.names. Returns added=true when the environment
-// list was modified (i.e. name was not already there). Idempotent —
-// calling twice with the same name is a no-op on the second call.
-func EnsureEnvironment(projectRoot, name string) (added bool, err error) {
-	m, err := EnsureManifest(projectRoot)
+func EnsureEnvironment(projectRoot, name string) (bool, error) {
+	m, err := ReadManifest(projectRoot)
 	if err != nil {
 		return false, err
 	}
-	if m.Environments == nil {
-		m.Environments = &Environments{}
+	if m.Env == nil {
+		return false, i18n.Errorf("infisical.binding_missing")
 	}
-	for _, existing := range m.Environments.Names {
-		if existing == name {
+	for _, env := range m.Env.Environments {
+		if env == name {
 			return false, nil
 		}
 	}
-	m.Environments.Names = append(m.Environments.Names, name)
-	if m.Environments.Default == "" {
-		m.Environments.Default = name
-	}
+	m.Env.Environments = append(m.Env.Environments, name)
 	return true, WriteManifest(projectRoot, m)
-}
-
-// RecordWorkspaceEnvKey appends key to the workspace-level env config's
-// keys list (sorted, deduped, idempotent). Use this when a `one env set`
-// runs at workspace-root scope — i.e. without -p and not inside any
-// project. These keys are stored in m.Env.Keys and are usable by every project.
-func RecordWorkspaceEnvKey(projectRoot, key string) error {
-	if key == "" {
-		return nil
-	}
-	m, err := EnsureManifest(projectRoot)
-	if err != nil {
-		return err
-	}
-	if m.Env == nil {
-		m.Env = &EnvironmentConfig{}
-	}
-	for _, existing := range m.Env.Keys {
-		if existing == key {
-			return nil
-		}
-	}
-	m.Env.Keys = append(m.Env.Keys, key)
-	sort.Strings(m.Env.Keys)
-	return WriteManifest(projectRoot, m)
-}
-
-// RecordProjectEnvKey appends key to projects[i].env.keys for the
-// named project. Sorted, deduped, idempotent — calling twice with the
-// same key is a no-op on the second call. Caller passes the project's name
-// (matches manifest.projects[i].name); unknown names are silently skipped
-// so set semantics aren't blocked by a metadata bookkeeping concern.
-func RecordProjectEnvKey(projectRoot, projectName, key string) error {
-	if projectName == "" || key == "" {
-		return nil
-	}
-	m, err := ReadManifest(projectRoot)
-	if err != nil {
-		return err
-	}
-	for i := range m.Projects {
-		if m.Projects[i].Name != projectName {
-			continue
-		}
-		if m.Projects[i].Env == nil {
-			m.Projects[i].Env = &ProjectEnvOverride{}
-		}
-		for _, existing := range m.Projects[i].Env.Keys {
-			if existing == key {
-				return nil
-			}
-		}
-		m.Projects[i].Env.Keys = append(m.Projects[i].Env.Keys, key)
-		sort.Strings(m.Projects[i].Env.Keys)
-		return WriteManifest(projectRoot, m)
-	}
-	return nil
 }
 
 func sortByRelativeDir(in []ManifestProject) []ManifestProject {

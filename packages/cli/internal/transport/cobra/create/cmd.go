@@ -1,12 +1,11 @@
 // Package createcmd contributes `one create` to the explicit root command.
-// It scaffolds a new workspace (one.manifest.json + folder skeleton),
+// It scaffolds a new workspace (one.manifest.toml + folder skeleton),
 // scaffolds workspace tooling and development tasks without a remote binding.
 // Projects, CI, and deployment targets are intentionally deferred.
 package createcmd
 
 import (
 	"github.com/spf13/cobra"
-
 	creationmodule "github.com/torchstellar-team/one-cli/packages/cli/internal/modules/creation"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/helpui"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/i18n"

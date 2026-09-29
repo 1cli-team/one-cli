@@ -3,7 +3,7 @@ title: 配置环境变量
 description: 登录 Infisical、绑定工作区，并在运行命令时注入变量。
 ---
 
-Infisical 保存变量值，`one.manifest.json` 记录绑定和变量名。One CLI 在执行命令时直接注入变量，无需中间 `.env` 文件。
+Infisical 保存变量值，`one.manifest.toml` 记录绑定和环境 slug。One CLI 在执行命令时直接注入变量，无需中间 `.env` 文件。
 
 ## 1. 登录
 
@@ -43,4 +43,4 @@ one run dev --env dev
 
 绑定启用 Infisical 注入，未绑定项目继承 shell 环境。已绑定项目认证或拉取失败会停止执行，不使用本地文件回退。
 
-接下来：[多环境与目录继承](/zh/tutorials/env-multi-env/)、[命令参考](/zh/docs/env-vars/)、[旧 Manifest 迁移](/zh/docs/manifest/)。
+接下来：[多环境与目录继承](/zh/tutorials/env-multi-env/)、[命令参考](/zh/docs/env-vars/)、[Manifest v2](/zh/docs/manifest/)。

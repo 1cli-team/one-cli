@@ -64,6 +64,7 @@ func PlanFiles(p *fsutil.FilePlan, m *workspace.Manifest) error {
 				return err
 			}
 			var pkg struct {
+				PackageManager  string            `json:"packageManager"`
 				Scripts         map[string]string `json:"scripts"`
 				Dependencies    map[string]string `json:"dependencies"`
 				DevDependencies map[string]string `json:"devDependencies"`
@@ -71,7 +72,22 @@ func PlanFiles(p *fsutil.FilePlan, m *workspace.Manifest) error {
 			if err := json.Unmarshal(raw, &pkg); err != nil {
 				return fmt.Errorf("%s/package.json: %w", dir, err)
 			}
-			pm := project.PackageManager
+			pm, _, _ := strings.Cut(pkg.PackageManager, "@")
+			if pm == "" {
+				rootRaw, err := p.Read("package.json")
+				if err != nil {
+					return err
+				}
+				var rootPkg struct {
+					PackageManager string `json:"packageManager"`
+				}
+				if len(rootRaw) > 0 {
+					if err = json.Unmarshal(rootRaw, &rootPkg); err != nil {
+						return err
+					}
+				}
+				pm, _, _ = strings.Cut(rootPkg.PackageManager, "@")
+			}
 			if pm == "" {
 				pm = "pnpm"
 			}

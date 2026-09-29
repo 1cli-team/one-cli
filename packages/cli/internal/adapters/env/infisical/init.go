@@ -29,8 +29,6 @@ type InitInput struct {
 	ProjectID    string
 	ProjectName  string
 	Environments []string
-	DefaultEnv   string
-	RootPath     string
 	// SkipVerify lets `init` write the config without contacting Infisical
 	// (useful for offline workflows / generation tooling). Default off:
 	// the CLI's value is in catching configuration mistakes early.
@@ -50,7 +48,7 @@ type InitResult struct {
 	RootPath     string   `json:"root_path"`
 	AuthStatus   string   `json:"auth_status"` // "verified" / "skipped" / "created"
 	Created      bool     `json:"created"`     // true when env init created the Infisical project
-	WrittenTo    string   `json:"written_to"`  // absolute path to one.manifest.json
+	WrittenTo    string   `json:"written_to"`  // absolute path to one.manifest.toml
 }
 
 // maxCreateProjectRetries allows one attempt with the original name followed
@@ -58,7 +56,7 @@ type InitResult struct {
 const maxCreateProjectRetries = 5
 
 // Init writes (or updates) the workspace's Infisical configuration under
-// one.manifest.json#env plus manifest.environments.
+// one.manifest.toml under [env.infisical].
 //
 // Three branches:
 //
@@ -81,36 +79,17 @@ func Init(ctx context.Context, projectRoot string, in InitInput) (*InitResult, e
 	if err != nil {
 		return nil, err
 	}
-	// Environment preferences exist even before the workspace has a binding.
-	if manifest.Environments != nil {
-		if len(in.Environments) == 0 {
-			in.Environments = append([]string(nil), manifest.Environments.Names...)
-		}
-		if strings.TrimSpace(in.DefaultEnv) == "" {
-			in.DefaultEnv = manifest.Environments.Default
-		}
+	if len(in.Environments) == 0 {
+		in.Environments = workspace.EnvironmentNames(manifest)
 	}
-	if existing := manifest.Env; existing != nil {
-		if strings.TrimSpace(in.ProjectID) == "" {
-			in.ProjectID = existing.ProjectID
-		}
-		if strings.TrimSpace(in.ProjectName) == "" && in.ProjectID == existing.ProjectID {
-			in.ProjectName = existing.ProjectName
-		}
-		if strings.TrimSpace(in.RootPath) == "" {
-			in.RootPath = existing.RootPath
-		}
+	if manifest.Env != nil && strings.TrimSpace(in.ProjectID) == "" {
+		in.ProjectID = manifest.Env.ProjectID
 	}
 	in = applyInitDefaults(in)
 	cfg := &WorkspaceConfig{
 		ProjectID:    strings.TrimSpace(in.ProjectID),
 		ProjectName:  strings.TrimSpace(in.ProjectName),
 		Environments: dedupeStrings(in.Environments),
-		DefaultEnv:   strings.TrimSpace(in.DefaultEnv),
-		RootPath:     strings.TrimSpace(in.RootPath),
-	}
-	if manifest.Env != nil {
-		cfg.Keys = append([]string(nil), manifest.Env.Keys...)
 	}
 
 	authStatus := "skipped"
@@ -169,7 +148,6 @@ func Init(ctx context.Context, projectRoot string, in InitInput) (*InitResult, e
 		authStatus = "verified"
 	}
 
-	cfg.RootPath = cfg.RootPathOrDefault()
 	configJSON, err := EncodeManifestConfig(cfg)
 	if err != nil {
 		return nil, err
@@ -178,7 +156,6 @@ func Init(ctx context.Context, projectRoot string, in InitInput) (*InitResult, e
 		Kind:             workspace.EnvBackendInfisical,
 		ConfigJSON:       configJSON,
 		EnvironmentNames: cfg.Environments,
-		DefaultEnv:       cfg.DefaultEnvOrFallback(),
 	}); err != nil {
 		if created {
 			return nil, bindingWriteError(projectRoot, cfg, err)
@@ -291,12 +268,6 @@ func createWithRetryContext(ctx context.Context, client *Client, baseName string
 func applyInitDefaults(in InitInput) InitInput {
 	if len(in.Environments) == 0 {
 		in.Environments = append([]string{}, DefaultEnvironments...)
-	}
-	if strings.TrimSpace(in.DefaultEnv) == "" {
-		in.DefaultEnv = in.Environments[0]
-	}
-	if strings.TrimSpace(in.RootPath) == "" {
-		in.RootPath = "/"
 	}
 	return in
 }

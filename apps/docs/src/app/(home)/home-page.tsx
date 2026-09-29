@@ -247,7 +247,7 @@ const homeCopy = {
               找到正确的命令。
             </>
           ),
-          body: "使用 one help --all 查看完整命令目录，再通过子命令的 --help 获取参数说明。AI 可以结合 README 和 one.manifest.json 里的项目事实选择操作。",
+          body: "使用 one help --all 查看完整命令目录，再通过子命令的 --help 获取参数说明。AI 可以结合 README 和 one.manifest.toml 里的项目事实选择操作。",
           bullets: [
             ["完整目录", "列出当前版本支持的全部命令。"],
             ["参数说明", "使用子命令的 --help 确认参数和用法。"],
@@ -278,8 +278,8 @@ const homeCopy = {
         {
           icon: ClipboardCheck,
           title: "Manifest 记录项目事实",
-          body: "`one.manifest.json` 记录项目、模板、toolchain 和环境边界。agent 先读这份事实，再决定进入哪个子项目、调用哪个命令。",
-          chip: "one.manifest.json",
+          body: "`one.manifest.toml` 记录项目、模板、toolchain 和环境边界。agent 先读这份事实，再决定进入哪个子项目、调用哪个命令。",
+          chip: "one.manifest.toml",
         },
         {
           icon: Wrench,
@@ -307,7 +307,7 @@ const homeCopy = {
       ],
       sampleLabel: "one add --name web --yes",
       sampleOutput: `未检测到 One CLI 项目，请在项目根目录执行。
-  - 当前目录缺少 one.manifest.json；
+  - 当前目录缺少 one.manifest.toml；
     请先创建工作区，或 cd 到已有工作区：
     one create <dir>`,
       automationNote: "这只是其中一个例子。创建、添加、运行、上线等命令遇到问题时，也会用同样的方式给出原因和下一步。",
@@ -343,7 +343,7 @@ const homeCopy = {
       ai: {
         label: "方式三",
         title: "交给 AI 执行",
-        body: "把目标和 One CLI 命令交给 Codex、Claude Code、Cursor 等 AI 编程工具；已有工作区先阅读 README 和 one.manifest.json。",
+        body: "把目标和 One CLI 命令交给 Codex、Claude Code、Cursor 等 AI 编程工具；已有工作区先阅读 README 和 one.manifest.toml。",
         bullets: ["直接描述要做什么", "AI 使用 One CLI 创建工作区或追加模板", "按项目类型补依赖"],
         cta: "查看 AI 指南",
         promptLabel: "给 agent 的一句话",
@@ -588,7 +588,7 @@ const homeCopy = {
               the right command.
             </>
           ),
-          body: "Use one help --all for the complete command catalogue, then a subcommand's --help for its options. Agents can combine this with README files and one.manifest.json to choose project operations.",
+          body: "Use one help --all for the complete command catalogue, then a subcommand's --help for its options. Agents can combine this with README files and one.manifest.toml to choose project operations.",
           bullets: [
             ["FULL CATALOGUE", "List every command supported by the installed version."],
             ["OPTIONS", "Check a subcommand's --help for arguments and usage."],
@@ -619,8 +619,8 @@ const homeCopy = {
         {
           icon: ClipboardCheck,
           title: "Manifest records project facts",
-          body: "`one.manifest.json` records projects, templates, toolchains, and environment boundaries. Agents read those facts before choosing a subproject or command.",
-          chip: "one.manifest.json",
+          body: "`one.manifest.toml` records projects, templates, toolchains, and environment boundaries. Agents read those facts before choosing a subproject or command.",
+          chip: "one.manifest.toml",
         },
         {
           icon: Wrench,
@@ -648,7 +648,7 @@ const homeCopy = {
       ],
       sampleLabel: "one add --name web --yes",
       sampleOutput: `No One CLI workspace found. Run this from a workspace root.
-  - This folder is missing one.manifest.json.
+  - This folder is missing one.manifest.toml.
     Create a workspace first, or cd into an existing one:
     one create <dir>`,
       automationNote: "This is one example. Create, add, run, and ship commands use the same pattern when something needs attention.",
@@ -684,7 +684,7 @@ const homeCopy = {
       ai: {
         label: "Option three",
         title: "Hand it to AI",
-        body: "Give your goal and One CLI commands to an AI coding tool. In an existing workspace, have it read README files and one.manifest.json first.",
+        body: "Give your goal and One CLI commands to an AI coding tool. In an existing workspace, have it read README files and one.manifest.toml first.",
         bullets: ["Describe what you want to build", "AI uses One CLI to create workspaces or add templates", "Dependencies are handled by project type"],
         cta: "Explore AI guide",
         promptLabel: "one-line agent prompt",

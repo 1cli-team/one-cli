@@ -61,7 +61,7 @@ one init mise
 
 `one run` 按任务实际工作目录确定项目归属，嵌套项目采用最长路径匹配。根任务即使叫 `serve-backend`，只要声明 `dir = "services/api"`，也能取得 api 的变量。根聚合任务不会合并各子项目的变量。
 
-One 每次运行只为每个启用的项目获取一次 Infisical 快照，沿用 `--env`、路径、继承和禁用规则。各任务只接收自身项目的快照，并覆盖同名 shell / mise 变量。变量值保留在内存中，通过带会话认证的回环服务传递，不写入 TOML、`.env` 或 context JSON。
+配置 Infisical 后，One 每次运行只为每个项目获取一次变量快照。`--env` 选择已声明环境，默认 `dev`；远程目录从项目路径推导，并合并共享及祖先目录变量。各任务只接收自身项目的快照，并覆盖同名 shell / mise 变量。变量值保留在内存中，通过带会话认证的回环服务传递，不写入 TOML、`.env` 或 context JSON。
 
 One 内置 mise 环境适配器，在对应配置作用域创建临时 `.one-run-*/bindings.toml`。文件只含任务引用，不含变量值，退出时清理。新工作区和 `one init mise` 会将 `.one-run-*/` 加入 Git 忽略规则。用户无需维护逐任务插件配置行。
 
