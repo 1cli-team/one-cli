@@ -1,0 +1,366 @@
+{
+  "nestjs-api": {
+    "name": {
+      "zh": "NestJS API 服务",
+      "en": "NestJS API service"
+    },
+    "description": {
+      "zh": "NestJS + TypeScript，适合 API 服务与业务后台",
+      "en": "NestJS + TypeScript for APIs and backend services"
+    },
+    "overview": {
+      "zh": "适合使用 TypeScript 开发模块化 API 服务，按控制器、服务与数据访问层组织业务。",
+      "en": "For modular TypeScript APIs organized into controllers, services, and data access layers."
+    },
+    "features": [
+      {
+        "zh": "认证、用户、健康检查与指标模块",
+        "en": "Authentication, users, health checks, and metrics modules"
+      },
+      {
+        "zh": "Swagger 接口文档、参数校验与统一响应处理",
+        "en": "Swagger API documentation, input validation, and response handling"
+      },
+      {
+        "zh": "Drizzle 数据访问、Pino 日志与测试配置",
+        "en": "Drizzle data access, Pino logging, and test configuration"
+      }
+    ]
+  },
+  "go-api": {
+    "name": {
+      "zh": "Go API 服务",
+      "en": "Go API service"
+    },
+    "description": {
+      "zh": "Gin + Gorm + Viper + Zap，适合 API 服务与业务后台",
+      "en": "Gin + Gorm + Viper + Zap for APIs and backend services"
+    },
+    "overview": {
+      "zh": "适合以 Go 构建独立 API 服务，包含路由、中间件、业务服务和仓储分层。",
+      "en": "For standalone Go APIs with routing, middleware, business services, and repository layers."
+    },
+    "features": [
+      {
+        "zh": "Gin 路由、Gorm 数据访问、Viper 配置与 Zap 日志",
+        "en": "Gin routing, Gorm data access, Viper configuration, and Zap logging"
+      },
+      {
+        "zh": "认证与用户接口、健康检查及请求中间件",
+        "en": "Authentication and user endpoints, health checks, and request middleware"
+      },
+      {
+        "zh": "OpenAPI 文档与 Taskfile 构建、检查任务",
+        "en": "OpenAPI documentation and Taskfile build and check tasks"
+      }
+    ]
+  },
+  "astro-site": {
+    "name": {
+      "zh": "Astro 静态网站",
+      "en": "Astro static site"
+    },
+    "description": {
+      "zh": "前端静态站模板，适合官网、营销站与内容站点",
+      "en": "Static site template for company, marketing, and content websites"
+    },
+    "overview": {
+      "zh": "适合以内容展示为主的官网、营销页面和静态站点。",
+      "en": "For company websites, marketing pages, and content-focused static sites."
+    },
+    "features": [
+      {
+        "zh": "Astro 文件路由、页面布局与组件示例",
+        "en": "Astro file-based routes, layouts, and example components"
+      },
+      {
+        "zh": "Tailwind CSS 与统一设计变量",
+        "en": "Tailwind CSS and shared design tokens"
+      },
+      {
+        "zh": "轻量请求工具、静态构建与预览入口",
+        "en": "Lightweight request helpers, static builds, and preview scripts"
+      }
+    ]
+  },
+  "starlight-docs": {
+    "name": {
+      "zh": "Starlight 文档站点",
+      "en": "Starlight documentation"
+    },
+    "description": {
+      "zh": "基于 Astro + Starlight 的文档项目模板",
+      "en": "Documentation project based on Astro + Starlight"
+    },
+    "overview": {
+      "zh": "适合产品文档、开发者指南和团队知识库，内容使用 Markdown 或 MDX 编写。",
+      "en": "For product documentation, developer guides, and team knowledge bases written in Markdown or MDX."
+    },
+    "features": [
+      {
+        "zh": "Astro 与 Starlight 文档站点结构",
+        "en": "Astro and Starlight documentation structure"
+      },
+      {
+        "zh": "指南与参考文档示例、侧边栏配置",
+        "en": "Sample guides, reference pages, and sidebar configuration"
+      },
+      {
+        "zh": "可定制主题样式与静态构建入口",
+        "en": "Customizable theme styling and static build scripts"
+      }
+    ]
+  },
+  "nextjs-app": {
+    "name": {
+      "zh": "Next.js 全栈应用",
+      "en": "Next.js application"
+    },
+    "description": {
+      "zh": "Next.js 前端模板，适合 SEO 与首屏性能要求较高场景",
+      "en": "Next.js application for SEO and fast initial page loads"
+    },
+    "overview": {
+      "zh": "适合需要服务端渲染、搜索引擎索引和 React 交互的 Web 应用。",
+      "en": "For web applications that need server rendering, search indexing, and React interactivity."
+    },
+    "features": [
+      {
+        "zh": "App Router 页面与 API Route 示例",
+        "en": "App Router pages and a sample API route"
+      },
+      {
+        "zh": "shadcn/ui、Tailwind CSS 与明暗主题",
+        "en": "shadcn/ui, Tailwind CSS, and light/dark themes"
+      },
+      {
+        "zh": "SWR、Zustand 与服务端数据获取封装",
+        "en": "SWR, Zustand, and server-side data fetching helpers"
+      }
+    ]
+  },
+  "react-spa": {
+    "name": {
+      "zh": "React 单页应用",
+      "en": "React single-page application"
+    },
+    "description": {
+      "zh": "React + Vite 单页应用模板，适合交互型业务系统",
+      "en": "React + Vite template for interactive applications"
+    },
+    "overview": {
+      "zh": "适合管理后台、内部工具等以浏览器端交互为主的业务系统。",
+      "en": "For dashboards, internal tools, and applications centered on browser-side interaction."
+    },
+    "features": [
+      {
+        "zh": "React、Vite 与页面路由结构",
+        "en": "React, Vite, and application routing"
+      },
+      {
+        "zh": "shadcn/ui、Tailwind CSS 与主题切换",
+        "en": "shadcn/ui, Tailwind CSS, and theme switching"
+      },
+      {
+        "zh": "SWR 请求示例、Zustand 状态与错误兜底",
+        "en": "SWR request examples, Zustand state, and error boundaries"
+      }
+    ]
+  },
+  "expo-mobile": {
+    "name": {
+      "zh": "Expo 移动 App",
+      "en": "Expo mobile app"
+    },
+    "description": {
+      "zh": "React Native + Expo App 模板，适合 iOS/Android 双端开发",
+      "en": "React Native + Expo template for iOS and Android"
+    },
+    "overview": {
+      "zh": "面向 iOS 和 Android 的跨平台移动应用，适合希望复用 React 技术栈的团队。",
+      "en": "A cross-platform starting point for iOS and Android teams working with React."
+    },
+    "features": [
+      {
+        "zh": "Expo Router 页面路由与 Tab 示例",
+        "en": "Expo Router navigation and sample tabs"
+      },
+      {
+        "zh": "NativeWind 样式、SWR 请求缓存与 Zustand 状态管理",
+        "en": "NativeWind styling, SWR request caching, and Zustand state"
+      },
+      {
+        "zh": "MMKV 本地持久化与开发构建支持",
+        "en": "MMKV local persistence and development build support"
+      }
+    ]
+  },
+  "ts-library": {
+    "name": {
+      "zh": "TypeScript 通用库",
+      "en": "TypeScript library"
+    },
+    "description": {
+      "zh": "通用库模板，适合发包场景，内置 tsdown + vitest + oxlint/oxfmt",
+      "en": "Publishable library with tsdown, vitest, and oxlint/oxfmt"
+    },
+    "overview": {
+      "zh": "适合共享工具、SDK 或可发布的 npm 包，提供从源码到测试与构建的基础结构。",
+      "en": "For shared utilities, SDKs, and publishable npm packages, with source, test, and build foundations."
+    },
+    "features": [
+      {
+        "zh": "tsdown 构建与类型声明输出",
+        "en": "tsdown builds and type declaration output"
+      },
+      {
+        "zh": "Vitest 单元测试与覆盖率配置",
+        "en": "Vitest unit tests and coverage configuration"
+      },
+      {
+        "zh": "oxlint、oxfmt 与发布前检查脚本",
+        "en": "oxlint, oxfmt, and pre-publish checks"
+      }
+    ]
+  },
+  "go-lib": {
+    "name": {
+      "zh": "Go 通用库",
+      "en": "Go library"
+    },
+    "description": {
+      "zh": "Go 库模板，遵循 golang-standards/project-layout，适合发包与被 import 场景",
+      "en": "Go library following golang-standards/project-layout, ready to publish and import"
+    },
+    "overview": {
+      "zh": "适合被其他 Go 项目导入的共享模块，从一个小型公共包开始扩展。",
+      "en": "For reusable modules imported by other Go projects, starting with a small public package."
+    },
+    "features": [
+      {
+        "zh": "独立 Go module 与 pkg/ 公共包结构",
+        "en": "A standalone Go module with public packages under pkg/"
+      },
+      {
+        "zh": "greeter 示例包及对应单元测试",
+        "en": "A sample greeter package and unit tests"
+      },
+      {
+        "zh": "Taskfile 构建、格式化、静态检查与测试任务",
+        "en": "Taskfile build, format, vet, and test tasks"
+      }
+    ]
+  },
+  "electron-app": {
+    "name": {
+      "zh": "Electron 桌面应用",
+      "en": "Electron desktop app"
+    },
+    "description": {
+      "zh": "Electron + React + Vite 桌面应用模板，主进程基于 inversify，内置 electron-log/store/updater",
+      "en": "Electron + React + Vite with inversify, electron-log, electron-store, and electron-updater"
+    },
+    "overview": {
+      "zh": "适合需要桌面窗口、本地能力和 Web 界面的跨平台桌面应用。",
+      "en": "For cross-platform desktop apps that combine native capabilities with a web interface."
+    },
+    "features": [
+      {
+        "zh": "独立组织的主进程、React 渲染进程与 preload 桥接层",
+        "en": "Separate main process, React renderer, and preload bridge"
+      },
+      {
+        "zh": "Inversify 依赖注入与共享 IPC 类型",
+        "en": "Inversify dependency injection and shared IPC types"
+      },
+      {
+        "zh": "日志、本地配置存储与更新模块",
+        "en": "Logging, local configuration storage, and update modules"
+      }
+    ]
+  },
+  "empty-app": {
+    "name": {
+      "zh": "空应用",
+      "en": "Empty application"
+    },
+    "description": {
+      "zh": "在 apps/ 下创建空项目，稍后自行配置技术栈",
+      "en": "Create an empty project under apps/ and configure a technology stack later"
+    },
+    "overview": {
+      "zh": "适合尚未确定前端框架，或需要接入内置模板之外技术栈的应用。",
+      "en": "For applications whose framework is still undecided or whose stack is not covered by a built-in template."
+    },
+    "features": [
+      {
+        "zh": "在 apps/ 下创建项目并登记到工作区",
+        "en": "Create a project under apps/ and register it in the workspace"
+      },
+      {
+        "zh": "技术栈和依赖由项目自行选择",
+        "en": "Choose the technology stack and dependencies yourself"
+      },
+      {
+        "zh": "后续按需添加源码与 mise 任务",
+        "en": "Add source files and mise tasks as needed"
+      }
+    ]
+  },
+  "empty-service": {
+    "name": {
+      "zh": "空服务",
+      "en": "Empty service"
+    },
+    "description": {
+      "zh": "在 services/ 下创建空项目，稍后自行配置技术栈",
+      "en": "Create an empty project under services/ and configure a technology stack later"
+    },
+    "overview": {
+      "zh": "适合自选语言和框架的后端服务、后台作业或其他服务进程。",
+      "en": "For backend services, background jobs, and service processes using your own language and framework."
+    },
+    "features": [
+      {
+        "zh": "在 services/ 下创建项目并登记到工作区",
+        "en": "Create a project under services/ and register it in the workspace"
+      },
+      {
+        "zh": "不预设服务框架和运行工具链",
+        "en": "No service framework or runtime toolchain is preselected"
+      },
+      {
+        "zh": "后续按需添加服务入口与 mise 任务",
+        "en": "Add service entry points and mise tasks as needed"
+      }
+    ]
+  },
+  "empty-library": {
+    "name": {
+      "zh": "空共享库",
+      "en": "Empty library"
+    },
+    "description": {
+      "zh": "在 packages/ 下创建空项目，稍后自行配置技术栈",
+      "en": "Create an empty project under packages/ and configure a technology stack later"
+    },
+    "overview": {
+      "zh": "适合使用自选语言构建共享模块，并自行决定源码组织与发布方式。",
+      "en": "For shared modules using your own language, source structure, and publishing workflow."
+    },
+    "features": [
+      {
+        "zh": "在 packages/ 下创建项目并登记到工作区",
+        "en": "Create a project under packages/ and register it in the workspace"
+      },
+      {
+        "zh": "不预设语言、依赖和构建工具",
+        "en": "No language, dependencies, or build tools are preselected"
+      },
+      {
+        "zh": "后续按需配置模块入口、测试与 mise 任务",
+        "en": "Add module entry points, tests, and mise tasks as needed"
+      }
+    ]
+  }
+}

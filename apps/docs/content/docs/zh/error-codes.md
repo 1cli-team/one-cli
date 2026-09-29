@@ -498,23 +498,6 @@ The requested preference value is not supported.
 
 > 没有默认 remediation。具体恢复方式请看错误的 `context` 字段。
 
-### `PRESET_FLAG_CONFLICT`
-
-Preset id and explicit flag declared conflicting values for the same field.
-
-**Remediation**:
-
-- `drop-conflicting-flag` — 去掉与 --preset 冲突的显式 flag（preset 已经表达了该选择）
-
-### `PRESET_INVALID`
-
-Preset id failed v1 grammar (bad version / segment shape / unknown code).
-
-**Remediation**:
-
-- `regen-preset` — 用 `one serve` 打开 dashboard 重新挑组合得到新的 preset id（dashboard 页面将在后续版本上线）
-- `check-syntax` — v1 形如 `1.bgok.fnav.ei` —— 前缀为版本号，段以 `.` 分隔，每段首字符是 f/b/l/e kind
-
 ### `RUNTIME_INVALID`
 
 The selected execution runtime is not builtin or mise.

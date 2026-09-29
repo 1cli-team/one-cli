@@ -72,7 +72,7 @@ one create my-app --yes
 }
 ```
 
-`package_manager` 在空工作区或纯 Go 工作区中为空字符串；含 Node 项目的 preset 会返回实际包管理器名称。
+`one create` 创建空工作区，因此 `package_manager` 为空字符串；使用 `one add` 添加 Node 项目后才会配置包管理器。
 
 `secrets_backend` 表示支持的来源（`infisical`），不代表已经绑定；`dev_enabled` 是 `true`。
 

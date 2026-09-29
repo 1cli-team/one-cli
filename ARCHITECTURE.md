@@ -115,7 +115,6 @@ packages/cli/internal/
     creation/          Template-to-Workspace/Project materialisation
     development/       local development process orchestration
     environment/       Infisical variables and workspace bindings
-    preset/            pure preset encoding, parsing, and resolution
     tasks/             finite task plans and environment snapshots
     miseconfig/        additive task and tool configuration
     hooks/             staged-file checks and Git integration
@@ -233,14 +232,12 @@ outside a workspace renders help instead of producing a workspace error.
 Creation is one Template-driven compiled workflow:
 
 - `modules/creation.Service` is the single mutation boundary shared by ordinary
-  `one create`, `one create --preset`, and `one add`;
+  `one create` and `one add`;
 - workspace target revalidation, skeleton generation, Backend selection,
   environment preparation, Template rendering, manifest publication, project
   artifact generation and best-effort Git initialization
   stay behind that boundary;
-- its private `syncProject` step owns the persisted dev command and environment safety rules;
-- `modules/preset` is a pure plan format: it owns only preset codes, parsing,
-  canonical encoding, registry resolution, and flag-conflict validation;
+- project creation synchronizes native mise tasks and derived environment paths;
 - there is no top-level `modules/scaffold`: workspace-file generation is an
   implementation detail of creation, not another product concept;
 - there is no cross-adapter `projectsync` package: orchestration stays beside
@@ -307,7 +304,7 @@ Finite workspace tasks are owned by `modules/tasks` and `modules/miseconfig`:
 - Hidden task adapters consume the same temporary context for cache fingerprints and execution. Context values never enter generated configuration or result envelopes.
 - mise owns task concurrency and artifact storage. One reports overall success/failure and leaves unsupported per-task event state unknown.
 - `one build` and `one run build` share this implementation. `one exec` handles arbitrary commands, while development keeps the existing terminal supervisor after finite prerequisite builds.
-- GitHub Actions files stay repository-owned and call the ordinary `ci` aggregate. Hooks and preset remain supported.
+- GitHub Actions files stay repository-owned and call the ordinary `ci` aggregate. Hooks remain supported.
 
 Environment is a vertical deep module because its two built-in backends are
 compiled implementation components rather than independently distributed

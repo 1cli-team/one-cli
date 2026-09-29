@@ -13,6 +13,13 @@ const config = {
   // 让生成的 URL 与 Starlight 的 trailing-slash 行为一致。
   trailingSlash: true,
   reactStrictMode: true,
+  async redirects() {
+    return ["zh", "en"].map((lang) => ({
+      source: `/${lang}/blog/preset-id-boundary/`,
+      destination: `/${lang}/templates/`,
+      permanent: true,
+    }));
+  },
 };
 
 export default withMDX(config);

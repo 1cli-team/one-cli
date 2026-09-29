@@ -31,7 +31,6 @@ To choose a template interactively, use [`one add`](/en/docs/add/).
   "templates": [
     {
       "id": "nestjs-api",
-      "code": "ne",
       "category": "backend",
       "name": "NestJS API service",
       "description": "NestJS + TypeScript for API services and business backends",
@@ -44,19 +43,18 @@ To choose a template interactively, use [`one add`](/en/docs/add/).
     },
     {
       "id": "go-api",
-      "code": "go",
       "category": "backend",
       "name": "Go API service",
       "toolchain": "go"
     },
-    // ... 8 more
+    // ... 11 more
   ]
 }
 ```
 
 ## Complete Template List
 
-The current registry has 10 templates:
+The current registry has 13 templates:
 
 | ID | Category | Details |
 |---|---|---|
@@ -70,6 +68,9 @@ The current registry has 10 templates:
 | `ts-library` | library | [->](/en/docs/templates/) |
 | `go-lib` | library | [->](/en/docs/templates/) |
 | `electron-app` | frontend / desktop | [->](/en/docs/templates/) |
+| `empty-app` | frontend | [->](/en/templates/#empty-app) |
+| `empty-service` | backend | [->](/en/templates/#empty-service) |
+| `empty-library` | library | [->](/en/templates/#empty-library) |
 
 Not sure which one to pick? Read the [template decision tree](/en/docs/templates/).
 

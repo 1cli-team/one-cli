@@ -2,7 +2,7 @@
 
 import { Menu } from "lucide-react";
 import { GithubIcon as Github } from "@/components/github-icon";
-import Link from "next/link";
+import { Link } from "next-view-transitions";
 import { BrandMark } from "@/components/brand-mark";
 import { localeLabels, locales, type Locale } from "@/i18n";
 
@@ -45,7 +45,7 @@ export const navText: Record<NavLocale, NavText> = {
   },
 };
 
-export function TemplateExamplesNav({ lang }: { lang: NavLocale }) {
+export function TemplateExamplesNav({ lang, templateId }: { lang: NavLocale; templateId?: string }) {
   const text = navText[lang];
   const prefix = `/${lang}`;
 
@@ -104,7 +104,7 @@ export function TemplateExamplesNav({ lang }: { lang: NavLocale }) {
               <Link
                 aria-current={locale === lang ? "true" : undefined}
                 data-active={locale === lang}
-                href={`/${locale}/templates/`}
+                href={`/${locale}/templates/${templateId ? `${templateId}/` : ""}`}
                 key={locale}
               >
                 {localeLabels[locale as Locale]}
@@ -126,13 +126,22 @@ export function TemplateExamplesNav({ lang }: { lang: NavLocale }) {
           >
             {text.getStarted}
           </Link>
-          <button
-            type="button"
-            className="inline-flex size-9 items-center justify-center rounded-md border border-stone-200 text-stone-700 lg:hidden"
-            aria-label={text.openMenu}
-          >
-            <Menu className="size-5" />
-          </button>
+          <details className="relative lg:hidden">
+            <summary className="flex size-9 cursor-pointer list-none items-center justify-center rounded-md border border-stone-200 text-stone-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-orange-600" aria-label={text.openMenu}>
+              <Menu className="size-5" aria-hidden="true" />
+            </summary>
+            <nav aria-label={text.openMenu} className="absolute right-0 top-12 grid w-52 gap-1 rounded-lg border border-stone-200 bg-white p-2 shadow-lg">
+              {[
+                [text.templates, `${prefix}/templates/`],
+                [text.tutorials, `${prefix}/tutorials/templates/`],
+                [text.docs, `${prefix}/docs/quick-start/`],
+                [text.blog, `${prefix}/blog/`],
+                [text.getStarted, `${prefix}/docs/installation/`],
+              ].map(([label, href]) => (
+                <Link key={href} href={href} className="rounded px-3 py-2 text-sm text-stone-700 hover:bg-stone-100 focus-visible:outline-2 focus-visible:outline-orange-600">{label}</Link>
+              ))}
+            </nav>
+          </details>
         </div>
       </div>
     </header>

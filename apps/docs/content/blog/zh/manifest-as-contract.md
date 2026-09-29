@@ -8,7 +8,7 @@ tags: ["manifest", "agent", "monorepo"]
 
 ## manifest 是工程事实源
 
-One CLI 生成的工作区里，`one.manifest.toml` 是最重要的文件之一。它不是给 CLI 自己看的临时缓存，而是描述整个 workspace 的事实源：有哪些 app、有哪些 package、使用什么 preset、当前项目依赖哪些运行边界。
+One CLI 生成的工作区里，`one.manifest.toml` 是最重要的文件之一。它不是给 CLI 自己看的临时缓存，而是描述整个 workspace 的事实源：有哪些 app、有哪些 package、当前项目依赖哪些运行边界。
 
 传统脚手架通常只负责把文件写出来。生成完成后，项目结构变成一堆约定，后续工具只能靠目录名、package script 或 README 猜测真实意图。One CLI 的做法是把这些决定写进 manifest，让后续命令和 agent 都能读取同一份结构化上下文。
 
@@ -34,7 +34,10 @@ manifest 让这些语义变成显式字段：
 理想的 One CLI 工作流是这样的：
 
 ```bash
-one create my-stack --preset 1.bgok.fnav.ei --yes
+one create my-stack --yes
+cd my-stack
+one add go-api --name api --yes
+one add nextjs-app --name web --yes
 cd my-stack
 one add nextjs-app --name admin --yes
 ```

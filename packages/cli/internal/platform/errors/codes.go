@@ -52,10 +52,6 @@ const (
 	TEMPLATE_REQUIRED        Code = "TEMPLATE_REQUIRED"
 	SUBPROJECT_NAME_REQUIRED Code = "SUBPROJECT_NAME_REQUIRED"
 
-	// Preset (see internal/modules/preset). Surfaced by `one create --preset`.
-	PRESET_INVALID       Code = "PRESET_INVALID"
-	PRESET_FLAG_CONFLICT Code = "PRESET_FLAG_CONFLICT"
-
 	// Manifest.
 	MANIFEST_INVALID          Code = "MANIFEST_INVALID"
 	MANIFEST_MISSING_OR_EMPTY Code = "MANIFEST_MISSING_OR_EMPTY"
@@ -175,9 +171,6 @@ var Codes = map[Code]Definition{
 	TEMPLATE_NOT_FOUND:       {Summary: "Requested template ID is not in the registry.", Remediation: []output.Remediation{{Action: "list-templates", Hint: "查看所有可用模板 ID", Command: "one templates -o json"}}},
 	TEMPLATE_REQUIRED:        {Summary: "Non-interactive add called without a template ID.", Remediation: []output.Remediation{{Action: "specify-template", Hint: "把 template ID 作为位置参数", Command: "one add <template-id> --name <subproject-name>"}}},
 	SUBPROJECT_NAME_REQUIRED: {Summary: "Non-interactive add called without --name.", Remediation: []output.Remediation{{Action: "provide-name", Hint: "传入 --name", Command: "one add <template-id> --name <subproject-name>"}}},
-
-	PRESET_INVALID:       {Summary: "Preset id failed v1 grammar (bad version / segment shape / unknown code).", Remediation: []output.Remediation{{Action: "regen-preset", Hint: "用 `one serve` 打开 dashboard 重新挑组合得到新的 preset id（dashboard 页面将在后续版本上线）"}, {Action: "check-syntax", Hint: "v1 形如 `1.bgok.fnav.ei` —— 前缀为版本号，段以 `.` 分隔，每段首字符是 f/b/l/e kind"}}},
-	PRESET_FLAG_CONFLICT: {Summary: "Preset id and explicit flag declared conflicting values for the same field.", Remediation: []output.Remediation{{Action: "drop-conflicting-flag", Hint: "去掉与 --preset 冲突的显式 flag（preset 已经表达了该选择）"}}},
 
 	MANIFEST_INVALID:          {Summary: "one.manifest.toml is malformed."},
 	MANIFEST_MISSING_OR_EMPTY: {Summary: "Workspace has no manifest, or the manifest declares no projects.", Remediation: []output.Remediation{{Action: "add-project", Hint: "新增一个项目", Command: "one add <template-id> --name <project-name>"}}},

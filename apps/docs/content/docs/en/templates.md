@@ -1,15 +1,15 @@
 ---
 title: How to Choose Templates
-description: Decision tree for the 10 base templates. Pick the right one in 30 seconds.
+description: Decision tree for the 13 built-in templates. Pick the right one in 30 seconds.
 ---
 
 If you are adding a new project and do not know which base template to pick, this page gives you a decision tree and a comparison table.
 
-If you would rather start from a complete workspace composition instead of choosing each `one add` template yourself, use [Template Examples](/en/templates/). That page has full starters for mobile, desktop, web, consumer, admin, and docs projects, each with a copyable `one create --preset ...` command.
+Use the [template catalog](/en/templates/) to filter by type and compare purpose and stack.
 
 **For**: people who ran `one templates` and saw too many IDs, tech leads evaluating stack choices, and anyone writing template-selection rules for agents.
 
-**You will learn**: how to pick the right base template in 30 seconds, and when to skip the decision and use a complete example instead.
+**You will learn**: how to pick the right base template in 30 seconds, then add projects with one add.
 
 ## 30-second Rule
 
@@ -28,16 +28,19 @@ If unsure, ask one question: **how does the user consume this thing?** Browser -
 
 | ID | Category | Keywords | One-line fit | Details |
 |---|---|---|---|---|
-| `nestjs-api` | API | TypeScript, NestJS, REST | Default API template for TypeScript teams | [Mobile / marketing / admin examples](/en/templates/) |
+| `nestjs-api` | API | TypeScript, NestJS, REST | Default API template for TypeScript teams | [View template](/en/templates/#nestjs-api) |
 | `go-api` | API | Go, Gin, GORM | High-throughput / low-memory / mixed-language teams | - |
-| `nextjs-app` | Web | Next.js, SSR, React | Default consumer web or full-stack app | [Consumer example](/en/templates/consumer-starter/) |
-| `react-spa` | Web | Vite, React, SPA | Console / internal app / no SEO | [Admin example](/en/templates/admin-starter/) |
-| `astro-site` | Web | Astro, static-first | Marketing or content site | [Marketing example](/en/templates/landing-starter/) |
-| `starlight-docs` | Docs | Starlight, Astro | Documentation site or knowledge base | [Docs example](/en/templates/docs-starter/) |
-| `expo-mobile` | Mobile | Expo, React Native | Cross-platform iOS + Android | [Mobile example](/en/templates/mobile-starter/) |
-| `electron-app` | Desktop | Electron, React, Vite | Desktop app for macOS / Windows / Linux | [Desktop example](/en/templates/desktop-starter/) |
+| `nextjs-app` | Web | Next.js, SSR, React | Default consumer web or full-stack app | [View template](/en/templates/#nextjs-app) |
+| `react-spa` | Web | Vite, React, SPA | Console / internal app / no SEO | [View template](/en/templates/#react-spa) |
+| `astro-site` | Web | Astro, static-first | Marketing or content site | [View template](/en/templates/#astro-site) |
+| `starlight-docs` | Docs | Starlight, Astro | Documentation site or knowledge base | [View template](/en/templates/#starlight-docs) |
+| `expo-mobile` | Mobile | Expo, React Native | Cross-platform iOS + Android | [View template](/en/templates/#expo-mobile) |
+| `electron-app` | Desktop | Electron, React, Vite | Desktop app for macOS / Windows / Linux | [View template](/en/templates/#electron-app) |
 | `ts-library` | Library | TS, strict semver | Reusable TypeScript package | - |
 | `go-lib` | Library | Go, module, package layout | Reusable Go module | - |
+| `empty-app` | App | No stack | Start with an empty application directory | - |
+| `empty-service` | API | No stack | Start with an empty service directory | - |
+| `empty-library` | Library | No stack | Start with an empty shared library directory | - |
 
 ## Add The Template You Chose
 

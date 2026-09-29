@@ -3,7 +3,6 @@
   "templates": [
     {
       "id": "nestjs-api",
-      "code": "ne",
       "name": "NestJS API 服务",
       "description": "NestJS + TypeScript，适合 API 服务与业务后台",
       "category": "backend",
@@ -19,7 +18,6 @@
     },
     {
       "id": "go-api",
-      "code": "go",
       "name": "Go API 服务",
       "description": "Gin + Gorm + Viper + Zap，适合 API 服务与业务后台",
       "category": "backend",
@@ -39,7 +37,6 @@
     },
     {
       "id": "astro-site",
-      "code": "as",
       "name": "Astro 静态网站",
       "description": "前端静态站模板，适合官网、营销站与内容站点",
       "category": "frontend",
@@ -55,7 +52,6 @@
     },
     {
       "id": "starlight-docs",
-      "code": "sl",
       "name": "Starlight 文档站点",
       "description": "基于 Astro + Starlight 的文档项目模板",
       "category": "frontend",
@@ -72,7 +68,6 @@
     },
     {
       "id": "nextjs-app",
-      "code": "na",
       "name": "Next.js 全栈应用",
       "description": "Next.js 前端模板，适合 SEO 与首屏性能要求较高场景",
       "category": "frontend",
@@ -88,7 +83,6 @@
     },
     {
       "id": "react-spa",
-      "code": "rs",
       "name": "React 单页应用",
       "description": "React + Vite 单页应用模板，适合交互型业务系统",
       "category": "frontend",
@@ -105,7 +99,6 @@
     },
     {
       "id": "expo-mobile",
-      "code": "em",
       "name": "Expo 移动 App",
       "description": "React Native + Expo App 模板，适合 iOS/Android 双端开发",
       "category": "frontend",
@@ -121,7 +114,6 @@
     },
     {
       "id": "ts-library",
-      "code": "tl",
       "name": "TypeScript 通用库",
       "description": "通用库模板，适合发包场景，内置 tsdown + vitest + oxlint/oxfmt",
       "category": "library",
@@ -138,7 +130,6 @@
     },
     {
       "id": "go-lib",
-      "code": "gl",
       "name": "Go 通用库",
       "description": "Go 库模板，遵循 golang-standards/project-layout，适合发包与被 import 场景",
       "category": "library",
@@ -155,7 +146,6 @@
     },
     {
       "id": "electron-app",
-      "code": "ea",
       "name": "Electron 桌面应用",
       "description": "Electron + React + Vite 桌面应用模板，主进程基于 inversify，内置 electron-log/store/updater",
       "category": "frontend",
@@ -172,7 +162,6 @@
     },
     {
       "id": "empty-app",
-      "code": "xa",
       "name": "空应用",
       "description": "在 apps/ 下创建空项目，稍后自行配置技术栈",
       "category": "frontend",
@@ -186,7 +175,6 @@
     },
     {
       "id": "empty-service",
-      "code": "xs",
       "name": "空服务",
       "description": "在 services/ 下创建空项目，稍后自行配置技术栈",
       "category": "backend",
@@ -200,7 +188,6 @@
     },
     {
       "id": "empty-library",
-      "code": "xl",
       "name": "空共享库",
       "description": "在 packages/ 下创建空项目，稍后自行配置技术栈",
       "category": "library",

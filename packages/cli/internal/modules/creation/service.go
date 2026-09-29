@@ -1,5 +1,5 @@
 // Package creation owns the complete Template-to-Workspace/Project lifecycle.
-// Preset parsing stays pure in modules/preset; Cobra owns prompts and rendering.
+// Cobra owns prompts and rendering.
 package creation
 
 import (
@@ -13,7 +13,6 @@ import (
 	environmentmodule "github.com/torchstellar-team/one-cli/packages/cli/internal/modules/environment"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/modules/hooks"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/modules/miseconfig"
-	"github.com/torchstellar-team/one-cli/packages/cli/internal/modules/preset"
 	cliErrors "github.com/torchstellar-team/one-cli/packages/cli/internal/platform/errors"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/fsutil"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/i18n"
@@ -51,8 +50,6 @@ type WorkspaceInput struct {
 	Name           string
 	EnvBackend     string
 	CreatedInPlace bool
-	Preset         *preset.ResolvedSpec
-	ProjectNames   []string
 }
 
 type WorkspaceResult struct {
@@ -66,8 +63,6 @@ type WorkspaceResult struct {
 	RegistryWarn    error
 	MiseTrustWarn   error
 	HooksWarn       error
-	Preset          PresetResult
-	PartialState    string
 }
 
 // ValidateWorkspaceTarget performs the same final safety check used by
@@ -100,12 +95,11 @@ func validateWorkspaceTarget(targetDir, displayPath string) error {
 	return nil
 }
 
-// CreateWorkspace is the single workspace-creation mutation boundary used by
-// ordinary create and create --preset.
+// CreateWorkspace owns the complete workspace-creation mutation.
 func (s *Service) CreateWorkspace(ctx context.Context, input WorkspaceInput) (WorkspaceResult, error) {
 	result := WorkspaceResult{
 		Name: input.Name, TargetDir: input.TargetDir, CreatedInPlace: input.CreatedInPlace,
-		EnvBackend: strings.TrimSpace(input.EnvBackend), PartialState: "none",
+		EnvBackend: strings.TrimSpace(input.EnvBackend),
 	}
 	if !workspace.IsValidProjectName(input.Name) {
 		return result, cliErrors.New(
@@ -152,20 +146,6 @@ func (s *Service) CreateWorkspace(ctx context.Context, input WorkspaceInput) (Wo
 	}
 	if err := files.Apply(ctx); err != nil {
 		return result, err
-	}
-
-	if input.Preset != nil {
-		applied, applyErr := ApplyPreset(ctx, input.TargetDir, *input.Preset, PresetOptions{
-			ProjectNames: input.ProjectNames,
-		})
-		result.Preset = applied
-		if applyErr != nil {
-			if len(applied.Projects) > 0 {
-				result.PartialState = "partial_projects"
-			}
-			_ = initGitRepo(input.TargetDir)
-			return result, applyErr
-		}
 	}
 
 	plan, err := miseconfig.Build(input.TargetDir, miseconfig.Options{})

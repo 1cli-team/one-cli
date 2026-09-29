@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Removed — Workspace presets / 工作区预设组合
+
+- 删除 `one create --preset`、`--project-names`、preset 编解码与批量展开。统一先 `one create` 创建空工作区，再通过 `one add` 添加项目；旧参数会在写入前报错。
+- Removed `one create --preset`, `--project-names`, preset encoding, and batch expansion. Create an empty workspace with `one create`, then add projects with `one add`. Retired flags fail before writing files.
+- 模板注册表和 `one templates` JSON 输出删除 preset 专用 `code` 字段，使用模板 `id` 作为标识。
+- The template registry and `one templates` JSON output no longer include the preset-only `code` field; templates are identified by `id`.
+- 官网保留原有封面卡片、视觉样式和切换动画，展示 10 个非空模板，补充封面插画与中英文详情页。移除组合构建器、组合示例、创建命令生成与复制入口，以及详情页推荐区；旧示例地址跳转至目录。
+- The website keeps its existing cover cards, visual style, and transitions while showing a filterable catalog of 10 non-empty templates with illustrations and bilingual detail pages. Removed the composition builder, workspace examples, generated commands, create-command copy controls, and related-template section. Old example URLs redirect to the catalog.
+
 ### Changed — Agent instructions / Agent 指引
 
 - `one create` 按当前 CLI 语言生成单语言 `AGENTS.md`，中英文模板改为独立 Markdown 文件维护；后续添加项目或切换语言保留已有文件。

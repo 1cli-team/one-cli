@@ -1,80 +1,55 @@
-import { isLocale, locales, type Locale } from "@/i18n";
-import { TemplateExampleDetail } from "@/components/template-example-detail";
-import { getExample, getExampleIds } from "@/lib/examples";
-import { notFound } from "next/navigation";
-import {
-  breadcrumbJsonLd,
-  createPageMetadata,
-  itemListJsonLd,
-  jsonLdScriptProps,
-} from "@/lib/seo";
+import { notFound, permanentRedirect } from "next/navigation";
+import { isLocale, locales } from "@/i18n";
+import { getTemplateById, templates } from "@/data/templates";
+import { TemplateDetail } from "@/components/template-detail";
+import { breadcrumbJsonLd, createPageMetadata, jsonLdScriptProps } from "@/lib/seo";
 
-export function generateStaticParams() {
-  const ids = getExampleIds();
-  return locales.flatMap((lang) => ids.map((id) => ({ lang, id })));
+const retiredExamples = new Set([
+  "mobile-starter", "desktop-starter", "landing-starter",
+  "docs-starter", "consumer-starter", "admin-starter",
+]);
+
+type PageProps = { params: Promise<{ lang: string; id: string }> };
+
+function resolveTemplate(lang: string, id: string) {
+  if (!isLocale(lang)) notFound();
+  if (retiredExamples.has(id)) permanentRedirect(`/${lang}/templates/`);
+  const template = getTemplateById(id);
+  if (!template) notFound();
+  return { lang, template };
 }
 
-export async function generateMetadata(props: {
-  params: Promise<{ lang: string; id: string }>;
-}) {
-  const { lang: rawLang, id } = await props.params;
-  if (!isLocale(rawLang)) notFound();
-  const example = getExample(id);
-  if (!example) notFound();
-  const lang = rawLang;
+export function generateStaticParams() {
+  return locales.flatMap((lang) => templates.map((template) => ({ lang, id: template.id })));
+}
 
+export async function generateMetadata({ params }: PageProps) {
+  const input = await params;
+  const { lang, template } = resolveTemplate(input.lang, input.id);
   return createPageMetadata({
-    title:
-      lang === "zh"
-        ? `${example.title.zh} | One CLI 模板示例`
-        : `${example.title.en} | One CLI Template Examples`,
-    description:
-      lang === "zh" ? example.tagline.zh : example.tagline.en,
-    path: detailPath(lang, id),
+    title: `${template.title[lang]} | One CLI`,
+    description: template.tagline[lang],
+    path: `/${lang}/templates/${template.id}/`,
     locale: lang,
+    images: [template.cover],
     alternates: {
-      "zh-Hans": detailPath("zh", id),
-      en: detailPath("en", id),
-      "x-default": detailPath("zh", id),
+      "zh-Hans": `/zh/templates/${template.id}/`,
+      en: `/en/templates/${template.id}/`,
+      "x-default": `/zh/templates/${template.id}/`,
     },
   });
 }
 
-export default async function TemplateExampleRoute(props: {
-  params: Promise<{ lang: string; id: string }>;
-}) {
-  const { lang: rawLang, id } = await props.params;
-  if (!isLocale(rawLang)) notFound();
-  const example = getExample(id);
-  if (!example) notFound();
-
+export default async function TemplatePage({ params }: PageProps) {
+  const input = await params;
+  const { lang, template } = resolveTemplate(input.lang, input.id);
   return (
     <>
-      <script
-        {...jsonLdScriptProps([
-          itemListJsonLd({
-            name: example.title[rawLang],
-            description: example.tagline[rawLang],
-            items: example.baseTemplates.map((template) => ({
-              name: template,
-              path: detailPath(rawLang, id),
-            })),
-          }),
-          breadcrumbJsonLd([
-            { name: "One CLI", path: `/${rawLang}/` },
-            {
-              name: rawLang === "zh" ? "模板示例" : "Template Examples",
-              path: `/${rawLang}/templates/`,
-            },
-            { name: example.title[rawLang], path: detailPath(rawLang, id) },
-          ]),
-        ])}
-      />
-      <TemplateExampleDetail example={example} lang={rawLang} />
+      <script {...jsonLdScriptProps(breadcrumbJsonLd([
+        { name: lang === "zh" ? "模板" : "Templates", path: `/${lang}/templates/` },
+        { name: template.title[lang], path: `/${lang}/templates/${template.id}/` },
+      ]))} />
+      <TemplateDetail template={template} lang={lang} />
     </>
   );
-}
-
-function detailPath(lang: Locale, id: string) {
-  return `/${lang}/templates/${id}/`;
 }

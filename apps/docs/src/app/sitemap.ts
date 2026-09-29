@@ -7,6 +7,7 @@ import {
 import { getAllBlogPosts } from "@/lib/blog";
 import { siteUrl } from "@/lib/seo";
 import { source } from "@/lib/source";
+import { templates } from "@/data/templates";
 
 export const dynamic = "force-static";
 
@@ -104,6 +105,14 @@ export default function sitemap(): MetadataRoute.Sitemap {
         ),
       },
     },
+    ...templates.flatMap((template) => ["zh", "en"].map((lang) => ({
+      url: absolute(`/${lang}/templates/${template.id}/`),
+      alternates: { languages: {
+        "zh-Hans": absolute(`/zh/templates/${template.id}/`),
+        en: absolute(`/en/templates/${template.id}/`),
+        "x-default": absolute(`/zh/templates/${template.id}/`),
+      } },
+    }))),
     ...blogEntries,
     ...docsEntries,
   ];

@@ -63,13 +63,15 @@ func TestE2E_CreateAndAddTrustGeneratedMiseFiles(t *testing.T) {
 	if fileExists(t, filepath.Join(ws, "packages/shared/mise.toml")) {
 		t.Fatal("unexpected project mise configuration")
 	}
-	preset := filepath.Join(parent, "preset")
-	run(parent, "create", preset, "--preset", "1.frs.ltl", "--yes", "-o", "json")
-	checkTrust(filepath.Join(preset, "mise.toml"), true)
-	if fileExists(t, filepath.Join(preset, "apps/react-spa/mise.toml")) {
+	multi := filepath.Join(parent, "multi")
+	run(parent, "create", multi, "--yes", "-o", "json")
+	run(multi, "add", "react-spa", "--name", "web", "--yes", "-o", "json")
+	run(multi, "add", "ts-library", "--name", "shared", "--yes", "-o", "json")
+	checkTrust(filepath.Join(multi, "mise.toml"), true)
+	if fileExists(t, filepath.Join(multi, "apps/web/mise.toml")) {
 		t.Fatal("unexpected project mise configuration")
 	}
-	if fileExists(t, filepath.Join(preset, "packages/ts-library/mise.toml")) {
+	if fileExists(t, filepath.Join(multi, "packages/shared/mise.toml")) {
 		t.Fatal("unexpected project mise configuration")
 	}
 }

@@ -56,7 +56,6 @@ tasks:
       - go run ./tools/verify-cli-references
       - go run ./tools/verify-help
       - go run ./tools/repo-checks frontmatter
-      - go test -count=1 -run 'TestTemplateCodesMatchGoldenAndRegistry|TestEnvCodesMatchGolden|TestGoldenSortedByCode|TestEncodeVectors|TestParseEncodeRoundTrip|TestEncodeOrderIndependent' ./internal/modules/preset/...
   verify-node-workspace:
     cmds: ['go run ./tools/repo-checks node-workspace']
   install-launcher:

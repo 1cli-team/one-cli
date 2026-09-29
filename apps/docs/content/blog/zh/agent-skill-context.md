@@ -29,7 +29,7 @@ One CLI 的 bundled `one-cli` skill 面向的是 Codex、Claude Code、Cursor �
 这样做有两个好处：
 
 - 用户只需要告诉 agent “使用 one-cli skill”。
-- skill 内部可以共享 manifest、preset、模板目录和错误恢复规则。
+- skill 内部可以共享 manifest、模板目录和错误恢复规则。
 
 这和 CLI 本身的设计一致：外部表面保持小，内部规则保持清楚。
 

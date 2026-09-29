@@ -29,7 +29,7 @@ Splitting every command into its own skill looks granular, but it pushes more de
 That shape has two practical benefits:
 
 - Users only need to say “use the one-cli skill”.
-- The skill can share manifest, preset, template catalog, and error recovery rules across workflows.
+- The skill can share manifest, template catalog, and error recovery rules across workflows.
 
 The external surface stays small while the internal rules stay specific.
 

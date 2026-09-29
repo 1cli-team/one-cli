@@ -22,17 +22,6 @@ func runCreate(deps Dependencies, cmd *cobra.Command, rawDir string, flags *crea
 		return err
 	}
 
-	// --preset implies fully non-interactive: the whole point is a
-	// reproducible scaffold from a single string. Force -y, parse the
-	// preset id up-front, and short-circuit to runCreateWithPreset.
-	// Pre-flight (parse + registry resolve) runs BEFORE any
-	// filesystem mutation so PRESET_INVALID never leaves a half-baked
-	// dir behind.
-	if flags.preset != "" {
-		flags.yes = true
-		return runCreateWithPreset(deps, cmd, cwd, rawDir, flags)
-	}
-
 	interactive := !flags.yes && output.CanPrompt()
 
 	// Validate both the destination and its derived name before accepting input.
@@ -150,7 +139,7 @@ func runCreate(deps Dependencies, cmd *cobra.Command, rawDir string, flags *crea
 	return nil
 }
 
-// resolveWorkspaceName is shared by interactive, positional and preset creation.
+// resolveWorkspaceName is shared by interactive and positional creation.
 func resolveWorkspaceName(targetDir, override string) (string, error) {
 	name := strings.TrimSpace(override)
 	key := "create.name_invalid"

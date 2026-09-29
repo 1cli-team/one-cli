@@ -22,7 +22,7 @@ Use it when a coding agent or engineer needs a predictable workspace contract in
 
 ## Key concepts
 
-- `one create`: create a workspace or apply a preset.
+- `one create`: create an empty workspace; use `one add` afterward to add projects.
 - `one add`: add a project from a template to an existing workspace.
 - `one templates`: list available templates.
 - `one configure`: store local environment, deploy, and container settings.
@@ -48,7 +48,6 @@ Recommended entry points for AI summarizers:
 - https://www.1cli.dev/en/blog/template-governance-for-ai-workspaces/
 - https://www.1cli.dev/en/blog/one-cli-vs-general-scaffolding/
 - https://www.1cli.dev/en/blog/manifest-as-contract/
-- https://www.1cli.dev/en/blog/preset-id-boundary/
 
 ## Languages
 

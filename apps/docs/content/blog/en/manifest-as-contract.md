@@ -8,7 +8,7 @@ tags: ["manifest", "agent", "monorepo"]
 
 ## The manifest is the workspace source of truth
 
-In a One CLI workspace, `one.manifest.toml` is one of the most important files. It is not a temporary cache for the CLI. It describes the apps, packages, preset, and operational boundaries that make up the workspace.
+In a One CLI workspace, `one.manifest.toml` is one of the most important files. It is not a temporary cache for the CLI. It describes the apps, packages, and operational boundaries that make up the workspace.
 
 Traditional scaffolding tools usually stop after writing files. After that, the project structure becomes a pile of conventions, and later tooling has to infer intent from folders, package scripts, or README text. One CLI writes those decisions into the manifest so future commands and agents can read the same structured context.
 
@@ -36,7 +36,10 @@ That is why One CLI pairs the manifest with team-maintained project guidance. Th
 A typical flow looks like this:
 
 ```bash
-one create my-stack --preset 1.bgok.fnav.ei --yes
+one create my-stack --yes
+cd my-stack
+one add go-api --name api --yes
+one add nextjs-app --name web --yes
 cd my-stack
 one add nextjs-app --name admin --yes
 ```

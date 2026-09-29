@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 
 export const metadata = {
-  title: "Template Builder | One CLI",
+  title: "Template Catalog | One CLI",
   robots: {
     index: false,
     follow: true,

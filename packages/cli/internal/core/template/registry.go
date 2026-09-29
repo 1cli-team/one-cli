@@ -54,12 +54,7 @@ const (
 //     Empty slice = template doesn't participate in this domain at all
 //     (e.g. mobile/library for "deploy").
 type Template struct {
-	ID string `json:"id"`
-	// Code is a 2-character lowercase identifier ([a-z0-9]{2}) used by
-	// the preset id encoding (see internal/modules/preset). Once assigned, a
-	// code never changes and is never re-used for a different template —
-	// the (code, id) pair is locked by testdata/preset/v1_codes.json.
-	Code        string              `json:"code"`
+	ID          string              `json:"id"`
 	Name        string              `json:"name"`
 	Description string              `json:"description"`
 	Category    Category            `json:"category"`
@@ -93,7 +88,6 @@ type templateDomainSpec struct {
 func (t Template) MarshalJSON() ([]byte, error) {
 	type wire struct {
 		ID          string                    `json:"id"`
-		Code        string                    `json:"code,omitempty"`
 		Name        string                    `json:"name"`
 		Description string                    `json:"description"`
 		Category    Category                  `json:"category"`
@@ -104,7 +98,6 @@ func (t Template) MarshalJSON() ([]byte, error) {
 	}
 	out := wire{
 		ID:          t.ID,
-		Code:        t.Code,
 		Name:        t.Name,
 		Description: t.Description,
 		Category:    t.Category,
@@ -278,10 +271,6 @@ func validateTemplate(raw map[string]json.RawMessage, index int) (Template, erro
 		return t, cliErrors.New(cliErrors.REGISTRY_INVALID,
 			i18n.Tf("registry.id_missing", index))
 	}
-	if err := unmarshalString(raw, "code", &t.Code); err != nil || !isValidTemplateCode(t.Code) {
-		return t, cliErrors.New(cliErrors.REGISTRY_INVALID,
-			i18n.Tf("registry.code_invalid", t.ID))
-	}
 	if err := unmarshalString(raw, "name", &t.Name); err != nil || t.Name == "" {
 		return t, cliErrors.New(cliErrors.REGISTRY_INVALID,
 			i18n.Tf("registry.name_missing", t.ID))
@@ -362,20 +351,4 @@ func unmarshalString(raw map[string]json.RawMessage, key string, dst *string) er
 		return i18n.Errorf("registry.field_missing", key)
 	}
 	return json.Unmarshal(v, dst)
-}
-
-// isValidTemplateCode enforces the preset-id template code shape: exactly
-// 2 chars from [a-z0-9]. The Preset id encoder (internal/modules/preset) packs
-// template codes as fixed-width into segment payloads, so the shape is
-// load-bearing for the encoded ID format.
-func isValidTemplateCode(code string) bool {
-	if len(code) != 2 {
-		return false
-	}
-	for _, r := range code {
-		if !((r >= 'a' && r <= 'z') || (r >= '0' && r <= '9')) {
-			return false
-		}
-	}
-	return true
 }

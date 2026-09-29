@@ -19,5 +19,3 @@ COMMON OPTIONS
 
 AUTOMATION AND ADVANCED OPTIONS
   -n, --name <value>       Workspace name (default: target directory name)
-  --preset <value>         Automation preset ID; implies --yes and may create projects
-  --project-names <value>  Comma-separated project names for --preset expansion
