@@ -115,12 +115,9 @@ func TestPlanDoesNotEvaluateCommandInputs(t *testing.T) {
 	writeTaskFile(t, w.Root(), "mise.local.toml", `[tasks."web:build".cache]
 enabled=true
 command_inputs=["echo forbidden > SHOULD_NOT_EXIST"]`)
-	p, err := NewPlan(w, Options{Name: "build"})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !strings.Contains(p.Tasks[1].Name, "web") {
-		t.Fatal(p.Tasks)
+	_, err := NewPlan(w, Options{Name: "build"})
+	if err == nil || !strings.Contains(err.Error(), "cache.command_inputs") {
+		t.Fatal("unsupported command input accepted", err)
 	}
 	if _, err = os.Stat(filepath.Join(w.Root(), "SHOULD_NOT_EXIST")); !os.IsNotExist(err) {
 		t.Fatal("dry-run executed input")

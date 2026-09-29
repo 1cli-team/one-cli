@@ -8,7 +8,7 @@ import (
 )
 
 // taskGraph projects an already-selected plan; it never schedules tasks or
-// changes the commands. Runtime identities also match mise's emitted labels.
+// changes the commands. Runtime identities also match Process Compose's emitted labels.
 func taskGraph(p *Plan) taskui.Graph {
 	canonical := func(name string) string {
 		if strings.HasPrefix(name, "//") {
@@ -52,6 +52,13 @@ func taskGraph(p *Plan) taskui.Graph {
 				}
 			}
 		}
+		for _, wait := range task.waitFor {
+			if dep, ok := identities[wait]; ok && !seen[dep] {
+				node.WaitFor = append(node.WaitFor, dep)
+				seen[dep] = true
+			}
+		}
+
 		graph.Tasks = append(graph.Tasks, node)
 	}
 	return graph

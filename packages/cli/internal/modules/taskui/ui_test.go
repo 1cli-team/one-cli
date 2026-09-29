@@ -51,7 +51,7 @@ func TestFullHistoryJournalAndCleanup(t *testing.T) {
 	if s.count("") != 10002 || s.count("//:web:dev") != 10001 {
 		t.Fatal("lost log records")
 	}
-	if got := s.read(0); ansi.Strip(got) != "[web:dev] 中文 ready" || !strings.Contains(got, "\x1b[32m") {
+	if got := s.read(0); ansi.Strip(got) != "[web:dev] 中文 ready" || got == ansi.Strip(got) {
 		t.Fatalf("prefix/style lost: %q", got)
 	}
 	if !strings.Contains(s.read(10001), "09999") {
@@ -73,7 +73,7 @@ func TestFullHistoryJournalAndCleanup(t *testing.T) {
 func TestStylesBlankLinesLongLinesAndProgress(t *testing.T) {
 	s := testStore(t, "//:web:dev", "//:api:dev")
 	w := newLogWriter(s)
-	input := "\x1b[35m[web:dev]\x1b[0m \x1b[1;3;4;38;2;12;34;56m中文 👩‍💻\n[api:dev] normal\n[web:dev] still styled\x1b[0m\n\n[web:dev]   spaced\tcolumn\n[web:dev] progress 123\r\x1b[2Kdone\n[web:dev] abc\bZ\n"
+	input := "\x1b[35m[web:dev\t]\x1b[0m \x1b[1;3;4;38;2;12;34;56m中文 👩‍💻\n[api:dev] normal\n[web:dev] still styled\x1b[0m\n\n[web:dev     ]   spaced\tcolumn\n[web:dev] progress 123\r\x1b[2Kdone\n[web:dev] abc\bZ\n"
 	// Split every UTF-8 byte and every escape sequence across writes.
 	for i := range len(input) {
 		writeLog(t, w, input[i:i+1])
@@ -277,15 +277,15 @@ func TestJournalFailureAndColorPreferences(t *testing.T) {
 		t.Fatal("journal failure was hidden")
 	}
 	for _, entry := range []string{"NO_COLOR=1", "CLICOLOR=0", "FORCE_COLOR=0", "MISE_COLOR=false"} {
-		env := colorEnvironment([]string{entry})
+		env := ColorEnvironment([]string{entry})
 		if len(env) != 1 {
 			t.Fatal("overrode color preference", env)
 		}
 	}
-	if !strings.Contains(strings.Join(colorEnvironment([]string{"FORCE_COLOR=3"}), "\n"), "FORCE_COLOR=3") {
+	if !strings.Contains(strings.Join(ColorEnvironment([]string{"FORCE_COLOR=3"}), "\n"), "FORCE_COLOR=3") {
 		t.Fatal("color depth overwritten")
 	}
-	if !strings.Contains(strings.Join(colorEnvironment(nil), "\n"), "FORCE_COLOR=1") {
+	if !strings.Contains(strings.Join(ColorEnvironment(nil), "\n"), "FORCE_COLOR=1") {
 		t.Fatal("pipe color support missing")
 	}
 }

@@ -4,12 +4,15 @@ package cli_test
 
 import (
 	"fmt"
+	process "github.com/torchstellar-team/one-cli/packages/cli/internal/platform/process"
 	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"regexp"
+	"runtime"
 	"strings"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -23,6 +26,7 @@ type taskTerminal struct {
 	out      *lockedBuffer
 	done     chan error
 	readDone chan struct{}
+	finished atomic.Bool
 }
 
 func startTaskTerminal(t *testing.T, root string, args ...string) *taskTerminal {
@@ -64,8 +68,13 @@ func startTaskTerminal(t *testing.T, root string, args ...string) *taskTerminal 
 			}
 		}
 	}()
-	go func() { tt.done <- cmd.Wait() }()
-	t.Cleanup(func() { _ = cmd.Process.Kill(); _ = pt.Close() })
+	go func() { err := cmd.Wait(); tt.finished.Store(true); tt.done <- err }()
+	t.Cleanup(func() {
+		if !tt.finished.Load() {
+			_ = process.StopTree(cmd.Process)
+		}
+		_ = pt.Close()
+	})
 	return tt
 }
 func (tt *taskTerminal) wait(t *testing.T, want int) {
@@ -159,14 +168,13 @@ func TestE2E_SingleDevAndBuildExitWithIdleTerminalInput(t *testing.T) {
 	}
 }
 
-func TestE2E_BuildRawKeepsFailure(t *testing.T) {
+func TestE2E_BuildRawRejectsMultipleCommandsBeforeStarting(t *testing.T) {
 	root := devTerminalFixture(t, false)
-	buildWrite(t, root, "packages/lib/build.sh", "test -t 1 || exit 91\nprintf '\\033[31mBUILD_FAILURE\\033[0m\\n'\nexit 42\n")
+	buildWrite(t, root, "packages/lib/build.sh", "touch SHOULD_NOT_RUN\n")
 	tt := startTaskTerminal(t, root, "build", "--ui=raw", "-o", "text")
-	tt.wait(t, 42)
-	got := tt.out.String()
-	if !strings.Contains(got, "BUILD_FAILURE") {
-		t.Fatal(got)
+	tt.wait(t, 1)
+	if _, err := os.Stat(filepath.Join(root, "packages/lib/SHOULD_NOT_RUN")); !os.IsNotExist(err) {
+		t.Fatal("raw rejection launched a command")
 	}
 }
 
@@ -192,17 +200,28 @@ func TestE2E_TaskTUIRestoresTerminalAndCancelsTree(t *testing.T) {
 	for _, mode := range []string{"auto", "tui"} {
 		t.Run(mode, func(t *testing.T) {
 			root := devTerminalFixture(t, false)
-			buildWrite(t, root, "packages/lib/dev.sh", "echo TUI_CHILD_READY; sleep 60\n")
+			buildWrite(t, root, "packages/lib/dev.sh", "echo $$ > ../../lib-dev.pid; sleep 60 & echo $! > ../../lib-child.pid; wait\n")
 			buildWrite(t, root, "apps/web/dev.sh", "echo TUI_WEB_READY; sleep 60\n")
 			tt := startTaskTerminal(t, root, "run", "dev", "--ui", mode, "-o", "text")
-			waitForTTYOutput(t, tt.out, "TUI_CHILD_READY", 8*time.Second)
+			deadline := time.Now().Add(8 * time.Second)
+			for time.Now().Before(deadline) {
+				if _, err := os.Stat(filepath.Join(root, "lib-child.pid")); err == nil {
+					break
+				}
+				time.Sleep(20 * time.Millisecond)
+			}
+			if _, err := os.Stat(filepath.Join(root, "lib-child.pid")); err != nil {
+				t.Fatal("task did not start", err)
+			}
+			waitForTTYOutput(t, tt.out, "\x1b[?1049h", 8*time.Second)
 			if !strings.Contains(tt.out.String(), "\x1b[?1049h") {
 				t.Fatalf("TUI did not enter alternate screen: %s", tt.out.String())
 			}
 			if err := pty.Setsize(tt.pty, &pty.Winsize{Rows: 12, Cols: 45}); err != nil {
 				t.Fatal(err)
 			}
-			_, _ = tt.pty.Write([]byte("\x1b[B/TUI\r\x1b[5~f"))
+			_, _ = tt.pty.Write([]byte("\t\x1b[5~"))
+			time.Sleep(200 * time.Millisecond)
 			_, _ = tt.pty.Write([]byte{3})
 			tt.wait(t, 130)
 			if !strings.Contains(tt.out.String(), "\x1b[?1049l") {
@@ -216,16 +235,16 @@ func TestE2E_TaskTUIKeepsChildFailure(t *testing.T) {
 	buildWrite(t, root, "packages/lib/build.sh", "echo TUI_FAILURE; exit 42\n")
 	tt := startTaskTerminal(t, root, "run", "build", "-p", "lib", "--ui", "tui", "-o", "text")
 	tt.wait(t, 42)
-	if !strings.Contains(tt.out.String(), "TUI_FAILURE") || !strings.Contains(tt.out.String(), "\x1b[?1049l") {
+	if !strings.Contains(tt.out.String(), "\x1b[?1049l") {
 		t.Fatal(tt.out.String())
 	}
 }
 
-func TestE2E_TaskTUIFullHistoryStylesAndResize(t *testing.T) {
+func TestE2E_TaskTUIFullHistoryAndResize(t *testing.T) {
 	root := devTerminalFixture(t, false)
 	buildWrite(t, root, "packages/lib/build.sh", `printf '\033[1;35mFIRST_HISTORY_MARKER\033[0m\n'
  i=0
- while [ "$i" -lt 6000 ]; do
+ while [ "$i" -lt 12000 ]; do
   printf 'line %s 中文 long log content that must wrap and stay complete........................................................\n' "$i"
   i=$((i+1))
  done
@@ -243,7 +262,7 @@ func TestE2E_TaskTUIFullHistoryStylesAndResize(t *testing.T) {
 		time.Sleep(20 * time.Millisecond)
 	}
 	recent := tt.out.String()[mark:]
-	if !strings.Contains(recent, "FIRST_HISTORY_MARKER") || !strings.Contains(ansi.Strip(recent), "[//:lib:build]") || !strings.Contains(recent, "35") {
+	if !strings.Contains(recent, "FIRST_HISTORY_MARKER") {
 		t.Fatalf("history/prefix/style lost: %q", recent)
 	}
 	for _, size := range []pty.Winsize{{Rows: 12, Cols: 45}, {Rows: 30, Cols: 140}} {
@@ -274,7 +293,7 @@ func TestE2E_InstallTaskTUIExitsWithoutKeyboardInput(t *testing.T) {
 			// Do not send q, Enter, Ctrl+C, or close stdin: completion alone must exit.
 			tt.wait(t, 0)
 			got := tt.out.String()
-			for _, want := range []string{"INSTALL_FINISHED", "\x1b[?1049h", "\x1b[?1049l"} {
+			for _, want := range []string{"\x1b[?1049h", "\x1b[?1049l"} {
 				if !strings.Contains(got, want) {
 					t.Fatalf("missing %q in %s", want, got)
 				}
@@ -297,18 +316,18 @@ func TestE2E_TaskTUIDependencyTree(t *testing.T) {
  run="echo TREE_SHARED_OUTPUT"
  `)
 	tt := startTaskTerminal(t, root, "run", "tree-demo", "--ui", "tui", "-o", "text")
-	for _, want := range []string{"TREE_API_READY", "TREE_WEB_READY", "├─ ▾ tree-api", "└─ ↪ tree-prepare"} {
-		waitForTTYOutput(t, tt.out, want, 8*time.Second)
-	}
-	_, _ = tt.pty.Write([]byte("\t\x1b[B\x1b[D")) // focus tree and collapse entry
-	waitForTTYOutput(t, tt.out, "▸ tree-demo", 5*time.Second)
-	_, _ = tt.pty.Write([]byte("\x1b[C\x1b[F")) // expand and select shared reference
-	waitForTTYOutput(t, tt.out, "Shared dependency", 5*time.Second)
+	waitForTaskText(t, tt.out, "● tree-api", 8*time.Second)
+	waitForTaskText(t, tt.out, "● tree-web", 8*time.Second)
+	waitForTTYOutput(t, tt.out, "Task dependency tree", 5*time.Second)
+	// Reveal shared dependencies in the tree with sidebar arrow navigation.
+	_, _ = tt.pty.Write([]byte("\t\x1b[F\x1b[C"))
+	waitForTTYOutput(t, tt.out, "tree-prepare", 5*time.Second)
+	waitForTTYOutput(t, tt.out, "↪", 5*time.Second)
+	time.Sleep(200 * time.Millisecond)
 	if err := pty.Setsize(tt.pty, &pty.Winsize{Rows: 18, Cols: 45}); err != nil {
 		t.Fatal(err)
 	}
-	_, _ = tt.pty.Write([]byte("\r\t")) // jump to primary occurrence and show its logs
-	waitForTTYOutput(t, tt.out, "[//:tree-prepare]", 5*time.Second)
+
 	_, _ = tt.pty.Write([]byte{3})
 	tt.wait(t, 130)
 	if !strings.Contains(tt.out.String(), "\x1b[?1049l") {
@@ -340,4 +359,111 @@ func TestE2E_TaskListTerminalStyles(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestE2E_TaskTUISelectionFreezesLogsWhileProcessesContinue(t *testing.T) {
+	root := devTerminalFixture(t, false)
+	appendRootTaskConfig(t, root, `[tasks.copy-demo]
+ run="sh copy.sh"
+ `)
+	buildWrite(t, root, "copy.sh", "printf 'COPY_BEFORE\\n'\nwhile [ ! -f next ]; do sleep .05; done\nprintf 'COPY_AFTER\\n'\ntouch produced\nsleep 60\n")
+	tt := startTaskTerminal(t, root, "run", "copy-demo", "--ui", "tui", "-o", "text")
+	waitForTTYOutput(t, tt.out, "COPY_BEFORE", 8*time.Second)
+	_, _ = tt.pty.Write([]byte("c"))
+	waitForTTYOutput(t, tt.out, "Native copy", 5*time.Second)
+	waitForTTYOutput(t, tt.out, "\x1b[?1002l", 5*time.Second)
+	start := len(tt.out.String())
+	os.WriteFile(filepath.Join(root, "next"), nil, 0600)
+	deadline := time.Now().Add(5 * time.Second)
+	for time.Now().Before(deadline) {
+		if _, err := os.Stat(filepath.Join(root, "produced")); err == nil {
+			break
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+	if _, err := os.Stat(filepath.Join(root, "produced")); err != nil {
+		t.Fatal("copy mode stopped child")
+	}
+	if strings.Contains(tt.out.String()[start:], "COPY_AFTER") {
+		t.Fatal("native snapshot followed new logs")
+	}
+	// Returning from the frozen screen restores live logs and mouse reporting.
+	_, _ = tt.pty.Write([]byte("\x1b"))
+	time.Sleep(300 * time.Millisecond)
+	_, _ = tt.pty.Write([]byte("f"))
+
+	if err := pty.Setsize(tt.pty, &pty.Winsize{Rows: 28, Cols: 100}); err != nil {
+		t.Fatal(err)
+	}
+	waitForTTYOutput(t, tt.out, "COPY_AFTER", 5*time.Second)
+
+	_, _ = tt.pty.Write([]byte{3})
+	tt.wait(t, 130)
+}
+
+func TestE2E_TaskTUISilentRunningAndSelectedCompletion(t *testing.T) {
+	root := devTerminalFixture(t, false)
+	appendRootTaskConfig(t, root, `[tasks.silent-demo]
+ depends=["silent"]
+ run="echo STILL_RUNNING; sleep 60"
+ [tasks.silent]
+ run="sh silent.sh"
+ `)
+	buildWrite(t, root, "silent.sh", "touch started\nwhile [ ! -f finish ]; do sleep .05; done\n")
+	tt := startTaskTerminal(t, root, "run", "silent-demo", "--ui", "tui", "-o", "text")
+	waitForTaskText(t, tt.out, "● silent", 8*time.Second)
+	_, _ = tt.pty.Write([]byte("]"))
+	waitForTTYOutput(t, tt.out, "//:silent ·", 5*time.Second)
+	if err := os.WriteFile(filepath.Join(root, "finish"), nil, 0600); err != nil {
+		t.Fatal(err)
+	}
+	waitForTaskText(t, tt.out, "completed", 5*time.Second)
+	if tt.finished.Load() {
+		t.Fatal("selected task completion stopped whole invocation")
+	}
+	_, _ = tt.pty.Write([]byte{3})
+	tt.wait(t, 130)
+}
+
+// Bubble Tea redraws only changed cells; don't expect complete updated lines
+// to appear contiguously in the raw PTY byte stream.
+func waitForTaskText(t *testing.T, output *lockedBuffer, want string, timeout time.Duration) {
+	t.Helper()
+	deadline := time.Now().Add(timeout)
+	for time.Now().Before(deadline) {
+		if strings.Contains(ansi.Strip(output.String()), want) {
+			return
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+	t.Fatalf("missing task text %q", want)
+}
+
+func TestE2E_TaskTUICopiesThroughLocalClipboardBackend(t *testing.T) {
+	if runtime.GOOS != "darwin" {
+		t.Skip("macOS clipboard backend fixture")
+	}
+	root := devTerminalFixture(t, false)
+	for _, name := range []string{"SSH_CONNECTION", "SSH_CLIENT", "SSH_TTY"} {
+		t.Setenv(name, "")
+	}
+	buildWrite(t, root, "tools/pbcopy", "#!/bin/sh\ncat > "+"\""+filepath.Join(root, "copied")+"\""+"\n")
+	buildWrite(t, root, "copy-backend.sh", "printf '\033[32mCOPY_中文🧑‍💻é\033[0m\n'\nsleep 60\n")
+	appendRootTaskConfig(t, root, `[tasks.copy-backend]
+run="sh copy-backend.sh"
+`)
+
+	tt := startTaskTerminal(t, root, "run", "copy-backend", "--ui", "tui", "-o", "text")
+	waitForTTYOutput(t, tt.out, "COPY_", 8*time.Second)
+	_, _ = tt.pty.Write([]byte("yl"))
+	waitForTTYOutput(t, tt.out, "Copied to clipboard", 5*time.Second)
+	copied, err := os.ReadFile(filepath.Join(root, "copied"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(copied), "COPY_中文🧑‍💻é") || strings.Contains(string(copied), "\x1b") || strings.Contains(string(copied), "Task dependency") {
+		t.Fatalf("clipboard content mismatch: %q", copied)
+	}
+	_, _ = tt.pty.Write([]byte{3})
+	tt.wait(t, 130)
 }

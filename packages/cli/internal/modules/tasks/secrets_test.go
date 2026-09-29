@@ -24,6 +24,7 @@ import (
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/core/workspace"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/modules/dependencies"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/i18n"
+	process "github.com/torchstellar-team/one-cli/packages/cli/internal/platform/process"
 	runtimeport "github.com/torchstellar-team/one-cli/packages/cli/internal/ports/runtime"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/ports/secrets"
 )
@@ -109,6 +110,11 @@ func testNativeMiseProjectEnvironmentsAndCache(t *testing.T, symlinked bool) {
 	if value := os.Getenv("ONE_TEST_MISE_BINARY"); value != "" {
 		binary = value
 	}
+	compose, err := exec.Command(binary, "which", "process-compose", "--tool", "process-compose@1.122.0").Output()
+	if err != nil {
+		t.Skipf("official pinned Process Compose is required: %v", err)
+	}
+	t.Setenv("PATH", filepath.Dir(strings.TrimSpace(string(compose)))+string(os.PathListSeparator)+os.Getenv("PATH"))
 	w := taskWorkspace(t)
 	if symlinked {
 		// Reproduce macOS /var -> /private/var path aliases on other platforms.
@@ -158,7 +164,7 @@ func testNativeMiseProjectEnvironmentsAndCache(t *testing.T, symlinked bool) {
 	if symlinked {
 		selectedLoader = &fixtureBatchLoader{fixtureLoader: loader}
 	}
-	service := Service{Provider: nativeProvider{binary}, Loaders: secrets.MustRegistry(selectedLoader), Prepare: func(context.Context, dependencies.Input) error { return nil }}
+	service := Service{Provider: nativeProvider{binary}, Loaders: secrets.MustRegistry(selectedLoader), Prepare: func(context.Context, dependencies.Input) error { return nil }, WorkerCommand: testWorkerCommand}
 	opts := Options{Name: "build", UI: "stream", Cache: "off", Jobs: 2}
 	for round := 0; round < 3; round++ {
 		if round == 1 {
@@ -254,7 +260,7 @@ func testNativeMiseProjectEnvironmentsAndCache(t *testing.T, symlinked bool) {
 			t.Fatalf("alias lost environment: %s %s", out.String(), stderr.String())
 		}
 	})
-	t.Run("profile replacement fails before running without binding", func(t *testing.T) {
+	t.Run("profile replacement retains the project snapshot", func(t *testing.T) {
 		t.Setenv("MISE_ENV", "one-test")
 		writeTaskFile(t, w.Root(), "mise.one-test.toml", string(local))
 		t.Cleanup(func() { os.Remove(filepath.Join(w.Root(), "mise.one-test.toml")) })
@@ -264,8 +270,8 @@ func testNativeMiseProjectEnvironmentsAndCache(t *testing.T, symlinked bool) {
 		}
 		var out, stderr bytes.Buffer
 		_, err = service.Execute(context.Background(), w, plan, opts, nil, &out, &stderr)
-		if err == nil || strings.Contains(out.String()+stderr.String(), "ENV_HASH=") {
-			t.Fatal("profile replacement launched an unbound command", err)
+		if err != nil || !strings.Contains(out.String()+stderr.String(), "ENV_HASH="+hashValues(loader.values["apps/web"])) {
+			t.Fatalf("profile lost environment: %v %s %s", err, out.String(), stderr.String())
 		}
 	})
 	t.Run("native project scopes with identical task names", func(t *testing.T) {
@@ -348,14 +354,23 @@ func TestEnvironmentSessionContainsNoValuesOnDiskAndCleansUp(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer session.close()
-	raw, err := os.ReadFile(filepath.Join(session.dir, "bindings.toml"))
+	config, err := composeConfig(plan, testWorkerCommand)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if strings.Contains(string(raw), "fake-web") || strings.Contains(string(raw), "web-only") {
-		t.Fatal("values written to disk")
+	for _, values := range loader.values {
+		for _, value := range values {
+			if value != "" && bytes.Contains(config, []byte(value)) {
+				t.Fatal("values written into config")
+			}
+		}
 	}
-	endpoint := envValue(session.env, "ONE_ENV_ENDPOINT") + "/task-0"
+	broker, err := newInvocationBroker(map[string]leafSpec{"task-0": {Task: plan.Tasks[0], Environment: session.env}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer broker.close()
+	endpoint := broker.endpoint + "/task-0"
 	r, err := http.Get(endpoint)
 	if err != nil {
 		t.Fatal(err)
@@ -364,15 +379,13 @@ func TestEnvironmentSessionContainsNoValuesOnDiskAndCleansUp(t *testing.T) {
 	if r.StatusCode != http.StatusUnauthorized {
 		t.Fatal("unauthenticated request accepted")
 	}
-	session.close()
-	if _, err = os.Stat(session.dir); !os.IsNotExist(err) {
-		t.Fatal("context not cleaned")
-	}
+	broker.close()
 	client := http.Client{Timeout: time.Second}
 	if r, err := client.Get(endpoint); err == nil {
 		r.Body.Close()
 		t.Fatal("broker remained open")
 	}
+
 }
 
 // Load deliberately fails so a regression to single-project loading is visible.
@@ -437,4 +450,19 @@ func TestEnvironmentBatchFailureLeavesNoSession(t *testing.T) {
 			}
 		})
 	}
+}
+
+func testWorkerCommand(id string) []string {
+	return []string{os.Args[0], "-test.run=^TestProcessLeafChild$", "--", id}
+}
+func TestProcessLeafChild(t *testing.T) {
+	if os.Getenv("ONE_PROCESS_ENDPOINT") == "" {
+		return
+	}
+	err := RunProcessLeaf(context.Background(), os.Args[len(os.Args)-1], os.Stdin, os.Stdout, os.Stderr)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(process.ExitCode(err))
+	}
+	os.Exit(0)
 }

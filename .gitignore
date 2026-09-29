@@ -60,3 +60,4 @@ bin-go/
 /packages/templates/**/pnpm-lock.yaml
 /packages/templates/**/go.work.sum
 .one-run-*/
+/.cache

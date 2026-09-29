@@ -92,7 +92,7 @@ one add nestjs-api --name api
 | `one env` | Review and manage environment variables |
 | `one login` | Sign in to Infisical with your browser |
 | `one serve` | Inspect workspaces, manage the current account and shared credentials |
-| `one run [task]` | Discover and execute workspace tasks through mise |
+| `one run [task]` | Discover static mise.toml tasks and execute them through Process Compose |
 | `one exec <project> -- <command>` | Execute a command with the selected project environment |
 
 `dev`, `build`, `test`, and `lint` are task names. They all use the same shorthand: `one <task>` → `one run <task>`. For example, `one dev` runs `one run dev`, and `one build -p web` runs `one run build -p web`.
@@ -137,7 +137,7 @@ If you want to work on One CLI itself, the repository is organized like this:
 | `packages/cli` | The One CLI app and its public Go packages |
 | `packages/kernel` | Shared Go kernel |
 | `packages/templates` | Starters used by `one add` |
-| `mise.toml` | Workspace scheduling, tools, and artifact cache declarations |
+| `mise.toml` | Task definitions and tool versions |
 | `apps/docs` | Documentation website |
 | `apps/dashboard` | Local workspace, account, and global-variable Dashboard opened by `one serve` |
 | `assets` | Brand assets, including the logo |
@@ -169,7 +169,7 @@ one serve                       # Manage this repository in the Dashboard
 
 `one run dev -p dashboard` starts the Vite UI; run `one run dev -p cli` in another terminal for its API, or use the combined `one run dev` task. Both the development API and `one serve` use this repository as their workspace. No Infisical binding is required to build, test, or start these projects.
 
-Root tasks remain native mise commands, so CI and first-time installation can still use `mise run build`, `mise run check`, and `mise run install`. Project tasks come from package scripts and Taskfiles. Only the root `mise.toml` is used: project tasks are namespaced as `cli:build` or `dashboard:dev` and select their directory with `dir`. CLI tasks declare their embedded-resource prerequisites there; CLI tests also build the binary used by E2E tests. Run `one init mise` after changing the project task catalogue to refresh the tracked native tasks. Running or listing tasks does not regenerate configuration. Dashboard discovers access links from process output; dev commands live exclusively in mise.
+Root tasks remain native mise commands, so CI and first-time installation can still use `mise run build`, `mise run check`, and `mise run install`. Project tasks come from package scripts and Taskfiles. Only the root `mise.toml` is used: project tasks are namespaced as `cli:build` or `dashboard:dev` and select their directory with `dir`. CLI tasks declare their embedded-resource prerequisites there; CLI tests also build the binary used by E2E tests. Run `one init mise` after changing the project task catalogue to refresh the tracked native tasks. Running or listing tasks does not regenerate configuration. Dashboard discovers access links from process output; dev commands are defined in mise.toml and executed by Process Compose.
 
 Read [CONTRIBUTING.md](./CONTRIBUTING.md) before opening a pull request.
 
@@ -194,9 +194,15 @@ one run test -p api               # Explicit task entry
 one test -p api                   # Same task through shorthand
 one dev -p web -p api             # Concurrent development services
 one dev -p web --ui raw           # Native terminal input for the selected service
-one build -p web -p api --concurrency 4
+one build -p web -p api
 ```
 
-All tasks use mise for scheduling, including development and user overrides. Use `one run dev --ui tui` for grouped task logs or `--ui stream` for streaming output. In a terminal, automatic mode selects TUI for a task graph with multiple entries. Save `"taskUI": "tui"` or `"taskUI": "stream"` in `~/.config/one/preferences.json` for a personal default. Ctrl+C or a task failure stops the invocation and its child processes. TUI preserves task prefixes and original log styles, wraps long lines on resize, and keeps the complete session history for scrolling and search. Use the wheel or ↑/↓ to scroll, Tab to focus the dependency tree, Home/End to jump, and `f` to follow. The tree follows task dependencies, supports ←/→ and Enter to collapse/expand, and marks shared references with `↪`. Below 70 columns, Tab switches between a full-width tree and logs. When mise finishes, TUI automatically restores the terminal and returns the original exit status; no keypress is required. Raw mode preserves terminal input and disables artifact caching. Structured results stay on stdout and child logs go to stderr.
+One uses official **Process Compose 1.122.0** for scheduling; mise installs tools and prepares version environments. `one run dev --ui tui` opens One's interface: running tasks above a complete dependency tree, with logs on the right. Tasks stay in the tree while running and retain their result after completion. No service declarations are needed. Tab switches between the sidebar and logs; arrows navigate, `/` searches, and `f` follows the latest output. Use `--ui stream` for streaming output.
 
-Concurrency is allocated automatically for every task name; `--concurrency` sets an explicit limit. Local Node dependencies build before their consumers. `one run build --cache off --force` always executes the build. See the [task guide](apps/docs/content/docs/en/run.md) for configuration, cache declarations, and Actions examples.
+Log prefixes use compact `[task name] body` formatting without name padding and receive consistent task colors. Log bodies retain their original styling and indentation. stdout and stderr share the same task color; copies contain plain text.
+
+Drag in the log pane and press `y` to copy the selection. With no selection, `y` opens a menu: `v` copies visible logs, `n` the full task name, and `l` log history (or current search matches). `c` shows a fixed, full-width log snapshot and releases mouse reporting, so VS Code can select normally and use Cmd+C. Esc returns to the interface. Tasks continue during copying. Local clipboard writes report their result; remote OSC 52 requests report only that a request was sent. One retains the complete session log in a private temporary journal, removed when execution ends.
+
+Ctrl+C or a task failure stops the invocation and its child processes. The terminal restores automatically when execution ends. Raw mode requires a graph with one executable task and preserves terminal input. Structured results stay on stdout and child logs go to stderr. Save `"taskUI": "tui"` or `"taskUI": "stream"` in `~/.config/one/preferences.json` for a personal default.
+
+Process Compose has no global concurrency limit. One rejects `--concurrency` values below the number of command tasks. `one run build --force` bypasses timestamp freshness; artifact caching is disabled. Unsupported selected task fields fail before commands start. See the [task guide](apps/docs/content/docs/en/run.md) for the static compatibility subset, variables, and terminal behavior.

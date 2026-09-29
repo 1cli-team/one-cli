@@ -40,6 +40,11 @@ func buildFixture(t *testing.T, mise bool) string {
 	if err != nil {
 		t.Skip("real mise is required for task integration")
 	}
+	compose, err := exec.Command(misePath, "which", "process-compose", "--tool", "process-compose@1.122.0").Output()
+	if err != nil {
+		t.Skipf("official pinned Process Compose is required: %v", err)
+	}
+	composePath := strings.TrimSpace(string(compose))
 	root := t.TempDir()
 	// mise does not discover a monorepo rooted at HOME.
 	isolateHome(t, t.TempDir())
@@ -82,6 +87,9 @@ toolchain = "node"
 	if err := os.Symlink(misePath, fixtureMise); err != nil {
 		t.Fatal(err)
 	}
+	if err := os.Symlink(composePath, filepath.Join(root, "tools/process-compose")); err != nil {
+		t.Fatal(err)
+	}
 	t.Setenv("PATH", filepath.Join(root, "tools")+string(os.PathListSeparator)+os.Getenv("PATH"))
 	t.Setenv("ONE_MISE_BINARY", fixtureMise)
 	buildWrite(t, root, "mise.toml", "[tools]\nnode=\"system\"\npnpm=\"system\"\n")
@@ -115,7 +123,7 @@ func TestE2E_BuildOrdersProjectsAndKeepsStructuredOutputClean(t *testing.T) {
 		t.Fatal(result)
 	}
 	for _, task := range result.Tasks {
-		if task.Status != "unknown" {
+		if task.Status != "succeeded" {
 			t.Fatal(task)
 		}
 	}

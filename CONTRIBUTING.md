@@ -14,12 +14,12 @@ mise run install                # 打包 Dashboard + CLI，再创建本地启动
 one --version                   # 验证装好
 ```
 
-工具版本以根 `mise.toml` 为准：Go 1.27.1、Node 24.15.0、pnpm 10.14.0、Task 3.53.1。工作区由 mise 调度，Go 子项目使用 Task，Node 项目使用 pnpm。
+工具版本以根 `mise.toml` 为准：Go 1.27.1、Node 24.15.0、pnpm 10.14.0、Task 3.53.1、Process Compose 1.122.0。通过 One 执行时由官方 Process Compose 调度，mise 负责工具环境，Go 子项目使用 Task，Node 项目使用 pnpm。
 
 > **fresh-clone 提示**：`packages/cli/internal/resources/bundled/` 整个目录是 gitignore 的——
 > registry / templates / dashboard dist 都由 `mise run sync-bundled` +
 > `mise run sync-web` 按需重建。这些任务作为 `mise run vet` / `test` / `build` 的依赖自动运行；
-> mise 程序不嵌入 One 发布文件；贡献者先安装 mise，再使用根任务。
+> One 使用官方 Process Compose；贡献者先安装 mise，再使用根任务准备和构建资源。
 > 第一次 `mise run install` 会准备依赖并构建 Dashboard；之后输入未变时复用 Dashboard 产物缓存。
 > 如果你直接跑 `go build` 而不走 mise，
 > 会看到 `pattern all:_templates: no matching files found` 这种报错——跑一次
@@ -55,9 +55,9 @@ one serve                       # 在 Dashboard 中管理当前真实仓库
 
 单独运行 `one run dev -p dashboard` 只启动 Vite 前端，需要在另一终端运行 `one run dev -p cli` 提供 API；通常直接使用联合任务 `one run dev`。开发 API 与 `one serve` 都管理当前真实仓库。构建、测试和开发不需要绑定 Infisical。
 
-`one run dev --ui tui` 显示分组日志界面，`--ui stream` 使用流式输出。交互终端中的多任务默认使用 TUI；也可在 `~/.config/one/preferences.json` 设置 `"taskUI": "tui"` 或 `"taskUI": "stream"`。CI 和结构化输出会回落 stream。所有任务名称共用自动并发策略，`--concurrency` 可指定上限。
+`one run dev --ui tui` 使用 One 的运行中列表、完整任务树和日志界面，官方 Process Compose 以 headless 模式调度；`--ui stream` 使用流式输出。Tab 切换焦点，方向键展开/定位；拖选后 y 复制，c 关闭鼠标报告并固定全宽日志供终端原生复制，Esc 返回。无需声明 service。状态来自实际命令开始/结束事件，不从输出猜测。多任务交互终端默认 TUI，CI 和结构化输出使用 stream；全部完成后自动关闭，Ctrl+C 取消并恢复终端。完整日志保存在私有临时 journal，不受上游 10,000 行缓存限制。
 
-TUI 保留任务前缀及日志原有样式，长行随窗口缩放自动换行，完整会话历史支持滚动和搜索。滚轮或 ↑/↓ 滚动，Tab 切换依赖树焦点，Home/End 跳转首尾，`f` 恢复跟随。依赖树以本次入口任务为根，←/→ 和 Enter 展开或折叠，共享依赖显示 `↪` 引用；不足 70 列时 Tab 切换全宽依赖树与日志。mise 执行结束后，TUI 自动恢复终端并返回原退出码，无需按键。
+mise 安装固定的 Process Compose 1.122.0，One 生成每次运行的私有配置；变量通过内存认证通道传给叶子进程。无需 Rust、补丁或嵌入调度器构建。首版仅支持静态任务子集，能力和限制见 [one run 文档](apps/docs/content/docs/zh/run.md)。Process Compose 没有全局并发上限，不再承诺任意 `--concurrency` 生效。
 
 根 `mise.toml` 继续维护原生任务，供首次安装、CI 和 Git hooks 使用：
 
@@ -70,7 +70,7 @@ mise run install                # 打包并安装本地启动器，无需预先�
 mise run pre-push               # 推送前检查，包含 race 测试
 ```
 
-项目任务来自各自的 `package.json` 或 `Taskfile.yml`，只在根 `mise.toml` 登记 `cli:build`、`dashboard:dev` 这样的任务入口，并通过 `dir` 指定子项目目录。根文件也声明 Dashboard、模板和嵌入资源的前置步骤，CLI 测试会先构建 E2E 使用的二进制。新增或修改任务目录后，运行 `one init mise` 同步这些受版本控制的原生任务。执行和查询不会重新生成配置；Dashboard 从进程输出发现访问地址，dev 命令只由 mise 定义。
+项目任务来自各自的 `package.json` 或 `Taskfile.yml`，只在根 `mise.toml` 登记 `cli:build`、`dashboard:dev` 这样的任务入口，并通过 `dir` 指定子项目目录。根文件也声明 Dashboard、模板和嵌入资源的前置步骤，CLI 测试会先构建 E2E 使用的二进制。新增或修改任务目录后，运行 `one init mise` 同步这些受版本控制的原生任务。执行和查询不会重新生成配置；Dashboard 从进程输出发现访问地址，dev 命令在 mise.toml 中定义，由 Process Compose 执行。
 
 ## 提交流程
 
@@ -101,7 +101,7 @@ CI；`mise run pre-push` 额外运行 Go race detector。远端五项检查会�
 
 ### mise 运行时
 
-One 发布文件不包含 mise 程序或压缩包。实际运行时优先使用 `ONE_MISE_BINARY`，其次使用 PATH 中兼容的 mise，否则复用或从官方 GitHub Release 下载固定版本。最低兼容版本和托管版本分别维护；系统或托管程序被删除后，下一次需要 runtime 时重新解析并按需恢复。
+工具环境优先使用 `ONE_MISE_BINARY`，其次使用 PATH 中兼容的 mise，否则复用或下载官方固定版本。所有 UI 模式的任务调度均使用官方 Process Compose；mise 只准备工具环境，旧的托管事件扩展和 Rust 构建流程已移除。最低兼容版本和托管版本分别维护；程序删除后，下一次使用时按需恢复。
 
 托管程序位于 `$XDG_DATA_HOME/one/runtimes/mise/<version>/<platform>/`，默认 `~/.local/share/one/runtimes/mise/`；工具、配置、状态和缓存分别使用对应 XDG 根下的 `one/mise/`。One 在托管子进程中设置四个 `MISE_*_DIR`，并关闭自动更新。外部 mise 沿用原目录。旧版 One 缓存中校验通过的同版本程序可以离线迁移，原缓存保留。
 

@@ -17,10 +17,11 @@ func CancelProcessTree(cmd *exec.Cmd) {
 		if cmd.Process == nil {
 			return os.ErrProcessDone
 		}
-		err := syscall.Kill(-cmd.Process.Pid, syscall.SIGKILL)
-		if err == syscall.ESRCH {
-			return os.ErrProcessDone
-		}
+		// mise exec can put the command in another process group. Snapshot
+		// descendants before terminating mise, then also kill the original
+		// group to cover children spawned during the snapshot.
+		err := StopTree(cmd.Process)
+		_ = syscall.Kill(-cmd.Process.Pid, syscall.SIGKILL)
 		return err
 	}
 	cmd.WaitDelay = 5 * time.Second

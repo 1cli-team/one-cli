@@ -45,6 +45,10 @@ func fileTasks(root, directory, project string, includes []string) (map[string]T
 					return nil, err
 				}
 				task.Run = fields["run"]
+				if runtime.GOOS == "windows" && hasRun(fields["run_windows"]) {
+					task.Run = fields["run_windows"]
+				}
+				task.File = ""
 				out[task.Name] = task
 			}
 			continue
@@ -103,29 +107,25 @@ func fileTasks(root, directory, project string, includes []string) (map[string]T
 }
 
 func fileTaskMetadata(root, directory, project, name, path string, raw []byte) (Task, error) {
-	var fields struct {
-		Description string   `toml:"description"`
-		Dir         string   `toml:"dir"`
-		Depends     []string `toml:"depends"`
-		Post        []string `toml:"depends_post"`
-		Sources     []string `toml:"sources"`
-		Outputs     []string `toml:"outputs"`
-		Interactive bool     `toml:"interactive"`
-		Raw         bool     `toml:"raw"`
-		Cache       struct {
-			Enabled bool `toml:"enabled"`
-		} `toml:"cache"`
-	}
-	if err := toml.Unmarshal(raw, &fields); err != nil {
+	metadata := map[string]any{}
+	if err := toml.Unmarshal(raw, &metadata); err != nil {
 		return Task{}, err
 	}
-	if strings.Contains(fields.Dir, "{{") || len(fields.Post) > 0 {
-		return Task{}, i18n.Errorf("tasks.dynamic_config", path)
-	}
-	dir := filepath.Join(root, directory, fields.Dir)
-	if filepath.IsAbs(fields.Dir) {
-		dir = fields.Dir
-	}
 	source, _ := filepath.Rel(root, path)
-	return Task{Name: "//" + directory + ":" + name, Project: project, Operation: name, Directory: dir, Source: filepath.ToSlash(source), Description: fields.Description, Run: []string{path}, Dependencies: fields.Depends, Sources: fields.Sources, Outputs: fields.Outputs, Cached: fields.Cache.Enabled, Interactive: fields.Interactive, Raw: fields.Raw, Status: "unknown"}, nil
+	task := Task{Name: "//" + directory + ":" + name, Project: project, Operation: name, Directory: filepath.Join(root, directory), Source: filepath.ToSlash(source), File: path, Status: "unknown"}
+	validateTaskFields(&task, metadata)
+	if dir, ok := metadata["dir"].(string); ok {
+		task.Directory = filepath.Join(root, directory, dir)
+		if filepath.IsAbs(dir) {
+			task.Directory = dir
+		}
+	}
+	task.Description, _ = metadata["description"].(string)
+	task.Interactive, _ = metadata["interactive"].(bool)
+	task.Raw, _ = metadata["raw"].(bool)
+	task.Dependencies, _ = stringList(metadata["depends"])
+	task.waitFor, _ = stringList(metadata["wait_for"])
+	task.Sources, _ = stringList(metadata["sources"])
+	task.Outputs, _ = stringList(metadata["outputs"])
+	return task, nil
 }

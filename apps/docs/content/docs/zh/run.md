@@ -1,35 +1,35 @@
 ---
 title: one run
-description: 执行原生 mise 任务，注入项目环境，并选择 stream 或 TUI 输出。
+description: 使用官方 Process Compose 和 mise 工具环境执行工作区任务。
 ---
 
-`one run` 只执行 mise 中实际存在的任务。One 负责项目选择、依赖准备、项目环境和输出展示；单个 mise 进程负责调度任务图并运行原生命令。
+`one run` 从 `mise.toml` 读取支持的静态任务，准备依赖和项目变量，再交给官方 **Process Compose 1.122.0** 调度。mise 继续负责安装工具和准备版本环境。One 不修改 mise，也不另写一套任务调度器。
 
 ```sh
 one run
 one run --verbose
 one run --list -p web -o json
-one run dev
-one run build -p web -p api
+one run dev --ui tui
+one run build -p web --ui stream
 one run test -p api -- -run TestHandler
 one run build --dry-run -o json
-one run dev --ui tui
-one run dev --ui stream
 ```
 
-不带任务名时，终端列表按工作区入口、项目命名空间分组，默认只展示任务名与描述。根任务省略 `//:` 前缀，显示的名字可直接用于 `one run <任务名>`。`one run -p web` 筛选项目相关任务，`one run --verbose` 显示来源、缓存及交互设置。窄终端自动换行；`-o json` / `-o yaml` 继续返回完整任务数据。
+`one <任务名>` 是 `one run <任务名>` 的简写，内置命令优先。终端列表省略根任务的 `//:`，项目任务使用 `web:build` 等名称。缺少任务时报错；执行与查询不生成缺失任务。调整 package scripts 或 Taskfile 后，显式运行 `one init mise` 同步定义。
 
-## 任务名与参数
+## 工具安装
 
-`one <task>` 保留为 `one run <task>` 的通用简写，没有独立内置的 dev 命令。`one run dev` 要求根 dev 任务存在；`one run dev -p web` 要求该项目的对应任务存在。缺失时直接报错，不回退到 start、start:dev、Go 目录或 manifest 命令。
+One 复用版本恰好为 1.122.0 的 Process Compose 程序。没有匹配版本时，调用 mise 安装 `process-compose@1.122.0`。首次运行需要网络，后续可复用已安装版本。使用官方程序，无需补丁或 Rust 构建。
 
-内置命令优先：`one env` 管理环境，`one run env` 执行同名 mise 任务。使用 `-- --help` 将帮助参数传给子命令。`--` 后的参数只传给一个选中任务；多项目选择不接受透传参数。`:::` 保留给 mise 分隔任务。
+```sh
+mise use process-compose@1.122.0
+```
 
-`one exec web -- pnpm add axios` 使用项目的 mise 工具环境和 One 变量运行任意命令，不选择任务图，也不安装应用依赖。
+工作区可以在 `[tools]` 中声明 `process-compose = "1.122.0"`。One 为每次调用生成临时配置，用户无需维护 `process-compose.yaml`。原生 HTTP API 关闭，不占用 8080 端口。
 
-## 原生配置
+## 支持的任务配置
 
-创建工作区、添加项目以及显式执行 `one init mise` 时，One 将已有包脚本和 Taskfile 任务映射到根配置：
+创建项目和 `one init mise` 仍将 package scripts 与 Taskfile 映射到根任务：
 
 ```toml
 [tasks."web:dev"]
@@ -44,85 +44,77 @@ run = "task dev --"
 depends = ["web:dev", "api:dev"]
 ```
 
-执行、任务列表、Dashboard 查询和 dry-run 都不会补出缺失任务或刷新工作区配置。新增包脚本后，显式更新 mise 声明：
+首版支持以下静态子集：
 
-```sh
-one init mise --dry-run -o json
-one init mise
-```
+| 配置 | 行为 |
+| --- | --- |
+| 字符串或字符串数组 `run` | 按顺序执行 shell 命令；任一步失败即结束任务。 |
+| `depends` | 选择依赖，成功完成后才启动当前任务；共享依赖只运行一次。 |
+| `wait_for` | 仅等待本次已选中的匹配任务成功，不额外选择任务。 |
+| `dir`、别名、项目作用域 | 执行前解析工作目录和规范任务名称。 |
+| 可执行文件任务、本地 TOML includes | 查询只读取定义，不执行脚本。 |
+| 普通任务 `env`、取消变量、`tools`、`shell` | 图启动前准备各任务工具和环境。 |
+| `sources`、`outputs`、`--force` | 时间戳新鲜度判断，支持递归 `**` glob；不恢复产物缓存。 |
+| `raw`、`interactive`、`--ui raw` | 仅包含一个可执行任务的图可以独占终端。 |
 
-保留文件末尾的 `# one:managed-v1` 标记以支持增量生成。用户编辑和注释会被保留；同一生成字段的冲突修改会返回 `MISE_CONFIG_CONFLICT`。已有项目 mise 配置、别名、`.mise/tasks/` 可执行脚本及 `[task_config] includes` 继续可用。
+任务模板、带参数依赖、`depends_post`、任务环境插件、usage 参数规范和可执行缓存输入暂不支持。One 在**启动任务命令前**指出所选定义与不支持的字段，不回退到 mise 任务调度。未选中的任务可以保留这些字段。这是明确的兼容子集，不是完整 mise 任务兼容实现。
 
-列表和实际执行读取 mise 的有效任务目录。dry-run 使用静态解析，不启动 mise、不安装工具、不获取远端变量，也不执行缓存输入。无法静态解析的动态配置需要通过正常的 mise 检查确认。
+任务命令可以调用 pnpm、Go、Task 等叶子工具。如果已有脚本本身调用 `mise run`，它仍会显式使用嵌套调度器；完整迁移工作区时需要调整这些脚本调用。
 
-生成的任务可以直接用 `mise run` 执行，不再调用 One 内部命令。直接运行 mise 时使用它自己的环境，不通过 One 获取 Infisical 变量。
+本地配置和 profile 通过静态方式读取，查询、正常规划与 dry-run 使用同一任务图。dry-run 不安装工具、读取远端变量、计算模板或执行缓存输入。
 
-## 项目变量
+保留 `# one:managed-v1` 增量生成标记；生成字段冲突仍报 `MISE_CONFIG_CONFLICT`。仓库首次安装、CI 和 Git hooks 可以独立继续使用原版 `mise run`。
 
-`one run` 按任务实际工作目录确定项目归属，嵌套项目采用最长路径匹配。根任务即使叫 `serve-backend`，只要声明 `dir = "services/api"`，也能取得 api 的变量。根聚合任务不会合并各子项目的变量。
+## 参数与 raw 模式
 
-配置 Infisical 后，One 每次运行只为每个项目获取一次变量快照。`--env` 选择已声明环境，默认 `dev`；远程目录从项目路径推导，并合并共享及祖先目录变量。各任务只接收自身项目的快照，并覆盖同名 shell / mise 变量。变量值保留在内存中，通过带会话认证的回环服务传递，不写入 TOML、`.env` 或 context JSON。
+`--` 后的参数只传给一个入口任务的最后一条命令，或直接传给文件任务，不传给依赖。多个入口同时传参时报错。`:::` 继续保留。
 
-任务启动前，One 会在 stderr 显示任务准备、依赖检查、环境变量加载和绑定校验的进度。同一次调用中，共享的 Infisical 目录只读取一次，最多并发请求 6 个目录。变量仍按根目录到项目目录的顺序合并，更具体的目录优先；下次调用会重新读取最新值。取消启动会同时取消尚未完成的环境请求，加载失败时任务不会启动。
+POSIX shell 参数保留空格、引号、中文和元字符。在 Windows 上，文件任务支持参数；带参数的内联命令需要显式 PowerShell shell。cmd.exe 参数转发在执行前拒绝，避免静默展开参数内容。
 
-One 内置 mise 环境适配器，在对应配置作用域创建临时 `.one-run-*/bindings.toml`。文件只含任务引用，不含变量值，退出时清理。新工作区和 `one init mise` 会将 `.one-run-*/` 加入 Git 忽略规则。用户无需维护逐任务插件配置行。
+`--ui raw` 使用 Process Compose 前台执行，保留一个可执行任务的 stdin/stdout/stderr。包含多个可执行任务的图使用 stream 或 TUI。`one exec web -- pnpm add axios` 仍用于带项目工具环境和 One 变量的任意命令。
 
-启动前会核对命令、目录、依赖和环境绑定。如果 profile 在运行时元数据之后重新定义整个任务，可能覆盖绑定，One 会在启动前报错。此时将命令保留在基础或 local 配置中，让 profile 只调整环境设置。
+## 项目变量与结果
 
-## 缓存与并行
+任务归属按实际工作目录匹配最深的已注册项目。根聚合任务不合并各子项目变量。
 
-通过 One 执行任务时，产物缓存保持关闭，不提供 `--cache` 参数。新工作区和 `one init mise` 不再开启 mise 实验性功能，也不再根据模板推导缓存输入和输出。用户手动编写的 mise 配置会保留。
+每次运行批量读取一次不可变的项目变量快照，`--env` 选择已声明环境，默认 `dev`。变量覆盖同名 shell、mise 和任务变量；每个叶子只接收自己的项目快照，包含空值。后续子进程继承相同环境。
 
-普通的 `sources` / `outputs` 新鲜度检查不需要实验性功能。对输入和输出明确的任务，可以在 `mise.toml` 中自行声明：
+变量和命令通过本地认证通道交给私有叶子进程。生成的 YAML 只含任务图元数据和 worker 标识，不含注入变量值；不生成环境插件或临时绑定 TOML。运行结束后关闭通道，清理私有配置目录。
+
+启动进度写入 stderr，取消会中断准备与执行。保留失败命令的退出码；SIGINT 和 SIGTERM 分别返回 130、143。任务结果使用 `succeeded`、`failed`、`cancelled`、`cached` 或 `skipped`，未启动的后续任务标记跳过。子进程自行打印变量仍会出现在日志中，One 不过滤子进程输出。
+
+JSON/YAML 计划使用 `one-cli/task-plan/v1`，其中 `runtime: process-compose`；结果使用 `one-cli/task-result/v1`。结构化模式的子进程日志写入 stderr。
+
+## 新鲜度与并发
+
+不使用产物缓存，没有 `--cache` 参数。已有 `cache.enabled` 元数据不会启用产物存储。普通 `sources`、`outputs` 仅在所有输出存在，且不早于输入和任务定义时跳过任务。输入、输出缺失或不可读时执行。路径相对 `dir`，所选任务的输出位置不可重叠。
 
 ```toml
 [tasks."web:build"]
 dir = "apps/web"
 run = "pnpm run build"
-sources = ["src/**/*", "package.json", "tsconfig.json", "../../pnpm-lock.yaml"]
+sources = ["src/**/*", "package.json", "../../pnpm-lock.yaml"]
 outputs = ["dist"]
 ```
 
-注入远端变量的任务及其下游可执行任务会跳过产物缓存和新鲜度检查，并显示简短提示。这样变量更新、删除或变为空字符串时，不会复用旧产物。One 不跨运行缓存密钥快照。
+`--force`、额外参数和 raw 模式绕过新鲜度检查。注入远端变量的任务及其下游也绕过，确保变量轮换、删除或空值不复用旧输出。
 
-```sh
-one run build
-one run build --force
-one run build --concurrency 4
-```
+Process Compose 在依赖允许时启动任务，没有全局并发槽上限。兼容参数 `--concurrency` 会拒绝小于所选命令任务数的上限；正常调度省略此参数即可。
 
-使用 `--force` 可以跳过新鲜度检查，重新执行任务。
+## One TUI 与复制
 
-source / output 路径相对于 `dir`，选中任务的产物位置不能重叠。透传额外命令参数会关闭产物缓存并强制执行。
+`--ui tui` 使用 One 界面，官方 Process Compose 在后台调度。左上按实际启动顺序显示已经开始且尚未结束的任务，无输出任务也会显示；等待启动的任务和纯聚合节点不冒充运行进程。左下保留完整依赖树，包括运行中的任务和已结束的结果。共享依赖用 ↪，等待关系用 ◇。无需声明 service，也无需修改上游工具。
 
-默认按任务图节点数分配并行额度，不对 dev 名称特殊处理。显式并行上限会被保留，常驻前置任务仍遵循 mise 的依赖语义。
+Tab 切换侧栏和日志焦点。侧栏方向键选择、折叠/展开，并将上方任务定位到树中；Enter 展开分支或跳转共享依赖。深层分支默认折叠，上下区域独立滚动，高度保持稳定。选中的运行任务结束后，选择定位到树中同一节点，继续保留日志、搜索和阅读位置。小于 70 列时，Tab 在全宽日志和侧栏之间切换。
 
-## 终端偏好
+日志按区域宽度自动换行。`/` 搜索，Home/End 浏览历史或跟随尾部，`f` 恢复跟随。标题显示选中任务的完整名称；按 `y` 再按 `n` 也可以复制完整名称。
 
-在 `~/.config/one/preferences.json` 中设置可选的 `taskUI`（遵循 `XDG_CONFIG_HOME`）：
+任务日志前缀采用紧凑的 `[任务名] 正文` 格式，不补齐任务名宽度；正文自身的缩进保留。前缀自动从 12 色调色板分配不同颜色，在同一任务图中保持一致，包括 stdout 和 stderr；任务更多时复用颜色。日志正文保留自己的颜色，复制文本去掉 ANSI 样式。环境中显式关闭颜色时，前缀也不着色。
 
-```json
-{
-  "version": 1,
-  "locale": "auto",
-  "taskUI": "tui"
-}
-```
+在日志区域拖选后按 **y** 复制。选择时固定日志画面，后台任务和日志收集继续运行。没有选区时，**y** 打开菜单：**v** 复制可见日志，**n** 复制完整任务名，**l** 复制当前任务日志历史（搜索时只复制匹配记录）。复制去掉 ANSI 和界面装饰，保留 Unicode 和真实换行，软换行不插入额外换行。切换任务清除选区，同一任务的上下入口和共享引用保留选区；窗口缩放重排固定文本。
 
-`taskUI` 接受 `stream` 或 `tui`，`--ui` 覆盖个人偏好。`auto` 在交互终端的多任务运行中使用 TUI，单任务使用 stream。CI、非终端及 JSON/YAML 输出使用 stream。`--ui raw` 保留原生终端输入，并交由 mise 处理 raw 输出；交互任务需要独占终端。
+按 **c** 显示固定的全宽日志快照并关闭鼠标报告。在 VS Code 中可直接拖选，再使用终端的复制快捷键（macOS 为 Cmd+C）。**Esc** 返回并恢复原阅读/跟随状态，**f** 返回并跟随新日志。Ctrl+C 始终取消任务；搜索输入时 y/c 作为普通文字。macOS 本地使用 pbcopy，Windows 使用 Set-Clipboard，Linux 在可用时使用 wl-copy/xclip。远程会话使用 OSC 52，只报告“已发送请求”，因为终端支持情况没有可靠回执。过大的 OSC 请求明确失败，不静默截断；复制失败保留选区，任务继续运行。
 
-TUI 保留 mise 任务前缀、Task 命令回显、ANSI 颜色和文字样式、缩进及空行。长行按日志区域宽度自动换行，支持中文和 emoji；查看历史时，窗口缩放会尽量保留原来的阅读位置。常见进度输出中的回车、退格和清行操作在日志区域内呈现；全屏交互程序应使用 `--ui raw`。
+One 使用私有临时日志文件保存**本次运行完整历史**，结束后删除；内存仅保留索引和有上限的渲染缓存。全部任务结束后，复制或搜索状态也会自动退出；取消和失败同样恢复终端。
 
-左侧按本次执行计划展示依赖树，入口任务位于根部。共享依赖只展开一次，其他分支以 `↪` 引用，选中后查看同一份任务日志。焦点在树中时，↑/↓ 选择任务，←/→ 折叠或展开，Enter 或空格切换展开状态；在共享引用上按 Enter 或 → 定位首次出现处。终端不足 70 列时，Tab 在全宽依赖树与日志之间切换。
-
-在日志区域中，鼠标滚轮或 ↑/↓ 逐行滚动，PgUp/PgDn 翻页，Home 查看最早日志，End 或 `f` 跟随最新输出。向上滚动会暂停跟随，新日志继续收集。Tab 在日志与依赖树之间切换键盘焦点；`[` / `]` 也可切换任务，`a` 查看全部日志。各任务分别保存阅读位置。`/` 打开历史搜索，Enter 应用，Esc 清空筛选。
-
-本次会话的完整历史保存在私有临时文件中，内存维护精简索引和有容量限制的渲染页面缓存，较早的日志不会被丢弃。正常退出时删除临时文件；存储失败会明确报错并停止运行。mise 执行结束后，无论成功或失败，TUI 都会自动退出并返回原退出码；正在滚动或搜索时也会正常结束，无需按键。执行期间 Ctrl+C 或 `q` 停止进程树并恢复终端。退出后，普通终端中保留简短的尾部日志。
-
-对于经过管道就默认关闭颜色的常见工具，TUI 会声明颜色支持，并保留用户显式设置的颜色偏好。依赖真实 TTY 界面的工具仍需使用 raw 模式。
-
-任务标签只表示是否观察到输出，不通过子进程文字推断就绪、成功或缓存命中。最终结果以 mise 退出码为准；由于 mise 没有可靠的结构化生命周期事件，单任务完成状态保持 `unknown`。
-
-One 原样转发子进程日志，不扫描或替换密钥值。One 自身的提示和结构化结果不展示注入值；子进程主动打印的值会出现在 stream、TUI、Dashboard 和原生日志缓存中。
-
-JSON/YAML 计划使用 `one-cli/task-plan/v1`，执行结果使用 `one-cli/task-result/v1`；结构化模式下子进程日志进入 stderr。
+`auto` 在交互终端的多任务运行中使用 TUI，其余使用 stream；CI 与结构化输出使用 stream。`--ui` 覆盖 `~/.config/one/preferences.json` 中可选的 `taskUI: "tui"` 或 `"stream"` 偏好。

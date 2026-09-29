@@ -13,8 +13,8 @@ import (
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/i18n"
 )
 
-// Catalog is a deliberately static preview. It never evaluates templates,
-// command inputs, env plugins, or task scripts. Real runs use mise's catalog.
+// Catalog never evaluates templates, command inputs, env plugins or scripts.
+// The selected static subset is compiled for official Process Compose.
 func Catalog(w execution.Workspace) ([]Task, *miseconfig.Plan, error) {
 	all := map[string]Task{}
 	roots, err := staticScope(w, "", all)
@@ -129,6 +129,7 @@ func staticScope(w execution.Workspace, scope string, all map[string]Task) ([]st
 	for name, task := range scripts {
 		task.Project = projectForDirectory(w, task.Directory)
 		all[name] = task
+		aliases[name] = task.aliases
 	}
 	for _, layer := range layers {
 		for name, value := range layer.doc.Tasks {
@@ -157,6 +158,7 @@ func staticScope(w execution.Workspace, scope string, all map[string]Task) ([]st
 			if command != nil {
 				task.Run = command
 			}
+			validateTaskFields(&task, fields)
 			if file, ok := fields["file"].(string); ok {
 				task.File = filepath.Join(w.Root(), scope, file)
 			}
@@ -165,7 +167,9 @@ func staticScope(w execution.Workspace, scope string, all map[string]Task) ([]st
 			}
 			if v, ok := fields["dir"].(string); ok {
 				if strings.Contains(v, "{{") {
-					return nil, i18n.Errorf("tasks.dynamic_config", canonical)
+					task.unsupported = "dir"
+					all[canonical] = task
+					continue
 				}
 				task.Directory = filepath.Join(w.Root(), scope, v)
 				if filepath.IsAbs(v) {
@@ -176,7 +180,8 @@ func staticScope(w execution.Workspace, scope string, all map[string]Task) ([]st
 				if value, ok := fields[key]; ok {
 					values, e := stringList(value)
 					if e != nil {
-						return nil, i18n.Errorf("tasks.dynamic_config", canonical)
+						task.unsupported = key
+						continue
 					}
 					*target = append(*target, values...)
 				}
@@ -184,8 +189,15 @@ func staticScope(w execution.Workspace, scope string, all map[string]Task) ([]st
 			if value, ok := fields["depends_post"]; ok {
 				values, e := stringList(value)
 				if e != nil || len(values) > 0 {
-					return nil, i18n.Errorf("tasks.dynamic_config", canonical)
+					task.unsupported = "depends_post"
 				}
+			}
+			if value, ok := fields["wait_for"]; ok {
+				values, e := stringList(value)
+				if e != nil {
+					task.unsupported = "wait_for"
+				}
+				task.waitFor = values
 			}
 			if value, ok := fields["outputs"]; ok {
 				task.Outputs, _ = stringList(value)
@@ -206,7 +218,6 @@ func staticScope(w execution.Workspace, scope string, all map[string]Task) ([]st
 			}
 			if v, ok := fields["cache"].(map[string]any); ok {
 				task.Cached, _ = v["enabled"].(bool)
-				task.cacheInputs, _ = stringList(v["command_inputs"])
 			}
 			task.Project = projectForDirectory(w, task.Directory)
 			all[canonical] = task

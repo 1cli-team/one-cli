@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"regexp"
 	"strings"
 	"testing"
 )
@@ -36,7 +37,7 @@ depends = []
 	for _, prefix := range [][]string{{"hello"}, {"run", "hello"}} {
 		args := append(append([]string{}, prefix...), "-o", "json", "--", "a b", "$(touch INJECTED)", "--output", "text", "--help")
 		out, logs, code := runBinaryIn(t, root, args...)
-		if code != 0 || !json.Valid([]byte(out)) || !strings.Contains(logs, "<a b>\n<$(touch INJECTED)>\n<--output>\n<text>\n<--help>") {
+		if code != 0 || !json.Valid([]byte(out)) || !strings.Contains(regexp.MustCompile(`(?m)\[//:[^\]]+\]\s*`).ReplaceAllString(logs, ""), "<a b>\n<$(touch INJECTED)>\n<--output>\n<text>\n<--help>") {
 			t.Fatalf("exit=%d out=%s logs=%s", code, out, logs)
 		}
 	}
@@ -116,7 +117,7 @@ func TestE2E_ScriptAndExplicitMiseDevForwardArguments(t *testing.T) {
 			}
 			buildWrite(t, root, "packages/lib/dev.sh", "printf '<%s>\\n' \"$@\"\n")
 			_, logs, code := runBinaryIn(t, root, "dev", "-p", "lib", "-o", "json", "--", "a b", "$(touch INJECTED)", "--port", "4300")
-			if code != 0 || !strings.Contains(logs, "<a b>\n<$(touch INJECTED)>\n<--port>\n<4300>") {
+			if code != 0 || !strings.Contains(regexp.MustCompile(`(?m)\[//:[^\]]+\]\s*`).ReplaceAllString(logs, ""), "<a b>\n<$(touch INJECTED)>\n<--port>\n<4300>") {
 				t.Fatal(code, logs)
 			}
 			if _, err := os.Stat(filepath.Join(root, "packages/lib/INJECTED")); !os.IsNotExist(err) {

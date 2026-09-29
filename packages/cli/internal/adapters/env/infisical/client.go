@@ -2,8 +2,10 @@ package infisical
 
 import (
 	"context"
+	"errors"
 	"io"
 	"net"
+	"net/http"
 	"regexp"
 	"strings"
 
@@ -210,8 +212,10 @@ func mapAPIError(err error) error {
 	if isNetworkError(err) {
 		return cliErrors.New(cliErrors.INFISICAL_NETWORK_ERROR, i18n.T("infisical.network"))
 	}
-	lower := strings.ToLower(err.Error())
-	if strings.Contains(lower, "401") || strings.Contains(lower, "unauthorized") {
+	// The SDK exposes the HTTP status. Error strings also contain URLs and
+	// request IDs, whose digits must not determine authentication state.
+	var response *infisical.APIError
+	if errors.As(err, &response) && response.StatusCode == http.StatusUnauthorized {
 		return cliErrors.New(cliErrors.INFISICAL_AUTH_FAILED, i18n.T("infisical.relogin"))
 	}
 	if folder, env := parseFolderNotFound(err); folder != "" {

@@ -58,6 +58,7 @@ func TestTreeNavigationSharesTaskLogsAndReadingPosition(t *testing.T) {
 	}
 	m = key(m, tea.KeyRight, "") // expand dev
 	m = key(m, tea.KeyRight, "") // api
+	m = key(m, tea.KeyRight, "") // expand api
 	m = key(m, tea.KeyRight, "") // prepare (primary)
 	primary := m.selected
 	if m.task() != "//:prepare" {
@@ -68,6 +69,7 @@ func TestTreeNavigationSharesTaskLogsAndReadingPosition(t *testing.T) {
 	m = key(m, tea.KeyDown, "")
 	position := m.reading()
 	m = key(m, tea.KeyTab, "") // tree
+	delete(m.tree.collapsed, m.tree.primary["//:web:dev"])
 	m = key(m, tea.KeyEnd, "") // prepare (reference)
 	if !m.tree.nodes[m.selected].reference || m.reading() != position {
 		t.Fatal("shared reference lost reading position")
@@ -104,16 +106,24 @@ func TestTreeMouseTargetsVisibleNodes(t *testing.T) {
 	m := newModel(testStore(t, graph.names()...), graph)
 	m.selected = m.tree.primary["//:api:dev"]
 	m.tree.collapsed[m.selected] = true
-	updated, _ := m.Update(tea.MouseClickMsg{X: 3, Y: 4, Button: tea.MouseLeft})
+	targetY := 0
+	for i, row := range m.sidebarRows() {
+		if row.id == m.tree.primary["//:web:dev"] {
+			targetY = i + len(m.headerLines())
+		}
+	}
+	updated, _ := m.Update(tea.MouseClickMsg{X: 3, Y: targetY, Button: tea.MouseLeft})
 	m = updated.(model)
 	if m.task() != "//:web:dev" || !m.taskFocus {
 		t.Fatal("click selected a hidden node", m.task())
 	}
-	updated, _ = m.Update(tea.MouseWheelMsg{X: 3, Y: 4, Button: tea.MouseWheelDown})
+	selected := m.selected
+	updated, _ = m.Update(tea.MouseWheelMsg{X: 3, Y: targetY, Button: tea.MouseWheelDown})
 	m = updated.(model)
-	if !m.tree.nodes[m.selected].reference || !m.reading().follow {
-		t.Fatal("tree wheel scrolled logs")
+	if m.selected != selected || !m.reading().follow {
+		t.Fatal("tree wheel moved selection or scrolled logs")
 	}
+
 	updated, _ = m.Update(tea.MouseWheelMsg{X: 75, Y: 4, Button: tea.MouseWheelUp})
 	m = updated.(model)
 	if m.reading().follow {
@@ -172,9 +182,17 @@ func TestTreeClickUsesRowsBeforeFocusChangesFooter(t *testing.T) {
 	}
 	m := newModel(testStore(t, graph.names()...), graph)
 	m.width, m.height, m.selected = 80, 10, len(graph.Tasks)
-	rows, first := m.treePage()
-	want := rows[first+1].id
-	updated, _ := m.Update(tea.MouseClickMsg{X: 3, Y: 2, Button: tea.MouseLeft})
+	m.ensureSidebarSelection()
+	rows := m.sidebarRows()
+	index := 0
+	for i, row := range rows {
+		if row.id > 0 {
+			index = i
+			break
+		}
+	}
+	want := rows[index].id
+	updated, _ := m.Update(tea.MouseClickMsg{X: 3, Y: len(m.headerLines()) + index, Button: tea.MouseLeft})
 	if got := updated.(model); got.selected != want {
 		t.Fatalf("focus changed clicked row: got=%d want=%d", got.selected, want)
 	}

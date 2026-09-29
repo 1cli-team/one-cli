@@ -60,9 +60,12 @@ func (w *logWriter) flush() {
 func (w *logWriter) render() (logLine, pen) {
 	raw := string(w.pending)
 	task, prefix, body := splitPrefix(raw, w.store.names)
-	// mise resets its label's styling on every line. Keep the application's
+	// Process Compose resets its label's styling on every line. Keep the application's
 	// own pen separately, including when two tasks interleave their output.
 	label, _ := renderText(prefix, pen{})
+	if style, ok := w.store.prefixStyles[task]; ok {
+		label = style.Diff(&uv.Style{}) + ansi.Strip(label) + ansi.ResetStyle
+	}
 	content, next := renderText(body, w.styles[task])
 	return logLine{task, label + content}, next
 }
@@ -76,7 +79,7 @@ func splitPrefix(raw string, names []string) (task, prefix, body string) {
 		return "", "", raw
 	}
 	for _, name := range names {
-		if plain[1:end] == name || plain[1:end] == strings.TrimPrefix(name, "//:") {
+		if strings.TrimSpace(plain[1:end]) == name || strings.TrimSpace(plain[1:end]) == strings.TrimPrefix(name, "//:") {
 			task = name
 			break
 		}
@@ -84,7 +87,8 @@ func splitPrefix(raw string, names []string) (task, prefix, body string) {
 	if task == "" {
 		return "", "", raw
 	}
-	// Preserve exactly one mise separator, including any label reset before it.
+	// Consume exactly one scheduler separator, including any label reset before it.
+	// Further whitespace belongs to the application's own indentation.
 	target := end + 1
 	if len(plain) > target && plain[target] == ' ' {
 		target++
@@ -96,13 +100,15 @@ func splitPrefix(raw string, names []string) (task, prefix, body string) {
 		if n == 0 {
 			break
 		}
-		if width > 0 {
+		if width > 0 || seq == "\t" {
 			visible += len(seq)
 		}
 		off += n
 		state = next
 	}
-	return task, raw[:off], raw[off:]
+	// Scheduler tabs/spaces inside the brackets are only alignment padding.
+	// Rebuild the label without them; task colors are applied by the renderer.
+	return task, "[" + strings.TrimSpace(plain[1:end]) + "]" + plain[end+1:target], raw[off:]
 }
 
 var parserPool = sync.Pool{New: func() any { p := new(ansi.Parser); p.SetParamsSize(32); p.SetDataSize(4096); return p }}
