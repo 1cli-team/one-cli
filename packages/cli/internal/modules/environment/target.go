@@ -6,7 +6,9 @@ import (
 
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/adapters/env/infisical"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/application/execution"
+	"github.com/torchstellar-team/one-cli/packages/cli/internal/core/workspace"
 	cliErrors "github.com/torchstellar-team/one-cli/packages/cli/internal/platform/errors"
+	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/fsutil"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/i18n"
 	session "github.com/torchstellar-team/one-cli/packages/cli/internal/platform/infisicalsession"
 )
@@ -22,24 +24,39 @@ func (s *Service) resolveInfisical() (*infisical.WorkspaceConfig, *infisical.Cre
 func (s *Service) ensureInfisicalBound(
 	ctx context.Context,
 	activeWorkspace execution.Workspace,
-) error {
+) (*BindingResult, error) {
 	projectRoot := activeWorkspace.Root()
-	config, _ := infisical.LoadWorkspaceConfig(projectRoot)
-	if config != nil && strings.TrimSpace(config.ProjectID) != "" {
-		return nil
+	unlock, err := fsutil.WorkspaceLock(ctx, projectRoot, "infisical-binding")
+	if err != nil {
+		return nil, err
 	}
-	_, err := s.initInfisical(ctx, projectRoot, infisical.InitInput{})
-	return err
+	defer unlock()
+	// Re-read after locking: another CLI or Dashboard save may have bound it.
+	config, err := infisical.LoadWorkspaceConfig(projectRoot)
+	if err != nil {
+		return nil, err
+	}
+	if config != nil && strings.TrimSpace(config.ProjectID) != "" {
+		return &BindingResult{ProjectID: config.ProjectID, ProjectName: config.ProjectName}, nil
+	}
+	result, err := s.initInfisical(ctx, projectRoot, infisical.InitInput{})
+	if err != nil {
+		return nil, err
+	}
+	binding := &BindingResult{ProjectID: result.ProjectID, ProjectName: result.ProjectName, Created: result.Created}
+	requestedName := ""
+	if identity := activeWorkspace.Manifest().Workspace; identity != nil {
+		requestedName = identity.Name
+	}
+	if requestedName != result.ProjectName {
+		binding.RequestedName = requestedName
+	}
+	return binding, nil
 }
 
 func requireInfisicalBackend(resolution resolution) error {
-	if resolution.Workspace.Manifest().Env == nil {
-		return cliErrors.New(
-			cliErrors.ENV_BACKEND_INVALID,
-			i18n.T("env.infisical_required"),
-		)
-	}
-	return nil
+	_, err := infisical.RequireWorkspaceConfig(resolution.Workspace.Root())
+	return err
 }
 
 func (s *Service) RequireInfisicalBackend(
@@ -55,22 +72,32 @@ func (s *Service) RequireInfisicalBackend(
 	return requireInfisicalBackend(resolution)
 }
 
-// EnsureInfisicalReady completes a missing project binding for a Workspace
-// whose selected env backend is already Infisical. It is the explicit repair
-// boundary used by the Dashboard; ordinary secret reads remain read-only.
+// EnsureInfisicalReady is the Dashboard initialization write boundary, called
+// only when saving the first secret. Reads and retries never initialize storage.
 func (s *Service) EnsureInfisicalReady(
 	ctx context.Context,
 	scope execution.Scope,
 	environment, project string,
-) error {
+) (*BindingResult, error) {
 	resolution, err := s.resolve(resolveInput{
 		Scope: scope, Requested: environment, AllowUnknown: true,
 	})
 	if err != nil {
-		return err
+		return nil, err
 	}
-	if err := requireInfisicalBackend(resolution); err != nil {
-		return err
+	if err := validateWriteEnvironment(resolution); err != nil {
+		return nil, err
+	}
+	declared := resolution.Declared
+	if len(declared) == 0 {
+		declared = workspace.DefaultEnvironments
+	}
+	if environment != "" && !contains(declared, environment) {
+		return nil, cliErrors.New(cliErrors.ENV_UNKNOWN_ENVIRONMENT,
+			i18n.Tf("env.environment_unknown", environment, strings.Join(declared, ", ")))
+	}
+	if _, err := s.resolveInfisicalFolderPath(resolution.Workspace, nil, project); err != nil {
+		return nil, err
 	}
 	return s.ensureInfisicalBound(ctx, resolution.Workspace)
 }
@@ -80,29 +107,10 @@ func (s *Service) resolveInfisicalFolderPath(
 	config *infisical.WorkspaceConfig,
 	selector string,
 ) (string, error) {
-	projectRoot := activeWorkspace.Root()
-	// Path metadata always comes from the workspace, independently of session credentials.
-	stored, err := infisical.LoadWorkspaceConfig(projectRoot)
-	if err != nil {
-		return "", err
-	}
-	pathConfig := &infisical.WorkspaceConfig{}
-	if config != nil {
-		*pathConfig = *config
-	}
-	if stored != nil {
-		pathConfig.RootPath = stored.RootPath
-	}
-	config = pathConfig
-
 	selector = strings.TrimSpace(selector)
 	if selector != "" {
 		if project, ok := activeWorkspace.Project(selector); ok {
-			override, err := infisical.LoadSubprojectConfig(projectRoot, project.RelativeDir)
-			if err != nil {
-				return "", err
-			}
-			return infisical.ResolveSubprojectPath(config, project, override).Path, nil
+			return infisical.ResolveSubprojectPath(project).Path, nil
 		}
 		if strings.HasPrefix(selector, "/") {
 			return infisical.NormalizePath(selector), nil
@@ -111,11 +119,7 @@ func (s *Service) resolveInfisicalFolderPath(
 			i18n.Tf("workspace.project_selector_missing", selector, strings.Join(activeWorkspace.ProjectNames(), ", ")))
 	}
 	if project, ok := activeWorkspace.ProjectFromWorkingDirectory(); ok {
-		override, err := infisical.LoadSubprojectConfig(projectRoot, project.RelativeDir)
-		if err != nil {
-			return "", err
-		}
-		return infisical.ResolveSubprojectPath(config, project, override).Path, nil
+		return infisical.ResolveSubprojectPath(project).Path, nil
 	}
-	return infisical.NormalizePath(config.RootPathOrDefault()), nil
+	return "/", nil
 }

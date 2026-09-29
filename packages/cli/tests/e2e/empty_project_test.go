@@ -49,7 +49,7 @@ func TestE2E_AddEmptyProjects(t *testing.T) {
 				}
 			}
 			manifest := readManifest(t, root)
-			projects := manifest["projects"].([]any)
+			projects := manifest["projects"].(map[string]any)
 			if len(projects) != 3 {
 				t.Fatalf("projects = %v", projects)
 			}

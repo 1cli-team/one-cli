@@ -45,7 +45,7 @@ After the download finishes, start the Web project:
 pnpm -C apps/web dev
 ```
 
-Open the `Local: http://localhost:.../` URL printed by the terminal. This Web example does not require preset `.env` values, so the quick start does not need env setup.
+Open the `Local: http://localhost:.../` URL printed by the terminal. This Web example does not require preconfigured environment variables, so the quick start does not need env setup.
 
 ## Done
 

@@ -4,18 +4,20 @@ import (
 	"context"
 	"fmt"
 	"regexp"
+	"slices"
 	"strings"
 
 	workspacecore "github.com/torchstellar-team/one-cli/packages/cli/internal/core/workspace"
+	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/i18n"
 )
 
 type WorkspaceEnvironmentSettings struct {
-	Schema      string `json:"schema"`
-	Revision    string `json:"revision"`
-	Backend     string `json:"backend"`
-	ProjectID   string `json:"projectId"`
-	ProjectName string `json:"projectName"`
-	SiteURL     string `json:"siteUrl"`
+	Environments []string `json:"environments"`
+	Schema       string   `json:"schema"`
+	Revision     string   `json:"revision"`
+	Backend      string   `json:"backend"`
+	ProjectID    string   `json:"projectId"`
+	SiteURL      string   `json:"siteUrl"`
 }
 
 func (s *Service) WorkspaceEnvironment(_ context.Context, root, environment string) (WorkspaceEnvironmentSettings, error) {
@@ -28,21 +30,23 @@ func (s *Service) WorkspaceEnvironment(_ context.Context, root, environment stri
 	if _, e = validateEnvironment(manifest, environment); e != nil {
 		return WorkspaceEnvironmentSettings{}, e
 	}
-	result := WorkspaceEnvironmentSettings{Schema: "one-cli/workspace-environment/v1", Revision: revision, Backend: workspacecore.EnvBackend(manifest)}
+	result := WorkspaceEnvironmentSettings{Environments: workspacecore.EnvironmentNames(manifest), Schema: "one-cli/workspace-environment/v1", Revision: revision, Backend: workspacecore.EnvBackend(manifest)}
 	if manifest.Env != nil {
 		result.ProjectID = manifest.Env.ProjectID
-		result.ProjectName = manifest.Env.ProjectName
 		result.SiteURL = manifest.Env.SiteURL
 	}
 	return result, nil
 }
 
-func validateEnvironment(_ *workspacecore.Manifest, requested string) (string, error) {
+func validateEnvironment(manifest *workspacecore.Manifest, requested string) (string, error) {
 	environment := strings.TrimSpace(requested)
 	if requested == "" {
-		return "", nil
+		return "dev", nil
 	}
 	if requested == environment && len(environment) <= 128 && environmentIDPattern.MatchString(environment) {
+		if manifest != nil && manifest.Env != nil && !slices.Contains(workspacecore.EnvironmentNames(manifest), environment) {
+			return "", fmt.Errorf("%w: %s", ErrInvalidInput, i18n.Tf("env.environment_unknown", environment, strings.Join(workspacecore.EnvironmentNames(manifest), ", ")))
+		}
 		return environment, nil
 	}
 	return "", fmt.Errorf(

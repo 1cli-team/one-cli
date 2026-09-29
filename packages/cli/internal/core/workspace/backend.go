@@ -44,35 +44,7 @@ func findProject(m *Manifest, projectName string) *ManifestProject {
 	return nil
 }
 
-// ProjectEnv returns the per-project env override, or nil when unset.
-func ProjectEnv(m *Manifest, projectName string) *ProjectEnvOverride {
-	d := findProject(m, projectName)
-	if d == nil {
-		return nil
-	}
-	return d.Env
-}
-
-// ProjectDev returns the dev command for projectName, or "" when there
-// is no dev block or its Command is empty. Used by `one dev` to
-// resolve the generated development adapter.
-func ProjectDev(m *Manifest, projectName string) string {
-	d := findProject(m, projectName)
-	if d == nil || d.Dev == nil {
-		return ""
-	}
-	return d.Dev.Command
-}
-
-// EnvironmentEnabled reports whether a command should fetch remote variables.
+// EnvironmentEnabled reports whether the workspace has an Infisical binding.
 func EnvironmentEnabled(m *Manifest, relativeDir string) bool {
-	if m == nil || m.Env == nil {
-		return false
-	}
-	for _, project := range m.Projects {
-		if project.RelativeDir == relativeDir {
-			return project.Env == nil || !project.Env.Disabled
-		}
-	}
-	return true
+	return m != nil && m.Env != nil && m.Env.ProjectID != ""
 }

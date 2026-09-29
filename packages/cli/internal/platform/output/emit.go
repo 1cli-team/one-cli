@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"strings"
 
 	"gopkg.in/yaml.v3"
 
@@ -67,8 +68,7 @@ func emitErrorTo(w io.Writer, err *Error) {
 		emitYAML(w, err.envelope())
 	default:
 		message := err.Error()
-		fmt.Fprintf(w, "✗ %s\n", message)
-		fmt.Fprintf(w, "  %s%s\n", i18n.T("error.code_label"), err.Code)
+		fmt.Fprintf(w, "✗ %s\n", strings.ReplaceAll(message, "\n", "\n  "))
 		printedHeader := false
 		for _, step := range err.Remediation {
 			if step.Hint == "" && step.Command == "" {
@@ -87,6 +87,8 @@ func emitErrorTo(w io.Writer, err *Error) {
 				fmt.Fprintf(w, "    %s\n", step.Command)
 			}
 		}
+		// Keep support metadata secondary to the problem and recovery.
+		fmt.Fprintf(w, "\n  %s%s\n", i18n.T("error.code_label"), err.Code)
 	}
 }
 

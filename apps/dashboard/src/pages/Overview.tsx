@@ -31,6 +31,7 @@ export const Overview: React.FC<{
 				<ProjectInspector
 					key={`${workspaceEntryId ?? "current"}:${environment}`}
 					projects={projects}
+					environments={data.workspace?.environments}
 					currentBackend={data.workspace?.domains?.env}
 					environment={environment}
 					workspaceEntryId={workspaceEntryId}

@@ -52,10 +52,6 @@ const (
 	TEMPLATE_REQUIRED        Code = "TEMPLATE_REQUIRED"
 	SUBPROJECT_NAME_REQUIRED Code = "SUBPROJECT_NAME_REQUIRED"
 
-	// Preset (see internal/modules/preset). Surfaced by `one create --preset`.
-	PRESET_INVALID       Code = "PRESET_INVALID"
-	PRESET_FLAG_CONFLICT Code = "PRESET_FLAG_CONFLICT"
-
 	// Manifest.
 	MANIFEST_INVALID          Code = "MANIFEST_INVALID"
 	MANIFEST_MISSING_OR_EMPTY Code = "MANIFEST_MISSING_OR_EMPTY"
@@ -69,7 +65,7 @@ const (
 	DOCTOR_FAILED          = STATUS_FIX_FAILED // internal compatibility alias; do not document.
 
 	// Environment backend selection.
-	// Surface when one.manifest.json references a backend the build doesn't
+	// Surface when one.manifest.toml references a backend the build doesn't
 	// know about, when a domain is required but missing, or when a profile
 	// is mismatched with its target backend.
 	BACKEND_ID_UNKNOWN         Code = "BACKEND_ID_UNKNOWN"
@@ -158,13 +154,13 @@ var Codes = map[Code]Definition{
 	PROMPT_CANCELLED:         {Summary: "User cancelled an interactive prompt (Ctrl+C / ESC)."},
 	OUTPUT_MARSHAL_FAILED:    {Summary: "Internal: failed to marshal a result payload to JSON. Should never fire in practice."},
 
-	NOT_ONE_PROJECT:            {Summary: "Current directory is not a One workspace (one.manifest.json is missing).", Remediation: []output.Remediation{{Action: "create-workspace", Hint: "当前目录缺少 one.manifest.json；请先创建工作区，或 cd 到已有工作区", Command: "one create <dir>"}}},
+	NOT_ONE_PROJECT:            {Summary: "Current directory is not a One workspace (one.manifest.toml is missing).", Remediation: []output.Remediation{{Action: "create-workspace", Hint: "当前目录缺少 one.manifest.toml；请先创建工作区，或 cd 到已有工作区", Command: "one create <dir>"}}},
 	NODE_VERSION_UNSUPPORTED:   {Summary: "Local Node version is below the supported minimum.", Remediation: []output.Remediation{{Action: "upgrade-node", Hint: "升级到 Node.js 18+"}}},
 	DEPENDENCIES_NOT_INSTALLED: {Summary: "Node dependencies required for local development are not installed."},
 	INVALID_NAME:               {Summary: "Project / subproject name fails the ^[a-zA-Z0-9][a-zA-Z0-9_-]*$ pattern.", Remediation: []output.Remediation{{Action: "use-valid-name", Hint: "用 kebab-case；空格替换为 -"}}},
-	INVALID_WORKSPACE_ROOTS:    {Summary: "one.manifest.json#workspace.roots is malformed."},
+	INVALID_WORKSPACE_ROOTS:    {Summary: "one.manifest.toml#workspace.roots is malformed."},
 	PROJECT_NAME_REQUIRED:      {Summary: "Non-interactive create called without a workspace directory.", Remediation: []output.Remediation{{Action: "provide-name", Hint: "把工作区目录作为位置参数", Command: "one create <workspace-directory>"}}},
-	EXISTING_TARGET_NOT_EMPTY:  {Summary: "Target directory exists and is non-empty; create only writes into empty / new directories.", Remediation: []output.Remediation{{Action: "use-different-dir", Hint: "换一个空的目标目录"}, {Action: "remove-target", Hint: "手动删除已存在的目录后重试"}}},
+	EXISTING_TARGET_NOT_EMPTY:  {Summary: "Target directory exists and is non-empty; create only writes into empty / new directories.", Remediation: []output.Remediation{{Action: "use-different-dir", Hint: "换一个空的目标目录"}}},
 	TARGET_EXISTS:              {Summary: "Subproject directory already exists.", Remediation: []output.Remediation{{Action: "use-different-name", Hint: "换一个 --name"}}},
 	WORKSPACE_NESTED_FORBIDDEN: {Summary: "Refusing to create a workspace inside an existing workspace; nesting one workspace inside another corrupts both manifests.", Remediation: []output.Remediation{{Action: "use-add", Hint: "在现有工作区里加项目，应该用 one add", Command: "one add <template> --name <subproject-name>"}, {Action: "create-elsewhere", Hint: "或换到工作区外的目录再 one create"}}},
 
@@ -176,23 +172,20 @@ var Codes = map[Code]Definition{
 	TEMPLATE_REQUIRED:        {Summary: "Non-interactive add called without a template ID.", Remediation: []output.Remediation{{Action: "specify-template", Hint: "把 template ID 作为位置参数", Command: "one add <template-id> --name <subproject-name>"}}},
 	SUBPROJECT_NAME_REQUIRED: {Summary: "Non-interactive add called without --name.", Remediation: []output.Remediation{{Action: "provide-name", Hint: "传入 --name", Command: "one add <template-id> --name <subproject-name>"}}},
 
-	PRESET_INVALID:       {Summary: "Preset id failed v1 grammar (bad version / segment shape / unknown code).", Remediation: []output.Remediation{{Action: "regen-preset", Hint: "用 `one serve` 打开 dashboard 重新挑组合得到新的 preset id（dashboard 页面将在后续版本上线）"}, {Action: "check-syntax", Hint: "v1 形如 `1.bgok.fnav.ei` —— 前缀为版本号，段以 `.` 分隔，每段首字符是 f/b/l/e kind"}}},
-	PRESET_FLAG_CONFLICT: {Summary: "Preset id and explicit flag declared conflicting values for the same field.", Remediation: []output.Remediation{{Action: "drop-conflicting-flag", Hint: "去掉与 --preset 冲突的显式 flag（preset 已经表达了该选择）"}}},
-
-	MANIFEST_INVALID:          {Summary: "one.manifest.json is malformed."},
+	MANIFEST_INVALID:          {Summary: "one.manifest.toml is malformed."},
 	MANIFEST_MISSING_OR_EMPTY: {Summary: "Workspace has no manifest, or the manifest declares no projects.", Remediation: []output.Remediation{{Action: "add-project", Hint: "新增一个项目", Command: "one add <template-id> --name <project-name>"}}},
 
 	STATUS_FIX_FAILED: {Summary: "Workspace 后置同步失败：写入 manifest 后某个后端 sync 回滚或失败。", Remediation: []output.Remediation{{Action: "retry", Hint: "重试触发该错误的命令"}}},
 
-	BACKEND_ID_UNKNOWN:         {Summary: "one.manifest.json refers to a backend id that this build does not recognise."},
-	DOMAIN_REQUIRED:            {Summary: "The environment configuration is missing in one.manifest.json."},
+	BACKEND_ID_UNKNOWN:         {Summary: "one.manifest.toml refers to a backend id that this build does not recognise."},
+	DOMAIN_REQUIRED:            {Summary: "The environment configuration is missing in one.manifest.toml."},
 	DOMAIN_INVALID:             {Summary: "The requested configuration domain is not supported."},
 	DOMAIN_NOT_REGISTERED:      {Summary: "Domain is recognised but this build has no backend implementation for it."},
 	DOMAIN_NOT_PER_SUBPROJECT:  {Summary: "This domain operates at workspace scope; -p / --project is not allowed.", Remediation: []output.Remediation{{Action: "drop-flag", Hint: "去掉 -p / --project 重试"}}},
-	SUBPROJECT_NOT_FOUND:       {Summary: "-p / --project named a project that does not exist in manifest.projects.", Remediation: []output.Remediation{{Action: "list-projects", Hint: "查看现有项目", Command: "cat one.manifest.json"}}},
+	SUBPROJECT_NOT_FOUND:       {Summary: "-p / --project named a project that does not exist in manifest.projects.", Remediation: []output.Remediation{{Action: "list-projects", Hint: "Check the project name or switch to its directory."}}},
 	PATCH_CONFLICT:             {Summary: "Two configuration fragments contributed conflicting patches to the same backend target."},
 	BACKEND_INVOKE_FAILED:      {Summary: "Backend's Invoke method returned an error."},
-	BACKEND_NOT_ENABLED:        {Summary: "The requested environment backend is not configured.", Remediation: []output.Remediation{{Action: "configure-domain", Hint: "Configure the environment backend with one env bind."}}},
+	BACKEND_NOT_ENABLED:        {Summary: "The requested environment backend is not configured.", Remediation: []output.Remediation{{Action: "configure-domain", Hint: "Save the first environment variable to set up storage.", Command: "one env set <KEY>"}}},
 	BACKEND_VERB_NOT_SUPPORTED: {Summary: "The requested environment operation is not supported."},
 	BACKEND_INTERFACE_MISMATCH: {Summary: "Internal: the dispatched backend failed its capability assertion. Build-side bug; should never reach end users."},
 	PREFERENCES_FILE_INVALID:   {Summary: "The local preferences file could not be read or parsed."},
@@ -208,18 +201,18 @@ var Codes = map[Code]Definition{
 	ENV_SET_VALUE_REQUIRED:     {Summary: "Non-interactive env set called without <VALUE>."},
 	ENV_PULL_CONFLICT:          {Summary: "Reserved error code from the retired local environment workflow."},
 	ENV_KEY_NOT_FOUND:          {Summary: "Requested env var key does not exist at the given Infisical path/environment."},
-	ENV_UNKNOWN_ENVIRONMENT:    {Summary: "请求的环境名不在 manifest.environments.names 列表中。", Remediation: []output.Remediation{{Action: "use-existing-env", Hint: "查看 one.manifest.json#environments.names 中已声明的环境，或改用 --env 指定其中一个"}, {Action: "create-via-set", Hint: "先在 Infisical 创建环境，再将名称登记到 manifest.environments.names"}, {Action: "register-env", Hint: "在 Infisical 后端，先在 UI 创建环境，再把名称加入 one.manifest.json#environments.names"}}},
+	ENV_UNKNOWN_ENVIRONMENT:    {Summary: "请求的环境名不在 env.infisical.environments 列表中。", Remediation: []output.Remediation{{Action: "use-existing-env", Hint: "Choose an available environment with --env.", Command: "one env"}}},
 
 	ENV_BACKEND_INVALID:   {Summary: "The workspace Infisical binding is missing or invalid."},
 	ENV_BACKEND_UNCHANGED: {Summary: "Reserved error code from the retired local environment workflow."},
 	ENV_MIGRATE_CONFLICT:  {Summary: "Reserved error code from the retired local environment workflow."},
 	ENV_MIGRATE_PARTIAL:   {Summary: "Reserved error code from the retired local environment workflow."},
 
-	INFISICAL_NOT_CONFIGURED:           {Summary: "The workspace has no Infisical project binding.", Remediation: []output.Remediation{{Action: "select-project", Hint: "在 Dashboard 工作区设置中选择 Infisical 项目", Command: "one serve"}}},
+	INFISICAL_NOT_CONFIGURED:           {Summary: "The workspace has no Infisical project binding.", Remediation: []output.Remediation{{Action: "set-first-variable", Hint: "Save the first variable to create and connect an Infisical project.", Command: "one env set <KEY>"}}},
 	INFISICAL_AUTH_MISSING:             {Summary: "No active Infisical browser session.", Remediation: []output.Remediation{{Action: "login", Command: "one login"}}},
 	INFISICAL_AUTH_FAILED:              {Summary: "The Infisical session was rejected or expired.", Remediation: []output.Remediation{{Action: "login", Command: "one login"}}},
 	INFISICAL_PROJECT_NOT_FOUND:        {Summary: "Infisical project id does not exist or the current account has no access to it."},
-	INFISICAL_PROJECT_NAME_TAKEN:       {Summary: "Infisical 项目名已被占用；auto-bind 会自动加随机后缀重试，但重试次数耗尽后会冒泡此错误。", Remediation: []output.Remediation{{Action: "use-explicit-name", Hint: "在 one.manifest.json#env.projectName 写一个不冲突的项目名后重试 env 命令"}}},
+	INFISICAL_PROJECT_NAME_TAKEN:       {Summary: "Infisical 项目名已被占用；auto-bind 会自动加随机后缀重试，但重试次数耗尽后会冒泡此错误。", Remediation: []output.Remediation{{Action: "use-explicit-name", Hint: "在 Dashboard 选择已有项目，或修改工作区名称后重试"}}},
 	INFISICAL_PROJECT_CREATE_FORBIDDEN: {Summary: "当前账号没有创建项目权限，请选择一个已有且有权访问的项目。"},
 	INFISICAL_NETWORK_ERROR:            {Summary: "Network error reaching the Infisical API. Check siteUrl + connectivity."},
 	INFISICAL_API_ERROR:                {Summary: "Infisical API returned an unexpected error. See error.context for details."},
@@ -232,7 +225,7 @@ var Codes = map[Code]Definition{
 	SERVE_PORT_BUSY:            {Summary: "one serve 无法绑定请求的端口（被占用或权限不足）。", Remediation: []output.Remediation{{Action: "use-random-port", Hint: "改用随机端口（让内核分配空闲端口）", Command: "one serve --port 0"}, {Action: "pick-different-port", Hint: "或显式换一个空闲端口", Command: "one serve --port 17900"}}},
 	SERVE_BIND_FORBIDDEN:       {Summary: "one serve 拒绝绑定到非 loopback 地址（本地接口可操作敏感凭据，仅 127.0.0.1 / localhost 才安全）。", Remediation: []output.Remediation{{Action: "use-loopback", Hint: "改用 127.0.0.1（默认）", Command: "one serve --host 127.0.0.1"}}},
 	SERVE_PAYLOAD_INVALID:      {Summary: "POST/PUT 请求体不是合法 JSON 或缺少必要字段。"},
-	SERVE_MANIFEST_CONFLICT:    {Summary: "one.manifest.json changed after the Dashboard draft was opened; the stale draft was not written.", Remediation: []output.Remediation{{Action: "reload-manifest", Hint: "重新加载 Workspace 配置，确认磁盘上的新修改后再应用草稿"}}},
+	SERVE_MANIFEST_CONFLICT:    {Summary: "one.manifest.toml changed after the Dashboard draft was opened; the stale draft was not written.", Remediation: []output.Remediation{{Action: "reload-manifest", Hint: "重新加载 Workspace 配置，确认磁盘上的新修改后再应用草稿"}}},
 	SERVE_REPOSITORY_READ_ONLY: {Summary: "Dashboard only writes explicitly allowlisted Project fields and env Backend switches through their revision-checked endpoints; this legacy route is not writable."},
 }
 

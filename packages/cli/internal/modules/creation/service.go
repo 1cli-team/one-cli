@@ -1,5 +1,5 @@
 // Package creation owns the complete Template-to-Workspace/Project lifecycle.
-// Preset parsing stays pure in modules/preset; Cobra owns prompts and rendering.
+// Cobra owns prompts and rendering.
 package creation
 
 import (
@@ -13,7 +13,6 @@ import (
 	environmentmodule "github.com/torchstellar-team/one-cli/packages/cli/internal/modules/environment"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/modules/hooks"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/modules/miseconfig"
-	"github.com/torchstellar-team/one-cli/packages/cli/internal/modules/preset"
 	cliErrors "github.com/torchstellar-team/one-cli/packages/cli/internal/platform/errors"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/fsutil"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/i18n"
@@ -51,8 +50,6 @@ type WorkspaceInput struct {
 	Name           string
 	EnvBackend     string
 	CreatedInPlace bool
-	Preset         *preset.ResolvedSpec
-	ProjectNames   []string
 }
 
 type WorkspaceResult struct {
@@ -66,8 +63,6 @@ type WorkspaceResult struct {
 	RegistryWarn    error
 	MiseTrustWarn   error
 	HooksWarn       error
-	Preset          PresetResult
-	PartialState    string
 }
 
 // ValidateWorkspaceTarget performs the same final safety check used by
@@ -85,16 +80,10 @@ func (s *Service) EnclosingWorkspace(targetDir string) string {
 }
 
 func validateWorkspaceTarget(targetDir, displayPath string) error {
-	empty, err := isDirectoryEmpty(targetDir)
-	if err != nil {
+	if err := validateEmptyTarget(targetDir, displayPath); err != nil {
 		return err
 	}
-	if !empty {
-		return cliErrors.New(
-			cliErrors.EXISTING_TARGET_NOT_EMPTY,
-			i18n.Tf("creation.target_not_empty", displayPath),
-		).WithContext(map[string]any{"target_path": targetDir, "display_path": displayPath})
-	}
+
 	if enclosing := enclosingWorkspace(targetDir); enclosing != "" {
 		return cliErrors.New(
 			cliErrors.WORKSPACE_NESTED_FORBIDDEN,
@@ -106,12 +95,11 @@ func validateWorkspaceTarget(targetDir, displayPath string) error {
 	return nil
 }
 
-// CreateWorkspace is the single workspace-creation mutation boundary used by
-// ordinary create and create --preset.
+// CreateWorkspace owns the complete workspace-creation mutation.
 func (s *Service) CreateWorkspace(ctx context.Context, input WorkspaceInput) (WorkspaceResult, error) {
 	result := WorkspaceResult{
 		Name: input.Name, TargetDir: input.TargetDir, CreatedInPlace: input.CreatedInPlace,
-		EnvBackend: strings.TrimSpace(input.EnvBackend), PartialState: "none",
+		EnvBackend: strings.TrimSpace(input.EnvBackend),
 	}
 	if !workspace.IsValidProjectName(input.Name) {
 		return result, cliErrors.New(
@@ -160,20 +148,6 @@ func (s *Service) CreateWorkspace(ctx context.Context, input WorkspaceInput) (Wo
 		return result, err
 	}
 
-	if input.Preset != nil {
-		applied, applyErr := ApplyPreset(ctx, input.TargetDir, *input.Preset, PresetOptions{
-			ProjectNames: input.ProjectNames,
-		})
-		result.Preset = applied
-		if applyErr != nil {
-			if len(applied.Projects) > 0 {
-				result.PartialState = "partial_projects"
-			}
-			_ = initGitRepo(input.TargetDir)
-			return result, applyErr
-		}
-	}
-
 	plan, err := miseconfig.Build(input.TargetDir, miseconfig.Options{})
 	if err == nil {
 		err = plan.Apply(ctx)
@@ -189,6 +163,10 @@ func (s *Service) CreateWorkspace(ctx context.Context, input WorkspaceInput) (Wo
 	}
 	if err := initGitRepo(input.TargetDir); err != nil {
 		result.HooksWarn = i18n.Errorf("creation.git_failed", err)
+	} else if shared, err := hasSharedGitDirectory(input.TargetDir); err != nil {
+		result.HooksWarn = err
+	} else if shared {
+		result.HooksWarn = errors.New(i18n.T("creation.shared_hooks_skipped"))
 	} else {
 		install, err := hooks.PlanInstall(ctx, input.TargetDir, "", false)
 		if err == nil {

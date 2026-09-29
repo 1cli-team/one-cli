@@ -19,7 +19,7 @@ func TestResolveWorkspaceScopeCreatesReusableSnapshot(t *testing.T) {
 	if err := workspace.WriteManifest(root, &workspace.Manifest{
 		Workspace: &workspace.ManifestWorkspace{ID: "ws-demo", Name: "demo"},
 		Projects: []workspace.ManifestProject{{
-			Name: "web", RelativeDir: "apps/web", Toolchain: "node", PackageManager: "pnpm",
+			Name: "web", RelativeDir: "apps/web", Toolchain: "node",
 		}},
 	}); err != nil {
 		t.Fatal(err)
@@ -62,7 +62,7 @@ func TestWorkspaceReloadRefreshesManifest(t *testing.T) {
 	}
 	if err := workspace.WriteManifest(root, &workspace.Manifest{
 		Workspace: &workspace.ManifestWorkspace{ID: "ws-demo", Name: "demo"},
-		Projects:  []workspace.ManifestProject{{Name: "api", RelativeDir: "services/api"}},
+		Projects:  []workspace.ManifestProject{{Name: "api", RelativeDir: "services/api", Toolchain: "node"}},
 	}); err != nil {
 		t.Fatal(err)
 	}

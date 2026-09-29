@@ -101,7 +101,7 @@ Full command docs live at [1cli.dev](https://1cli.dev).
 
 ## Work With AI Assistants
 
-New workspaces include bilingual `AGENTS.md` guidance. Agents can inspect `one run --list -o json`, preview tasks with `one run build --dry-run`, and consult command-specific help.
+New workspaces include one `AGENTS.md` in the active One CLI language. The editable [English](packages/cli/internal/modules/creation/templates/AGENTS.en-US.md) and [Chinese](packages/cli/internal/modules/creation/templates/AGENTS.zh-CN.md) Markdown templates cover execution through `one run`, complex scripts in `scripts/*.mts`, and variable management through One. Publishing credentials belong in global variables configured on the Dashboard’s Shared credentials page; tasks inject them with `one exec --global`. Existing guidance remains team-owned when the language changes or projects are added.
 
 You can ask an assistant for project-level changes in natural language, for example:
 
@@ -111,19 +111,19 @@ You can ask an assistant for project-level changes in natural language, for exam
 
 > Add a mobile app next to the existing backend.
 
-The assistant can read `one.manifest.json` and project README files, then use One CLI commands with `-o json` to make project changes.
+The assistant can read `one.manifest.toml` and project README files, then use One CLI commands with `-o json` to make project changes.
 
 ## Local Settings
 
-One CLI manages variables in Infisical and injects them directly into commands. Workspace bindings live in the top-level manifest `env` field; `.env` files are not loaded or exported. Run `one login` to sign in with your browser; the single session is stored in the OS keyring, with no plaintext fallback. Use `one whoami` to inspect status and `one logout` to remove the local session.
+One CLI manages variables in Infisical and injects them directly into commands. Workspace bindings live in the manifest `[env.infisical]` table; `.env` files are not loaded or exported. Run `one login` to sign in with your browser; the single session is stored in the OS keyring, with no plaintext fallback. Use `one whoami` to inspect status and `one logout` to remove the local session.
 
-Run `one serve` for account settings, workspaces, and shared credentials. Workspace and project configuration changes share one reviewed, revision-checked Manifest draft. Remote variable edits take effect immediately; lists omit values and reveal/copy fetch plaintext only on demand.
+Run `one serve` for account settings, workspaces, and shared credentials. Workspace binding changes use a reviewed, revision-checked TOML draft; project settings display derived configuration. Remote variable edits take effect immediately; lists omit values and reveal/copy fetch plaintext only on demand.
 
-Choose shared credential storage with `one env bind --global`. Agents discover environments and folders through `one env --global` and `one env list --global`, then execute with `one exec --global --env dev --path /folder --keys KEY -- command`. Explicit scope and best-effort masking reduce accidental exposure; they do not isolate arbitrary programs running as the same OS user. Use least-privilege remote permissions.
+Choose shared credential storage with `one env bind --global`. Agents discover environments and folders through `one env --global` and `one env list --global`, then execute with `one exec --global --env dev --path /folder --keys KEY -- command`. One does not print injected values. Child logs preserve their original content and formatting.
 
 ## Project Map
 
-Every One CLI project has a `one.manifest.json` file at the root. Most users do not need to edit it by hand.
+Every One CLI project has a `one.manifest.toml` file at the root. Most users do not need to edit it by hand.
 
 Think of it as the project map. It records which parts exist, where they live, and which starter created them. One CLI reads it when you add, run, build, or inspect parts of the project. `one serve` writes it only after an explicit reviewed, revision-checked Dashboard action; other repository changes stay in the normal code-review workflow.
 
@@ -133,7 +133,7 @@ If you want to work on One CLI itself, the repository is organized like this:
 
 | Path | Purpose |
 |---|---|
-| `one.manifest.json` | The four projects managed by One CLI itself |
+| `one.manifest.toml` | The four projects managed by One CLI itself |
 | `packages/cli` | The One CLI app and its public Go packages |
 | `packages/kernel` | Shared Go kernel |
 | `packages/templates` | Starters used by `one add` |
@@ -152,22 +152,24 @@ mise install
 mise run install
 ```
 
+If upgrading an existing checkout, run `mise run install` again before using the new commands. This rebuilds the local version and points the `one` launcher at `packages/cli/bin/one`, avoiding an older installed release.
+
 Then use the workspace commands:
 
 ```bash
 one                             # Inspect this workspace
 one run                         # List root and project tasks
-one dev                         # Dashboard API + Vite UI, using the development fixture
-one dev -p docs                  # Documentation at http://localhost:3000
-one build -p cli                 # Prepare embedded resources and build the CLI
-one test -p kernel               # Test the shared Go kernel
+one run dev                     # Dashboard API + Vite UI for this workspace
+one run dev -p docs              # Documentation at http://localhost:3000
+one run build -p cli             # Prepare embedded resources and build the CLI
+one run test -p kernel           # Test the shared Go kernel
 one run check                   # The complete repository gate; one check is shorthand
 one serve                       # Manage this repository in the Dashboard
 ```
 
-`one dev -p dashboard` starts the Vite UI; run `one dev -p cli` in another terminal for its API, or use the combined `one dev` task. `one serve` opens this repository as a real workspace, while the contributor development API uses the existing test fixture. No Infisical binding is required to build, test, or start these projects.
+`one run dev -p dashboard` starts the Vite UI; run `one run dev -p cli` in another terminal for its API, or use the combined `one run dev` task. Both the development API and `one serve` use this repository as their workspace. No Infisical binding is required to build, test, or start these projects.
 
-Root tasks remain native mise commands, so CI and first-time installation can still use `mise run build`, `mise run check`, and `mise run install`. Project tasks come from package scripts and Taskfiles. Only the root `mise.toml` is used: project tasks are namespaced as `cli:build` or `dashboard:dev` and select their directory with `dir`. CLI tasks declare their embedded-resource prerequisites there; CLI tests also build the binary used by E2E tests. Run `one init mise` after changing the project task catalogue to refresh the tracked task adapters.
+Root tasks remain native mise commands, so CI and first-time installation can still use `mise run build`, `mise run check`, and `mise run install`. Project tasks come from package scripts and Taskfiles. Only the root `mise.toml` is used: project tasks are namespaced as `cli:build` or `dashboard:dev` and select their directory with `dir`. CLI tasks declare their embedded-resource prerequisites there; CLI tests also build the binary used by E2E tests. Run `one init mise` after changing the project task catalogue to refresh the tracked native tasks. Running or listing tasks does not regenerate configuration. Dashboard discovers access links from process output; dev commands live exclusively in mise.
 
 Read [CONTRIBUTING.md](./CONTRIBUTING.md) before opening a pull request.
 
@@ -175,7 +177,7 @@ Read [CONTRIBUTING.md](./CONTRIBUTING.md) before opening a pull request.
 
 - [Installation](https://1cli.dev/docs/installation/)
 - [First project tutorial](https://1cli.dev/tutorials/first-workspace/)
-- [Templates](https://1cli.dev/templates/)
+- [Templates](https://1cli.dev/en/docs/templates/)
 - [Command reference](https://1cli.dev/docs/cli-overview/)
 - [Error codes](https://1cli.dev/docs/error-codes/)
 
@@ -195,6 +197,6 @@ one dev -p web --ui raw           # Native terminal input for the selected servi
 one build -p web -p api --concurrency 4
 ```
 
-All tasks use mise for scheduling, including development and user overrides. Multiple services use prefixed logs; Ctrl+C or a task failure stops the invocation and its child processes. Raw mode preserves terminal input and disables artifact caching. The previous development TUI and single-service restart controls have been removed. Structured results stay on stdout and child logs go to stderr.
+All tasks use mise for scheduling, including development and user overrides. Use `one run dev --ui tui` for grouped task logs or `--ui stream` for streaming output. In a terminal, automatic mode selects TUI for a task graph with multiple entries. Save `"taskUI": "tui"` or `"taskUI": "stream"` in `~/.config/one/preferences.json` for a personal default. Ctrl+C or a task failure stops the invocation and its child processes. TUI preserves task prefixes and original log styles, wraps long lines on resize, and keeps the complete session history for scrolling and search. Use the wheel or ↑/↓ to scroll, Tab to focus the dependency tree, Home/End to jump, and `f` to follow. The tree follows task dependencies, supports ←/→ and Enter to collapse/expand, and marks shared references with `↪`. Below 70 columns, Tab switches between a full-width tree and logs. When mise finishes, TUI automatically restores the terminal and returns the original exit status; no keypress is required. Raw mode preserves terminal input and disables artifact caching. Structured results stay on stdout and child logs go to stderr.
 
-Build concurrency defaults to 1; development allocates it automatically. Local Node dependencies build before their consumers. `one run build --cache off --force` always executes the build. See the [task guide](apps/docs/content/docs/en/run.md) for configuration, cache declarations, and Actions examples.
+Concurrency is allocated automatically for every task name; `--concurrency` sets an explicit limit. Local Node dependencies build before their consumers. `one run build --cache off --force` always executes the build. See the [task guide](apps/docs/content/docs/en/run.md) for configuration, cache declarations, and Actions examples.

@@ -1,0 +1,21 @@
+version = 2
+
+[workspace]
+id = "one-cli"
+name = "One CLI"
+
+[projects.dashboard]
+path = "apps/dashboard"
+toolchain = "node"
+
+[projects.docs]
+path = "apps/docs"
+toolchain = "node"
+
+[projects.cli]
+path = "packages/cli"
+toolchain = "go"
+
+[projects.kernel]
+path = "packages/kernel"
+toolchain = "go"

@@ -15,7 +15,20 @@ func fixture(t *testing.T) string {
 	t.Helper()
 	root := t.TempDir()
 	files := map[string]string{
-		"one.manifest.json":         `{"version":1,"workspace":{"id":"mise-fixture","name":"fixture"},"projects":[{"name":"web","relativeDir":"apps/web","toolchain":"node","templateId":"react-spa","dev":{"command":"pnpm dev"}},{"name":"api","relativeDir":"services/api","toolchain":"go","templateId":"go-api","dev":{"command":"go run ./cmd/server"}}]}`,
+		"one.manifest.toml": `version = 2
+
+[workspace]
+id = "mise-fixture"
+name = "fixture"
+
+[projects."web"]
+path = "apps/web"
+toolchain = "node"
+
+[projects."api"]
+path = "services/api"
+toolchain = "go"
+`,
 		"package.json":              `{"packageManager":"pnpm@10.14.0"}`,
 		"apps/web/package.json":     `{"scripts":{"dev":"vite","build":"vite build","test":"vitest run"}}`,
 		"services/api/go.mod":       "module example.com/api\n\ngo 1.25.0\n",
@@ -45,7 +58,7 @@ func TestConfigurationGenerationIsAdditiveAndIdempotent(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(p.Changes) != 1 || !p.DryRun {
+	if len(p.Changes) != 2 || !p.DryRun {
 		t.Fatalf("unexpected plan: %+v", p)
 	}
 	if actual, _ := os.ReadFile(filepath.Join(root, Filename)); string(actual) != string(userBefore) {
@@ -68,8 +81,8 @@ func TestConfigurationGenerationIsAdditiveAndIdempotent(t *testing.T) {
 	if rootConfig.Tasks["web:build"].Directory != "apps/web" || strings.Contains(string(rootRaw), "vite") {
 		t.Fatalf("tasks do not reference the source commands: %s", rootRaw)
 	}
-	if !strings.Contains(rootConfig.Tasks["web:dev"].Run, "one __task --project 'web' --task 'dev'") {
-		t.Fatal("missing terminal execution leaf")
+	if rootConfig.Tasks["web:dev"].Run != "pnpm run dev" {
+		t.Fatal("missing native command")
 	}
 	for _, dir := range []string{"apps/web", "services/api"} {
 		if _, err := os.Stat(filepath.Join(root, dir, Filename)); !os.IsNotExist(err) {

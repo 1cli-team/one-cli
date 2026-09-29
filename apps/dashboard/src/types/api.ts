@@ -100,7 +100,6 @@ export interface OverviewProject {
 	name: string;
 	relativeDir: string;
 	kind: OverviewProjectKind;
-	templateId?: string;
 	toolchain?: string;
 	domains?: Partial<Record<OverviewIssueDomain, string>>;
 	issues?: OverviewIssue[];
@@ -156,20 +155,15 @@ export interface ProjectEnvironmentSettings {
 	backend?: string;
 	path?: string;
 	inherits: boolean;
-	disabled: boolean;
-	keys?: string[];
 }
 
 export interface ProjectSettings {
 	name: string;
 	relativeDir: string;
 	kind: OverviewProjectKind;
-	templateId?: string;
 	toolchain?: string;
 	packageManager?: string;
-	buildVersion?: string;
-	devCommand?: string;
-	devURL?: string;
+	devAvailable?: boolean;
 	build?: {
 		command?: string;
 		source?: string;
@@ -182,6 +176,7 @@ export interface ProjectSettings {
 		status: "ready" | "unavailable";
 		entries: Array<{
 			name: string;
+			operation?: string;
 			source: string;
 			depends: string[] | null;
 			outputs: string[] | null;
@@ -200,22 +195,10 @@ export interface ProjectSettingsResponse {
 
 // ───────────────────────── manifest draft publication ──────────────────
 
-export interface ProjectGeneralPatch {
-	buildVersion: string;
-	devCommand: string;
-	devURL?: string;
-}
-
-export interface ProjectEnvironmentPatch {
-	path: string;
-	inherits: boolean;
-	disabled: boolean;
-}
-
 export interface WorkspaceEnvironmentPatch {
+	environments?: string[];
 	backend: string;
 	projectId?: string;
-	projectName?: string;
 	siteUrl?: string;
 }
 
@@ -225,8 +208,6 @@ export interface WorkspaceManifestPatch {
 
 export interface ProjectManifestPatch {
 	project: string;
-	general?: ProjectGeneralPatch;
-	environment?: ProjectEnvironmentPatch;
 }
 
 export interface ApplyManifestRequest {
@@ -280,11 +261,11 @@ export interface SecretMutationResponse {
 }
 
 export interface WorkspaceEnvironmentSettings {
+	environments: string[];
 	schema: string;
 	revision: string;
 	backend: string;
 	projectId: string;
-	projectName: string;
 	siteUrl: string;
 }
 

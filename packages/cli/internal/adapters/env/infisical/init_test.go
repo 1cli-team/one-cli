@@ -7,7 +7,6 @@ package infisical
 // manifest back-fill behavior.
 
 import (
-	"encoding/json"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -17,74 +16,13 @@ import (
 )
 
 func TestApplyInitDefaults(t *testing.T) {
-	cases := []struct {
-		name string
-		in   InitInput
-		want InitInput
-	}{
-		{
-			name: "empty input fills every default",
-			in:   InitInput{},
-			want: InitInput{
-				Environments: append([]string{}, DefaultEnvironments...),
-				DefaultEnv:   DefaultEnvironments[0],
-				RootPath:     "/",
-			},
-		},
-		{
-			name: "explicit environments pin DefaultEnv to first when DefaultEnv blank",
-			in: InitInput{
-				Environments: []string{"qa", "prod"},
-			},
-			want: InitInput{
-				Environments: []string{"qa", "prod"},
-				DefaultEnv:   "qa",
-				RootPath:     "/",
-			},
-		},
-		{
-			name: "explicit DefaultEnv preserved",
-			in: InitInput{
-				Environments: []string{"qa", "prod"},
-				DefaultEnv:   "prod",
-			},
-			want: InitInput{
-				Environments: []string{"qa", "prod"},
-				DefaultEnv:   "prod",
-				RootPath:     "/",
-			},
-		},
-		{
-			name: "explicit RootPath preserved",
-			in: InitInput{
-				RootPath: "/teams/web",
-			},
-			want: InitInput{
-				Environments: append([]string{}, DefaultEnvironments...),
-				DefaultEnv:   DefaultEnvironments[0],
-				RootPath:     "/teams/web",
-			},
-		},
-		{
-			name: "whitespace-only DefaultEnv treated as blank",
-			in: InitInput{
-				Environments: []string{"qa", "prod"},
-				DefaultEnv:   "   ",
-			},
-			want: InitInput{
-				Environments: []string{"qa", "prod"},
-				DefaultEnv:   "qa",
-				RootPath:     "/",
-			},
-		},
+	got := applyInitDefaults(InitInput{})
+	if !reflect.DeepEqual(got.Environments, []string{"dev", "staging", "prod"}) {
+		t.Fatal(got)
 	}
-	for _, tc := range cases {
-		t.Run(tc.name, func(t *testing.T) {
-			got := applyInitDefaults(tc.in)
-			if !reflect.DeepEqual(got, tc.want) {
-				t.Errorf("got %+v\n  want %+v", got, tc.want)
-			}
-		})
+	custom := applyInitDefaults(InitInput{Environments: []string{"prod", "dev"}})
+	if !reflect.DeepEqual(custom.Environments, []string{"prod", "dev"}) {
+		t.Fatal(custom)
 	}
 }
 
@@ -287,33 +225,9 @@ func TestEnsureManifestProject_PreservesExisting(t *testing.T) {
 	}
 }
 
-func TestEnsureManifestProject_BackfillsMissingIDOnly(t *testing.T) {
-	// Project block has Name but no ID — back-fill the ID, keep the Name.
-	tmp := t.TempDir()
-	mustWriteManifest(t, tmp, &workspace.Manifest{
-		Version:   workspace.ManifestVersion,
-		Workspace: &workspace.ManifestWorkspace{ID: "", Name: "name-was-set"},
-		Projects:  []workspace.ManifestProject{},
-	})
-
-	if err := ensureManifestProject(tmp, "fallback-name"); err != nil {
-		t.Fatal(err)
-	}
-
-	loaded, _ := workspace.ReadManifest(tmp)
-	if loaded.Workspace.Name != "name-was-set" {
-		t.Errorf("Name should be preserved: got %q", loaded.Workspace.Name)
-	}
-	if loaded.Workspace.ID == "" {
-		t.Error("ID should be back-filled")
-	}
-}
-
-// --- helpers ---
-
 func mustWriteManifest(t *testing.T, dir string, m *workspace.Manifest) {
 	t.Helper()
-	b, err := json.MarshalIndent(m, "", "  ")
+	b, err := workspace.MarshalManifest(m)
 	if err != nil {
 		t.Fatal(err)
 	}

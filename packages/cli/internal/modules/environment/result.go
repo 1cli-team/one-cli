@@ -28,12 +28,20 @@ type ListResult struct {
 	Total       *int     `json:"total,omitempty"`
 }
 
+type BindingResult struct {
+	ProjectID     string `json:"project_id"`
+	ProjectName   string `json:"project_name"`
+	Created       bool   `json:"created"`
+	RequestedName string `json:"requested_name,omitempty"`
+}
+
 type SetResult struct {
-	Schema             string `json:"schema"`
-	Source             string `json:"source,omitempty"`
-	Environment        string `json:"env,omitempty"`
-	Path               string `json:"path,omitempty"`
-	Key                string `json:"key"`
-	Action             string `json:"action"`
-	CreatedEnvironment bool   `json:"created_environment,omitempty"`
+	Binding            *BindingResult `json:"binding,omitempty"`
+	Schema             string         `json:"schema"`
+	Source             string         `json:"source,omitempty"`
+	Environment        string         `json:"env,omitempty"`
+	Path               string         `json:"path,omitempty"`
+	Key                string         `json:"key"`
+	Action             string         `json:"action"`
+	CreatedEnvironment bool           `json:"created_environment,omitempty"`
 }

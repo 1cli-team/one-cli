@@ -1,5 +1,8 @@
 "use client";
 
+import { PanelLeft } from "lucide-react";
+import { SiteTopNav, type SiteTopNavActive } from "@/components/site-top-nav";
+import type { Locale } from "@/i18n";
 import {
   DocsLayout as FumadocsLayout,
   type DocsLayoutProps,
@@ -23,6 +26,35 @@ const sidebarSlot: DocsSlots["sidebar"] = {
   useSidebar,
 };
 
-export function DocsLayout(props: DocsLayoutProps) {
-  return <FumadocsLayout {...props} slots={{ sidebar: sidebarSlot }} />;
+export function DocsLayout({
+  lang,
+  active,
+  ...props
+}: DocsLayoutProps & { lang: Locale; active: SiteTopNavActive }) {
+  const menuLabel = lang === "zh" ? "目录" : "Contents";
+
+  return (
+    <FumadocsLayout
+      {...props}
+      nav={{
+        ...props.nav,
+        component: (
+          <SiteTopNav
+            lang={lang}
+            active={active}
+            sidebarTrigger={
+              <SidebarTrigger
+                className="one-docs-menu-trigger"
+                aria-label={lang === "zh" ? "切换目录" : "Toggle contents"}
+              >
+                <PanelLeft aria-hidden="true" className="size-4" />
+                <span>{menuLabel}</span>
+              </SidebarTrigger>
+            }
+          />
+        ),
+      }}
+      slots={{ sidebar: sidebarSlot }}
+    />
+  );
 }

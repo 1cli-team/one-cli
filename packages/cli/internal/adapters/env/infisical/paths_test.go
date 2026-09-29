@@ -106,9 +106,8 @@ func TestPathInheritanceChain(t *testing.T) {
 }
 
 func TestResolveSubprojectPath_DefaultsFromRelativeDir(t *testing.T) {
-	cfg := &WorkspaceConfig{RootPath: "/"}
 	sub := &workspace.Project{Name: "user-api", RelativeDir: "services/user-api"}
-	res := ResolveSubprojectPath(cfg, sub, nil)
+	res := ResolveSubprojectPath(sub)
 	if res.Path != "/services/user-api" {
 		t.Errorf("default path wrong: %v", res.Path)
 	}
@@ -117,21 +116,13 @@ func TestResolveSubprojectPath_DefaultsFromRelativeDir(t *testing.T) {
 	}
 }
 
-func TestResolveSubprojectPath_OverrideWins(t *testing.T) {
-	cfg := &WorkspaceConfig{RootPath: "/"}
-	sub := &workspace.Project{Name: "user-api", RelativeDir: "services/user-api"}
-	off := false
-	res := ResolveSubprojectPath(cfg, sub, &SubprojectConfig{
-		Path:     "/teams/payments",
-		Inherits: &off,
-	})
-	if res.Path != "/teams/payments" {
-		t.Errorf("override path ignored: %v", res.Path)
+func TestProjectPathIncludesOnlyAncestors(t *testing.T) {
+	res := ResolveSubprojectPath(&workspace.Project{RelativeDir: "apps/web"})
+	if !reflect.DeepEqual(res.Chain, []string{"/", "/apps", "/apps/web"}) {
+		t.Fatal(res)
 	}
-	if res.Inherits {
-		t.Errorf("Inherits override ignored")
-	}
-	if !reflect.DeepEqual(res.Chain, []string{"/teams/payments"}) {
-		t.Errorf("chain wrong with inherits=false: %v", res.Chain)
+	root := ResolveSubprojectPath(nil)
+	if !reflect.DeepEqual(root.Chain, []string{"/"}) {
+		t.Fatal(root)
 	}
 }

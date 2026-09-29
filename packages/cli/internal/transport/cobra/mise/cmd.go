@@ -15,7 +15,7 @@ func Commands() []*cobra.Command {
 	var dryRun bool
 	cmd := &cobra.Command{
 		Use: "mise", Short: i18n.T("mise.configure.short"),
-		Example: "  one init mise --dry-run -o json\n  one init mise\n  one dev -p web",
+		Example: "  one init mise --dry-run -o json\n  one init mise\n  one run dev -p web",
 		Args:    i18n.NoArgs,
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			w, err := execution.ResolveWorkspace(cmd.Context())

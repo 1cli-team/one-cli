@@ -15,7 +15,7 @@ import (
 )
 
 // The private worker isolates Cobra's process-wide state. stdout is a bounded
-// lifecycle protocol; stderr contains the task pipeline's redacted console.
+// lifecycle protocol; stderr contains the task pipeline's original console.
 func serviceWorker(service tasks.Service) *cobra.Command {
 	var project, environment string
 	cmd := &cobra.Command{Use: "__service", Hidden: true, Args: cobra.NoArgs, RunE: func(cmd *cobra.Command, _ []string) error {

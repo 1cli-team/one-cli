@@ -64,6 +64,7 @@ depends = []
 func TestE2E_TaskShortcutPreviewAndHelpAreStatic(t *testing.T) {
 	root := buildFixture(t, true)
 	buildWrite(t, root, "packages/lib/package.json", `{"name":"@build/lib","scripts":{"dev":"sh dev.sh","test":"sh test.sh","build":"sh build.sh","lint":"sh lint.sh"}}`)
+	syncFixtureTasks(t, root)
 	t.Setenv("ONE_MISE_BINARY", filepath.Join(root, "missing-mise"))
 	for _, name := range []string{"dev", "build", "test", "lint"} {
 		short, logs, code := runBinaryIn(t, root, name, "-p", "lib", "--dry-run", "-o", "json")
@@ -103,14 +104,15 @@ func TestE2E_TaskShortcutPreviewAndHelpAreStatic(t *testing.T) {
 	}
 }
 
-func TestE2E_NativeAndManifestDevForwardArguments(t *testing.T) {
+func TestE2E_ScriptAndExplicitMiseDevForwardArguments(t *testing.T) {
 	for _, manifest := range []bool{false, true} {
-		t.Run(map[bool]string{false: "native", true: "manifest"}[manifest], func(t *testing.T) {
+		t.Run(map[bool]string{false: "native", true: "explicit mise"}[manifest], func(t *testing.T) {
 			root := buildFixture(t, true)
 			if manifest {
 				overrideDevCommand(t, root, "lib", "sh dev.sh")
 			} else {
 				buildWrite(t, root, "packages/lib/package.json", `{"name":"@build/lib","scripts":{"dev":"sh dev.sh"}}`)
+				syncFixtureTasks(t, root)
 			}
 			buildWrite(t, root, "packages/lib/dev.sh", "printf '<%s>\\n' \"$@\"\n")
 			_, logs, code := runBinaryIn(t, root, "dev", "-p", "lib", "-o", "json", "--", "a b", "$(touch INJECTED)", "--port", "4300")
@@ -124,14 +126,20 @@ func TestE2E_NativeAndManifestDevForwardArguments(t *testing.T) {
 	}
 }
 
-func TestE2E_DevelopmentRejectsBlockingModesBeforePreparation(t *testing.T) {
+func TestE2E_TaskValidationRejectsInteractiveGraphBeforePreparation(t *testing.T) {
 	root := buildFixture(t, true)
 	for _, project := range []string{"web", "lib"} {
 		overrideDevCommand(t, root, project, "echo DEV_SHOULD_NOT_START")
 	}
+
+	appendRootTaskConfig(t, root, `[tasks.dev]
+ depends=["web:dev","lib:dev"]
+ [tasks."web:dev"]
+ interactive=true
+ `)
 	for _, locale := range []string{"zh_CN.UTF-8", "en_US.UTF-8"} {
 		t.Setenv("LC_ALL", locale)
-		for _, args := range [][]string{{"dev", "--ui", "raw"}, {"dev", "--concurrency", "1"}, {"test", "--", ":::"}} {
+		for _, args := range [][]string{{"dev"}, {"dev", "--ui", "tui"}, {"test", "--", ":::"}} {
 			out, logs, code := runBinaryIn(t, root, append(args, "--dry-run")...)
 			if code == 0 || strings.Contains(out+logs, "DEV_SHOULD_NOT_START") || strings.Contains(logs, `"message": "tasks.`) {
 				t.Fatal(args, code, out, logs)
@@ -140,5 +148,29 @@ func TestE2E_DevelopmentRejectsBlockingModesBeforePreparation(t *testing.T) {
 	}
 	if _, err := os.Stat(filepath.Join(root, "installs")); !os.IsNotExist(err) {
 		t.Fatal("validation installed dependencies")
+	}
+}
+
+func TestE2E_TaskListGroupsAndVerbose(t *testing.T) {
+	root := buildFixture(t, true)
+	for _, locale := range []string{"en_US.UTF-8", "zh_CN.UTF-8"} {
+		t.Setenv("LC_ALL", locale)
+		out, logs, code := runBinaryIn(t, root, "run", "-o", "text")
+		if code != 0 || strings.Contains(out, "mise.toml") || strings.Contains(out, "//:") || !strings.Contains(out, "one run --verbose") {
+			t.Fatal(code, out, logs)
+		}
+		detailed, logs, code := runBinaryIn(t, root, "run", "--verbose", "-o", "text")
+		if code != 0 || !strings.Contains(detailed, "mise.toml") {
+			t.Fatal(code, detailed, logs)
+		}
+		out, logs, code = runBinaryIn(t, root, "run", "-p", "web", "-o", "text")
+		if code != 0 || !strings.Contains(out, "web:build") || strings.Contains(out, "lib:build") {
+			t.Fatal(code, out, logs)
+		}
+		plain, _, code := runBinaryIn(t, root, "run", "-o", "json")
+		verbose, _, verboseCode := runBinaryIn(t, root, "run", "--verbose", "-o", "json")
+		if code != 0 || verboseCode != 0 || !reflect.DeepEqual(mustParseJSON(t, plain), mustParseJSON(t, verbose)) {
+			t.Fatal("verbose changed the catalog protocol", plain, verbose)
+		}
 	}
 }

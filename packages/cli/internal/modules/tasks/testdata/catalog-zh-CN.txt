@@ -1,0 +1,15 @@
+工作区任务（2）
+  build            Build workspace applications
+  install
+
+项目：api（1）
+  //apps/api:test  Run API tests
+
+项目：web（1）
+  web:dev          Start the web app
+
+作用域：//tools（1）
+  //tools:check    Check tooling
+
+执行任务：one run <任务名>
+筛选项目：one run -p <项目名> · 查看详情：one run --verbose

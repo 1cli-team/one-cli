@@ -3,8 +3,7 @@
 // technology stack. Ordinary calls configure local development only; CI,
 // deployment, and image-registry choices are not added implicitly.
 //
-// The workspace mutation lives in modules/creation, shared with
-// `one create --preset`. This file is a thin
+// The workspace mutation lives in modules/creation. This file is a thin
 // shell: parse flags + positional, run the registry / prompts, then call
 // into the engine.
 package addcmd
@@ -132,7 +131,7 @@ func runAdd(cmd *cobra.Command, service *creationmodule.Service, positional stri
 	}
 
 	// All workspace mutation now lives in creation.Service (the same
-	// engine `one create --preset` orchestrates over multiple projects).
+	// engine).
 	// addcmd remains a thin shell: validate flags, prompt where the
 	// command-specific UX is, then hand off.
 	// Ordinary add deliberately leaves deployment unset. An explicit advanced

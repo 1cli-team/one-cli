@@ -15,17 +15,14 @@ one create [dir] [options]
 
 | Argument | Description |
 |---|---|
-| `dir` | Target directory. Use `.` to create in the current directory with `basename(cwd)` as the name. The target must not exist or must be empty |
-| `-n, --name <name>` | Workspace name. Defaults to `basename(dir)` |
+| `dir` | Target directory. Use `.` for the current directory and its folder name. Supports new directories, empty directories, and repositories containing only valid Git metadata |
+| `-n, --name <name>` | Advanced override for the name derived from the target folder |
 | `-y, --yes` | Non-interactive mode; uses defaults and requires an explicit `dir` |
 | `-o, --output <fmt>` | `json` / `yaml` / `text`; default is TTY-aware auto detection |
 
 ## Interactive Mode
 
-Running `one create` with no arguments opens terminal questions for:
-
-1. Target directory, such as `./my-app`; use `.` for the current directory.
-2. Workspace name, optional; when empty, One CLI uses the target directory basename.
+Running `one create` with no arguments asks only for the target directory, such as `./my-app` or `.`. The workspace name is derived from the final folder name. Invalid names are reported while entering the directory.
 
 
 For scripts, CI, and agents, use non-interactive commands:
@@ -55,7 +52,7 @@ a workflow that calls `one run ci` when needed.
 
 ## Infisical binding
 
-Creation does not contact Infisical or write an `env` binding. Sign in with `one login` when you need managed variables. The first `one env set`, `get`, or `list` initializes the binding; Dashboard also lets you select an existing project. Execution without a binding uses the shell environment.
+Creation does not contact Infisical or write an `env` binding. Sign in with `one login` when you need managed variables. Only the first variable save (`one env set` or Dashboard Save) initializes the binding. Listing, refreshing, reading, and deleting never create a remote project. A name conflict triggers a short suffix, and One displays the actual remote project name. The local workspace name stays unchanged. Later writes use the stored remote project ID. Execution without a binding uses the shell environment.
 
 ## Output
 
@@ -80,7 +77,7 @@ Creation does not contact Infisical or write an `env` binding. Sign in with `one
 
 ```bash
 one create
-# Asks for target directory and optional workspace name
+# Asks only for the target directory
 ```
 
 ### Non-interactive
@@ -115,7 +112,7 @@ pnpm install
 
 | Code | Recovery |
 |---|---|
-| `EXISTING_TARGET_NOT_EMPTY` | Choose an empty directory, or delete the target manually and retry |
+| `EXISTING_TARGET_NOT_EMPTY` | Check the listed conflicts and choose an empty directory or empty Git repository |
 | `INVALID_NAME` | Names must match `^[a-zA-Z0-9][a-zA-Z0-9_-]*$`; replace spaces with `-` |
 | `PROJECT_NAME_REQUIRED` | Pass the workspace directory as the positional argument in non-interactive mode |
 | `WORKSPACE_NESTED_FORBIDDEN` | Do not create a workspace inside an existing workspace; use another directory or `one add` |
@@ -125,4 +122,12 @@ Full table: [Error codes](/en/docs/error-codes/).
 ## Agent instructions
 
 
-New workspaces include a concise bilingual `AGENTS.md` with 7 rules per language covering workspace discovery, CLI help, adding projects, tasks and verification, dependencies, environment variables, and automation error handling. Command details are discovered through `one <command> --help` instead of embedding a full command manual. The file is team-owned; later `one add` operations preserve edits.
+New workspaces receive a single-language `AGENTS.md` matching the active One CLI language. Set the preference with `one locale zh-CN` or `one locale en-US`; `auto` follows the terminal language and falls back to English. Existing files are not rewritten when the language changes or `one add` runs.
+
+The source templates are editable Markdown files in `packages/cli/internal/modules/creation/templates/`: `AGENTS.en-US.md` and `AGENTS.zh-CN.md`. Rebuild the CLI after editing them to update future workspaces.
+
+The instructions require agents to run tests and project commands through `one run`, place complex TypeScript scripts in `scripts/*.mts` and register them as tasks, and manage environment variables through One. Publishing and operations credentials, such as Docker registry accounts, belong in global variables. When missing, agents direct users to the Dashboard’s Shared credentials page and then inject the configured variables with `one exec --global` inside the task.
+
+## Existing empty Git repositories
+
+After cloning an empty repository or running `git init`, use `one create .`. One preserves branches, remotes, history, and Git configuration. Custom hooks are preserved with a warning; shared hooks in linked worktrees are not installed automatically. Repositories with files such as README or source code, or uncommitted deletions, are rejected with the specific conflict.

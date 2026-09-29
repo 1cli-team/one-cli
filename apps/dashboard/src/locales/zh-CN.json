@@ -18,7 +18,7 @@
 	"manifestDraft": {
 		"saveButton": "保存更改 · {{count}}",
 		"title": "要把这些修改写入 Manifest 吗？",
-		"description": "这会修改工作区里的 one.manifest.json。继续前请确认下面的具体差异。",
+		"description": "这会修改工作区里的 one.manifest.toml。继续前请确认下面的具体差异。",
 		"currentManifest": "当前 Manifest",
 		"updatedManifest": "修改后",
 		"confirm": "保存到 Manifest",
@@ -28,15 +28,15 @@
 		"discard": "放弃草稿",
 		"saved": "Manifest 修改已保存",
 		"saveFailed": "无法保存 Manifest 修改",
-		"conflict": "草稿打开后 one.manifest.json 已发生变化。请放弃草稿、检查最新配置后再修改。",
+		"conflict": "草稿打开后 one.manifest.toml 已发生变化。请放弃草稿、检查最新配置后再修改。",
 		"changedFields": "修改字段",
 		"jumpToChange": "定位首处修改"
 	},
 	"environmentSwitcher": {
 		"label": "环境",
 		"dev": "开发",
-		"preview": "预览",
-		"prod": "生产"
+		"prod": "生产",
+		"staging": "预发布"
 	},
 	"workspaces": {
 		"workspaceLabel": "Workspace",
@@ -92,11 +92,11 @@
 			},
 			"invalid": {
 				"title": "Workspace Manifest 无效",
-				"description": "修复该目录中的 one.manifest.json，然后重新在 Workspace 内执行 one serve。"
+				"description": "修复该目录中的 one.manifest.toml，然后重新在 Workspace 内执行 one serve。"
 			},
 			"identity-missing": {
 				"title": "Workspace 缺少稳定 ID",
-				"description": "请先在 one.manifest.json 中补齐 workspace.id，再配置 Project 级 Profile。"
+				"description": "请先在 one.manifest.toml 中补齐 workspace.id，再配置 Project 级 Profile。"
 			},
 			"identity-conflict": {
 				"title": "Workspace ID 重复",
@@ -187,12 +187,10 @@
 		"unsavedChanges": "当前修改尚未保存。要放弃修改并继续吗？",
 		"discardAndContinue": "放弃并继续",
 		"general": {
-			"template": "Template",
 			"toolchain": "Toolchain",
 			"path": "项目路径",
 			"buildVersion": "构建版本",
 			"packageManager": "包管理器",
-			"devCommand": "开发命令",
 			"buildCommand": "构建命令",
 			"buildSource": "one build 自动读取 {{source}}，请在该文件中修改构建任务。 工作区依赖与缓存由 mise 管理，one run build 使用相同入口。",
 			"buildMissing": "未配置构建任务",
@@ -218,7 +216,8 @@
 			"inheritsHint": "项目变量会覆盖同名工作区变量。",
 			"disabled": "禁用项目环境",
 			"disabledHint": "运行项目命令时不注入环境变量。",
-			"keys": "已声明变量名"
+			"keys": "已声明变量名",
+			"conventionHint": "变量目录由项目路径确定，自动继承父级目录；同名变量以更具体的目录为准。"
 		},
 		"draftHint": "修改将暂存为草稿，预览并保存后生效。"
 	},
@@ -253,14 +252,17 @@
 		"deleteTitle": "删除 {{key}}？",
 		"deleteDescription": "这会从当前 Infisical 环境和 folder 中移除该值，无法在这里撤销。",
 		"deleteConfirmation": "输入 {{key}} 确认删除",
-		"notConfiguredTitle": "连接存储项目",
-		"notConfiguredHint": "在工作区设置中选择存储项目，或自动连接后加载当前环境的密钥。",
-		"connectAndLoad": "连接并加载密钥",
+		"notConfiguredTitle": "尚未配置环境变量存储",
+		"notConfiguredHint": "添加第一个变量并保存时，One 会自动创建并连接 Infisical 项目。",
 		"search": "搜索密钥名称",
 		"noMatches": "没有匹配的密钥",
 		"scopeHint": "此处的修改会直接保存到 Infisical。",
 		"loadError": "无法加载密钥",
-		"more": "{{key}} 的更多操作"
+		"more": "{{key}} 的更多操作",
+		"initializing": "正在创建存储项目…",
+		"invalidKey": "变量名只能包含字母、数字和下划线，并以字母或下划线开头，例如 API_TOKEN。",
+		"storageCreated": "已创建 Infisical 项目：{{name}}",
+		"storageRenamed": "名称 {{requested}} 已被占用，已创建 Infisical 项目：{{name}}"
 	},
 	"project": {
 		"fields": {
@@ -274,7 +276,7 @@
 			"description": "配置工作区环境存储，并管理共享密钥。",
 			"backend": "Backend",
 			"backendPending": "等待审阅",
-			"backendSource": "Infisical 项目绑定变更经审阅后写入 one.manifest.json。",
+			"backendSource": "Infisical 项目绑定变更经审阅后写入 one.manifest.toml。",
 			"signInHint": "请先在设置中登录 Infisical，再选择存储项目。",
 			"noProjects": "暂无可用的存储项目，可在共享凭据中创建。"
 		},
@@ -574,7 +576,7 @@
 		"copyFailed": "无法复制，请在控制台选择文本后复制。",
 		"actionFailed": "操作失败，请重试。",
 		"saveFirst": "有未保存的配置，请先保存或丢弃，再启动或重启服务。",
-		"noDev": "尚未配置 dev 任务。请在概览中设置开发命令，或在项目的 mise.toml 中添加 dev 任务。",
+		"noDev": "mise 中没有 dev 任务。请定义 dev 任务，或添加项目 dev 脚本后执行 one init mise。",
 		"environmentMismatch": "当前服务使用 {{environment}} 环境。重启后将使用所选的 {{next}} 环境。",
 		"exitCode": "退出码：{{code}}",
 		"reachable": "本机端口可连接",
@@ -584,7 +586,7 @@
 		"waitingLogs": "正在准备运行环境，等待输出…",
 		"emptyLogs": "启动服务后，运行日志会显示在这里。",
 		"noMatches": "没有匹配的日志。",
-		"consoleHint": "日志已脱敏，最多保留最近 256 KiB。关闭页面不影响服务；关闭 one serve 会停止服务。",
+		"consoleHint": "显示子进程原始日志，最多保留最近 256 KiB。关闭页面不影响服务；关闭 one serve 会停止服务。",
 		"truncated": "较早的日志已移除，仅显示最近的输出。",
 		"status": {
 			"preparing": "准备中",

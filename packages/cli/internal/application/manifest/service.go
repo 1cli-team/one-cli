@@ -1,17 +1,18 @@
 // Package manifest owns the Dashboard's narrow, review-before-publish write
-// boundary for one.manifest.json. Workspace projections remain read-only.
+// boundary for one.manifest.toml. Workspace projections remain read-only.
 package manifest
 
 import (
 	"context"
 	"fmt"
 	"net/url"
+	"os"
 	"strings"
 	"sync"
 
 	catalog "github.com/torchstellar-team/one-cli/packages/cli/internal/core/backend"
 	workspacecore "github.com/torchstellar-team/one-cli/packages/cli/internal/core/workspace"
-	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/localurl"
+	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/i18n"
 )
 
 const (
@@ -48,33 +49,15 @@ func (e *ManifestConflict) Error() string {
 
 func (e *ManifestConflict) Unwrap() error { return ErrManifestConflict }
 
-type ProjectGeneralPatch struct {
-	BuildVersion string  `json:"buildVersion"`
-	DevCommand   string  `json:"devCommand"`
-	DevURL       *string `json:"devURL,omitempty"`
-}
-
-type ProjectEnvironmentPatch struct {
-	Path     string `json:"path"`
-	Inherits bool   `json:"inherits"`
-	Disabled bool   `json:"disabled"`
-}
-
-// ProjectManifestPatch is intentionally a whitelist rather than a partial
-// Manifest. Browser clients can only update the user-facing project settings
-// represented here; identity, paths, toolchains and unknown backend config
-// never cross the write boundary.
 type ProjectManifestPatch struct {
-	Project     string                   `json:"project"`
-	General     *ProjectGeneralPatch     `json:"general,omitempty"`
-	Environment *ProjectEnvironmentPatch `json:"environment,omitempty"`
+	Project string `json:"project"`
 }
 
 type WorkspaceEnvironmentPatch struct {
-	Backend     string  `json:"backend"`
-	ProjectID   *string `json:"projectId,omitempty"`
-	ProjectName *string `json:"projectName,omitempty"`
-	SiteURL     *string `json:"siteUrl,omitempty"`
+	Backend      string   `json:"backend"`
+	ProjectID    *string  `json:"projectId,omitempty"`
+	SiteURL      *string  `json:"siteUrl,omitempty"`
+	Environments []string `json:"environments,omitempty"`
 }
 
 type WorkspaceManifestPatch struct {
@@ -174,7 +157,7 @@ func (s *Service) PreviewManifestDraft(
 	if input.Revision != currentRevision {
 		return PreviewManifestResult{}, &ManifestConflict{Expected: input.Revision, Current: currentRevision}
 	}
-	before, err := workspacecore.MarshalManifest(manifest)
+	before, err := os.ReadFile(workspacecore.ManifestPath(root))
 	if err != nil {
 		return PreviewManifestResult{}, err
 	}
@@ -202,7 +185,7 @@ func applyWorkspaceEnvironmentPatch(manifest *workspacecore.Manifest, patch *Wor
 		return fmt.Errorf("%w: unknown environment backend %q", ErrInvalidInput, backend)
 	}
 	if manifest.Env == nil {
-		manifest.Env = &workspacecore.EnvironmentConfig{}
+		manifest.Env = &workspacecore.EnvironmentConfig{Environments: workspacecore.EnvironmentNames(nil)}
 	}
 	if patch.ProjectID != nil {
 		if strings.TrimSpace(*patch.ProjectID) == "" {
@@ -210,8 +193,8 @@ func applyWorkspaceEnvironmentPatch(manifest *workspacecore.Manifest, patch *Wor
 		}
 		manifest.Env.ProjectID = strings.TrimSpace(*patch.ProjectID)
 	}
-	if patch.ProjectName != nil {
-		manifest.Env.ProjectName = *patch.ProjectName
+	if patch.Environments != nil {
+		manifest.Env.Environments = append([]string(nil), patch.Environments...)
 	}
 	if patch.SiteURL != nil {
 		u, err := url.Parse(*patch.SiteURL)
@@ -243,46 +226,7 @@ func (s *Service) applyProjectChanges(
 		if project == nil {
 			return 0, fmt.Errorf("%w: %s", ErrProjectNotFound, name)
 		}
-		if change.General == nil && change.Environment == nil {
-			return 0, fmt.Errorf("%w: project %q has no changes", ErrInvalidInput, name)
-		}
-
-		if change.General != nil {
-			project.BuildVersion = workspacecore.NormalizeBuildVersion(change.General.BuildVersion)
-			command := strings.TrimSpace(change.General.DevCommand)
-			url := ""
-			if project.Dev != nil {
-				url = project.Dev.URL
-			}
-			if change.General.DevURL != nil {
-				var err error
-				url, err = localurl.Normalize(*change.General.DevURL)
-				if err != nil {
-					return 0, fmt.Errorf("%w: %w", ErrInvalidInput, err)
-				}
-			}
-			if command == "" && url == "" {
-				project.Dev = nil
-			} else {
-				project.Dev = &workspacecore.ProjectDevOverride{Command: command, URL: url}
-			}
-			applied++
-		}
-		if change.Environment != nil {
-			if strings.Contains(change.Environment.Path, "\x00") || unsafeSecretPath(change.Environment.Path) {
-				return 0, fmt.Errorf("%w: project %q has an unsafe environment path", ErrInvalidInput, name)
-			}
-			inherits := change.Environment.Inherits
-			keys := []string(nil)
-			if project.Env != nil {
-				keys = append(keys, project.Env.Keys...)
-			}
-			project.Env = &workspacecore.ProjectEnvOverride{
-				Path: strings.TrimSpace(change.Environment.Path), Inherits: &inherits,
-				Disabled: change.Environment.Disabled, Keys: keys,
-			}
-			applied++
-		}
+		return 0, fmt.Errorf("%w: %s", ErrInvalidInput, i18n.T("manifest.project_readonly"))
 	}
 	return applied, nil
 }
@@ -297,13 +241,4 @@ func findProject(manifest *workspacecore.Manifest, name string) *workspacecore.M
 		}
 	}
 	return nil
-}
-
-func unsafeSecretPath(value string) bool {
-	for _, part := range strings.Split(strings.ReplaceAll(value, "\\", "/"), "/") {
-		if part == ".." {
-			return true
-		}
-	}
-	return false
 }

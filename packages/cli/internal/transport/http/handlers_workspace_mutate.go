@@ -7,6 +7,7 @@ import (
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/application/execution"
 	manifestapp "github.com/torchstellar-team/one-cli/packages/cli/internal/application/manifest"
 	workspaceapp "github.com/torchstellar-team/one-cli/packages/cli/internal/application/workspace"
+	environmentmodule "github.com/torchstellar-team/one-cli/packages/cli/internal/modules/environment"
 	cliErrors "github.com/torchstellar-team/one-cli/packages/cli/internal/platform/errors"
 )
 
@@ -37,12 +38,13 @@ func handleInitializeWorkspaceEnvironmentBackend(opts MuxOpts) http.HandlerFunc 
 			writeNoWorkspace(w)
 			return
 		}
-		if err := opts.EnvironmentService.EnsureInfisicalReady(
+		binding, err := opts.EnvironmentService.EnsureInfisicalReady(
 			r.Context(),
 			execution.NewScope(r.Context(), opts.WorkspaceRoot),
 			r.URL.Query().Get("env"),
 			secretProject(r),
-		); err != nil {
+		)
+		if err != nil {
 			writeServiceError(w, err)
 			return
 		}
@@ -53,7 +55,10 @@ func handleInitializeWorkspaceEnvironmentBackend(opts MuxOpts) http.HandlerFunc 
 			writeWorkspaceMutationErr(w, err)
 			return
 		}
-		writeJSON(w, http.StatusOK, settings)
+		writeJSON(w, http.StatusOK, struct {
+			workspaceapp.WorkspaceEnvironmentSettings
+			Binding *environmentmodule.BindingResult `json:"binding,omitempty"`
+		}{settings, binding})
 	}
 }
 

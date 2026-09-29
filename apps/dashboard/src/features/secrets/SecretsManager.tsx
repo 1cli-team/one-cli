@@ -113,6 +113,7 @@ export const SecretsManager: React.FC<{
 	const [deleteKey, setDeleteKey] = useState("");
 	const [deleteConfirmation, setDeleteConfirmation] = useState("");
 	const [saving, setSaving] = useState(false);
+	const [initializing, setInitializing] = useState(false);
 	const [retrying, setRetrying] = useState(false);
 	const [recoveryError, setRecoveryError] = useState("");
 	const [search, setSearch] = useState("");
@@ -124,6 +125,7 @@ export const SecretsManager: React.FC<{
 		{ revalidateIfStale: false },
 	);
 	const listError = result.error as HttpError | undefined;
+	const needsInitialization = listError?.code === "INFISICAL_NOT_CONFIGURED";
 	const showLoading = result.isLoading && !result.data;
 	const showError = !showLoading && !result.data && Boolean(listError);
 	const showEmpty = !showLoading && !showError && result.data?.keys.length === 0;
@@ -149,17 +151,10 @@ export const SecretsManager: React.FC<{
 	]);
 
 	async function retryList() {
-		if (retrying || (readOnly && listError?.code === "INFISICAL_NOT_CONFIGURED")) return;
+		if (retrying) return;
 		setRetrying(true);
 		setRecoveryError("");
 		try {
-			if ((result.error as HttpError | undefined)?.code === "INFISICAL_NOT_CONFIGURED") {
-				await initializeWorkspaceEnvironmentBackend(
-					workspaceEntryId,
-					environment,
-					project || undefined,
-				);
-			}
 			await result.mutate();
 		} catch (error) {
 			const failure = error as HttpError;
@@ -223,11 +218,35 @@ export const SecretsManager: React.FC<{
 	}
 
 	async function saveEditor() {
-		if (!editor || !editor.key.trim() || saving) return;
+		if (!editor || !editor.key.trim() || saving || readOnly) return;
+		if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(editor.key.trim())) {
+			setEditorError(t("secrets.invalidKey"));
+			return;
+		}
 		setSaving(true);
 		setEditorError("");
 		try {
 			if (editor.mode === "create") {
+				if (needsInitialization) {
+					setInitializing(true);
+					const initialized = await initializeWorkspaceEnvironmentBackend(
+						workspaceEntryId,
+						environment,
+						project || undefined,
+					);
+					setInitializing(false);
+					if (initialized.binding?.created) {
+						const binding = initialized.binding;
+						toast.success(
+							t(binding.requested_name ? "secrets.storageRenamed" : "secrets.storageCreated", {
+								name: binding.project_name,
+								requested: binding.requested_name,
+							}),
+						);
+					}
+					// A missing remote folder can make listing fail before the first write.
+					await result.mutate().catch(() => undefined);
+				}
 				await createSecret(
 					workspaceEntryId,
 					environment,
@@ -255,6 +274,7 @@ export const SecretsManager: React.FC<{
 		} catch (error) {
 			setEditorError((error as HttpError).message || t("secrets.saveFailed"));
 		} finally {
+			setInitializing(false);
 			setSaving(false);
 		}
 	}
@@ -328,7 +348,7 @@ export const SecretsManager: React.FC<{
 								actionTrigger.current = null;
 								setEditor({ mode: "create", key: "", value: "" });
 							}}
-							disabled={readOnly || showError || showLoading}
+							disabled={readOnly || (showError && !needsInitialization) || showLoading}
 						>
 							<Plus />
 							{t("secrets.add")}
@@ -355,17 +375,9 @@ export const SecretsManager: React.FC<{
 						{recoveryError && listError.code === "INFISICAL_NOT_CONFIGURED" ? (
 							<ErrorNotice>{recoveryError}</ErrorNotice>
 						) : null}
-						<Button
-							variant="outline"
-							disabled={retrying || (readOnly && listError.code === "INFISICAL_NOT_CONFIGURED")}
-							onClick={() => void retryList()}
-						>
+						<Button variant="outline" disabled={retrying} onClick={() => void retryList()}>
 							{retrying ? <Spinner /> : <RefreshCw />}
-							{t(
-								listError.code === "INFISICAL_NOT_CONFIGURED"
-									? "secrets.connectAndLoad"
-									: "secrets.retry",
-							)}
+							{t("secrets.retry")}
 						</Button>
 					</StatePanel>
 				) : null}
@@ -381,7 +393,7 @@ export const SecretsManager: React.FC<{
 								actionTrigger.current = null;
 								setEditor({ mode: "create", key: "", value: "" });
 							}}
-							disabled={readOnly || showError || showLoading}
+							disabled={readOnly || (showError && !needsInitialization) || showLoading}
 						>
 							<Plus />
 							{t("secrets.add")}
@@ -509,6 +521,7 @@ export const SecretsManager: React.FC<{
 				error={editorError}
 				returnFocus={actionTrigger.current}
 				saving={saving}
+				initializing={initializing}
 				onChange={setEditor}
 				onSave={() => void saveEditor()}
 				onClose={() => !saving && setEditor(null)}
@@ -566,12 +579,13 @@ export const SecretsManager: React.FC<{
 const SecretEditor: React.FC<{
 	editor: SecretEditorState | null;
 	saving: boolean;
+	initializing: boolean;
 	error: string;
 	returnFocus: HTMLButtonElement | null;
 	onChange(editor: SecretEditorState): void;
 	onSave(): void;
 	onClose(): void;
-}> = ({ editor, saving, error, returnFocus, onChange, onSave, onClose }) => {
+}> = ({ editor, saving, initializing, error, returnFocus, onChange, onSave, onClose }) => {
 	const { t } = useTranslation();
 	const [showValue, setShowValue] = useState(false);
 	const [confirmClose, setConfirmClose] = useState(false);
@@ -688,7 +702,7 @@ const SecretEditor: React.FC<{
 							</Button>
 							<Button type="submit" disabled={saving || !editor?.key.trim()}>
 								{saving ? <Spinner /> : <ShieldCheck />}
-								{t("secrets.save")}
+								{t(initializing ? "secrets.initializing" : "secrets.save")}
 							</Button>
 						</DialogFooter>
 					)}

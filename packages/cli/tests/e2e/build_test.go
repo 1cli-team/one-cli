@@ -1,6 +1,7 @@
 package cli_test
 
 import (
+	"context"
 	"encoding/json"
 	"os"
 	"os/exec"
@@ -9,6 +10,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/torchstellar-team/one-cli/packages/cli/internal/modules/miseconfig"
 	buildmodule "github.com/torchstellar-team/one-cli/packages/cli/internal/modules/tasks"
 	"gopkg.in/yaml.v3"
 )
@@ -42,7 +44,25 @@ func buildFixture(t *testing.T, mise bool) string {
 	// mise does not discover a monorepo rooted at HOME.
 	isolateHome(t, t.TempDir())
 	t.Setenv("ONE_RUNTIME", "builtin")
-	buildWrite(t, root, "one.manifest.json", `{"version":1,"workspace":{"id":"build-test","name":"build-test"},"environments":{"names":["dev","prod"],"default":"dev"},"projects":[{"name":"web","relativeDir":"apps/web","toolchain":"node"},{"name":"lib","relativeDir":"packages/lib","toolchain":"node"},{"name":"mobile","relativeDir":"apps/mobile","toolchain":"node"}]}`)
+	t.Setenv("MISE_EXPERIMENTAL", "0")
+	buildWrite(t, root, "one.manifest.toml", `version = 2
+
+[workspace]
+id = "build-test"
+name = "build-test"
+
+[projects."web"]
+path = "apps/web"
+toolchain = "node"
+
+[projects."lib"]
+path = "packages/lib"
+toolchain = "node"
+
+[projects."mobile"]
+path = "apps/mobile"
+toolchain = "node"
+`)
 	buildWrite(t, root, "package.json", `{"packageManager":"pnpm@12.3.4"}`)
 	buildWrite(t, root, "apps/web/package.json", `{"name":"@build/web","scripts":{"build":"sh build.sh"},"dependencies":{"@build/lib":"workspace:*"}}`)
 	buildWrite(t, root, "packages/lib/package.json", `{"name":"@build/lib","scripts":{"build":"sh build.sh"}}`)
@@ -61,6 +81,13 @@ func buildFixture(t *testing.T, mise bool) string {
 		t.Setenv(key, filepath.Join(root, key))
 	}
 
+	plan, e := miseconfig.Build(root, miseconfig.Options{})
+	if e != nil {
+		t.Fatal(e)
+	}
+	if e = plan.Apply(context.Background()); e != nil {
+		t.Fatal(e)
+	}
 	return root
 }
 
@@ -158,7 +185,7 @@ func TestE2E_GoLibraryTemplateHasBuildTask(t *testing.T) {
 	if err := json.Unmarshal([]byte(stdout), &plan); err != nil {
 		t.Fatal(err)
 	}
-	if len(plan.Tasks) != 1 || plan.Tasks[0].Operation != "build" || !plan.Tasks[0].Managed {
+	if len(plan.Tasks) != 1 || plan.Tasks[0].Operation != "build" || plan.Tasks[0].Run != "task build --" {
 		t.Fatal(plan)
 	}
 	raw, err := os.ReadFile(filepath.Join(ws, "packages/lib/Taskfile.yml"))
@@ -168,5 +195,16 @@ func TestE2E_GoLibraryTemplateHasBuildTask(t *testing.T) {
 	raw, err = os.ReadFile(filepath.Join(ws, "mise.toml"))
 	if err != nil || !strings.Contains(string(raw), "[tasks.'lib:build']") {
 		t.Fatalf("%s %v", raw, err)
+	}
+}
+
+func syncFixtureTasks(t *testing.T, root string) {
+	t.Helper()
+	plan, err := miseconfig.Build(root, miseconfig.Options{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err = plan.Apply(context.Background()); err != nil {
+		t.Fatal(err)
 	}
 }

@@ -58,17 +58,14 @@ func TestOverview_NoWorkspace_ReturnsPresentFalse(t *testing.T) {
 func TestOverview_PopulatedWorkspace(t *testing.T) {
 	tmp := t.TempDir()
 	m := &workspace.Manifest{
-		Version:      workspace.ManifestVersion,
-		Workspace:    &workspace.ManifestWorkspace{ID: "demo", Name: "demo"},
-		Environments: &workspace.Environments{Names: []string{"dev"}, Default: "dev"},
+		Version:   workspace.ManifestVersion,
+		Workspace: &workspace.ManifestWorkspace{ID: "demo", Name: "demo"},
 
-		Env: &workspace.EnvironmentConfig{ProjectID: "remote"},
+		Env: &workspace.EnvironmentConfig{ProjectID: "remote", Environments: []string{"dev"}},
 
 		Projects: []workspace.ManifestProject{
 			{
-				Name: "web", RelativeDir: "apps/web", TemplateID: "react-spa", Toolchain: "node",
-
-				Dev: &workspace.ProjectDevOverride{Command: "pnpm dev"},
+				Name: "web", RelativeDir: "apps/web", Toolchain: "node",
 			},
 		},
 	}

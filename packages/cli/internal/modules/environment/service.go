@@ -99,15 +99,7 @@ func (s *Service) Summary(scope execution.Scope) (*Summary, error) {
 	manifest := resolution.Workspace.Manifest()
 	source := workspace.EnvBackend(manifest)
 	defaultEnvironment := "dev"
-	environments := append([]string(nil), workspace.DefaultEnvironments...)
-	if manifest.Environments != nil {
-		if strings.TrimSpace(manifest.Environments.Default) != "" {
-			defaultEnvironment = manifest.Environments.Default
-		}
-		if len(manifest.Environments.Names) > 0 {
-			environments = append([]string(nil), manifest.Environments.Names...)
-		}
-	}
+	environments := workspace.EnvironmentNames(manifest)
 	result := &Summary{
 		Schema:                "one-cli/env-summary/v1",
 		Source:                source,

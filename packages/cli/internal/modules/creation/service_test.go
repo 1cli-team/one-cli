@@ -5,6 +5,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	catalog "github.com/torchstellar-team/one-cli/packages/cli/internal/core/backend"
@@ -92,9 +93,12 @@ func TestServiceOwnsWorkspaceAndProjectCreation(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(manifest.Projects) != 1 || manifest.Projects[0].Name != "web" ||
-		manifest.Projects[0].Dev == nil {
+	if len(manifest.Projects) != 1 || manifest.Projects[0].Name != "web" {
 		t.Fatalf("manifest projects = %+v", manifest.Projects)
+	}
+	raw, err := os.ReadFile(workspace.ManifestPath(target))
+	if err != nil || strings.Contains(string(raw), "template") {
+		t.Fatalf("creation persisted template identity: %s %v", raw, err)
 	}
 }
 

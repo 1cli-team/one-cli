@@ -17,23 +17,14 @@ import (
 func seedProjectSettingsWorkspace(t *testing.T) string {
 	t.Helper()
 	root := t.TempDir()
-	inherits := false
 	manifest := &workspacecore.Manifest{
-		Version:      workspacecore.ManifestVersion,
-		Workspace:    &workspacecore.ManifestWorkspace{ID: "ws-demo", Name: "Demo"},
-		Environments: &workspacecore.Environments{Names: []string{"dev", "staging", "prod"}, Default: "dev"},
+		Version:   workspacecore.ManifestVersion,
+		Workspace: &workspacecore.ManifestWorkspace{ID: "ws-demo", Name: "Demo"},
 
-		Env: &workspacecore.EnvironmentConfig{ProjectID: "remote"},
+		Env: &workspacecore.EnvironmentConfig{ProjectID: "remote", Environments: []string{"dev", "staging", "prod"}},
 
 		Projects: []workspacecore.ManifestProject{{
-			Name: "web", RelativeDir: "apps/web", TemplateID: "react-spa", Toolchain: "node",
-			BuildVersion: "1.2.3", PackageManager: "pnpm",
-
-			Env: &workspacecore.ProjectEnvOverride{
-				Path: "/apps/web", Inherits: &inherits, Keys: []string{"Z_KEY", "A_KEY"},
-			},
-
-			Dev: &workspacecore.ProjectDevOverride{Command: "pnpm dev"},
+			Name: "web", RelativeDir: "apps/web", Toolchain: "node",
 		}},
 	}
 	if err := workspacecore.WriteManifest(root, manifest); err != nil {
@@ -90,18 +81,18 @@ func TestProjectSettingsReturnsEnvironmentAwareSafeProjection(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	settings, err := service.ProjectSettings(context.Background(), root, "web", "preview")
+	settings, err := service.ProjectSettings(context.Background(), root, "web", "staging")
 	if err != nil {
 		t.Fatal(err)
 	}
 	project := settings.Project
-	if settings.Schema != ProjectSettingsSchema || settings.Environment != "preview" ||
+	if settings.Schema != ProjectSettingsSchema || settings.Environment != "staging" ||
 		project.Kind != workspacecore.ProjectKindApp {
 		t.Fatalf("unexpected envelope: %#v", settings)
 	}
 
-	if got := strings.Join(project.Environment.Keys, ","); got != "A_KEY,Z_KEY" {
-		t.Fatalf("environment keys = %q", got)
+	if project.Environment.Path != "/apps/web" || !project.Environment.Inherits {
+		t.Fatalf("unexpected scope: %+v", project.Environment)
 	}
 	raw, err := json.Marshal(settings)
 	if err != nil {

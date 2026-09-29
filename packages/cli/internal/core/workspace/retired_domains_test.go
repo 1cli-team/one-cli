@@ -14,10 +14,9 @@ func TestReadManifestRejectsRetiredDomainsWithoutRewritingFiles(t *testing.T) {
 		for _, scope := range []string{"workspace", "project"} {
 			t.Run(scope+"/"+domain, func(t *testing.T) {
 				root := t.TempDir()
-				domains := fmt.Sprintf(`{"%s":{"kind":"old"}}`, domain)
-				manifest := fmt.Sprintf(`{"version":1,"domains":%s,"projects":[]}`, domains)
+				manifest := fmt.Sprintf("version=2\n[domains.%s]\nkind='old'\n", domain)
 				if scope == "project" {
-					manifest = fmt.Sprintf(`{"version":1,"projects":[{"name":"web","relativeDir":"apps/web","toolchain":"node","domains":%s}]}`, domains)
+					manifest = fmt.Sprintf("version=2\n[projects.web]\npath='apps/web'\ntoolchain='node'\n[projects.web.domains.%s]\nkind='old'\n", domain)
 				}
 				path := filepath.Join(root, ManifestFilename)
 				before := []byte(manifest)

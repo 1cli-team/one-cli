@@ -174,13 +174,13 @@ export const ManifestSaveControl: React.FC<{ entryId: string }> = ({ entryId }) 
 										<span className="font-sans text-xs font-semibold">
 											{t("manifestDraft.currentManifest")}
 										</span>
-										<span className="ml-2 text-muted-foreground">a/one.manifest.json</span>
+										<span className="ml-2 text-muted-foreground">a/one.manifest.toml</span>
 									</div>
 									<div className="bg-success-surface px-3 py-2 text-success-foreground">
 										<span className="font-sans text-xs font-semibold">
 											{t("manifestDraft.updatedManifest")}
 										</span>
-										<span className="ml-2 text-muted-foreground">b/one.manifest.json</span>
+										<span className="ml-2 text-muted-foreground">b/one.manifest.toml</span>
 									</div>
 								</div>
 								<div className="py-1.5">

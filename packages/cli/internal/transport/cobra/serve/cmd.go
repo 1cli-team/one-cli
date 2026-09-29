@@ -16,7 +16,6 @@ import (
 
 	"github.com/pkg/browser"
 	"github.com/spf13/cobra"
-
 	manifestapp "github.com/torchstellar-team/one-cli/packages/cli/internal/application/manifest"
 	workspaceapp "github.com/torchstellar-team/one-cli/packages/cli/internal/application/workspace"
 	catalog "github.com/torchstellar-team/one-cli/packages/cli/internal/core/backend"
@@ -60,7 +59,7 @@ func newServeCmd(deps Dependencies) *cobra.Command {
 			defer cancel()
 
 			// WalkUpToManifest fails with NOT_ONE_PROJECT when there's no
-			// one.manifest.json anywhere up the tree. That's fine here —
+			// one.manifest.toml anywhere up the tree. That's fine here —
 			// `one serve` is happy to run outside a workspace: it still
 			// loads the persisted registry and machine-level Profiles.
 			target, registryWarn := discoverServeWorkspaceTarget(ctx, "", deps.Registry)

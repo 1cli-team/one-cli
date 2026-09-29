@@ -28,7 +28,9 @@ func TestE2E_RepositoryWorkspaceTaskGraph(t *testing.T) {
 		{"gate", []string{"check"}, []string{"//:build", "//:test:go:plain", "//:test:dashboard"}, true},
 		{"cli build", []string{"build", "-p", "cli"}, []string{"//:sync-bundled", "//:build-web", "//:sync-web", "//:cli:build"}, false},
 		{"cli test", []string{"test", "-p", "cli"}, []string{"//:build", "//:cli:test"}, false},
-		{"development", []string{"dev"}, []string{"//:dev:serve", "//:dev:dashboard"}, true},
+		{"development", []string{"dev"}, []string{"//:cli:dev", "//:dashboard:dev"}, true},
+		{"docs development", []string{"dev", "-p", "docs"}, []string{"//:install-deps", "//:docs:dev"}, false},
+		{"docs build", []string{"build", "-p", "docs"}, []string{"//:install-deps", "//:docs:build"}, false},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			args := append(append([]string{}, tc.args...), "--dry-run", "-o", "json")

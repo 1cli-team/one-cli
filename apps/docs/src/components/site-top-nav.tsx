@@ -1,25 +1,25 @@
+import type { ReactNode } from "react";
 import { Search } from "lucide-react";
 import { GithubIcon as Github } from "@/components/github-icon";
 import Link from "next/link";
 import { BrandMark } from "@/components/brand-mark";
 import {
-  localizedBlogPath,
   localizedDocsPath,
   localizedTutorialsPath,
   type Locale,
 } from "@/i18n";
-import { DocsLanguageSwitcher } from "@/app/docs/docs-language-switcher";
+import { LanguageSwitcher } from "@/components/language-switcher";
 
-type SiteTopNavActive = "docs" | "tutorials" | "templates" | "blog";
+export type SiteTopNavActive = "docs" | "tutorials";
 
 export function SiteTopNav({
   lang,
   active,
-  standalone = false,
+  sidebarTrigger,
 }: {
   lang: Locale;
   active?: SiteTopNavActive;
-  standalone?: boolean;
+  sidebarTrigger?: ReactNode;
 }) {
   const labels = topNavText[lang];
   const navItems = [
@@ -33,42 +33,27 @@ export function SiteTopNav({
       label: labels.docs,
       href: localizedDocsPath(lang, ["quick-start"]),
     },
-    {
-      key: "templates",
-      label: labels.templates,
-      href: `/${lang}/templates/`,
-    },
-    {
-      key: "blog",
-      label: labels.blog,
-      href: localizedBlogPath(lang),
-    },
   ] as const;
 
   return (
-    <header className="one-docs-topbar" data-standalone={standalone ? "true" : undefined}>
-      <div className="one-docs-topbar-left">
-        <Link href={`/${lang}/`} className="inline-flex items-center" aria-label={labels.home}>
-          <BrandMark variant="light" />
-        </Link>
+    <header className="one-docs-topbar">
+      <Link href={`/${lang}/`} className="one-docs-brand" aria-label={labels.home}>
+        <BrandMark variant="light" />
+      </Link>
+      <div className="one-docs-navigation">
         <nav className="one-docs-navlinks" aria-label={labels.navAria}>
           {navItems.map((item) => (
             <Link
               data-active={active === item.key}
+              aria-current={active === item.key ? "page" : undefined}
               href={item.href}
               key={item.key}
             >
               {item.label}
             </Link>
           ))}
-          <a
-            href="https://github.com/1cli-team/one-cli/blob/master/CHANGELOG.md"
-            target="_blank"
-            rel="noreferrer"
-          >
-            {labels.changelog}
-          </a>
         </nav>
+        {sidebarTrigger}
       </div>
       <div className="one-docs-topbar-right">
         <div className="one-docs-search" aria-hidden="true">
@@ -76,7 +61,7 @@ export function SiteTopNav({
           <span>{labels.search}</span>
           <kbd>⌘K</kbd>
         </div>
-        <DocsLanguageSwitcher lang={lang} />
+        <LanguageSwitcher lang={lang} />
         <a
           href="https://github.com/1cli-team/one-cli"
           className="one-docs-icon-link"
@@ -86,12 +71,6 @@ export function SiteTopNav({
         >
           <Github className="size-[18px]" />
         </a>
-        <Link
-          href={localizedDocsPath(lang, ["installation"])}
-          className="one-docs-start"
-        >
-          {labels.start}
-        </Link>
       </div>
     </header>
   );
@@ -104,11 +83,7 @@ const topNavText: Record<
     navAria: string;
     docs: string;
     tutorials: string;
-    templates: string;
-    blog: string;
-    changelog: string;
     search: string;
-    start: string;
   }
 > = {
   zh: {
@@ -116,21 +91,13 @@ const topNavText: Record<
     navAria: "站点导航",
     docs: "文档",
     tutorials: "教程",
-    templates: "模板",
-    blog: "博客",
-    changelog: "更新日志",
     search: "搜索文档",
-    start: "开始使用",
   },
   en: {
     home: "One CLI Home",
     navAria: "Site navigation",
     docs: "Docs",
     tutorials: "Tutorials",
-    templates: "Templates",
-    blog: "Blog",
-    changelog: "Changelog",
     search: "Search docs",
-    start: "Get started",
   },
 };

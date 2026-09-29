@@ -31,7 +31,6 @@ one templates [-o <fmt>]
   "templates": [
     {
       "id": "nestjs-api",
-      "code": "ne",
       "category": "backend",
       "name": "NestJS API 服务",
       "description": "NestJS + TypeScript，适合 API 服务与业务后台",
@@ -44,19 +43,18 @@ one templates [-o <fmt>]
     },
     {
       "id": "go-api",
-      "code": "go",
       "category": "backend",
       "name": "Go API 服务",
       "toolchain": "go"
     },
-    // ... 8 more
+    // ... 其余 11 个模板
   ]
 }
 ```
 
 ## 完整模板列表
 
-当前注册表有 10 个模板。每个都有详细对比页：
+当前注册表有 13 个模板，可在模板目录查看：
 
 | ID | 类别 | 详细 |
 |---|---|---|
@@ -70,6 +68,9 @@ one templates [-o <fmt>]
 | `ts-library` | library | [→](/zh/docs/templates/) |
 | `go-lib` | library | [→](/zh/docs/templates/) |
 | `electron-app` | frontend / desktop | [→](/zh/docs/templates/) |
+| `empty-app` | frontend | [→](/zh/docs/templates/) |
+| `empty-service` | backend | [→](/zh/docs/templates/) |
+| `empty-library` | library | [→](/zh/docs/templates/) |
 
 不知道选哪个？看 [模板决策树](/zh/docs/templates/)。
 

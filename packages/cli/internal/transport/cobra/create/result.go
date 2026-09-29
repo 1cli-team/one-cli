@@ -7,8 +7,6 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/torchstellar-team/one-cli/packages/cli/internal/core/workspace"
-	cliErrors "github.com/torchstellar-team/one-cli/packages/cli/internal/platform/errors"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/i18n"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/userdirs"
 )
@@ -95,55 +93,4 @@ func resolveDisplayPath(path string) string {
 		return path
 	}
 	return filepath.Join(resolveDisplayPath(parent), filepath.Base(path))
-}
-
-func parsePresetProjectNames(raw string, want int) ([]string, error) {
-	raw = strings.TrimSpace(raw)
-	if raw == "" {
-		return nil, nil
-	}
-	parts := strings.Split(raw, ",")
-	names := make([]string, 0, len(parts))
-	seen := map[string]bool{}
-	for i, part := range parts {
-		name := strings.TrimSpace(part)
-		if name == "" {
-			return nil, cliErrors.New(cliErrors.INVALID_NAME,
-				i18n.Tf("create.project_names_empty", i+1)).
-				WithContext(map[string]any{
-					"project_names": raw,
-					"index":         i,
-				})
-		}
-		if !workspace.IsValidProjectName(name) {
-			return nil, cliErrors.New(cliErrors.INVALID_NAME,
-				i18n.Tf("create.project_name_invalid", name)).
-				WithContext(map[string]any{
-					"project_names": raw,
-					"invalid_name":  name,
-					"index":         i,
-				})
-		}
-		if seen[name] {
-			return nil, cliErrors.New(cliErrors.INVALID_NAME,
-				i18n.Tf("create.project_names_duplicate", name)).
-				WithContext(map[string]any{
-					"project_names":  raw,
-					"duplicate_name": name,
-					"index":          i,
-				})
-		}
-		seen[name] = true
-		names = append(names, name)
-	}
-	if len(names) != want {
-		return nil, cliErrors.New(cliErrors.PRESET_INVALID,
-			i18n.Tf("create.project_names_count", len(names), want)).
-			WithContext(map[string]any{
-				"project_names": raw,
-				"provided":      len(names),
-				"expected":      want,
-			})
-	}
-	return names, nil
 }

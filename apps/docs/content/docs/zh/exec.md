@@ -5,7 +5,7 @@ description: 给任意命令注入项目环境变量，并在解析出的项目�
 
 `one exec` 解析项目，在配置了 Infisical 时注入变量，然后在项目目录执行命令。
 
-工作区与全局执行都会遮盖 stdout、stderr 中的已知注入密钥值，保留普通日志格式和子进程退出码。遮盖覆盖多行值及其 JSON 转义形式，但不构成对子进程任意行为的隔离。
+One 不输出拉取到的变量值。子进程的 stdout、stderr、颜色、格式和退出码保持原样。
 
 ## 用法
 
@@ -60,14 +60,14 @@ one exec --env staging -- pnpm run e2e
 
 ## Infisical 注入
 
-Manifest 顶层 `env` 绑定启用 Infisical 注入。未绑定或设置 `projects[].env.disabled: true` 时，命令继承 shell 环境。One CLI 不加载 `.env` 文件，认证或拉取失败会停止执行，不回退到本地文件。通过 `one login` 登录。
+Manifest 的 `[env.infisical]` 绑定启用 Infisical 注入。未绑定时，命令继承 shell 环境。One CLI 不加载 `.env` 文件，认证或拉取失败会停止执行，不回退到本地文件。通过 `one login` 登录。
 
 ## 错误恢复
 
 | 错误码 | 处理 |
 |---|---|
 | `NOT_ONE_PROJECT` | 在 workspace 内运行，或进入某个项目目录 |
-| `SUBPROJECT_NOT_FOUND` | `-p` 改成 manifest 里的 `name` 或 `relativeDir` |
+| `SUBPROJECT_NOT_FOUND` | `-p` 改成 manifest 里的项目名或 `path` |
 | `RUN_COMMAND_NOT_FOUND` | 确认命令在 PATH、项目 `node_modules/.bin` 或 workspace `node_modules/.bin` 内 |
 | `INFISICAL_AUTH_MISSING` | 先 `one login` |
 

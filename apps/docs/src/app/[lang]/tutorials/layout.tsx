@@ -1,6 +1,5 @@
 import { DocsLayout } from "../../docs/docs-layout";
 import type { ReactNode } from "react";
-import { SiteTopNav } from "@/components/site-top-nav";
 import { isLocale } from "@/i18n";
 import { tutorialsSource } from "@/lib/source";
 import { CodeCopyEnhancer } from "../../docs/code-copy-enhancer";
@@ -21,14 +20,15 @@ export default async function Layout({
 
   return (
     <>
-      <SiteTopNav lang={lang} active="tutorials" />
       <CodeCopyEnhancer />
       <DocsLayout
+        lang={lang}
+        active="tutorials"
         tree={tutorialsSource.getPageTree(lang)}
         {...baseOptions}
         containerProps={{
           className:
-            "one-docs-layout md:[--fd-nav-height:64px] md:[--fd-sidebar-width:280px] xl:[--fd-toc-width:260px] xl:[--fd-page-width:1160px]",
+            "one-docs-layout md:[--fd-sidebar-width:280px] xl:[--fd-toc-width:260px] xl:[--fd-page-width:1160px]",
         }}
         sidebar={{
           children: <TutorialsSidebar lang={lang} />,

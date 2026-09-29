@@ -18,6 +18,8 @@ import (
 	"sort"
 	"strings"
 	"testing"
+
+	"github.com/pelletier/go-toml/v2"
 )
 
 // repoRoot returns the absolute path to the repository root, derived
@@ -179,7 +181,7 @@ var volatileKeys = map[string]bool{
 	"home":              true,
 	"message":           true, // error envelopes' message embeds tempdir paths and is i18n-mutable; contract is `code`+`schema`
 	"files":             true, // add-spec: list of absolute paths to generated spec files
-	"written_to":        true, // env init: absolute path to one.manifest.json
+	"written_to":        true, // env init: absolute path to one.manifest.toml
 	"url":               true, // serve: per-run URL with random port
 	"port":              true, // serve: kernel-assigned port when --port 0
 }
@@ -295,15 +297,19 @@ func fileExists(t *testing.T, path string) bool {
 	return err == nil
 }
 
-// readManifest parses one.manifest.json at the given workspace root
+// readManifest parses one.manifest.toml at the given workspace root
 // for spot assertions in tests. Returns the parsed map.
 func readManifest(t *testing.T, workspaceRoot string) map[string]any {
 	t.Helper()
-	raw, err := os.ReadFile(filepath.Join(workspaceRoot, "one.manifest.json"))
+	raw, err := os.ReadFile(filepath.Join(workspaceRoot, "one.manifest.toml"))
 	if err != nil {
 		t.Fatalf("read manifest: %v", err)
 	}
-	return mustParseJSON(t, string(raw))
+	var manifest map[string]any
+	if err := toml.Unmarshal(raw, &manifest); err != nil {
+		t.Fatalf("parse manifest: %v", err)
+	}
+	return manifest
 }
 
 // bootstrapWorkspace runs `one create <tmp>/<name> -y` to produce a

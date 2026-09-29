@@ -112,12 +112,12 @@ describe("WorkspaceHome", () => {
 			),
 		);
 
-		renderHome("/?env=preview");
+		renderHome("/?env=staging");
 
 		expect(await screen.findByRole("heading", { name: "Workspaces" })).toBeDefined();
 
 		const alpha = screen.getByRole("link", { name: /Alpha/ });
-		expect(alpha.getAttribute("href")).toBe("/workspace/alpha-entry?env=preview");
+		expect(alpha.getAttribute("href")).toBe("/workspace/alpha-entry?env=staging");
 		expect(within(alpha).getByText("Projects")).toBeDefined();
 		expect(within(alpha).getByText("3")).toBeDefined();
 		expect(within(alpha).getByText(/^Last detected ·/)).toBeDefined();
@@ -187,7 +187,7 @@ describe("Workspace discovery and recovery", () => {
 	it("combines path search with attention filtering and restores the list on clear", async () => {
 		serveRegistry();
 		const user = userEvent.setup();
-		renderHome("/?env=preview");
+		renderHome("/?env=staging");
 		await screen.findByRole("link", { name: /Alpha/ });
 		const search = screen.getByRole("textbox", { name: "Search name, path or ID…" });
 		// The case/whitespace filter assertion only needs the final query. Pasting
@@ -196,7 +196,7 @@ describe("Workspace discovery and recovery", () => {
 		await user.paste(" /WORKSPACES/ALPHA ");
 		expect(screen.getAllByRole("article")).toHaveLength(1);
 		expect(screen.getByRole("link", { name: /Alpha/ }).getAttribute("href")).toBe(
-			"/workspace/alpha-entry?env=preview",
+			"/workspace/alpha-entry?env=staging",
 		);
 		await user.click(screen.getByRole("button", { name: /Needs attention/ }));
 		expect(screen.getByText("No matching workspaces")).toBeDefined();

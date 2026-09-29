@@ -10,22 +10,23 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
+	"time"
 
 	"github.com/spf13/cobra"
 
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/application/execution"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/core/workspace"
+	"github.com/torchstellar-team/one-cli/packages/cli/internal/modules/toolenv"
 	cliErrors "github.com/torchstellar-team/one-cli/packages/cli/internal/platform/errors"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/i18n"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/output"
 	platformprocess "github.com/torchstellar-team/one-cli/packages/cli/internal/platform/process"
-	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/redact"
 	runtimeport "github.com/torchstellar-team/one-cli/packages/cli/internal/ports/runtime"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/ports/secrets"
 )
 
 func Commands(loaders *secrets.Registry, provider runtimeport.Provider) []*cobra.Command {
-	return []*cobra.Command{newRunCmd(loaders, provider), newExecCmd(loaders)}
+	return []*cobra.Command{newRunCmd(loaders, provider)}
 }
 
 type runFlags struct {
@@ -35,7 +36,6 @@ type runFlags struct {
 	project      string
 	envName      string
 	runtime      string
-	prepared     bool
 	provider     runtimeport.Provider
 	dryRun       bool
 	outputFormat string
@@ -137,6 +137,13 @@ func parseRunArgs(cmd *cobra.Command, flags *runFlags, args []string) ([]string,
 }
 
 func runRun(ctx context.Context, loaders *secrets.Registry, flags *runFlags, args []string) (resultErr error) {
+	ctx, stop := platformprocess.SignalContext(ctx)
+	defer stop()
+	defer func() {
+		if ctx.Err() != nil {
+			resultErr = &platformprocess.ExitStatus{Code: platformprocess.ExitCode(context.Cause(ctx))}
+		}
+	}()
 	activeWorkspace, err := execution.ResolveWorkspace(ctx)
 	if err != nil {
 		return err
@@ -148,11 +155,9 @@ func runRun(ctx context.Context, loaders *secrets.Registry, flags *runFlags, arg
 		return err
 	}
 
-	if !flags.prepared {
-		flags.runtime, err = execution.RuntimeKind(projectRoot)
-		if err != nil {
-			return err
-		}
+	flags.runtime, err = execution.RuntimeKind(projectRoot)
+	if err != nil {
+		return err
 	}
 	if err := runtimeport.Validate(flags.runtime); err != nil {
 		return err
@@ -161,30 +166,15 @@ func runRun(ctx context.Context, loaders *secrets.Registry, flags *runFlags, arg
 		output.Emit(map[string]any{"schema": "one-cli/run-plan/v1", "runtime": flags.runtime, "directory": targetDir, "argv": args, "environment": flags.envName, "dry_run": true})
 		return nil
 	}
+	childEnv := os.Environ()
 	if flags.runtime == runtimeport.Mise {
-		binary, err := os.Executable()
-		if err != nil {
-			return err
-		}
-		childArgs := []string{binary, "__exec", "--protocol", "1", "--project", relativeDir}
-		if flags.outputFormat != "" {
-			childArgs = append(childArgs, "--output", flags.outputFormat)
-		}
-		if flags.envName != "" {
-			childArgs = append(childArgs, "--env", flags.envName)
-		}
-		childArgs = append(append(childArgs, "--"), args...)
 		if flags.provider == nil {
-			return cliErrors.New(cliErrors.ONE_CLI_ERROR, i18n.T("exec.mise_missing"))
+			return i18n.Errorf("exec.mise_missing")
 		}
-		prepared, err := flags.provider.Prepare(ctx, runtimeport.Command{Directory: targetDir, Argv: childArgs, Env: os.Environ()})
+		childEnv, err = toolenv.Environment(ctx, flags.provider, targetDir, childEnv)
 		if err != nil {
 			return err
 		}
-		child := platformprocess.Command(prepared.Argv[0], prepared.Argv[1:]...)
-		child.Dir, child.Env = prepared.Directory, prepared.Env
-		child.Stdin, child.Stdout, child.Stderr = os.Stdin, os.Stdout, os.Stderr
-		return platformprocess.RunForwarded(ctx, child)
 	}
 
 	vars, source, err := loadRunSecrets(
@@ -193,13 +183,11 @@ func runRun(ctx context.Context, loaders *secrets.Registry, flags *runFlags, arg
 	if err != nil {
 		return err
 	}
-	filter := redact.New(vars)
-	defer func() { resultErr = filter.Error(resultErr) }()
 	if output.IsTTY() && source != "" {
 		fmt.Fprintf(os.Stderr, i18n.T("exec.injected")+"\n", len(vars), source)
 	}
 
-	childEnv := secrets.MergeIntoEnviron(os.Environ(), vars, true)
+	childEnv = secrets.MergeIntoEnviron(childEnv, vars, true)
 	// Always inject node_modules/.bin so commands like `astro` / `next` / `vite`
 	// resolve when invoked directly (and so `npm run dev` finds hoisted bins
 	// in pnpm/turbo workspaces). Subproject-local first, workspace root next,
@@ -220,16 +208,21 @@ func runRun(ctx context.Context, loaders *secrets.Registry, flags *runFlags, arg
 			})
 	}
 
-	child := platformprocess.Command(binary, args[1:]...)
+	child := platformprocess.CommandContext(ctx, binary, args[1:]...)
+	child.Cancel = func() error { return platformprocess.StopTree(child.Process) }
+	child.WaitDelay = 3 * time.Second
 	child.Stdin = os.Stdin
 	child.Stdout = os.Stdout
 	child.Stderr = os.Stderr
 	child.Env = childEnv
 	child.Dir = targetDir
 
-	err = platformprocess.RunRedacted(ctx, child, vars)
-	var exit *platformprocess.ExitStatus
-	if err != nil && !errors.As(err, &exit) {
+	err = child.Run()
+	var exit *exec.ExitError
+	if errors.As(err, &exit) {
+		return &platformprocess.ExitStatus{Code: platformprocess.ExitCode(err)}
+	}
+	if err != nil {
 		return cliErrors.New(cliErrors.RUN_COMMAND_NOT_FOUND, i18n.Tf("exec.start_failed", args[0], err))
 	}
 	return err

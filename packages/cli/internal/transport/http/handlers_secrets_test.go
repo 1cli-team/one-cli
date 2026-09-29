@@ -28,16 +28,17 @@ func TestSecretRoutesRejectUnconfiguredEnvironment(t *testing.T) {
 		body   string
 	}{
 		{name: "list", method: http.MethodGet, path: "/api/workspace/secrets"},
+		{name: "delete", method: http.MethodDelete, path: "/api/workspace/secrets/HELLO"},
 		{name: "get", method: http.MethodGet, path: "/api/workspace/secrets/HELLO"},
 		{name: "create", method: http.MethodPost, path: "/api/workspace/secrets", body: `{"key":"HELLO","value":"world"}`},
 		{name: "update", method: http.MethodPut, path: "/api/workspace/secrets/HELLO", body: `{"value":"world"}`},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			recorder := workspaceRequest(t, handler, tc.method, tc.path, strings.NewReader(tc.body))
-			if recorder.Code != http.StatusBadRequest {
+			if recorder.Code != http.StatusConflict {
 				t.Fatalf("%s status = %d; body = %s", tc.name, recorder.Code, recorder.Body.String())
 			}
-			if !strings.Contains(recorder.Body.String(), `"code":"ENV_BACKEND_INVALID"`) {
+			if !strings.Contains(recorder.Body.String(), `"code":"INFISICAL_NOT_CONFIGURED"`) {
 				t.Fatalf("%s body = %s", tc.name, recorder.Body.String())
 			}
 		})

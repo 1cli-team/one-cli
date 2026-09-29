@@ -128,3 +128,75 @@ setInterval(() => { if (fs.existsSync('fail')) process.exit(7); }, 20);
 		})
 	}
 }
+
+func TestE2E_ExecWithoutInternalWorkerCancelsDescendants(t *testing.T) {
+	node, err := exec.LookPath("node")
+	if err != nil {
+		t.Skip("node required")
+	}
+	for _, sig := range []syscall.Signal{syscall.SIGINT, syscall.SIGTERM} {
+		t.Run(sig.String(), func(t *testing.T) {
+			root := buildFixture(t, true)
+			script := `const fs=require('node:fs');const net=require('node:net');
+if (!process.env.EXEC_GRANDCHILD) {require('node:child_process').spawn(process.execPath,[__filename],{env:{...process.env,EXEC_GRANDCHILD:'1'},stdio:'inherit'});setInterval(()=>{},1000)}
+else {net.createServer().listen(0,'127.0.0.1',function(){fs.writeFileSync('exec-ready',String(this.address().port))})}
+`
+			buildWrite(t, root, "apps/web/exec.cjs", script)
+			cmd := exec.Command(binaryPath(t), "exec", "web", "--", node, "exec.cjs")
+			cmd.Dir = root
+			cmd.Env = os.Environ()
+			var log lockedBuffer
+			cmd.Stdout, cmd.Stderr = &log, &log
+			if err := cmd.Start(); err != nil {
+				t.Fatal(err)
+			}
+			t.Cleanup(func() { _ = cmd.Process.Kill() })
+			done := make(chan error, 1)
+			go func() { done <- cmd.Wait() }()
+			var port string
+			deadline := time.Now().Add(8 * time.Second)
+			for port == "" && time.Now().Before(deadline) {
+				if raw, err := os.ReadFile(filepath.Join(root, "apps/web/exec-ready")); err == nil {
+					port = string(raw)
+					break
+				}
+				select {
+				case err := <-done:
+					t.Fatalf("exec stopped: %v %s", err, log.String())
+				default:
+				}
+				time.Sleep(10 * time.Millisecond)
+			}
+			if port == "" {
+				t.Fatalf("exec never ready: %s", log.String())
+			}
+			if err := cmd.Process.Signal(sig); err != nil {
+				t.Fatal(err)
+			}
+			select {
+			case err := <-done:
+				want := 130
+				if sig == syscall.SIGTERM {
+					want = 143
+				}
+				if exit, ok := err.(*exec.ExitError); !ok || exit.ExitCode() != want {
+					t.Fatalf("exit %v, want %d: %s", err, want, log.String())
+				}
+			case <-time.After(8 * time.Second):
+				t.Fatalf("exec did not stop: %s", log.String())
+			}
+			deadline = time.Now().Add(time.Second)
+			for {
+				conn, err := net.DialTimeout("tcp", "127.0.0.1:"+port, 100*time.Millisecond)
+				if err != nil {
+					break
+				}
+				conn.Close()
+				if time.Now().After(deadline) {
+					t.Fatal("exec grandchild still listening")
+				}
+				time.Sleep(10 * time.Millisecond)
+			}
+		})
+	}
+}

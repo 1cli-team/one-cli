@@ -97,7 +97,9 @@ agent 的处理顺序应该是：
 
 ## 规则三：项目说明由团队维护
 
+`one create` 按当前 CLI 语言生成一份 `AGENTS.md`，中英文源码使用独立的 Markdown 模板维护。后续语言切换和 `one add` 保留团队修改。
 
+默认指引要求测试和项目命令统一通过 `one run` 执行。复杂操作可以写成 `scripts/*.mts` 并登记为任务。变量由 One 管理；发布凭据放到全局“共享凭据”，提示用户在 Dashboard 配置后，在任务内部通过 `one exec --global` 注入。
 
 ## 规则四：配置和凭据有边界
 
@@ -105,7 +107,7 @@ One CLI 可以管理 env、container、deploy 等机器级配置，但 agent 不
 
 推荐边界：
 
-- `one.manifest.json` 记录可审查的 Workspace/Project/Backend 配置；密钥值与会话令牌不进 Manifest
+- `one.manifest.toml` 记录可审查的 Workspace/Project/Backend 配置；密钥值与会话令牌不进 Manifest
 - `one login` 管理系统钥匙串中的单一浏览器会话；`one serve` 提供账号设置、共享凭据元数据和经审阅的 Manifest 草稿。
 - `.env*`、私钥、云厂商 token 不进 Git，也不写进 agent 可复用文档
 - agent 可以读取结构化状态、执行缺失依赖安装和项目生成，但涉及发布、删除、覆盖凭据时应回到团队策略或人工确认
@@ -142,5 +144,5 @@ one add api-fastify --name api --yes -o json
 
 ```bash
 one add nestjs-api --name api --yes -o json
-cat one.manifest.json
+cat one.manifest.toml
 ```

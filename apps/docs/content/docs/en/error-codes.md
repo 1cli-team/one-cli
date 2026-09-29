@@ -64,7 +64,7 @@ Workspace detection, naming rules, and target-directory conflicts.
 
 ### `EXISTING_TARGET_NOT_EMPTY`
 
-Create target exists and is non-empty. Pick an empty directory or remove the target manually.
+The target contains files or uncommitted Git deletions. Check the reported conflicts and choose an empty directory or an empty Git repository.
 
 ### `INVALID_NAME`
 
@@ -72,7 +72,7 @@ Project / subproject name does not match `^[a-zA-Z0-9][a-zA-Z0-9_-]*$`. Use keba
 
 ### `INVALID_WORKSPACE_ROOTS`
 
-`one.manifest.json#workspace.roots` is malformed. Inspect the manifest.
+`one.manifest.toml#workspace.roots` is malformed. Inspect the manifest.
 
 ### `NODE_VERSION_UNSUPPORTED`
 
@@ -80,7 +80,7 @@ Local Node.js is too old. Upgrade to Node.js 18+.
 
 ### `NOT_ONE_PROJECT`
 
-Current directory has no `one.manifest.json`. Run `one create <dir>` or `cd` to a workspace.
+Current directory has no `one.manifest.toml`. Run `one create <dir>` or `cd` to a workspace.
 
 ### `PROJECT_NAME_REQUIRED`
 
@@ -97,11 +97,11 @@ Refused to create a workspace inside another workspace. Use `one add` or create 
 
 ## Manifest
 
-`one.manifest.json` shape, missing file, or empty project registry.
+`one.manifest.toml` shape, missing file, or empty project registry.
 
 ### `MANIFEST_INVALID`
 
-Manifest is malformed. Fix JSON and schema fields.
+Manifest is malformed. Fix TOML and schema fields.
 
 ### `MANIFEST_MISSING_OR_EMPTY`
 
@@ -253,15 +253,15 @@ Could not reach Infisical. Check network and site URL.
 
 ### `INFISICAL_NOT_CONFIGURED`
 
-Workspace is not configured for Infisical or has no project binding.
+This workspace has no Infisical project binding. Save the first variable with `one env set <KEY>` or Dashboard Save to create one. Reading, refreshing, and deleting do not initialize storage.
 
 ### `INFISICAL_PROJECT_CREATE_FORBIDDEN`
 
-Machine identity cannot create projects. Grant permissions or create manually.
+The signed-in account cannot create projects. Ask an administrator for permission or connect an accessible project in Dashboard settings.
 
 ### `INFISICAL_PROJECT_NAME_TAKEN`
 
-Desired project name already exists. Change the configured name or bind manually.
+Creation still failed after retrying name conflicts with short suffixes. Select an existing project in Dashboard, or change the workspace name and retry. One never connects to an existing project by matching its name.
 
 ### `INFISICAL_PROJECT_NOT_FOUND`
 

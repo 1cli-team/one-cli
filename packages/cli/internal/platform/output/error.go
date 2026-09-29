@@ -16,6 +16,7 @@ type Remediation struct {
 // Error is the structured CLI error type. It mirrors OneCliError in TS:
 // the public envelope is `{ schema: "one-cli/error/v1", error: {...} }`.
 type Error struct {
+	Cause       error          `json:"-"`
 	Code        string         `json:"-"`
 	Message     string         `json:"-"`
 	Context     map[string]any `json:"-"`
@@ -98,3 +99,12 @@ type errorBody struct {
 	Context     map[string]any `json:"context"`
 	Remediation []Remediation  `json:"remediation"`
 }
+
+// WithCause keeps diagnostics available to errors.Is/As without changing the wire shape.
+func (e *Error) WithCause(cause error) *Error {
+	out := *e
+	out.Cause = cause
+	return &out
+}
+
+func (e *Error) Unwrap() error { return e.Cause }

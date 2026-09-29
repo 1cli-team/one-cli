@@ -42,8 +42,8 @@ function mount(environment = "dev") {
 				name: "web",
 				relativeDir: "apps/web",
 				kind: "app",
-				devCommand: "pnpm dev",
-				environment: { inherits: true, disabled: true },
+				devAvailable: true,
+				environment: { inherits: true },
 			}}
 			environment={environment}
 			entryId="entry"
@@ -72,13 +72,12 @@ describe("service console", () => {
 			"http://localhost:3000/",
 		);
 		act(() =>
-			useManifestDraftStore.getState().stageSection({
+			useManifestDraftStore.getState().stageWorkspaceSection({
 				entryId: "entry",
-				project: "web",
 				revision: "x",
-				section: "general",
-				initial: { devCommand: "old" },
-				next: { devCommand: "new" },
+				section: "environment",
+				initial: { backend: "infisical", projectId: "old" },
+				next: { backend: "infisical", projectId: "new" },
 				labels: {},
 			}),
 		);

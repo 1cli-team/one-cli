@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { HomeCopyButton } from "./home-template-preview";
+import { HomeCopyButton } from "@/components/copy-button";
 
 const installCommands = {
   unix: {

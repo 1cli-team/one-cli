@@ -14,13 +14,14 @@ import (
 func TestWriteManifestAtomicallyPreservesPermissionsAndFormat(t *testing.T) {
 	root := t.TempDir()
 	path := ManifestPath(root)
-	if err := os.WriteFile(path, []byte(`{"version":1,"projects":[]}`+"\n"), 0o600); err != nil {
+	if err := os.WriteFile(path, []byte(`version = 2
+`+"\n"), 0o600); err != nil {
 		t.Fatal(err)
 	}
 	manifest := &Manifest{
 		Version: ManifestVersion,
 		Projects: []ManifestProject{{
-			Name: "web", RelativeDir: "apps/web", TemplateID: "react-spa", Toolchain: "node",
+			Name: "web", RelativeDir: "apps/web", Toolchain: "node",
 		}},
 	}
 	if err := WriteManifest(root, manifest); err != nil {
@@ -37,7 +38,7 @@ func TestWriteManifestAtomicallyPreservesPermissionsAndFormat(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !strings.HasSuffix(string(raw), "\n") || !strings.Contains(string(raw), `  "projects":`) {
+	if !strings.HasSuffix(string(raw), "\n") || !strings.Contains(string(raw), `[projects.web]`) {
 		t.Fatalf("manifest formatting changed: %s", raw)
 	}
 	assertNoManifestTemps(t, root)
@@ -46,11 +47,17 @@ func TestWriteManifestAtomicallyPreservesPermissionsAndFormat(t *testing.T) {
 func TestAtomicManifestRenameFailurePreservesPublishedFile(t *testing.T) {
 	root := t.TempDir()
 	path := ManifestPath(root)
-	original := []byte(`{"version":1,"projects":[]}` + "\n")
+	original := []byte(`version = 2
+` + "\n")
 	if err := os.WriteFile(path, original, 0o640); err != nil {
 		t.Fatal(err)
 	}
-	replacement := []byte(`{"version":1,"projects":[{"name":"web"}]}` + "\n")
+	replacement := []byte(`version = 2
+
+[projects."web"]
+path = "apps/web"
+toolchain = "node"
+` + "\n")
 	publishErr := errors.New("injected rename failure")
 	renameCalled := false
 	err := atomicWriteManifestWithRename(path, replacement, 0o644, func(tempPath, targetPath string) error {
@@ -93,7 +100,8 @@ func TestAtomicManifestRenameFailurePreservesPublishedFile(t *testing.T) {
 func TestMalformedEnvironmentConfigPreservesPublishedFile(t *testing.T) {
 	root := t.TempDir()
 	path := ManifestPath(root)
-	original := []byte(`{"version":1,"projects":[]}` + "\n")
+	original := []byte(`version = 2
+` + "\n")
 	if err := os.WriteFile(path, original, 0o644); err != nil {
 		t.Fatal(err)
 	}
@@ -110,7 +118,7 @@ func TestMalformedEnvironmentConfigPreservesPublishedFile(t *testing.T) {
 	assertNoManifestTemps(t, root)
 }
 
-func TestAtomicManifestConcurrentReadersNeverObservePartialJSON(t *testing.T) {
+func TestAtomicManifestConcurrentReadersNeverObservePartialTOML(t *testing.T) {
 	root := t.TempDir()
 	if err := WriteManifest(root, &Manifest{Version: ManifestVersion, Projects: []ManifestProject{}}); err != nil {
 		t.Fatal(err)
@@ -152,11 +160,9 @@ func TestAtomicManifestConcurrentReadersNeverObservePartialJSON(t *testing.T) {
 		projects := make([]ManifestProject, 0, projectsPerWrite)
 		for index := 0; index < projectsPerWrite; index++ {
 			projects = append(projects, ManifestProject{
-				Name:         fmt.Sprintf("service-%03d", index),
-				RelativeDir:  fmt.Sprintf("services/service-%03d", index),
-				TemplateID:   "go-api",
-				Toolchain:    "go",
-				BuildVersion: fmt.Sprintf("1.%d.%d", iteration, index),
+				Name:        fmt.Sprintf("service-%03d", index),
+				RelativeDir: fmt.Sprintf("services/service-%03d", index),
+				Toolchain:   "go",
 			})
 		}
 		if err := WriteManifest(root, &Manifest{Version: ManifestVersion, Projects: projects}); err != nil {

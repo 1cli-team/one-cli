@@ -36,7 +36,7 @@ const server = setupServer(
 function show(withApp = false) {
 	return render(
 		<SWRConfig value={{ provider: () => new Map(), shouldRetryOnError: false }}>
-			<MemoryRouter initialEntries={["/templates?env=preview"]}>
+			<MemoryRouter initialEntries={["/templates?env=staging"]}>
 				{withApp ? <App /> : <ProjectTemplates />}
 			</MemoryRouter>
 		</SWRConfig>,
@@ -73,7 +73,7 @@ describe("project template catalog", () => {
 			screen
 				.getByRole("link", { name: i18n.t("templateCatalog.chooseWorkspace") })
 				.getAttribute("href"),
-		).toBe("/?env=preview");
+		).toBe("/?env=staging");
 	});
 
 	it("combines category and feature search, and resets an empty result", async () => {
@@ -146,7 +146,7 @@ describe("project template catalog", () => {
 		expect(within(breadcrumb).getByText("Project templates")).toBeDefined();
 		await user.click(screen.getByRole("button", { name: "One CLI navigation menu" }));
 		const item = screen.getByRole("menuitem", { name: "Project templates" });
-		expect(item.getAttribute("href")).toBe("/templates?env=preview");
+		expect(item.getAttribute("href")).toBe("/templates?env=staging");
 		expect(item.getAttribute("aria-current")).toBe("page");
 		await user.click(item);
 		await waitFor(() => expect(screen.queryByRole("menu")).toBeNull());

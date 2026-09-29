@@ -56,7 +56,7 @@ func runGlobal(ctx context.Context, f *runFlags, args []string) error {
 	child.Env = secrets.MergeIntoEnviron(env, vars, true)
 	child.Stdin = os.Stdin
 	child.Stdout, child.Stderr = os.Stdout, os.Stderr
-	return process.RunRedacted(ctx, child, vars)
+	return process.RunForwarded(ctx, child)
 }
 func reservedGlobalKey(key string) bool {
 	key = strings.ToUpper(key)

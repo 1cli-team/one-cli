@@ -430,27 +430,18 @@ article blockquote {
   position: fixed;
   inset: 0 var(--removed-body-scroll-bar-size, 0) auto 0;
   z-index: 35;
-  display: none;
+  display: flex;
   height: 64px;
   align-items: center;
-  justify-content: space-between;
+  gap: 32px;
   padding: 0 80px;
   background: color-mix(in oklab, var(--surface-primary) 92%, transparent);
   border-bottom: 1px solid var(--border-subtle);
   backdrop-filter: blur(14px);
 }
 
-.one-docs-topbar[data-standalone="true"] {
-  display: flex;
-}
-
-@media (min-width: 768px) {
-  .one-docs-topbar {
-    display: flex;
-  }
-}
-
-.one-docs-topbar-left,
+.one-docs-brand,
+.one-docs-navigation,
 .one-docs-topbar-right,
 .one-docs-navlinks,
 .one-docs-search {
@@ -458,16 +449,22 @@ article blockquote {
   align-items: center;
 }
 
-.one-docs-topbar-left {
-  gap: 32px;
+.one-docs-brand {
+  flex-shrink: 0;
+  width: fit-content;
 }
 
 .one-docs-topbar-right {
+  margin-left: auto;
   gap: 12px;
 }
 
 .one-docs-navlinks {
   gap: 24px;
+}
+
+.one-docs-menu-trigger {
+  display: none;
 }
 
 .one-docs-navlinks a {
@@ -517,42 +514,85 @@ article blockquote {
   box-shadow: none;
 }
 
-.one-docs-lang-switcher {
+.one-language-trigger,
+.one-language-menu {
+  --language-bg: var(--surface-primary);
+  --language-muted: var(--surface-elevated);
+  --language-fg: var(--foreground-primary);
+  --language-border: var(--border-subtle);
+}
+
+.one-language-trigger[data-variant="dark"],
+.one-language-menu[data-variant="dark"] {
+  --language-bg: #171717;
+  --language-muted: #292524;
+  --language-fg: #fafaf9;
+  --language-border: #292524;
+}
+
+.one-language-trigger {
   display: inline-flex;
-  height: 34px;
+  height: 36px;
+  width: 36px;
+  flex-shrink: 0;
   align-items: center;
-  padding: 2px;
-  border: 1px solid var(--border-subtle);
+  justify-content: center;
+  padding: 0;
+  border: 0;
   border-radius: var(--radius-md);
-  background: var(--surface-elevated);
+  background: transparent;
+  color: var(--language-fg);
+  cursor: pointer;
 }
 
-.one-docs-lang-switcher a {
-  display: inline-flex;
-  height: 28px;
+.one-language-trigger:hover {
+  background: var(--language-muted);
+}
+
+.one-language-trigger:focus-visible {
+  outline: 2px solid var(--accent-primary);
+  outline-offset: 3px;
+}
+
+.one-language-menu {
+  min-width: 144px;
+  padding: 4px;
+  border: 1px solid var(--language-border);
+  border-radius: var(--radius-md);
+  background: var(--language-bg);
+  color: var(--language-fg);
+  box-shadow: 0 8px 24px rgb(0 0 0 / 12%);
+  outline: none;
+}
+
+.one-language-option {
+  display: flex;
+  min-height: 40px;
   align-items: center;
-  padding: 0 9px;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 0 10px;
   border-radius: var(--radius-sm);
-  color: var(--foreground-secondary);
-  font-size: 12px;
+  color: inherit;
+  font-size: 13px;
   text-decoration: none;
+  cursor: pointer;
+  outline: none;
 }
 
-.one-docs-lang-switcher a[data-active="true"] {
-  background: var(--surface-primary);
-  color: var(--foreground-primary);
+.one-language-option[data-highlighted] {
+  background: var(--language-muted);
+}
+
+.one-language-option[data-active="true"] {
   font-weight: 600;
 }
 
-.one-docs-icon-link,
-.one-docs-start {
+.one-docs-icon-link {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   text-decoration: none;
-}
-
-.one-docs-icon-link {
   width: 34px;
   height: 34px;
   color: var(--foreground-primary);
@@ -564,17 +604,9 @@ article blockquote {
   background: var(--surface-elevated);
 }
 
-.one-docs-start {
-  height: 34px;
-  padding: 0 14px;
-  border-radius: var(--radius-md);
-  background: var(--foreground-primary);
-  color: var(--foreground-inverse);
-  font-size: 13px;
-  font-weight: 600;
-}
-
 .one-docs-layout {
+  --fd-banner-height: 64px;
+  padding-top: var(--fd-banner-height);
   --color-fd-background: var(--surface-primary);
   --color-fd-card: var(--surface-primary);
   --color-fd-foreground: var(--foreground-primary);
@@ -583,13 +615,6 @@ article blockquote {
   --color-fd-primary: var(--accent-primary);
   --color-fd-border: var(--border-subtle);
   background: var(--surface-primary);
-}
-
-@media (min-width: 768px) {
-  .one-docs-layout {
-    --fd-banner-height: 64px;
-    padding-top: 64px;
-  }
 }
 
 .one-docs-sidebar-shell {
@@ -1306,25 +1331,6 @@ article blockquote {
   .one-docs-body {
     margin-top: 24px;
   }
-
-  .one-docs-topbar[data-standalone="true"] {
-    padding: 0 16px;
-  }
-
-  .one-docs-topbar[data-standalone="true"] .one-docs-start {
-    display: none;
-  }
-}
-
-@media (max-width: 1023px) {
-  .one-docs-topbar {
-    padding: 0 24px;
-  }
-
-  .one-docs-navlinks,
-  .one-docs-search {
-    display: none;
-  }
 }
 
 @media (max-width: 1279px) {
@@ -1335,6 +1341,17 @@ article blockquote {
   .one-docs-sidebar-inner {
     padding-right: 26px;
     padding-left: 32px;
+  }
+}
+
+@media (max-width: 1023px) {
+  .one-docs-topbar {
+    gap: 24px;
+    padding: 0 24px;
+  }
+
+  .one-docs-search {
+    display: none;
   }
 }
 
@@ -1350,8 +1367,56 @@ article blockquote {
 }
 
 @media (max-width: 767px) {
-  .one-docs-topbar[data-standalone="true"] {
+  .one-docs-topbar {
+    display: grid;
+    height: 104px;
+    grid-template-columns: 1fr auto;
+    grid-template-rows: 60px 44px;
+    gap: 0 12px;
     padding: 0 16px;
+  }
+
+  .one-docs-brand {
+    grid-area: 1 / 1;
+  }
+
+  .one-docs-topbar-right {
+    grid-area: 1 / 2;
+    gap: 8px;
+  }
+
+  .one-docs-navigation {
+    grid-area: 2 / 1 / 3 / -1;
+    height: 100%;
+    justify-content: space-between;
+    border-top: 1px solid var(--border-subtle);
+  }
+
+  .one-docs-navlinks,
+  .one-docs-navlinks a {
+    display: flex;
+    height: 100%;
+    align-items: center;
+  }
+
+  .one-docs-menu-trigger {
+    display: inline-flex;
+    height: 36px;
+    align-items: center;
+    gap: 6px;
+    padding: 0 8px;
+    border-radius: var(--radius-md);
+    color: var(--foreground-secondary);
+    font-size: 13px;
+    cursor: pointer;
+  }
+
+  .one-docs-menu-trigger:hover {
+    background: var(--surface-elevated);
+  }
+
+  .one-docs-layout {
+    --fd-banner-height: 104px;
   }
 }
 

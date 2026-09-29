@@ -53,15 +53,7 @@ func BuildSummary(root string) (Summary, error) {
 	}
 	envSource := EnvBackend(m)
 	defaultEnv := "dev"
-	environments := append([]string(nil), DefaultEnvironments...)
-	if m.Environments != nil {
-		if strings.TrimSpace(m.Environments.Default) != "" {
-			defaultEnv = strings.TrimSpace(m.Environments.Default)
-		}
-		if len(m.Environments.Names) > 0 {
-			environments = append([]string(nil), m.Environments.Names...)
-		}
-	}
+	environments := EnvironmentNames(m)
 
 	s := Summary{
 		Schema:                SummarySchema,
@@ -74,18 +66,8 @@ func BuildSummary(root string) (Summary, error) {
 	}
 	for i := range m.Projects {
 		p := &m.Projects[i]
-		devCommand := strings.TrimSpace(ProjectDev(m, p.Name))
 		projectDir := filepath.Join(root, filepath.FromSlash(p.RelativeDir))
-		canDevelop := devCommand != ""
-		if !canDevelop {
-			native, _ := DiscoverTasks(root, Project{Name: p.Name, RelativeDir: p.RelativeDir, Toolchain: p.Toolchain, PackageManager: p.PackageManager}, nil)
-			for _, task := range native {
-				if task.Name == "dev" {
-					canDevelop = true
-					break
-				}
-			}
-		}
+		canDevelop := false // Filled from the effective task catalog by the caller.
 		dependenciesInstalled := ProjectDependenciesInstalled(root, projectDir, p.Toolchain)
 		dependencyStatus := ""
 		if p.Toolchain == "go" {
@@ -108,6 +90,21 @@ func BuildSummary(root string) (Summary, error) {
 
 	s.NextCommand = bestNextCommand(s.Projects)
 	return s, nil
+}
+
+// ApplyTaskCapabilities refreshes status and suggestions from mise task discovery.
+func (s *Summary) ApplyTaskCapabilities(available map[string]bool) {
+	s.Issues = nil
+	for i := range s.Projects {
+		p := &s.Projects[i]
+		p.CanStartDevelopment = available[p.Name]
+		if !p.CanStartDevelopment {
+			s.Issues = append(s.Issues, SummaryIssue{Code: "development_not_available", Project: p.Name})
+		} else if !p.DependenciesInstalled && p.DependenciesStatus != "unverified" {
+			s.Issues = append(s.Issues, SummaryIssue{Code: "dependencies_not_installed", Project: p.Name})
+		}
+	}
+	s.NextCommand = bestNextCommand(s.Projects)
 }
 
 // ProjectDependenciesInstalled reports whether a project can start without a
@@ -170,7 +167,7 @@ func bestNextCommand(projects []SummaryProject) string {
 	}
 	for _, p := range projects {
 		if p.CanStartDevelopment {
-			return "one dev -p " + p.Name
+			return "one run dev -p " + p.Name
 		}
 	}
 	return "one add"

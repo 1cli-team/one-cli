@@ -6,103 +6,44 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/pelletier/go-toml/v2"
 )
 
 func appendRootTaskConfig(t *testing.T, root, value string) {
 	t.Helper()
-	raw, err := os.ReadFile(filepath.Join(root, "mise.toml"))
-	if err != nil {
+	path := filepath.Join(root, "mise.local.toml")
+	raw, err := os.ReadFile(path)
+	if err != nil && !os.IsNotExist(err) {
 		t.Fatal(err)
 	}
-	buildWrite(t, root, "mise.toml", string(raw)+"\n"+value)
-}
-
-func TestE2E_TasksRestoreArtifactsAndInvalidateRootConfiguration(t *testing.T) {
-	// CI runs race and plain suites with the same outer artifact cache. A new
-	// fixture must execute its first build even when identical artifacts exist.
-	t.Setenv("MISE_TASK_CACHE_DIR", t.TempDir())
-	for _, name := range []string{"first", "fresh-home"} {
-		t.Run(name, testTasksRestoreArtifactsAndInvalidateRootConfiguration)
-	}
-}
-
-func testTasksRestoreArtifactsAndInvalidateRootConfiguration(t *testing.T) {
-	root := buildFixture(t, true)
-	for _, project := range []struct{ name, dir string }{{"web", "apps/web"}, {"lib", "packages/lib"}} {
-		name, dir := project.name, project.dir
-		buildWrite(t, root, dir+"/build.sh", "#!/bin/sh\nmkdir -p dist\nprintf '%s' \"$BUILD_VALUE\" > dist/value\necho executed >> executions\nprintf '<%s>\\n' \"$@\"\n")
-		appendRootTaskConfig(t, root, "[tasks.\""+name+":build\"]\nenv={BUILD_VALUE='"+name+"'}\nsources=['package.json','build.sh']\noutputs=['dist']\ncache={enabled=true,env=['BUILD_VALUE'],command_inputs=['one __task-input --project "+name+" --task build']}\n")
-	}
-	run := func(args ...string) string {
-		t.Helper()
-		out, stderr, code := runBinaryIn(t, root, args...)
-		if code != 0 {
-			t.Fatalf("%v: %d %s %s", args, code, out, stderr)
-		}
-		return out + stderr
-	}
-	runs := func(dir string) int {
-		t.Helper()
-		raw, err := os.ReadFile(filepath.Join(root, dir, "executions"))
-		if err != nil {
-			t.Fatal(err)
-		}
-		return strings.Count(string(raw), "executed")
-	}
-	run("run", "build", "-p", "web", "-o", "json")
-	run("build", "-p", "web", "-o", "json")
-	if runs("apps/web") != 1 || runs("packages/lib") != 1 {
-		t.Fatal("repeat did not hit cache")
-	}
-	for _, dir := range []string{"apps/web", "packages/lib"} {
-		if err := os.RemoveAll(filepath.Join(root, dir, "dist")); err != nil {
+	current := map[string]any{}
+	patch := map[string]any{}
+	if len(raw) > 0 {
+		if err = toml.Unmarshal(raw, &current); err != nil {
 			t.Fatal(err)
 		}
 	}
-	run("run", "build", "-p", "web", "-o", "json")
-	for _, project := range []struct{ name, dir string }{{"web", "apps/web"}, {"lib", "packages/lib"}} {
-		name, dir := project.name, project.dir
-		raw, err := os.ReadFile(filepath.Join(root, dir, "dist/value"))
-		if err != nil || string(raw) != name {
-			t.Fatalf("restored environment %s: %s %v", name, raw, err)
-		}
-		if runs(dir) != 1 {
-			t.Fatal("restore executed the task")
+	if err = toml.Unmarshal([]byte(value), &patch); err != nil {
+		t.Fatal(err)
+	}
+	var merge func(map[string]any, map[string]any)
+	merge = func(target, source map[string]any) {
+		for key, value := range source {
+			next, ok := value.(map[string]any)
+			if old, exists := target[key].(map[string]any); ok && exists {
+				merge(old, next)
+			} else {
+				target[key] = value
+			}
 		}
 	}
-	config, err := os.ReadFile(filepath.Join(root, "mise.toml"))
+	merge(current, patch)
+	raw, err = toml.Marshal(current)
 	if err != nil {
 		t.Fatal(err)
 	}
-	buildWrite(t, root, "mise.toml", strings.Replace(string(config), "BUILD_VALUE='web'", "BUILD_VALUE='changed'", 1))
-	run("run", "build", "-p", "web", "-o", "json")
-	// mise includes the defining config in every task cache key. Editing the
-	// shared root config invalidates both tasks, while their environments stay isolated.
-	if runs("apps/web") != 2 || runs("packages/lib") != 2 {
-		t.Fatalf("root configuration did not invalidate both tasks: web=%d lib=%d", runs("apps/web"), runs("packages/lib"))
-	}
-	raw, _ := os.ReadFile(filepath.Join(root, "apps/web/dist/value"))
-	if string(raw) != "changed" {
-		t.Fatal("stale environment cache hit")
-	}
-	lib, _ := os.ReadFile(filepath.Join(root, "packages/lib/dist/value"))
-	if string(lib) != "lib" {
-		t.Fatal("project environments are not isolated")
-	}
-	run("run", "build", "-p", "web", "--force", "--cache", "off")
-	if runs("apps/web") != 3 || runs("packages/lib") != 3 {
-		t.Fatal("forced execution skipped tasks")
-	}
-	out := run("run", "build", "-p", "web", "--", "a b", "中文", "$(nope)")
-	for _, want := range []string{"<a b>", "<中文>", "<$(nope)>"} {
-		if !strings.Contains(out, want) {
-			t.Fatalf("lost argv %q: %s", want, out)
-		}
-	}
-	// Missing context fails even when an artifact is already cached.
-	if _, _, code := runBinaryIn(t, root, "__task-input", "--project", "web", "--task", "build"); code == 0 {
-		t.Fatal("missing context accepted")
-	}
+	buildWrite(t, root, "mise.local.toml", string(raw))
 }
 
 func TestE2E_NativeMiseFileTask(t *testing.T) {
@@ -123,15 +64,16 @@ func TestE2E_NativeMiseFileTask(t *testing.T) {
 	}
 }
 
-func TestE2E_TasksRejectCacheWithoutEnvironmentFingerprint(t *testing.T) {
+func TestE2E_NativeCacheNeedsNoOneCommand(t *testing.T) {
 	root := buildFixture(t, true)
+	t.Setenv("MISE_EXPERIMENTAL", "1")
 	appendRootTaskConfig(t, root, "[tasks.\"web:build\"]\nsources=['package.json']\noutputs=['dist']\ncache={enabled=true}\n")
 	stdout, stderr, code := runBinaryIn(t, root, "run", "build", "-p", "web", "-o", "json")
-	if code == 0 || !strings.Contains(stderr+stdout, "__task-input") {
-		t.Fatalf("effective cache without fingerprint accepted: %d %s %s", code, stdout, stderr)
+	if code != 0 {
+		t.Fatalf("native cache failed: %d %s %s", code, stdout, stderr)
 	}
-	if _, err := os.Stat(filepath.Join(root, "order")); !os.IsNotExist(err) {
-		t.Fatal("task ran before effective cache was validated")
+	if _, err := os.Stat(filepath.Join(root, "order")); err != nil {
+		t.Fatal("native cached task did not run")
 	}
 }
 
@@ -147,36 +89,7 @@ func TestE2E_NativeMiseIncludedTOMLTask(t *testing.T) {
 	}
 }
 
-func TestE2E_TasksReuseArtifactsAcrossCheckouts(t *testing.T) {
-	cache := t.TempDir()
-	for i := 0; i < 2; i++ {
-		root := buildFixture(t, true)
-		// Opt into sharing only after the fixture has isolated its home/cache.
-		t.Setenv("MISE_TASK_CACHE_DIR", cache)
-		for _, project := range []struct{ name, dir string }{{"web", "apps/web"}, {"lib", "packages/lib"}} {
-			name, dir := project.name, project.dir
-			buildWrite(t, root, dir+"/build.sh", "#!/bin/sh\nmkdir -p dist\necho portable-artifact > dist/value\necho executed >> executions\n")
-			appendRootTaskConfig(t, root, "[tasks.\""+name+":build\"]\nsources=['package.json','build.sh']\noutputs=['dist']\ncache={enabled=true,command_inputs=['one __task-input --project "+name+" --task build']}\n")
-		}
-		stdout, stderr, code := runBinaryIn(t, root, "build", "-o", "json")
-		if code != 0 {
-			t.Fatalf("checkout %d: %d %s %s", i, code, stdout, stderr)
-		}
-		if i == 1 {
-			for _, dir := range []string{"apps/web", "packages/lib"} {
-				if _, err := os.Stat(filepath.Join(root, dir, "executions")); !os.IsNotExist(err) {
-					t.Fatal("cache was not reused across checkout paths", err)
-				}
-				raw, err := os.ReadFile(filepath.Join(root, dir, "dist/value"))
-				if err != nil || string(raw) != "portable-artifact\n" {
-					t.Fatalf("missing restored artifact: %s %v", raw, err)
-				}
-			}
-		}
-	}
-}
-
-func TestE2E_GoTaskBuildRestoresExecutableAndForwardsArguments(t *testing.T) {
+func TestE2E_GoTaskBuildRebuildsExecutableAndForwardsArguments(t *testing.T) {
 	taskBinary, err := exec.LookPath("task")
 	if err != nil {
 		t.Skip("real Task is required for Go integration")
@@ -191,7 +104,16 @@ func TestE2E_GoTaskBuildRestoresExecutableAndForwardsArguments(t *testing.T) {
 		t.Fatal(err)
 	}
 	t.Setenv("CGO_ENABLED", "0")
-	buildWrite(t, root, "one.manifest.json", `{"version":1,"workspace":{"id":"go-test","name":"go-test"},"projects":[{"name":"api","relativeDir":"services/api","toolchain":"go","templateId":"go-api"}]}`)
+	buildWrite(t, root, "one.manifest.toml", `version = 2
+
+[workspace]
+id = "go-test"
+name = "go-test"
+
+[projects."api"]
+path = "services/api"
+toolchain = "go"
+`)
 	buildWrite(t, root, "mise.toml", "[tools]\ngo='system'\ntask='system'\nnode='system'\npnpm='system'\n")
 	buildWrite(t, root, "services/api/go.mod", "module example.com/task-test\n\ngo 1.25.0\n")
 	buildWrite(t, root, "services/api/cmd/server/main.go", "package main\nimport \"fmt\"\nvar message=\"default\"\nfunc main(){fmt.Print(message)}\n")
@@ -214,6 +136,7 @@ func TestE2E_GoTaskBuildRestoresExecutableAndForwardsArguments(t *testing.T) {
 			t.Fatalf("built executable: %s %v, want %s", out, err, want)
 		}
 	}
+	run("init", "mise")
 	run("build", "-p", "api")
 	check("default")
 	if err = os.RemoveAll(filepath.Join(root, "services/api/bin")); err != nil {
@@ -223,4 +146,60 @@ func TestE2E_GoTaskBuildRestoresExecutableAndForwardsArguments(t *testing.T) {
 	check("default")
 	run("run", "build", "-p", "api", "--", "-ldflags=-X 'main.message=hello world'")
 	check("hello world")
+}
+
+func TestE2E_ArtifactCacheStaysOffWithoutPublicFlag(t *testing.T) {
+	root := buildFixture(t, true)
+	// Ambient mise preferences cannot enable artifact caching through One.
+	t.Setenv("MISE_EXPERIMENTAL", "1")
+	t.Setenv("MISE_TASK_CACHE", "local-only")
+	t.Setenv("MISE_TASK_CACHE_DIR", t.TempDir())
+	buildWrite(t, root, "apps/web/build.sh", "#!/bin/sh\nmkdir -p dist\necho artifact > dist/value\necho executed >> executions\nprintf '<%s>\\n' \"$@\"\n")
+	appendRootTaskConfig(t, root, `[tasks."web:build"]
+sources = ["package.json", "build.sh"]
+outputs = ["dist"]
+cache = { enabled = true }
+`)
+	run := func(extra ...string) string {
+		t.Helper()
+		args := append([]string{"run", "build", "-p", "web", "--ui", "stream"}, extra...)
+		out, stderr, code := runBinaryIn(t, root, args...)
+		if code != 0 {
+			t.Fatalf("%v: %d %s %s", args, code, out, stderr)
+		}
+		return out + stderr
+	}
+	check := func(want int) {
+		t.Helper()
+		raw, err := os.ReadFile(filepath.Join(root, "apps/web/executions"))
+		if err != nil || strings.Count(string(raw), "executed") != want {
+			t.Fatalf("executions = %q, want %d: %v", raw, want, err)
+		}
+	}
+	run()
+	check(1)
+	run() // Ordinary freshness checks are unchanged.
+	check(1)
+	if err := os.RemoveAll(filepath.Join(root, "apps/web/dist")); err != nil {
+		t.Fatal(err)
+	}
+	run() // Missing outputs must be rebuilt instead of restored from cache.
+	check(2)
+	run("--force")
+	check(3)
+	out := run("--", "a b", "中文", "$(nope)")
+	check(4)
+	for _, want := range []string{"<a b>", "<中文>", "<$(nope)>"} {
+		if !strings.Contains(out, want) {
+			t.Fatalf("lost argv %q: %s", want, out)
+		}
+	}
+	if _, _, code := runBinaryIn(t, root, "run", "build", "--cache", "off"); code == 0 {
+		t.Fatal("removed --cache flag was accepted")
+	}
+	for _, name := range []string{"__task", "__task-input", "__exec"} {
+		if _, _, code := runBinaryIn(t, root, name); code == 0 {
+			t.Fatalf("retired command %s is available", name)
+		}
+	}
 }

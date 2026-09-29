@@ -19,10 +19,9 @@ import (
 // InitInput captures the auto-bind inputs for an Infisical workspace.
 //
 // All fields are optional. The default flow auto-creates an Infisical
-// project named after the workspace (manifest.project.name);
-// --project-id short-circuits creation (bind to an existing Infisical
-// project), and --project-name overrides the desired name when
-// auto-creating.
+// project named after the workspace (manifest.workspace.name);
+// ProjectID binds to an existing project; ProjectName overrides the desired
+// display name when creating one. Names are never used to find an existing ID.
 //
 // Authentication uses the single browser session stored in the system keyring.
 // Only project metadata is persisted in the workspace manifest.
@@ -30,8 +29,6 @@ type InitInput struct {
 	ProjectID    string
 	ProjectName  string
 	Environments []string
-	DefaultEnv   string
-	RootPath     string
 	// SkipVerify lets `init` write the config without contacting Infisical
 	// (useful for offline workflows / generation tooling). Default off:
 	// the CLI's value is in catching configuration mistakes early.
@@ -51,16 +48,15 @@ type InitResult struct {
 	RootPath     string   `json:"root_path"`
 	AuthStatus   string   `json:"auth_status"` // "verified" / "skipped" / "created"
 	Created      bool     `json:"created"`     // true when env init created the Infisical project
-	WrittenTo    string   `json:"written_to"`  // absolute path to one.manifest.json
+	WrittenTo    string   `json:"written_to"`  // absolute path to one.manifest.toml
 }
 
-// maxCreateProjectRetries caps the suffix-retry loop. Five 4-char hex
-// suffixes give a 20-bit search space — collisions on every attempt would
-// indicate Infisical-side trouble, not legitimate name competition.
+// maxCreateProjectRetries allows one attempt with the original name followed
+// by at most four attempts with independently generated 4-character hex suffixes.
 const maxCreateProjectRetries = 5
 
 // Init writes (or updates) the workspace's Infisical configuration under
-// one.manifest.json#env plus manifest.environments.
+// one.manifest.toml under [env.infisical].
 //
 // Three branches:
 //
@@ -69,7 +65,7 @@ const maxCreateProjectRetries = 5
 //  2. in.ProjectID empty + a previous auto-bind already wrote a projectId
 //     to the manifest — re-verify and idempotently rewrite the config.
 //  3. in.ProjectID empty + no prior config — auto-create on Infisical using
-//     manifest.project.name (or the override --project-name), retrying with
+//     manifest.workspace.name (or the ProjectName override), retrying with
 //     a short random suffix on name collisions, and write the resolved id +
 //     name back into manifest.env.
 //
@@ -79,40 +75,21 @@ func Init(ctx context.Context, projectRoot string, in InitInput) (*InitResult, e
 		return nil, cliErrors.New(cliErrors.NOT_ONE_PROJECT,
 			i18n.T("workspace.manifest_required"))
 	}
-	// Inherit existing manifest.environments.names / default when the
-	// caller didn't pass --envs / --default-env. This keeps re-runs of
-	// auto-bind idempotent against a workspace that customised its environment
-	// list (otherwise DefaultEnvironments would clobber whatever was there).
-	if len(in.Environments) == 0 || strings.TrimSpace(in.DefaultEnv) == "" {
-		if existing, _ := LoadWorkspaceConfig(projectRoot); existing != nil {
-			if len(in.Environments) == 0 && len(existing.Environments) > 0 {
-				in.Environments = append([]string{}, existing.Environments...)
-			}
-			if strings.TrimSpace(in.DefaultEnv) == "" && existing.DefaultEnv != "" {
-				in.DefaultEnv = existing.DefaultEnv
-			}
-		}
+	manifest, err := workspace.ReadManifest(projectRoot)
+	if err != nil {
+		return nil, err
+	}
+	if len(in.Environments) == 0 {
+		in.Environments = workspace.EnvironmentNames(manifest)
+	}
+	if manifest.Env != nil && strings.TrimSpace(in.ProjectID) == "" {
+		in.ProjectID = manifest.Env.ProjectID
 	}
 	in = applyInitDefaults(in)
-
 	cfg := &WorkspaceConfig{
 		ProjectID:    strings.TrimSpace(in.ProjectID),
 		ProjectName:  strings.TrimSpace(in.ProjectName),
 		Environments: dedupeStrings(in.Environments),
-		DefaultEnv:   strings.TrimSpace(in.DefaultEnv),
-		RootPath:     strings.TrimSpace(in.RootPath),
-	}
-
-	// Branch 2 fallback: re-use a previously-stored projectId so re-running
-	// `env init` is idempotent and does NOT try to create a duplicate
-	// project upstream.
-	if cfg.ProjectID == "" {
-		if existing, _ := LoadWorkspaceConfig(projectRoot); existing != nil && existing.ProjectID != "" {
-			cfg.ProjectID = existing.ProjectID
-			if cfg.ProjectName == "" {
-				cfg.ProjectName = existing.ProjectName
-			}
-		}
 	}
 
 	authStatus := "skipped"
@@ -138,7 +115,7 @@ func Init(ctx context.Context, projectRoot string, in InitInput) (*InitResult, e
 		if err != nil {
 			return nil, err
 		}
-		id, resolvedName, err := createWithRetry(client, desiredName)
+		id, resolvedName, err := createWithRetryContext(ctx, client, desiredName)
 		if err != nil {
 			return nil, err
 		}
@@ -148,11 +125,11 @@ func Init(ctx context.Context, projectRoot string, in InitInput) (*InitResult, e
 		created = true
 
 		// Back-fill the manifest's workspace identity. New scaffolds set
-		// project at create time; older workspaces (or those that lost the
-		// field) get it written here so subsequent `env init` runs and any
+		// workspace at create time; older workspaces (or those that lost the
+		// field) get it written here so subsequent initialization calls and any
 		// future identity-aware command can rely on it.
 		if err := ensureManifestProject(projectRoot, resolvedName); err != nil {
-			return nil, err
+			return nil, bindingWriteError(projectRoot, cfg, err)
 		}
 	} else if !in.SkipVerify {
 		// Branch 1 / Branch-2-rewrite: validate the explicit / cached id.
@@ -171,7 +148,6 @@ func Init(ctx context.Context, projectRoot string, in InitInput) (*InitResult, e
 		authStatus = "verified"
 	}
 
-	cfg.RootPath = cfg.RootPathOrDefault()
 	configJSON, err := EncodeManifestConfig(cfg)
 	if err != nil {
 		return nil, err
@@ -180,8 +156,10 @@ func Init(ctx context.Context, projectRoot string, in InitInput) (*InitResult, e
 		Kind:             workspace.EnvBackendInfisical,
 		ConfigJSON:       configJSON,
 		EnvironmentNames: cfg.Environments,
-		DefaultEnv:       cfg.DefaultEnvOrFallback(),
 	}); err != nil {
+		if created {
+			return nil, bindingWriteError(projectRoot, cfg, err)
+		}
 		return nil, err
 	}
 
@@ -199,7 +177,7 @@ func Init(ctx context.Context, projectRoot string, in InitInput) (*InitResult, e
 }
 
 // resolveProjectName picks the Infisical project name when env init is
-// auto-creating. Precedence: explicit override → manifest.project.name →
+// auto-creating. Precedence: explicit override → manifest.workspace.name →
 // package.json#name → workspace folder basename. The first non-empty value
 // wins; if all are empty we surface a clear error.
 func resolveProjectName(projectRoot, override string) (string, error) {
@@ -265,9 +243,13 @@ func ensureManifestProject(projectRoot, fallbackName string) error {
 // suffix to the desired name on collisions. The first attempt uses the bare
 // name so the common case (unused name) lands cleanly without decoration.
 func createWithRetry(client *Client, baseName string) (string, string, error) {
+	return createWithRetryContext(context.Background(), client, baseName)
+}
+
+func createWithRetryContext(ctx context.Context, client *Client, baseName string) (string, string, error) {
 	candidate := baseName
 	for attempt := 0; attempt < maxCreateProjectRetries; attempt++ {
-		id, resolved, err := client.CreateProject(candidate)
+		id, resolved, err := client.CreateProjectContext(ctx, candidate)
 		if err == nil {
 			return id, resolved, nil
 		}
@@ -286,12 +268,6 @@ func createWithRetry(client *Client, baseName string) (string, string, error) {
 func applyInitDefaults(in InitInput) InitInput {
 	if len(in.Environments) == 0 {
 		in.Environments = append([]string{}, DefaultEnvironments...)
-	}
-	if strings.TrimSpace(in.DefaultEnv) == "" {
-		in.DefaultEnv = in.Environments[0]
-	}
-	if strings.TrimSpace(in.RootPath) == "" {
-		in.RootPath = "/"
 	}
 	return in
 }
@@ -322,4 +298,10 @@ func dedupeStrings(in []string) []string {
 		out = append(out, v)
 	}
 	return out
+}
+
+func bindingWriteError(root string, cfg *WorkspaceConfig, err error) error {
+	return cliErrors.New(cliErrors.ONE_CLI_ERROR,
+		i18n.Errorf("infisical.init.binding_write_failed", cfg.ProjectName, cfg.ProjectID, workspace.ManifestPath(root), err).Error()).
+		WithContext(map[string]any{"project_id": cfg.ProjectID, "project_name": cfg.ProjectName, "partial_state": "project_created_binding_unsaved"}).WithCause(err)
 }

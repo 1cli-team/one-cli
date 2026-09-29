@@ -28,8 +28,7 @@ func seedRegistryWorkspace(t *testing.T, id, name, projectName string) string {
 	}
 	if projectName != "" {
 		manifest.Projects = []workspacecore.ManifestProject{{
-			Name: projectName, RelativeDir: "apps/" + projectName,
-			TemplateID: "react-spa", Toolchain: "node",
+			Name: projectName, RelativeDir: "apps/" + projectName, Toolchain: "node",
 		}}
 	}
 	if err := workspacecore.WriteManifest(root, manifest); err != nil {
@@ -169,7 +168,7 @@ func TestWorkspacesLegacyProjectMutationIsReadOnlyWithoutResolvingBodyRoot(t *te
 	if err != nil {
 		t.Fatal(err)
 	}
-	beforeBuildVersion := before.Projects[0].BuildVersion
+	beforeProject := before.Projects[0]
 
 	recorder := registryRequest(t, handler, http.MethodPut,
 		"/api/workspaces/"+selected.EntryID+"/projects/selected-web",
@@ -184,7 +183,7 @@ func TestWorkspacesLegacyProjectMutationIsReadOnlyWithoutResolvingBodyRoot(t *te
 	if err != nil {
 		t.Fatal(err)
 	}
-	if manifest.Projects[0].BuildVersion != beforeBuildVersion {
+	if manifest.Projects[0] != beforeProject {
 		t.Fatal("rejected root injection changed the selected workspace")
 	}
 }

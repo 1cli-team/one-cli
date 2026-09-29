@@ -97,7 +97,9 @@ The full catalogue is in [Error codes](/en/docs/error-codes/).
 
 ## Rule 3: Project Instructions Belong To The Team
 
+`one create` writes one `AGENTS.md` in the active CLI language. Its English and Chinese sources are maintained as separate Markdown templates. Later language changes and `one add` preserve the team's edits.
 
+The generated instructions require `one run` for tests and project commands. Complex operations can live in `scripts/*.mts`, registered as tasks. Variables are managed through One; publishing credentials belong in global Shared credentials configured by the user in Dashboard and injected inside tasks with `one exec --global`.
 
 ## Rule 4: Configuration And Credentials Have Boundaries
 
@@ -105,7 +107,7 @@ One CLI can manage env, container, and deploy configuration, but agents should n
 
 Recommended boundary:
 
-- `one.manifest.json` records reviewable Workspace/Project/Backend configuration; secret values and session tokens never enter it.
+- `one.manifest.toml` records reviewable Workspace/Project/Backend configuration; secret values and session tokens never enter it.
 - `one login` manages one browser session in the system keyring. `one serve` exposes account settings, global-variable metadata, and reviewed Manifest drafts.
 - `.env*`, private keys, and cloud tokens stay out of Git and out of reusable agent-facing docs.
 - Agents can read structured state, install missing dependencies, and scaffold projects, but publishing, deletion, and credential overwrites should go through team policy or human confirmation.
@@ -142,5 +144,5 @@ After adding a real template, inspect its manifest entry:
 
 ```bash
 one add nestjs-api --name api --yes -o json
-cat one.manifest.json
+cat one.manifest.toml
 ```

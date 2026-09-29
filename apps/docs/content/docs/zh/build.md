@@ -10,7 +10,7 @@ one build
 one build -p web -p api
 one build -p web --env prod
 one build -p web --dry-run -o json
-one build --cache off --force
+one build --force
 one build -p web --ui raw
 ```
 

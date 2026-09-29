@@ -13,7 +13,6 @@ import (
 	cliErrors "github.com/torchstellar-team/one-cli/packages/cli/internal/platform/errors"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/fsutil"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/i18n"
-	"github.com/torchstellar-team/one-cli/packages/cli/pkg/toolchain"
 )
 
 // ProjectInput names everything the creation workflow needs to materialise one
@@ -139,19 +138,9 @@ func materializeProject(ctx context.Context, projectRoot string, in ProjectInput
 
 	manifestPM := manifestPackageManagerFor(string(entry.Toolchain), packageManager)
 	newProject := workspace.ManifestProject{
-		Name:           in.Name,
-		RelativeDir:    filepath.ToSlash(relDir),
-		TemplateID:     entry.ID,
-		Toolchain:      string(entry.Toolchain),
-		PackageManager: manifestPM,
-	}
-	scripts, err := loadProjectScripts(targetDir)
-	if err != nil {
-		return ProjectResult{}, err
-	}
-	dev := workspace.ResolveScaffoldDevCommand(scripts, string(entry.Toolchain), targetDir)
-	if dev != "" {
-		newProject.Dev = &workspace.ProjectDevOverride{Command: dev}
+		Name:        in.Name,
+		RelativeDir: filepath.ToSlash(relDir),
+		Toolchain:   string(entry.Toolchain),
 	}
 	for _, p := range manifest.Projects {
 		if p.RelativeDir == newProject.RelativeDir || p.Name == in.Name {
@@ -205,25 +194,6 @@ func materializeProject(ctx context.Context, projectRoot string, in ProjectInput
 		return ProjectResult{}, err
 	}
 	registered = true
-
-	addManifest, _ := workspace.ReadManifest(projectRoot)
-	var thisSub *workspace.ManifestProject
-	for i := range addManifest.Projects {
-		if addManifest.Projects[i].Name == in.Name {
-			thisSub = &addManifest.Projects[i]
-			break
-		}
-	}
-	addSelected := workspace.SelectionForProject(addManifest, thisSub)
-	if err := syncProject(syncProjectOptions{
-		ProjectRoot:    projectRoot,
-		TargetDir:      targetDir,
-		Toolchain:      toolchain.Toolchain(entry.Toolchain),
-		PackageManager: toolchain.PackageManager(packageManager),
-		Selected:       addSelected,
-	}); err != nil {
-		return ProjectResult{}, err
-	}
 
 	compatManifest, _ := workspace.ReadManifest(projectRoot)
 	compatSelection := workspace.SelectionForProject(compatManifest, nil)

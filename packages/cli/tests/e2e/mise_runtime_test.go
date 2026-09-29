@@ -22,7 +22,20 @@ func runtimeFixture(t *testing.T) string {
 	t.Setenv("XDG_STATE_HOME", filepath.Join(root, ".local", "state"))
 	t.Setenv("ONE_RUNTIME", "")
 	files := map[string]string{
-		"one.manifest.json":     `{"version":1,"workspace":{"id":"runtime-test","name":"runtime-test"},"projects":[{"name":"web","relativeDir":"apps/web","toolchain":"node","templateId":"react-spa","dev":{"command":"node dev.cjs"}},{"name":"api","relativeDir":"services/api","toolchain":"go","templateId":"go-api","dev":{"command":"node dev.cjs"}}]}`,
+		"one.manifest.toml": `version = 2
+
+[workspace]
+id = "runtime-test"
+name = "runtime-test"
+
+[projects."web"]
+path = "apps/web"
+toolchain = "node"
+
+[projects."api"]
+path = "services/api"
+toolchain = "go"
+`,
 		"mise.toml":             "[env]\nONE_MISE_TEST_VALUE = 'root'\nONE_MISE_PARENT = 'root-only'\n",
 		"apps/web/mise.toml":    "[env]\nONE_MISE_TEST_VALUE = 'project'\nONE_MISE_ONLY = 'from-mise'\n",
 		"apps/web/.env":         "ONE_MISE_TEST_VALUE=web-secret\nWEB_ONLY=web-only\n",
@@ -47,7 +60,22 @@ func installFakeMise(t *testing.T) {
 		t.Skip("POSIX fake mise; real integration can run on Windows")
 	}
 	dir := t.TempDir()
-	script := "#!/bin/sh\nif [ \"$1\" = --version ]; then echo '2026.9.7 linux-x64'; exit 0; fi\n[ \"$1\" = exec ] && [ \"$2\" = -- ] || exit 91\nshift 2\nexport ONE_MISE_TEST_VALUE=from-mise\nexport ONE_MISE_ONLY=from-mise\nexec \"$@\"\n"
+	script := `#!/bin/sh
+if [ "$1" = --version ]; then echo '2026.9.7 linux-x64'; exit 0; fi
+if [ "$1" = env ]; then
+ cat <<'ENV'
+${Env:ONE_MISE_TEST_VALUE}='from-mise'
+${Env:ONE_MISE_ONLY}='from-mise'
+ENV
+ exit 0
+fi
+[ "$1" = exec ] && [ "$2" = -- ] || exit 91
+shift 2
+export ONE_MISE_TEST_VALUE=from-mise
+export ONE_MISE_ONLY=from-mise
+exec "$@"
+`
+
 	if err := os.WriteFile(filepath.Join(dir, "mise"), []byte(script), 0o755); err != nil {
 		t.Fatal(err)
 	}
@@ -351,12 +379,12 @@ func TestE2E_MiseCreateAddAndRefreshWithoutNewFlags(t *testing.T) {
 	if err := os.WriteFile(path, []byte(strings.Replace(string(raw), "//:web:build", "//:custom:build", 1)), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	manifest, _ := os.ReadFile(filepath.Join(root, "one.manifest.json"))
+	manifest, _ := os.ReadFile(filepath.Join(root, "one.manifest.toml"))
 	_, _, code = runBinaryIn(t, root, "add", "react-spa", "--name", "another", "-y")
 	if code == 0 {
 		t.Fatal("add succeeded with conflicting configuration")
 	}
-	after, _ := os.ReadFile(filepath.Join(root, "one.manifest.json"))
+	after, _ := os.ReadFile(filepath.Join(root, "one.manifest.toml"))
 	if string(after) != string(manifest) {
 		t.Fatal("conflict changed manifest")
 	}
@@ -365,7 +393,7 @@ func TestE2E_MiseCreateAddAndRefreshWithoutNewFlags(t *testing.T) {
 	}
 }
 
-func TestE2E_MiseRealGeneratedTasksRequireOneContext(t *testing.T) {
+func TestE2E_MiseNativeTasksDoNotRequireOneContext(t *testing.T) {
 	mise := os.Getenv("ONE_TEST_MISE_BINARY")
 	if mise == "" {
 		t.Skip("set ONE_TEST_MISE_BINARY for real task integration")
@@ -414,7 +442,7 @@ func TestE2E_MiseRealGeneratedTasksRequireOneContext(t *testing.T) {
 		cmd := exec.Command(mise, "run", "//:web:dev")
 		cmd.Dir = root
 		out, err := cmd.CombinedOutput()
-		if err == nil || !strings.Contains(string(out), "one run") {
+		if err != nil || !strings.Contains(string(out), strings.TrimPrefix(command, "echo ")) {
 			t.Fatalf("generated task: %v %s", err, out)
 		}
 	}

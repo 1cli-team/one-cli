@@ -36,7 +36,7 @@ const (
 // cobra-side --no-ui that exposes it.
 //
 // WorkspaceRoot is the absolute path to the One workspace the user ran
-// `one serve` from (resolved by walking up from cwd for one.manifest.json).
+// `one serve` from (resolved by walking up from cwd for one.manifest.toml).
 // Empty string means "no workspace detected"; the Dashboard can still select
 // a previously observed Workspace from RegistryService.
 type Opts struct {

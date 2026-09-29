@@ -56,6 +56,7 @@ import type { OverviewProject, ProjectSettingsResponse } from "@/types/api";
 type ProjectInspectorTab = "overview" | "environment" | "runtime";
 
 interface ProjectInspectorProps {
+	environments?: string[];
 	projects: OverviewProject[];
 	currentBackend?: string;
 	environment: string;
@@ -73,6 +74,7 @@ const TAB_ITEMS: ReadonlyArray<{
 ];
 
 export const ProjectInspector: React.FC<ProjectInspectorProps> = ({
+	environments,
 	projects,
 	currentBackend,
 	environment,
@@ -270,7 +272,7 @@ export const ProjectInspector: React.FC<ProjectInspectorProps> = ({
 									{t("projectCreate.title")}
 								</Button>
 							)}
-							<EnvironmentSelector />
+							<EnvironmentSelector environments={environments} />
 							<WorkspaceSettingsDialog
 								currentBackend={currentBackend}
 								environment={environment}

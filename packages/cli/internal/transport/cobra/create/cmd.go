@@ -1,12 +1,11 @@
 // Package createcmd contributes `one create` to the explicit root command.
-// It scaffolds a new workspace (one.manifest.json + folder skeleton),
+// It scaffolds a new workspace (one.manifest.toml + folder skeleton),
 // scaffolds workspace tooling and development tasks without a remote binding.
 // Projects, CI, and deployment targets are intentionally deferred.
 package createcmd
 
 import (
 	"github.com/spf13/cobra"
-
 	creationmodule "github.com/torchstellar-team/one-cli/packages/cli/internal/modules/creation"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/helpui"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/i18n"
@@ -34,10 +33,8 @@ var workspaceDefaultEnables = []string{
 var canonicalDomainOrder = []string{"dev", "ci", "env"}
 
 type createFlags struct {
-	name         string
-	yes          bool
-	preset       string
-	projectNames string
+	name string
+	yes  bool
 }
 
 func newCreateCmd(deps Dependencies) *cobra.Command {
@@ -45,7 +42,7 @@ func newCreateCmd(deps Dependencies) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "create [dir]",
 		Long:    i18n.T("create.tip"),
-		Example: "  one create demo\n  one create . --name demo\n  one create demo --yes",
+		Example: "  one create demo\n  one create .\n  one create demo --yes",
 		Args:    i18n.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			dir := ""
@@ -57,15 +54,9 @@ func newCreateCmd(deps Dependencies) *cobra.Command {
 	}
 	cmd.Flags().StringVarP(&flags.name, "name", "n", "", i18n.T("create.flag.name"))
 	cmd.Flags().BoolVarP(&flags.yes, "yes", "y", false, i18n.T("create.flag.yes"))
-	cmd.Flags().StringVar(&flags.preset, "preset", "",
-		i18n.T("create.flag.preset"))
-	cmd.Flags().StringVar(&flags.projectNames, "project-names", "",
-		i18n.T("create.flag.project_names"))
 	i18n.MarkFlagUsage(cmd, "name", "create.flag.name")
 	i18n.MarkFlagUsage(cmd, "yes", "create.flag.yes")
-	i18n.MarkFlagUsage(cmd, "preset", "create.flag.preset")
-	i18n.MarkFlagUsage(cmd, "project-names", "create.flag.project_names")
-	helpui.MarkAdvanced(cmd, "preset", "project-names")
+	helpui.MarkAdvanced(cmd, "name")
 	i18n.MarkShort(cmd, "create.short")
 	i18n.MarkLong(cmd, "create.tip")
 	return cmd

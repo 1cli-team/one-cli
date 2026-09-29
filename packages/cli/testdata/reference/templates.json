@@ -3,7 +3,6 @@
   "templates": [
     {
       "category": "backend",
-      "code": "ne",
       "description": "NestJS + TypeScript，适合 API 服务与业务后台",
       "id": "nestjs-api",
       "name": "NestJS API 服务",
@@ -18,7 +17,6 @@
     },
     {
       "category": "backend",
-      "code": "go",
       "description": "Gin + Gorm + Viper + Zap，适合 API 服务与业务后台",
       "id": "go-api",
       "name": "Go API 服务",
@@ -37,7 +35,6 @@
     },
     {
       "category": "frontend",
-      "code": "as",
       "description": "前端静态站模板，适合官网、营销站与内容站点",
       "id": "astro-site",
       "name": "Astro 静态网站",
@@ -52,7 +49,6 @@
     },
     {
       "category": "frontend",
-      "code": "sl",
       "description": "基于 Astro + Starlight 的文档项目模板",
       "id": "starlight-docs",
       "name": "Starlight 文档站点",
@@ -68,7 +64,6 @@
     },
     {
       "category": "frontend",
-      "code": "na",
       "description": "Next.js 前端模板，适合 SEO 与首屏性能要求较高场景",
       "id": "nextjs-app",
       "name": "Next.js 全栈应用",
@@ -83,7 +78,6 @@
     },
     {
       "category": "frontend",
-      "code": "rs",
       "description": "React + Vite 单页应用模板，适合交互型业务系统",
       "id": "react-spa",
       "name": "React 单页应用",
@@ -99,7 +93,6 @@
     },
     {
       "category": "frontend",
-      "code": "em",
       "description": "React Native + Expo App 模板，适合 iOS/Android 双端开发",
       "id": "expo-mobile",
       "name": "Expo 移动 App",
@@ -114,7 +107,6 @@
     },
     {
       "category": "library",
-      "code": "tl",
       "description": "通用库模板，适合发包场景，内置 tsdown + vitest + oxlint/oxfmt",
       "id": "ts-library",
       "name": "TypeScript 通用库",
@@ -130,7 +122,6 @@
     },
     {
       "category": "library",
-      "code": "gl",
       "description": "Go 库模板，遵循 golang-standards/project-layout，适合发包与被 import 场景",
       "id": "go-lib",
       "name": "Go 通用库",
@@ -146,7 +137,6 @@
     },
     {
       "category": "frontend",
-      "code": "ea",
       "description": "Electron + React + Vite 桌面应用模板，主进程基于 inversify，内置 electron-log/store/updater",
       "id": "electron-app",
       "name": "Electron 桌面应用",
@@ -162,7 +152,6 @@
     },
     {
       "category": "frontend",
-      "code": "xa",
       "description": "在 apps/ 下创建空项目，稍后自行配置技术栈",
       "id": "empty-app",
       "name": "空应用",
@@ -175,7 +164,6 @@
     },
     {
       "category": "backend",
-      "code": "xs",
       "description": "在 services/ 下创建空项目，稍后自行配置技术栈",
       "id": "empty-service",
       "name": "空服务",
@@ -188,7 +176,6 @@
     },
     {
       "category": "library",
-      "code": "xl",
       "description": "在 packages/ 下创建空项目，稍后自行配置技术栈",
       "id": "empty-library",
       "name": "空共享库",

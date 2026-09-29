@@ -5,7 +5,7 @@ description: Inject project env vars into any command and execute it from the re
 
 `one exec` resolves a project, injects its Infisical variables when configured, and runs your command from the project directory.
 
-Workspace and global execution mask known injected secret values on stdout and stderr. Ordinary log formatting and child exit codes are preserved. Masking also covers multiline values and their JSON-escaped forms; it does not isolate arbitrary child programs.
+One does not print fetched variable values. Child stdout, stderr, colors, formatting, and exit codes pass through unchanged.
 
 ## Usage
 
@@ -51,14 +51,14 @@ This lets pnpm / turbo workspaces invoke `vite`, `next`, `astro`, and similar bi
 
 ## Infisical injection
 
-The top-level manifest `env` binding enables Infisical injection. Without a binding, or with `projects[].env.disabled: true`, the command inherits the shell environment. One CLI does not load `.env` files. Authentication or fetch failures stop execution instead of falling back to local files. Use `one login` to authenticate.
+The manifest `[env.infisical]` binding enables Infisical injection. Without a binding, the command inherits the shell environment. One CLI does not load `.env` files. Authentication or fetch failures stop execution instead of falling back to local files. Use `one login` to authenticate.
 
 ## Common errors
 
 | code | fix |
 |---|---|
 | `NOT_ONE_PROJECT` | run inside a workspace or project directory |
-| `SUBPROJECT_NOT_FOUND` | pass a manifest `name` or `relativeDir` to `-p` |
+| `SUBPROJECT_NOT_FOUND` | pass a manifest project name or `path` to `-p` |
 | `RUN_COMMAND_NOT_FOUND` | check PATH, project `node_modules/.bin`, and workspace `node_modules/.bin` |
 | `INFISICAL_AUTH_MISSING` | run `one login` |
 

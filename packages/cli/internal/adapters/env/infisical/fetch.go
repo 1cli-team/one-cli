@@ -13,12 +13,12 @@ import (
 // disk IO. Used by `one run` so users get live secrets each invocation
 // without needing to keep a `.env` on disk in sync.
 //
-// relativeDir uses the same convention as one.manifest.json subprojects
+// relativeDir uses the same convention as one.manifest.toml subprojects
 // (e.g. "services/api" — POSIX, no leading slash). When empty the
 // workspace-root path is used.
 //
 // Errors propagate raw so callers can branch:
-//   - INFISICAL_NOT_CONFIGURED — workspace's env.projectId is unset
+//   - INFISICAL_NOT_CONFIGURED — workspace's env.infisical.projectId is unset
 //   - INFISICAL_AUTH_MISSING   — no active browser session
 //   - INFISICAL_AUTH_FAILED / INFISICAL_API_ERROR — network / API-level
 //
@@ -46,7 +46,7 @@ func FetchSecretsForSubproject(ctx context.Context, projectRoot, relativeDir, en
 		return nil, err
 	}
 
-	resolution, err := resolveRunPath(cfg, projectRoot, relativeDir)
+	resolution, err := resolveRunPath(projectRoot, relativeDir)
 	if err != nil {
 		return nil, err
 	}
@@ -88,13 +88,10 @@ func isFolderNotFound(err error) bool {
 	return false
 }
 
-// resolveRunPath builds the PathResolution for one subproject without
-// touching the manifest's full subproject list. Mirrors what
-// pull.buildPullTargets does for a single target, but takes the relativeDir
-// directly so callers don't have to pre-walk the manifest.
-func resolveRunPath(cfg *WorkspaceConfig, projectRoot, relativeDir string) (PathResolution, error) {
+// resolveRunPath derives the fixed folder inheritance chain for a task directory.
+func resolveRunPath(projectRoot, relativeDir string) (PathResolution, error) {
 	if relativeDir == "" {
-		return ResolveSubprojectPath(cfg, nil, nil), nil
+		return ResolveSubprojectPath(nil), nil
 	}
 	rel := workspace.ToPosixPath(relativeDir)
 	sub := &workspace.Project{
@@ -102,9 +99,5 @@ func resolveRunPath(cfg *WorkspaceConfig, projectRoot, relativeDir string) (Path
 		RelativeDir: rel,
 		TargetDir:   filepath.Join(projectRoot, filepath.FromSlash(rel)),
 	}
-	override, err := LoadSubprojectConfig(projectRoot, rel)
-	if err != nil {
-		return PathResolution{}, err
-	}
-	return ResolveSubprojectPath(cfg, sub, override), nil
+	return ResolveSubprojectPath(sub), nil
 }

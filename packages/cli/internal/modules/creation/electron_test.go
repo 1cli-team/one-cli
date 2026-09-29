@@ -244,11 +244,11 @@ func TestElectronRejectsOtherManagerWithoutPartialWrites(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(root, "package.json"), []byte(pkg), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	before, _ := os.ReadFile(filepath.Join(root, "one.manifest.json"))
+	before, _ := os.ReadFile(filepath.Join(root, "one.manifest.toml"))
 	if err := addLanguageProject(t, s, root, "electron-app", "desktop"); err == nil {
 		t.Fatal("unsupported manager accepted")
 	}
-	after, _ := os.ReadFile(filepath.Join(root, "one.manifest.json"))
+	after, _ := os.ReadFile(filepath.Join(root, "one.manifest.toml"))
 	if string(before) != string(after) {
 		t.Fatal("changed manifest on failure")
 	}

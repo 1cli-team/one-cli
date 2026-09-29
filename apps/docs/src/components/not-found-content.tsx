@@ -44,9 +44,9 @@ export function NotFoundContent() {
 
   return (
     <main className="min-h-screen bg-[var(--surface-primary)] text-[var(--foreground-primary)]">
-      <SiteTopNav lang={lang} standalone />
+      <SiteTopNav lang={lang} />
 
-      <section className="mx-auto flex max-w-3xl flex-col items-center px-6 pt-24 pb-32 text-center sm:pt-32">
+      <section className="mx-auto flex max-w-3xl flex-col items-center px-6 pt-36 pb-32 text-center md:pt-32">
         <span className="text-[11px] font-medium uppercase tracking-[0.32em] text-[var(--foreground-muted)]">
           {text.hint} · 404
         </span>

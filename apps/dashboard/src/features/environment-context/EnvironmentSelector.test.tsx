@@ -44,10 +44,10 @@ describe("EnvironmentSelector", () => {
 
 	it("uses the env query and preserves every other query parameter", async () => {
 		const user = userEvent.setup();
-		renderSelector("/workspace/demo?view=compact&panel=deploy&env=preview");
+		renderSelector("/workspace/demo?view=compact&panel=deploy&env=staging");
 
-		const selector = screen.getByRole("combobox", { name: "Environment: Preview" });
-		expect(selector.textContent).toContain("Preview");
+		const selector = screen.getByRole("combobox", { name: "Environment: Staging" });
+		expect(selector.textContent).toContain("Staging");
 		await user.click(selector);
 		await user.click(await screen.findByRole("option", { name: "Production" }));
 
@@ -62,7 +62,7 @@ describe("EnvironmentSelector", () => {
 	it("keeps the selected environment while navigating between Dashboard pages", async () => {
 		const user = userEvent.setup();
 		render(
-			<MemoryRouter initialEntries={["/settings?env=preview"]}>
+			<MemoryRouter initialEntries={["/settings?env=staging"]}>
 				<EnvironmentLink to="/settings/env/infisical">Open Infisical</EnvironmentLink>
 				<RouteProbe />
 			</MemoryRouter>,
@@ -70,7 +70,7 @@ describe("EnvironmentSelector", () => {
 
 		await user.click(screen.getByRole("link", { name: "Open Infisical" }));
 
-		expect(screen.getByTestId("route").textContent).toBe("/settings/env/infisical?env=preview");
+		expect(screen.getByTestId("route").textContent).toBe("/settings/env/infisical?env=staging");
 	});
 
 	it("keeps guarding while any independent editor remains dirty", async () => {

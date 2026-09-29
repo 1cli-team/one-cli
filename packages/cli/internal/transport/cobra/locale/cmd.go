@@ -6,7 +6,6 @@ import (
 	"strings"
 
 	"github.com/spf13/cobra"
-
 	cliErrors "github.com/torchstellar-team/one-cli/packages/cli/internal/platform/errors"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/i18n"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/output"
@@ -16,7 +15,7 @@ import (
 // ───────────────────── locale ─────────────────────
 //
 // `one locale` reads or updates the user's global display-language preference.
-// Workspace configuration is stored separately in one.manifest.json.
+// Workspace configuration is stored separately in one.manifest.toml.
 
 type localeResult struct {
 	Schema       string `json:"schema"`

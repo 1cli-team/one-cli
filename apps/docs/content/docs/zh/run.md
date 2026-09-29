@@ -1,133 +1,126 @@
 ---
 title: one run
-description: 使用 mise 发现、调度和缓存工作区任务。
+description: 执行原生 mise 任务，注入项目环境，并选择 stream 或 TUI 输出。
 ---
 
-One 负责项目选择和项目环境，mise 负责工作区任务依赖与执行。Node 项目在 `package.json` scripts 中定义命令，由 pnpm 执行；Go 项目在 Taskfile 中定义命令，由 Task 执行。
+`one run` 只执行 mise 中实际存在的任务。One 负责项目选择、依赖准备、项目环境和输出展示；单个 mise 进程负责调度任务图并运行原生命令。
 
 ```sh
-one run                          # 列出任务，不执行命令
+one run
+one run --verbose
 one run --list -p web -o json
-one run build                    # 构建工作区及本地依赖
+one run dev
 one run build -p web -p api
 one run test -p api -- -run TestHandler
-one run check --env prod
-one run ci
 one run build --dry-run -o json
+one run dev --ui tui
+one run dev --ui stream
 ```
 
-## 任务简写
+不带任务名时，终端列表按工作区入口、项目命名空间分组，默认只展示任务名与描述。根任务省略 `//:` 前缀，显示的名字可直接用于 `one run <任务名>`。`one run -p web` 筛选项目相关任务，`one run --verbose` 显示来源、缓存及交互设置。窄终端自动换行；`-o json` / `-o yaml` 继续返回完整任务数据。
 
-`one <任务名>` 是 `one run <任务名>` 的简写。`dev`、`build`、`test`、`lint` 都是普通任务名，统一遵循这条规则。例如 `one test -p api` 与 `one run test -p api` 执行同一个任务。内置命令及其别名优先：`one env` 打开环境变量管理，`one run env` 执行名为 env 的任务。未知名称按任务解析，找不到时提示任务不存在。`one <任务名> --help` 显示 One 通用任务参数；用 `-- --help` 把帮助参数传给底层命令。
+## 任务名与参数
 
-## 项目选择与参数
+`one <task>` 保留为 `one run <task>` 的通用简写，没有独立内置的 dev 命令。`one run dev` 要求根 dev 任务存在；`one run dev -p web` 要求该项目的对应任务存在。缺失时直接报错，不回退到 start、start:dev、Go 目录或 manifest 命令。
 
-不传 `-p` 时选择工作区聚合任务。可以重复传入 `-p`，指定项目名或工作区相对路径。`--` 后的参数原样传给一个选中的任务；同时选择多个项目时不接受这类参数。`one build -p web` 和 `one run build -p web` 共用执行链路。
+内置命令优先：`one env` 管理环境，`one run env` 执行同名 mise 任务。使用 `-- --help` 将帮助参数传给子命令。`--` 后的参数只传给一个选中任务；多项目选择不接受透传参数。`:::` 保留给 mise 分隔任务。
 
-任意命令使用 `one exec web -- pnpm add axios`。它不运行任务图，也不自动安装应用依赖。
+`one exec web -- pnpm add axios` 使用项目的 mise 工具环境和 One 变量运行任意命令，不选择任务图，也不安装应用依赖。
 
-`:::` 是 mise 的任务分隔符，不能作为任务参数透传。
+## 原生配置
 
-## 配置与依赖
+创建工作区、添加项目以及显式执行 `one init mise` 时，One 将已有包脚本和 Taskfile 任务映射到根配置：
 
-One 只在工作区根目录的 `mise.toml` 中声明工具版本、项目命令入口、聚合任务和本地 Node 构建依赖。子项目保留原生的命令文件，不再生成子项目级 mise 配置。直接编辑这个文件即可添加任务或调整设置。执行任务、添加项目或运行 `one init mise` 时，One 会补充新配置，并更新未被用户修改的生成项；自定义字段和注释保留。根 `dev`、`build`、`check`、`test` 只聚合项目实际存在的任务，`ci` 组合 build、check、test 聚合任务。
+```toml
+[tasks."web:dev"]
+dir = "apps/web"
+run = "pnpm run dev"
 
-文件末尾的 `# one:managed-v1` 注释记录 One 上一次生成的字段。请保留它，以便后续增量更新。如果同一个字段被用户和 One 同时改成不同内容，会报告 `MISE_CONFIG_CONFLICT` 并指出冲突项。仅修改注释、添加自定义任务或调整默认值，不会因为整份文件改变而被拒绝。
+[tasks."api:dev"]
+dir = "services/api"
+run = "task dev --"
 
-```text
-workspace/
-  one.manifest.json
-  mise.toml             # 工具版本、项目任务入口、聚合与缓存配置
-  .config/hk.pkl        # 工作区 Git 检查
-  apps/web/
-    package.json        # pnpm 脚本
-  services/api/
-    Taskfile.yml        # Go 项目命令
+[tasks.dev]
+depends = ["web:dev", "api:dev"]
 ```
 
-预览和刷新配置：
+执行、任务列表、Dashboard 查询和 dry-run 都不会补出缺失任务或刷新工作区配置。新增包脚本后，显式更新 mise 声明：
 
-```bash
+```sh
 one init mise --dry-run -o json
 one init mise
 ```
 
-项目任务统一使用根任务名，如 `web:build`（规范名称为 `//:web:build`），并通过 `dir = "apps/web"` 指定执行目录。工具版本统一固定在根目录，Go 默认采用工作区模块要求的最高版本。本地 Node 上游存在 build 时，会在下游 build、check、test、typecheck 和 dev 前执行。Go 的模块依赖由 `go.work` 和编译器解析。One 管理的 Node 项目统一使用 pnpm。
+保留文件末尾的 `# one:managed-v1` 标记以支持增量生成。用户编辑和注释会被保留；同一生成字段的冲突修改会返回 `MISE_CONFIG_CONFLICT`。已有项目 mise 配置、别名、`.mise/tasks/` 可执行脚本及 `[task_config] includes` 继续可用。
 
-列表和 dry-run 静态读取配置，不启动 mise、不安装工具、不读取密钥、不写文件。动态表达式和带参数的依赖无法静态预览。实际运行还会读取 mise 的有效任务清单。用户直接定义命令的原生 mise 任务使用 mise 环境；One 生成的项目入口使用 One 项目环境。
+列表和实际执行读取 mise 的有效任务目录。dry-run 使用静态解析，不启动 mise、不安装工具、不获取远端变量，也不执行缓存输入。无法静态解析的动态配置需要通过正常的 mise 检查确认。
 
-## 定义自己的任务
+生成的任务可以直接用 `mise run` 执行，不再调用 One 内部命令。直接运行 mise 时使用它自己的环境，不通过 One 获取 Infisical 变量。
 
-项目命令写入 `package.json` scripts 或 Taskfile，例如新增 `"docs:build": "typedoc"` 后，使用 `one run docs:build -p lib`。工作区级任务写入根 `mise.toml`：
+## 项目变量
 
-```toml
-[tasks.verify]
-depends = ["//:web:check", "//:api:test"]
+`one run` 按任务实际工作目录确定项目归属，嵌套项目采用最长路径匹配。根任务即使叫 `serve-backend`，只要声明 `dir = "services/api"`，也能取得 api 的变量。根聚合任务不会合并各子项目的变量。
 
-[tasks.hello]
-description = "Print a greeting"
-run = "echo hello"
-```
+配置 Infisical 后，One 每次运行只为每个项目获取一次变量快照。`--env` 选择已声明环境，默认 `dev`；远程目录从项目路径推导，并合并共享及祖先目录变量。各任务只接收自身项目的快照，并覆盖同名 shell / mise 变量。变量值保留在内存中，通过带会话认证的回环服务传递，不写入 TOML、`.env` 或 context JSON。
 
-使用 `one run verify` 执行聚合，或 `one run hello` 执行自定义命令。也可以把可执行脚本放到 `.mise/tasks/`，或用 `[task_config] includes = ["tasks.toml"]` 加载独立任务文件。
+One 内置 mise 环境适配器，在对应配置作用域创建临时 `.one-run-*/bindings.toml`。文件只含任务引用，不含变量值，退出时清理。新工作区和 `one init mise` 会将 `.one-run-*/` 加入 Git 忽略规则。用户无需维护逐任务插件配置行。
 
-诊断原生配置可运行 `one mise tasks ls --all --local` 和 `one mise tasks info //:web:build --json`。用户自行定义的原生任务可以直接用 `mise run hello`；One 生成的项目任务需要 `one run` 准备环境上下文。
+启动前会核对命令、目录、依赖和环境绑定。如果 profile 在运行时元数据之后重新定义整个任务，可能覆盖绑定，One 会在启动前报错。此时将命令保留在基础或 local 配置中，让 profile 只调整环境设置。
 
-## 缓存
+## 缓存与并行
 
-生成配置开启 mise 实验性功能。已知模板的 **build** 任务声明输入、输出和环境指纹；其他任务需要显式声明缓存规则。修改模板构建脚本或构建配置后，自动缓存声明会关闭；在根 `mise.toml` 对应的项目任务中声明实际输入和输出即可重新启用。缓存存储和产物恢复交给 mise。
+通过 One 执行任务时，产物缓存保持关闭，不提供 `--cache` 参数。新工作区和 `one init mise` 不再开启 mise 实验性功能，也不再根据模板推导缓存输入和输出。用户手动编写的 mise 配置会保留。
 
-```sh
-one run build --cache local-only
-one run build --cache off --force
-one run build --cache read-only
-one run build --concurrency 4
-```
-
-`--cache off --force` 同时关闭产物缓存和输入新鲜度跳过，确保实际执行。还支持 `read-write` 和 `write-only`；使用远程缓存前需自行配置 mise 缓存后端，One 不创建远程服务。
-
-在根 `mise.toml` 为项目的生成任务开启缓存时，需要完整输入、输出和 One 环境指纹命令：
+普通的 `sources` / `outputs` 新鲜度检查不需要实验性功能。对输入和输出明确的任务，可以在 `mise.toml` 中自行声明：
 
 ```toml
 [tasks."web:build"]
 dir = "apps/web"
+run = "pnpm run build"
 sources = ["src/**/*", "package.json", "tsconfig.json", "../../pnpm-lock.yaml"]
 outputs = ["dist"]
-cache = { enabled = true, env = ["NODE_ENV"], command_inputs = ['one __task-input --project "web" --task "build"'] }
 ```
 
-输入和输出路径相对于任务的 `dir`。mise 也会将任务所在的配置文件纳入缓存输入，因此修改根 `mise.toml` 会使其中任务的缓存失效。
+注入远端变量的任务及其下游可执行任务会跳过产物缓存和新鲜度检查，并显示简短提示。这样变量更新、删除或变为空字符串时，不会复用旧产物。One 不跨运行缓存密钥快照。
 
-只验证输入且结果确定的任务可以声明 `outputs = []`。自定义任务应包含所有上游源码、外部文件、配置值和编译器输入。输出必须位于任务目录内，且不能与同次执行其他任务的输出重叠。新配置先用 `--cache off --force` 验证。
-
-每次运行中，One 在缓存查找前读取一次每个托管项目的环境，保存为临时上下文。指纹计算和执行使用同一份快照。环境值不会写入生成 TOML 或结构化结果。所有注入项目的变量都参与指纹；仅用于读取变量的账号凭据不参与。生成入口必须通过 `one run` 获得上下文，不能直接用 `mise run` 绕过。
-
-## 终端与结构化输出
-
-任务使用 mise 流式输出，`--ui raw` 保留原生终端输入并关闭产物缓存。多开发服务使用带前缀的日志并自动分配并发数；raw/interactive 服务需要单独运行。`--ui tui` 不再支持。`one dev` 与 `one run dev` 共用执行路径，包括上游构建。开发行为见 [one dev](/zh/docs/dev/)。
-
-JSON/YAML 预览的 schema 是 `one-cli/task-plan/v1`，执行结果是 `one-cli/task-result/v1`。结构化模式下子进程日志写到 stderr。结果包含整体状态与退出码。当前 mise 版本没有可靠的结构化完成事件，因此单任务状态为 `unknown`，不会从日志文字猜测缓存命中。
-
-## GitHub Actions
-
-工作流继续由仓库维护，并调用与本地相同的任务。安装 One 后可使用：
-
-```yaml
-- uses: actions/checkout@v7
-- uses: jdx/mise-action@v4
-  with:
-    version: 2026.9.7
-    experimental: true
-- uses: actions/cache@v4
-  with:
-    path: .cache/mise-task-artifacts
-    key: tasks-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('**/pnpm-lock.yaml', '**/go.sum', '**/mise.toml') }}-${{ github.sha }}
-    restore-keys: tasks-${{ runner.os }}-${{ runner.arch }}-
-- run: one run ci --ui stream
-  env:
-    MISE_TASK_CACHE_DIR: ${{ github.workspace }}/.cache/mise-task-artifacts
+```sh
+one run build
+one run build --force
+one run build --concurrency 4
 ```
 
-缓存目录应排除在任务输入和版本控制之外。外层缓存 key 隔离运行平台，mise 验证每个产物的输入 key。读取密钥的工作流沿用仓库的权限和分支信任规则。
+使用 `--force` 可以跳过新鲜度检查，重新执行任务。
 
-原生选项见 [mise 任务缓存](https://mise.jdx.dev/tasks/caching.html)和[任务配置](https://mise.jdx.dev/tasks/task-configuration.html)。
+source / output 路径相对于 `dir`，选中任务的产物位置不能重叠。透传额外命令参数会关闭产物缓存并强制执行。
+
+默认按任务图节点数分配并行额度，不对 dev 名称特殊处理。显式并行上限会被保留，常驻前置任务仍遵循 mise 的依赖语义。
+
+## 终端偏好
+
+在 `~/.config/one/preferences.json` 中设置可选的 `taskUI`（遵循 `XDG_CONFIG_HOME`）：
+
+```json
+{
+  "version": 1,
+  "locale": "auto",
+  "taskUI": "tui"
+}
+```
+
+`taskUI` 接受 `stream` 或 `tui`，`--ui` 覆盖个人偏好。`auto` 在交互终端的多任务运行中使用 TUI，单任务使用 stream。CI、非终端及 JSON/YAML 输出使用 stream。`--ui raw` 保留原生终端输入，并交由 mise 处理 raw 输出；交互任务需要独占终端。
+
+TUI 保留 mise 任务前缀、Task 命令回显、ANSI 颜色和文字样式、缩进及空行。长行按日志区域宽度自动换行，支持中文和 emoji；查看历史时，窗口缩放会尽量保留原来的阅读位置。常见进度输出中的回车、退格和清行操作在日志区域内呈现；全屏交互程序应使用 `--ui raw`。
+
+左侧按本次执行计划展示依赖树，入口任务位于根部。共享依赖只展开一次，其他分支以 `↪` 引用，选中后查看同一份任务日志。焦点在树中时，↑/↓ 选择任务，←/→ 折叠或展开，Enter 或空格切换展开状态；在共享引用上按 Enter 或 → 定位首次出现处。终端不足 70 列时，Tab 在全宽依赖树与日志之间切换。
+
+在日志区域中，鼠标滚轮或 ↑/↓ 逐行滚动，PgUp/PgDn 翻页，Home 查看最早日志，End 或 `f` 跟随最新输出。向上滚动会暂停跟随，新日志继续收集。Tab 在日志与依赖树之间切换键盘焦点；`[` / `]` 也可切换任务，`a` 查看全部日志。各任务分别保存阅读位置。`/` 打开历史搜索，Enter 应用，Esc 清空筛选。
+
+本次会话的完整历史保存在私有临时文件中，内存维护精简索引和有容量限制的渲染页面缓存，较早的日志不会被丢弃。正常退出时删除临时文件；存储失败会明确报错并停止运行。mise 执行结束后，无论成功或失败，TUI 都会自动退出并返回原退出码；正在滚动或搜索时也会正常结束，无需按键。执行期间 Ctrl+C 或 `q` 停止进程树并恢复终端。退出后，普通终端中保留简短的尾部日志。
+
+对于经过管道就默认关闭颜色的常见工具，TUI 会声明颜色支持，并保留用户显式设置的颜色偏好。依赖真实 TTY 界面的工具仍需使用 raw 模式。
+
+任务标签只表示是否观察到输出，不通过子进程文字推断就绪、成功或缓存命中。最终结果以 mise 退出码为准；由于 mise 没有可靠的结构化生命周期事件，单任务完成状态保持 `unknown`。
+
+One 原样转发子进程日志，不扫描或替换密钥值。One 自身的提示和结构化结果不展示注入值；子进程主动打印的值会出现在 stream、TUI、Dashboard 和原生日志缓存中。
+
+JSON/YAML 计划使用 `one-cli/task-plan/v1`，执行结果使用 `one-cli/task-result/v1`；结构化模式下子进程日志进入 stderr。

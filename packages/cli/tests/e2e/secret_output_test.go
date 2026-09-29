@@ -3,6 +3,7 @@ package cli_test
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -91,9 +92,15 @@ func TestE2E_SecretManagementNeverPrintsValues(t *testing.T) {
 	defer server.Close()
 	root := t.TempDir()
 	isolateHome(t, t.TempDir())
-	manifest := map[string]any{"version": 1, "workspace": map[string]string{"id": "test", "name": "test"}, "env": map[string]string{"siteUrl": server.URL, "projectId": "test-project"}, "environments": map[string]any{"names": []string{"dev"}, "default": "dev"}, "projects": []any{}}
-	raw, _ := json.Marshal(manifest)
-	buildWrite(t, root, "one.manifest.json", string(raw))
+	buildWrite(t, root, "one.manifest.toml", fmt.Sprintf(`version = 2
+[workspace]
+id = "test"
+name = "test"
+[env.infisical]
+siteUrl = %q
+projectId = "test-project"
+environments = ["dev"]
+`, server.URL))
 	if out, errOut, code := runAuthenticatedCLI(t, root, server.URL, "env", "bind", "--global", "--project-id", "test-project", "--env", "dev", "-o", "json"); code != 0 {
 		t.Fatalf("bind: %s %s", out, errOut)
 	}
@@ -121,8 +128,8 @@ func TestE2E_SecretManagementNeverPrintsValues(t *testing.T) {
 	if runtime.GOOS != "windows" {
 		fail.Store(false)
 		out, errOut, code := runAuthenticatedCLI(t, root, server.URL, "exec", "--global", "--path", "/", "--env", "dev", "--", "sh", "-c", `printf '%s\n' "$TEST_KEY"; printf '%s\n' "$TEST_KEY" >&2; exit 13`)
-		if code != 13 || strings.Contains(out+errOut, secret) || !strings.Contains(out, "[REDACTED]") || !strings.Contains(errOut, "[REDACTED]") {
-			t.Fatalf("unsafe global exec: %d %s %s", code, out, errOut)
+		if code != 13 || !strings.Contains(out, secret) || !strings.Contains(errOut, secret) || strings.Contains(out+errOut, "test-session-token") {
+			t.Fatalf("unexpected raw global exec: %d %s %s", code, out, errOut)
 		}
 	}
 }

@@ -1,32 +1,10 @@
 package execution
 
 import (
-	"os"
-	"runtime"
-
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/core/workspace"
 	cliErrors "github.com/torchstellar-team/one-cli/packages/cli/internal/platform/errors"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/i18n"
 )
-
-// OperationArgs resolves the live source command, never a copy in generated TOML.
-func OperationArgs(w Workspace, selector, operation string) ([]string, error) {
-	p, ok := w.Project(selector)
-	if !ok {
-		return nil, cliErrors.New(cliErrors.SUBPROJECT_NOT_FOUND, i18n.Tf("workspace.unknown_project", selector))
-	}
-	if command := workspace.ProjectDev(w.Manifest(), p.Name); operation == "dev" && command != "" {
-		if runtime.GOOS == "windows" {
-			shell := os.Getenv("ComSpec")
-			if shell == "" {
-				shell = "cmd.exe"
-			}
-			return []string{shell, "/d", "/s", "/c", command}, nil
-		}
-		return []string{"sh", "-c", command}, nil
-	}
-	return ProjectOperationArgs(w.Root(), *p, operation)
-}
 
 // ProjectOperationArgs resolves a task from the project's current source files.
 // It is shared by execution and the Dashboard and never installs or runs tools.

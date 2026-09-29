@@ -16,11 +16,8 @@ func TestServiceResolvesScopeFromManifest(t *testing.T) {
 	root := t.TempDir()
 	if err := workspace.WriteManifest(root, &workspace.Manifest{
 		Version: workspace.ManifestVersion,
-		Environments: &workspace.Environments{
-			Names: []string{"dev", "production"}, Default: "dev",
-		},
 
-		Env: &workspace.EnvironmentConfig{ProjectID: "remote"},
+		Env: &workspace.EnvironmentConfig{ProjectID: "remote", Environments: []string{"dev", "production"}},
 	}); err != nil {
 		t.Fatal(err)
 	}
@@ -51,13 +48,10 @@ func TestPlanSetOwnsEnvironmentAndProjectSelection(t *testing.T) {
 	}
 	if err := workspace.WriteManifest(root, &workspace.Manifest{
 		Version: workspace.ManifestVersion,
-		Environments: &workspace.Environments{
-			Names: []string{"dev"}, Default: "dev",
-		},
 
-		Env: &workspace.EnvironmentConfig{ProjectID: "remote"},
+		Env: &workspace.EnvironmentConfig{ProjectID: "remote", Environments: []string{"dev"}},
 
-		Projects: []workspace.ManifestProject{{Name: "web", RelativeDir: "apps/web"}},
+		Projects: []workspace.ManifestProject{{Name: "web", RelativeDir: "apps/web", Toolchain: "node"}},
 	}); err != nil {
 		t.Fatal(err)
 	}
@@ -94,7 +88,7 @@ func TestServiceRejectsMissingCapability(t *testing.T) {
 	if err := workspace.WriteManifest(root, &workspace.Manifest{
 		Version: workspace.ManifestVersion,
 
-		Env: &workspace.EnvironmentConfig{ProjectID: "remote"},
+		Env: &workspace.EnvironmentConfig{ProjectID: "remote", Environments: []string{"dev", "staging", "prod"}},
 	}); err != nil {
 		t.Fatal(err)
 	}

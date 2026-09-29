@@ -1,5 +1,7 @@
 # One CLI 工作区任务与 mise 缓存统一规划
 
+> 2026-09-29 后续规划：原生任务、无需手写绑定的环境注入、dev 遗留清理和 stream/TUI 的最新目标见 [原生 mise 任务、环境注入与终端输出规划](2026-09-29-native-mise-environment-and-terminal.md)。该文为待实施规划，不表示下述历史实现已经完成对应调整。
+
 > 后续调整：dev/build 已统一为 mise 任务入口，支持 `one <任务名>` 简写，项目使用重复的 `-p` 选择。开发 supervisor 与 TUI 已移除；当前行为见 [任务管理说明](../../apps/docs/content/docs/zh/run.md)。下文保留原规划。
 
 日期：2026-09-28  

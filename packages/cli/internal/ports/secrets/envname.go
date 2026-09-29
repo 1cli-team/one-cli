@@ -8,37 +8,18 @@ import (
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/i18n"
 )
 
-// ResolveEnvName picks the effective environment name for a verb
-// invocation against a workspace's manifest. Precedence:
-//
-//	flag → manifest.environments.default → manifest.environments.names[0] → ""
-//
-// allowUnknown=true skips the "not in environments list" check (used by
-// the set verb, which can implicitly create new environments, and by deploy
-// when the user passes --secrets-env for an env that hasn't been declared
-// yet). Returns the chosen name plus the declared list (for help text /
-// error context).
+// ResolveEnvName selects --env or the fixed dev default. The declared slugs
+// come from env.infisical.environments. Set may use an undeclared slug, which
+// is registered locally only after the remote write succeeds.
 func ResolveEnvName(projectRoot, flag string, allowUnknown bool) (string, []string, error) {
 	m, err := workspace.ReadManifest(projectRoot)
 	if err != nil {
 		return "", nil, err
 	}
-	declared := []string{}
-	defaultEnv := ""
-	if m.Environments != nil {
-		declared = append(declared, m.Environments.Names...)
-		defaultEnv = strings.TrimSpace(m.Environments.Default)
-	}
-
+	declared := workspace.EnvironmentNames(m)
 	chosen := strings.TrimSpace(flag)
 	if chosen == "" {
-		chosen = defaultEnv
-	}
-	if chosen == "" && len(declared) > 0 {
-		chosen = declared[0]
-	}
-	if chosen == "" {
-		return "", declared, nil
+		chosen = "dev"
 	}
 	if allowUnknown {
 		return chosen, declared, nil

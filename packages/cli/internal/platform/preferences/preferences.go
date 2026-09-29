@@ -2,13 +2,8 @@
 // ~/.config/one/preferences.json (XDG-aware; honours XDG_CONFIG_HOME
 // just like internal/core/profile).
 //
-// This is the home for cross-workspace UI preferences that have no
-// concept of (domain, backend) — today just Locale, in future
-// possibly theme, telemetry opt-in, default editor, etc. Profile
-// configuration (per-(domain, backend) endpoint + credentials) lives
-// in internal/core/profile and is intentionally kept separate: profile
-// state has its own AWS-CLI-style two-file split for credential
-// handling that we do not want or need here.
+// Cross-workspace display preferences live here; project bindings and
+// Infisical credentials use their existing, separate stores.
 //
 // File layout:
 //
@@ -18,7 +13,8 @@
 //
 //	{
 //	  "version": 1,
-//	  "locale":  "auto" | "zh-CN" | "en-US"
+//	  "locale":  "auto" | "zh-CN" | "en-US",
+//	  "taskUI": "stream" | "tui"  // optional; omitted means automatic
 //	}
 //
 // Missing file is not an error — Load returns zero values
@@ -56,6 +52,7 @@ const (
 type Preferences struct {
 	Version int    `json:"version"`
 	Locale  string `json:"locale"`
+	TaskUI  string `json:"taskUI,omitempty"`
 }
 
 // IsValidLocale reports whether s is one of the three accepted
@@ -126,9 +123,13 @@ func LoadAt(path string) (*Preferences, error) {
 	if !IsValidLocale(p.Locale) {
 		p.Locale = defaultLoc
 	}
+	if p.TaskUI != "stream" && p.TaskUI != "tui" {
+		p.TaskUI = ""
+	}
 	if p.Version == 0 {
 		p.Version = SchemaVersion
 	}
+
 	return &p, nil
 }
 
@@ -149,6 +150,9 @@ func SaveAt(p *Preferences, path string) error {
 	}
 	if !IsValidLocale(p.Locale) {
 		return errors.New(i18n.T("preferences.locale_invalid"))
+	}
+	if p.TaskUI != "" && p.TaskUI != "stream" && p.TaskUI != "tui" {
+		return i18n.Errorf("preferences.task_ui_invalid")
 	}
 	p.Version = SchemaVersion
 

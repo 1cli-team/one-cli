@@ -1,42 +1,32 @@
 ---
 title: dev 任务
-description: 通过 mise 运行开发任务及其前置依赖。
+description: 通过 mise 执行已经存在的开发任务。
 ---
 
-`one dev` 是 `one run dev` 的简写。`dev` 和 `test`、`lint` 一样是普通任务名，共用任务解析、参数和帮助。最终执行 mise 中生效的任务图，包括你在 `mise.toml` 中定义的覆盖。
+`dev` 是普通 mise 任务。使用 `one run dev`；`one dev` 只是通用任务简写，没有独立的内置实现。
 
 ```sh
-one dev
-one dev -p web -p api
-one dev -p apps/web --dry-run -o json
-one dev -p web --ui raw
-one dev -p web -- --port 4300
+one run dev
+one run dev -p web -p api
+one run dev -p apps/web --dry-run -o json
+one run dev --ui tui
+one run dev -p web -- --port 4300
 ```
 
-不传 `-p` 时运行根目录的 `dev` 任务，生成的聚合任务包含有 dev 任务的项目。重复 `-p` 可按名称或相对路径选择项目。任务参数放在 `--` 后；传开发参数时选择一个项目。
+不指定 `-p` 时，根 dev 任务必须存在；指定 `-p` 时，对应项目的 dev 任务必须存在。缺失时直接报错，不从 manifest、start 脚本或 Go 源码目录推断命令。显式运行 `one init mise`，可将已有包脚本和 Taskfile 任务投影为原生 mise 命令。自定义命令直接编辑 mise 任务。
 
-## 命令与覆盖
+## 准备与环境变量
 
-生成的适配任务优先使用 `projects[].dev.command`，未设置时使用项目原生的 `dev` 包脚本或 Taskfile 任务。在根 `mise.toml` 中可以覆盖 `web:dev` 这样的项目任务，也可以替换工作区聚合。自定义 mise 命令使用 mise 的环境；生成的适配任务接收 One 冻结的项目环境。
+所有命名任务共用准备策略。Node 依赖在工作区根目录准备；pnpm 10.14 及以上会检查现有安装并复用匹配的依赖，包括手动安装的依赖。需要安装时执行 `pnpm install --no-frozen-lockfile`。Go 准备会解析固定模块构建列表，不自动执行 `go mod tidy` 或 `go work sync`。准备失败则不启动任务；`one exec` 不安装依赖。
 
-## 依赖准备
+One 按任务实际工作目录匹配登记项目。启用环境变量的项目各自获取本次运行的 Infisical 快照；并行项目不共用变量表，孙进程继承对应项目的环境。无需在 mise 中声明 env 插件或填写密钥值。
 
-`one dev` 在启动服务前自动准备所选项目的工具与应用依赖，交互和非交互调用行为一致。
+## 终端与退出
 
-- Node：在工作区根目录统一准备依赖。使用 pnpm 时，先通过 pnpm 自身检查工作区的安装状态；手动 `pnpm install` 后，只要依赖与当前工作区一致，就直接复用。需要安装时执行 `pnpm install --no-frozen-lockfile`，自动同步新增项目或依赖变更。pnpm 10.14 之前的版本沿用 One 的安装缓存。其他包管理器仍使用原有锁文件策略。
-- `one build` 保留现有的严格安装策略：已有 pnpm 依赖锁文件时使用 `--frozen-lockfile`。构建发现锁文件过期后，需要先安装并审阅锁文件变更。
-- Go：独立模块下载固定构建列表并补充 `go.sum`；存在 `go.work` 时由 Go 按实际包依赖解析本地成员和外部依赖，按需维护 `go.work.sum`。准备过程不自动运行 `go mod tidy` 或 `go work sync`。
-- 所有准备成功后才启动 mise 任务图。失败保留底层错误和下载缓存，可修复后重试原命令；取消时停止准备进程。
+默认并发为任务图中的每个节点分配一个槽位；显式 `--concurrency` 会被遵守。并发过低时，长期运行任务可能占满其他服务需要的槽位。有限时长的前置任务完成后，才启动依赖它的服务。
 
-`go.work.sum` 不替代各模块发布所需的 `go.sum`。模块声明需要修复时，可显式运行 `one exec api -- go mod tidy`。`one exec` 保持直接执行命令，不自动安装应用依赖。
+`--ui stream` 显示前缀日志；`--ui tui` 支持任务选择、搜索、滚动和跟随。交互式/raw 任务需要独占终端。`--ui raw` 由 mise 处理终端并关闭产物缓存。TUI 与 stream 的调度和退出行为一致。
 
+Ctrl+C 或 SIGTERM 会停止本次调用及子进程。子进程日志保持原样；One 自己不打印注入的变量值。JSON/YAML 模式将子进程日志写入 stderr。Dry-run 静态读取配置，不加载密钥或写入文件。
 
-## 日志、输入与退出
-
-开发任务默认自动分配足够的并发数量。多服务使用 mise 带前缀的日志；指定 `--concurrency` 时需为所有开发服务留出运行位置。上游有限构建完成后才会启动依赖它的服务。
-
-单个服务可使用 `--ui raw` 保留原生终端输入，此时关闭产物缓存。mise 的 raw/interactive 任务独占终端，需要交互的服务请单独运行。多开发服务不支持 raw 输出。原 TUI、交互项目选择器、`--keep-going` 和单服务重启控件已移除。
-
-Ctrl+C 或 SIGTERM 会停止本次调用及其子进程。任务失败会停止本次调用并返回子进程退出码。JSON/YAML 使用 `one-cli/task-result/v1`，子进程日志写到 stderr。`--dry-run` 使用静态 `one-cli/task-plan/v1`，不安装工具、不读取密钥、不写配置。
-
-通用参数、任务配置、缓存与命令重名规则见 [one run](/zh/docs/run/)。
+配置、缓存行为和输出偏好见 [one run](/zh/docs/run/)。

@@ -29,9 +29,15 @@ import {
 /**
  * EnvironmentSelector is a tab-local Dashboard view context. It only updates
  * the URL and deliberately does not call a write API or change the Workspace
- * manifest's default environment.
+ * fixed CLI default environment.
  */
-export function EnvironmentSelector({ variant = "default" }: { variant?: "default" | "icon" }) {
+export function EnvironmentSelector({
+	variant = "default",
+	environments = DASHBOARD_ENVIRONMENTS,
+}: {
+	variant?: "default" | "icon";
+	environments?: readonly string[];
+}) {
 	const { t } = useTranslation();
 	const [searchParams, setSearchParams] = useSearchParams();
 	const [pendingEnvironment, setPendingEnvironment] = useState<DashboardEnvironment | null>(null);
@@ -76,7 +82,7 @@ export function EnvironmentSelector({ variant = "default" }: { variant?: "defaul
 					{variant === "icon" ? <Layers3 className="size-4" /> : <SelectValue />}
 				</SelectTrigger>
 				<SelectContent>
-					{DASHBOARD_ENVIRONMENTS.map((environment) => (
+					{environments.map((environment) => (
 						<SelectItem key={environment} value={environment} className="font-mono text-xs">
 							{t(`environmentSwitcher.${environment}`, {
 								defaultValue: environment,

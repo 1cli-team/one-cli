@@ -3,7 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { HttpResponse, http } from "msw";
 import { setupServer } from "msw/node";
 import { SWRConfig } from "swr";
-import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { SecretsManager } from "@/features/secrets/SecretsManager";
 import i18n from "@/lib/i18n";
 
@@ -25,12 +25,58 @@ function renderManager() {
 	);
 }
 
+function mockUnconfiguredStorage() {
+	const requests = { initializations: 0, saves: 0, lists: 0 };
+	server.use(
+		http.get("http://localhost/api/workspaces/demo-entry/secrets", () => {
+			requests.lists++;
+			if (!requests.initializations)
+				return HttpResponse.json(
+					{ error: { code: "INFISICAL_NOT_CONFIGURED", message: "Storage is not connected." } },
+					{ status: 409 },
+				);
+			return HttpResponse.json({
+				schema: "one-cli/env-list/v1",
+				env: "dev",
+				path: "/",
+				keys: requests.saves ? ["API_TOKEN"] : [],
+				total: requests.saves,
+			});
+		}),
+		http.post("http://localhost/api/workspaces/demo-entry/environment/backend/initialize", () => {
+			requests.initializations++;
+			return HttpResponse.json({
+				schema: "one-cli/workspace-environment/v1",
+				backend: "infisical",
+				projectId: "new-id",
+				projectName: "demo-a3f2",
+				binding: {
+					project_id: "new-id",
+					project_name: "demo-a3f2",
+					created: true,
+					requested_name: "demo",
+				},
+			});
+		}),
+		http.post("http://localhost/api/workspaces/demo-entry/secrets", async ({ request }) => {
+			expect(requests.initializations).toBe(1);
+			expect(await request.json()).toEqual({ key: "API_TOKEN", value: "secret-value" });
+			requests.saves++;
+			return HttpResponse.json({ action: "created", key: "API_TOKEN" }, { status: 201 });
+		}),
+	);
+	return requests;
+}
+
 describe("Infisical secrets manager", () => {
 	beforeAll(async () => {
 		server.listen({ onUnhandledRequest: "error" });
 		await i18n.changeLanguage("en-US");
 	});
-	afterEach(() => server.resetHandlers());
+	afterEach(async () => {
+		server.resetHandlers();
+		await i18n.changeLanguage("en-US");
+	});
 	afterAll(() => server.close());
 
 	it("lists names without values and reveals only one requested secret", async () => {
@@ -106,58 +152,61 @@ describe("Infisical secrets manager", () => {
 		await waitFor(() => expect(requestBody).toEqual({ key: "API_TOKEN", value: "secret-value" }));
 	});
 
-	it("repairs an older missing Infisical binding before retrying the list", async () => {
-		let initialized = false;
-		server.use(
-			http.get("http://localhost/api/workspaces/demo-entry/secrets", () => {
-				if (!initialized) {
-					return HttpResponse.json(
-						{
-							schema: "one-cli/error/v1",
-							error: {
-								code: "INFISICAL_NOT_CONFIGURED",
-								message: "Infisical project binding is missing.",
-								context: {},
-								remediation: [],
-							},
-						},
-						{ status: 409 },
-					);
-				}
-				return HttpResponse.json({
-					schema: "one-cli/env-list/v1",
-					env: "dev",
-					path: "/",
-					keys: [],
-					total: 0,
-				});
-			}),
-			http.post(
-				"http://localhost/api/workspaces/demo-entry/environment/backend/initialize",
-				({ request }) => {
-					const url = new URL(request.url);
-					expect(url.searchParams.get("env")).toBe("dev");
-					initialized = true;
-					return HttpResponse.json({
-						schema: "one-cli/workspace-profile/v1",
-						root: "/workspace/demo",
-						environment: "dev",
-						revision: "sha256:repaired",
-						domain: "env",
-						backend: "infisical",
-						configurable: true,
-					});
-				},
-			),
-		);
-		const user = userEvent.setup();
-		renderManager();
+	describe.each(["en-US", "zh-CN"])("unconfigured storage (%s)", (locale) => {
+		let requests: ReturnType<typeof mockUnconfiguredStorage>;
+		let user: ReturnType<typeof userEvent.setup>;
 
-		expect(await screen.findByText("Connect a storage project")).toBeDefined();
-		await user.click(screen.getByRole("button", { name: "Connect and load secrets" }));
-		expect(
-			await screen.findByText("No secrets are defined directly in this scope yet."),
-		).toBeDefined();
-		expect(initialized).toBe(true);
+		beforeEach(async () => {
+			await i18n.changeLanguage(locale);
+			requests = mockUnconfiguredStorage();
+			user = userEvent.setup();
+			renderManager();
+			expect(await screen.findByText(i18n.t("secrets.notConfiguredTitle"))).toBeDefined();
+			expect(requests.initializations).toBe(0);
+		});
+
+		it("retries the list without initializing storage", async () => {
+			await user.click(screen.getByRole("button", { name: i18n.t("secrets.retry") }));
+			await waitFor(() => expect(requests.lists).toBeGreaterThan(1));
+			expect(requests.initializations).toBe(0);
+			expect(requests.saves).toBe(0);
+		});
+
+		it("cancels the editor without initializing storage", async () => {
+			await user.click(screen.getByRole("button", { name: i18n.t("secrets.add") }));
+			await user.click(
+				within(await screen.findByRole("dialog")).getByRole("button", {
+					name: i18n.t("form.cancel"),
+				}),
+			);
+			await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+			expect(requests.initializations).toBe(0);
+			expect(requests.saves).toBe(0);
+		});
+
+		it("rejects an invalid key before initializing storage", async () => {
+			await user.click(screen.getByRole("button", { name: i18n.t("secrets.add") }));
+			const dialog = within(await screen.findByRole("dialog"));
+			await user.click(dialog.getByLabelText(i18n.t("secrets.key")));
+			await user.paste("1INVALID");
+			await user.click(dialog.getByRole("button", { name: i18n.t("secrets.save") }));
+			expect(await dialog.findByText(i18n.t("secrets.invalidKey"))).toBeDefined();
+			expect(requests.initializations).toBe(0);
+			expect(requests.saves).toBe(0);
+		});
+
+		it("initializes storage once before saving a valid secret", async () => {
+			await user.click(screen.getByRole("button", { name: i18n.t("secrets.add") }));
+			const dialog = within(await screen.findByRole("dialog"));
+			await user.click(dialog.getByLabelText(i18n.t("secrets.key")));
+			await user.paste("API_TOKEN");
+			await user.click(dialog.getByLabelText(i18n.t("secrets.value")));
+			await user.paste("secret-value");
+			expect(requests.initializations).toBe(0);
+			await user.click(dialog.getByRole("button", { name: i18n.t("secrets.save") }));
+			await waitFor(() => expect(requests.saves).toBe(1));
+			expect(requests.initializations).toBe(1);
+			await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+		});
 	});
 });

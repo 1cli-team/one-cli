@@ -7,7 +7,6 @@ type Project struct {
 	RelativeDir    string
 	Toolchain      string
 	PackageManager string
-	TemplateID     string
 }
 
 func mergeDeps(pkg *PackageJSON) map[string]string {

@@ -90,3 +90,27 @@ func TestIsValidLocale(t *testing.T) {
 		}
 	}
 }
+
+func TestTaskUIRoundTripAndLocaleChanges(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "preferences.json")
+	for _, mode := range []string{"", "stream", "tui"} {
+		if err := SaveAt(&Preferences{Locale: LocaleEnUS, TaskUI: mode}, path); err != nil {
+			t.Fatal(err)
+		}
+		loaded, err := LoadAt(path)
+		if err != nil {
+			t.Fatal(err)
+		}
+		loaded.Locale = LocaleZhCN
+		if err = SaveAt(loaded, path); err != nil {
+			t.Fatal(err)
+		}
+		loaded, err = LoadAt(path)
+		if err != nil || loaded.TaskUI != mode {
+			t.Fatalf("%+v %v", loaded, err)
+		}
+	}
+	if err := SaveAt(&Preferences{Locale: LocaleEnUS, TaskUI: "bad"}, path); err == nil {
+		t.Fatal("invalid task UI persisted")
+	}
+}

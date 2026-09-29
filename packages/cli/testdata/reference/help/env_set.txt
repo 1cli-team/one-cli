@@ -9,7 +9,7 @@ TIPS
 Sets one environment variable. Use `one env set KEY` for hidden interactive input, or pass `KEY VALUE` / `KEY=VALUE` in automation.
 
 COMMON OPTIONS
-  --env <value>            Environment name (default: workspace default)
+  --env <value>            Environment name (default: dev)
   --global                 Manage Infisical shared credentials, including outside a workspace
   -o, --output <value>     Output format: json | yaml | text (default: terminal-friendly text, JSON when piped)
   --path <value>           Shared credential folder (current level only, not recursive)

@@ -47,7 +47,7 @@ const overview: OverviewPayload = {
 		name: "demo",
 		manifestVersion: 1,
 		defaultEnvironment: "dev",
-		environments: ["dev", "preview", "prod"],
+		environments: ["dev", "staging", "prod"],
 		domains: { env: "infisical" },
 	},
 	projects: [
@@ -55,7 +55,6 @@ const overview: OverviewPayload = {
 			name: "web",
 			relativeDir: "apps/web",
 			kind: "app",
-			templateId: "react-spa",
 			toolchain: "node",
 			domains: { env: "infisical" },
 		},
@@ -63,7 +62,6 @@ const overview: OverviewPayload = {
 			name: "api",
 			relativeDir: "services/api",
 			kind: "service",
-			templateId: "go-api",
 			toolchain: "go",
 			domains: { env: "infisical" },
 		},
@@ -71,7 +69,6 @@ const overview: OverviewPayload = {
 			name: "shared",
 			relativeDir: "packages/shared",
 			kind: "package",
-			templateId: "typescript-package",
 			toolchain: "node",
 			domains: { env: "infisical" },
 		},
@@ -87,23 +84,19 @@ const webSettings: ProjectSettingsResponse = {
 		name: "web",
 		relativeDir: "apps/web",
 		kind: "app",
-		templateId: "react-spa",
 		toolchain: "node",
 		packageManager: "pnpm",
-		buildVersion: "1.0.0",
-		devCommand: "pnpm dev",
+		devAvailable: true,
 		build: {
 			command: "pnpm run build",
 			source: "package.json#scripts.build",
 			status: "ready",
 		},
-		availableEnvironments: ["dev", "preview", "prod"],
+		availableEnvironments: ["dev", "staging", "prod"],
 		environment: {
 			backend: "infisical",
-			path: ".env",
+			path: "/apps/web",
 			inherits: true,
-			disabled: false,
-			keys: ["API_URL"],
 		},
 	},
 };
@@ -350,8 +343,8 @@ describe("workspace overview Profile-only configuration", () => {
 
 	it("uses environment-specific SWR keys for every workspace projection", () => {
 		expect(overviewKeyFor("demo-entry", "dev")).toBe("/workspaces/demo-entry/overview?env=dev");
-		expect(workspaceEnvironmentKey("demo-entry", "preview")).toBe(
-			"/workspaces/demo-entry/environment?env=preview",
+		expect(workspaceEnvironmentKey("demo-entry", "staging")).toBe(
+			"/workspaces/demo-entry/environment?env=staging",
 		);
 		expect(projectSettingsKey("web app", "demo-entry", "prod")).toBe(
 			"/workspaces/demo-entry/projects/web%20app?env=prod",
@@ -370,39 +363,16 @@ describe("workspace overview Profile-only configuration", () => {
 		expect(useManifestDraftStore.getState().drafts[manifestDraftKey("demo-entry")]).toBeUndefined();
 	});
 
-	it("keeps identity fields read-only and stages editable General manifest fields", async () => {
-		let receivedEnvironment = "";
-		server.use(
-			http.get("http://localhost/api/workspace/projects/web", ({ request }) => {
-				receivedEnvironment = new URL(request.url).searchParams.get("env") ?? "";
-				return HttpResponse.json(webSettings);
-			}),
-		);
+	it("shows project metadata without retired manifest editing fields", async () => {
 		renderOverview();
 		const inspector = await openProjectSettings();
-
-		await within(inspector).findByLabelText("Build version");
-		expect(within(inspector).queryByText("Manifest draft")).toBeNull();
-		expect((within(inspector).getByLabelText("Build version") as HTMLInputElement).value).toBe(
-			"1.0.0",
-		);
+		const command = (await within(inspector).findByLabelText("Build command")) as HTMLInputElement;
+		expect(command.value).toBe("pnpm run build");
+		expect(command.readOnly).toBe(true);
 		expect(within(inspector).getByText("pnpm")).toBeDefined();
-		expect(
-			(within(inspector).getByLabelText("Development command") as HTMLInputElement).value,
-		).toBe("pnpm dev");
-		expect(within(inspector).queryByLabelText("Package manager")).toBeNull();
-		const buildCommand = within(inspector).getByLabelText("Build command") as HTMLInputElement;
-		expect(buildCommand.value).toBe("pnpm run build");
-		expect(buildCommand.readOnly).toBe(true);
-		expect(within(inspector).getByText(/one build reads package.json#scripts.build/)).toBeDefined();
-		const user = userEvent.setup();
-		await user.clear(within(inspector).getByLabelText("Build version"));
-		await user.type(within(inspector).getByLabelText("Build version"), "2.0.0");
-		expect(
-			useManifestDraftStore.getState().drafts[manifestDraftKey()]?.changes.web?.general,
-		).toEqual({ buildVersion: "2.0.0", devCommand: "pnpm dev", devURL: "" });
-		expect(within(inspector).queryByRole("button", { name: "Save local binding" })).toBeNull();
-		expect(receivedEnvironment).toBe("dev");
+		expect(within(inspector).queryByLabelText("Build version")).toBeNull();
+		expect(within(inspector).queryByLabelText("Development URL")).toBeNull();
+		expect(useManifestDraftStore.getState().drafts[manifestDraftKey()]).toBeUndefined();
 	});
 
 	it.each([
@@ -431,9 +401,7 @@ describe("workspace overview Profile-only configuration", () => {
 			expect(command.placeholder).toBe(placeholder);
 			expect(command.readOnly).toBe(true);
 			expect(within(inspector).getByText(/one build reads Taskfile.yml#tasks.build/)).toBeDefined();
-			expect(
-				(within(inspector).getByLabelText("Development command") as HTMLInputElement).disabled,
-			).toBe(false);
+			expect(within(inspector).queryByLabelText("Build version")).toBeNull();
 		},
 	);
 

@@ -3,16 +3,16 @@ package execcmd
 import (
 	"context"
 	"errors"
-	"github.com/torchstellar-team/one-cli/packages/cli/internal/application/execution"
-	platformprocess "github.com/torchstellar-team/one-cli/packages/cli/internal/platform/process"
-	runtimeport "github.com/torchstellar-team/one-cli/packages/cli/internal/ports/runtime"
 	"os"
 	"path/filepath"
 	"runtime"
 	"strings"
 	"testing"
 
+	"github.com/torchstellar-team/one-cli/packages/cli/internal/application/execution"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/core/workspace"
+	platformprocess "github.com/torchstellar-team/one-cli/packages/cli/internal/platform/process"
+	runtimeport "github.com/torchstellar-team/one-cli/packages/cli/internal/ports/runtime"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/ports/secrets"
 )
 
@@ -39,12 +39,11 @@ func TestSecretsUseOnlyExplicitRemoteBinding(t *testing.T) {
 		calls    int
 	}{
 		{name: "unconfigured"},
-		{name: "configured", env: &workspace.EnvironmentConfig{ProjectID: "remote"}, calls: 1},
-		{name: "disabled", env: &workspace.EnvironmentConfig{ProjectID: "remote"}, disabled: true},
+		{name: "configured", env: &workspace.EnvironmentConfig{ProjectID: "remote", Environments: []string{"dev", "staging", "prod"}}, calls: 1},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			loader := &recordingLoader{}
-			m := &workspace.Manifest{Env: tc.env, Projects: []workspace.ManifestProject{{Name: "web", RelativeDir: "apps/web", Env: &workspace.ProjectEnvOverride{Disabled: tc.disabled}}}}
+			m := &workspace.Manifest{Env: tc.env, Projects: []workspace.ManifestProject{{Name: "web", RelativeDir: "apps/web", Toolchain: "node"}}}
 			vars, _, err := loadRunSecrets(context.Background(), secrets.MustRegistry(loader), &runFlags{}, root, m, "apps/web")
 			if err != nil || loader.calls != tc.calls {
 				t.Fatalf("calls=%d err=%v", loader.calls, err)
@@ -65,19 +64,32 @@ func TestRemoteFailureDoesNotFallBackToLocalFiles(t *testing.T) {
 	}
 	failure := errors.New("remote authentication failed")
 	loader := &recordingLoader{err: failure}
-	vars, _, err := loadRunSecrets(context.Background(), secrets.MustRegistry(loader), &runFlags{}, root, &workspace.Manifest{Env: &workspace.EnvironmentConfig{ProjectID: "remote"}}, "")
+	vars, _, err := loadRunSecrets(context.Background(), secrets.MustRegistry(loader), &runFlags{}, root, &workspace.Manifest{Env: &workspace.EnvironmentConfig{ProjectID: "remote", Environments: []string{"dev", "staging", "prod"}}}, "")
 	if !errors.Is(err, failure) || vars != nil {
 		t.Fatalf("vars=%v err=%v", vars, err)
 	}
 }
 
-func TestWorkspaceExecMasksInjectedValues(t *testing.T) {
+func TestWorkspaceExecPreservesChildOutput(t *testing.T) {
 	if runtime.GOOS == "windows" {
 		t.Skip("shell fixture")
 	}
 	root := t.TempDir()
-	manifest := `{"version":1,"workspace":{"id":"test","name":"test"},"environments":{"names":["dev"],"default":"dev"},"env":{"projectId":"remote"},"projects":[{"name":"web","relativeDir":"apps/web","toolchain":"node"}]}`
-	if err := os.WriteFile(filepath.Join(root, "one.manifest.json"), []byte(manifest), 0600); err != nil {
+	manifest := `version = 2
+
+[workspace]
+id = "test"
+name = "test"
+
+[env.infisical]
+projectId = "remote"
+environments = ["dev"]
+
+[projects."web"]
+path = "apps/web"
+toolchain = "node"
+`
+	if err := os.WriteFile(filepath.Join(root, "one.manifest.toml"), []byte(manifest), 0600); err != nil {
 		t.Fatal(err)
 	}
 	if err := os.MkdirAll(filepath.Join(root, "apps/web"), 0755); err != nil {
@@ -97,7 +109,7 @@ func TestWorkspaceExecMasksInjectedValues(t *testing.T) {
 	os.Stdout, os.Stderr = out, errOut
 	defer func() { os.Stdout, os.Stderr = oldOut, oldErr }()
 	ctx := execution.WithScope(context.Background(), execution.NewScope(context.Background(), root))
-	err = runRun(ctx, secrets.MustRegistry(&recordingLoader{}), &runFlags{project: "web", prepared: true, runtime: runtimeport.Builtin}, []string{"sh", "-c", `printf '%s\n' "$TOKEN"; printf '%s\n' "$TOKEN" >&2; exit 6`})
+	err = runRun(ctx, secrets.MustRegistry(&recordingLoader{}), &runFlags{project: "web", runtime: runtimeport.Builtin}, []string{"sh", "-c", `printf '%s\n' "$TOKEN"; printf '%s\n' "$TOKEN" >&2; exit 6`})
 	if platformprocess.ExitCode(err) != 6 {
 		t.Fatal(err)
 	}
@@ -106,8 +118,8 @@ func TestWorkspaceExecMasksInjectedValues(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if strings.Contains(string(log), "remote") || !strings.Contains(string(log), "[REDACTED]") {
-			t.Fatalf("unsafe exec output: %q", log)
+		if !strings.Contains(string(log), "remote") || strings.Contains(string(log), "[REDACTED]") {
+			t.Fatalf("changed child output: %q", log)
 		}
 	}
 }

@@ -24,11 +24,7 @@ const (
 
 // Issue domains and severities the dashboard knows how to render.
 //
-// Note: dev command is intentionally NOT a domain here. `one add` writes
-// projects[].dev.command from a package.json-scripts heuristic
-// (see workspace.ResolveDevCommand); an empty Command is a *valid* state
-// that allows native task discovery. Projects without any development task
-// are omitted from the generated dev aggregate.
+// Executable task capabilities are read from mise, separately from this metadata.
 const (
 	IssueDomainEnv = "env"
 
@@ -71,7 +67,6 @@ type OverviewProject struct {
 	Name        string            `json:"name"`
 	RelativeDir string            `json:"relativeDir"`
 	Kind        string            `json:"kind"`
-	TemplateID  string            `json:"templateId,omitempty"`
 	Toolchain   string            `json:"toolchain,omitempty"`
 	Domains     map[string]string `json:"domains,omitempty"`
 	Issues      []OverviewIssue   `json:"issues,omitempty"`
@@ -139,12 +134,8 @@ func buildWorkspaceSummary(m *Manifest) *OverviewWorkspace {
 		s.ID = m.Workspace.ID
 		s.Name = m.Workspace.Name
 	}
-	if m.Environments != nil {
-		s.DefaultEnvironment = m.Environments.Default
-		if len(m.Environments.Names) > 0 {
-			s.Environments = append([]string(nil), m.Environments.Names...)
-		}
-	}
+	s.DefaultEnvironment = "dev"
+	s.Environments = EnvironmentNames(m)
 	if m.Env != nil {
 		domains := map[string]string{}
 		if m.Env != nil {
@@ -163,7 +154,6 @@ func buildProject(m *Manifest, p *ManifestProject) OverviewProject {
 		Name:        p.Name,
 		RelativeDir: p.RelativeDir,
 		Kind:        kind,
-		TemplateID:  p.TemplateID,
 		Toolchain:   p.Toolchain,
 		Domains:     projectResolvedDomains(m, p),
 	}

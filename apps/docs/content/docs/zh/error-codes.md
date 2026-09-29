@@ -81,7 +81,6 @@ Target directory exists and is non-empty; create only writes into empty / new di
 **Remediation**:
 
 - `use-different-dir` — 换一个空的目标目录
-- `remove-target` — 手动删除已存在的目录后重试
 
 ### `INVALID_NAME`
 
@@ -93,7 +92,7 @@ Project / subproject name fails the ^[a-zA-Z0-9][a-zA-Z0-9_-]*$ pattern.
 
 ### `INVALID_WORKSPACE_ROOTS`
 
-one.manifest.json#workspace.roots is malformed.
+one.manifest.toml#workspace.roots is malformed.
 
 > 没有默认 remediation。具体恢复方式请看错误的 `context` 字段。
 
@@ -107,11 +106,11 @@ Local Node version is below the supported minimum.
 
 ### `NOT_ONE_PROJECT`
 
-Current directory is not a One workspace (one.manifest.json is missing).
+Current directory is not a One workspace (one.manifest.toml is missing).
 
 **Remediation**:
 
-- `create-workspace` — 当前目录缺少 one.manifest.json；请先创建工作区，或 cd 到已有工作区<br />运行：`one create <dir>`
+- `create-workspace` — 当前目录缺少 one.manifest.toml；请先创建工作区，或 cd 到已有工作区<br />运行：`one create <dir>`
 
 ### `PROJECT_NAME_REQUIRED`
 
@@ -131,11 +130,11 @@ Subproject directory already exists.
 
 ## Manifest
 
-`one.manifest.json` 的格式 / 缺失 / 内容问题。
+`one.manifest.toml` 的格式 / 缺失 / 内容问题。
 
 ### `MANIFEST_INVALID`
 
-one.manifest.json is malformed.
+one.manifest.toml is malformed.
 
 > 没有默认 remediation。具体恢复方式请看错误的 `context` 字段。
 
@@ -307,13 +306,11 @@ Non-interactive env set called without <VALUE>.
 
 ### `ENV_UNKNOWN_ENVIRONMENT`
 
-请求的环境名不在 manifest.environments.names 列表中。
+请求的环境名不在 env.infisical.environments 列表中。
 
 **Remediation**:
 
-- `use-existing-env` — 查看 one.manifest.json#environments.names 中已声明的环境，或改用 --env 指定其中一个
-- `create-via-set` — 先在 Infisical 创建环境，再将名称登记到 manifest.environments.names
-- `register-env` — 在 Infisical 后端，先在 UI 创建环境，再把名称加入 one.manifest.json#environments.names
+- `use-existing-env` — Choose an available environment with --env.<br />运行：`one env`
 
 ## Infisical 后端
 
@@ -363,7 +360,7 @@ The workspace has no Infisical project binding.
 
 **Remediation**:
 
-- `select-project` — 在 Dashboard 工作区设置中选择 Infisical 项目<br />运行：`one serve`
+- `set-first-variable` — Save the first variable to create and connect an Infisical project.<br />运行：`one env set <KEY>`
 
 ### `INFISICAL_PROJECT_CREATE_FORBIDDEN`
 
@@ -377,7 +374,7 @@ Infisical 项目名已被占用；auto-bind 会自动加随机后缀重试，但
 
 **Remediation**:
 
-- `use-explicit-name` — 在 one.manifest.json#env.projectName 写一个不冲突的项目名后重试 env 命令
+- `use-explicit-name` — 在 Dashboard 选择已有项目，或修改工作区名称后重试
 
 ### `INFISICAL_PROJECT_NOT_FOUND`
 
@@ -391,7 +388,7 @@ Infisical project id does not exist or the current account has no access to it.
 
 ### `BACKEND_ID_UNKNOWN`
 
-one.manifest.json refers to a backend id that this build does not recognise.
+one.manifest.toml refers to a backend id that this build does not recognise.
 
 > 没有默认 remediation。具体恢复方式请看错误的 `context` 字段。
 
@@ -413,7 +410,7 @@ The requested environment backend is not configured.
 
 **Remediation**:
 
-- `configure-domain` — Configure the environment backend with one env bind.
+- `configure-domain` — Save the first environment variable to set up storage.<br />运行：`one env set <KEY>`
 
 ### `BACKEND_VERB_NOT_SUPPORTED`
 
@@ -449,7 +446,7 @@ Domain is recognised but this build has no backend implementation for it.
 
 ### `DOMAIN_REQUIRED`
 
-The environment configuration is missing in one.manifest.json.
+The environment configuration is missing in one.manifest.toml.
 
 > 没有默认 remediation。具体恢复方式请看错误的 `context` 字段。
 
@@ -501,23 +498,6 @@ The requested preference value is not supported.
 
 > 没有默认 remediation。具体恢复方式请看错误的 `context` 字段。
 
-### `PRESET_FLAG_CONFLICT`
-
-Preset id and explicit flag declared conflicting values for the same field.
-
-**Remediation**:
-
-- `drop-conflicting-flag` — 去掉与 --preset 冲突的显式 flag（preset 已经表达了该选择）
-
-### `PRESET_INVALID`
-
-Preset id failed v1 grammar (bad version / segment shape / unknown code).
-
-**Remediation**:
-
-- `regen-preset` — 用 `one serve` 打开 dashboard 重新挑组合得到新的 preset id（dashboard 页面将在后续版本上线）
-- `check-syntax` — v1 形如 `1.bgok.fnav.ei` —— 前缀为版本号，段以 `.` 分隔，每段首字符是 f/b/l/e kind
-
 ### `RUNTIME_INVALID`
 
 The selected execution runtime is not builtin or mise.
@@ -563,7 +543,7 @@ one serve 拒绝绑定到非 loopback 地址（本地接口可操作敏感凭据
 
 ### `SERVE_MANIFEST_CONFLICT`
 
-one.manifest.json changed after the Dashboard draft was opened; the stale draft was not written.
+one.manifest.toml changed after the Dashboard draft was opened; the stale draft was not written.
 
 **Remediation**:
 
@@ -596,7 +576,7 @@ Dashboard only writes explicitly allowlisted Project fields and env Backend swit
 
 **Remediation**:
 
-- `list-projects` — 查看现有项目<br />运行：`cat one.manifest.json`
+- `list-projects` — Check the project name or switch to its directory.
 
 ### `WORKSPACE_NESTED_FORBIDDEN`
 

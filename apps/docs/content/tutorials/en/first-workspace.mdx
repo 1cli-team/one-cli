@@ -24,8 +24,6 @@ The simplest form prompts you interactively for everything:
 one create my-workspace
 ```
 
-If you came from the [templates page](/en/tutorials/templates/) with a generated command, you can paste it directly — it has `--preset` / `--project-names` already filled in.
-
 Non-interactive form (for scripts and CI):
 
 ```bash
@@ -38,7 +36,6 @@ Key flags:
 |---|---|
 | `--name <name>` | Workspace name (overrides positional arg's basename) |
 | `--yes` | Skip all prompts; accept defaults |
-| `--preset <id>` | Create the projects encoded by the template picker |
 
 For the full list, see the [`one create` reference](/en/docs/create/).
 
@@ -55,7 +52,7 @@ You'll see something like:
 .git/
 .config/
 apps/
-one.manifest.json
+one.manifest.toml
 packages/
 services/
 ```
@@ -63,16 +60,15 @@ services/
 Inspect the manifest:
 
 ```bash
-cat one.manifest.json | jq
+cat one.manifest.toml
 ```
 
 Key parts of the produced manifest:
 
-- `version: 1` — required schema version
-- `workspace.id` — generated UUID
-- `environments.names: ["dev", "preview", "prod"]` and `default: "dev"`
-- `env` — optional Infisical binding, absent until configured
-- `projects: []` — empty unless you passed `--preset`
+- `version = 2` — TOML schema version
+- `[workspace]` — workspace ID and display name
+- `[env.infisical]` — optional binding and environment slugs; absent until configured
+- `[projects.<name>]` — one table per project; absent in an empty workspace
 
 ## 4. Defaults wired by `one create`
 
@@ -81,11 +77,21 @@ Every new workspace gets two baseline capabilities without prompting:
 | Capability | Implementation | What it gives you |
 |---|---|---|
 | `env` | Infisical | Direct process injection after binding; shell environment before binding |
-| `dev` | mise | Each `one add` records a dev command at `projects[].dev.command`, run by [`one dev`](/en/tutorials/dev-local/) through mise |
+| `dev` | mise | `one add` projects existing dev scripts into native mise tasks, run by [`one dev`](/en/tutorials/dev-local/) through mise |
 
 CI is not configured by `one create` or `one add`, and no workflow file is generated automatically.
 
-## 5. The first commit
+## 5. Add a project
+
+Browse the [template guide](/en/docs/templates/), then add a project using its ID:
+
+```bash
+one add react-spa --name web --yes
+```
+
+Repeat `one add` for each project you need.
+
+## 6. The first commit
 
 ```bash
 git status
@@ -102,7 +108,7 @@ git commit -m "chore: scaffold workspace"
 | `INVALID_NAME` | Workspace name has unsupported characters | Use `^[a-zA-Z0-9][a-zA-Z0-9_-]*$` (kebab-case is safe) |
 | `WORKSPACE_NESTED_FORBIDDEN` | Tried to `one create` inside an existing workspace | Run from a non-workspace directory |
 | `TARGET_EXISTS` | The target directory already exists and is non-empty | Pick a different name, or empty the directory first |
-| `TEMPLATE_NOT_FOUND` | The preset refers to an unavailable template | Run [`one templates list`](/en/docs/templates-cmd/) or visit the [templates page](/en/tutorials/templates/) |
+| `TEMPLATE_NOT_FOUND` | one add refers to an unavailable template | Run [`one templates list`](/en/docs/templates-cmd/) or visit the [templates page](/en/tutorials/templates/) |
 
 Full table: [error codes](/en/docs/error-codes/).
 

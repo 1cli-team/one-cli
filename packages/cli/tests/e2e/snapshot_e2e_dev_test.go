@@ -8,6 +8,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/pelletier/go-toml/v2"
 )
 
 func TestSnapshot_E2E_DevPositionalSelectorUnknown(t *testing.T) {
@@ -53,7 +55,7 @@ func TestSnapshot_E2E_DevProjectSelectorUnknown(t *testing.T) {
 	}
 }
 
-func TestSnapshot_E2E_DevFromManifest(t *testing.T) {
+func TestSnapshot_E2E_DevFromMise(t *testing.T) {
 	ws := buildFixture(t, true)
 	overrideDevCommand(t, ws, "lib", "echo manifest-development")
 	stdout, stderr, code := runBinaryIn(t, ws, "dev", "-p", "lib", "-o", "json")
@@ -66,11 +68,8 @@ func TestSnapshot_E2E_DevFromManifest(t *testing.T) {
 	}
 }
 
-// TestSnapshot_E2E_DevManifestStoresDevCommand asserts the schema
-// invariant: after `one add`, the manifest contains a non-empty
-// projects[].domains.dev.command for the new project. This lock the
-// contract so a future change can't quietly stop persisting the field.
-func TestSnapshot_E2E_DevManifestStoresDevCommand(t *testing.T) {
+// Adding a project must never persist task commands in its manifest.
+func TestSnapshot_E2E_ManifestDoesNotStoreDevCommand(t *testing.T) {
 	tmp := t.TempDir()
 	isolateHome(t, tmp)
 	ws := bootstrapWorkspace(t, tmp, "ws")
@@ -78,8 +77,8 @@ func TestSnapshot_E2E_DevManifestStoresDevCommand(t *testing.T) {
 	if _, stderr, code := runBinaryIn(t, ws, "add", "go-api", "--name", "api", "-y", "-o", "json"); code != 0 {
 		t.Fatalf("add api failed: %d\n  stderr: %s", code, stderr)
 	}
-	if got := readDevCommandFromManifest(t, ws, "api"); got == "" {
-		t.Fatalf("expected projects[api].domains.dev.command to be non-empty after `one add`")
+	if got := readDevCommandFromManifest(t, ws, "api"); got != "" {
+		t.Fatalf("one add persisted the retired dev command")
 	}
 
 	// Procfile.dev must NOT have been written.
@@ -88,60 +87,41 @@ func TestSnapshot_E2E_DevManifestStoresDevCommand(t *testing.T) {
 	}
 }
 
-// overrideDevCommand directly patches one.manifest.json to set the
-// dev command on a named project. Used by tests that want a
-// deterministic, fast-exiting child rather than the real toolchain
-// default.
-func overrideDevCommand(t *testing.T, workspaceRoot, projectName, cmd string) {
+// overrideDevCommand defines a native mise task with a deterministic child.
+func overrideDevCommand(t *testing.T, root, projectName, command string) {
 	t.Helper()
-	manifestPath := filepath.Join(workspaceRoot, "one.manifest.json")
-	raw, err := os.ReadFile(manifestPath)
+	raw, err := os.ReadFile(filepath.Join(root, "one.manifest.toml"))
 	if err != nil {
-		t.Fatalf("read manifest: %v", err)
+		t.Fatal(err)
 	}
-	var m map[string]any
-	if err := json.Unmarshal(raw, &m); err != nil {
-		t.Fatalf("parse manifest: %v", err)
+	var manifest struct {
+		Projects map[string]struct {
+			Path string `toml:"path"`
+		} `toml:"projects"`
 	}
-	projects, _ := m["projects"].([]any)
-	for _, raw := range projects {
-		p, _ := raw.(map[string]any)
-		if p["name"] != projectName {
-			continue
+	if err = toml.Unmarshal(raw, &manifest); err != nil {
+		t.Fatal(err)
+	}
+	if project, ok := manifest.Projects[projectName]; ok {
+		raw, err = toml.Marshal(map[string]any{"tasks": map[string]any{projectName + ":dev": map[string]any{"dir": project.Path, "run": command, "run_windows": command, "raw_args": true}}})
+		if err != nil {
+			t.Fatal(err)
 		}
-		p["dev"] = map[string]any{"command": cmd}
+		appendRootTaskConfig(t, root, string(raw))
+		return
 	}
-	out, err := json.MarshalIndent(m, "", "  ")
-	if err != nil {
-		t.Fatalf("marshal manifest: %v", err)
-	}
-	if err := os.WriteFile(manifestPath, append(out, '\n'), 0o644); err != nil {
-		t.Fatalf("write manifest: %v", err)
-	}
+	t.Fatal("project missing")
 }
 
 func readDevCommandFromManifest(t *testing.T, workspaceRoot, projectName string) string {
 	t.Helper()
-	raw, err := os.ReadFile(filepath.Join(workspaceRoot, "one.manifest.json"))
-	if err != nil {
-		t.Fatalf("read manifest: %v", err)
+	m := readManifest(t, workspaceRoot)
+	projects, _ := m["projects"].(map[string]any)
+	p, _ := projects[projectName].(map[string]any)
+	if p == nil {
+		t.Fatalf("project %s missing", projectName)
 	}
-	var m map[string]any
-	if err := json.Unmarshal(raw, &m); err != nil {
-		t.Fatalf("parse manifest: %v", err)
-	}
-	projects, _ := m["projects"].([]any)
-	for _, raw := range projects {
-		p, _ := raw.(map[string]any)
-		if p["name"] != projectName {
-			continue
-		}
-		dev, _ := p["dev"].(map[string]any)
-		if dev == nil {
-			return ""
-		}
-		cmd, _ := dev["command"].(string)
-		return cmd
-	}
-	return ""
+	dev, _ := p["dev"].(map[string]any)
+	cmd, _ := dev["command"].(string)
+	return cmd
 }

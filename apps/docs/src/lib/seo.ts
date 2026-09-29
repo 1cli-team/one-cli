@@ -156,13 +156,6 @@ export function articleJsonLd({
   };
 }
 
-export function blogPostingJsonLd(input: ArticleJsonLdInput) {
-  return {
-    ...articleJsonLd(input),
-    "@type": "BlogPosting",
-  };
-}
-
 export function breadcrumbJsonLd(items: Array<{ name: string; path: string }>) {
   return {
     "@context": "https://schema.org",

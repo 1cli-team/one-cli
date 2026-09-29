@@ -15,7 +15,7 @@ type Registry struct {
 
 // RegistryEntry is one durable pointer to a workspace on this machine.
 // EntryID is a machine-local opaque identifier, while WorkspaceID comes from
-// one.manifest.json and may be empty for legacy manifests.
+// one.manifest.toml and may be empty for legacy manifests.
 type RegistryEntry struct {
 	EntryID      string    `json:"entryId"`
 	WorkspaceID  string    `json:"workspaceId,omitempty"`

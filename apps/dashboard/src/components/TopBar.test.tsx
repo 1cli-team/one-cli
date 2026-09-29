@@ -54,22 +54,10 @@ describe("TopBar and manifest review", () => {
 		vi.mocked(previewManifestDraft).mockResolvedValue({
 			schema: "one-cli/workspace-manifest-preview/v1",
 			revision: "sha256:base",
-			before: JSON.stringify(
-				{
-					env: { projectId: "old-project" },
-					projects: [{ name: "web", general: { buildVersion: "1.0.0" } }],
-				},
-				null,
-				2,
-			),
-			after: JSON.stringify(
-				{
-					env: { projectId: "new-project" },
-					projects: [{ name: "web", general: { buildVersion: "2.0.0" } }],
-				},
-				null,
-				2,
-			),
+			before:
+				"version = 2\n[env.infisical]\nprojectId = 'old-project'\nenvironments = ['dev','staging','prod']\n",
+			after:
+				"version = 2\n[env.infisical]\nprojectId = 'new-project'\nenvironments = ['dev','staging','prod']\n",
 		});
 	});
 	afterEach(() => {
@@ -79,67 +67,13 @@ describe("TopBar and manifest review", () => {
 
 	it.each([
 		"/",
-		"/settings?env=preview",
-		"/settings/env/infisical?env=preview",
-		"/profile?env=preview",
-		"/section/env/infisical?env=preview",
+		"/settings?env=staging",
+		"/settings/env/infisical?env=staging",
+		"/profile?env=staging",
+		"/section/env/infisical?env=staging",
 	])("keeps the global TopBar free of workspace environment controls at %s", (path) => {
 		renderTopBar(path);
 		expect(screen.queryByRole("combobox", { name: /^Environment:/ })).toBeNull();
-	});
-
-	it("reviews and publishes a revision-checked manifest draft", async () => {
-		vi.mocked(applyManifestDraft).mockResolvedValue({
-			schema: "one-cli/workspace-manifest-apply/v1",
-			revision: "sha256:next",
-			applied: 1,
-		});
-		useManifestDraftStore.getState().stageSection({
-			entryId: "demo-entry",
-			revision: "sha256:base",
-			project: "web",
-			section: "general",
-			initial: { buildVersion: "1.0.0", devCommand: "pnpm dev" },
-			next: { buildVersion: "2.0.0", devCommand: "pnpm dev" },
-			labels: { buildVersion: "projectInspector.general.buildVersion" },
-		});
-		const user = userEvent.setup();
-		renderManifestSaveControl("/workspace/demo-entry?env=dev");
-
-		await user.click(screen.getByRole("button", { name: "Save changes · 1" }));
-		const dialog = await screen.findByRole("alertdialog");
-		expect(await within(dialog).findByText(/"buildVersion": "1\.0\.0"/)).toBeDefined();
-		expect(within(dialog).getByText(/"buildVersion": "2\.0\.0"/)).toBeDefined();
-		expect(previewManifestDraft).toHaveBeenCalledWith(
-			{
-				revision: "sha256:base",
-				workspace: undefined,
-				changes: [
-					{
-						project: "web",
-						general: { buildVersion: "2.0.0", devCommand: "pnpm dev" },
-					},
-				],
-			},
-			"demo-entry",
-		);
-
-		await user.click(within(dialog).getByRole("button", { name: "Save to manifest" }));
-		await waitFor(() =>
-			expect(applyManifestDraft).toHaveBeenCalledWith(
-				{
-					revision: "sha256:base",
-					changes: [
-						{
-							project: "web",
-							general: { buildVersion: "2.0.0", devCommand: "pnpm dev" },
-						},
-					],
-				},
-				"demo-entry",
-			),
-		);
-		expect(screen.queryByRole("button", { name: /Save changes/ })).toBeNull();
 	});
 
 	it("reviews and publishes a Workspace Infisical binding draft", async () => {
@@ -156,8 +90,8 @@ describe("TopBar and manifest review", () => {
 
 		await user.click(screen.getByRole("button", { name: "Save changes · 1" }));
 		const dialog = await screen.findByRole("alertdialog");
-		expect(await within(dialog).findByText(/"projectId": "old-project"/)).toBeDefined();
-		expect(within(dialog).getByText(/"projectId": "new-project"/)).toBeDefined();
+		expect(await within(dialog).findByText(/projectId = 'old-project'/)).toBeDefined();
+		expect(within(dialog).getByText(/projectId = 'new-project'/)).toBeDefined();
 		expect(previewManifestDraft).toHaveBeenCalledWith(
 			{
 				revision: "sha256:base",
@@ -196,19 +130,10 @@ describe("TopBar and manifest review", () => {
 			next: { backend: "infisical", projectId: "new-project" },
 			labels: { projectId: "global.project" },
 		});
-		useManifestDraftStore.getState().stageSection({
-			entryId: "demo-entry",
-			revision: "sha256:base",
-			project: "web",
-			section: "general",
-			initial: { buildVersion: "1.0.0", devCommand: "pnpm dev" },
-			next: { buildVersion: "2.0.0", devCommand: "pnpm dev" },
-			labels: { buildVersion: "projectInspector.general.buildVersion" },
-		});
 		const user = userEvent.setup();
 		renderManifestSaveControl("/workspace/demo-entry?env=dev");
 
-		await user.click(screen.getByRole("button", { name: "Save changes · 2" }));
+		await user.click(screen.getByRole("button", { name: "Save changes · 1" }));
 		const dialog = await screen.findByRole("alertdialog");
 		const saveButton = within(dialog).getByRole("button", { name: "Save to manifest" });
 		await waitFor(() => expect((saveButton as HTMLButtonElement).disabled).toBe(false));
@@ -218,12 +143,7 @@ describe("TopBar and manifest review", () => {
 			{
 				revision: "sha256:base",
 				workspace: { environment: { backend: "infisical", projectId: "new-project" } },
-				changes: [
-					{
-						project: "web",
-						general: { buildVersion: "2.0.0", devCommand: "pnpm dev" },
-					},
-				],
+				changes: [],
 			},
 			"demo-entry",
 		);
@@ -232,6 +152,6 @@ describe("TopBar and manifest review", () => {
 		expect(remaining.workspace).toEqual({
 			environment: { backend: "infisical", projectId: "new-project" },
 		});
-		expect(Object.keys(remaining.changes)).toEqual(["web"]);
+		expect(Object.keys(remaining.changes)).toEqual([]);
 	});
 });

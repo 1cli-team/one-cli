@@ -9,6 +9,7 @@ package cli_test
 import (
 	"io/fs"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -41,7 +42,7 @@ var expectedScaffoldPaths = []string{
 	"apps",
 	"services",
 	"packages",
-	"one.manifest.json",
+	"one.manifest.toml",
 	"AGENTS.md",
 	"mise.toml",
 	".config/hk.pkl",
@@ -73,10 +74,10 @@ func TestSnapshot_E2E_Create_Default(t *testing.T) {
 
 	// Manifest sanity. Schema is the current ManifestVersion.
 	mf := readManifest(t, target)
-	if v, _ := mf["version"].(float64); v != float64(workspace.ManifestVersion) {
+	if v, _ := mf["version"].(int64); v != int64(workspace.ManifestVersion) {
 		t.Errorf("manifest version: want %d, got %v", workspace.ManifestVersion, mf["version"])
 	}
-	if subs, ok := mf["projects"].([]any); !ok || len(subs) != 0 {
+	if subs, _ := mf["projects"].(map[string]any); len(subs) != 0 {
 		t.Errorf("fresh manifest should have empty projects, got %v", mf["projects"])
 	}
 }
@@ -141,7 +142,7 @@ func TestSnapshot_E2E_Create_NonEmptyTargetFails(t *testing.T) {
 
 // TestSnapshot_E2E_Create_NestedInsideWorkspace_Refused locks the guard:
 // `one create` must refuse to plant a workspace inside a directory that
-// already has a one.manifest.json anywhere in its ancestry. Without this,
+// already has a one.manifest.toml anywhere in its ancestry. Without this,
 // two manifests in the same tree silently break env/add discovery.
 func TestSnapshot_E2E_Create_NestedInsideWorkspace_Refused(t *testing.T) {
 	tmp := t.TempDir()
@@ -208,8 +209,7 @@ func TestSnapshot_E2E_Create_DefaultEnablesUniversalSet(t *testing.T) {
 		t.Errorf("dev_enabled: want true, got %v", got["dev_enabled"])
 	}
 
-	// Current manifest: env backend lives under domains.env.kind; ci / dev have
-	// no on-disk representation. CI is not enabled implicitly.
+	// Fresh workspaces have no remote binding or command configuration.
 	mf := readManifest(t, target)
 	if _, has := mf["plugins"]; has {
 		t.Errorf("manifest should not carry legacy plugins map, got %v", mf["plugins"])
@@ -234,7 +234,7 @@ func assertWorkspaceAgentDocs(t *testing.T, root string) {
 		t.Fatal(err)
 	}
 	if !strings.Contains(string(body), "one run") || !strings.Contains(string(body), "one exec") {
-		t.Fatalf("workspace guidance does not explain skill installation: %s", body)
+		t.Fatalf("workspace guidance does not explain task execution and environment injection: %s", body)
 	}
 	for _, entry := range []string{"apps", "services", "packages"} {
 		assertNoAgentDocs(t, filepath.Join(root, entry))
@@ -243,5 +243,45 @@ func assertWorkspaceAgentDocs(t *testing.T, root string) {
 		if _, err := os.Stat(filepath.Join(root, entry)); !os.IsNotExist(err) {
 			t.Fatalf("unexpected generated %s: %v", entry, err)
 		}
+	}
+}
+
+func TestCreateInCurrentEmptyGitRepository(t *testing.T) {
+	tmp := t.TempDir()
+	isolateHome(t, tmp)
+	target := filepath.Join(tmp, "existing-repo")
+	if err := os.Mkdir(target, 0755); err != nil {
+		t.Fatal(err)
+	}
+	for _, args := range [][]string{{"init", "-b", "topic"}, {"remote", "add", "origin", "https://example.invalid/team/existing.git"}} {
+		cmd := exec.Command("git", args...)
+		cmd.Dir = target
+		if out, err := cmd.CombinedOutput(); err != nil {
+			t.Fatalf("git: %v %s", err, out)
+		}
+	}
+	before, _ := os.ReadFile(filepath.Join(target, ".git", "config"))
+	stdout, stderr, code := runBinaryIn(t, target, "create", ".", "--yes", "-o", "json")
+	if code != 0 {
+		t.Fatalf("create: %d %s %s", code, stdout, stderr)
+	}
+	result := mustParseJSON(t, stdout)
+	if result["project_name"] != "existing-repo" || result["created_in_place"] != true {
+		t.Fatalf("result=%v", result)
+	}
+	after, _ := os.ReadFile(filepath.Join(target, ".git", "config"))
+	if string(before) != string(after) {
+		t.Fatal("Git config changed")
+	}
+	manifestBefore, _ := os.ReadFile(filepath.Join(target, "one.manifest.toml"))
+	for _, args := range [][]string{{"env", "list", "-o", "json"}, {"env", "unset", "TOKEN", "-o", "json"}} {
+		_, stderr, code = runBinaryIn(t, target, args...)
+		if code == 0 || !strings.Contains(stderr, "INFISICAL_NOT_CONFIGURED") {
+			t.Fatalf("%v: %d %s", args, code, stderr)
+		}
+	}
+	manifestAfter, _ := os.ReadFile(filepath.Join(target, "one.manifest.toml"))
+	if string(manifestBefore) != string(manifestAfter) {
+		t.Fatal("read/delete changed binding")
 	}
 }

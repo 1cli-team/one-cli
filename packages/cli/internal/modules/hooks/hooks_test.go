@@ -27,7 +27,12 @@ func fixture(t *testing.T) string {
 	}
 	t.Setenv("GIT_CONFIG_GLOBAL", os.DevNull)
 	t.Setenv("GIT_CONFIG_NOSYSTEM", "1")
-	write(t, root, "one.manifest.json", `{"version":1,"workspace":{"id":"hooks","name":"hooks"},"projects":[]}`)
+	write(t, root, "one.manifest.toml", `version = 2
+
+[workspace]
+id = "hooks"
+name = "hooks"
+`)
 	cmd := exec.Command("git", "init", "-q", root)
 	if out, err := cmd.CombinedOutput(); err != nil {
 		t.Fatalf("git init: %v %s", err, out)
@@ -63,10 +68,10 @@ func TestConfigureDryRunIdempotentAndUserOverrides(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !preview.DryRun || len(preview.GitChanges) != 2 || len(preview.Changes) != 2 {
+	if !preview.DryRun || len(preview.GitChanges) != 2 || len(preview.Changes) != 3 {
 		t.Fatalf("preview: %+v", preview)
 	}
-	for _, path := range []string{"hk.pkl", workspace.HooksConfigFilename, workspace.MiseConfigFilename, ".git/hooks/pre-commit"} {
+	for _, path := range []string{"hk.pkl", workspace.HooksConfigFilename, workspace.MiseConfigFilename, ".gitignore", ".git/hooks/pre-commit"} {
 		if _, err := os.Stat(filepath.Join(root, path)); !os.IsNotExist(err) {
 			t.Fatalf("dry-run wrote %s", path)
 		}
@@ -135,7 +140,7 @@ func TestConfigureLinkedWorktreeUsesCommonGitHooks(t *testing.T) {
 	root := fixture(t)
 	ctx := context.Background()
 	for _, args := range [][]string{
-		{"add", "one.manifest.json"},
+		{"add", "one.manifest.toml"},
 		{"-c", "user.name=One hook test", "-c", "user.email=test@example.invalid", "commit", "-qm", "test fixture"},
 	} {
 		if out, err := gitOutput(ctx, root, args...); err != nil {
@@ -233,7 +238,7 @@ func TestGeneratedLanguageStepsAndConcurrentEdit(t *testing.T) {
 	write(t, root, "apps/web/package.json", `{"devDependencies":{"oxlint":"1.82.0","oxfmt":"0.67.0"}}`)
 	m := &workspace.Manifest{Projects: []workspace.ManifestProject{
 		{Name: "api", RelativeDir: "services/api", Toolchain: "go"},
-		{Name: "web", RelativeDir: "apps/web", Toolchain: "node", PackageManager: "pnpm"},
+		{Name: "web", RelativeDir: "apps/web", Toolchain: "node"},
 	}}
 	p := fsutil.NewFilePlan(root)
 	if err := PlanFiles(p, m); err != nil {
@@ -279,7 +284,7 @@ func TestRealHKValidatesGeneratedPkl(t *testing.T) {
 	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
 	write(t, root, "apps/web/package.json", `{"devDependencies":{"oxlint":"1.82.0","oxfmt":"0.67.0"}}`)
 	p := fsutil.NewFilePlan(root)
-	m := &workspace.Manifest{Projects: []workspace.ManifestProject{{Name: "api", RelativeDir: "services/api", Toolchain: "go"}, {Name: "web", RelativeDir: "apps/web", Toolchain: "node", PackageManager: "pnpm"}}}
+	m := &workspace.Manifest{Projects: []workspace.ManifestProject{{Name: "api", RelativeDir: "services/api", Toolchain: "go"}, {Name: "web", RelativeDir: "apps/web", Toolchain: "node"}}}
 	if err := PlanFiles(p, m); err != nil {
 		t.Fatal(err)
 	}

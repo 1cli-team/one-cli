@@ -3,11 +3,11 @@ title: 多环境与目录继承
 description: 通过 Infisical 环境和项目目录共享、覆盖变量。
 ---
 
-一个工作区绑定一个 Infisical 项目。`environments.names` 声明环境名，目录路径区分共享变量与项目变量。
+一个工作区绑定一个 Infisical 项目。`env.infisical.environments` 声明环境名，目录路径区分共享变量与项目变量。
 
 ## 环境名
 
-新工作区使用 `dev`、`preview`、`prod`。添加 `qa`：
+新绑定使用 `dev`、`staging`、`prod`。先在 Infisical 创建 `qa`，再保存变量：
 
 ```bash
 one env set API_URL=https://qa.example.com -p web --env qa --yes
@@ -15,35 +15,25 @@ one env list -p web --env qa
 one exec -p web --env qa -- pnpm test
 ```
 
-`set` 会登记新环境名，`list` 拒绝未声明名称。省略 `--env` 时使用 Manifest 默认环境。
+`set` 在远程写入成功后登记新环境名，`list` 拒绝未声明名称。省略 `--env` 时固定使用 `dev`。
 
 ## 目录继承
 
-工作区 `env.rootPath` 默认 `/`，项目默认使用 `relativeDir` 对应目录。`services/api` 的合并顺序是：
+共享目录固定为 `/`，项目目录固定对应 Manifest 中的 `path`。`services/api` 的合并顺序是：
 
 ```text
 / → /services → /services/api
 ```
 
-越靠近项目的目录优先覆盖同名变量。可在项目 `env` 中配置自定义路径：
-
-```json
-{
-  "name": "api",
-  "relativeDir": "services/api",
-  "env": { "path": "/teams/payments/api", "inherits": true }
-}
-```
-
-设置 `inherits: false` 只读取该目录；设置 `disabled: true` 跳过该项目的 Infisical 注入，继承 shell 环境。
+越靠近项目的目录优先覆盖同名变量。规则固定，不提供项目级路径、继承或停用开关。
 
 ## 执行
 
 ```bash
-one run build --env preview
+one run build --env staging
 one exec -p api --env prod -- go run ./cmd/server
 ```
 
-生成的任务适配器和项目命令直接接收拉取的变量，不同步本地变量文件。认证或拉取失败会停止执行。自定义 mise 任务继续使用 mise 自身环境。
+`one run` 和 `one exec` 将变量注入对应项目的进程。并行项目的环境相互独立。不同步本地变量文件，认证或拉取失败会停止执行。
 
 绑定与错误处理见 [one env](/zh/docs/env-vars/)，独立于工作区的存储见[全局凭据](/zh/docs/login/)。

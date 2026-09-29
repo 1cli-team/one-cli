@@ -18,7 +18,7 @@
 	"manifestDraft": {
 		"saveButton": "Save changes · {{count}}",
 		"title": "Write these changes to the manifest?",
-		"description": "This updates one.manifest.json in the Workspace. Review the exact changes before continuing.",
+		"description": "This updates one.manifest.toml in the Workspace. Review the exact changes before continuing.",
 		"currentManifest": "Current manifest",
 		"updatedManifest": "After changes",
 		"confirm": "Save to manifest",
@@ -28,15 +28,15 @@
 		"discard": "Discard draft",
 		"saved": "Manifest changes saved",
 		"saveFailed": "Could not save manifest changes",
-		"conflict": "one.manifest.json changed after this draft was opened. Discard the draft, review the latest configuration, and try again.",
+		"conflict": "one.manifest.toml changed after this draft was opened. Discard the draft, review the latest configuration, and try again.",
 		"changedFields": "Changed fields",
 		"jumpToChange": "Go to first change"
 	},
 	"environmentSwitcher": {
 		"label": "Environment",
 		"dev": "Development",
-		"preview": "Preview",
-		"prod": "Production"
+		"prod": "Production",
+		"staging": "Staging"
 	},
 	"workspaces": {
 		"workspaceLabel": "Workspace",
@@ -92,11 +92,11 @@
 			},
 			"invalid": {
 				"title": "The Workspace manifest is invalid",
-				"description": "Repair one.manifest.json at this path, then run one serve in the Workspace again."
+				"description": "Repair one.manifest.toml at this path, then run one serve in the Workspace again."
 			},
 			"identity-missing": {
 				"title": "This Workspace has no stable ID",
-				"description": "Add workspace.id to one.manifest.json before configuring project-scoped Profiles."
+				"description": "Add workspace.id to one.manifest.toml before configuring project-scoped Profiles."
 			},
 			"identity-conflict": {
 				"title": "This Workspace ID is duplicated",
@@ -187,12 +187,10 @@
 		"unsavedChanges": "You have unsaved changes. Discard them and continue?",
 		"discardAndContinue": "Discard and continue",
 		"general": {
-			"template": "Template",
 			"toolchain": "Toolchain",
 			"path": "Project path",
 			"buildVersion": "Build version",
 			"packageManager": "Package manager",
-			"devCommand": "Development command",
 			"buildCommand": "Build command",
 			"buildSource": "one build reads {{source}}. Edit that file to change the build task. Workspace dependencies and caching are managed by mise; one run build uses the same entry point.",
 			"buildMissing": "No build task configured",
@@ -218,7 +216,8 @@
 			"inheritsHint": "Project variables override workspace variables with the same name.",
 			"disabled": "Disable project environment",
 			"disabledHint": "Do not inject environment variables into project commands.",
-			"keys": "Declared variable names"
+			"keys": "Declared variable names",
+			"conventionHint": "Variables follow the project directory and inherit parent folders. More specific folders take precedence."
 		},
 		"draftHint": "Changes are kept in a draft. Review and save them to apply."
 	},
@@ -253,14 +252,17 @@
 		"deleteTitle": "Delete {{key}}?",
 		"deleteDescription": "This removes the value from the selected Infisical environment and folder. This action cannot be undone here.",
 		"deleteConfirmation": "Type {{key}} to confirm",
-		"notConfiguredTitle": "Connect a storage project",
-		"notConfiguredHint": "Choose a storage project in Workspace settings, or connect automatically to load this environment’s secrets.",
-		"connectAndLoad": "Connect and load secrets",
+		"notConfiguredTitle": "Environment variable storage is not set up",
+		"notConfiguredHint": "One will create and connect an Infisical project when you save the first variable.",
 		"search": "Search secret keys",
 		"noMatches": "No matching secrets",
 		"scopeHint": "Changes here are saved directly to Infisical.",
 		"loadError": "Unable to load secrets",
-		"more": "More actions for {{key}}"
+		"more": "More actions for {{key}}",
+		"initializing": "Setting up storage…",
+		"invalidKey": "Use letters, digits, and underscores for the key, starting with a letter or underscore, such as API_TOKEN.",
+		"storageCreated": "Created Infisical project: {{name}}",
+		"storageRenamed": "Name {{requested}} was taken. Created Infisical project: {{name}}"
 	},
 	"project": {
 		"fields": {
@@ -274,7 +276,7 @@
 			"description": "Configure workspace environment storage and manage shared secrets.",
 			"backend": "Backend",
 			"backendPending": "Pending review",
-			"backendSource": "Infisical project binding changes are reviewed before being written to one.manifest.json.",
+			"backendSource": "Infisical project binding changes are reviewed before being written to one.manifest.toml.",
 			"signInHint": "Sign in to Infisical in Settings to choose a storage project.",
 			"noProjects": "No storage projects available. Create one from Shared credentials."
 		},
@@ -574,7 +576,7 @@
 		"copyFailed": "Could not copy. Select and copy text in the console.",
 		"actionFailed": "Action failed. Try again.",
 		"saveFirst": "Save or discard pending configuration changes before starting or restarting.",
-		"noDev": "No dev task is configured. Set a dev command in Overview or add a dev task to the project’s mise.toml.",
+		"noDev": "No dev task is configured in mise. Define a dev task, or run one init mise after adding a project dev script.",
 		"environmentMismatch": "This service uses {{environment}}. Restart to use the selected {{next}} environment.",
 		"exitCode": "Exit code: {{code}}",
 		"reachable": "Local port is reachable",
@@ -584,7 +586,7 @@
 		"waitingLogs": "Preparing the runtime. Waiting for output…",
 		"emptyLogs": "Start a service to see its output here.",
 		"noMatches": "No matching logs.",
-		"consoleHint": "Logs are redacted; up to 256 KiB is retained. Closing this page keeps services running; closing one serve stops them.",
+		"consoleHint": "Original child logs; up to 256 KiB is retained. Closing this page keeps services running; closing one serve stops them.",
 		"truncated": "Older logs were removed. Only recent output is shown.",
 		"status": {
 			"preparing": "Preparing",

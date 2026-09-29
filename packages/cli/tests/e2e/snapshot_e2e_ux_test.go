@@ -34,7 +34,7 @@ func TestSnapshot_E2E_CreateDailyText(t *testing.T) {
 	if code == 0 {
 		t.Fatal("non-interactive create without a directory should fail")
 	}
-	for _, want := range []string{"✗ 非交互模式下必须提供 [dir] 位置参数", "错误代码：PROJECT_NAME_REQUIRED", "可尝试：", "one create <workspace-directory>"} {
+	for _, want := range []string{"✗ 请指定要创建的目录", "错误代码：PROJECT_NAME_REQUIRED", "下一步：", "one create <workspace-directory>"} {
 		if !strings.Contains(errorText, want) {
 			t.Errorf("localized error missing %q: %q", want, errorText)
 		}
@@ -100,13 +100,13 @@ func TestSnapshot_E2E_WorkspaceOverviewAndDeferredDeployment(t *testing.T) {
 	if _, stderr, code = runBinaryIn(t, ws, "add", "react-spa", "--name", "web", "--yes", "-o", "json"); code != 0 {
 		t.Fatalf("add failed: exit=%d stderr=%s", code, stderr)
 	}
-	manifestBefore, err := os.ReadFile(filepath.Join(ws, "one.manifest.json"))
+	manifestBefore, err := os.ReadFile(filepath.Join(ws, "one.manifest.toml"))
 	if err != nil {
 		t.Fatal(err)
 	}
 	m := readManifest(t, ws)
-	projects := m["projects"].([]any)
-	domains, _ := projects[0].(map[string]any)["domains"].(map[string]any)
+	projects := m["projects"].(map[string]any)
+	domains, _ := projects["web"].(map[string]any)["domains"].(map[string]any)
 	if _, exists := domains["deploy"]; exists {
 		t.Fatalf("ordinary add configured deployment: %v", domains["deploy"])
 	}
@@ -120,7 +120,7 @@ func TestSnapshot_E2E_WorkspaceOverviewAndDeferredDeployment(t *testing.T) {
 	}
 	summary := mustParseJSON(t, stdout)
 	project := summary["projects"].([]any)[0].(map[string]any)
-	if project["deployment_configured"] != nil || summary["next_command"] != "one dev -p web" {
+	if project["deployment_configured"] != nil || summary["next_command"] != "one run dev -p web" {
 		t.Fatalf("unexpected project summary: %v", summary)
 	}
 
@@ -144,7 +144,7 @@ func TestSnapshot_E2E_WorkspaceOverviewAndDeferredDeployment(t *testing.T) {
 	if !strings.Contains(deployErr["error"].(map[string]any)["message"].(string), "//:deploy") {
 		t.Fatalf("unexpected removed-command error: %v", deployErr)
 	}
-	manifestAfter, err := os.ReadFile(filepath.Join(ws, "one.manifest.json"))
+	manifestAfter, err := os.ReadFile(filepath.Join(ws, "one.manifest.toml"))
 	if err != nil {
 		t.Fatal(err)
 	}

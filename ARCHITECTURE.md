@@ -28,7 +28,7 @@ The runtime concepts are:
 `Template` exists only while a Project is created. `Credential` is a sensitive,
 typed value inside a Profile; it is not a peer runtime concept.
 
-`kind` in `one.manifest.json`, `--provider` flags, and existing `PLUGIN_*`
+`kind` in `one.manifest.toml`, `--provider` flags, and existing `PLUGIN_*`
 error codes are compatibility surfaces. New code and documentation use
 **backend** as the canonical term.
 
@@ -115,7 +115,6 @@ packages/cli/internal/
     creation/          Template-to-Workspace/Project materialisation
     development/       local development process orchestration
     environment/       Infisical variables and workspace bindings
-    preset/            pure preset encoding, parsing, and resolution
     tasks/             finite task plans and environment snapshots
     miseconfig/        additive task and tool configuration
     hooks/             staged-file checks and Git integration
@@ -214,7 +213,7 @@ command context
 execution.Scope                 working directory + lifecycle
       |
       v
-execution.ResolveWorkspace     walk up to one.manifest.json once
+execution.ResolveWorkspace     walk up to one.manifest.toml once
       |
       v
 execution.Workspace            root + manifest snapshot + project lookup
@@ -226,21 +225,19 @@ execution.Workspace            root + manifest snapshot + project lookup
 Dev, configure, run, exec, add, and environment commands use
 this same boundary. Helpers receive the snapshot rather than a root string that
 would let them rediscover the workspace. A workflow that intentionally writes
-`one.manifest.json` must call `Workspace.Reload` before relying on the new
+`one.manifest.toml` must call `Workspace.Reload` before relying on the new
 state. The bare root command keeps optional discovery because running `one`
 outside a workspace renders help instead of producing a workspace error.
 
 Creation is one Template-driven compiled workflow:
 
 - `modules/creation.Service` is the single mutation boundary shared by ordinary
-  `one create`, `one create --preset`, and `one add`;
+  `one create` and `one add`;
 - workspace target revalidation, skeleton generation, Backend selection,
   environment preparation, Template rendering, manifest publication, project
   artifact generation and best-effort Git initialization
   stay behind that boundary;
-- its private `syncProject` step owns the persisted dev command and environment safety rules;
-- `modules/preset` is a pure plan format: it owns only preset codes, parsing,
-  canonical encoding, registry resolution, and flag-conflict validation;
+- project creation synchronizes native mise tasks and derived environment paths;
 - there is no top-level `modules/scaffold`: workspace-file generation is an
   implementation detail of creation, not another product concept;
 - there is no cross-adapter `projectsync` package: orchestration stays beside
@@ -252,18 +249,16 @@ Dashboard Workspace reads and machine-local Profile selections enter through
 `application/workspace.Service`. The service owns Overview construction,
 Backend validation, Project lookup, Template compatibility, and
 Profile-binding policy, but has no manifest-publication capability.
-`one.manifest.json` is a read-only fact source for that projection service:
+`one.manifest.toml` is a read-only fact source for that projection service:
 the Project projection exposes its values, a SHA-256 revision, and resolved
 Profile names/sources, never Profile values or credentials. Confirmed
 Dashboard publication enters through the separate `application/manifest.Service`.
-It accepts only typed, allowlisted Project patches, compares the submitted
-revision with the current file, validates Backend/config compatibility, and
-publishes the complete candidate through the existing atomic Manifest writer.
-Workspace environment Backend changes instead enter through the revision-checked
-HTTP switch endpoint and `modules/environment.Service`, so selecting Infisical
-initializes and persists its remote project binding before the request succeeds.
-Changing the Workspace environment Backend does not migrate secret values
-between providers.
+It accepts only typed workspace Infisical binding changes, compares the submitted
+revision with the current file, and publishes through the atomic TOML writer.
+Preview returns the actual before/after TOML, preserving user comments and
+untouched text. Project settings are read-only: remote folders derive from
+project paths, with shared and parent-folder inheritance always enabled.
+Remote storage is initialized only on an explicit first variable save.
 Stale drafts fail with `SERVE_MANIFEST_CONFLICT`; browser clients never submit
 a replacement Manifest document. Environment-aware Workspace and Project
 selections are stored in XDG-aware
@@ -271,7 +266,7 @@ selections are stored in XDG-aware
 Workspace root and safe environment id, and its Workspace/Project maps contain
 only `domain/backend -> Profile name` selections. Keeping the canonical root
 in the key isolates two repository copies even when their manifests share one
-Workspace id. The Dashboard UI exposes `dev`, `preview`, and `prod` as URL
+Workspace id. The Dashboard UI exposes the binding's environment slugs (default `dev`, `staging`, and `prod`) as URL
 state (`?env=`), not as a manifest migration; the core/API contract also
 accepts safe custom environment ids for non-UI workflows. HTTP handlers only
 decode requests, resolve the trusted Workspace root, map application errors,
@@ -309,7 +304,7 @@ Finite workspace tasks are owned by `modules/tasks` and `modules/miseconfig`:
 - Hidden task adapters consume the same temporary context for cache fingerprints and execution. Context values never enter generated configuration or result envelopes.
 - mise owns task concurrency and artifact storage. One reports overall success/failure and leaves unsupported per-task event state unknown.
 - `one build` and `one run build` share this implementation. `one exec` handles arbitrary commands, while development keeps the existing terminal supervisor after finite prerequisite builds.
-- GitHub Actions files stay repository-owned and call the ordinary `ci` aggregate. Hooks and preset remain supported.
+- GitHub Actions files stay repository-owned and call the ordinary `ci` aggregate. Hooks remain supported.
 
 Environment is a vertical deep module because its two built-in backends are
 compiled implementation components rather than independently distributed
@@ -344,7 +339,7 @@ boundary:
   `credentials.json`, and legacy Workspace/Project selections in
   `config.json#workspaces` remain readable. The additive
   `profile-bindings.json` store does not change either schema-v1 file or
-  `one.manifest.json`;
+  `one.manifest.toml`;
 - resolution is deterministic: one-shot flag, environment-aware Project
   selection, environment-aware Workspace selection, legacy Project selection,
   legacy Workspace selection, then machine default. Environment-aware keys use
@@ -369,9 +364,9 @@ The Dashboard loads `GET /api/catalog` once through an immutable SWR cache and
 derives credential and project configuration fields from that response. Adding
 a backend no longer requires duplicating backend lists and form switches across
 the UI. `features/project-settings` owns the desktop project matrix, lazy
-project-detail read, right-side inspector, Manifest draft inputs, and Project
+project-detail read, right-side inspector, read-only project configuration, and Project
 Profile binding controls. `features/manifest-draft` keeps per-Workspace typed
-patches and human-readable differences in memory; the top bar is the only
+workspace Infisical binding patches and human-readable differences in memory; the top bar is the only
 publish affordance and requires a confirmation review. Profile binding saves
 remain independent machine-local writes. Backend choices and backend-specific
 Project fields come from the Catalog, while the server repeats all allowlist
@@ -381,10 +376,10 @@ Workspace or Project folder. Lists contain key names without values; a value is
 retrieved individually into component-local state and every response uses
 `Cache-Control: no-store`. The error-state retry action may call the explicit
 Backend initialization endpoint to repair a missing Infisical project binding
-created by an older Dashboard or a hand-edited Manifest; secret reads and
-writes never auto-bind Infisical, register a Manifest key, or participate in a
-Manifest draft transaction.
-The router preserves `?env=dev|preview|prod` across Workspace and Project links.
+created by an older Dashboard or a hand-edited Manifest; secret reads never create a binding. The first explicit variable save may
+initialize storage; values and variable-name registries never enter the Manifest
+or its draft transaction.
+The router preserves the selected environment slug in `?env=` across Workspace and Project links.
 The global Settings page hides the selector because Profile definitions/CRUD
 are machine-global rather than environment-scoped; preserved query state still
 returns users to the same Workspace/Project binding namespace. The query does
@@ -419,7 +414,7 @@ remain independently installable after leaving this repository.
 Internal migration must preserve:
 
 - command exit behavior, except for explicitly approved command removals and renames;
-- `one.manifest.json` v1;
+- `one.manifest.toml` v2 (the former JSON format is not supported);
 - `~/.config/one/config.json` and `credentials.json` v1;
 - the legacy profile resolution order, extended ahead of it by optional
   Project+Environment and Workspace+Environment bindings from the additive
@@ -430,5 +425,5 @@ Internal migration must preserve:
 New HTTP endpoints may be added. Existing read and Profile-management payloads
 remain compatible; historical Dashboard routes that wrote a repository are a
 deliberate safety exception and still return an explicit read-only error. The
-supported repository writes are the typed, revision-checked Project Manifest
+supported repository writes are the typed, revision-checked workspace Infisical binding
 draft endpoint and the revision-checked environment Backend switch endpoint.

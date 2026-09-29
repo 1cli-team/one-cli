@@ -65,7 +65,7 @@ func (s Service) Prepare(ctx context.Context, in Input) error {
 			if !selected[p.Name] {
 				continue
 			}
-		} else if (in.Project != "" && p.Name != in.Project) || strings.TrimSpace(workspace.ProjectDev(in.Manifest, p.Name)) == "" {
+		} else if in.Project != "" && p.Name != in.Project {
 			continue
 		}
 		switch p.Toolchain {
@@ -76,7 +76,7 @@ func (s Service) Prepare(ctx context.Context, in Input) error {
 		}
 	}
 	if len(nodes) > 0 {
-		if err := s.prepareNode(ctx, in, nodes[0].PackageManager); err != nil {
+		if err := s.prepareNode(ctx, in, ""); err != nil {
 			return err
 		}
 	}
@@ -395,7 +395,7 @@ func preparationError(project, dir, command string, err error, detail string) *o
 }
 
 // Internal packages belong to the same install even when only their parent is
-// registered in one.manifest.json or selected for development/building.
+// registered in one.manifest.toml or selected for development/building.
 func nodePackageDirs(in Input) ([]string, error) {
 	seen := map[string]bool{}
 	var dirs []string

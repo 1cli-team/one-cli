@@ -77,7 +77,7 @@ func mustWorkspaceRegistryService() *workspaceapp.RegistryService {
 func mustWorkspaceService(
 	backendCatalog *catalog.Catalog,
 ) *workspaceapp.Service {
-	service, err := workspaceapp.NewService(backendCatalog, tasksmodule.ProjectSettings)
+	service, err := workspaceapp.NewService(backendCatalog, (tasksmodule.Service{Provider: miseruntime.Provider{}}).ProjectSettings)
 	if err != nil {
 		panic(err)
 	}

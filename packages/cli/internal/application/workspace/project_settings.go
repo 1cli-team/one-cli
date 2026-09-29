@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"path/filepath"
-	"sort"
 	"strings"
 
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/application/execution"
@@ -30,12 +29,9 @@ type ProjectSettingsProject struct {
 	Name                  string                     `json:"name"`
 	RelativeDir           string                     `json:"relativeDir"`
 	Kind                  string                     `json:"kind"`
-	TemplateID            string                     `json:"templateId,omitempty"`
 	Toolchain             string                     `json:"toolchain,omitempty"`
 	PackageManager        string                     `json:"packageManager,omitempty"`
-	BuildVersion          string                     `json:"buildVersion,omitempty"`
-	DevCommand            string                     `json:"devCommand,omitempty"`
-	DevURL                string                     `json:"devURL,omitempty"`
+	DevAvailable          bool                       `json:"devAvailable"`
 	Build                 ProjectBuildSettings       `json:"build"`
 	Tasks                 *ProjectTasks              `json:"tasks,omitempty"`
 	DefaultEnvironment    string                     `json:"defaultEnvironment,omitempty"`
@@ -52,11 +48,9 @@ type ProjectBuildSettings struct {
 }
 
 type ProjectEnvironmentSettings struct {
-	Backend  string   `json:"backend,omitempty"`
-	Path     string   `json:"path,omitempty"`
-	Inherits bool     `json:"inherits"`
-	Disabled bool     `json:"disabled"`
-	Keys     []string `json:"keys"`
+	Backend  string `json:"backend,omitempty"`
+	Path     string `json:"path,omitempty"`
+	Inherits bool   `json:"inherits"`
 }
 
 // ProjectSettings returns manifest-owned settings, the live build command,
@@ -91,21 +85,26 @@ func (s *Service) projectSettings(
 	env := ProjectEnvironmentSettings{
 		Backend:  strings.TrimSpace(workspacecore.EnvBackend(manifest)),
 		Inherits: true,
-		Keys:     []string{},
+		Path:     "/" + project.RelativeDir,
 	}
-	if override := workspacecore.ProjectEnv(manifest, project.Name); override != nil {
-		env.Path = override.Path
-		env.Disabled = override.Disabled
-		if override.Inherits != nil {
-			env.Inherits = *override.Inherits
+	packageManager := ""
+	if project.Toolchain == "node" {
+		pkg, _ := workspacecore.ReadPackageJSON(filepath.Join(root, project.RelativeDir))
+		if pkg == nil || pkg.PackageManager == "" {
+			pkg, _ = workspacecore.ReadPackageJSON(root)
 		}
-		env.Keys = append([]string(nil), override.Keys...)
-		sort.Strings(env.Keys)
+		if pkg != nil {
+			packageManager, _, _ = strings.Cut(pkg.PackageManager, "@")
+		}
 	}
-
-	devURL := ""
-	if project.Dev != nil {
-		devURL = project.Dev.URL
+	tasks := s.projectTasks(ctx, root, project.Name)
+	devAvailable := false
+	if tasks != nil && tasks.Status == "ready" {
+		for _, task := range tasks.Entries {
+			if task.Name == "//:"+project.Name+":dev" || task.Name == "//"+filepath.ToSlash(project.RelativeDir)+":dev" {
+				devAvailable = true
+			}
+		}
 	}
 	return ProjectSettings{
 		Schema:      ProjectSettingsSchema,
@@ -116,14 +115,11 @@ func (s *Service) projectSettings(
 			Name:                  project.Name,
 			RelativeDir:           project.RelativeDir,
 			Kind:                  projectKind(project.RelativeDir),
-			TemplateID:            project.TemplateID,
 			Toolchain:             project.Toolchain,
-			PackageManager:        project.PackageManager,
-			BuildVersion:          project.BuildVersion,
-			DevCommand:            workspacecore.ProjectDev(manifest, project.Name),
-			DevURL:                devURL,
+			PackageManager:        packageManager,
+			DevAvailable:          devAvailable,
 			Build:                 projectBuildSettings(root, *project),
-			Tasks:                 s.projectTasks(ctx, root, project.Name),
+			Tasks:                 tasks,
 			DefaultEnvironment:    defaultEnvironment,
 			AvailableEnvironments: environments,
 			Environment:           env,
@@ -142,8 +138,7 @@ func projectBuildSettings(root string, project workspacecore.ManifestProject) Pr
 	args, err := execution.ProjectOperationArgs(root, workspacecore.Project{
 		Name: project.Name, RelativeDir: project.RelativeDir,
 		TargetDir: filepath.Join(root, filepath.FromSlash(project.RelativeDir)),
-		Toolchain: project.Toolchain, PackageManager: project.PackageManager,
-		TemplateID: project.TemplateID,
+		Toolchain: project.Toolchain,
 	}, "build")
 	if err != nil {
 		var taskError *output.Error
@@ -170,16 +165,5 @@ func projectKind(relativeDir string) string {
 }
 
 func projectEnvironments(manifest *workspacecore.Manifest) ([]string, string) {
-	environments := append([]string(nil), workspacecore.DefaultEnvironments...)
-	defaultEnvironment := ""
-	if manifest != nil && manifest.Environments != nil {
-		if len(manifest.Environments.Names) > 0 {
-			environments = append([]string(nil), manifest.Environments.Names...)
-		}
-		defaultEnvironment = strings.TrimSpace(manifest.Environments.Default)
-	}
-	if defaultEnvironment == "" && len(environments) > 0 {
-		defaultEnvironment = environments[0]
-	}
-	return environments, defaultEnvironment
+	return workspacecore.EnvironmentNames(manifest), "dev"
 }

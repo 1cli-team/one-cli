@@ -22,44 +22,19 @@ func runCreate(deps Dependencies, cmd *cobra.Command, rawDir string, flags *crea
 		return err
 	}
 
-	// --preset implies fully non-interactive: the whole point is a
-	// reproducible scaffold from a single string. Force -y, parse the
-	// preset id up-front, and short-circuit to runCreateWithPreset.
-	// Pre-flight (parse + registry resolve) runs BEFORE any
-	// filesystem mutation so PRESET_INVALID never leaves a half-baked
-	// dir behind.
-	if flags.preset != "" {
-		flags.yes = true
-		return runCreateWithPreset(deps, cmd, cwd, rawDir, flags)
-	}
-
 	interactive := !flags.yes && output.CanPrompt()
 
-	// validateDir is the unified target-directory validator: same logic
-	// the post-form code path runs (existence + emptiness + nesting),
-	// surfaced inside the huh prompt so the user sees the conflict
-	// before they finish filling in the form. Without this, you fill in
-	// dir + name picks and only THEN learn the directory was
-	// already a workspace — bad UX.
+	// Validate both the destination and its derived name before accepting input.
 	validateDir := func(v string) error {
 		v = strings.TrimSpace(v)
 		if v == "" {
 			return errors.New(i18n.T("create.enter_directory"))
 		}
 		abs := resolveTargetPath(cwd, v)
+		if _, err := resolveWorkspaceName(abs, flags.name); err != nil {
+			return err
+		}
 		return deps.Creation.ValidateWorkspaceTarget(abs)
-	}
-	// Form-mode validation allows empty (we'll fall back to basename(dir));
-	// but if the user types something, it must parse as a valid name.
-	validateNameOptional := func(v string) error {
-		v = strings.TrimSpace(v)
-		if v == "" {
-			return nil
-		}
-		if !workspace.IsValidProjectName(v) {
-			return errors.New(i18n.T("common.name_format"))
-		}
-		return nil
 	}
 
 	// Pre-flight: if the user hasn't told us a directory yet AND cwd is
@@ -78,20 +53,7 @@ func runCreate(deps Dependencies, cmd *cobra.Command, rawDir string, flags *crea
 		}
 	}
 
-	// Fast path: when both dir and name need prompting, render them in a
-	// single huh form so the user can shift+tab back to revise dir before
-	// committing.
-	if rawDir == "" && flags.name == "" && interactive {
-		var dirInput, nameInput string
-		if err := prompt.NewForm().
-			Text(&dirInput, i18n.T("create.prompt_dir"), "./my-app", validateDir).
-			Text(&nameInput, i18n.T("create.prompt_name"), "", validateNameOptional).
-			Run(); err != nil {
-			return err
-		}
-		rawDir = strings.TrimSpace(dirInput)
-		flags.name = strings.TrimSpace(nameInput)
-	} else if rawDir == "" {
+	if rawDir == "" {
 		if !interactive {
 			return cliErrors.New(cliErrors.PROJECT_NAME_REQUIRED,
 				i18n.T("create.directory_required")).
@@ -107,14 +69,9 @@ func runCreate(deps Dependencies, cmd *cobra.Command, rawDir string, flags *crea
 	useCurrentDir := rawDir == "." || rawDir == "./"
 	targetDir := resolveTargetPath(cwd, rawDir)
 
-	// Resolve project name. Default = basename(targetDir).
-	projectName := strings.TrimSpace(flags.name)
-	if projectName == "" {
-		projectName = filepath.Base(targetDir)
-	}
-	if !workspace.IsValidProjectName(projectName) {
-		return cliErrors.New(cliErrors.INVALID_NAME,
-			i18n.Tf("create.name_invalid", projectName))
+	projectName, err := resolveWorkspaceName(targetDir, flags.name)
+	if err != nil {
+		return err
 	}
 
 	displayPath := relativeOrAbs(cwd, targetDir, useCurrentDir)
@@ -180,4 +137,19 @@ func runCreate(deps Dependencies, cmd *cobra.Command, rawDir string, flags *crea
 	output.Emit(&payload)
 
 	return nil
+}
+
+// resolveWorkspaceName is shared by interactive and positional creation.
+func resolveWorkspaceName(targetDir, override string) (string, error) {
+	name := strings.TrimSpace(override)
+	key := "create.name_invalid"
+	if name == "" {
+		name = filepath.Base(filepath.Clean(targetDir))
+		key = "create.directory_name_invalid"
+	}
+	if !workspace.IsValidProjectName(name) {
+		return "", cliErrors.New(cliErrors.INVALID_NAME, i18n.Tf(key, name)).
+			WithContext(map[string]any{"target_path": targetDir, "name": name})
+	}
+	return name, nil
 }

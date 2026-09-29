@@ -10,12 +10,8 @@ func TestLoadWorkspaceConfig_FromManifest(t *testing.T) {
 	tmp := t.TempDir()
 	if err := workspace.WriteManifest(tmp, &workspace.Manifest{
 		Version: workspace.ManifestVersion,
-		Environments: &workspace.Environments{
-			Names:   []string{"dev", "prod"},
-			Default: "dev",
-		},
 
-		Env: &workspace.EnvironmentConfig{ProjectID: "proj-x"},
+		Env: &workspace.EnvironmentConfig{ProjectID: "proj-x", Environments: []string{"dev", "prod"}},
 
 		Projects: []workspace.ManifestProject{},
 	}); err != nil {
@@ -28,6 +24,9 @@ func TestLoadWorkspaceConfig_FromManifest(t *testing.T) {
 	}
 	if cfg == nil || cfg.ProjectID != "proj-x" {
 		t.Fatalf("cfg = %+v; want ProjectID=proj-x", cfg)
+	}
+	if cfg.SiteURL != DefaultSiteURL {
+		t.Fatalf("omitted siteUrl resolved to %q", cfg.SiteURL)
 	}
 	if cfg.DefaultEnvOrFallback() != "dev" {
 		t.Errorf("default env = %q; want dev", cfg.DefaultEnvOrFallback())
@@ -51,79 +50,20 @@ func TestLoadWorkspaceConfig_NilWhenNoEnv(t *testing.T) {
 	}
 }
 
-func TestLoadSubprojectConfig_FromManifestEntry(t *testing.T) {
-	tmp := t.TempDir()
-	inherits := false
-	if err := workspace.WriteManifest(tmp, &workspace.Manifest{
-		Version: workspace.ManifestVersion,
-		Projects: []workspace.ManifestProject{{
-			Name:        "api",
-			RelativeDir: "services/api",
-			TemplateID:  "go-api",
-			Toolchain:   "go",
-
-			Env: &workspace.ProjectEnvOverride{
-				Path:     "/custom/api",
-				Inherits: &inherits,
-			},
-		}},
-	}); err != nil {
-		t.Fatal(err)
-	}
-
-	got, err := LoadSubprojectConfig(tmp, "services/api")
-	if err != nil {
-		t.Fatalf("LoadSubprojectConfig: %v", err)
-	}
-	if got == nil {
-		t.Fatal("got nil; expected SubprojectConfig with Path=/custom/api")
-	}
-	if got.Path != "/custom/api" {
-		t.Errorf("Path = %q; want /custom/api", got.Path)
-	}
-	if got.Inherits == nil || *got.Inherits != false {
-		t.Errorf("Inherits = %v; want pointer to false", got.Inherits)
+func TestFixedDefaultsIndependentOfOrder(t *testing.T) {
+	cfg := &WorkspaceConfig{Environments: []string{"prod", "dev"}}
+	if cfg.DefaultEnvOrFallback() != "dev" || cfg.RootPathOrDefault() != "/" {
+		t.Fatal(cfg)
 	}
 }
 
-func TestLoadSubprojectConfig_DisabledRoundTrip(t *testing.T) {
-	tmp := t.TempDir()
-	if err := workspace.WriteManifest(tmp, &workspace.Manifest{
-		Version: workspace.ManifestVersion,
-		Projects: []workspace.ManifestProject{{
-			Name:        "web",
-			RelativeDir: "apps/web",
-			TemplateID:  "react-spa",
-			Toolchain:   "node",
-
-			Env: &workspace.ProjectEnvOverride{Disabled: true},
-		}},
-	}); err != nil {
+func TestOmittedSiteCannotUseAnotherSessionInstance(t *testing.T) {
+	root := t.TempDir()
+	if err := workspace.WriteManifest(root, &workspace.Manifest{Version: 2, Env: &workspace.EnvironmentConfig{ProjectID: "p", Environments: []string{"dev"}}}); err != nil {
 		t.Fatal(err)
 	}
-
-	got, err := LoadSubprojectConfig(tmp, "apps/web")
-	if err != nil {
-		t.Fatal(err)
-	}
-	if got == nil || !got.Disabled {
-		t.Errorf("expected Disabled=true; got %+v", got)
-	}
-}
-
-func TestLoadSubprojectConfig_NilForUnknownDir(t *testing.T) {
-	tmp := t.TempDir()
-	if err := workspace.WriteManifest(tmp, &workspace.Manifest{
-		Version:  workspace.ManifestVersion,
-		Projects: []workspace.ManifestProject{},
-	}); err != nil {
-		t.Fatal(err)
-	}
-	got, err := LoadSubprojectConfig(tmp, "apps/missing")
-	if err != nil {
-		t.Fatal(err)
-	}
-	if got != nil {
-		t.Errorf("expected nil for unknown dir; got %+v", got)
+	_, _, err := resolveCfgAndCreds(root, &WorkspaceConfig{SiteURL: "https://other.example"}, &Credentials{AccessToken: "synthetic"})
+	if err == nil {
+		t.Fatal("omitted siteUrl followed a different instance")
 	}
 }

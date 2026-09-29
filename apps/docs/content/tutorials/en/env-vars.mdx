@@ -3,7 +3,7 @@ title: Configure environment variables
 description: Sign in to Infisical, bind a workspace, and run commands with injected variables.
 ---
 
-Infisical stores the values; `one.manifest.json` records the binding and variable names. One CLI injects variables when commands run, without an intermediate `.env` file.
+Infisical stores the values; `one.manifest.toml` records the binding and environment slugs. One CLI injects variables when commands run, without an intermediate `.env` file.
 
 ## 1. Sign in
 
@@ -22,7 +22,7 @@ From a workspace containing a project named `api`:
 one env set DATABASE_URL -p api --env dev
 ```
 
-The terminal asks for the value with hidden input. The first env operation initializes the Infisical project binding if absent. To use an existing project, select it in Dashboard workspace settings before running the command.
+The terminal asks for the value with hidden input. The first variable save initializes the Infisical project binding if absent. To use an existing project, select it in Dashboard workspace settings before running the command.
 
 At the workspace root, omit `-p` for shared values; interactive `set` offers a scope selector. For scripts, pass a value explicitly and use `--yes` to confirm changes.
 
@@ -43,4 +43,4 @@ one run dev --env dev
 
 The binding enables Infisical injection. Unbound projects inherit the shell environment. A configured project's authentication or fetch failure stops execution; local files are not used as a fallback.
 
-Next: [environments and folder inheritance](/en/tutorials/env-multi-env/), [command reference](/en/docs/env-vars/), and [migration for older manifests](/en/docs/manifest/).
+Next: [environments and folder inheritance](/en/tutorials/env-multi-env/), [command reference](/en/docs/env-vars/), and [Manifest v2](/en/docs/manifest/).
