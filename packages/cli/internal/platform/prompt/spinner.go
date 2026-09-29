@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"charm.land/lipgloss/v2"
-	"charm.land/lipgloss/v2/compat"
 
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/output"
 )
@@ -59,8 +58,10 @@ func Spin(title string, action func() error) error {
 func renderSpinner(w io.Writer, title string, stop <-chan struct{}, done chan<- struct{}) {
 	defer close(done)
 
-	accent := compat.AdaptiveColor{Light: lipgloss.Color("#0E7490"), Dark: lipgloss.Color("#22D3EE")}
-	frameStyle := lipgloss.NewStyle().Foreground(accent)
+	// Use the terminal's cyan palette entry. Importing lipgloss/compat probes
+	// the background synchronously during package initialization, delaying even
+	// commands that never show a spinner when the terminal does not respond.
+	frameStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("6"))
 
 	t := time.NewTicker(frameInterval)
 	defer t.Stop()
@@ -94,7 +95,7 @@ func Step(message string) {
 		return
 	}
 	check := lipgloss.NewStyle().
-		Foreground(compat.AdaptiveColor{Light: lipgloss.Color("#16A34A"), Dark: lipgloss.Color("#4ADE80")}).
+		Foreground(lipgloss.Color("2")).
 		SetString("✓")
 	lipgloss.Fprintf(os.Stderr, "%s %s\n", check, message)
 }
