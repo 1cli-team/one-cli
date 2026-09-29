@@ -253,14 +253,17 @@
 		"deleteTitle": "删除 {{key}}？",
 		"deleteDescription": "这会从当前 Infisical 环境和 folder 中移除该值，无法在这里撤销。",
 		"deleteConfirmation": "输入 {{key}} 确认删除",
-		"notConfiguredTitle": "连接存储项目",
-		"notConfiguredHint": "在工作区设置中选择存储项目，或自动连接后加载当前环境的密钥。",
-		"connectAndLoad": "连接并加载密钥",
+		"notConfiguredTitle": "尚未配置环境变量存储",
+		"notConfiguredHint": "添加第一个变量并保存时，One 会自动创建并连接 Infisical 项目。",
 		"search": "搜索密钥名称",
 		"noMatches": "没有匹配的密钥",
 		"scopeHint": "此处的修改会直接保存到 Infisical。",
 		"loadError": "无法加载密钥",
-		"more": "{{key}} 的更多操作"
+		"more": "{{key}} 的更多操作",
+		"initializing": "正在创建存储项目…",
+		"invalidKey": "变量名只能包含字母、数字和下划线，并以字母或下划线开头，例如 API_TOKEN。",
+		"storageCreated": "已创建 Infisical 项目：{{name}}",
+		"storageRenamed": "名称 {{requested}} 已被占用，已创建 Infisical 项目：{{name}}"
 	},
 	"project": {
 		"fields": {

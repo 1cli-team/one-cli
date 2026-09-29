@@ -7,17 +7,17 @@ USAGE
 
 EXAMPLES
   one create demo
-  one create . --name demo
+  one create .
   one create demo --yes
 
 TIPS
-Creates an empty workspace. Run one add to add a project.
+Create an empty workspace named after its target folder. Empty directories and empty Git repositories are supported. Run one add afterward to add a project.
 
 COMMON OPTIONS
-  -n, --name <value>       Workspace name (default: target directory name)
   -o, --output <value>     Output format: json | yaml | text (default: terminal-friendly text, JSON when piped)
   -y, --yes                Use defaults without prompting
 
 AUTOMATION AND ADVANCED OPTIONS
+  -n, --name <value>       Workspace name (default: target directory name)
   --preset <value>         Automation preset ID; implies --yes and may create projects
   --project-names <value>  Comma-separated project names for --preset expansion

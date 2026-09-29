@@ -85,16 +85,10 @@ func (s *Service) EnclosingWorkspace(targetDir string) string {
 }
 
 func validateWorkspaceTarget(targetDir, displayPath string) error {
-	empty, err := isDirectoryEmpty(targetDir)
-	if err != nil {
+	if err := validateEmptyTarget(targetDir, displayPath); err != nil {
 		return err
 	}
-	if !empty {
-		return cliErrors.New(
-			cliErrors.EXISTING_TARGET_NOT_EMPTY,
-			i18n.Tf("creation.target_not_empty", displayPath),
-		).WithContext(map[string]any{"target_path": targetDir, "display_path": displayPath})
-	}
+
 	if enclosing := enclosingWorkspace(targetDir); enclosing != "" {
 		return cliErrors.New(
 			cliErrors.WORKSPACE_NESTED_FORBIDDEN,
@@ -189,6 +183,10 @@ func (s *Service) CreateWorkspace(ctx context.Context, input WorkspaceInput) (Wo
 	}
 	if err := initGitRepo(input.TargetDir); err != nil {
 		result.HooksWarn = i18n.Errorf("creation.git_failed", err)
+	} else if shared, err := hasSharedGitDirectory(input.TargetDir); err != nil {
+		result.HooksWarn = err
+	} else if shared {
+		result.HooksWarn = errors.New(i18n.T("creation.shared_hooks_skipped"))
 	} else {
 		install, err := hooks.PlanInstall(ctx, input.TargetDir, "", false)
 		if err == nil {

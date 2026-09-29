@@ -2,6 +2,9 @@
   "error": {
     "code": "EXISTING_TARGET_NOT_EMPTY",
     "context": {
+      "conflicting_entries": [
+        "preexisting.txt"
+      ],
       "display_path": "\u003cvolatile\u003e",
       "target_path": "\u003cvolatile\u003e"
     },
@@ -9,11 +12,7 @@
     "remediation": [
       {
         "action": "use-different-dir",
-        "hint": "Choose an empty target directory"
-      },
-      {
-        "action": "remove-target",
-        "hint": "Remove the existing directory manually, then retry"
+        "hint": "Choose another empty directory, for example one create my-app."
       }
     ]
   },

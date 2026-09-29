@@ -2,9 +2,14 @@ package workspace
 
 import (
 	"encoding/json"
+	"errors"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
+
+	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/i18n"
+	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/output"
 )
 
 func TestManifest_RoundTrip(t *testing.T) {
@@ -150,5 +155,39 @@ func TestInitWorkspaceEnv_PreservesProjects(t *testing.T) {
 	}
 	if len(got.Projects) != 1 {
 		t.Fatalf("projects wiped: %d", len(got.Projects))
+	}
+}
+
+func TestManifestParseErrorIncludesPathLocationAndCause(t *testing.T) {
+	t.Cleanup(func() { _ = i18n.Init(i18n.DefaultLocale) })
+	for _, locale := range []string{"zh-CN", "en-US"} {
+		_ = i18n.Init(locale)
+		root := t.TempDir()
+		path := ManifestPath(root)
+		// The invalid character is on line 2, column 11, after a Unicode name.
+		if err := os.WriteFile(path, []byte("{\n\"中文\":true,@}"), 0644); err != nil {
+			t.Fatal(err)
+		}
+		_, err := ReadManifest(root)
+		var coded *output.Error
+		var syntax *json.SyntaxError
+		if !errors.As(err, &coded) || coded.Code != "MANIFEST_INVALID" || !errors.As(err, &syntax) {
+			t.Fatalf("lost structured error or cause: %v", err)
+		}
+		if !strings.Contains(err.Error(), path) || !strings.Contains(err.Error(), "@") || coded.Context["line"] != 2 || coded.Context["column"] != 11 {
+			t.Fatalf("missing error detail: %v; context=%v", err, coded.Context)
+		}
+	}
+}
+
+func TestManifestReadErrorIncludesPathAndCause(t *testing.T) {
+	root := t.TempDir()
+	if err := os.Mkdir(ManifestPath(root), 0755); err != nil {
+		t.Fatal(err)
+	}
+	_, err := ReadManifest(root)
+	var pathError *os.PathError
+	if !errors.As(err, &pathError) || !strings.Contains(err.Error(), ManifestPath(root)) {
+		t.Fatalf("missing read cause/path: %v", err)
 	}
 }

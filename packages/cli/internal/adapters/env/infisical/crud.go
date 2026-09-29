@@ -98,9 +98,9 @@ func Set(ctx context.Context, projectRoot string, in SetInput) (*SetResult, erro
 	}
 	if !in.Overwrite {
 		return nil, cliErrors.New(cliErrors.ENV_SET_OVERWRITE_REQUIRED,
-			i18n.Tf("env.key_overwrite", in.Key)).
+			i18n.Tf("env.key_overwrite_target", in.Key, cfg.ProjectName, cfg.ProjectID, env, path)).
 			WithContext(map[string]any{
-				"env": env, "path": path, "key": in.Key,
+				"env": env, "path": path, "key": in.Key, "project_id": cfg.ProjectID, "project_name": cfg.ProjectName,
 			})
 	}
 	if _, err := client.UpdateSecret(env, path, in.Key, in.Value); err != nil {

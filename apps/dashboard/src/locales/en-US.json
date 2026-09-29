@@ -253,14 +253,17 @@
 		"deleteTitle": "Delete {{key}}?",
 		"deleteDescription": "This removes the value from the selected Infisical environment and folder. This action cannot be undone here.",
 		"deleteConfirmation": "Type {{key}} to confirm",
-		"notConfiguredTitle": "Connect a storage project",
-		"notConfiguredHint": "Choose a storage project in Workspace settings, or connect automatically to load this environment’s secrets.",
-		"connectAndLoad": "Connect and load secrets",
+		"notConfiguredTitle": "Environment variable storage is not set up",
+		"notConfiguredHint": "One will create and connect an Infisical project when you save the first variable.",
 		"search": "Search secret keys",
 		"noMatches": "No matching secrets",
 		"scopeHint": "Changes here are saved directly to Infisical.",
 		"loadError": "Unable to load secrets",
-		"more": "More actions for {{key}}"
+		"more": "More actions for {{key}}",
+		"initializing": "Setting up storage…",
+		"invalidKey": "Use letters, digits, and underscores for the key, starting with a letter or underscore, such as API_TOKEN.",
+		"storageCreated": "Created Infisical project: {{name}}",
+		"storageRenamed": "Name {{requested}} was taken. Created Infisical project: {{name}}"
 	},
 	"project": {
 		"fields": {

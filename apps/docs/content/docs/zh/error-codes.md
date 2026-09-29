@@ -76,12 +76,11 @@ First positional argument did not match any known subcommand.
 
 ### `EXISTING_TARGET_NOT_EMPTY`
 
-Target directory exists and is non-empty; create only writes into empty / new directories.
+目标目录含有文件，或 Git 仓库存在尚未提交的删除。请检查错误中列出的冲突。
 
 **Remediation**:
 
-- `use-different-dir` — 换一个空的目标目录
-- `remove-target` — 手动删除已存在的目录后重试
+- `use-different-dir` — 选择空目录或空 Git 仓库
 
 ### `INVALID_NAME`
 
@@ -311,9 +310,7 @@ Non-interactive env set called without <VALUE>.
 
 **Remediation**:
 
-- `use-existing-env` — 查看 one.manifest.json#environments.names 中已声明的环境，或改用 --env 指定其中一个
-- `create-via-set` — 先在 Infisical 创建环境，再将名称登记到 manifest.environments.names
-- `register-env` — 在 Infisical 后端，先在 UI 创建环境，再把名称加入 one.manifest.json#environments.names
+- `use-existing-env` — 查看可用环境，并使用 `--env` 选择其中一个。CLI 的 `set` 可以创建新环境，读取操作要求环境已经存在。<br />运行：`one env`
 
 ## Infisical 后端
 
@@ -359,11 +356,11 @@ Network error reaching the Infisical API. Check siteUrl + connectivity.
 
 ### `INFISICAL_NOT_CONFIGURED`
 
-The workspace has no Infisical project binding.
+当前工作区尚未连接 Infisical 项目。读取、刷新和删除不会初始化存储。
 
 **Remediation**:
 
-- `select-project` — 在 Dashboard 工作区设置中选择 Infisical 项目<br />运行：`one serve`
+- `set-first-variable` — 使用 CLI 或 Dashboard 保存第一个变量时，会创建并连接 Infisical 项目。<br />运行：`one env set <KEY>`
 
 ### `INFISICAL_PROJECT_CREATE_FORBIDDEN`
 
@@ -373,7 +370,7 @@ The workspace has no Infisical project binding.
 
 ### `INFISICAL_PROJECT_NAME_TAKEN`
 
-Infisical 项目名已被占用；auto-bind 会自动加随机后缀重试，但重试次数耗尽后会冒泡此错误。
+遇到同名项目并添加短后缀重试后，仍无法创建。One 不会根据名称连接已有项目。
 
 **Remediation**:
 

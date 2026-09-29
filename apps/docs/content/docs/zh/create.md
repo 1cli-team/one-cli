@@ -15,17 +15,14 @@ one create [dir] [options]
 
 | 参数 | 说明 |
 |---|---|
-| `dir` | 目标目录（位置参数）。传 `.` 在当前目录就地创建（用 `basename(cwd)` 当名字）；目标目录必须不存在或为空 |
-| `-n, --name <name>` | 工作区名称（默认 `basename(dir)`） |
+| `dir` | 目标目录（位置参数）。传 `.` 在当前目录就地创建，自动使用当前文件夹名；支持新目录、空目录或只有有效 Git 元数据的仓库 |
+| `-n, --name <name>` | 高级选项：覆盖自动使用的文件夹名称 |
 | `-y, --yes` | 非交互模式：使用默认值；必须显式传 `dir` |
 | `-o, --output <fmt>` | `json` / `yaml` / `text`（默认按 TTY 检测） |
 
 ## 交互模式
 
-直接运行 `one create` 会进入终端交互式询问：
-
-1. 目标目录（例如 `./my-app`，也可以填 `.` 表示当前目录）
-2. 工作区名称（可留空；留空时使用目标目录的 basename）
+直接运行 `one create` 只询问目标目录，例如 `./my-app`，也可以填 `.` 表示当前目录。工作区名称自动使用最后一级文件夹名，不再单独询问；名称不合要求时会直接在目录输入处提示。
 
 
 脚本、CI、agent 场景用非交互写法：
@@ -59,7 +56,7 @@ one create my-app --yes
 
 ## Infisical 绑定
 
-创建时不访问 Infisical，也不写入 `env` 绑定。需要托管变量时先通过 `one login` 登录，首次 `one env set`、`get` 或 `list` 会初始化绑定；也可在 Dashboard 选择已有项目。未绑定时执行命令使用 shell 环境。
+创建时不访问 Infisical，也不写入 `env` 绑定。需要托管变量时先通过 `one login` 登录，首次保存变量（`one env set` 或 Dashboard 保存）时才初始化绑定。查看、刷新、读取和删除不会创建远程项目。重名时会自动追加短后缀，并显示实际创建的远程项目名称；本地工作区名称保持原样。后续写入按保存的远程项目 ID 定位。未绑定时执行命令使用 shell 环境。
 
 ## 输出
 
@@ -86,7 +83,7 @@ one create my-app --yes
 
 ```bash
 one create
-# 引导填写目标目录 + 可选工作区名称
+# 只需填写目标目录
 ```
 
 ### 非交互（CI / 脚本）
@@ -108,6 +105,10 @@ mkdir my-app && cd my-app
 one create . --yes
 ```
 
+### 在已有空 Git 仓库中创建
+
+克隆空仓库或执行 `git init` 后，运行 `one create .` 即可。One 会保留分支、远程地址、历史和 Git 配置。已有自定义 hooks 时保留原内容并提示；linked worktree 的共享 hooks 跳过自动安装。含 README、源码等文件或未提交删除的仓库仍会提示冲突。
+
 ### 起骨架 + 加首个项目
 
 ```bash
@@ -121,7 +122,7 @@ one dev -p api
 
 | 错误码 | 处理 |
 |---|---|
-| `EXISTING_TARGET_NOT_EMPTY` | 换一个空目录，或手动删除目标后重试 |
+| `EXISTING_TARGET_NOT_EMPTY` | 根据提示检查已有文件，选择空目录或空 Git 仓库 |
 | `INVALID_NAME` | 名字必须匹配 `^[a-zA-Z0-9][a-zA-Z0-9_-]*$`；空格替换为 `-` |
 | `PROJECT_NAME_REQUIRED` | 非交互模式必须把工作区目录作为位置参数传入 |
 | `WORKSPACE_NESTED_FORBIDDEN` | 拒绝在已有 workspace 里再 create；换目录或用 `one add` |

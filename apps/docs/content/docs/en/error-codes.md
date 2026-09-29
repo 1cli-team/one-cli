@@ -64,7 +64,7 @@ Workspace detection, naming rules, and target-directory conflicts.
 
 ### `EXISTING_TARGET_NOT_EMPTY`
 
-Create target exists and is non-empty. Pick an empty directory or remove the target manually.
+The target contains files or uncommitted Git deletions. Check the reported conflicts and choose an empty directory or an empty Git repository.
 
 ### `INVALID_NAME`
 
@@ -253,15 +253,15 @@ Could not reach Infisical. Check network and site URL.
 
 ### `INFISICAL_NOT_CONFIGURED`
 
-Workspace is not configured for Infisical or has no project binding.
+This workspace has no Infisical project binding. Save the first variable with `one env set <KEY>` or Dashboard Save to create one. Reading, refreshing, and deleting do not initialize storage.
 
 ### `INFISICAL_PROJECT_CREATE_FORBIDDEN`
 
-Machine identity cannot create projects. Grant permissions or create manually.
+The signed-in account cannot create projects. Ask an administrator for permission or connect an accessible project in Dashboard settings.
 
 ### `INFISICAL_PROJECT_NAME_TAKEN`
 
-Desired project name already exists. Change the configured name or bind manually.
+Creation still failed after retrying name conflicts with short suffixes. Set a different `env.projectName` in `one.manifest.json` and retry. One never connects to an existing project by matching its name.
 
 ### `INFISICAL_PROJECT_NOT_FOUND`
 

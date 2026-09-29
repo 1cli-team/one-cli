@@ -7,7 +7,7 @@ Infisical 是 One CLI 唯一管理的环境变量来源。变量在执行命令�
 
 ## 绑定工作区
 
-新工作区没有 Infisical 绑定，无需登录即可运行。先执行 `one login`，首次使用 `one env set` 或 `one env list` 时会初始化绑定。也可以在 Dashboard 的工作区设置中选择已有 Infisical 项目。
+新工作区没有 Infisical 绑定，无需登录即可运行。先执行 `one login`，首次使用 `one env set` 保存变量时会初始化绑定。Dashboard 也仅在首次点击保存时初始化；打开页面、刷新和取消编辑不会创建项目。
 
 绑定保存在 `one.manifest.json` 顶层的 `env`：
 
@@ -45,7 +45,7 @@ one env list -p web --env dev
 
 `environments.names` 声明可用环境，默认使用 `environments.default`，缺省时取第一个名称。新工作区声明 `dev`、`preview`、`prod`，默认 `dev`。`--env` 可覆盖选择。
 
-`set` 可以经确认登记新环境。`list` 对未声明名称返回 `ENV_UNKNOWN_ENVIRONMENT`；这些命令仍可能初始化尚未存在的 Infisical 绑定。
+`set` 可以经确认登记新环境。`list` 对未声明名称返回 `ENV_UNKNOWN_ENVIRONMENT`；`list`、读取与 `unset` 都只使用已有绑定；未绑定时会提示先保存第一个变量。
 
 项目默认使用 `relativeDir` 对应的 Infisical 目录，也可通过 `projects[].env` 覆盖：
 
@@ -80,7 +80,7 @@ one run dev --env dev
 
 | 错误码 | 恢复方法 |
 |---|---|
-| `INFISICAL_NOT_CONFIGURED` | 在 Dashboard 绑定 Infisical 项目，或登录后通过 env 命令初始化 |
+| `INFISICAL_NOT_CONFIGURED` | 登录后保存第一个变量，One 会自动创建并绑定存储项目 |
 | `INFISICAL_AUTH_MISSING` / `INFISICAL_AUTH_FAILED` | 执行 `one login` 并检查绑定项目的访问权限 |
 | `INFISICAL_PROJECT_NAME_TAKEN` | 设置不同的 `env.projectName`，或显式绑定已有项目 |
 | `INFISICAL_PROJECT_CREATE_FORBIDDEN` | 在 Dashboard 选择已有且可访问的项目 |
@@ -90,3 +90,7 @@ one run dev --env dev
 | `ENV_UNKNOWN_ENVIRONMENT` | 通过 `set` 登记新环境，或选择已有名称 |
 
 旧工作区参阅 [Manifest 迁移](/zh/docs/manifest/)，初次配置参阅[操作教程](/zh/tutorials/env-vars/)。
+
+## 同名工作区
+
+远程项目默认使用工作区名称；名称冲突时自动添加短后缀，并显示实际名称。不同工作区不会仅因同名而共用变量，写入目标由 `env.projectId` 确定。复制或克隆包含绑定的配置会继续使用同一远程项目。创建后变量保存失败时，绑定会保留，重试复用该项目。

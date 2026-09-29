@@ -51,5 +51,14 @@ func (r setOutput) RenderTTY(w io.Writer) {
 	if r.SetResult == nil {
 		return
 	}
+	if binding := r.Binding; binding != nil {
+		if binding.Created {
+			if binding.RequestedName != "" {
+				fmt.Fprintf(w, i18n.T("env.project_renamed")+"\n", binding.RequestedName, binding.ProjectName)
+			}
+			fmt.Fprintf(w, i18n.T("env.project_created")+"\n", binding.ProjectName)
+		}
+		fmt.Fprintf(w, i18n.T("env.project_target")+"\n", binding.ProjectName, binding.ProjectID)
+	}
 	fmt.Fprintf(w, i18n.T("env.set_success_remote")+"\n", r.Key, r.Path, r.Environment)
 }

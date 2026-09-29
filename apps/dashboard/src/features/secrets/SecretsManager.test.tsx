@@ -106,58 +106,82 @@ describe("Infisical secrets manager", () => {
 		await waitFor(() => expect(requestBody).toEqual({ key: "API_TOKEN", value: "secret-value" }));
 	});
 
-	it("repairs an older missing Infisical binding before retrying the list", async () => {
-		let initialized = false;
-		server.use(
-			http.get("http://localhost/api/workspaces/demo-entry/secrets", () => {
-				if (!initialized) {
-					return HttpResponse.json(
-						{
-							schema: "one-cli/error/v1",
-							error: {
-								code: "INFISICAL_NOT_CONFIGURED",
-								message: "Infisical project binding is missing.",
-								context: {},
-								remediation: [],
-							},
-						},
-						{ status: 409 },
-					);
-				}
-				return HttpResponse.json({
-					schema: "one-cli/env-list/v1",
-					env: "dev",
-					path: "/",
-					keys: [],
-					total: 0,
-				});
-			}),
-			http.post(
-				"http://localhost/api/workspaces/demo-entry/environment/backend/initialize",
-				({ request }) => {
-					const url = new URL(request.url);
-					expect(url.searchParams.get("env")).toBe("dev");
-					initialized = true;
+	it.each(["en-US", "zh-CN"])(
+		"initializes only on save, not on retry or cancel (%s)",
+		async (locale) => {
+			await i18n.changeLanguage(locale);
+			let initializations = 0;
+			let saves = 0;
+			let lists = 0;
+			server.use(
+				http.get("http://localhost/api/workspaces/demo-entry/secrets", () => {
+					lists++;
+					if (!initializations)
+						return HttpResponse.json(
+							{ error: { code: "INFISICAL_NOT_CONFIGURED", message: "Storage is not connected." } },
+							{ status: 409 },
+						);
 					return HttpResponse.json({
-						schema: "one-cli/workspace-profile/v1",
-						root: "/workspace/demo",
-						environment: "dev",
-						revision: "sha256:repaired",
-						domain: "env",
-						backend: "infisical",
-						configurable: true,
+						schema: "one-cli/env-list/v1",
+						env: "dev",
+						path: "/",
+						keys: saves ? ["API_TOKEN"] : [],
+						total: saves,
 					});
-				},
-			),
-		);
-		const user = userEvent.setup();
-		renderManager();
-
-		expect(await screen.findByText("Connect a storage project")).toBeDefined();
-		await user.click(screen.getByRole("button", { name: "Connect and load secrets" }));
-		expect(
-			await screen.findByText("No secrets are defined directly in this scope yet."),
-		).toBeDefined();
-		expect(initialized).toBe(true);
-	});
+				}),
+				http.post(
+					"http://localhost/api/workspaces/demo-entry/environment/backend/initialize",
+					() => {
+						initializations++;
+						return HttpResponse.json({
+							schema: "one-cli/workspace-environment/v1",
+							backend: "infisical",
+							projectId: "new-id",
+							projectName: "demo-a3f2",
+							binding: {
+								project_id: "new-id",
+								project_name: "demo-a3f2",
+								created: true,
+								requested_name: "demo",
+							},
+						});
+					},
+				),
+				http.post("http://localhost/api/workspaces/demo-entry/secrets", () => {
+					expect(initializations).toBe(1);
+					saves++;
+					return HttpResponse.json({ action: "created", key: "API_TOKEN" }, { status: 201 });
+				}),
+			);
+			const user = userEvent.setup();
+			renderManager();
+			expect(await screen.findByText(i18n.t("secrets.notConfiguredTitle"))).toBeDefined();
+			expect(initializations).toBe(0);
+			await user.click(screen.getByRole("button", { name: i18n.t("secrets.retry") }));
+			await waitFor(() => expect(lists).toBeGreaterThan(1));
+			expect(initializations).toBe(0);
+			await user.click(screen.getByRole("button", { name: i18n.t("secrets.add") }));
+			await user.click(
+				within(await screen.findByRole("dialog")).getByRole("button", {
+					name: i18n.t("form.cancel"),
+				}),
+			);
+			expect(initializations).toBe(0);
+			await user.click(screen.getByRole("button", { name: i18n.t("secrets.add") }));
+			const dialog = within(await screen.findByRole("dialog"));
+			await user.type(dialog.getByLabelText(i18n.t("secrets.key")), "1INVALID");
+			await user.click(dialog.getByRole("button", { name: i18n.t("secrets.save") }));
+			expect(await dialog.findByText(i18n.t("secrets.invalidKey"))).toBeDefined();
+			expect(initializations).toBe(0);
+			expect(saves).toBe(0);
+			await user.clear(dialog.getByLabelText(i18n.t("secrets.key")));
+			await user.type(dialog.getByLabelText(i18n.t("secrets.key")), "API_TOKEN");
+			await user.type(dialog.getByLabelText(i18n.t("secrets.value")), "secret-value");
+			await user.click(dialog.getByRole("button", { name: i18n.t("secrets.save") }));
+			await waitFor(() => expect(saves).toBe(1));
+			expect(initializations).toBe(1);
+			await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+			await i18n.changeLanguage("en-US");
+		},
+	);
 });

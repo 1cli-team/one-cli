@@ -4,13 +4,10 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"path/filepath"
-	"strings"
 
 	"github.com/spf13/cobra"
 
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/core/template"
-	"github.com/torchstellar-team/one-cli/packages/cli/internal/core/workspace"
 	creationmodule "github.com/torchstellar-team/one-cli/packages/cli/internal/modules/creation"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/modules/preset"
 	cliErrors "github.com/torchstellar-team/one-cli/packages/cli/internal/platform/errors"
@@ -97,14 +94,11 @@ func runCreateWithPreset(deps Dependencies, cmd *cobra.Command, cwd, rawDir stri
 	}
 	useCurrentDir := rawDir == "." || rawDir == "./"
 	targetDir := resolveTargetPath(cwd, rawDir)
-	projectName := strings.TrimSpace(flags.name)
-	if projectName == "" {
-		projectName = filepath.Base(targetDir)
+	projectName, err := resolveWorkspaceName(targetDir, flags.name)
+	if err != nil {
+		return err
 	}
-	if !workspace.IsValidProjectName(projectName) {
-		return cliErrors.New(cliErrors.INVALID_NAME,
-			i18n.Tf("create.name_invalid", projectName))
-	}
+
 	displayPath := relativeOrAbs(cwd, targetDir, useCurrentDir)
 
 	// Step 5: creation owns the complete mutation, including the final target

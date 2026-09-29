@@ -58,7 +58,16 @@ func newSetCmd(deps Dependencies) *cobra.Command {
 			input := environmentmodule.SetInput{
 				Plan: plan, Key: key, Value: value, Overwrite: yes,
 			}
-			result, err := deps.Service.Set(cmd.Context(), input)
+			var result *environmentmodule.SetResult
+			progress := i18n.T("env.saving")
+			if plan.NeedsBinding {
+				progress = i18n.T("env.initializing")
+			}
+			err = prompt.Spin(progress, func() error {
+				var setErr error
+				result, setErr = deps.Service.Set(cmd.Context(), input)
+				return setErr
+			})
 			if retry, confirmErr := confirmOverwrite(err, key, yes); confirmErr != nil {
 				return confirmErr
 			} else if retry {
@@ -146,7 +155,11 @@ func confirmOverwrite(setErr error, key string, yes bool) (bool, error) {
 	if yes || !output.CanPrompt() {
 		return false, setErr
 	}
-	overwrite, err := prompt.Confirm(i18n.Tf("env.prompt_overwrite", key), false,
+	message := i18n.Tf("env.prompt_overwrite", key)
+	if detail, ok := setErr.(*output.Error); ok {
+		message = detail.Message + "\n" + message
+	}
+	overwrite, err := prompt.Confirm(message, false,
 		i18n.T("common.overwrite"), i18n.T("common.cancel"))
 	if err != nil {
 		return false, err

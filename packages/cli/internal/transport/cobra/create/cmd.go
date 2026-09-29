@@ -45,7 +45,7 @@ func newCreateCmd(deps Dependencies) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "create [dir]",
 		Long:    i18n.T("create.tip"),
-		Example: "  one create demo\n  one create . --name demo\n  one create demo --yes",
+		Example: "  one create demo\n  one create .\n  one create demo --yes",
 		Args:    i18n.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			dir := ""
@@ -65,7 +65,7 @@ func newCreateCmd(deps Dependencies) *cobra.Command {
 	i18n.MarkFlagUsage(cmd, "yes", "create.flag.yes")
 	i18n.MarkFlagUsage(cmd, "preset", "create.flag.preset")
 	i18n.MarkFlagUsage(cmd, "project-names", "create.flag.project_names")
-	helpui.MarkAdvanced(cmd, "preset", "project-names")
+	helpui.MarkAdvanced(cmd, "name", "preset", "project-names")
 	i18n.MarkShort(cmd, "create.short")
 	i18n.MarkLong(cmd, "create.tip")
 	return cmd

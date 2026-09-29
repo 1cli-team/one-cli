@@ -6,8 +6,10 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
+	"unicode/utf8"
 
 	cliErrors "github.com/torchstellar-team/one-cli/packages/cli/internal/platform/errors"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/fsutil"
@@ -178,7 +180,7 @@ func ReadManifestSnapshot(projectRoot string) (*Manifest, string, error) {
 		if errors.Is(err, os.ErrNotExist) {
 			return emptyManifest(), "", nil
 		}
-		return nil, "", cliErrors.New(cliErrors.MANIFEST_INVALID, i18n.T("manifest.parse_failed"))
+		return nil, "", cliErrors.New(cliErrors.MANIFEST_INVALID, i18n.Tf("manifest.read_failed", path, err)).WithContext(map[string]any{"path": path}).WithCause(err)
 	}
 	var m Manifest
 	dec := json.NewDecoder(bytes.NewReader(raw))
@@ -190,7 +192,7 @@ func ReadManifestSnapshot(projectRoot string) (*Manifest, string, error) {
 		if err.Error() == `json: unknown field "deploy"` || err.Error() == `json: unknown field "container"` {
 			return nil, "", cliErrors.New(cliErrors.MANIFEST_INVALID, i18n.T("manifest.retired_fields"))
 		}
-		return nil, "", cliErrors.New(cliErrors.MANIFEST_INVALID, i18n.T("manifest.parse_failed"))
+		return nil, "", manifestParseError(path, raw, err)
 	}
 	if m.Version != ManifestVersion {
 		msg := i18n.Tf("manifest.version_unsupported", m.Version, ManifestVersion)
@@ -217,4 +219,25 @@ func emptyManifest() *Manifest {
 		Version:  ManifestVersion,
 		Projects: []ManifestProject{},
 	}
+}
+
+// Include the source location without dumping configuration contents.
+func manifestParseError(path string, raw []byte, cause error) error {
+	context := map[string]any{"path": path}
+	message := i18n.Tf("manifest.parse_detail", path, cause)
+	var syntax *json.SyntaxError
+	offset := int64(0)
+	if errors.As(cause, &syntax) {
+		offset = syntax.Offset
+	} else if errors.Is(cause, io.ErrUnexpectedEOF) || errors.Is(cause, io.EOF) {
+		offset = int64(len(raw)) + 1
+	}
+	if offset > 0 {
+		prefix := raw[:min(int64(len(raw)), offset-1)]
+		line := bytes.Count(prefix, []byte("\n")) + 1
+		column := utf8.RuneCount(prefix[bytes.LastIndexByte(prefix, '\n')+1:]) + 1
+		context["line"], context["column"] = line, column
+		message = i18n.Tf("manifest.parse_location", path, line, column, cause)
+	}
+	return cliErrors.New(cliErrors.MANIFEST_INVALID, message).WithContext(context).WithCause(cause)
 }

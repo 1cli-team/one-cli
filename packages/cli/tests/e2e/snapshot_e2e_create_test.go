@@ -9,6 +9,7 @@ package cli_test
 import (
 	"io/fs"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -243,5 +244,45 @@ func assertWorkspaceAgentDocs(t *testing.T, root string) {
 		if _, err := os.Stat(filepath.Join(root, entry)); !os.IsNotExist(err) {
 			t.Fatalf("unexpected generated %s: %v", entry, err)
 		}
+	}
+}
+
+func TestCreateInCurrentEmptyGitRepository(t *testing.T) {
+	tmp := t.TempDir()
+	isolateHome(t, tmp)
+	target := filepath.Join(tmp, "existing-repo")
+	if err := os.Mkdir(target, 0755); err != nil {
+		t.Fatal(err)
+	}
+	for _, args := range [][]string{{"init", "-b", "topic"}, {"remote", "add", "origin", "https://example.invalid/team/existing.git"}} {
+		cmd := exec.Command("git", args...)
+		cmd.Dir = target
+		if out, err := cmd.CombinedOutput(); err != nil {
+			t.Fatalf("git: %v %s", err, out)
+		}
+	}
+	before, _ := os.ReadFile(filepath.Join(target, ".git", "config"))
+	stdout, stderr, code := runBinaryIn(t, target, "create", ".", "--yes", "-o", "json")
+	if code != 0 {
+		t.Fatalf("create: %d %s %s", code, stdout, stderr)
+	}
+	result := mustParseJSON(t, stdout)
+	if result["project_name"] != "existing-repo" || result["created_in_place"] != true {
+		t.Fatalf("result=%v", result)
+	}
+	after, _ := os.ReadFile(filepath.Join(target, ".git", "config"))
+	if string(before) != string(after) {
+		t.Fatal("Git config changed")
+	}
+	manifestBefore, _ := os.ReadFile(filepath.Join(target, "one.manifest.json"))
+	for _, args := range [][]string{{"env", "list", "-o", "json"}, {"env", "unset", "TOKEN", "-o", "json"}} {
+		_, stderr, code = runBinaryIn(t, target, args...)
+		if code == 0 || !strings.Contains(stderr, "INFISICAL_NOT_CONFIGURED") {
+			t.Fatalf("%v: %d %s", args, code, stderr)
+		}
+	}
+	manifestAfter, _ := os.ReadFile(filepath.Join(target, "one.manifest.json"))
+	if string(manifestBefore) != string(manifestAfter) {
+		t.Fatal("read/delete changed binding")
 	}
 }

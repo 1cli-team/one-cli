@@ -3,6 +3,7 @@ package output
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"io"
 	"strings"
 	"testing"
@@ -217,5 +218,20 @@ func TestPlain_DoesNotImplement_TTYRenderer(t *testing.T) {
 	var p any = &plain{Schema: "one-cli/test/v1", Value: 1}
 	if _, ok := p.(TTYRenderer); ok {
 		t.Errorf("plain should NOT implement TTYRenderer (would change Emit dispatch)")
+	}
+}
+
+func TestErrorRecoveryPrecedesCodeAndCauseIsPreserved(t *testing.T) {
+	t.Cleanup(func() { SetMode(ModeAuto) })
+	SetMode(ModeTTY)
+	cause := errors.New("disk write failed")
+	err := NewError("ONE_CLI_ERROR", "Cannot save demo.\nDisk write failed.").WithCause(cause).WithRemediation(Remediation{Hint: "Check write permissions."})
+	if !errors.Is(err, cause) {
+		t.Fatal("cause lost")
+	}
+	var out bytes.Buffer
+	emitErrorTo(&out, err)
+	if !strings.Contains(out.String(), "\n  Disk write failed.") || strings.Index(out.String(), "Check write permissions.") > strings.Index(out.String(), "ONE_CLI_ERROR") {
+		t.Fatalf("error order=%s", out.String())
 	}
 }
