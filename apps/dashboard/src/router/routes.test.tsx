@@ -147,7 +147,7 @@ function registerCatalogHandler() {
 						toolchain: "node",
 						packageManager: "pnpm",
 						buildVersion: "1.0.0",
-						devCommand: "pnpm dev",
+						devAvailable: true,
 						availableEnvironments: ["dev", "preview", "prod"],
 						environment: {
 							backend: "infisical",

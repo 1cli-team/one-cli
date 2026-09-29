@@ -59,7 +59,7 @@ one add empty-library --name shared --yes
 
 These templates create `apps/web/`, `services/api/`, and `packages/shared/`, respectively, containing only a `.gitkeep` file so Git tracks the directory. They register `toolchain: "none"` and generate no `package.json`, `go.mod`, dependencies, or startup tasks. Interactive `one add` and the Dashboard's new-project picker also offer these choices.
 
-For Node or Go code, set the project's `toolchain` in `one.manifest.json` to `node` or `go`. Node projects use `packageManager: "pnpm"` and need membership in the root package workspace; Go modules need membership in the root `go.work`. Define tasks in `package.json` / `Taskfile.yml`, or set the project's `dev.command`, then run `one init mise` to update task configuration. For other languages, keep `toolchain: "none"` and define your own tools and tasks in the root `mise.toml`, or set `dev.command`. Configure the commands before using `one dev` / `one build`.
+For Node or Go code, set the project's `toolchain` in `one.manifest.json` to `node` or `go`. Node projects use `packageManager: "pnpm"` and need membership in the root package workspace; Go modules need membership in the root `go.work`. Define tasks in `package.json` / `Taskfile.yml`, then run `one init mise` to update task configuration. For other languages, keep `toolchain: "none"` and define your own tools and tasks in the root `mise.toml`. Configure the commands before using `one dev` / `one build`.
 
 ## Output
 
@@ -119,7 +119,7 @@ one add nestjs-api --name user-api --yes -o json | jq
 ## What Gets Synced
 
 - Registers the project in `one.manifest.json#projects[]`
-- Writes the project's local development command
+- Projects existing package scripts and Taskfile tasks into native mise configuration
 - Leaves continuous integration unconfigured
 
 Non-blocking sync issues are reported in `warnings[]`; the project is still added.

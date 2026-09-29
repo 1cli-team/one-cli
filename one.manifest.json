@@ -1,46 +1,41 @@
 {
-  "version": 1,
-  "workspace": {
-    "id": "one-cli",
-    "name": "One CLI"
-  },
   "environments": {
+    "default": "dev",
     "names": [
       "dev",
       "preview",
       "prod"
-    ],
-    "default": "dev"
+    ]
   },
   "projects": [
     {
       "name": "dashboard",
-      "relativeDir": "apps/dashboard",
-      "templateId": "react-spa",
-      "toolchain": "node",
       "packageManager": "pnpm",
-      "dev": {
+      "relativeDir": "apps/dashboard",
+      "service": {
         "url": "http://localhost:5173"
-      }
+      },
+      "templateId": "react-spa",
+      "toolchain": "node"
     },
     {
       "name": "docs",
-      "relativeDir": "apps/docs",
-      "templateId": "nextjs-app",
-      "toolchain": "node",
       "packageManager": "pnpm",
-      "dev": {
+      "relativeDir": "apps/docs",
+      "service": {
         "url": "http://localhost:3000"
-      }
+      },
+      "templateId": "nextjs-app",
+      "toolchain": "node"
     },
     {
       "name": "cli",
       "relativeDir": "packages/cli",
-      "templateId": "custom",
-      "toolchain": "go",
-      "dev": {
+      "service": {
         "url": "http://127.0.0.1:5174"
-      }
+      },
+      "templateId": "custom",
+      "toolchain": "go"
     },
     {
       "name": "kernel",
@@ -48,5 +43,10 @@
       "templateId": "custom",
       "toolchain": "go"
     }
-  ]
+  ],
+  "version": 1,
+  "workspace": {
+    "id": "one-cli",
+    "name": "One CLI"
+  }
 }

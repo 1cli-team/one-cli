@@ -2,16 +2,12 @@ package tasks
 
 import (
 	"context"
-	"encoding/json"
 	"os"
 	"path/filepath"
-	"runtime"
 	"strings"
 	"testing"
 
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/application/execution"
-	"github.com/torchstellar-team/one-cli/packages/cli/internal/core/workspace"
-	"github.com/torchstellar-team/one-cli/packages/cli/internal/ports/secrets"
 )
 
 func writeTaskFile(t *testing.T, root, path, content string) {
@@ -27,173 +23,122 @@ func writeTaskFile(t *testing.T, root, path, content string) {
 func taskWorkspace(t *testing.T) execution.Workspace {
 	t.Helper()
 	root := t.TempDir()
-	writeTaskFile(t, root, "one.manifest.json", `{"version":1,"workspace":{"id":"test","name":"test"},"environments":{"names":["dev","prod"],"default":"dev"},"projects":[{"name":"web","relativeDir":"apps/web","toolchain":"node"},{"name":"lib","relativeDir":"packages/lib","toolchain":"node"}]}`)
-	writeTaskFile(t, root, "package.json", `{"packageManager":"pnpm@12.3.4"}`)
-	writeTaskFile(t, root, "apps/web/package.json", `{"name":"web","scripts":{"build":"echo web","test":"echo test"},"dependencies":{"lib":"workspace:*"}}`)
-	writeTaskFile(t, root, "packages/lib/package.json", `{"name":"lib","scripts":{"build":"echo lib","test":"echo test"}}`)
+	writeTaskFile(t, root, "one.manifest.json", `{"version":1,"workspace":{"id":"test","name":"test"},"environments":{"names":["dev","prod"],"default":"dev"},"projects":[{"name":"web","relativeDir":"apps/web","toolchain":"none"},{"name":"lib","relativeDir":"packages/lib","toolchain":"none"}]}`)
+	writeTaskFile(t, root, "apps/web/package.json", `{"scripts":{"dev":"echo web","start":"echo start","build":"echo build"}}`)
+	writeTaskFile(t, root, "packages/lib/package.json", `{"scripts":{"build":"echo lib"}}`)
+	writeTaskFile(t, root, "mise.toml", `[tasks.build]
+depends=["web:build","lib:build"]
+[tasks."web:build"]
+dir="apps/web"
+run="echo web"
+depends=["lib:build"]
+[tasks."lib:build"]
+dir="packages/lib"
+run="echo lib"
+`)
 	w, err := execution.ResolveWorkspaceScope(execution.NewScope(context.Background(), root))
 	if err != nil {
 		t.Fatal(err)
 	}
 	return w
 }
-func TestPlanIncludesSharedDependenciesWithoutWrites(t *testing.T) {
+func TestPlanUsesExistingTasksWithoutWrites(t *testing.T) {
 	w := taskWorkspace(t)
+	before, _ := os.ReadFile(filepath.Join(w.Root(), "mise.toml"))
 	p, err := NewPlan(w, Options{Name: "build", Projects: []string{"web", "lib"}})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(p.Tasks) != 2 || p.Tasks[0].Project != "lib" || p.Tasks[1].Project != "web" {
-		t.Fatalf("%+v", p.Tasks)
+	if len(p.Tasks) != 2 || p.Tasks[0].Project != "lib" || p.Tasks[1].Project != "web" || len(p.ConfigChanges) != 0 {
+		t.Fatalf("%+v", p)
 	}
-	if _, err = os.Stat(filepath.Join(w.Root(), ".mise")); !os.IsNotExist(err) {
-		t.Fatal("preview wrote configuration")
+	for _, opts := range []Options{{Name: "dev"}, {Name: "start", Projects: []string{"web"}}, {Name: "build", Projects: []string{"web", "lib"}, Arguments: []string{"flag"}}, {Name: "build", Environment: "missing"}} {
+		if _, err := NewPlan(w, opts); err == nil {
+			t.Fatalf("unexpected plan: %+v", opts)
+		}
 	}
-	if _, err = NewPlan(w, Options{Name: "build", Projects: []string{"web", "lib"}, Arguments: []string{"flag"}}); err == nil {
-		t.Fatal("ambiguous arguments accepted")
-	}
-	if _, err = NewPlan(w, Options{Name: "build", Environment: "missing"}); err == nil {
-		t.Fatal("unknown environment accepted")
+	after, _ := os.ReadFile(filepath.Join(w.Root(), "mise.toml"))
+	if string(before) != string(after) {
+		t.Fatal("planning changed configuration")
 	}
 }
-func TestRootProjectTaskPreservesColonNameAndNativeDirectory(t *testing.T) {
+func TestPlanProjectOwnershipFollowsDirectory(t *testing.T) {
 	w := taskWorkspace(t)
-	writeTaskFile(t, w.Root(), "apps/web/package.json", `{"scripts":{"docs:build":"echo docs"}}`)
-	p, err := NewPlan(w, Options{Name: "docs:build", Projects: []string{"web"}})
+	writeTaskFile(t, w.Root(), "mise.toml", `[tasks.serve-backend]
+dir="apps/web"
+run="echo real-task"`)
+	p, err := NewPlan(w, Options{Name: "serve-backend"})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(p.Tasks) != 1 {
+	if p.Tasks[0].Project != "web" {
 		t.Fatal(p.Tasks)
 	}
-	task := p.Tasks[0]
-	if task.Name != "//:web:docs:build" || task.Operation != "docs:build" || task.Project != "web" || task.Source != "mise.toml" || task.Directory != filepath.Join(w.Root(), "apps/web") {
-		t.Fatalf("wrong project task identity or directory: %+v", task)
-	}
-	if len(p.ConfigChanges) != 1 || p.ConfigChanges[0].Path != "mise.toml" {
-		t.Fatalf("generated non-root configuration: %+v", p.ConfigChanges)
+	if _, err = NewPlan(w, Options{Name: "dev", Projects: []string{"web"}}); err == nil {
+		t.Fatal("invented dev task")
 	}
 }
-
-func TestPlanRejectsCycleOutputConflictsAndUnsafeCache(t *testing.T) {
-	for _, tc := range []struct{ name, root, project string }{
-		{"cycle", `[tasks.build]
-depends=["build"]`, ""},
-		{"overlap", `[tasks.build]
+func TestPlanRejectsCyclesAndOverlappingOutputs(t *testing.T) {
+	for _, config := range []string{`[tasks.build]
+depends=["build"]`, `[tasks.build]
 depends=["a","b"]
 [tasks.a]
 run="echo a"
 outputs=["dist"]
 [tasks.b]
 run="echo b"
-outputs=["dist/child"]`, ""},
-		{"glob overlap", `[tasks.build]
-depends=["a","b"]
-[tasks.a]
-run="echo a"
-outputs=["dist/**/*.js"]
-[tasks.b]
-run="echo b"
-outputs=["dist/assets"]`, ""},
-		{"cache without environment fingerprint", "", `[tasks.build]
-sources=["package.json"]
-outputs=["dist"]
-cache={enabled=true}`},
-		{"escaped output", "", `[tasks.build]
-outputs=["../../outside"]`},
-		{"managed directory override", "", `[tasks.build]
-dir="../elsewhere"`},
-	} {
-		t.Run(tc.name, func(t *testing.T) {
-			w := taskWorkspace(t)
-			writeTaskFile(t, w.Root(), "mise.toml", tc.root+"\n"+strings.ReplaceAll(tc.project, "[tasks.build]", "[tasks.\"web:build\"]"))
-			if _, err := NewPlan(w, Options{Name: "build"}); err == nil {
-				t.Fatal("invalid task plan accepted")
-			}
-		})
+outputs=["dist/child"]`, `[tasks.build]
+run="echo x"
+outputs=["../outside"]`} {
+		w := taskWorkspace(t)
+		writeTaskFile(t, w.Root(), "mise.toml", config)
+		if _, err := NewPlan(w, Options{Name: "build"}); err == nil {
+			t.Fatal("invalid plan accepted")
+		}
 	}
 }
-
-type countingLoader struct {
-	calls map[string]int
-	value string
-}
-
-func (l *countingLoader) ID() string { return "infisical" }
-func (l *countingLoader) Load(_ context.Context, _ string, project, _ string) (map[string]string, error) {
-	l.calls[project]++
-	return map[string]string{"VALUE": l.value + project}, nil
-}
-func TestContextFreezesEachProjectOnceAndCleansUp(t *testing.T) {
+func TestPlanDoesNotEvaluateCommandInputs(t *testing.T) {
 	w := taskWorkspace(t)
-	w.Manifest().Env = &workspace.EnvironmentConfig{ProjectID: "remote"}
+	writeTaskFile(t, w.Root(), "mise.local.toml", `[tasks."web:build".cache]
+enabled=true
+command_inputs=["echo forbidden > SHOULD_NOT_EXIST"]`)
 	p, err := NewPlan(w, Options{Name: "build"})
 	if err != nil {
 		t.Fatal(err)
 	}
-	// The same project may contribute multiple tasks to an aggregate.
-	p.Tasks = append(p.Tasks, Task{Project: "web", Operation: "test", Managed: true})
-	loader := &countingLoader{calls: map[string]int{}, value: "secret-"}
-	env, _, cleanup, err := prepareContext(context.Background(), w, p, secrets.MustRegistry(loader))
+	if !strings.Contains(p.Tasks[1].Name, "web") {
+		t.Fatal(p.Tasks)
+	}
+	if _, err = os.Stat(filepath.Join(w.Root(), "SHOULD_NOT_EXIST")); !os.IsNotExist(err) {
+		t.Fatal("dry-run executed input")
+	}
+}
+
+func TestStaticNativeScopesAliasesAndCommandOverrides(t *testing.T) {
+	w := taskWorkspace(t)
+	writeTaskFile(t, w.Root(), "mise.toml", `monorepo_root=true
+[monorepo]
+config_roots=["apps/*"]
+[tasks.build]
+depends=["//apps/web:compile"]
+`)
+	writeTaskFile(t, w.Root(), "apps/web/mise.toml", `[tasks.build]
+alias="compile"
+run="echo base"
+depends=["missing-old-dependency"]
+`)
+	writeTaskFile(t, w.Root(), "apps/web/mise.local.toml", `[tasks.build]
+alias="compile"
+run="echo override"
+`)
+	plan, err := NewPlan(w, Options{Name: "build"})
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer cleanup()
-	path := ""
-	for _, entry := range env {
-		if strings.HasPrefix(entry, contextVariable+"=") {
-			path = strings.TrimPrefix(entry, contextVariable+"=")
-		}
+	if len(plan.Tasks) != 2 || plan.Tasks[0].Run != "echo override" || plan.Tasks[0].Project != "web" {
+		t.Fatal(plan.Tasks)
 	}
-	t.Setenv(contextVariable, path)
-	info, err := os.Stat(path)
-	if err != nil {
+	if _, err = NewPlan(w, Options{Name: "build", Projects: []string{"web"}}); err != nil {
 		t.Fatal(err)
-	}
-	if runtime.GOOS != "windows" && info.Mode().Perm()&0077 != 0 {
-		t.Fatal("context readable outside owner")
-	}
-	if loader.calls["apps/web"] != 1 || loader.calls["packages/lib"] != 1 {
-		t.Fatal(loader.calls)
-	}
-	state, web, err := loadContext(w, "web", "build")
-	if err != nil {
-		t.Fatal(err)
-	}
-	if web.Variables["VALUE"] != "secret-apps/web" {
-		t.Fatal("wrong project environment")
-	}
-	first, err := InputFingerprint(context.Background(), w, "web", "build")
-	if err != nil {
-		t.Fatal(err)
-	}
-	web.Operations["unrelated"] = []string{"echo", "unrelated"}
-	state.Projects["web"] = web
-	raw, _ := json.Marshal(state)
-	if err = os.WriteFile(path, raw, 0600); err != nil {
-		t.Fatal(err)
-	}
-	second, err := InputFingerprint(context.Background(), w, "web", "build")
-	if err != nil || first != second {
-		t.Fatal("unrelated tasks changed cache key", err)
-	}
-	web.Variables["VALUE"] = "changed"
-	state.Projects["web"] = web
-	raw, _ = json.Marshal(state)
-	_ = os.WriteFile(path, raw, 0600)
-	third, err := InputFingerprint(context.Background(), w, "web", "build")
-	if err != nil || third == first {
-		t.Fatal("environment did not invalidate key", err)
-	}
-	encoded, _ := json.Marshal(p)
-	if strings.Contains(string(encoded), "secret-") {
-		t.Fatal("plan leaked environment")
-	}
-	cleanup()
-	if _, err = os.Stat(path); !os.IsNotExist(err) {
-		t.Fatal("context survived cleanup")
-	}
-	if _, _, err = loadContext(w, "web", "build"); err == nil {
-		t.Fatal("expired context accepted")
 	}
 }

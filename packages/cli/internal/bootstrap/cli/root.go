@@ -21,6 +21,7 @@ import (
 
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/application/execution"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/core/workspace"
+	"github.com/torchstellar-team/one-cli/packages/cli/internal/modules/tasks"
 	cliErrors "github.com/torchstellar-team/one-cli/packages/cli/internal/platform/errors"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/helpui"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/i18n"
@@ -161,6 +162,17 @@ func Execute(version string, args []string) (resultErr error) {
 				}
 				return err
 			}
+			available := map[string]bool{}
+			if w, e := execution.ResolveWorkspaceScope(execution.NewScope(context.Background(), root)); e == nil {
+				if catalog, _, e := tasks.Catalog(w); e == nil {
+					for _, task := range catalog {
+						if task.Operation == "dev" {
+							available[task.Project] = true
+						}
+					}
+				}
+			}
+			summary.ApplyTaskCapabilities(available)
 			output.Emit(&summary)
 			return nil
 		}

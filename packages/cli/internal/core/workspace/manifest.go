@@ -34,7 +34,7 @@ const ManifestVersion = 1
 //   - env: optional Infisical binding
 //   - projects[]: each project carries identity (name, relativeDir,
 //     templateId, toolchain, buildVersion, packageManager) plus an optional
-//     env overrides and a dev command.
+//     env overrides and service presentation settings.
 type Manifest struct {
 	Version      int                `json:"version"`
 	Workspace    *ManifestWorkspace `json:"workspace,omitempty"`
@@ -78,7 +78,7 @@ type EnvironmentConfig struct {
 }
 
 // ManifestProject is one project entry in manifest.projects[]. Identity
-// fields, env overrides, and dev commands are stored directly on the project.
+// fields, env overrides, and service URLs are stored directly on the project.
 type ManifestProject struct {
 	Name           string              `json:"name"`
 	RelativeDir    string              `json:"relativeDir"`
@@ -87,21 +87,35 @@ type ManifestProject struct {
 	BuildVersion   string              `json:"buildVersion"`
 	PackageManager string              `json:"packageManager,omitempty"`
 	Env            *ProjectEnvOverride `json:"env,omitempty"`
-	Dev            *ProjectDevOverride `json:"dev,omitempty"`
+	Service        *ProjectService     `json:"service,omitempty"`
 }
 
-// ProjectDevOverride is the per-project dev command for `one dev`.
-// Written by `one add` at scaffold time (derived from package.json
-// scripts + toolchain). Users can hand-edit Command in the manifest to
-// customise — there's no auto-sync if package.json scripts change after
-// scaffold; manifest is the source of truth.
-//
-// An empty Command (or missing block) falls back to the native dev task.
-type ProjectDevOverride struct {
-	// Command is the full shell line executed by the platform shell
-	// (sh on Unix, cmd.exe on Windows).
-	Command string `json:"command,omitempty"`
-	URL     string `json:"url,omitempty"`
+// ProjectService stores presentation metadata; mise alone defines executable tasks.
+type ProjectService struct {
+	URL string `json:"url,omitempty"`
+}
+
+// Older manifests may keep a URL beside a retired dev command. Preserve the URL
+// when reading them, but never restore or re-emit that command.
+func (p *ManifestProject) UnmarshalJSON(raw []byte) error {
+	type project ManifestProject
+	var wire struct {
+		project
+		Dev *struct {
+			URL     string          `json:"url"`
+			Command json.RawMessage `json:"command"`
+		} `json:"dev"`
+	}
+	decoder := json.NewDecoder(bytes.NewReader(raw))
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(&wire); err != nil {
+		return err
+	}
+	*p = ManifestProject(wire.project)
+	if p.Service == nil && wire.Dev != nil && wire.Dev.URL != "" {
+		p.Service = &ProjectService{URL: wire.Dev.URL}
+	}
+	return nil
 }
 
 // ProjectEnvOverride is the per-project env override. Carries no `kind`

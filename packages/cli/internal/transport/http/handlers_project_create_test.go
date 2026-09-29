@@ -200,7 +200,7 @@ func TestCreateEmptyProjectsInSelectedWorkspace(t *testing.T) {
 		t.Fatalf("manifest = %#v", manifest)
 	}
 	for _, project := range manifest.Projects {
-		if project.Toolchain != "none" || project.PackageManager != "" || project.Dev != nil {
+		if project.Toolchain != "none" || project.PackageManager != "" || project.Service != nil {
 			t.Fatalf("empty project = %#v", project)
 		}
 	}

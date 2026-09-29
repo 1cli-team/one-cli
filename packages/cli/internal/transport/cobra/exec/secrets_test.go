@@ -71,7 +71,7 @@ func TestRemoteFailureDoesNotFallBackToLocalFiles(t *testing.T) {
 	}
 }
 
-func TestWorkspaceExecMasksInjectedValues(t *testing.T) {
+func TestWorkspaceExecPreservesChildOutput(t *testing.T) {
 	if runtime.GOOS == "windows" {
 		t.Skip("shell fixture")
 	}
@@ -97,7 +97,7 @@ func TestWorkspaceExecMasksInjectedValues(t *testing.T) {
 	os.Stdout, os.Stderr = out, errOut
 	defer func() { os.Stdout, os.Stderr = oldOut, oldErr }()
 	ctx := execution.WithScope(context.Background(), execution.NewScope(context.Background(), root))
-	err = runRun(ctx, secrets.MustRegistry(&recordingLoader{}), &runFlags{project: "web", prepared: true, runtime: runtimeport.Builtin}, []string{"sh", "-c", `printf '%s\n' "$TOKEN"; printf '%s\n' "$TOKEN" >&2; exit 6`})
+	err = runRun(ctx, secrets.MustRegistry(&recordingLoader{}), &runFlags{project: "web", runtime: runtimeport.Builtin}, []string{"sh", "-c", `printf '%s\n' "$TOKEN"; printf '%s\n' "$TOKEN" >&2; exit 6`})
 	if platformprocess.ExitCode(err) != 6 {
 		t.Fatal(err)
 	}
@@ -106,8 +106,8 @@ func TestWorkspaceExecMasksInjectedValues(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if strings.Contains(string(log), "remote") || !strings.Contains(string(log), "[REDACTED]") {
-			t.Fatalf("unsafe exec output: %q", log)
+		if !strings.Contains(string(log), "remote") || strings.Contains(string(log), "[REDACTED]") {
+			t.Fatalf("changed child output: %q", log)
 		}
 	}
 }

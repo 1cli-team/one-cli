@@ -27,8 +27,8 @@ func seedManifest(t *testing.T) (string, *Service, string) {
 			Name: "web", RelativeDir: "apps/web", TemplateID: "react-spa", Toolchain: "node",
 			BuildVersion: "1.0.0",
 
-			Dev: &workspacecore.ProjectDevOverride{Command: "pnpm dev"},
-			Env: &workspacecore.ProjectEnvOverride{Path: "/apps/web", Inherits: &value, Keys: []string{"API_URL"}},
+			Service: &workspacecore.ProjectService{URL: "http://localhost:3000/"},
+			Env:     &workspacecore.ProjectEnvOverride{Path: "/apps/web", Inherits: &value, Keys: []string{"API_URL"}},
 		}},
 	}
 	if err := workspacecore.WriteManifest(root, manifest); err != nil {
@@ -51,7 +51,7 @@ func TestApplyManifestDraftPublishesAllowlistedFieldsAtomically(t *testing.T) {
 		Revision: revision,
 		Changes: []ProjectManifestPatch{{
 			Project:     "web",
-			General:     &ProjectGeneralPatch{BuildVersion: "v2.1.0", DevCommand: "pnpm start"},
+			General:     &ProjectGeneralPatch{BuildVersion: "v2.1.0"},
 			Environment: &ProjectEnvironmentPatch{Path: "/frontend", Inherits: false, Disabled: true},
 		}},
 	})
@@ -66,7 +66,7 @@ func TestApplyManifestDraftPublishesAllowlistedFieldsAtomically(t *testing.T) {
 		t.Fatal(err)
 	}
 	project := manifest.Projects[0]
-	if project.BuildVersion != "2.1.0" || project.Dev.Command != "pnpm start" {
+	if project.BuildVersion != "2.1.0" {
 		t.Fatalf("general patch = %#v", project)
 	}
 	if project.Env.Path != "/frontend" || *project.Env.Inherits || !project.Env.Disabled {
@@ -153,7 +153,7 @@ func TestPreviewManifestDraftReturnsCanonicalBeforeAfterWithoutWriting(t *testin
 		Revision: revision,
 		Changes: []ProjectManifestPatch{{
 			Project: "web",
-			General: &ProjectGeneralPatch{BuildVersion: "v9.9.9", DevCommand: "pnpm preview"},
+			General: &ProjectGeneralPatch{BuildVersion: "v9.9.9"},
 		}},
 	})
 	if err != nil {
@@ -189,8 +189,8 @@ func TestPreviewManifestDraftReturnsCanonicalBeforeAfterWithoutWriting(t *testin
 	if len(afterManifest.Projects) != 1 || afterManifest.Projects[0].BuildVersion != "9.9.9" {
 		t.Fatalf("preview after did not include requested patch: %#v", afterManifest.Projects)
 	}
-	if afterManifest.Projects[0].Dev == nil || afterManifest.Projects[0].Dev.Command != "pnpm preview" {
-		t.Fatalf("preview after dev command mismatch: %#v", afterManifest.Projects[0].Dev)
+	if afterManifest.Projects[0].Service == nil || afterManifest.Projects[0].Service.URL != "http://localhost:3000/" {
+		t.Fatalf("preview after dev command mismatch: %#v", afterManifest.Projects[0].Service)
 	}
 
 	afterOnDisk, err := os.ReadFile(path)
@@ -272,15 +272,15 @@ func TestDevURLCanExistWithoutOverrideAndSurvivesLegacyPatches(t *testing.T) {
 	if err := apply(&ProjectGeneralPatch{DevURL: &url}); err != nil {
 		t.Fatal(err)
 	}
-	if err := apply(&ProjectGeneralPatch{DevCommand: "pnpm start"}); err != nil {
+	if err := apply(&ProjectGeneralPatch{BuildVersion: "2.1.0"}); err != nil {
 		t.Fatal(err)
 	}
 	m, err := workspacecore.ReadManifest(root)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if m.Projects[0].Dev.URL != url || m.Projects[0].Dev.Command != "pnpm start" {
-		t.Fatal(m.Projects[0].Dev)
+	if m.Projects[0].Service.URL != url {
+		t.Fatal(m.Projects[0].Service)
 	}
 	unsafe := "https://external.example/?token=x"
 	if err := apply(&ProjectGeneralPatch{DevURL: &unsafe}); !errors.Is(err, ErrInvalidInput) {
@@ -291,7 +291,7 @@ func TestDevURLCanExistWithoutOverrideAndSurvivesLegacyPatches(t *testing.T) {
 		t.Fatal(err)
 	}
 	m, _ = workspacecore.ReadManifest(root)
-	if m.Projects[0].Dev != nil {
+	if m.Projects[0].Service != nil {
 		t.Fatal("empty dev override not removed")
 	}
 }

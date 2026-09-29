@@ -2,10 +2,11 @@ package workspace
 
 import "context"
 
-// TaskReader provides a static task projection without installing or executing tools.
+// TaskReader projects the effective mise catalog without executing tasks.
 type TaskReader func(context.Context, string, string) ([]ProjectTask, error)
 type ProjectTask struct {
 	Name         string   `json:"name"`
+	Operation    string   `json:"operation"`
 	Source       string   `json:"source"`
 	Dependencies []string `json:"depends"`
 	Outputs      []string `json:"outputs"`

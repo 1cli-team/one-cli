@@ -3,19 +3,19 @@ title: 本地开发
 description: 选择项目、定制 mise 任务并启动开发服务。
 ---
 
-运行 `one dev` 启动工作区，或显式选择服务：
+运行 `one run dev` 启动工作区，或显式选择服务：
 
 ```sh
-one dev -p web -p api
-one dev -p web --ui raw
-one dev -p web -- --port 4300
-one dev --dry-run -o json
+one run dev -p web -p api
+one run dev -p web --ui raw
+one run dev -p web -- --port 4300
+one run dev --dry-run -o json
 ```
 
 One 准备工具和项目依赖，冻结各项目的环境变量，然后调用一次 mise。mise 先运行所需的上游构建，再启动依赖它的服务。多服务日志带任务名前缀；Ctrl+C 停止整组进程。任务失败会停止本次调用并返回子进程退出码。
 
-项目命令来自包脚本、Taskfile 或 Manifest 中的开发命令。任务依赖和命令覆盖写在 `mise.toml` 中；One 会增量更新未被用户修改的配置项，并保留自定义内容和注释。自定义 mise 命令使用 mise 的环境，生成的适配任务注入 One 的项目环境。
+只执行已存在的 mise 任务。通过 `one init mise` 将包脚本和 Taskfile 初始化为原生任务，再在 mise 中定制依赖和命令。执行时不重新生成配置；包括自定义任务在内，均按实际工作目录注入对应项目的变量。使用 `--ui tui` 或 `--ui stream` 选择日志展示。
 
 任意命令使用 `one exec -p web -- pnpm add axios`，它在选中项目的环境中执行，不调度任务图。
 
-终端模式与依赖准备见 [one dev](/zh/docs/dev/)，任务简写、配置覆盖与缓存见 [one run](/zh/docs/run/)。
+终端模式与依赖准备见 [one run dev](/zh/docs/dev/)，任务简写、配置覆盖与缓存见 [one run](/zh/docs/run/)。

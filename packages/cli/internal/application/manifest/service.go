@@ -50,7 +50,6 @@ func (e *ManifestConflict) Unwrap() error { return ErrManifestConflict }
 
 type ProjectGeneralPatch struct {
 	BuildVersion string  `json:"buildVersion"`
-	DevCommand   string  `json:"devCommand"`
 	DevURL       *string `json:"devURL,omitempty"`
 }
 
@@ -249,10 +248,9 @@ func (s *Service) applyProjectChanges(
 
 		if change.General != nil {
 			project.BuildVersion = workspacecore.NormalizeBuildVersion(change.General.BuildVersion)
-			command := strings.TrimSpace(change.General.DevCommand)
 			url := ""
-			if project.Dev != nil {
-				url = project.Dev.URL
+			if project.Service != nil {
+				url = project.Service.URL
 			}
 			if change.General.DevURL != nil {
 				var err error
@@ -261,10 +259,10 @@ func (s *Service) applyProjectChanges(
 					return 0, fmt.Errorf("%w: %w", ErrInvalidInput, err)
 				}
 			}
-			if command == "" && url == "" {
-				project.Dev = nil
+			if url == "" {
+				project.Service = nil
 			} else {
-				project.Dev = &workspacecore.ProjectDevOverride{Command: command, URL: url}
+				project.Service = &workspacecore.ProjectService{URL: url}
 			}
 			applied++
 		}

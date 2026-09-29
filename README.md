@@ -152,22 +152,24 @@ mise install
 mise run install
 ```
 
+If upgrading an existing checkout, run `mise run install` again before using the new commands. This rebuilds the local version and points the `one` launcher at `packages/cli/bin/one`, avoiding an older installed release.
+
 Then use the workspace commands:
 
 ```bash
 one                             # Inspect this workspace
 one run                         # List root and project tasks
-one dev                         # Dashboard API + Vite UI, using the development fixture
-one dev -p docs                  # Documentation at http://localhost:3000
-one build -p cli                 # Prepare embedded resources and build the CLI
-one test -p kernel               # Test the shared Go kernel
+one run dev                     # Dashboard API + Vite UI for this workspace
+one run dev -p docs              # Documentation at http://localhost:3000
+one run build -p cli             # Prepare embedded resources and build the CLI
+one run test -p kernel           # Test the shared Go kernel
 one run check                   # The complete repository gate; one check is shorthand
 one serve                       # Manage this repository in the Dashboard
 ```
 
-`one dev -p dashboard` starts the Vite UI; run `one dev -p cli` in another terminal for its API, or use the combined `one dev` task. `one serve` opens this repository as a real workspace, while the contributor development API uses the existing test fixture. No Infisical binding is required to build, test, or start these projects.
+`one run dev -p dashboard` starts the Vite UI; run `one run dev -p cli` in another terminal for its API, or use the combined `one run dev` task. Both the development API and `one serve` use this repository as their workspace. No Infisical binding is required to build, test, or start these projects.
 
-Root tasks remain native mise commands, so CI and first-time installation can still use `mise run build`, `mise run check`, and `mise run install`. Project tasks come from package scripts and Taskfiles. Only the root `mise.toml` is used: project tasks are namespaced as `cli:build` or `dashboard:dev` and select their directory with `dir`. CLI tasks declare their embedded-resource prerequisites there; CLI tests also build the binary used by E2E tests. Run `one init mise` after changing the project task catalogue to refresh the tracked task adapters.
+Root tasks remain native mise commands, so CI and first-time installation can still use `mise run build`, `mise run check`, and `mise run install`. Project tasks come from package scripts and Taskfiles. Only the root `mise.toml` is used: project tasks are namespaced as `cli:build` or `dashboard:dev` and select their directory with `dir`. CLI tasks declare their embedded-resource prerequisites there; CLI tests also build the binary used by E2E tests. Run `one init mise` after changing the project task catalogue to refresh the tracked native tasks. Running or listing tasks does not regenerate configuration. `projects[].service.url` stores access links; dev commands live exclusively in mise.
 
 Read [CONTRIBUTING.md](./CONTRIBUTING.md) before opening a pull request.
 
@@ -195,6 +197,6 @@ one dev -p web --ui raw           # Native terminal input for the selected servi
 one build -p web -p api --concurrency 4
 ```
 
-All tasks use mise for scheduling, including development and user overrides. Multiple services use prefixed logs; Ctrl+C or a task failure stops the invocation and its child processes. Raw mode preserves terminal input and disables artifact caching. The previous development TUI and single-service restart controls have been removed. Structured results stay on stdout and child logs go to stderr.
+All tasks use mise for scheduling, including development and user overrides. Use `one run dev --ui tui` for grouped task logs or `--ui stream` for streaming output. In a terminal, automatic mode selects TUI for a task graph with multiple entries. Save `"taskUI": "tui"` or `"taskUI": "stream"` in `~/.config/one/preferences.json` for a personal default. Ctrl+C or a task failure stops the invocation and its child processes. TUI preserves task prefixes and original log styles, wraps long lines on resize, and keeps the complete session history for scrolling and search. Use the wheel or ↑/↓ to scroll, Tab to focus the dependency tree, Home/End to jump, and `f` to follow. The tree follows task dependencies, supports ←/→ and Enter to collapse/expand, and marks shared references with `↪`. Below 70 columns, Tab switches between a full-width tree and logs. When mise finishes, TUI automatically restores the terminal and returns the original exit status; no keypress is required. Raw mode preserves terminal input and disables artifact caching. Structured results stay on stdout and child logs go to stderr.
 
-Build concurrency defaults to 1; development allocates it automatically. Local Node dependencies build before their consumers. `one run build --cache off --force` always executes the build. See the [task guide](apps/docs/content/docs/en/run.md) for configuration, cache declarations, and Actions examples.
+Concurrency is allocated automatically for every task name; `--concurrency` sets an explicit limit. Local Node dependencies build before their consumers. `one run build --cache off --force` always executes the build. See the [task guide](apps/docs/content/docs/en/run.md) for configuration, cache declarations, and Actions examples.

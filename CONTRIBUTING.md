@@ -8,7 +8,7 @@
 brew install mise               # macOS；其他系统先安装 mise
 git clone https://github.com/1cli-team/one-cli
 cd one-cli
-mise trust              # 信任当前 checkout 的根和项目配置
+mise trust                      # 信任当前 checkout 的根配置
 mise install                    # 安装 mise.toml 固定的工具版本
 mise run install                # 打包 Dashboard + CLI，再创建本地启动器
 one --version                   # 验证装好
@@ -38,20 +38,26 @@ one --version                   # 验证装好
 
 `packages/templates` 和测试 fixture 是源码素材，不登记为项目。`packages/cli` 保留现有路径，因为公开 Go 包的 module path 已包含该目录。
 
-完成首次安装后，可以直接用 One CLI 开发自身：
+已有 checkout 升级后也先运行 `mise run install`，重新构建本地新版并将 `one` 启动器指向 `packages/cli/bin/one`，避免继续调用旧发行版。
+
+完成安装后，可以直接用 One CLI 开发自身：
 
 ```bash
 one                             # 查看当前工作区
 one run                         # 查看根任务和项目任务
-one dev                         # Go Dashboard API + Vite UI，使用原有开发 fixture
-one dev -p docs                  # 文档站：http://localhost:3000
-one build -p cli                 # 准备嵌入资源并构建 CLI
-one test -p kernel               # 测试共享 Go 内核
+one run dev                     # Go Dashboard API + Vite UI，管理当前真实工作区
+one run dev -p docs              # 文档站：http://localhost:3000
+one run build -p cli             # 准备嵌入资源并构建 CLI
+one run test -p kernel           # 测试共享 Go 内核
 one run check                   # 完整仓库检查；也可简写 one check
 one serve                       # 在 Dashboard 中管理当前真实仓库
 ```
 
-单独运行 `one dev -p dashboard` 只启动 Vite 前端，需要在另一终端运行 `one dev -p cli` 提供 API；通常直接使用联合任务 `one dev`。`one serve` 管理当前真实仓库，开发 API 仍使用测试 fixture。构建、测试和开发不需要绑定 Infisical。
+单独运行 `one run dev -p dashboard` 只启动 Vite 前端，需要在另一终端运行 `one run dev -p cli` 提供 API；通常直接使用联合任务 `one run dev`。开发 API 与 `one serve` 都管理当前真实仓库。构建、测试和开发不需要绑定 Infisical。
+
+`one run dev --ui tui` 显示分组日志界面，`--ui stream` 使用流式输出。交互终端中的多任务默认使用 TUI；也可在 `~/.config/one/preferences.json` 设置 `"taskUI": "tui"` 或 `"taskUI": "stream"`。CI 和结构化输出会回落 stream。所有任务名称共用自动并发策略，`--concurrency` 可指定上限。
+
+TUI 保留任务前缀及日志原有样式，长行随窗口缩放自动换行，完整会话历史支持滚动和搜索。滚轮或 ↑/↓ 滚动，Tab 切换依赖树焦点，Home/End 跳转首尾，`f` 恢复跟随。依赖树以本次入口任务为根，←/→ 和 Enter 展开或折叠，共享依赖显示 `↪` 引用；不足 70 列时 Tab 切换全宽依赖树与日志。mise 执行结束后，TUI 自动恢复终端并返回原退出码，无需按键。
 
 根 `mise.toml` 继续维护原生任务，供首次安装、CI 和 Git hooks 使用：
 
@@ -64,7 +70,7 @@ mise run install                # 打包并安装本地启动器，无需预先�
 mise run pre-push               # 推送前检查，包含 race 测试
 ```
 
-项目任务来自各自的 `package.json` 或 `Taskfile.yml`，只在根 `mise.toml` 登记 `cli:build`、`dashboard:dev` 这样的任务入口，并通过 `dir` 指定子项目目录。根文件也声明 Dashboard、模板和嵌入资源的前置步骤，CLI 测试会先构建 E2E 使用的二进制。新增或修改任务目录后，运行 `one init mise` 同步这些受版本控制的配置。
+项目任务来自各自的 `package.json` 或 `Taskfile.yml`，只在根 `mise.toml` 登记 `cli:build`、`dashboard:dev` 这样的任务入口，并通过 `dir` 指定子项目目录。根文件也声明 Dashboard、模板和嵌入资源的前置步骤，CLI 测试会先构建 E2E 使用的二进制。新增或修改任务目录后，运行 `one init mise` 同步这些受版本控制的原生任务。执行和查询不会重新生成配置；manifest 的 `service.url` 只保存访问链接，dev 命令只由 mise 定义。
 
 ## 提交流程
 
@@ -111,9 +117,8 @@ One 发布文件不包含 mise 程序或压缩包。实际运行时优先使用 
 ### 改 dashboard（`apps/dashboard/`，`one serve` 的 UI）
 
 - React + Vite，pnpm 管理
-- 前后端联调：在仓库根目录运行 `mise run dev`，打开 `http://localhost:5173/`
-- `mise run dev` 的 Workspace/Project 数据来自仓库内固定 fixture；Profile 增删改查仍会
-  操作本机真实的 One 配置，Profile binding 也会真实写入但只关联 fixture Workspace
+- 前后端联调：在仓库根目录运行 `one run dev`，打开 `http://localhost:5173/`
+- 开发 API 使用当前仓库的真实项目与任务；页面保存项目配置会更新当前仓库的 manifest，账号使用本机 One 登录会话
 - 本地开发：先在仓库根目录运行 `pnpm install`，再运行 `pnpm --filter one-serve-web dev`
 - 静态检查：`mise run check:dashboard`；架构护栏和交互测试包含在 `mise run check:test`
 - 改完后 `mise run vet` / `test` / `build` 会自动跑 `sync-web`（pnpm install + vite build）
@@ -122,7 +127,7 @@ One 发布文件不包含 mise 程序或压缩包。实际运行时优先使用 
 ### 改文档站（`apps/docs/`）
 
 - 文档站是 Next.js + Fumadocs SSG
-- 本地预览：先在仓库根目录运行 `pnpm install`，再运行 `pnpm docs:dev`
+- 本地预览：在仓库根目录运行 `one run dev -p docs`
 - 线上部署：Vercel 项目 Root Directory 指向 `apps/docs`，Output Directory 用 `dist`，域名绑定 `1cli.dev`
 - `apps/docs/content/docs/reference/error-codes.md` **不要手工编辑**——跑 `mise run gen-error-codes` 重生成
 - 新增页面要更新对应目录的 `meta.json`（sidebar 顺序）

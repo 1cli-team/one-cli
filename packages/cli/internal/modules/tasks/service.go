@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"os"
 	"slices"
 	"strconv"
 	"strings"
@@ -12,10 +13,10 @@ import (
 
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/application/execution"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/modules/dependencies"
+	"github.com/torchstellar-team/one-cli/packages/cli/internal/modules/taskui"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/i18n"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/output"
 	process "github.com/torchstellar-team/one-cli/packages/cli/internal/platform/process"
-	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/redact"
 	runtimeport "github.com/torchstellar-team/one-cli/packages/cli/internal/ports/runtime"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/ports/secrets"
 )
@@ -51,9 +52,7 @@ func ValidateOptions(opts Options) error {
 		return i18n.Errorf("tasks.cache_invalid", opts.Cache)
 	}
 	switch opts.UI {
-	case "auto", "stream", "raw":
-	case "tui":
-		return i18n.Errorf("tasks.tui_unavailable")
+	case "auto", "stream", "raw", "tui":
 	default:
 		return i18n.Errorf("tasks.ui_invalid", opts.UI)
 	}
@@ -63,18 +62,17 @@ func (s Service) Execute(ctx context.Context, w execution.Workspace, p *Plan, op
 	if err := ValidateOptions(opts); err != nil {
 		return nil, err
 	}
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
 	ctx, stop := process.SignalContext(ctx)
 	defer stop()
-	if err := p.configuration.Apply(ctx); err != nil {
-		return nil, err
-	}
 	if s.Provider == nil {
 		return nil, i18n.Errorf("exec.mise_missing")
 	}
 	if err := executionOptions(p, &opts); err != nil {
 		return nil, err
 	}
-	if err := s.inspectCache(ctx, w, p, opts); err != nil {
+	if err := s.inspectCache(ctx, w, p); err != nil {
 		return nil, err
 	}
 	for _, task := range p.Tasks {
@@ -86,16 +84,33 @@ func (s Service) Execute(ctx context.Context, w execution.Workspace, p *Plan, op
 	if prepare == nil {
 		prepare = (dependencies.Service{Provider: s.Provider}).Prepare
 	}
-	if err := prepare(ctx, dependencies.Input{Root: w.Root(), Manifest: w.Manifest(), Projects: projectNames(p), Runtime: runtimeport.Mise, Development: opts.Name == "dev", Log: errOut}); err != nil {
+	if err := prepare(ctx, dependencies.Input{Root: w.Root(), Manifest: w.Manifest(), Projects: projectNames(p), Runtime: runtimeport.Mise, Development: true, Log: errOut}); err != nil {
 		return nil, err
 	}
-	env, variables, cleanup, err := prepareContext(ctx, w, p, s.Loaders)
+	base, err := s.Provider.PrepareCLI(ctx, runtimeport.Command{Directory: w.Root(), Env: os.Environ()})
 	if err != nil {
 		return nil, err
 	}
-	defer cleanup()
+	session, err := s.prepareEnvironment(ctx, w, p, base.Env)
+	if err != nil {
+		return nil, err
+	}
+	defer session.close()
+	if err = s.verifyBindings(ctx, w, p, session); err != nil {
+		return nil, err
+	}
+	for i := range p.Tasks {
+		if session.uncached[p.Tasks[i].Name] {
+			p.Tasks[i].Cached = false
+		}
+	}
+	env := session.env
+	if len(session.bindings) > 0 {
+		fmt.Fprintln(errOut, i18n.T("tasks.environment_cache_off"))
+	}
+	opts.UI = taskui.Mode(opts.UI, len(p.Tasks), in, errOut)
 	mode := "interleave"
-	if len(projectNames(p)) > 1 || len(p.Entries) > 1 {
+	if len(p.Tasks) > 1 || opts.UI == "tui" {
 		mode = "prefix"
 	}
 	argv := []string{"run", "--jobs", strconv.Itoa(opts.Jobs), "--task-cache", opts.Cache, "--output", mode}
@@ -108,12 +123,18 @@ func (s Service) Execute(ctx context.Context, w execution.Workspace, p *Plan, op
 		argv = append(argv, "--task-cache", "off", "--force")
 	}
 	if opts.UI == "raw" {
-		argv = append(argv, "--raw", "--task-cache", "off")
+		argv = append(argv, "--raw", "--task-cache", "off", "--force")
 		fmt.Fprintln(errOut, i18n.T("tasks.raw_cache_off"))
 	}
 	for i, entry := range p.Entries {
 		if i > 0 {
 			argv = append(argv, ":::")
+		}
+		for _, task := range p.Tasks {
+			if task.Name == entry {
+				entry = task.runtimeName()
+				break
+			}
 		}
 		argv = append(argv, entry)
 		if len(opts.Arguments) > 0 {
@@ -130,7 +151,7 @@ func (s Service) Execute(ctx context.Context, w execution.Workspace, p *Plan, op
 	})
 	command, err := s.Provider.PrepareCLI(ctx, runtimeport.Command{Directory: w.Root(), Argv: argv, Env: env})
 	if err != nil {
-		return nil, redact.New(variables).Error(err)
+		return nil, err
 	}
 	child := process.CommandContext(ctx, command.Argv[0], command.Argv[1:]...)
 	child.Cancel = func() error { return process.StopTree(child.Process) }
@@ -143,18 +164,17 @@ func (s Service) Execute(ctx context.Context, w execution.Workspace, p *Plan, op
 	if output.IsStructured() {
 		child.Stdout = errOut
 	}
-	filter := redact.New(variables)
-	stdout, flushOut := filter.Writer(child.Stdout)
-	stderr, flushErr := filter.Writer(child.Stderr)
-	child.Stdout, child.Stderr = stdout, stderr
-	err = child.Start()
-	if err == nil {
-		if s.OnStarted != nil {
-			s.OnStarted()
+	if opts.UI == "tui" {
+		err = taskui.Run(ctx, cancel, child, taskGraph(p), in, errOut, s.OnStarted)
+	} else {
+		err = child.Start()
+		if err == nil {
+			if s.OnStarted != nil {
+				s.OnStarted()
+			}
+			err = child.Wait()
 		}
-		err = child.Wait()
 	}
-	err = errors.Join(err, flushOut(), flushErr())
 	result := &Result{Schema: "one-cli/task-result/v1", Status: "succeeded", Entries: p.Entries, Tasks: p.Tasks}
 	if err != nil {
 		result.Status = "failed"

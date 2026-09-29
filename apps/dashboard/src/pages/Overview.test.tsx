@@ -91,7 +91,7 @@ const webSettings: ProjectSettingsResponse = {
 		toolchain: "node",
 		packageManager: "pnpm",
 		buildVersion: "1.0.0",
-		devCommand: "pnpm dev",
+		devAvailable: true,
 		build: {
 			command: "pnpm run build",
 			source: "package.json#scripts.build",
@@ -387,9 +387,7 @@ describe("workspace overview Profile-only configuration", () => {
 			"1.0.0",
 		);
 		expect(within(inspector).getByText("pnpm")).toBeDefined();
-		expect(
-			(within(inspector).getByLabelText("Development command") as HTMLInputElement).value,
-		).toBe("pnpm dev");
+		expect(within(inspector).queryByLabelText("Development command")).toBeNull();
 		expect(within(inspector).queryByLabelText("Package manager")).toBeNull();
 		const buildCommand = within(inspector).getByLabelText("Build command") as HTMLInputElement;
 		expect(buildCommand.value).toBe("pnpm run build");
@@ -400,7 +398,7 @@ describe("workspace overview Profile-only configuration", () => {
 		await user.type(within(inspector).getByLabelText("Build version"), "2.0.0");
 		expect(
 			useManifestDraftStore.getState().drafts[manifestDraftKey()]?.changes.web?.general,
-		).toEqual({ buildVersion: "2.0.0", devCommand: "pnpm dev", devURL: "" });
+		).toEqual({ buildVersion: "2.0.0", devURL: "" });
 		expect(within(inspector).queryByRole("button", { name: "Save local binding" })).toBeNull();
 		expect(receivedEnvironment).toBe("dev");
 	});
@@ -431,9 +429,9 @@ describe("workspace overview Profile-only configuration", () => {
 			expect(command.placeholder).toBe(placeholder);
 			expect(command.readOnly).toBe(true);
 			expect(within(inspector).getByText(/one build reads Taskfile.yml#tasks.build/)).toBeDefined();
-			expect(
-				(within(inspector).getByLabelText("Development command") as HTMLInputElement).disabled,
-			).toBe(false);
+			expect((within(inspector).getByLabelText("Build version") as HTMLInputElement).disabled).toBe(
+				false,
+			);
 		},
 	);
 

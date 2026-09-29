@@ -198,7 +198,7 @@ func TestManifestDraftRouteRequiresCurrentRevisionAndWritesAllowlistedFields(t *
 		"revision": %q,
 		"changes": [{
 			"project": "web",
-			"general": {"buildVersion": "v2.0.0", "devCommand": "pnpm dev --host"},
+			"general": {"buildVersion": "v2.0.0", "devURL": "http://localhost:3001/"},
 			"environment": {"path": "/frontend", "inherits": false, "disabled": false}
 		}]
 	}`, settings.Revision)
@@ -211,7 +211,7 @@ func TestManifestDraftRouteRequiresCurrentRevisionAndWritesAllowlistedFields(t *
 		t.Fatal(err)
 	}
 	if manifest.Projects[0].BuildVersion != "2.0.0" ||
-		manifest.Projects[0].Dev.Command != "pnpm dev --host" ||
+		manifest.Projects[0].Service.URL != "http://localhost:3001/" ||
 		manifest.Projects[0].Env.Path != "/frontend" {
 		t.Fatalf("manifest = %#v", manifest.Projects[0])
 	}

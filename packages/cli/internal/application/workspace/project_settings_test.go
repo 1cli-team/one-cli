@@ -33,7 +33,7 @@ func seedProjectSettingsWorkspace(t *testing.T) string {
 				Path: "/apps/web", Inherits: &inherits, Keys: []string{"Z_KEY", "A_KEY"},
 			},
 
-			Dev: &workspacecore.ProjectDevOverride{Command: "pnpm dev"},
+			Service: &workspacecore.ProjectService{URL: "http://localhost:3000/"},
 		}},
 	}
 	if err := workspacecore.WriteManifest(root, manifest); err != nil {

@@ -65,7 +65,7 @@ func (s Service) Prepare(ctx context.Context, in Input) error {
 			if !selected[p.Name] {
 				continue
 			}
-		} else if (in.Project != "" && p.Name != in.Project) || strings.TrimSpace(workspace.ProjectDev(in.Manifest, p.Name)) == "" {
+		} else if in.Project != "" && p.Name != in.Project {
 			continue
 		}
 		switch p.Toolchain {

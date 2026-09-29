@@ -12,7 +12,7 @@ Use -- to separate One options from the child command. When the workspace has an
 
 With --global, provide --env and --path explicitly. The command keeps the current working directory. Use --keys to select shared credentials.
 
-Known injected secret values are masked on stdout and stderr.
+One does not print injected variable values. Child stdout and stderr pass through unchanged.
 
 COMMON OPTIONS
   --dry-run                Print the execution plan without loading environment values or starting a command

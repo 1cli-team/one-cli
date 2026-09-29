@@ -68,7 +68,7 @@ func TestOverview_PopulatedWorkspace(t *testing.T) {
 			{
 				Name: "web", RelativeDir: "apps/web", TemplateID: "react-spa", Toolchain: "node",
 
-				Dev: &workspace.ProjectDevOverride{Command: "pnpm dev"},
+				Service: &workspace.ProjectService{URL: "http://localhost:3000/"},
 			},
 		},
 	}

@@ -99,8 +99,8 @@ describe("TopBar and manifest review", () => {
 			revision: "sha256:base",
 			project: "web",
 			section: "general",
-			initial: { buildVersion: "1.0.0", devCommand: "pnpm dev" },
-			next: { buildVersion: "2.0.0", devCommand: "pnpm dev" },
+			initial: { buildVersion: "1.0.0" },
+			next: { buildVersion: "2.0.0" },
 			labels: { buildVersion: "projectInspector.general.buildVersion" },
 		});
 		const user = userEvent.setup();
@@ -117,7 +117,7 @@ describe("TopBar and manifest review", () => {
 				changes: [
 					{
 						project: "web",
-						general: { buildVersion: "2.0.0", devCommand: "pnpm dev" },
+						general: { buildVersion: "2.0.0" },
 					},
 				],
 			},
@@ -132,7 +132,7 @@ describe("TopBar and manifest review", () => {
 					changes: [
 						{
 							project: "web",
-							general: { buildVersion: "2.0.0", devCommand: "pnpm dev" },
+							general: { buildVersion: "2.0.0" },
 						},
 					],
 				},
@@ -201,8 +201,8 @@ describe("TopBar and manifest review", () => {
 			revision: "sha256:base",
 			project: "web",
 			section: "general",
-			initial: { buildVersion: "1.0.0", devCommand: "pnpm dev" },
-			next: { buildVersion: "2.0.0", devCommand: "pnpm dev" },
+			initial: { buildVersion: "1.0.0" },
+			next: { buildVersion: "2.0.0" },
 			labels: { buildVersion: "projectInspector.general.buildVersion" },
 		});
 		const user = userEvent.setup();
@@ -221,7 +221,7 @@ describe("TopBar and manifest review", () => {
 				changes: [
 					{
 						project: "web",
-						general: { buildVersion: "2.0.0", devCommand: "pnpm dev" },
+						general: { buildVersion: "2.0.0" },
 					},
 				],
 			},

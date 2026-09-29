@@ -42,7 +42,7 @@ function mount(environment = "dev") {
 				name: "web",
 				relativeDir: "apps/web",
 				kind: "app",
-				devCommand: "pnpm dev",
+				devAvailable: true,
 				environment: { inherits: true, disabled: true },
 			}}
 			environment={environment}
@@ -77,8 +77,8 @@ describe("service console", () => {
 				project: "web",
 				revision: "x",
 				section: "general",
-				initial: { devCommand: "old" },
-				next: { devCommand: "new" },
+				initial: { devURL: "http://localhost:3000/" },
+				next: { devURL: "http://localhost:3001/" },
 				labels: {},
 			}),
 		);

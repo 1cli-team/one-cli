@@ -28,7 +28,6 @@ export const GeneralForm: React.FC<ProjectSettingsFormProps> = ({
 	const stageSection = useManifestDraftStore((state) => state.stageSection);
 	const initial: ProjectGeneralPatch = {
 		buildVersion: project.buildVersion ?? "",
-		devCommand: project.devCommand ?? "",
 		devURL: project.devURL ?? "",
 	};
 	const value = staged ?? initial;
@@ -44,7 +43,6 @@ export const GeneralForm: React.FC<ProjectSettingsFormProps> = ({
 			next,
 			labels: {
 				buildVersion: "projectInspector.general.buildVersion",
-				devCommand: "projectInspector.general.devCommand",
 				devURL: "projectInspector.general.devURL",
 			},
 		});
@@ -89,18 +87,6 @@ export const GeneralForm: React.FC<ProjectSettingsFormProps> = ({
 							id="project-build-version"
 							value={value.buildVersion}
 							onChange={(event) => update({ ...value, buildVersion: event.target.value })}
-							readOnly={readOnly}
-						/>
-					</ProjectField>
-					<ProjectField
-						label={t("projectInspector.general.devCommand")}
-						htmlFor="project-dev-command"
-					>
-						<Input
-							id="project-dev-command"
-							className="font-mono"
-							value={value.devCommand}
-							onChange={(event) => update({ ...value, devCommand: event.target.value })}
 							readOnly={readOnly}
 						/>
 					</ProjectField>

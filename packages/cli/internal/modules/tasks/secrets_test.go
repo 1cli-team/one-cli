@@ -3,122 +3,339 @@ package tasks
 import (
 	"bytes"
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
+	"encoding/json"
+	"fmt"
+	"net/http"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"runtime"
 	"strings"
+	"sync"
 	"testing"
+	"time"
 
+	"github.com/pelletier/go-toml/v2"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/core/workspace"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/modules/dependencies"
-	process "github.com/torchstellar-team/one-cli/packages/cli/internal/platform/process"
 	runtimeport "github.com/torchstellar-team/one-cli/packages/cli/internal/ports/runtime"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/ports/secrets"
 )
 
-func TestLeafMasksInjectedValuesBeforeSchedulerCanCacheLogs(t *testing.T) {
-	if runtime.GOOS == "windows" {
-		t.Skip("shell fixture")
+type fixtureLoader struct {
+	mu     sync.Mutex
+	calls  map[string]int
+	values map[string]map[string]string
+}
+
+func (l *fixtureLoader) ID() string { return "infisical" }
+func (l *fixtureLoader) Load(_ context.Context, _ string, project, _ string) (map[string]string, error) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	l.calls[project]++
+	return l.values[project], nil
+}
+
+type nativeProvider struct{ binary string }
+
+func (p nativeProvider) PrepareCLI(_ context.Context, c runtimeport.Command) (runtimeport.Command, error) {
+	c.Argv = append([]string{p.binary}, c.Argv...)
+	return c, nil
+}
+func (p nativeProvider) Prepare(ctx context.Context, c runtimeport.Command) (runtimeport.Command, error) {
+	c.Argv = append([]string{"exec", "--"}, c.Argv...)
+	return p.PrepareCLI(ctx, c)
+}
+func syntheticLoader() *fixtureLoader {
+	return &fixtureLoader{calls: map[string]int{}, values: map[string]map[string]string{
+		"apps/web":     {"ONE_TEST_SHARED": "fake-web", "ONE_TEST_WEB": "web-only", "ONE_TEST_COMPLEX": "中文 ' \" $() `x` \\ \n\r\n", "ONE_TEST_EMPTY": ""},
+		"packages/lib": {"ONE_TEST_SHARED": "fake-lib", "ONE_TEST_LIB": "lib-only", "ONE_TEST_COMPLEX": "中文 ' \" $() `x` \\ \n\r\n", "ONE_TEST_EMPTY": ""},
+	}}
+}
+func hashValues(v map[string]string) string {
+	raw, _ := json.Marshal(v)
+	sum := sha256.Sum256(raw)
+	return hex.EncodeToString(sum[:])
+}
+func TestNativeEnvironmentChild(t *testing.T) {
+	if os.Getenv("ONE_NATIVE_CHILD") != "1" {
+		return
 	}
-	w := taskWorkspace(t)
-	w.Manifest().Env = &workspace.EnvironmentConfig{ProjectID: "remote"}
-	p, err := NewPlan(w, Options{Name: "build", Projects: []string{"web"}})
-	if err != nil {
-		t.Fatal(err)
+	if os.Getenv("ONE_NATIVE_ROOT") == "1" {
+		fmt.Println("ROOT_RAN")
+		return
 	}
-	loader := &countingLoader{calls: map[string]int{}, value: "private-test-value-"}
-	env, _, cleanup, err := prepareContext(context.Background(), w, p, secrets.MustRegistry(loader))
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer cleanup()
-	for _, entry := range env {
-		if key, value, ok := strings.Cut(entry, "="); ok && key == contextVariable {
-			t.Setenv(key, value)
+	values := map[string]string{}
+	for _, entry := range os.Environ() {
+		k, v, _ := strings.Cut(entry, "=")
+		if strings.HasPrefix(k, "ONE_TEST_") && k != "ONE_TEST_MISE_BINARY" {
+			values[k] = v
 		}
 	}
-	binary := filepath.Join(w.Root(), "apps/web/node_modules/.bin/pnpm")
-	writeTaskFile(t, w.Root(), "apps/web/node_modules/.bin/pnpm", "#!/bin/sh\nprintf '%s\\n' \"$VALUE\"\nprintf '%s\\n' \"$VALUE\" >&2\nprintf '\\033[32mordinary log\\033[0m\\n'\nexit 9\n")
-	if err := os.Chmod(binary, 0755); err != nil {
-		t.Fatal(err)
-	}
-	var out, errOut bytes.Buffer
-	err = ExecuteLeaf(context.Background(), w, "web", "build", nil, nil, &out, &errOut)
-	if process.ExitCode(err) != 9 {
-		t.Fatal(err)
-	}
-	for _, log := range []string{out.String(), errOut.String()} {
-		if strings.Contains(log, "private-test-value-") || !strings.Contains(log, "[REDACTED]") {
-			t.Fatalf("unsafe logs: %q", log)
+	fmt.Println("ENV_HASH=" + hashValues(values))
+	if os.Getenv("ONE_NATIVE_GRANDCHILD") != "1" {
+		c := exec.Command(os.Args[0], "-test.run=^TestNativeEnvironmentChild$")
+		c.Env = append(os.Environ(), "ONE_NATIVE_GRANDCHILD=1")
+		c.Stdout = os.Stdout
+		c.Stderr = os.Stderr
+		if err := c.Run(); err != nil {
+			os.Exit(17)
 		}
 	}
-	if !strings.Contains(out.String(), "\x1b[32mordinary log\x1b[0m") {
-		t.Fatal("changed unrelated log formatting")
+	// The requested raw-log contract: child values are not filtered by One.
+	fmt.Println("CHILD_LOG=" + values["ONE_TEST_SHARED"])
+	time.Sleep(40 * time.Millisecond)
+}
+func TestNativeMiseProjectEnvironmentsAndCache(t *testing.T) {
+	binary, err := exec.LookPath("mise")
+	if err != nil {
+		t.Skip("mise is not installed")
 	}
-}
-
-type replayProvider struct{}
-
-func (replayProvider) Prepare(_ context.Context, command runtimeport.Command) (runtimeport.Command, error) {
-	return command, nil
-}
-func (replayProvider) PrepareCLI(_ context.Context, command runtimeport.Command) (runtimeport.Command, error) {
-	script := "printf '{}'"
-	if command.Argv[0] == "run" {
-		script = "printf 'cache replay: private-test-value-apps/web\\n'; printf 'cache replay: private-test-value-packages/lib\\n' >&2"
-	}
-	command.Argv = []string{"sh", "-c", script}
-	return command, nil
-}
-func TestSchedulerMasksCachedOutputAcrossProjects(t *testing.T) {
-	if runtime.GOOS == "windows" {
-		t.Skip("shell fixture")
+	if value := os.Getenv("ONE_TEST_MISE_BINARY"); value != "" {
+		binary = value
 	}
 	w := taskWorkspace(t)
-	w.Manifest().Env = &workspace.EnvironmentConfig{ProjectID: "remote"}
-	opts := Options{Name: "build", Projects: []string{"web"}, Cache: "off", UI: "stream", Jobs: 1}
-	plan, err := NewPlan(w, opts)
+	w.Manifest().Env = &workspace.EnvironmentConfig{ProjectID: "synthetic"}
+	isolated := t.TempDir()
+	for _, key := range []string{"MISE_DATA_DIR", "MISE_STATE_DIR", "MISE_CACHE_DIR", "MISE_CONFIG_DIR", "MISE_SYSTEM_CONFIG_DIR"} {
+		t.Setenv(key, filepath.Join(isolated, key))
+	}
+	t.Setenv("MISE_GLOBAL_CONFIG_FILE", filepath.Join(isolated, "global.toml"))
+	t.Setenv("MISE_TRUSTED_CONFIG_PATHS", w.Root())
+	t.Setenv("MISE_AUTO_INSTALL", "0")
+	t.Setenv("MISE_TASK_RUN_AUTO_INSTALL", "0")
+	t.Setenv("MISE_TASK_CACHE_DIR", filepath.Join(isolated, "task-cache"))
+	t.Setenv("ONE_NATIVE_CHILD", "1")
+	loader := syntheticLoader()
+	quote := func(s string) string {
+		if runtime.GOOS == "windows" {
+			return `"` + s + `"`
+		}
+		return "'" + strings.ReplaceAll(s, "'", "'\"'\"'") + "'"
+	}
+	config := map[string]any{"tasks": map[string]any{"build": map[string]any{"depends": []string{"web:build", "lib:build"}, "run": quote(os.Args[0]) + " -test.run=^TestNativeEnvironmentChild$", "env": map[string]string{"ONE_NATIVE_ROOT": "1"}, "sources": []string{"apps/web/package.json"}, "outputs": []string{"root-dist"}, "cache": map[string]any{"enabled": true}}, "web:build": map[string]any{"dir": "apps/web", "run": quote(os.Args[0]) + " -test.run=^TestNativeEnvironmentChild$", "sources": []string{"package.json"}, "outputs": []string{"dist"}, "cache": map[string]any{"enabled": true}}, "lib:build": map[string]any{"dir": "packages/lib", "run": quote(os.Args[0]) + " -test.run=^TestNativeEnvironmentChild$"}}}
+	raw, _ := toml.Marshal(config)
+	writeTaskFile(t, w.Root(), "mise.toml", string(raw))
+	writeTaskFile(t, w.Root(), "apps/web/dist/existing", "old output")
+	writeTaskFile(t, w.Root(), "root-dist/existing", "old output")
+	// A local command override must retain both its command and the injected env.
+	local, _ := toml.Marshal(map[string]any{"tasks": map[string]any{"web:build": map[string]any{"dir": "apps/web", "run": quote(os.Args[0]) + " -test.run=^TestNativeEnvironmentChild$", "sources": []string{"package.json"}, "outputs": []string{"dist"}, "cache": map[string]any{"enabled": true}}}})
+	writeTaskFile(t, w.Root(), "mise.local.toml", string(local))
+	service := Service{Provider: nativeProvider{binary}, Loaders: secrets.MustRegistry(loader), Prepare: func(context.Context, dependencies.Input) error { return nil }}
+	opts := Options{Name: "build", UI: "stream", Cache: "local-only", Jobs: 2}
+	for round := 0; round < 3; round++ {
+		if round == 1 {
+			loader.values["apps/web"]["ONE_TEST_SHARED"] = "rotated"
+		}
+		if round == 2 {
+			delete(loader.values["apps/web"], "ONE_TEST_EMPTY")
+		}
+		plan, err := service.Plan(context.Background(), w, opts)
+		if err != nil {
+			t.Fatal(err)
+		}
+		var out, errOut bytes.Buffer
+		result, err := service.Execute(context.Background(), w, plan, opts, nil, &out, &errOut)
+		if err != nil {
+			t.Fatalf("%v\n%s\n%s", err, out.String(), errOut.String())
+		}
+		if result.Status != "succeeded" {
+			t.Fatal(result)
+		}
+		log := out.String() + errOut.String()
+		if !strings.Contains(log, "ROOT_RAN\n") {
+			t.Fatalf("downstream freshness skipped: %s", log)
+		}
+		for _, values := range loader.values {
+			if strings.Count(log, "ENV_HASH="+hashValues(values)) != 2 {
+				t.Fatalf("environment or grandchild mismatch: %s", log)
+			}
+			if !strings.Contains(log, "CHILD_LOG="+values["ONE_TEST_SHARED"]) {
+				t.Fatal("raw child log was changed")
+			}
+		}
+		if loader.calls["apps/web"] != round+1 || loader.calls["packages/lib"] != round+1 {
+			t.Fatal(loader.calls)
+		}
+	}
+	after, _ := os.ReadFile(filepath.Join(w.Root(), "mise.toml"))
+	if !bytes.Equal(raw, after) {
+		t.Fatal("run changed mise config")
+	}
+
+	t.Run("simultaneous invocations keep independent snapshots", func(t *testing.T) {
+		var wg sync.WaitGroup
+		failures := make(chan error, 2)
+		for _, label := range []string{"first", "second"} {
+			wg.Go(func() {
+				isolatedLoader := syntheticLoader()
+				for _, values := range isolatedLoader.values {
+					values["ONE_TEST_SHARED"] = label
+				}
+				independent := service
+				independent.Loaders = secrets.MustRegistry(isolatedLoader)
+				plan, err := independent.Plan(context.Background(), w, opts)
+				if err != nil {
+					failures <- err
+					return
+				}
+				var out, stderr bytes.Buffer
+				_, err = independent.Execute(context.Background(), w, plan, opts, nil, &out, &stderr)
+				if err != nil {
+					failures <- fmt.Errorf("%w: %s %s", err, out.String(), stderr.String())
+					return
+				}
+				for _, values := range isolatedLoader.values {
+					if strings.Count(out.String()+stderr.String(), "ENV_HASH="+hashValues(values)) != 2 {
+						failures <- fmt.Errorf("cross-invocation values: %s %s", out.String(), stderr.String())
+						return
+					}
+				}
+			})
+		}
+		wg.Wait()
+		close(failures)
+		for err := range failures {
+			t.Error(err)
+		}
+	})
+	t.Run("native task alias retains environment", func(t *testing.T) {
+		local, _ := toml.Marshal(map[string]any{"tasks": map[string]any{"web:build": map[string]any{"alias": "compile", "dir": "apps/web", "run": quote(os.Args[0]) + " -test.run=^TestNativeEnvironmentChild$"}}})
+		writeTaskFile(t, w.Root(), "mise.local.toml", string(local))
+		aliasOpts := opts
+		aliasOpts.Name = "compile"
+		plan, err := service.Plan(context.Background(), w, aliasOpts)
+		if err != nil {
+			t.Fatal(err)
+		}
+		var out, stderr bytes.Buffer
+		_, err = service.Execute(context.Background(), w, plan, aliasOpts, nil, &out, &stderr)
+		if err != nil {
+			t.Fatalf("%v: %s %s", err, out.String(), stderr.String())
+		}
+		if strings.Count(out.String()+stderr.String(), "ENV_HASH="+hashValues(loader.values["apps/web"])) != 2 {
+			t.Fatalf("alias lost environment: %s %s", out.String(), stderr.String())
+		}
+	})
+	t.Run("profile replacement fails before running without binding", func(t *testing.T) {
+		t.Setenv("MISE_ENV", "one-test")
+		writeTaskFile(t, w.Root(), "mise.one-test.toml", string(local))
+		t.Cleanup(func() { os.Remove(filepath.Join(w.Root(), "mise.one-test.toml")) })
+		plan, err := service.Plan(context.Background(), w, opts)
+		if err != nil {
+			t.Fatal(err)
+		}
+		var out, stderr bytes.Buffer
+		_, err = service.Execute(context.Background(), w, plan, opts, nil, &out, &stderr)
+		if err == nil || strings.Contains(out.String()+stderr.String(), "ENV_HASH=") {
+			t.Fatal("profile replacement launched an unbound command", err)
+		}
+	})
+	t.Run("native project scopes with identical task names", func(t *testing.T) {
+		if err := os.Remove(filepath.Join(w.Root(), "mise.local.toml")); err != nil {
+			t.Fatal(err)
+		}
+		writeTaskFile(t, w.Root(), "mise.toml", `monorepo_root=true
+[monorepo]
+config_roots=["apps/web","packages/lib"]
+[tasks.build]
+depends=["//apps/web:build","//packages/lib:build"]
+`)
+		for _, dir := range []string{"apps/web", "packages/lib"} {
+			raw, _ := toml.Marshal(map[string]any{"tasks": map[string]any{"build": map[string]any{"run": quote(os.Args[0]) + " -test.run=^TestNativeEnvironmentChild$"}}})
+			writeTaskFile(t, w.Root(), dir+"/mise.toml", string(raw))
+		}
+		plan, err := service.Plan(context.Background(), w, opts)
+		if err != nil {
+			t.Fatal(err)
+		}
+		var out, errOut bytes.Buffer
+		_, err = service.Execute(context.Background(), w, plan, opts, nil, &out, &errOut)
+		if err != nil {
+			t.Fatalf("%v: %s %s", err, out.String(), errOut.String())
+		}
+		for _, values := range loader.values {
+			if strings.Count(out.String()+errOut.String(), "ENV_HASH="+hashValues(values)) != 2 {
+				t.Fatalf("scoped environment mismatch: %s %s", out.String(), errOut.String())
+			}
+		}
+		// Project selection resolves the native scope, without inventing a root alias.
+		selected := opts
+		selected.Projects = []string{"web"}
+		if plan, err = service.Plan(context.Background(), w, selected); err != nil || len(plan.Tasks) != 1 {
+			t.Fatalf("%+v %v", plan, err)
+		}
+	})
+	t.Run("file task keeps its native source and project environment", func(t *testing.T) {
+		if runtime.GOOS == "windows" {
+			t.Skip("POSIX executable file task")
+		}
+		if err := os.Remove(filepath.Join(w.Root(), "apps/web/mise.toml")); err != nil {
+			t.Fatal(err)
+		}
+		writeTaskFile(t, w.Root(), "apps/web/mise.toml", "[tasks.build]\ndescription='native file'\n")
+		path := filepath.Join(w.Root(), "apps/web/.mise/tasks/build")
+		writeTaskFile(t, w.Root(), "apps/web/.mise/tasks/build", "#!/bin/sh\nexec "+quote(os.Args[0])+" -test.run=^TestNativeEnvironmentChild$\n")
+		if err := os.Chmod(path, 0755); err != nil {
+			t.Fatal(err)
+		}
+		selected := opts
+		selected.Projects = []string{"web"}
+		plan, err := service.Plan(context.Background(), w, selected)
+		if err != nil {
+			t.Fatal(err)
+		}
+		var out, stderr bytes.Buffer
+		_, err = service.Execute(context.Background(), w, plan, selected, nil, &out, &stderr)
+		if err != nil {
+			t.Fatalf("%v: %s %s", err, out.String(), stderr.String())
+		}
+		if strings.Count(out.String()+stderr.String(), "ENV_HASH="+hashValues(loader.values["apps/web"])) != 2 {
+			t.Fatalf("file task lost environment: %s %s", out.String(), stderr.String())
+		}
+	})
+
+}
+func TestEnvironmentSessionContainsNoValuesOnDiskAndCleansUp(t *testing.T) {
+	w := taskWorkspace(t)
+	w.Manifest().Env = &workspace.EnvironmentConfig{ProjectID: "synthetic"}
+	plan, err := NewPlan(w, Options{Name: "build"})
 	if err != nil {
 		t.Fatal(err)
 	}
-	service := Service{Provider: replayProvider{}, Loaders: secrets.MustRegistry(&countingLoader{calls: map[string]int{}, value: "private-test-value-"}), Prepare: func(context.Context, dependencies.Input) error { return nil }}
-	var out, errOut bytes.Buffer
-	result, err := service.Execute(context.Background(), w, plan, opts, nil, &out, &errOut)
-	if err != nil || result.Status != "succeeded" {
-		t.Fatalf("execution: %v %+v", err, result)
-	}
-	combined := out.String() + errOut.String()
-	if strings.Contains(combined, "private-test-value-") || strings.Count(combined, "[REDACTED]") != 2 {
-		t.Fatalf("unsafe cached logs: %q", combined)
-	}
-}
-
-// The Dashboard worker merges both streams into one private console pipe.
-func TestDevConsoleMasksBeforeForwardingAndReportsSchedulerStart(t *testing.T) {
-	if runtime.GOOS == "windows" {
-		t.Skip("shell fixture")
-	}
-	w := taskWorkspace(t)
-	w.Manifest().Env = &workspace.EnvironmentConfig{ProjectID: "remote"}
-	for i := range w.Manifest().Projects {
-		w.Manifest().Projects[i].Dev = &workspace.ProjectDevOverride{Command: "echo dev"}
-	}
-	if err := workspace.WriteManifest(w.Root(), w.Manifest()); err != nil {
-		t.Fatal(err)
-	}
-	opts := Options{Name: "dev", Projects: []string{"web", "lib"}, Cache: "off", UI: "stream", Jobs: 1}
-	plan, err := NewPlan(w, opts)
+	loader := syntheticLoader()
+	service := Service{Loaders: secrets.MustRegistry(loader)}
+	base := secrets.MergeIntoEnviron(os.Environ(), map[string]string{"MISE_PLUGINS_DIR": t.TempDir()}, true)
+	session, err := service.prepareEnvironment(context.Background(), w, plan, base)
 	if err != nil {
 		t.Fatal(err)
 	}
-	started := false
-	service := Service{Provider: replayProvider{}, Loaders: secrets.MustRegistry(&countingLoader{calls: map[string]int{}, value: "private-test-value-"}), Prepare: func(context.Context, dependencies.Input) error { return nil }, OnStarted: func() { started = true }}
-	var console bytes.Buffer
-	result, err := service.Execute(context.Background(), w, plan, opts, nil, &console, &console)
-	if err != nil || result.Status != "succeeded" || !started {
-		t.Fatalf("%+v %v %v", result, err, started)
+	defer session.close()
+	raw, err := os.ReadFile(filepath.Join(session.dir, "bindings.toml"))
+	if err != nil {
+		t.Fatal(err)
 	}
-	if strings.Contains(console.String(), "private-test-value-") || strings.Count(console.String(), "[REDACTED]") != 2 {
-		t.Fatal("unsafe console output")
+	if strings.Contains(string(raw), "fake-web") || strings.Contains(string(raw), "web-only") {
+		t.Fatal("values written to disk")
+	}
+	endpoint := envValue(session.env, "ONE_ENV_ENDPOINT") + "/task-0"
+	r, err := http.Get(endpoint)
+	if err != nil {
+		t.Fatal(err)
+	}
+	r.Body.Close()
+	if r.StatusCode != http.StatusUnauthorized {
+		t.Fatal("unauthenticated request accepted")
+	}
+	session.close()
+	if _, err = os.Stat(session.dir); !os.IsNotExist(err) {
+		t.Fatal("context not cleaned")
+	}
+	client := http.Client{Timeout: time.Second}
+	if r, err := client.Get(endpoint); err == nil {
+		r.Body.Close()
+		t.Fatal("broker remained open")
 	}
 }

@@ -62,5 +62,5 @@ tasks:
   install-launcher:
     cmds: ['go run ./tools/install-local bin/one{{.GOEXE}}']
   dev:
-    dir: testdata/dashboard-dev-workspace
-    cmds: ['go run ../../cmd/one serve --port 5174 --open=false -o text']
+    dir: ../..
+    cmds: ['go run ./packages/cli/cmd/one serve --port 5174 --open=false -o text']

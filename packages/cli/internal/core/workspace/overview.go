@@ -24,11 +24,7 @@ const (
 
 // Issue domains and severities the dashboard knows how to render.
 //
-// Note: dev command is intentionally NOT a domain here. `one add` writes
-// projects[].dev.command from a package.json-scripts heuristic
-// (see workspace.ResolveDevCommand); an empty Command is a *valid* state
-// that allows native task discovery. Projects without any development task
-// are omitted from the generated dev aggregate.
+// Executable task capabilities are read from mise, separately from this metadata.
 const (
 	IssueDomainEnv = "env"
 

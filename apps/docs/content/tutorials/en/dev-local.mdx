@@ -3,19 +3,19 @@ title: Local development
 description: Select projects, customize mise tasks, and run development services.
 ---
 
-Start the workspace with `one dev`, or select services explicitly:
+Start the workspace with `one run dev`, or select services explicitly:
 
 ```sh
-one dev -p web -p api
-one dev -p web --ui raw
-one dev -p web -- --port 4300
-one dev --dry-run -o json
+one run dev -p web -p api
+one run dev -p web --ui raw
+one run dev -p web -- --port 4300
+one run dev --dry-run -o json
 ```
 
 One prepares tools and project dependencies, freezes each project's environment, and invokes mise once. mise runs upstream builds before the services that need them. Multiple services use prefixed logs; Ctrl+C stops the group. A failing task stops the invocation and returns its exit code.
 
-Project commands come from package scripts, Taskfile, or the manifest's development command. Customize task dependencies and commands in `mise.toml`. One updates generated fields incrementally, preserving custom settings and comments. Custom mise commands use mise's environment; generated adapters inject One's project environment.
+Only existing mise tasks run. Initialize native tasks from package scripts and Taskfiles with `one init mise`, then customize dependencies and commands in mise. Execution does not regenerate configuration. One injects each project’s environment according to the task’s working directory, including custom tasks. Use `--ui tui` or `--ui stream` to choose log presentation.
 
 For arbitrary commands, use `one exec -p web -- pnpm add axios`. It runs in the selected project environment without invoking a task graph.
 
-See [one dev](/en/docs/dev/) for terminal modes and dependency preparation, and [one run](/en/docs/run/) for task shorthand, overrides, and caching.
+See [one run dev](/en/docs/dev/) for terminal modes and dependency preparation, and [one run](/en/docs/run/) for task shorthand, overrides, and caching.

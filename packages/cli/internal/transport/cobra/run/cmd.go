@@ -3,8 +3,6 @@ package runcmd
 
 import (
 	"context"
-	"fmt"
-	"os"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -12,6 +10,7 @@ import (
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/modules/tasks"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/i18n"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/output"
+	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/preferences"
 	process "github.com/torchstellar-team/one-cli/packages/cli/internal/platform/process"
 	runtimeport "github.com/torchstellar-team/one-cli/packages/cli/internal/ports/runtime"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/ports/secrets"
@@ -19,11 +18,11 @@ import (
 
 func Commands(loaders *secrets.Registry, provider runtimeport.Provider) []*cobra.Command {
 	service := tasks.Service{Provider: provider, Loaders: loaders}
-	return []*cobra.Command{command(service), internal(false), internal(true), serviceWorker(service)}
+	return []*cobra.Command{command(service), serviceWorker(service)}
 }
 func command(service tasks.Service) *cobra.Command {
 	opts := tasks.Options{Jobs: 1, Cache: "local-only", UI: "auto"}
-	var list, dry bool
+	var list, dry, verbose bool
 	cmd := &cobra.Command{Use: "run [task]", Args: cobra.ArbitraryArgs, Example: "  one run\n  one run build -p web\n  one run test -p api\n  one run build --dry-run", RunE: func(cmd *cobra.Command, args []string) (resultErr error) {
 		dash := cmd.ArgsLenAtDash()
 		if dash >= 0 {
@@ -44,7 +43,7 @@ func command(service tasks.Service) *cobra.Command {
 			if len(opts.Arguments) > 0 {
 				return i18n.Errorf("tasks.one_name")
 			}
-			catalog, _, err := tasks.Catalog(w)
+			catalog, err := service.Catalog(cmd.Context(), w)
 			if err != nil {
 				return err
 			}
@@ -67,9 +66,14 @@ func command(service tasks.Service) *cobra.Command {
 			if output.IsStructured() {
 				output.Emit(tasks.MarshalCatalog(visible))
 			} else {
-				tasks.RenderCatalog(cmd.OutOrStdout(), visible)
+				tasks.RenderCatalog(cmd.OutOrStdout(), visible, verbose)
 			}
 			return nil
+		}
+		if !cmd.Flags().Changed("ui") {
+			if p, e := preferences.Load(); e == nil && p.TaskUI != "" {
+				opts.UI = p.TaskUI
+			}
 		}
 		if err := tasks.ValidateOptions(opts); err != nil {
 			return err
@@ -109,40 +113,11 @@ func command(service tasks.Service) *cobra.Command {
 	cmd.Flags().BoolVar(&opts.Force, "force", false, "")
 	cmd.Flags().BoolVar(&dry, "dry-run", false, "")
 	cmd.Flags().BoolVar(&list, "list", false, "")
-	for _, name := range []string{"project", "env", "cache", "ui", "concurrency", "force", "dry-run", "list"} {
+	cmd.Flags().BoolVar(&verbose, "verbose", false, "")
+	for _, name := range []string{"project", "env", "cache", "ui", "concurrency", "force", "dry-run", "list", "verbose"} {
 		i18n.MarkFlagUsage(cmd, name, "tasks.flag."+strings.ReplaceAll(name, "-", "_"))
 	}
 	i18n.MarkShort(cmd, "tasks.run.short")
 	i18n.MarkLong(cmd, "tasks.run.long")
-	return cmd
-}
-func internal(fingerprint bool) *cobra.Command {
-	var project, operation string
-	name := "__task"
-	if fingerprint {
-		name = "__task-input"
-	}
-	cmd := &cobra.Command{Use: name, Hidden: true, RunE: func(cmd *cobra.Command, args []string) error {
-		w, err := execution.ResolveWorkspace(cmd.Context())
-		if err != nil {
-			return err
-		}
-		if project == "" || operation == "" {
-			return i18n.Errorf("tasks.context_invalid")
-		}
-		if fingerprint {
-			value, err := tasks.InputFingerprint(cmd.Context(), w, project, operation)
-			if err == nil {
-				fmt.Fprintln(cmd.OutOrStdout(), value)
-			}
-			return err
-		}
-		if cmd.ArgsLenAtDash() != 0 {
-			return i18n.Errorf("exec.internal_command_required")
-		}
-		return tasks.ExecuteLeaf(cmd.Context(), w, project, operation, args, os.Stdin, os.Stdout, os.Stderr)
-	}}
-	cmd.Flags().StringVar(&project, "project", "", "")
-	cmd.Flags().StringVar(&operation, "task", "", "")
 	return cmd
 }

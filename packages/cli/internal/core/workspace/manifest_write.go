@@ -198,29 +198,6 @@ func EnsureEnvironment(projectRoot, name string) (added bool, err error) {
 	return true, WriteManifest(projectRoot, m)
 }
 
-// UpdateProjectDev sets projects[].dev.command on the project
-// entry keyed by relativeDir. Empty cmd clears the override block.
-//
-// Used by creation during `one add` to persist the derived
-// dev command into the manifest, replacing the legacy Procfile.dev
-// write path.
-func UpdateProjectDev(projectRoot, relativeDir, cmd string) error {
-	m, err := ReadManifest(projectRoot)
-	if err != nil {
-		return err
-	}
-	for i := range m.Projects {
-		if m.Projects[i].RelativeDir == ToPosixPath(relativeDir) {
-			m.Projects[i].Dev = nil
-			if cmd != "" {
-				m.Projects[i].Dev = &ProjectDevOverride{Command: cmd}
-			}
-			return WriteManifest(projectRoot, m)
-		}
-	}
-	return nil
-}
-
 // RecordWorkspaceEnvKey appends key to the workspace-level env config's
 // keys list (sorted, deduped, idempotent). Use this when a `one env set`
 // runs at workspace-root scope — i.e. without -p and not inside any

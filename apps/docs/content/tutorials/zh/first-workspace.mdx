@@ -81,7 +81,7 @@ manifest 关键字段：
 | Capability | Implementation | 给你啥 |
 |---|---|---|
 | `env` | Infisical | 绑定后直接注入进程，绑定前使用 shell 环境 |
-| `dev` | mise | `one add` 时把每个项目的 dev 命令写到 `projects[].dev.command`，[`one dev`](/zh/tutorials/dev-local/) 通过 mise 调度 |
+| `dev` | mise | `one add` 时将项目已有 dev 脚本投影为原生 mise 任务，[`one dev`](/zh/tutorials/dev-local/) 通过 mise 调度 |
 
 `one create` 和 `one add` 都不会默认配置 CI，也不会自动生成 workflow 文件。
 

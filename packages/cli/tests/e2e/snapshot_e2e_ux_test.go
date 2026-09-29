@@ -120,7 +120,7 @@ func TestSnapshot_E2E_WorkspaceOverviewAndDeferredDeployment(t *testing.T) {
 	}
 	summary := mustParseJSON(t, stdout)
 	project := summary["projects"].([]any)[0].(map[string]any)
-	if project["deployment_configured"] != nil || summary["next_command"] != "one dev -p web" {
+	if project["deployment_configured"] != nil || summary["next_command"] != "one run dev -p web" {
 		t.Fatalf("unexpected project summary: %v", summary)
 	}
 

@@ -7,13 +7,13 @@ import (
 	workspaceapp "github.com/torchstellar-team/one-cli/packages/cli/internal/application/workspace"
 )
 
-// ProjectSettings shares the static CLI catalog with the Dashboard.
-func ProjectSettings(ctx context.Context, root, project string) ([]workspaceapp.ProjectTask, error) {
+// ProjectSettings shares the effective mise catalog with the Dashboard.
+func (s Service) ProjectSettings(ctx context.Context, root, project string) ([]workspaceapp.ProjectTask, error) {
 	w, err := execution.ResolveWorkspaceScope(execution.NewScope(ctx, root))
 	if err != nil {
 		return nil, err
 	}
-	catalog, _, err := Catalog(w)
+	catalog, err := s.Catalog(ctx, w)
 	if err != nil {
 		return nil, err
 	}
@@ -22,7 +22,7 @@ func ProjectSettings(ctx context.Context, root, project string) ([]workspaceapp.
 		if task.Project != project {
 			continue
 		}
-		out = append(out, workspaceapp.ProjectTask{Name: task.Name, Source: task.Source, Dependencies: task.Dependencies, Outputs: task.Outputs, CacheEnabled: task.Cached})
+		out = append(out, workspaceapp.ProjectTask{Name: task.Name, Operation: task.Operation, Source: task.Source, Dependencies: task.Dependencies, Outputs: task.Outputs, CacheEnabled: task.Cached})
 	}
 	return out, nil
 }

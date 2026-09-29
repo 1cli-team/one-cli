@@ -121,8 +121,8 @@ func TestE2E_SecretManagementNeverPrintsValues(t *testing.T) {
 	if runtime.GOOS != "windows" {
 		fail.Store(false)
 		out, errOut, code := runAuthenticatedCLI(t, root, server.URL, "exec", "--global", "--path", "/", "--env", "dev", "--", "sh", "-c", `printf '%s\n' "$TEST_KEY"; printf '%s\n' "$TEST_KEY" >&2; exit 13`)
-		if code != 13 || strings.Contains(out+errOut, secret) || !strings.Contains(out, "[REDACTED]") || !strings.Contains(errOut, "[REDACTED]") {
-			t.Fatalf("unsafe global exec: %d %s %s", code, out, errOut)
+		if code != 13 || !strings.Contains(out, secret) || !strings.Contains(errOut, secret) || strings.Contains(out+errOut, "test-session-token") {
+			t.Fatalf("unexpected raw global exec: %d %s %s", code, out, errOut)
 		}
 	}
 }

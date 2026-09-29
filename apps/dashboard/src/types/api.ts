@@ -168,7 +168,7 @@ export interface ProjectSettings {
 	toolchain?: string;
 	packageManager?: string;
 	buildVersion?: string;
-	devCommand?: string;
+	devAvailable?: boolean;
 	devURL?: string;
 	build?: {
 		command?: string;
@@ -182,6 +182,7 @@ export interface ProjectSettings {
 		status: "ready" | "unavailable";
 		entries: Array<{
 			name: string;
+			operation?: string;
 			source: string;
 			depends: string[] | null;
 			outputs: string[] | null;
@@ -202,7 +203,6 @@ export interface ProjectSettingsResponse {
 
 export interface ProjectGeneralPatch {
 	buildVersion: string;
-	devCommand: string;
 	devURL?: string;
 }
 

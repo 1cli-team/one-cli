@@ -110,7 +110,7 @@ func TestExplicitBinaryIsRespectedAndVersionChecked(t *testing.T) {
 		t.Fatal(err)
 	}
 	t.Setenv("ONE_MISE_BINARY", path)
-	command := runtimeport.Command{Directory: dir, Argv: []string{"one", "__exec", "--", "a b", ""}, Env: []string{"PATH=/somewhere", "KEEP=unchanged"}}
+	command := runtimeport.Command{Directory: dir, Argv: []string{"node", "script.mjs", "a b", ""}, Env: []string{"PATH=/somewhere", "KEEP=unchanged"}}
 	prepared, err := (Provider{}).Prepare(context.Background(), command)
 	if err != nil {
 		t.Fatal(err)

@@ -59,3 +59,4 @@ bin-go/
 # Local template development; generated projects resolve their own workspace lock.
 /packages/templates/**/pnpm-lock.yaml
 /packages/templates/**/go.work.sum
+.one-run-*/

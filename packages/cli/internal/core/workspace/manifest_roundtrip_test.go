@@ -5,6 +5,7 @@ package workspace
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -82,55 +83,29 @@ func TestManifest_WriteIsByteDeterministic(t *testing.T) {
 	}
 }
 
-func TestManifest_PreservesDevOverride(t *testing.T) {
-	tmp := t.TempDir()
-	if err := WriteManifest(tmp, &Manifest{Projects: []ManifestProject{{
-		Name: "api", RelativeDir: "services/api", TemplateID: "nestjs-api", Toolchain: "node", PackageManager: "pnpm",
-	}}}); err != nil {
-		t.Fatalf("WriteManifest: %v", err)
-	}
-	if err := UpdateProjectDev(tmp, "services/api", "pnpm run start:dev"); err != nil {
-		t.Fatalf("UpdateProjectDev: %v", err)
-	}
-	if got := readDevCommand(t, tmp, "api"); got != "pnpm run start:dev" {
-		t.Errorf("dev.command after write = %q, want %q", got, "pnpm run start:dev")
-	}
-
-	// Read and persist the manifest again; the dev command must survive.
-	m, err := ReadManifest(tmp)
-	if err != nil {
+func TestManifestRetiresDevCommandAndPreservesServiceURL(t *testing.T) {
+	root := t.TempDir()
+	raw := []byte(`{"version":1,"projects":[{"name":"api","relativeDir":"services/api","toolchain":"node","dev":{"command":"echo retired","url":"http://localhost:3000/"}}]}`)
+	if err := os.WriteFile(filepath.Join(root, ManifestFilename), raw, 0600); err != nil {
 		t.Fatal(err)
 	}
-	if err := WriteManifest(tmp, m); err != nil {
-		t.Fatal(err)
-	}
-	if got := readDevCommand(t, tmp, "api"); got != "pnpm run start:dev" {
-		t.Errorf("dev.command lost on round-trip: got %q", got)
-	}
-
-	// Empty command clears the block.
-	if err := UpdateProjectDev(tmp, "services/api", ""); err != nil {
-		t.Fatalf("clear: %v", err)
-	}
-	if got := readDevCommand(t, tmp, "api"); got != "" {
-		t.Errorf("dev.command should clear, got %q", got)
-	}
-	loaded, err := ReadManifest(tmp)
-	if err != nil {
-		t.Fatalf("ReadManifest after clear: %v", err)
-	}
-	if loaded.Projects[0].Dev != nil {
-		t.Errorf("Dev should be cleared to nil, got %+v", loaded.Projects[0].Dev)
-	}
-}
-
-func readDevCommand(t *testing.T, root, projectName string) string {
-	t.Helper()
 	m, err := ReadManifest(root)
 	if err != nil {
-		t.Fatalf("ReadManifest: %v", err)
+		t.Fatal(err)
 	}
-	return ProjectDev(m, projectName)
+	if m.Projects[0].Service == nil || m.Projects[0].Service.URL != "http://localhost:3000/" {
+		t.Fatal(m.Projects[0])
+	}
+	if err = WriteManifest(root, m); err != nil {
+		t.Fatal(err)
+	}
+	after, err := os.ReadFile(filepath.Join(root, ManifestFilename))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(string(after), "retired") || strings.Contains(string(after), `"dev"`) {
+		t.Fatal("retired execution metadata was persisted")
+	}
 }
 
 func TestManifest_WriteReadPreservesOverrides(t *testing.T) {

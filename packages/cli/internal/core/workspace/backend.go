@@ -53,17 +53,6 @@ func ProjectEnv(m *Manifest, projectName string) *ProjectEnvOverride {
 	return d.Env
 }
 
-// ProjectDev returns the dev command for projectName, or "" when there
-// is no dev block or its Command is empty. Used by `one dev` to
-// resolve the generated development adapter.
-func ProjectDev(m *Manifest, projectName string) string {
-	d := findProject(m, projectName)
-	if d == nil || d.Dev == nil {
-		return ""
-	}
-	return d.Dev.Command
-}
-
 // EnvironmentEnabled reports whether a command should fetch remote variables.
 func EnvironmentEnabled(m *Manifest, relativeDir string) bool {
 	if m == nil || m.Env == nil {

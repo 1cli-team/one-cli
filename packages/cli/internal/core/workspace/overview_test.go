@@ -52,7 +52,7 @@ func TestBuildOverview_FullyConfigured_NoIssues(t *testing.T) {
 			{
 				Name: "web", RelativeDir: "apps/web", TemplateID: "react-spa", Toolchain: "node",
 
-				Dev: &ProjectDevOverride{Command: "pnpm dev"},
+				Service: &ProjectService{URL: "http://localhost:3000/"},
 			},
 		},
 	}
@@ -97,7 +97,7 @@ func TestBuildOverview_EnvWorkspaceLevelOnly(t *testing.T) {
 		Projects: []ManifestProject{
 			{Name: "web", RelativeDir: "apps/web", TemplateID: "react-spa", Toolchain: "node",
 
-				Dev: &ProjectDevOverride{Command: "pnpm dev"},
+				Service: &ProjectService{URL: "http://localhost:3000/"},
 			},
 		},
 	}

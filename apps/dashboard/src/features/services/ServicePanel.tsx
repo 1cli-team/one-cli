@@ -65,9 +65,7 @@ export function ServicePanel({
 	);
 	const active = state && ["preparing", "running", "stopping"].includes(state.status);
 	const busy = pending || state?.status === "stopping";
-	const hasDev =
-		!!project.devCommand ||
-		project.tasks?.entries.some((task) => task.name === "dev" || task.name.endsWith(":dev"));
+	const hasDev = project.devAvailable === true;
 	const raw = state?.logs.map((line) => line.text).join("") ?? "";
 	const text = useMemo(() => consoleText(raw), [raw]);
 	const visible = useMemo(

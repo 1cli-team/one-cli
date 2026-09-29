@@ -63,10 +63,10 @@ func TestConfigureDryRunIdempotentAndUserOverrides(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !preview.DryRun || len(preview.GitChanges) != 2 || len(preview.Changes) != 2 {
+	if !preview.DryRun || len(preview.GitChanges) != 2 || len(preview.Changes) != 3 {
 		t.Fatalf("preview: %+v", preview)
 	}
-	for _, path := range []string{"hk.pkl", workspace.HooksConfigFilename, workspace.MiseConfigFilename, ".git/hooks/pre-commit"} {
+	for _, path := range []string{"hk.pkl", workspace.HooksConfigFilename, workspace.MiseConfigFilename, ".gitignore", ".git/hooks/pre-commit"} {
 		if _, err := os.Stat(filepath.Join(root, path)); !os.IsNotExist(err) {
 			t.Fatalf("dry-run wrote %s", path)
 		}

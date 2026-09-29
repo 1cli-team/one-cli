@@ -1,6 +1,7 @@
 package cli_test
 
 import (
+	"github.com/pelletier/go-toml/v2"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -10,11 +11,38 @@ import (
 
 func appendRootTaskConfig(t *testing.T, root, value string) {
 	t.Helper()
-	raw, err := os.ReadFile(filepath.Join(root, "mise.toml"))
+	path := filepath.Join(root, "mise.local.toml")
+	raw, err := os.ReadFile(path)
+	if err != nil && !os.IsNotExist(err) {
+		t.Fatal(err)
+	}
+	current := map[string]any{}
+	patch := map[string]any{}
+	if len(raw) > 0 {
+		if err = toml.Unmarshal(raw, &current); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err = toml.Unmarshal([]byte(value), &patch); err != nil {
+		t.Fatal(err)
+	}
+	var merge func(map[string]any, map[string]any)
+	merge = func(target, source map[string]any) {
+		for key, value := range source {
+			next, ok := value.(map[string]any)
+			if old, exists := target[key].(map[string]any); ok && exists {
+				merge(old, next)
+			} else {
+				target[key] = value
+			}
+		}
+	}
+	merge(current, patch)
+	raw, err = toml.Marshal(current)
 	if err != nil {
 		t.Fatal(err)
 	}
-	buildWrite(t, root, "mise.toml", string(raw)+"\n"+value)
+	buildWrite(t, root, "mise.local.toml", string(raw))
 }
 
 func TestE2E_TasksRestoreArtifactsAndInvalidateRootConfiguration(t *testing.T) {
@@ -31,7 +59,7 @@ func testTasksRestoreArtifactsAndInvalidateRootConfiguration(t *testing.T) {
 	for _, project := range []struct{ name, dir string }{{"web", "apps/web"}, {"lib", "packages/lib"}} {
 		name, dir := project.name, project.dir
 		buildWrite(t, root, dir+"/build.sh", "#!/bin/sh\nmkdir -p dist\nprintf '%s' \"$BUILD_VALUE\" > dist/value\necho executed >> executions\nprintf '<%s>\\n' \"$@\"\n")
-		appendRootTaskConfig(t, root, "[tasks.\""+name+":build\"]\nenv={BUILD_VALUE='"+name+"'}\nsources=['package.json','build.sh']\noutputs=['dist']\ncache={enabled=true,env=['BUILD_VALUE'],command_inputs=['one __task-input --project "+name+" --task build']}\n")
+		appendRootTaskConfig(t, root, "[tasks.\""+name+":build\"]\nenv={BUILD_VALUE='"+name+"'}\nsources=['package.json','build.sh']\noutputs=['dist']\ncache={enabled=true,env=['BUILD_VALUE']}\n")
 	}
 	run := func(args ...string) string {
 		t.Helper()
@@ -70,11 +98,11 @@ func testTasksRestoreArtifactsAndInvalidateRootConfiguration(t *testing.T) {
 			t.Fatal("restore executed the task")
 		}
 	}
-	config, err := os.ReadFile(filepath.Join(root, "mise.toml"))
+	config, err := os.ReadFile(filepath.Join(root, "mise.local.toml"))
 	if err != nil {
 		t.Fatal(err)
 	}
-	buildWrite(t, root, "mise.toml", strings.Replace(string(config), "BUILD_VALUE='web'", "BUILD_VALUE='changed'", 1))
+	buildWrite(t, root, "mise.local.toml", strings.Replace(string(config), "BUILD_VALUE = 'web'", "BUILD_VALUE = 'changed'", 1))
 	run("run", "build", "-p", "web", "-o", "json")
 	// mise includes the defining config in every task cache key. Editing the
 	// shared root config invalidates both tasks, while their environments stay isolated.
@@ -99,9 +127,11 @@ func testTasksRestoreArtifactsAndInvalidateRootConfiguration(t *testing.T) {
 			t.Fatalf("lost argv %q: %s", want, out)
 		}
 	}
-	// Missing context fails even when an artifact is already cached.
-	if _, _, code := runBinaryIn(t, root, "__task-input", "--project", "web", "--task", "build"); code == 0 {
-		t.Fatal("missing context accepted")
+	// Retired internal entry points are unavailable.
+	for _, name := range []string{"__task", "__task-input", "__exec"} {
+		if _, _, code := runBinaryIn(t, root, name); code == 0 {
+			t.Fatalf("retired command %s is available", name)
+		}
 	}
 }
 
@@ -123,15 +153,15 @@ func TestE2E_NativeMiseFileTask(t *testing.T) {
 	}
 }
 
-func TestE2E_TasksRejectCacheWithoutEnvironmentFingerprint(t *testing.T) {
+func TestE2E_NativeCacheNeedsNoOneCommand(t *testing.T) {
 	root := buildFixture(t, true)
 	appendRootTaskConfig(t, root, "[tasks.\"web:build\"]\nsources=['package.json']\noutputs=['dist']\ncache={enabled=true}\n")
 	stdout, stderr, code := runBinaryIn(t, root, "run", "build", "-p", "web", "-o", "json")
-	if code == 0 || !strings.Contains(stderr+stdout, "__task-input") {
-		t.Fatalf("effective cache without fingerprint accepted: %d %s %s", code, stdout, stderr)
+	if code != 0 {
+		t.Fatalf("native cache failed: %d %s %s", code, stdout, stderr)
 	}
-	if _, err := os.Stat(filepath.Join(root, "order")); !os.IsNotExist(err) {
-		t.Fatal("task ran before effective cache was validated")
+	if _, err := os.Stat(filepath.Join(root, "order")); err != nil {
+		t.Fatal("native cached task did not run")
 	}
 }
 
@@ -156,7 +186,7 @@ func TestE2E_TasksReuseArtifactsAcrossCheckouts(t *testing.T) {
 		for _, project := range []struct{ name, dir string }{{"web", "apps/web"}, {"lib", "packages/lib"}} {
 			name, dir := project.name, project.dir
 			buildWrite(t, root, dir+"/build.sh", "#!/bin/sh\nmkdir -p dist\necho portable-artifact > dist/value\necho executed >> executions\n")
-			appendRootTaskConfig(t, root, "[tasks.\""+name+":build\"]\nsources=['package.json','build.sh']\noutputs=['dist']\ncache={enabled=true,command_inputs=['one __task-input --project "+name+" --task build']}\n")
+			appendRootTaskConfig(t, root, "[tasks.\""+name+":build\"]\nsources=['package.json','build.sh']\noutputs=['dist']\ncache={enabled=true}\n")
 		}
 		stdout, stderr, code := runBinaryIn(t, root, "build", "-o", "json")
 		if code != 0 {
@@ -214,6 +244,7 @@ func TestE2E_GoTaskBuildRestoresExecutableAndForwardsArguments(t *testing.T) {
 			t.Fatalf("built executable: %s %v, want %s", out, err, want)
 		}
 	}
+	run("init", "mise")
 	run("build", "-p", "api")
 	check("default")
 	if err = os.RemoveAll(filepath.Join(root, "services/api/bin")); err != nil {

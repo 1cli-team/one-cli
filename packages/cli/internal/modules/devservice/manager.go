@@ -1,5 +1,5 @@
 // Package devservice owns Dashboard dev processes for the lifetime of one serve.
-// Workers use the normal task pipeline; only already-redacted output reaches here.
+// Workers use the normal task pipeline; child output is forwarded unchanged.
 package devservice
 
 import (

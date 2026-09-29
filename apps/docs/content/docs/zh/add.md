@@ -55,7 +55,7 @@ one add empty-library --name shared --yes
 
 三个模板分别创建 `apps/web/`、`services/api/`、`packages/shared/`，仅包含用于 Git 跟踪目录的 `.gitkeep`。它们以 `toolchain: "none"` 登记，不生成 `package.json`、`go.mod`、依赖或启动任务。交互式 `one add` 和 Dashboard 的新建项目选择器也提供这三个选项。
 
-如果使用 Node 或 Go，在 `one.manifest.json` 中将项目的 `toolchain` 改为 `node` 或 `go`；Node 项目使用 `packageManager: "pnpm"`，并补齐根工作区的包成员配置，Go 项目则将模块加入根 `go.work`。在 `package.json` / `Taskfile.yml` 中定义任务，或设置项目的 `dev.command`，然后运行 `one init mise` 更新任务配置。使用其他语言时，可以保留 `toolchain: "none"`，在根 `mise.toml` 中自行定义工具和任务，或设置 `dev.command`。配置好命令后再使用 `one dev` / `one build`。
+如果使用 Node 或 Go，在 `one.manifest.json` 中将项目的 `toolchain` 改为 `node` 或 `go`；Node 项目使用 `packageManager: "pnpm"`，并补齐根工作区的包成员配置，Go 项目则将模块加入根 `go.work`。在 `package.json` / `Taskfile.yml` 中定义任务，然后运行 `one init mise` 更新任务配置。使用其他语言时，可以保留 `toolchain: "none"`，在根 `mise.toml` 中自行定义工具和任务。配置好命令后再使用 `one dev` / `one build`。
 
 ## 输出
 
@@ -114,9 +114,8 @@ one add nestjs-api --name user-api --yes -o json | jq
 ## 加完会自动做的事
 
 - 把项目登记到 `one.manifest.json#projects[]`
-- 写入项目的本地开发命令
+- 将已有包脚本和 Taskfile 任务投影到原生 mise 配置
 - 持续集成保持未配置
-- 部署和镜像配置保持为空，首次部署时再生成
 
 非阻断同步问题通过 `warnings[]` 返回，项目仍然加成功。
 

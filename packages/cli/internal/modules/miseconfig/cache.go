@@ -92,7 +92,7 @@ func (p *Plan) configureCache(root string, project workspace.Project, op workspa
 		t.Sources = append(t.Sources, filepath.ToSlash(rel))
 	}
 	t.Outputs = &outputs
-	t.Cache = &Cache{Enabled: true, Env: []string{"NODE_ENV", "CI", "GOOS", "GOARCH", "CGO_ENABLED", "GOFLAGS", "GOTOOLCHAIN", "CC", "CXX", "CFLAGS", "CXXFLAGS", "LDFLAGS", "CGO_CFLAGS", "CGO_CPPFLAGS", "CGO_CXXFLAGS", "CGO_LDFLAGS", "GOPATH", "GOWORK"}, CommandInputs: []string{"one __task-input --project " + windowsQuote(project.Name) + " --task " + windowsQuote(op.Name)}}
+	t.Cache = &Cache{Enabled: true, Env: []string{"NODE_ENV", "CI", "GOOS", "GOARCH", "CGO_ENABLED", "GOFLAGS", "GOTOOLCHAIN", "CC", "CXX", "CFLAGS", "CXXFLAGS", "LDFLAGS", "CGO_CFLAGS", "CGO_CPPFLAGS", "CGO_CXXFLAGS", "CGO_LDFLAGS", "GOPATH", "GOWORK"}}
 }
 
 // Build configuration can redirect output through arbitrary code. Only infer an
@@ -135,4 +135,21 @@ func (p *Plan) templateCacheConfigUnchanged(project workspace.Project) bool {
 		}
 	}
 	return true
+}
+
+// nativeCommand keeps normal script names readable and quotes user-defined names.
+func nativeCommand(argv []string, windows bool) string {
+	parts := make([]string, len(argv))
+	for i, arg := range argv {
+		if arg != "" && strings.IndexFunc(arg, func(r rune) bool {
+			return !(r >= 'a' && r <= 'z' || r >= 'A' && r <= 'Z' || r >= '0' && r <= '9' || strings.ContainsRune("_./:-", r))
+		}) < 0 {
+			parts[i] = arg
+		} else if windows {
+			parts[i] = windowsQuote(arg)
+		} else {
+			parts[i] = shellQuote(arg)
+		}
+	}
+	return strings.Join(parts, " ")
 }

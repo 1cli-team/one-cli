@@ -20,7 +20,7 @@ func merge(t *testing.T, before, desired string) string {
 }
 func TestTOMLPreservesUserTextAndUpdatesOwnedFields(t *testing.T) {
 	before := "# My tools\n[tools]\nnode = 'system' # local choice\n[env]\nKEEP = 'yes'\n[tasks.custom]\nrun = 'hello'\n[tasks.empty]\n"
-	desired := "min_version = '2026.9.7'\n[tools]\nnode = '24.15.0'\n[tasks.build]\nrun = 'one __task build'\nraw_args = true\n"
+	desired := "min_version = '2026.9.7'\n[tools]\nnode = '24.15.0'\n[tasks.build]\nrun = 'pnpm run build'\nraw_args = true\n"
 	first := merge(t, before, desired)
 	for _, text := range []string{"# My tools", "node = 'system' # local choice", "KEEP = 'yes'", "run = 'hello'", "[tasks.empty]"} {
 		if !strings.Contains(first, text) {
@@ -34,12 +34,12 @@ func TestTOMLPreservesUserTextAndUpdatesOwnedFields(t *testing.T) {
 	if got := merge(t, user, desired); got != user {
 		t.Fatalf("user changes not preserved: %s", got)
 	}
-	changed := strings.Replace(desired, "one __task build", "one __task newbuild", 1)
+	changed := strings.Replace(desired, "pnpm run build", "pnpm run newbuild", 1)
 	got := merge(t, user, changed)
-	if !strings.Contains(got, "one __task newbuild") || !strings.Contains(got, "false # mine") {
+	if !strings.Contains(got, "pnpm run newbuild") || !strings.Contains(got, "false # mine") {
 		t.Fatal(got)
 	}
-	conflict := strings.Replace(got, "one __task newbuild", "echo custom", 1)
+	conflict := strings.Replace(got, "pnpm run newbuild", "echo custom", 1)
 	if _, err := TOML([]byte(conflict), []byte(desired)); err == nil {
 		t.Fatal("expected same-entry conflict")
 	}
@@ -47,7 +47,7 @@ func TestTOMLPreservesUserTextAndUpdatesOwnedFields(t *testing.T) {
 func TestTOMLShapes(t *testing.T) {
 	for _, before := range []string{"[tasks]\nbuild = { cache = { enabled = false }, description = 'mine' }\n", "tasks.build.cache.enabled = false\ntasks.build.description = 'mine'\n", "[tasks.build]\ncache = { enabled = false }\ndescription = 'mine'\n"} {
 		t.Run(before, func(t *testing.T) {
-			desired := "[tasks.build]\nrun = 'one __task build'\nraw_args = true\n[tasks.build.cache]\nenabled = true\nenv = ['VERSION']\n"
+			desired := "[tasks.build]\nrun = 'pnpm run build'\nraw_args = true\n[tasks.build.cache]\nenabled = true\nenv = ['VERSION']\n"
 			first := merge(t, before, desired)
 			if !strings.Contains(first, "'mine'") {
 				t.Fatal(first)
@@ -61,7 +61,7 @@ func TestTOMLShapes(t *testing.T) {
 }
 func TestTOMLCustomTaskAndAdvancedTools(t *testing.T) {
 	before := "[tools]\nnode = { version = 'lts', postinstall = 'echo yes' }\n[tasks]\nbuild = 'my build'\ntest = { run = 'my test', description = 'mine' }\n"
-	desired := "[tools]\nnode = '24.15.0'\n[tasks.build]\nrun = 'one __task build'\nraw_args = true\n[tasks.test]\nrun = 'one __task test'\nraw_args = true\n"
+	desired := "[tools]\nnode = '24.15.0'\n[tasks.build]\nrun = 'pnpm run build'\nraw_args = true\n[tasks.test]\nrun = 'pnpm run test'\nraw_args = true\n"
 	if got := merge(t, before, desired); got != before {
 		t.Fatalf("custom definitions changed: %s", got)
 	}
@@ -104,8 +104,8 @@ func TestTOMLRootFieldsStayAtRoot(t *testing.T) {
 }
 
 func TestTOMLAddsFieldsToPreviouslyGeneratedTasks(t *testing.T) {
-	first := merge(t, "", "[tasks.build]\nrun = 'one __task build'\n[tasks.build.cache]\nenabled = false\n")
-	desired := "[tasks.build]\nrun = 'one __task build'\ndepends = ['//packages/lib:build']\nsources = ['src/**']\noutputs = ['dist']\n[tasks.build.cache]\nenabled = true\ncommand_inputs = ['fingerprint']\n"
+	first := merge(t, "", "[tasks.build]\nrun = 'pnpm run build'\n[tasks.build.cache]\nenabled = false\n")
+	desired := "[tasks.build]\nrun = 'pnpm run build'\ndepends = ['//packages/lib:build']\nsources = ['src/**']\noutputs = ['dist']\n[tasks.build.cache]\nenabled = true\ncommand_inputs = ['fingerprint']\n"
 	got := merge(t, first, desired)
 	var doc map[string]any
 	_ = toml.Unmarshal([]byte(got), &doc)

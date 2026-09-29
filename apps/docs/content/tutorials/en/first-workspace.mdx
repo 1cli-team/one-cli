@@ -81,7 +81,7 @@ Every new workspace gets two baseline capabilities without prompting:
 | Capability | Implementation | What it gives you |
 |---|---|---|
 | `env` | Infisical | Direct process injection after binding; shell environment before binding |
-| `dev` | mise | Each `one add` records a dev command at `projects[].dev.command`, run by [`one dev`](/en/tutorials/dev-local/) through mise |
+| `dev` | mise | `one add` projects existing dev scripts into native mise tasks, run by [`one dev`](/en/tutorials/dev-local/) through mise |
 
 CI is not configured by `one create` or `one add`, and no workflow file is generated automatically.
 

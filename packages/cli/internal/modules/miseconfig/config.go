@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"reflect"
 	"regexp"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -126,6 +127,47 @@ func BuildWithFiles(root string, opts Options, files map[string][]byte) (*Plan, 
 	if _, err := workspace.ReadManifest(root); err != nil {
 		return nil, err
 	}
+	// Explicit initialization retires old dev execution metadata. Preserve
+	// unrelated JSON fields and migrate only the service URL.
+	var document map[string]any
+	if err = json.Unmarshal(raw, &document); err != nil {
+		return nil, err
+	}
+	migrated := false
+	if entries, ok := document["projects"].([]any); ok {
+		for _, value := range entries {
+			entry, ok := value.(map[string]any)
+			if !ok {
+				continue
+			}
+			if dev, exists := entry["dev"]; exists {
+				if fields, ok := dev.(map[string]any); ok {
+					if url, ok := fields["url"].(string); ok && url != "" {
+						if _, present := entry["service"]; !present {
+							entry["service"] = map[string]any{"url": url}
+						}
+					}
+				}
+				delete(entry, "dev")
+				migrated = true
+			}
+		}
+	}
+	if migrated {
+		after, e := json.MarshalIndent(document, "", "  ")
+		if e != nil {
+			return nil, e
+		}
+		p.Changes = append(p.Changes, Change{Path: workspace.ManifestFilename, Before: string(raw), After: string(append(after, '\n'))})
+	}
+	ignore, err := p.readOptional(".gitignore")
+	if err != nil {
+		return nil, err
+	}
+	if !slices.Contains(strings.Split(strings.ReplaceAll(string(ignore), "\r\n", "\n"), "\n"), ".one-run-*/") {
+		after := strings.TrimRight(string(ignore), "\r\n") + "\n.one-run-*/\n"
+		p.Changes = append(p.Changes, Change{Path: ".gitignore", Before: string(ignore), After: after})
+	}
 	oldRoot, err := p.readOptional(Filename)
 	if err != nil {
 		return nil, err
@@ -234,17 +276,6 @@ func BuildWithFiles(root string, opts Options, files map[string][]byte) (*Plan, 
 		if err != nil {
 			return nil, err
 		}
-		if workspace.ProjectDev(&m, project.Name) != "" {
-			found := false
-			for _, op := range operations {
-				if op.Name == "dev" {
-					found = true
-				}
-			}
-			if !found {
-				operations = append(operations, workspace.ProjectTask{Name: "dev"})
-			}
-		}
 		switch project.Toolchain {
 		case "node":
 			rootConfig.Tools["node"] = opts.NodeVersion
@@ -271,10 +302,15 @@ func BuildWithFiles(root string, opts Options, files map[string][]byte) (*Plan, 
 			rootConfig.Tools["task"] = "3.51.1"
 		}
 		for _, op := range operations {
-			// Stable command text keeps per-run context paths out of cache keys.
-			args := " --project " + shellQuote(project.Name) + " --task " + shellQuote(op.Name)
-			task := Task{Directory: rel, Description: op.Description, Run: "one __task" + args + " --", RawArgs: true, Interactive: op.Interactive, Cache: &Cache{Enabled: false}}
-			task.RunWindows = "one __task --project " + windowsQuote(project.Name) + " --task " + windowsQuote(op.Name) + " --"
+			argv := append([]string(nil), op.Argv...)
+			// Task accepts CLI arguments after --; pnpm forwards script arguments.
+			if project.Toolchain == "go" {
+				argv = append(argv, "--")
+			}
+			task := Task{Directory: rel, Description: op.Description, Run: nativeCommand(argv, false), RawArgs: true, Interactive: op.Interactive, Cache: &Cache{Enabled: false}}
+			if windows := nativeCommand(argv, true); windows != task.Run {
+				task.RunWindows = windows
+			}
 			if !op.Interactive {
 				p.configureCache(root, nativeProject, op, &task)
 			}

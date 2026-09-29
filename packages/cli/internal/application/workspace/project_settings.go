@@ -34,7 +34,7 @@ type ProjectSettingsProject struct {
 	Toolchain             string                     `json:"toolchain,omitempty"`
 	PackageManager        string                     `json:"packageManager,omitempty"`
 	BuildVersion          string                     `json:"buildVersion,omitempty"`
-	DevCommand            string                     `json:"devCommand,omitempty"`
+	DevAvailable          bool                       `json:"devAvailable"`
 	DevURL                string                     `json:"devURL,omitempty"`
 	Build                 ProjectBuildSettings       `json:"build"`
 	Tasks                 *ProjectTasks              `json:"tasks,omitempty"`
@@ -104,8 +104,17 @@ func (s *Service) projectSettings(
 	}
 
 	devURL := ""
-	if project.Dev != nil {
-		devURL = project.Dev.URL
+	if project.Service != nil {
+		devURL = project.Service.URL
+	}
+	tasks := s.projectTasks(ctx, root, project.Name)
+	devAvailable := false
+	if tasks != nil && tasks.Status == "ready" {
+		for _, task := range tasks.Entries {
+			if task.Name == "//:"+project.Name+":dev" || task.Name == "//"+filepath.ToSlash(project.RelativeDir)+":dev" {
+				devAvailable = true
+			}
+		}
 	}
 	return ProjectSettings{
 		Schema:      ProjectSettingsSchema,
@@ -120,10 +129,10 @@ func (s *Service) projectSettings(
 			Toolchain:             project.Toolchain,
 			PackageManager:        project.PackageManager,
 			BuildVersion:          project.BuildVersion,
-			DevCommand:            workspacecore.ProjectDev(manifest, project.Name),
+			DevAvailable:          devAvailable,
 			DevURL:                devURL,
 			Build:                 projectBuildSettings(root, *project),
-			Tasks:                 s.projectTasks(ctx, root, project.Name),
+			Tasks:                 tasks,
 			DefaultEnvironment:    defaultEnvironment,
 			AvailableEnvironments: environments,
 			Environment:           env,
