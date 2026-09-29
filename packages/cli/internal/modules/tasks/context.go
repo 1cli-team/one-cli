@@ -71,8 +71,9 @@ func (s Service) prepareEnvironment(ctx context.Context, w execution.Workspace, 
 			session.close()
 		}
 	}()
-	projects := map[string]map[string]string{}
-	provider := workspace.EnvBackend(w.Manifest())
+	projectDirs := map[string]string{}
+	dirs := []string{}
+	seen := map[string]bool{}
 	for _, task := range p.Tasks {
 		if task.Project == "" {
 			continue
@@ -81,22 +82,33 @@ func (s Service) prepareEnvironment(ctx context.Context, w execution.Workspace, 
 		if !workspace.EnvironmentEnabled(w.Manifest(), project.RelativeDir) {
 			continue
 		}
-		if _, ok := projects[task.Project]; ok {
-			continue
+		projectDirs[task.Project] = project.RelativeDir
+		if !seen[project.RelativeDir] {
+			seen[project.RelativeDir] = true
+			dirs = append(dirs, project.RelativeDir)
 		}
-		if s.Loaders == nil || s.Loaders.Find(provider) == nil {
-			return nil, i18n.Errorf("exec.provider_unregistered", provider)
-		}
-		values, e := s.Loaders.Find(provider).Load(ctx, w.Root(), project.RelativeDir, p.Environment)
-		if e != nil {
-			return nil, e
-		}
-		// An empty snapshot still requires a fresh execution: removing the last
-		// variable must not restore outputs from the preceding environment.
-		projects[task.Project] = maps.Clone(values)
 	}
-	if len(projects) == 0 {
+	if len(dirs) == 0 {
 		return session, nil
+	}
+	provider := workspace.EnvBackend(w.Manifest())
+	loader := s.Loaders.Find(provider)
+	if loader == nil {
+		return nil, i18n.Errorf("exec.provider_unregistered", provider)
+	}
+	values, err := secrets.LoadProjects(ctx, loader, w.Root(), dirs, p.Environment)
+	if err != nil {
+		return nil, err
+	}
+	projects := make(map[string]map[string]string, len(projectDirs))
+	for name, dir := range projectDirs {
+		snapshot, ok := values[dir]
+		if !ok {
+			return nil, i18n.Errorf("tasks.environment_missing", name)
+		}
+		// Even an empty snapshot disables caching: deleting the last variable
+		// must not restore outputs from a preceding environment.
+		projects[name] = maps.Clone(snapshot)
 	}
 	session.dir, err = os.MkdirTemp(w.Root(), ".one-run-")
 	if err != nil {

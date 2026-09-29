@@ -63,6 +63,8 @@ Generated tasks can run directly through `mise run`; they no longer call private
 
 With an Infisical binding, One loads each project's values once per invocation. `--env` selects a declared environment, defaulting to `dev`. Remote folders derive from project paths and include shared and ancestor variables. Each task receives only its project's snapshot; values override matching shell and mise variables. Values remain in memory, including transmission through an authenticated loopback session. No secret values are written to TOML, `.env` or context JSON.
 
+Before tasks start, One reports task preparation, dependency checks, environment loading and binding verification on stderr. Within one invocation, shared Infisical folders are fetched once, with up to six concurrent requests. Values still merge from root to project, with closer folders taking precedence. Every later invocation fetches a new snapshot. Cancelling startup also cancels pending environment requests; a failed load prevents tasks from starting.
+
 One bundles the mise environment adapter and creates temporary `.one-run-*/bindings.toml` metadata in the relevant config scopes. These files contain task references, never variable values, and are removed on exit. `one init mise` and new workspaces ignore `.one-run-*/` in Git. No plugin rows need to be maintained in user task definitions.
 
 Before launching, One checks that commands, directories, dependencies and bindings remain consistent. A profile that replaces a whole task after the runtime metadata can override its binding; One fails before starting it. Keep the command in the base or local configuration and use profiles for environment settings in that case.

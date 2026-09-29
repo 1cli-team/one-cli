@@ -5,6 +5,8 @@ package cli_test
 import (
 	"strings"
 	"testing"
+
+	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/i18n"
 )
 
 func TestE2E_NoninteractiveStartupDoesNotQueryTerminal(t *testing.T) {
@@ -28,7 +30,7 @@ func TestE2E_NoninteractiveStartupDoesNotQueryTerminal(t *testing.T) {
 					terminal := startTaskTerminal(t, root, tc.args...)
 					terminal.wait(t, 0)
 					got := terminal.out.String()
-					if !strings.Contains(got, tc.want) || strings.Contains(got, "SHOULD_NOT_RUN") {
+					if !strings.Contains(got, tc.want) || strings.Contains(got, "SHOULD_NOT_RUN") || strings.Contains(got, "[one]") {
 						t.Fatalf("unexpected output: %q", got)
 					}
 					// Even a helper's package initialization can query the terminal
@@ -40,6 +42,33 @@ func TestE2E_NoninteractiveStartupDoesNotQueryTerminal(t *testing.T) {
 						}
 					}
 				})
+			}
+		})
+	}
+}
+
+func TestE2E_TaskStartupProgressIsLocalized(t *testing.T) {
+	for _, locale := range []struct{ id, env string }{{"en-US", "en_US.UTF-8"}, {"zh-CN", "zh_CN.UTF-8"}} {
+		t.Run(locale.id, func(t *testing.T) {
+			root := t.TempDir()
+			isolateHome(t, root)
+			t.Setenv("LC_ALL", locale.env)
+			if err := i18n.Init(locale.id); err != nil {
+				t.Fatal(err)
+			}
+			t.Cleanup(func() { _ = i18n.Init("en-US") })
+			buildWrite(t, root, "one.manifest.toml", "version = 2\n[workspace]\nid = 'startup'\nname = 'startup'\n")
+			buildWrite(t, root, "mise.toml", "[tasks.dev]\nrun = 'echo CHILD_STARTED'\n")
+			terminal := startTaskTerminal(t, root, "dev", "--ui", "stream")
+			terminal.wait(t, 0)
+			got := terminal.out.String()
+			last := -1
+			for _, want := range []string{i18n.T("tasks.preparing"), i18n.T("tasks.preparing_dependencies"), i18n.Tf("tasks.preparing_environment", "dev"), "CHILD_STARTED"} {
+				at := strings.Index(got, want)
+				if at <= last {
+					t.Fatalf("missing/out of order %q: %q", want, got)
+				}
+				last = at
 			}
 		})
 	}

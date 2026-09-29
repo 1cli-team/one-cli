@@ -3,6 +3,7 @@ package runcmd
 
 import (
 	"context"
+	"fmt"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -90,6 +91,7 @@ func command(service tasks.Service) *cobra.Command {
 		if dry {
 			plan, err = tasks.NewPlan(w, opts)
 		} else {
+			fmt.Fprintln(cmd.ErrOrStderr(), i18n.T("tasks.preparing"))
 			plan, err = service.Plan(ctx, w, opts)
 		}
 		if err != nil {

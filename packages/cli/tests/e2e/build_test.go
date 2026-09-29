@@ -45,6 +45,9 @@ func buildFixture(t *testing.T, mise bool) string {
 	isolateHome(t, t.TempDir())
 	t.Setenv("ONE_RUNTIME", "builtin")
 	t.Setenv("MISE_EXPERIMENTAL", "0")
+	// Nested mise may select a different Go binary than the parent test task.
+	// Let that binary discover its own matching standard library.
+	t.Setenv("GOROOT", "")
 	buildWrite(t, root, "one.manifest.toml", `version = 2
 
 [workspace]
@@ -73,8 +76,14 @@ toolchain = "node"
 	buildWrite(t, root, "apps/web/.env.prod", "BUILD_VALUE=production\n")
 	buildWrite(t, root, "tools/pnpm", "#!/bin/sh\ncase \"$1\" in\n--version) echo 12.3.4;;\ninstall) mkdir -p node_modules; echo installed >> installs;;\nrun) script=$2; shift 2; exec sh \"$script.sh\" \"$@\";;\n*) exit 95;;\nesac\n")
 	buildWrite(t, root, "tools/node", "#!/bin/sh\necho v24.15.0\n")
+	// One prepends the selected mise binary's directory to PATH. Keep it with
+	// the fixture tools so a host pnpm cannot override the fake package manager.
+	fixtureMise := filepath.Join(root, "tools/mise")
+	if err := os.Symlink(misePath, fixtureMise); err != nil {
+		t.Fatal(err)
+	}
 	t.Setenv("PATH", filepath.Join(root, "tools")+string(os.PathListSeparator)+os.Getenv("PATH"))
-	t.Setenv("ONE_MISE_BINARY", misePath)
+	t.Setenv("ONE_MISE_BINARY", fixtureMise)
 	buildWrite(t, root, "mise.toml", "[tools]\nnode=\"system\"\npnpm=\"system\"\n")
 	t.Setenv("MISE_TRUSTED_CONFIG_PATHS", root)
 	for _, key := range []string{"MISE_CONFIG_DIR", "MISE_CACHE_DIR", "MISE_DATA_DIR", "MISE_STATE_DIR"} {

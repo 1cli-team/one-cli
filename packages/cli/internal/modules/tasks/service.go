@@ -84,6 +84,7 @@ func (s Service) Execute(ctx context.Context, w execution.Workspace, p *Plan, op
 	if prepare == nil {
 		prepare = (dependencies.Service{Provider: s.Provider}).Prepare
 	}
+	fmt.Fprintln(errOut, i18n.T("tasks.preparing_dependencies"))
 	if err := prepare(ctx, dependencies.Input{Root: w.Root(), Manifest: w.Manifest(), Projects: projectNames(p), Runtime: runtimeport.Mise, Development: true, Log: errOut}); err != nil {
 		return nil, err
 	}
@@ -91,11 +92,15 @@ func (s Service) Execute(ctx context.Context, w execution.Workspace, p *Plan, op
 	if err != nil {
 		return nil, err
 	}
+	fmt.Fprintln(errOut, i18n.Tf("tasks.preparing_environment", p.Environment))
 	session, err := s.prepareEnvironment(ctx, w, p, base.Env)
 	if err != nil {
 		return nil, err
 	}
 	defer session.close()
+	if len(session.bindings) > 0 {
+		fmt.Fprintln(errOut, i18n.T("tasks.verifying_environment"))
+	}
 	if err = s.verifyBindings(ctx, w, p, session); err != nil {
 		return nil, err
 	}

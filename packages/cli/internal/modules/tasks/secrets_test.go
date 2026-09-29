@@ -6,11 +6,13 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"reflect"
 	"runtime"
 	"strings"
 	"sync"
@@ -21,6 +23,7 @@ import (
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/application/execution"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/core/workspace"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/modules/dependencies"
+	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/i18n"
 	runtimeport "github.com/torchstellar-team/one-cli/packages/cli/internal/ports/runtime"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/ports/secrets"
 )
@@ -151,7 +154,11 @@ func testNativeMiseProjectEnvironmentsAndCache(t *testing.T, symlinked bool) {
 	// A local command override must retain both its command and the injected env.
 	local, _ := toml.Marshal(map[string]any{"tasks": map[string]any{"web:build": map[string]any{"dir": "apps/web", "run": quote(os.Args[0]) + " -test.run=^TestNativeEnvironmentChild$", "sources": []string{"package.json"}, "outputs": []string{"dist"}, "cache": map[string]any{"enabled": true}}}})
 	writeTaskFile(t, w.Root(), "mise.local.toml", string(local))
-	service := Service{Provider: nativeProvider{binary}, Loaders: secrets.MustRegistry(loader), Prepare: func(context.Context, dependencies.Input) error { return nil }}
+	var selectedLoader secrets.Loader = loader
+	if symlinked {
+		selectedLoader = &fixtureBatchLoader{fixtureLoader: loader}
+	}
+	service := Service{Provider: nativeProvider{binary}, Loaders: secrets.MustRegistry(selectedLoader), Prepare: func(context.Context, dependencies.Input) error { return nil }}
 	opts := Options{Name: "build", UI: "stream", Cache: "off", Jobs: 2}
 	for round := 0; round < 3; round++ {
 		if round == 1 {
@@ -365,5 +372,69 @@ func TestEnvironmentSessionContainsNoValuesOnDiskAndCleansUp(t *testing.T) {
 	if r, err := client.Get(endpoint); err == nil {
 		r.Body.Close()
 		t.Fatal("broker remained open")
+	}
+}
+
+// Load deliberately fails so a regression to single-project loading is visible.
+type fixtureBatchLoader struct {
+	*fixtureLoader
+	batches int
+	err     error
+	omit    bool
+}
+
+func (l *fixtureBatchLoader) Load(context.Context, string, string, string) (map[string]string, error) {
+	return nil, errors.New("single-project load called")
+}
+func (l *fixtureBatchLoader) LoadProjects(ctx context.Context, root string, dirs []string, env string) (map[string]map[string]string, error) {
+	l.batches++
+	if l.err != nil {
+		return nil, l.err
+	}
+	values := map[string]map[string]string{}
+	for _, dir := range dirs {
+		if _, exists := values[dir]; exists {
+			return nil, errors.New("duplicate batch directory")
+		}
+		v, err := l.fixtureLoader.Load(ctx, root, dir, env)
+		if err != nil {
+			return nil, err
+		}
+		if !l.omit {
+			values[dir] = v
+		}
+	}
+	return values, nil
+}
+
+func TestEnvironmentBatchFailureLeavesNoSession(t *testing.T) {
+	for _, locale := range []string{"en-US", "zh-CN"} {
+		t.Run(locale, func(t *testing.T) {
+			if err := i18n.Init(locale); err != nil {
+				t.Fatal(err)
+			}
+			t.Cleanup(func() { _ = i18n.Init("en-US") })
+			for _, omit := range []bool{false, true} {
+				w := taskWorkspace(t)
+				w.Manifest().Env = &workspace.EnvironmentConfig{ProjectID: "fixture"}
+				l := &fixtureBatchLoader{fixtureLoader: syntheticLoader(), omit: omit}
+				if !omit {
+					l.err = errors.New("synthetic permission denied")
+				}
+				service := Service{Loaders: secrets.MustRegistry(l)}
+				before, _ := os.ReadDir(w.Root())
+				session, err := service.prepareEnvironment(context.Background(), w, &Plan{Environment: "dev", Tasks: []Task{{Project: "web"}, {Project: "lib"}, {Project: "web"}}}, nil)
+				if session != nil || err == nil || (!omit && !errors.Is(err, l.err)) {
+					t.Fatalf("unexpected result: %v %v", session, err)
+				}
+				if omit && !strings.Contains(err.Error(), "web") && !strings.Contains(err.Error(), "lib") {
+					t.Fatal("missing project context", err)
+				}
+				after, _ := os.ReadDir(w.Root())
+				if !reflect.DeepEqual(before, after) || l.batches != 1 {
+					t.Fatal("failed load created session files or repeated batch")
+				}
+			}
+		})
 	}
 }

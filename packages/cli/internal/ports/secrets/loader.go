@@ -3,6 +3,7 @@ package secrets
 
 import (
 	"context"
+	"maps"
 	"strings"
 
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/i18n"
@@ -12,6 +13,41 @@ import (
 type Loader interface {
 	ID() string
 	Load(ctx context.Context, projectRoot, relativeDir, envName string) (map[string]string, error)
+}
+
+// BatchLoader optionally fetches several projects in one invocation. Results are
+// keyed by the requested relative directory. Implementations must return every
+// requested project (including empty environments), isolate their maps, and
+// never reuse secret snapshots across invocations.
+type BatchLoader interface {
+	Loader
+	LoadProjects(ctx context.Context, projectRoot string, relativeDirs []string, envName string) (map[string]map[string]string, error)
+}
+
+// LoadProjects prefers a provider's batch path, with a serial fallback for
+// loaders that do not promise concurrency safety.
+func LoadProjects(ctx context.Context, loader Loader, root string, dirs []string, env string) (map[string]map[string]string, error) {
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+	if batch, ok := loader.(BatchLoader); ok {
+		return batch.LoadProjects(ctx, root, dirs, env)
+	}
+	result := make(map[string]map[string]string, len(dirs))
+	for _, dir := range dirs {
+		if _, ok := result[dir]; ok {
+			continue
+		}
+		if err := ctx.Err(); err != nil {
+			return nil, err
+		}
+		values, err := loader.Load(ctx, root, dir, env)
+		if err != nil {
+			return nil, err
+		}
+		result[dir] = maps.Clone(values)
+	}
+	return result, nil
 }
 
 // Registry owns one command tree's loader set. It is immutable after
