@@ -32,11 +32,6 @@ export function localizedDocsPath(locale: Locale, slug?: string[]) {
   return `/${locale}/docs${suffix}/`;
 }
 
-export function localizedBlogPath(locale: Locale, slug?: string[]) {
-  const suffix = slug && slug.length > 0 ? `/${slug.join("/")}` : "";
-  return `/${locale}/blog${suffix}/`;
-}
-
 export function localizedTutorialsPath(locale: Locale, slug?: string[]) {
   const suffix = slug && slug.length > 0 ? `/${slug.join("/")}` : "";
   return `/${locale}/tutorials${suffix}/`;
@@ -47,14 +42,6 @@ export function alternateDocsLanguages(slug?: string[]) {
     "zh-Hans": localizedDocsPath("zh", slug),
     en: localizedDocsPath("en", slug),
     "x-default": localizedDocsPath(defaultLocale, slug),
-  };
-}
-
-export function alternateBlogLanguages(slug?: string[]) {
-  return {
-    "zh-Hans": localizedBlogPath("zh", slug),
-    en: localizedBlogPath("en", slug),
-    "x-default": localizedBlogPath(defaultLocale, slug),
   };
 }
 

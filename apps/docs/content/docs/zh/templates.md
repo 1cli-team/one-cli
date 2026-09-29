@@ -5,7 +5,7 @@ description: 13 个内置模板按用途分组的决策树。30 秒判断到底�
 
 如果你正要给工作区加一个新项目，但不知道选哪个基础模板（API 选 Nest 还是 Go？前端选 CSR / SSR / SSG？），这一页给你一棵决策树和一张对比速查表。
 
-可在[模板目录](/zh/templates/)按类型筛选，查看各模板的用途、技术栈和默认目录。
+运行 [`one templates`](/zh/docs/templates-cmd/) 查看当前安装版本的内置模板，下表说明各模板的用途与技术栈。
 
 **适合读这页的人**：刚跑完 `one templates` 看到一串 ID 但不知道差异的人；评估栈选型的 Tech Lead；要给下属 / agent 写决策约束的人。
 
@@ -28,14 +28,14 @@ description: 13 个内置模板按用途分组的决策树。30 秒判断到底�
 
 | ID | 类别 | 关键词 | 一句话 | 详细 |
 |---|---|---|---|---|
-| `nestjs-api` | API | TypeScript, NestJS, REST | TS 团队默认 API 模板 | [查看模板](/zh/templates/#nestjs-api) |
+| `nestjs-api` | API | TypeScript, NestJS, REST | TS 团队默认 API 模板 | [源码](https://github.com/1cli-team/one-cli/tree/master/packages/templates/nestjs-api) |
 | `go-api` | API | Go, Gin, GORM | 高吞吐 / 低内存 / 团队混语言 | - |
-| `nextjs-app` | Web | Next.js, SSR, React | 通用 Web 应用 / C 端内容站首选 | [查看模板](/zh/templates/#nextjs-app) |
-| `react-spa` | Web | Vite, React, SPA | 控制台 / 内部应用 / 无 SEO | [查看模板](/zh/templates/#react-spa) |
-| `astro-site` | Web | Astro, 静态优先 | 营销页 / 内容站 | [查看模板](/zh/templates/#astro-site) |
-| `starlight-docs` | Docs | Starlight, Astro | 文档站 / 知识库 | [查看模板](/zh/templates/#starlight-docs) |
-| `expo-mobile` | Mobile | Expo, React Native | iOS + Android 跨平台 | [查看模板](/zh/templates/#expo-mobile) |
-| `electron-app` | Desktop | Electron, React, Vite | 桌面 app（macOS / Windows / Linux） | [查看模板](/zh/templates/#electron-app) |
+| `nextjs-app` | Web | Next.js, SSR, React | 通用 Web 应用 / C 端内容站首选 | [源码](https://github.com/1cli-team/one-cli/tree/master/packages/templates/nextjs-app) |
+| `react-spa` | Web | Vite, React, SPA | 控制台 / 内部应用 / 无 SEO | [源码](https://github.com/1cli-team/one-cli/tree/master/packages/templates/react-spa) |
+| `astro-site` | Web | Astro, 静态优先 | 营销页 / 内容站 | [源码](https://github.com/1cli-team/one-cli/tree/master/packages/templates/astro-site) |
+| `starlight-docs` | Docs | Starlight, Astro | 文档站 / 知识库 | [源码](https://github.com/1cli-team/one-cli/tree/master/packages/templates/starlight-docs) |
+| `expo-mobile` | Mobile | Expo, React Native | iOS + Android 跨平台 | [源码](https://github.com/1cli-team/one-cli/tree/master/packages/templates/expo-mobile) |
+| `electron-app` | Desktop | Electron, React, Vite | 桌面 app（macOS / Windows / Linux） | [源码](https://github.com/1cli-team/one-cli/tree/master/packages/templates/electron-app) |
 | `ts-library` | Library | TS, 严格 semver | 跨项目复用的 TS 库 | - |
 | `go-lib` | Library | Go, module, package layout | 跨项目复用的 Go module | - |
 | `empty-app` | App | 无技术栈 | 从空应用目录开始 | - |

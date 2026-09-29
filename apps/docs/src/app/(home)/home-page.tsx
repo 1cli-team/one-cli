@@ -16,13 +16,12 @@ import {
 import { GithubIcon as Github } from "@/components/github-icon";
 import {
   defaultLocale,
-  localeLabels,
-  localizedBlogPath,
   localizedDocsPath,
   localizedTutorialsPath,
   type Locale,
 } from "@/i18n";
 import { BrandMark } from "@/components/brand-mark";
+import { LanguageSwitcher } from "@/components/language-switcher";
 import { HomeHeroCanvas } from "./hero-canvas";
 import { HomeInstallCommand } from "./home-install-command";
 import { HomeCopyButton } from "@/components/copy-button";
@@ -44,12 +43,9 @@ const homeCopy = {
     nav: {
       docs: "文档",
       tutorials: "教程",
-      templates: "模板",
-      blog: "博客",
-      changelog: "更新日志",
       github: "GitHub",
-      start: "开始使用",
-      startShort: "开始",
+      home: "One CLI 首页",
+      navAria: "站点导航",
     },
     hero: {
       byline: "来自 · TORCHSTELLAR",
@@ -116,12 +112,12 @@ const homeCopy = {
           body: "one create 可以直接运行并填写目标目录，也可以指定目录名，创建空工作区后再用 one add 添加项目。",
           bullets: [
             ["交互创建", "直接输入 one create，会引导你填写目标目录。"],
-            ["添加项目", "浏览模板目录，再通过 one add 添加所需项目。"],
+            ["添加项目", "运行 one templates 查看模板，再通过 one add 添加所需项目。"],
             ["自动化模式", "CI 或 AI 使用 --yes 和 -o json，方便确认输出和错误。"],
           ],
           href: ["create"],
           cta: "查看 one create",
-          secondaryCta: "去模板页选择",
+          secondaryCta: "查看模板指南",
           secondaryHref: "templates",
           sample: "one create",
           output: [
@@ -201,7 +197,7 @@ const homeCopy = {
           ],
           href: ["templates-cmd"],
           cta: "查看 templates",
-          secondaryCta: "打开模板页",
+          secondaryCta: "查看模板指南",
           secondaryHref: "templates",
           sample: "one templates",
           output: [
@@ -315,7 +311,7 @@ const homeCopy = {
     startWays: {
       eyebrow: "开始方式",
       title: "三种开始方式。",
-      body: "直接运行 one create 创建工作区，或先浏览模板目录了解技术栈；也可以向 AI 描述目标，由它通过 One CLI 完成创建。",
+      body: "直接运行 one create 创建工作区，或先用 one templates 查看可用模板；也可以向 AI 描述目标，由它通过 One CLI 完成创建。",
       direct: {
         label: "方式一",
         title: "直接运行 one create",
@@ -327,12 +323,12 @@ const homeCopy = {
       },
       template: {
         label: "方式二",
-        title: "去模板页选择",
-        body: "按前端应用、后端服务和共享库浏览模板，查看技术栈、用途和默认目录。",
-        bullets: ["按类型筛选", "查看真实的内置模板", "通过 one add 添加所需项目"],
-        cta: "进入模板页",
-        metaLabel: "模板页入口",
-        metaValue: "1cli.dev /zh/templates/",
+        title: "运行 one templates",
+        body: "在终端查看当前版本内置的应用、服务和共享库模板，再通过 one add 添加所需项目。",
+        bullets: ["终端查看模板清单", "了解模板类型与用途", "通过 one add 添加所需项目"],
+        cta: "查看模板命令",
+        metaLabel: "查看可用模板",
+        metaValue: "one templates",
       },
       ai: {
         label: "方式三",
@@ -361,11 +357,10 @@ const homeCopy = {
         tutorialsHome: "教程总览",
         firstWorkspace: "第一个工作区",
         envVars: "配置环境变量",
-        templateCatalog: "模板页面",
+        templateCommand: "查看模板命令",
         templateGuide: "怎么选模板",
         commandOverview: "命令总览",
         releases: "版本发布",
-        changelog: "更新日志",
       },
       built: "基于 Next.js、Fumadocs 和 One CLI 构建。",
     },
@@ -379,12 +374,9 @@ const homeCopy = {
     nav: {
       docs: "Docs",
       tutorials: "Tutorials",
-      templates: "Templates",
-      blog: "Blog",
-      changelog: "Changelog",
       github: "GitHub",
-      start: "Get started",
-      startShort: "Start",
+      home: "One CLI Home",
+      navAria: "Site navigation",
     },
     hero: {
       byline: "BY · TORCHSTELLAR",
@@ -451,12 +443,12 @@ const homeCopy = {
           body: "Run one create to choose a target directory, or pass the directory explicitly. Then use one add to add projects to the empty workspace.",
           bullets: [
             ["PROMPTED CREATE", "Run one create by itself to choose the target directory."],
-            ["ADD PROJECTS", "Browse the catalog, then add the projects you need with one add."],
+            ["ADD PROJECTS", "Run one templates to list templates, then add projects with one add."],
             ["AUTOMATION", "CI and AI use --yes and -o json for predictable output and errors."],
           ],
           href: ["create"],
           cta: "Explore one create",
-          secondaryCta: "Open templates",
+          secondaryCta: "Read the template guide",
           secondaryHref: "templates",
           sample: "one create",
           output: [
@@ -536,7 +528,7 @@ const homeCopy = {
           ],
           href: ["templates-cmd"],
           cta: "Explore templates",
-          secondaryCta: "Open template page",
+          secondaryCta: "Read the template guide",
           secondaryHref: "templates",
           sample: "one templates",
           output: [
@@ -650,7 +642,7 @@ const homeCopy = {
     startWays: {
       eyebrow: "Start here",
       title: "Three ways to start.",
-      body: "Create a workspace with one create, browse the catalog to compare stacks, or describe your goal to an agent that uses One CLI.",
+      body: "Create a workspace with one create, list available templates with one templates, or describe your goal to an agent that uses One CLI.",
       direct: {
         label: "Option one",
         title: "Run one create",
@@ -662,12 +654,12 @@ const homeCopy = {
       },
       template: {
         label: "Option two",
-        title: "Open the templates page",
-        body: "Browse frontend apps, backend services, and shared libraries. Compare their stacks, purpose, and default directories.",
-        bullets: ["Filter by type", "Browse the actual built-in templates", "Add projects with one add"],
-        cta: "Open templates",
-        metaLabel: "Template page",
-        metaValue: "1cli.dev /en/templates/",
+        title: "Run one templates",
+        body: "List the apps, services, and shared library templates bundled with your CLI, then add projects with one add.",
+        bullets: ["List templates in the terminal", "Compare their type and purpose", "Add projects with one add"],
+        cta: "Explore the templates command",
+        metaLabel: "List available templates",
+        metaValue: "one templates",
       },
       ai: {
         label: "Option three",
@@ -696,11 +688,10 @@ const homeCopy = {
         tutorialsHome: "Tutorials home",
         firstWorkspace: "First workspace",
         envVars: "Configure env vars",
-        templateCatalog: "Templates page",
+        templateCommand: "List templates",
         templateGuide: "Choose templates",
         commandOverview: "Command overview",
         releases: "Releases",
-        changelog: "Changelog",
       },
       built: "Built with Next.js, Fumadocs, and One CLI.",
     },
@@ -769,81 +760,35 @@ function HomeNav({ lang, text }: { lang: Locale; text: HomeText }) {
   const navItems = [
     [text.nav.tutorials, localizedTutorialsPath(lang, ["templates"])],
     [text.nav.docs, localizedDocsPath(lang, ["quick-start"])],
-    [text.nav.templates, localizedTemplatesPath(lang)],
-    [text.nav.blog, localizedBlogPath(lang)],
-    [text.nav.changelog, "https://github.com/1cli-team/one-cli/blob/master/CHANGELOG.md"],
   ] as const;
 
   return (
     <header className="sticky top-0 z-30 border-b border-[#292524] bg-[#0a0a0a]/92 backdrop-blur-xl">
-      <div className="mx-auto flex h-16 w-full max-w-[1440px] items-center justify-between gap-4 px-5 lg:px-20">
-        <Link href={localizedHomePath(lang)} className="inline-flex items-center" aria-label="One CLI home">
+      <div className="mx-auto grid w-full max-w-[1440px] grid-cols-[1fr_auto] grid-rows-[60px_44px] items-center gap-x-3 px-4 md:flex md:h-16 md:justify-between md:gap-4 md:px-5 lg:px-20">
+        <Link href={localizedHomePath(lang)} className="inline-flex w-fit items-center md:order-1" aria-label={text.nav.home}>
           <BrandMark variant="dark" />
         </Link>
-        <nav className="hidden items-center gap-7 text-sm lg:flex">
-          {navItems.map(([label, href]) => {
-            const external = href.startsWith("http");
-            if (external) {
-              return (
-                <a key={label} href={href} target="_blank" rel="noreferrer" className="text-stone-400 transition hover:text-white">
-                  {label}
-                </a>
-              );
-            }
-            return (
-              <Link key={label} href={href} className="text-stone-400 transition hover:text-white">
-                {label}
-              </Link>
-            );
-          })}
+        <nav aria-label={text.nav.navAria} className="col-span-2 row-start-2 flex h-full items-center gap-6 border-t border-white/10 text-sm md:order-2 md:gap-7 md:border-0">
+          {navItems.map(([label, href]) => (
+            <Link key={label} href={href} className="inline-flex h-full items-center text-stone-400 transition hover:text-white">
+              {label}
+            </Link>
+          ))}
         </nav>
-        <div className="flex items-center gap-2">
-          <HomeLanguageSwitcher lang={lang} />
+        <div className="col-start-2 row-start-1 flex items-center justify-end gap-2 md:order-3">
+          <LanguageSwitcher lang={lang} variant="dark" />
           <a
             href="https://github.com/1cli-team/one-cli"
             target="_blank"
             rel="noreferrer"
-            className="hidden size-9 items-center justify-center rounded-md text-stone-300 transition hover:bg-white/5 hover:text-white sm:inline-flex"
+            className="inline-flex size-9 shrink-0 items-center justify-center rounded-md text-stone-300 transition hover:bg-white/5 hover:text-white"
             aria-label={text.nav.github}
           >
             <Github className="size-5" />
           </a>
-          <Link
-            href={localizedDocsPath(lang, ["installation"])}
-            className="inline-flex h-9 shrink-0 items-center gap-2 rounded-md bg-[#ea580c] px-3.5 text-sm font-semibold text-white transition hover:bg-[#c2410c]"
-          >
-            <span className="hidden sm:inline">{text.nav.start}</span>
-            <span className="sm:hidden">{text.nav.startShort}</span>
-            <ArrowRight className="size-4" />
-          </Link>
         </div>
       </div>
     </header>
-  );
-}
-
-function HomeLanguageSwitcher({ lang }: { lang: Locale }) {
-  return (
-    <div
-      aria-label="Language switcher"
-      className="hidden h-9 items-center rounded-md border border-white/10 bg-white/[0.03] p-1 sm:inline-flex"
-    >
-      {(["zh", "en"] as const).map((locale) => (
-        <Link
-          aria-current={locale === lang ? "true" : undefined}
-          className={[
-            "inline-flex h-7 items-center rounded px-2.5 text-xs font-medium transition",
-            locale === lang
-              ? "bg-white text-[#0a0a0a]"
-              : "text-stone-400 hover:text-white",
-          ].join(" ")}
-          href={localizedHomePath(locale)}
-          key={locale}
-        >
-          {localeLabels[locale]}
-        </Link>
-      ))}
-    </div>
   );
 }
 
@@ -982,7 +927,7 @@ function WorkflowSection({ lang, text }: { lang: Locale; text: HomeText }) {
                     </Link>
                     {"secondaryCta" in item && item.secondaryHref === "templates" ? (
                       <Link
-                        href={localizedTemplatesPath(lang)}
+                        href={localizedDocsPath(lang, ["templates"])}
                         className="no-style inline-flex h-10 w-fit items-center justify-center gap-2 whitespace-nowrap rounded-md border border-white/10 px-4 text-sm font-semibold text-stone-100 transition hover:border-orange-500/60 hover:bg-white/5"
                       >
                         <span>{item.secondaryCta}</span>
@@ -1120,8 +1065,7 @@ function JsonSection({ text }: { text: HomeText }) {
 
 function StartWaysSection({ lang, text }: { lang: Locale; text: HomeText }) {
   const createHref = localizedDocsPath(lang, ["create"]);
-  const templatesHref = localizedTemplatesPath(lang);
-  const templateUrl = `https://1cli.dev${templatesHref}`;
+  const templatesHref = localizedDocsPath(lang, ["templates-cmd"]);
   const aiGuideHref = localizedDocsPath(lang, ["ai-native"]);
 
   return (
@@ -1191,15 +1135,14 @@ function StartWaysSection({ lang, text }: { lang: Locale; text: HomeText }) {
                   {text.startWays.template.metaLabel}
                 </p>
                 <HomeCopyButton
-                  value={templateUrl}
+                  value={text.startWays.template.metaValue}
                   label={text.hero.copy}
                   copiedLabel={text.hero.copied}
                   className="shrink-0 px-2 py-1 font-mono text-[10px] text-stone-500 hover:text-white"
                 />
               </div>
               <p className="truncate px-4 py-3 font-mono text-sm text-stone-200">
-                <span className="text-orange-400">1cli.dev</span>
-                {templatesHref}
+                <span className="text-orange-400">$</span> {text.startWays.template.metaValue}
               </p>
             </div>
             <div className="mt-6 space-y-3">
@@ -1335,7 +1278,7 @@ function Footer({ lang, text }: { lang: Locale; text: HomeText }) {
           <FooterLinks
             title={text.footer.templates}
             links={[
-              [text.footer.links.templateCatalog, localizedTemplatesPath(lang)],
+              [text.footer.links.templateCommand, localizedDocsPath(lang, ["templates-cmd"])],
               [text.footer.links.templateGuide, localizedDocsPath(lang, ["templates"])],
             ]}
           />
@@ -1343,9 +1286,7 @@ function Footer({ lang, text }: { lang: Locale; text: HomeText }) {
             title={text.footer.project}
             links={[
               ["GitHub", "https://github.com/1cli-team/one-cli"],
-              [text.nav.blog, localizedBlogPath(lang)],
               [text.footer.links.releases, "https://github.com/1cli-team/one-cli/releases"],
-              [text.footer.links.changelog, "https://github.com/1cli-team/one-cli/blob/master/CHANGELOG.md"],
             ]}
           />
         </div>
@@ -1425,10 +1366,6 @@ function CodePanel({
 
 export function localizedHomePath(lang: Locale) {
   return `/${lang}/`;
-}
-
-function localizedTemplatesPath(lang: Locale) {
-  return `/${lang}/templates/`;
 }
 
 function alternateHomeLanguages() {

@@ -68,9 +68,9 @@ one templates [-o <fmt>]
 | `ts-library` | library | [→](/zh/docs/templates/) |
 | `go-lib` | library | [→](/zh/docs/templates/) |
 | `electron-app` | frontend / desktop | [→](/zh/docs/templates/) |
-| `empty-app` | frontend | [→](/zh/templates/#empty-app) |
-| `empty-service` | backend | [→](/zh/templates/#empty-service) |
-| `empty-library` | library | [→](/zh/templates/#empty-library) |
+| `empty-app` | frontend | [→](/zh/docs/templates/) |
+| `empty-service` | backend | [→](/zh/docs/templates/) |
+| `empty-library` | library | [→](/zh/docs/templates/) |
 
 不知道选哪个？看 [模板决策树](/zh/docs/templates/)。
 

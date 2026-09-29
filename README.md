@@ -177,7 +177,7 @@ Read [CONTRIBUTING.md](./CONTRIBUTING.md) before opening a pull request.
 
 - [Installation](https://1cli.dev/docs/installation/)
 - [First project tutorial](https://1cli.dev/tutorials/first-workspace/)
-- [Templates](https://1cli.dev/templates/)
+- [Templates](https://1cli.dev/en/docs/templates/)
 - [Command reference](https://1cli.dev/docs/cli-overview/)
 - [Error codes](https://1cli.dev/docs/error-codes/)
 

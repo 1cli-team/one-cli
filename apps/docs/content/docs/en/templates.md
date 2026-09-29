@@ -5,7 +5,7 @@ description: Decision tree for the 13 built-in templates. Pick the right one in 
 
 If you are adding a new project and do not know which base template to pick, this page gives you a decision tree and a comparison table.
 
-Use the [template catalog](/en/templates/) to filter by type and compare purpose and stack.
+Run [`one templates`](/en/docs/templates-cmd/) to list the templates in your installed CLI. The table below compares their purpose and stack.
 
 **For**: people who ran `one templates` and saw too many IDs, tech leads evaluating stack choices, and anyone writing template-selection rules for agents.
 
@@ -28,14 +28,14 @@ If unsure, ask one question: **how does the user consume this thing?** Browser -
 
 | ID | Category | Keywords | One-line fit | Details |
 |---|---|---|---|---|
-| `nestjs-api` | API | TypeScript, NestJS, REST | Default API template for TypeScript teams | [View template](/en/templates/#nestjs-api) |
+| `nestjs-api` | API | TypeScript, NestJS, REST | Default API template for TypeScript teams | [Source](https://github.com/1cli-team/one-cli/tree/master/packages/templates/nestjs-api) |
 | `go-api` | API | Go, Gin, GORM | High-throughput / low-memory / mixed-language teams | - |
-| `nextjs-app` | Web | Next.js, SSR, React | Default consumer web or full-stack app | [View template](/en/templates/#nextjs-app) |
-| `react-spa` | Web | Vite, React, SPA | Console / internal app / no SEO | [View template](/en/templates/#react-spa) |
-| `astro-site` | Web | Astro, static-first | Marketing or content site | [View template](/en/templates/#astro-site) |
-| `starlight-docs` | Docs | Starlight, Astro | Documentation site or knowledge base | [View template](/en/templates/#starlight-docs) |
-| `expo-mobile` | Mobile | Expo, React Native | Cross-platform iOS + Android | [View template](/en/templates/#expo-mobile) |
-| `electron-app` | Desktop | Electron, React, Vite | Desktop app for macOS / Windows / Linux | [View template](/en/templates/#electron-app) |
+| `nextjs-app` | Web | Next.js, SSR, React | Default consumer web or full-stack app | [Source](https://github.com/1cli-team/one-cli/tree/master/packages/templates/nextjs-app) |
+| `react-spa` | Web | Vite, React, SPA | Console / internal app / no SEO | [Source](https://github.com/1cli-team/one-cli/tree/master/packages/templates/react-spa) |
+| `astro-site` | Web | Astro, static-first | Marketing or content site | [Source](https://github.com/1cli-team/one-cli/tree/master/packages/templates/astro-site) |
+| `starlight-docs` | Docs | Starlight, Astro | Documentation site or knowledge base | [Source](https://github.com/1cli-team/one-cli/tree/master/packages/templates/starlight-docs) |
+| `expo-mobile` | Mobile | Expo, React Native | Cross-platform iOS + Android | [Source](https://github.com/1cli-team/one-cli/tree/master/packages/templates/expo-mobile) |
+| `electron-app` | Desktop | Electron, React, Vite | Desktop app for macOS / Windows / Linux | [Source](https://github.com/1cli-team/one-cli/tree/master/packages/templates/electron-app) |
 | `ts-library` | Library | TS, strict semver | Reusable TypeScript package | - |
 | `go-lib` | Library | Go, module, package layout | Reusable Go module | - |
 | `empty-app` | App | No stack | Start with an empty application directory | - |

@@ -68,9 +68,9 @@ The current registry has 13 templates:
 | `ts-library` | library | [->](/en/docs/templates/) |
 | `go-lib` | library | [->](/en/docs/templates/) |
 | `electron-app` | frontend / desktop | [->](/en/docs/templates/) |
-| `empty-app` | frontend | [->](/en/templates/#empty-app) |
-| `empty-service` | backend | [->](/en/templates/#empty-service) |
-| `empty-library` | library | [->](/en/templates/#empty-library) |
+| `empty-app` | frontend | [->](/en/docs/templates/) |
+| `empty-service` | backend | [->](/en/docs/templates/) |
+| `empty-library` | library | [->](/en/docs/templates/) |
 
 Not sure which one to pick? Read the [template decision tree](/en/docs/templates/).
 
