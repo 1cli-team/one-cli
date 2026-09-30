@@ -8,12 +8,16 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"reflect"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
 
+	"github.com/infisical/go-sdk/packages/models"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/core/workspace"
+	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/i18n"
+	"github.com/torchstellar-team/one-cli/packages/cli/internal/ports/secrets"
 	"github.com/zalando/go-keyring"
 )
 
@@ -31,161 +35,114 @@ func batchWorkspace(t *testing.T, handler http.HandlerFunc) string {
 	return root
 }
 
-func waitFolderRequests(t *testing.T, started <-chan string, n int) {
+func waitSnapshotRequest(t *testing.T, started <-chan struct{}) {
 	t.Helper()
-	timer := time.NewTimer(5 * time.Second)
-	defer timer.Stop()
-	for range n {
-		select {
-		case <-started:
-		case <-timer.C:
-			t.Fatal("folder reads did not overlap")
-		}
+	select {
+	case <-started:
+	case <-time.After(5 * time.Second):
+		t.Fatal("snapshot request did not start")
 	}
 }
 
-func TestBatchFetchDeduplicatesAndMergesFreshSnapshots(t *testing.T) {
-	var mu sync.Mutex
-	calls := map[string]int{}
-	var generation atomic.Int32
-	started := make(chan string, 32)
-	release := make(chan struct{})
-	var releaseOnce sync.Once
-	unblock := func() { releaseOnce.Do(func() { close(release) }) }
-	// Registered after server cleanup as well, so a failing test releases handlers.
-	folders := map[string]map[string]string{
-		"/":                {"SHARED": "root", "OVERRIDE": "root"},
-		"/services":        {"OVERRIDE": "services"},
-		"/services/server": {"OVERRIDE": "server", "SERVER_ONLY": "yes"},
-		"/apps":            {"OVERRIDE": "apps"},
-		"/apps/home":       {"OVERRIDE": "home", "HOME_ONLY": "yes"},
-	}
+func TestBatchFetchReadsOnceAndMergesFreshSnapshots(t *testing.T) {
+	var calls, generation atomic.Int32
 	root := batchWorkspace(t, func(w http.ResponseWriter, r *http.Request) {
 		q := r.URL.Query()
-		path := q.Get("secretPath")
-		if r.Method != http.MethodGet || r.URL.Path != "/api/v3/secrets/raw" || q.Get("workspaceId") != "remote" || q.Get("environment") != "dev" || q.Get("expandSecretReferences") != "true" || q.Get("recursive") != "false" || r.Header.Get("Authorization") == "" {
+		if r.Method != http.MethodGet || r.URL.Path != "/api/v3/secrets/raw" || q.Get("workspaceId") != "remote" || q.Get("environment") != "dev" || q.Get("secretPath") != "/" || q.Get("expandSecretReferences") != "true" || q.Get("recursive") != "true" || q.Get("include_imports") != "false" || r.Header.Get("Authorization") == "" {
 			t.Errorf("unexpected request %s %s", r.Method, r.URL)
 		}
-		mu.Lock()
-		calls[path]++
-		mu.Unlock()
-		started <- path
-		select {
-		case <-release:
-		case <-r.Context().Done():
-			return
+		calls.Add(1)
+		// Children precede their parents in the response. Only inheritance
+		// order, never response order, may decide which value wins.
+		folders := []struct {
+			path   string
+			values map[string]string
+		}{
+			{"/services/server", map[string]string{"OVERRIDE": "server", "SERVER_ONLY": "yes"}},
+			{"/apps/home", map[string]string{"OVERRIDE": "home", "HOME_ONLY": "yes"}},
+			{"/apps/home/nested", map[string]string{"NESTED_ONLY": "yes", "OVERRIDE": "nested"}},
+			{"/apps/home-other", map[string]string{"PREFIX_ONLY": "yes"}},
+			{"/unrelated", map[string]string{"UNRELATED_ONLY": "yes"}},
+			{"/apps", map[string]string{"OVERRIDE": "apps"}},
+			{"/services", map[string]string{"OVERRIDE": "services"}},
+			{"/", map[string]string{"SHARED": "root", "OVERRIDE": "root"}},
 		}
+		values := []models.Secret{}
+		for _, folder := range folders {
+			for key, value := range folder.values {
+				values = append(values, models.Secret{SecretPath: folder.path, SecretKey: key, SecretValue: fmt.Sprintf("%d:%s", generation.Load(), value)})
+			}
+		}
+		values = append(values, models.Secret{SecretPath: "/", SecretKey: "EMPTY", SecretValue: ""})
 		w.Header().Set("Content-Type", "application/json")
-		if path == "/apps/admin" {
-			w.WriteHeader(http.StatusNotFound)
-			_ = json.NewEncoder(w).Encode(map[string]string{"message": "Folder with path '/apps/admin' in environment 'dev' was not found."})
-			return
-		}
-		// Parents finish last: completion order must never define precedence.
-		if path == "/" {
-			time.Sleep(20 * time.Millisecond)
-		}
-		values := []map[string]string{}
-		for key, value := range folders[path] {
-			values = append(values, map[string]string{"secretKey": key, "secretValue": fmt.Sprintf("%d:%s", generation.Load(), value)})
-		}
 		_ = json.NewEncoder(w).Encode(map[string]any{"secrets": values})
 	})
-	t.Cleanup(unblock)
-	dirs := []string{"services/server", "apps/home", "apps/admin", "apps/home"}
-	type result struct {
-		values map[string]map[string]string
-		err    error
-	}
-	done := make(chan result, 1)
-	go func() {
-		values, err := fetchSecretsForProjects(context.Background(), root, dirs, "dev")
-		done <- result{values, err}
-	}()
-	waitFolderRequests(t, started, 6)
-	unblock()
-	got := <-done
-	if got.err != nil {
-		t.Fatal(got.err)
-	}
-	for _, tc := range []struct{ dir, override string }{{"services/server", "server"}, {"apps/home", "home"}, {"apps/admin", "apps"}} {
-		values := got.values[tc.dir]
-		if values["SHARED"] != "0:root" || values["OVERRIDE"] != "0:"+tc.override {
-			t.Fatalf("wrong inheritance: %v", got.values)
-		}
-	}
-	if got.values["apps/home"]["SERVER_ONLY"] != "" || got.values["apps/admin"]["HOME_ONLY"] != "" {
-		t.Fatal("project values leaked")
-	}
-	got.values["apps/home"]["SHARED"] = "modified"
-	if got.values["apps/admin"]["SHARED"] != "0:root" {
-		t.Fatal("project maps alias")
-	}
-	mu.Lock()
-	for path, n := range calls {
-		if n != 1 {
-			t.Errorf("%s read %d times", path, n)
-		}
-	}
-	mu.Unlock()
-	generation.Store(1)
-	next, err := fetchSecretsForProjects(context.Background(), root, dirs, "dev")
+	dirs := []string{"services/server", "apps/home", "apps/admin", "apps/home", "", "missing/project"}
+	got, err := secrets.LoadProjects(context.Background(), Loader(), root, dirs, "dev")
 	if err != nil {
 		t.Fatal(err)
 	}
-	if next["apps/home"]["SHARED"] != "1:root" {
-		t.Fatal("a later invocation reused stale values")
+	if calls.Load() != 1 || len(got) != 5 {
+		t.Fatalf("requests = %d, snapshots = %d", calls.Load(), len(got))
 	}
-	mu.Lock()
-	defer mu.Unlock()
-	for path, n := range calls {
-		if n != 2 {
-			t.Errorf("%s read %d times after two invocations", path, n)
+	for _, tc := range []struct{ dir, override string }{{"services/server", "server"}, {"apps/home", "home"}, {"apps/admin", "apps"}, {"", "root"}, {"missing/project", "root"}} {
+		values := got[tc.dir]
+		if values["SHARED"] != "0:root" || values["OVERRIDE"] != "0:"+tc.override {
+			t.Fatalf("wrong inheritance: %v", got)
 		}
+		if empty, exists := values["EMPTY"]; !exists || empty != "" {
+			t.Fatal("empty value was lost")
+		}
+		for _, key := range []string{"NESTED_ONLY", "PREFIX_ONLY", "UNRELATED_ONLY"} {
+			if _, exists := values[key]; exists {
+				t.Fatalf("%s leaked into %s", key, tc.dir)
+			}
+		}
+	}
+	if got["apps/home"]["SERVER_ONLY"] != "" || got["apps/admin"]["HOME_ONLY"] != "" || got[""]["HOME_ONLY"] != "" {
+		t.Fatal("project values leaked")
+	}
+	got["apps/home"]["SHARED"] = "modified"
+	if got["apps/admin"]["SHARED"] != "0:root" {
+		t.Fatal("project maps alias")
+	}
+	generation.Store(1)
+	next, err := secrets.LoadProjects(context.Background(), Loader(), root, dirs, "dev")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if next["apps/home"]["SHARED"] != "1:root" || calls.Load() != 2 {
+		t.Fatal("a later invocation did not read exactly one fresh snapshot")
 	}
 }
 
-func TestBatchFetchBoundsConcurrency(t *testing.T) {
-	var active, peak atomic.Int32
-	started := make(chan string, 64)
-	release := make(chan struct{})
-	var once sync.Once
-	unblock := func() { once.Do(func() { close(release) }) }
+func TestBatchFetchReadsManyProjectsOnce(t *testing.T) {
+	var calls atomic.Int32
 	root := batchWorkspace(t, func(w http.ResponseWriter, r *http.Request) {
-		n := active.Add(1)
-		defer active.Add(-1)
-		for old := peak.Load(); n > old; old = peak.Load() {
-			if peak.CompareAndSwap(old, n) {
-				break
-			}
-		}
-		started <- r.URL.Query().Get("secretPath")
-		select {
-		case <-release:
-		case <-r.Context().Done():
-			return
-		}
+		calls.Add(1)
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = w.Write([]byte(`{"secrets":[]}`))
 	})
-	t.Cleanup(unblock)
 	dirs := []string{}
 	for i := range 20 {
 		dirs = append(dirs, fmt.Sprintf("apps/p%d", i))
 	}
-	done := make(chan error, 1)
-	go func() { _, err := fetchSecretsForProjects(context.Background(), root, dirs, "dev"); done <- err }()
-	waitFolderRequests(t, started, maxFolderRequests)
-	unblock()
-	if err := <-done; err != nil {
-		t.Fatal(err)
+	got, err := fetchSecretsForProjects(context.Background(), root, dirs, "dev")
+	if err != nil || len(got) != len(dirs) || calls.Load() != 1 {
+		t.Fatalf("snapshots = %d, requests = %d, error = %v", len(got), calls.Load(), err)
 	}
-	if peak.Load() != maxFolderRequests {
-		t.Fatalf("peak concurrent requests = %d", peak.Load())
+	for _, dir := range dirs {
+		if got[dir] == nil || len(got[dir]) != 0 {
+			t.Fatalf("missing empty snapshot for %s", dir)
+		}
+	}
+	got, err = fetchSecretsForProjects(context.Background(), t.TempDir(), nil, "dev")
+	if err != nil || len(got) != 0 || calls.Load() != 1 {
+		t.Fatal("empty batch required configuration or performed a request")
 	}
 }
 
-func TestBatchFetchFailureCancelsReads(t *testing.T) {
+func TestBatchFetchFailureReturnsNoSnapshot(t *testing.T) {
 	for _, tc := range []struct {
 		name   string
 		status int
@@ -194,27 +151,15 @@ func TestBatchFetchFailureCancelsReads(t *testing.T) {
 		{"unauthorized", 401, "INFISICAL_AUTH_FAILED"},
 		{"forbidden", 403, "INFISICAL_API_ERROR"},
 		{"project_missing", 404, "INFISICAL_API_ERROR"},
+		{"rate_limited", 429, "INFISICAL_API_ERROR"},
 		{"server_error", 500, "INFISICAL_API_ERROR"},
 		{"connection_closed", 0, "INFISICAL_API_ERROR"},
+		{"invalid_json", 200, "INFISICAL_API_ERROR"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			started := make(chan string, 6)
-			release := make(chan struct{})
-			var once sync.Once
-			unblock := func() { once.Do(func() { close(release) }) }
-			ctx, cancel := context.WithCancel(context.Background())
+			var calls atomic.Int32
 			root := batchWorkspace(t, func(w http.ResponseWriter, r *http.Request) {
-				path := r.URL.Query().Get("secretPath")
-				started <- path
-				if path != "/" {
-					<-r.Context().Done()
-					return
-				}
-				select {
-				case <-release:
-				case <-r.Context().Done():
-					return
-				}
+				calls.Add(1)
 				if tc.status == 0 {
 					conn, _, err := w.(http.Hijacker).Hijack()
 					if err == nil {
@@ -224,44 +169,92 @@ func TestBatchFetchFailureCancelsReads(t *testing.T) {
 				}
 				w.Header().Set("Content-Type", "application/json")
 				w.WriteHeader(tc.status)
-				_, _ = w.Write([]byte(`{"message":"request rejected"}`))
+				if tc.status == 200 {
+					_, _ = w.Write([]byte(`{"secrets":`))
+					return
+				}
+				_, _ = w.Write([]byte(`{"message":"request rejected: synthetic-secret-value"}`))
 			})
-			t.Cleanup(cancel)
-			t.Cleanup(unblock)
-			done := make(chan error, 1)
-			go func() {
-				values, err := fetchSecretsForProjects(ctx, root, []string{"services/server", "apps/home", "apps/admin"}, "dev")
-				if values != nil {
-					t.Error("partial snapshot returned on failure")
-				}
-				done <- err
-			}()
-			waitFolderRequests(t, started, 6)
-			unblock()
-			select {
-			case err := <-done:
-				var coded interface{ ErrorCode() string }
-				if !errors.As(err, &coded) || coded.ErrorCode() != tc.code {
-					t.Fatalf("error = %v, want %s", err, tc.code)
-				}
-			case <-time.After(3 * time.Second):
-				t.Fatal("failed sibling did not cancel outstanding HTTP requests")
+			values, err := fetchSecretsForProjects(context.Background(), root, []string{"services/server", "apps/home", "apps/admin"}, "dev")
+			var coded interface{ ErrorCode() string }
+			if values != nil || !errors.As(err, &coded) || coded.ErrorCode() != tc.code || calls.Load() != 1 {
+				t.Fatalf("error = %v, requests = %d, want %s", err, calls.Load(), tc.code)
+			}
+			if strings.Contains(err.Error(), "synthetic-secret-value") {
+				t.Fatal("error exposed the response body")
+			}
+		})
+	}
+}
+
+func TestBatchFetchRejectsMissingSecretPaths(t *testing.T) {
+	for _, locale := range []string{"en-US", "zh-CN"} {
+		t.Run(locale, func(t *testing.T) {
+			if err := i18n.Init(locale); err != nil {
+				t.Fatal(err)
+			}
+			t.Cleanup(func() { _ = i18n.Init("en-US") })
+			root := batchWorkspace(t, func(w http.ResponseWriter, r *http.Request) {
+				w.Header().Set("Content-Type", "application/json")
+				_, _ = w.Write([]byte(`{"secrets":[{"secretPath":"/apps/home","secretKey":"VALID","secretValue":"synthetic-secret-value"},{"secretKey":"PRIVATE","secretValue":"synthetic-secret-value"}]}`))
+			})
+			values, err := fetchSecretsForProjects(context.Background(), root, []string{"apps/home", "apps/admin"}, "dev")
+			var coded interface{ ErrorCode() string }
+			if values != nil || !errors.As(err, &coded) || coded.ErrorCode() != "INFISICAL_API_ERROR" || err.Error() != i18n.T("infisical.snapshot_path_missing") {
+				t.Fatalf("missing secret path was not rejected: %v", err)
+			}
+			if strings.Contains(err.Error(), "synthetic-secret-value") {
+				t.Fatal("error exposed secret values")
+			}
+		})
+	}
+}
+
+func TestBatchFetchChecksRecursiveDepth(t *testing.T) {
+	dir := strings.Repeat("nested/", maxSnapshotDepth-1) + "project"
+	var calls atomic.Int32
+	root := batchWorkspace(t, func(w http.ResponseWriter, r *http.Request) {
+		calls.Add(1)
+		w.Header().Set("Content-Type", "application/json")
+		_ = json.NewEncoder(w).Encode(map[string]any{"secrets": []models.Secret{{SecretPath: "/" + dir, SecretKey: "DEEPEST", SecretValue: "yes"}}})
+	})
+	got, err := fetchSecretsForProjects(context.Background(), root, []string{dir}, "dev")
+	if err != nil || got[dir]["DEEPEST"] != "yes" || calls.Load() != 1 {
+		t.Fatalf("supported depth failed: %v %v", got, err)
+	}
+	for _, locale := range []string{"en-US", "zh-CN"} {
+		t.Run(locale, func(t *testing.T) {
+			if err := i18n.Init(locale); err != nil {
+				t.Fatal(err)
+			}
+			t.Cleanup(func() { _ = i18n.Init("en-US") })
+			tooDeep := dir + "/child"
+			got, err := fetchSecretsForProjects(context.Background(), root, []string{"apps/home", tooDeep}, "dev")
+			if got != nil || err == nil || err.Error() != i18n.Tf("infisical.snapshot_depth_exceeded", tooDeep, maxSnapshotDepth) || calls.Load() != 1 {
+				t.Fatalf("unsupported depth was not rejected before fetching: %v", err)
 			}
 		})
 	}
 }
 
 func TestBatchFetchCancellation(t *testing.T) {
-	started := make(chan string, 6)
+	started := make(chan struct{}, 1)
+	cancelled := make(chan struct{}, 1)
+	var calls atomic.Int32
 	root := batchWorkspace(t, func(w http.ResponseWriter, r *http.Request) {
-		started <- r.URL.Query().Get("secretPath")
+		calls.Add(1)
+		started <- struct{}{}
 		<-r.Context().Done()
+		cancelled <- struct{}{}
 	})
 	ctx, cancel := context.WithCancel(context.Background())
 	t.Cleanup(cancel)
 	done := make(chan error, 1)
-	go func() { _, err := fetchSecretsForProjects(ctx, root, []string{"apps/home"}, "dev"); done <- err }()
-	waitFolderRequests(t, started, 3)
+	go func() {
+		_, err := fetchSecretsForProjects(ctx, root, []string{"apps/home", "apps/admin"}, "dev")
+		done <- err
+	}()
+	waitSnapshotRequest(t, started)
 	cancel()
 	select {
 	case err := <-done:
@@ -269,18 +262,21 @@ func TestBatchFetchCancellation(t *testing.T) {
 			t.Fatalf("error = %v", err)
 		}
 	case <-time.After(3 * time.Second):
-		t.Fatal("HTTP requests ignored cancellation")
+		t.Fatal("HTTP request ignored cancellation")
 	}
+	waitSnapshotRequest(t, cancelled)
 	values, err := fetchSecretsForProjects(ctx, root, []string{"apps/home"}, "dev")
-	if !errors.Is(err, context.Canceled) || values != nil {
+	if !errors.Is(err, context.Canceled) || values != nil || calls.Load() != 1 {
 		t.Fatal("pre-cancelled load did work")
 	}
 }
 
 func TestBatchFetchEnvironmentIsolation(t *testing.T) {
+	var calls atomic.Int32
 	root := batchWorkspace(t, func(w http.ResponseWriter, r *http.Request) {
+		calls.Add(1)
 		w.Header().Set("Content-Type", "application/json")
-		_ = json.NewEncoder(w).Encode(map[string]any{"secrets": []map[string]string{{"secretKey": "ENV", "secretValue": r.URL.Query().Get("environment")}}})
+		_ = json.NewEncoder(w).Encode(map[string]any{"secrets": []models.Secret{{SecretPath: "/", SecretKey: "ENV", SecretValue: r.URL.Query().Get("environment")}}})
 	})
 	var wg sync.WaitGroup
 	for _, env := range []string{"dev", "staging"} {
@@ -293,4 +289,7 @@ func TestBatchFetchEnvironmentIsolation(t *testing.T) {
 		})
 	}
 	wg.Wait()
+	if calls.Load() != 2 {
+		t.Fatalf("requests = %d, want one per environment", calls.Load())
+	}
 }

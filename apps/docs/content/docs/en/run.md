@@ -77,7 +77,9 @@ POSIX shell argument forwarding preserves spaces, quotes, Unicode and metacharac
 
 Task ownership follows the deepest registered project directory containing its effective working directory. Root aggregates do not receive a union of child variables.
 
-One batch-loads an immutable project snapshot once per invocation. `--env` selects a declared environment, defaulting to `dev`. Values override matching shell, mise and task variables. Each leaf receives only its project's snapshot, including empty values. Child processes inherit the same environment.
+When projects enable environment variables, One makes a single recursive request to Infisical per invocation and builds immutable project snapshots in memory. A later invocation fetches fresh values. `--env` selects a declared environment, defaulting to `dev`. Each project inherits root, ancestor, and project-directory variables in that order, with closer folders overriding matching keys. Variables from other projects or deeper subdirectories are excluded. Values override matching shell, mise and task variables. Each leaf receives only its project's snapshot, including empty values. Child processes inherit the same environment.
+
+Infisical recursive reads support at most 20 directory levels. Projects beyond that depth fail before the request. A response containing a secret without an absolute folder path also fails, preventing incomplete or incorrectly scoped variables from being distributed.
 
 Environment values and commands are sent to private leaf processes through an authenticated loopback channel. Generated YAML contains graph metadata and worker identities; it contains no injected variable values. No environment plugins or temporary binding TOML are generated. The channel and private configuration directory are closed and removed when the invocation ends.
 

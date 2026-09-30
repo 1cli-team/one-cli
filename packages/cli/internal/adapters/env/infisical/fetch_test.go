@@ -27,7 +27,7 @@ func TestFetchProjectEnvironmentsStayIsolated(t *testing.T) {
 	}
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		q := r.URL.Query()
-		if r.URL.Path != "/api/v3/secrets/raw" || q.Get("workspaceId") != "remote" || q.Get("recursive") == "true" {
+		if r.URL.Path != "/api/v3/secrets/raw" || q.Get("workspaceId") != "remote" || q.Get("recursive") != "true" || q.Get("secretPath") != "/" {
 			t.Errorf("unexpected request %s", r.URL)
 		}
 		env := q.Get("environment")
@@ -35,8 +35,10 @@ func TestFetchProjectEnvironmentsStayIsolated(t *testing.T) {
 			t.Errorf("unexpected environment %q", env)
 		}
 		values := []map[string]string{}
-		for k, v := range folders[q.Get("secretPath")] {
-			values = append(values, map[string]string{"secretKey": k, "secretValue": env + ":" + v})
+		for path, folder := range folders {
+			for k, v := range folder {
+				values = append(values, map[string]string{"secretPath": path, "secretKey": k, "secretValue": env + ":" + v})
+			}
 		}
 		w.Header().Set("Content-Type", "application/json")
 		_ = json.NewEncoder(w).Encode(map[string]any{"secrets": values})

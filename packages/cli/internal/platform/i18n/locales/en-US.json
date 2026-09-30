@@ -155,6 +155,8 @@
   "infisical.relogin": "The Infisical session is no longer valid. Run one logout, then one login.",
   "infisical.folder_missing": "Infisical folder not found (environment=%s, folder=%s).",
   "infisical.request_failed": "The Infisical request failed. Check the project, environment, path, and access permissions.",
+  "infisical.snapshot_path_missing": "The Infisical recursive response contains a secret without an absolute folder path. Check your Infisical server version before retrying.",
+  "infisical.snapshot_depth_exceeded": "Project directory %s exceeds Infisical's recursive read limit of %d levels. Shorten the project directory path before retrying.",
   "infisical.token_missing": "An Infisical access token is required to create a project.",
   "infisical.unreachable": "Cannot connect to Infisical.",
   "infisical.request_error": "Infisical request failed.",

@@ -155,6 +155,8 @@
   "infisical.relogin": "Infisical 登录失效，请先运行 one logout，再运行 one login。",
   "infisical.folder_missing": "Infisical 目录不存在（环境=%s，目录=%s）。",
   "infisical.request_failed": "Infisical 请求失败，请检查项目、环境、路径和访问权限。",
+  "infisical.snapshot_path_missing": "Infisical 递归响应中有变量缺少绝对目录路径，请检查 Infisical 服务版本后重试。",
+  "infisical.snapshot_depth_exceeded": "项目目录 %s 超出 Infisical 递归读取的 %d 层限制，请缩短项目目录路径后重试。",
   "infisical.token_missing": "Infisical access token 不可用，无法调用 create-project。",
   "infisical.unreachable": "无法连接到 Infisical",
   "infisical.request_error": "Infisical 请求失败",
