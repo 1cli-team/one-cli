@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed — Task execution / 任务执行
+
+- `one run` 使用官方 Process Compose 1.122.0 调度任务，One 提供运行中列表、完整任务树和日志复制界面，mise 保留工具管理；不再维护 mise 补丁或 Rust 构建。
+- Official Process Compose schedules tasks while One renders a running-task list, complete dependency tree and copyable logs. mise retains tool management; no upstream patches are required. Static compatibility and limits are documented in the run guide.
+- TUI 使用无补齐空格的紧凑任务前缀，并按任务身份分配稳定颜色，stdout/stderr 共用颜色；保留正文颜色、缩进与纯文本复制，并尊重显式关闭颜色的设置。
+- TUI log prefixes use compact formatting without name padding and consistent task colors across stdout/stderr, preserving body styling, indentation and plain-text copying while honoring explicit color-off settings.
+
+- Infisical 通过 SDK 的 HTTP 状态识别登录错误，连接错误中的端口号或请求 ID 不再误触发重新登录提示。
+- Infisical authentication errors use the SDK's HTTP status; port numbers and request IDs in connection failures no longer trigger a false sign-in error.
+
 ### Removed — Workspace presets / 工作区预设组合
 
 - 删除 `one create --preset`、`--project-names`、preset 编解码与批量展开。统一先 `one create` 创建空工作区，再通过 `one add` 添加项目；旧参数会在写入前报错。

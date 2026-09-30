@@ -6,6 +6,7 @@ go = "1.27.1"
 node = "24.15.0"
 pnpm = "10.14.0"
 task = "3.53.1"
+process-compose = "1.122.0"
 
 [tasks.install-deps]
 description = "Install the root pnpm workspace dependencies"
@@ -23,6 +24,10 @@ outputs = ["dist"]
 description = "Refresh embedded templates and registry"
 dir = "packages/cli"
 run = "task sync-bundled"
+
+[tasks."process-compose:inspect"]
+description = "Inspect the official Process Compose runtime installed by mise"
+run = ["mise registry process-compose", "process-compose version --short", "process-compose up --help", "mise env --help"]
 
 [tasks.sync-web]
 depends = ["build-web"]

@@ -17,5 +17,11 @@ func (runLoader) Load(ctx context.Context, projectRoot, relativeDir, envName str
 	return FetchSecretsForSubproject(ctx, projectRoot, relativeDir, envName)
 }
 
+func (runLoader) LoadProjects(ctx context.Context, root string, dirs []string, env string) (map[string]map[string]string, error) {
+	return fetchSecretsForProjects(ctx, root, dirs, env)
+}
+
+var _ secrets.BatchLoader = runLoader{}
+
 // Loader constructs the Infisical adapter for an explicit composition root.
 func Loader() secrets.Loader { return runLoader{} }

@@ -7,6 +7,7 @@ import (
 	"strings"
 	"sync"
 
+	uv "github.com/charmbracelet/ultraviolet"
 	"github.com/charmbracelet/x/ansi"
 )
 
@@ -17,17 +18,18 @@ type logEntry struct {
 	size   int
 }
 type logStore struct {
-	closed   bool
-	mu       sync.Mutex
-	file     *os.File
-	names    []string
-	entries  []logEntry
-	tasks    map[string][]int
-	observed map[string]bool
-	writers  []*logWriter
-	pending  map[*logWriter]logLine
-	size     int64
-	err      error
+	closed       bool
+	mu           sync.Mutex
+	file         *os.File
+	names        []string
+	prefixStyles map[string]uv.Style
+	entries      []logEntry
+	tasks        map[string][]int
+	observed     map[string]bool
+	writers      []*logWriter
+	pending      map[*logWriter]logLine
+	size         int64
+	err          error
 }
 type logLine struct{ task, text string }
 
@@ -36,7 +38,7 @@ func newLogStore(names []string) (*logStore, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &logStore{file: f, names: names, tasks: map[string][]int{}, observed: map[string]bool{}, pending: map[*logWriter]logLine{}}, nil
+	return &logStore{file: f, names: names, prefixStyles: taskPrefixStyles(names), tasks: map[string][]int{}, observed: map[string]bool{}, pending: map[*logWriter]logLine{}}, nil
 }
 func (s *logStore) close() {
 	s.mu.Lock()
@@ -138,6 +140,19 @@ func (s *logStore) search(ctx context.Context, task, query string, from, to int)
 		if strings.Contains(strings.ToLower(ansi.Strip(s.read(id))), query) {
 			ids = append(ids, id)
 		}
+	}
+	return ids
+}
+
+func (s *logStore) ids(task string) []int {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if task != "" {
+		return append([]int(nil), s.tasks[task]...)
+	}
+	ids := make([]int, len(s.entries))
+	for i := range ids {
+		ids[i] = i
 	}
 	return ids
 }

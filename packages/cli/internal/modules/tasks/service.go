@@ -6,8 +6,9 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
+	"runtime"
 	"slices"
-	"strconv"
 	"strings"
 	"time"
 
@@ -27,6 +28,8 @@ type Service struct {
 	Provider  runtimeport.Provider
 	Loaders   *secrets.Registry
 	Prepare   func(context.Context, dependencies.Input) error
+	// WorkerCommand substitutes the private leaf transport in process integration tests.
+	WorkerCommand func(string) []string
 }
 type Result struct {
 	Schema   string   `json:"schema"`
@@ -62,28 +65,22 @@ func (s Service) Execute(ctx context.Context, w execution.Workspace, p *Plan, op
 	if err := ValidateOptions(opts); err != nil {
 		return nil, err
 	}
-	ctx, cancel := context.WithCancel(ctx)
-	defer cancel()
-	ctx, stop := process.SignalContext(ctx)
-	defer stop()
-	if s.Provider == nil {
-		return nil, i18n.Errorf("exec.mise_missing")
-	}
 	if err := executionOptions(p, &opts); err != nil {
 		return nil, err
 	}
-	if err := s.inspectCache(ctx, w, p); err != nil {
-		return nil, err
+	if s.Provider == nil {
+		return nil, i18n.Errorf("exec.mise_missing")
 	}
-	for _, task := range p.Tasks {
-		if task.Interactive || task.Raw {
-			opts.Cache = "off"
-		}
-	}
+	ctx, stop := process.SignalContext(ctx)
+	defer stop()
+	ctx, cancel := context.WithCancelCause(ctx)
+	defer cancel(nil)
+	opts.UI = taskui.Mode(opts.UI, len(p.Tasks), in, errOut)
 	prepare := s.Prepare
 	if prepare == nil {
 		prepare = (dependencies.Service{Provider: s.Provider}).Prepare
 	}
+	fmt.Fprintln(errOut, i18n.T("tasks.preparing_dependencies"))
 	if err := prepare(ctx, dependencies.Input{Root: w.Root(), Manifest: w.Manifest(), Projects: projectNames(p), Runtime: runtimeport.Mise, Development: true, Log: errOut}); err != nil {
 		return nil, err
 	}
@@ -91,81 +88,101 @@ func (s Service) Execute(ctx context.Context, w execution.Workspace, p *Plan, op
 	if err != nil {
 		return nil, err
 	}
+	fmt.Fprintln(errOut, i18n.Tf("tasks.preparing_environment", p.Environment))
 	session, err := s.prepareEnvironment(ctx, w, p, base.Env)
 	if err != nil {
 		return nil, err
 	}
-	defer session.close()
-	if err = s.verifyBindings(ctx, w, p, session); err != nil {
-		return nil, err
-	}
-	for i := range p.Tasks {
-		if session.uncached[p.Tasks[i].Name] {
-			p.Tasks[i].Cached = false
+	specs := map[string]leafSpec{}
+	toolEnvironments := map[string][]string{}
+	for i, task := range p.Tasks {
+		commands, err := runCommands(task)
+		if err != nil {
+			return nil, err
 		}
+		env := base.Env
+		if len(commands) > 0 || task.File != "" {
+			key := task.Directory + "\x00" + strings.Join(task.tools, "\x00")
+			env = toolEnvironments[key]
+			if env == nil {
+				env, err = s.toolEnvironment(ctx, task, base.Env, errOut)
+				if err != nil {
+					return nil, err
+				}
+				toolEnvironments[key] = env
+			}
+			env = secrets.MergeIntoEnviron(env, task.env, true)
+			env = removeEnv(env, task.unsetEnv)
+			env = secrets.MergeIntoEnviron(env, session.snapshots[task.Project], true)
+		}
+		env = removeEnv(env, []string{"ONE_PROCESS_ENDPOINT", "ONE_PROCESS_TOKEN", "MISE_TASK_PGID_MANAGED"})
+		env = secrets.MergeIntoEnviron(env, map[string]string{"MISE_PROJECT_ROOT": w.Root(), "MISE_TASK_NAME": strings.TrimPrefix(task.Name, "//:"), "ONE_WORKSPACE_ROOT": w.Root()}, true)
+		if opts.UI == "tui" {
+			env = taskui.ColorEnvironment(env)
+		}
+		task.Source = filepath.Join(w.Root(), task.Source)
+		arguments := []string(nil)
+		if slices.Contains(p.Entries, task.Name) {
+			arguments = opts.Arguments
+		}
+		specs[fmt.Sprintf("task-%d", i)] = leafSpec{Task: task, Commands: commands, Environment: env, Arguments: arguments, Shell: task.shell, Force: opts.Force || opts.UI == "raw" || task.Raw || task.Interactive || len(arguments) > 0 || session.uncached[task.Name]}
 	}
-	env := session.env
-	if len(session.bindings) > 0 {
+	if len(session.snapshots) > 0 {
 		fmt.Fprintln(errOut, i18n.T("tasks.environment_cache_off"))
 	}
-	opts.UI = taskui.Mode(opts.UI, len(p.Tasks), in, errOut)
-	mode := "interleave"
-	if len(p.Tasks) > 1 || opts.UI == "tui" {
-		mode = "prefix"
-	}
-	argv := []string{"run", "--jobs", strconv.Itoa(opts.Jobs), "--task-cache", opts.Cache, "--output", mode}
-	if opts.Force {
-		argv = append(argv, "--force")
-	}
-	// Extra flags may redirect output or select watch mode. A generated output
-	// contract describes the default invocation only.
-	if len(opts.Arguments) > 0 {
-		argv = append(argv, "--task-cache", "off", "--force")
-	}
-	if opts.UI == "raw" {
-		argv = append(argv, "--raw", "--task-cache", "off", "--force")
-		fmt.Fprintln(errOut, i18n.T("tasks.raw_cache_off"))
-	}
-	for i, entry := range p.Entries {
-		if i > 0 {
-			argv = append(argv, ":::")
-		}
-		for _, task := range p.Tasks {
-			if task.Name == entry {
-				entry = task.runtimeName()
-				break
-			}
-		}
-		argv = append(argv, entry)
-		if len(opts.Arguments) > 0 {
-			argv = append(argv, "--")
-			argv = append(argv, opts.Arguments...)
-		}
-	}
-	// One starts its own scheduler, even when invoked from another mise task.
-	// Inheriting the parent's marker disables child process groups in mise,
-	// preventing it from stopping sibling services when one task fails.
-	env = slices.DeleteFunc(env, func(entry string) bool {
-		key, _, _ := strings.Cut(entry, "=")
-		return strings.EqualFold(key, "MISE_TASK_PGID_MANAGED")
-	})
-	command, err := s.Provider.PrepareCLI(ctx, runtimeport.Command{Directory: w.Root(), Argv: argv, Env: env})
+	binary, err := s.prepareCompose(ctx, w.Root(), base.Env, errOut)
 	if err != nil {
 		return nil, err
 	}
-	child := process.CommandContext(ctx, command.Argv[0], command.Argv[1:]...)
-	child.Cancel = func() error { return process.StopTree(child.Process) }
-	child.WaitDelay = 3 * time.Second
-	child.Dir = command.Directory
-	child.Env = command.Env
-	child.Stdin = in
-	child.Stdout = out
-	child.Stderr = errOut
-	if output.IsStructured() {
+	broker, err := newInvocationBroker(specs)
+	if err != nil {
+		return nil, err
+	}
+	defer broker.close()
+	directory, err := os.MkdirTemp("", "one-compose-")
+	if err != nil {
+		return nil, err
+	}
+	defer os.RemoveAll(directory)
+	worker := s.WorkerCommand
+	if worker == nil {
+		worker = defaultWorker
+	}
+	config, err := composeConfig(p, worker)
+	if err != nil {
+		return nil, err
+	}
+	path := filepath.Join(directory, "process-compose.yaml")
+	if err := os.WriteFile(path, config, 0600); err != nil {
+		return nil, err
+	}
+
+	argv := []string{"up", "--config", path, "--no-server", "--disable-dotenv", "--ordered-shutdown", "--read-only", "--log-file", filepath.Join(directory, "runtime.log"), "--tui=false"}
+	argv = append(argv, p.Entries...)
+	if opts.UI == "raw" {
+		entry := ""
+		for _, task := range p.Tasks {
+			if hasRun(task.Run) || task.File != "" {
+				entry = task.Name
+			}
+		}
+		argv = []string{"run", entry, "--config", path, "--no-server", "--disable-dotenv", "--read-only", "--log-file", filepath.Join(directory, "runtime.log")}
+	}
+	child := process.CommandContext(ctx, binary, argv...)
+	child.Dir, child.Env = w.Root(), broker.environment(secrets.MergeIntoEnviron(composeEnvironment(base.Env), map[string]string{"PROC_COMP_CONFIG": directory}, true))
+	child.Stdin, child.Stdout, child.Stderr = in, out, errOut
+	if output.IsStructured() || opts.UI == "tui" {
 		child.Stdout = errOut
 	}
+	child.Cancel = func() error {
+		if runtime.GOOS == "windows" {
+			return process.StopTree(child.Process)
+		}
+		return child.Process.Signal(os.Interrupt)
+	}
+	child.WaitDelay = 8 * time.Second
 	if opts.UI == "tui" {
-		err = taskui.Run(ctx, cancel, child, taskGraph(p), in, errOut, s.OnStarted)
+		err = taskui.Run(ctx, func() { cancel(&process.ExitStatus{Code: 130}) }, child, taskGraph(p), in, errOut, s.OnStarted, broker.snapshot)
 	} else {
 		err = child.Start()
 		if err == nil {
@@ -175,22 +192,50 @@ func (s Service) Execute(ctx context.Context, w execution.Workspace, p *Plan, op
 			err = child.Wait()
 		}
 	}
-	result := &Result{Schema: "one-cli/task-result/v1", Status: "succeeded", Entries: p.Entries, Tasks: p.Tasks}
+
+	result := &Result{Schema: "one-cli/task-result/v1", Status: "succeeded", Entries: p.Entries}
 	if err != nil {
 		result.Status = "failed"
 		result.ExitCode = process.ExitCode(err)
+	}
+	if ctx.Err() != nil {
+		result.Status = "cancelled"
+		result.ExitCode = 130
 		var exit *process.ExitStatus
-		if errors.As(err, &exit) {
+		if errors.As(context.Cause(ctx), &exit) {
 			result.ExitCode = exit.Code
 		}
-		if ctx.Err() != nil {
-			result.Status = "cancelled"
-			result.ExitCode = 130
-			if errors.As(context.Cause(ctx), &exit) {
-				result.ExitCode = exit.Code
+	}
+	// Preserve the first business failure when shutdown cancels sibling tasks.
+	if ctx.Err() == nil {
+		broker.mu.Lock()
+		failed, cancelled := broker.firstFailure, 0
+		for _, event := range broker.events {
+			if event.Status == "cancelled" && cancelled == 0 {
+				cancelled = event.ExitCode
 			}
 		}
+		broker.mu.Unlock()
+		if failed != 0 {
+			result.Status = "failed"
+			result.ExitCode = failed
+		} else if cancelled != 0 {
+			result.Status = "cancelled"
+			result.ExitCode = cancelled
+		}
+	}
+	result.Tasks = broker.tasks(p, result.Status)
+	if result.ExitCode != 0 {
 		return result, &process.ExitStatus{Code: result.ExitCode}
 	}
 	return result, nil
+}
+
+// Runtime flags belong to One. Ambient PC configuration must not redirect this
+// invocation to another project, enable its HTTP API or load a separate dotenv.
+func composeEnvironment(env []string) []string {
+	return slices.DeleteFunc(slices.Clone(env), func(entry string) bool {
+		key, _, _ := strings.Cut(entry, "=")
+		return strings.HasPrefix(strings.ToUpper(key), "PC_")
+	})
 }

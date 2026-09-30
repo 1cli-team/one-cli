@@ -3,6 +3,13 @@ package infisical
 import (
 	"context"
 	"path/filepath"
+	"sync"
+	"time"
+
+	"github.com/go-resty/resty/v2"
+	api "github.com/infisical/go-sdk/packages/api/secrets"
+	"github.com/infisical/go-sdk/packages/models"
+	"github.com/infisical/go-sdk/packages/util"
 
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/core/workspace"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/i18n"
@@ -25,6 +32,23 @@ import (
 // Credentials + siteUrl come exclusively from the active browser session.
 // Env vars are no longer read.
 func FetchSecretsForSubproject(ctx context.Context, projectRoot, relativeDir, envName string) (map[string]string, error) {
+	projects, err := fetchSecretsForProjects(ctx, projectRoot, []string{relativeDir}, envName)
+	if err != nil {
+		return nil, err
+	}
+	return projects[relativeDir], nil
+}
+
+// Snapshot lifetime is exactly one call: a later launch always reads fresh
+// values. Unique folders are requested concurrently, then merged in chain order.
+func fetchSecretsForProjects(ctx context.Context, projectRoot string, dirs []string, envName string) (map[string]map[string]string, error) {
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+	result := make(map[string]map[string]string, len(dirs))
+	if len(dirs) == 0 {
+		return result, nil
+	}
 	cfg, err := RequireWorkspaceConfig(projectRoot)
 	if err != nil {
 		return nil, err
@@ -41,37 +65,101 @@ func FetchSecretsForSubproject(ctx context.Context, projectRoot, relativeDir, en
 		return nil, i18n.Errorf("infisical.binding_instance_mismatch")
 	}
 	cfg.SiteURL = siteURL
-	client, err := NewClient(ctx, cfg, creds)
-	if err != nil {
-		return nil, err
-	}
-
-	resolution, err := resolveRunPath(projectRoot, relativeDir)
-	if err != nil {
-		return nil, err
-	}
-
-	merged := map[string]string{}
-	for _, p := range resolution.Chain {
-		secrets, err := client.ListSecrets(env, p, false)
+	chains := make(map[string][]string, len(dirs))
+	indices := map[string]int{}
+	paths := []string{}
+	for _, dir := range dirs {
+		resolution, err := resolveRunPath(projectRoot, dir)
 		if err != nil {
-			// A missing folder along the inheritance chain is normal: the
-			// chain is `[/, /apps, /apps/web]` for a workspace whose
-			// secrets only live under /apps/web. The intermediate `/apps`
-			// folder doesn't have to exist on Infisical — that path was
-			// only there in case it had shared values to inherit. Treat
-			// FolderNotFound as "no secrets at this level" and continue.
-			// Other errors (auth / network / project-not-found) still bail.
-			if isFolderNotFound(err) {
-				continue
-			}
 			return nil, err
 		}
-		for _, s := range secrets {
-			merged[s.SecretKey] = s.SecretValue
+		chains[dir] = resolution.Chain
+		for _, path := range resolution.Chain {
+			if _, exists := indices[path]; !exists {
+				indices[path] = len(paths)
+				paths = append(paths, path)
+			}
 		}
 	}
-	return merged, nil
+	folders, err := fetchFolders(ctx, cfg, creds, env, paths)
+	if err != nil {
+		return nil, err
+	}
+	for dir, chain := range chains {
+		merged := map[string]string{}
+		for _, path := range chain {
+			for _, secret := range folders[indices[path]] {
+				merged[secret.SecretKey] = secret.SecretValue
+			}
+		}
+		result[dir] = merged
+	}
+	return result, nil
+}
+
+const maxFolderRequests = 6
+
+func fetchFolders(ctx context.Context, cfg *WorkspaceConfig, creds *Credentials, env string, paths []string) ([][]models.Secret, error) {
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+	// The SDK's high-level client does not pass its constructor context to
+	// HTTP requests. Reuse its list API and error contract with a cancellable
+	// request client so Ctrl-C and a failed sibling stop in-flight reads.
+	client := resty.New().
+		SetBaseURL(util.AppendAPIEndpoint(cfg.SiteURLOrDefault())).
+		SetHeader("User-Agent", "one-cli/"+clientVersion).
+		SetAuthToken(creds.AccessToken).
+		SetTimeout(30 * time.Second).
+		SetRedirectPolicy(resty.NoRedirectPolicy()).
+		OnBeforeRequest(func(_ *resty.Client, request *resty.Request) error {
+			request.SetContext(ctx)
+			return ctx.Err()
+		})
+	defer client.GetClient().CloseIdleConnections()
+	results := make([][]models.Secret, len(paths))
+	jobs := make(chan int, len(paths))
+	for i := range paths {
+		jobs <- i
+	}
+	close(jobs)
+	var wg sync.WaitGroup
+	var once sync.Once
+	var firstErr error
+	for range min(maxFolderRequests, len(paths)) {
+		wg.Go(func() {
+			for i := range jobs {
+				if ctx.Err() != nil {
+					return
+				}
+				response, err := api.CallListSecretsV3(nil, client, api.ListSecretsV3RawRequest{
+					ProjectID: cfg.ProjectID, Environment: env, SecretPath: paths[i],
+					ExpandSecretReferences: true,
+				})
+				if err != nil {
+					if ctx.Err() != nil {
+						return
+					}
+					err = mapAPIError(err)
+					// Missing ancestors are empty, never a reason to hide auth,
+					// network, or project-not-found failures.
+					if isFolderNotFound(err) {
+						continue
+					}
+					once.Do(func() { firstErr = err; cancel() })
+					return
+				}
+				results[i] = response.Secrets
+			}
+		})
+	}
+	wg.Wait()
+	if firstErr != nil {
+		return nil, firstErr
+	}
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+	return results, nil
 }
 
 // isFolderNotFound reports whether err is the structured

@@ -1,8 +1,9 @@
-// Package runcmd exposes named workspace tasks through mise.
+// Package runcmd exposes named workspace tasks through Process Compose.
 package runcmd
 
 import (
 	"context"
+	"fmt"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -18,7 +19,7 @@ import (
 
 func Commands(loaders *secrets.Registry, provider runtimeport.Provider) []*cobra.Command {
 	service := tasks.Service{Provider: provider, Loaders: loaders}
-	return []*cobra.Command{command(service), serviceWorker(service)}
+	return []*cobra.Command{command(service), serviceWorker(service), processWorker()}
 }
 func command(service tasks.Service) *cobra.Command {
 	opts := tasks.Options{Jobs: 1, Cache: "off", UI: "auto"}
@@ -90,6 +91,7 @@ func command(service tasks.Service) *cobra.Command {
 		if dry {
 			plan, err = tasks.NewPlan(w, opts)
 		} else {
+			fmt.Fprintln(cmd.ErrOrStderr(), i18n.T("tasks.preparing"))
 			plan, err = service.Plan(ctx, w, opts)
 		}
 		if err != nil {

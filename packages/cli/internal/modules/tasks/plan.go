@@ -1,4 +1,4 @@
-// Package tasks owns workspace task planning and one mise invocation.
+// Package tasks plans workspace tasks for the official Process Compose runtime.
 package tasks
 
 import (
@@ -26,25 +26,31 @@ type Options struct {
 	UI           string
 }
 type Task struct {
-	Name                  string   `json:"name"`
-	Project               string   `json:"project,omitempty"`
-	Operation             string   `json:"operation"`
-	Directory             string   `json:"directory"`
-	Source                string   `json:"source"`
-	Description           string   `json:"description,omitempty"`
-	Run                   any      `json:"run,omitempty"`
-	Dependencies          []string `json:"depends"`
-	Sources               []string `json:"sources,omitempty"`
-	Outputs               []string `json:"outputs,omitempty"`
-	Cached                bool     `json:"cache_enabled"`
-	Interactive           bool     `json:"interactive"`
-	Raw                   bool     `json:"raw"`
-	Managed               bool     `json:"managed"`
-	Status                string   `json:"status"`
-	cacheInputs           []string
-	File                  string `json:"file,omitempty"`
-	environmentDirectives []string
-	nativeName            string
+	waitFor      []string
+	Name         string   `json:"name"`
+	Project      string   `json:"project,omitempty"`
+	Operation    string   `json:"operation"`
+	Directory    string   `json:"directory"`
+	Source       string   `json:"source"`
+	Description  string   `json:"description,omitempty"`
+	Run          any      `json:"run,omitempty"`
+	Dependencies []string `json:"depends"`
+	Sources      []string `json:"sources,omitempty"`
+	Outputs      []string `json:"outputs,omitempty"`
+	Cached       bool     `json:"cache_enabled"`
+	Interactive  bool     `json:"interactive"`
+	Raw          bool     `json:"raw"`
+	Managed      bool     `json:"managed"`
+	Status       string   `json:"status"`
+	File         string   `json:"file,omitempty"`
+	nativeName   string
+	env          map[string]string
+	unsetEnv     []string
+	tools        []string
+	shell        []string
+	aliases      []string
+	hidden       bool
+	unsupported  string
 }
 type Plan struct {
 	Schema        string              `json:"schema"`
@@ -82,6 +88,9 @@ func taskIdentity(w execution.Workspace, canonical string) (string, string) {
 }
 
 func stringList(value any) ([]string, error) {
+	if values, ok := value.([]string); ok {
+		return values, nil
+	}
 	if s, ok := value.(string); ok {
 		return []string{s}, nil
 	}
@@ -113,7 +122,7 @@ func planCatalog(w execution.Workspace, opts Options, catalog []Task, configurat
 		return nil, err
 	}
 	opts.Environment = environment
-	p := &Plan{Schema: "one-cli/task-plan/v1", Runtime: "mise", Environment: opts.Environment, DryRun: true, Tasks: []Task{}, Arguments: opts.Arguments, configuration: configuration}
+	p := &Plan{Schema: "one-cli/task-plan/v1", Runtime: "process-compose", Environment: opts.Environment, DryRun: true, Tasks: []Task{}, Arguments: opts.Arguments, configuration: configuration}
 	byName := map[string]Task{}
 	for _, t := range catalog {
 		byName[t.Name] = t
@@ -148,18 +157,25 @@ func planCatalog(w execution.Workspace, opts Options, catalog []Task, configurat
 	stack := []string{}
 	var visit func(string) error
 	visit = func(name string) error {
+		task, ok := byName[name]
+		if !ok {
+			return i18n.Errorf("tasks.missing", name)
+		}
+		name = task.runtimeName()
+		task.Name = name
+		task.Cached = false
 		if seen[name] == 2 {
 			return nil
 		}
 		if seen[name] == 1 {
 			return i18n.Errorf("build.dependency_cycle", strings.Join(append(stack, name), " -> "))
 		}
-		task, ok := byName[name]
-		if !ok {
-			return i18n.Errorf("tasks.missing", name)
+		if task.unsupported != "" {
+			return i18n.Errorf("tasks.unsupported", task.Source, name, task.unsupported)
 		}
 		seen[name] = 1
 		stack = append(stack, name)
+		dependencies := []string{}
 		for _, dep := range task.Dependencies {
 			if strings.Contains(dep, "{{") || strings.ContainsAny(dep, " \t") {
 				return i18n.Errorf("tasks.dynamic_config", name)
@@ -174,6 +190,7 @@ func planCatalog(w execution.Workspace, opts Options, catalog []Task, configurat
 					ok, _ := filepath.Match(dep, candidate.Name)
 					if ok {
 						matched = true
+						dependencies = append(dependencies, candidate.runtimeName())
 						if err := visit(candidate.Name); err != nil {
 							return err
 						}
@@ -182,10 +199,14 @@ func planCatalog(w execution.Workspace, opts Options, catalog []Task, configurat
 				if !matched {
 					return i18n.Errorf("tasks.missing", dep)
 				}
-			} else if err := visit(dep); err != nil {
-				return err
+			} else {
+				if err := visit(dep); err != nil {
+					return err
+				}
+				dependencies = append(dependencies, byName[dep].runtimeName())
 			}
 		}
+		task.Dependencies = uniqueNames(dependencies)
 		stack = stack[:len(stack)-1]
 		seen[name] = 2
 		p.Tasks = append(p.Tasks, task)
@@ -195,6 +216,13 @@ func planCatalog(w execution.Workspace, opts Options, catalog []Task, configurat
 		if err := visit(entry); err != nil {
 			return nil, err
 		}
+	}
+	for i, entry := range p.Entries {
+		p.Entries[i] = byName[entry].runtimeName()
+	}
+	p.Entries = uniqueNames(p.Entries)
+	if err := resolveWaits(p, byName); err != nil {
+		return nil, err
 	}
 	for i, a := range p.Tasks {
 		for _, out := range a.Outputs {

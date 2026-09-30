@@ -30,3 +30,14 @@ func TestTaskGraphResolvesScopesGlobsAndAliases(t *testing.T) {
 		t.Fatal("display graph changed scheduler plan")
 	}
 }
+
+func TestTaskGraphWaitEdgesOnlyReferenceSelectedTasks(t *testing.T) {
+	p := &Plan{Entries: []string{"//:dev"}, Tasks: []Task{{Name: "//:dev", Dependencies: []string{"//:api"}}, {Name: "//:api", waitFor: []string{"//:ready", "//:outside"}}, {Name: "//:ready"}}}
+	graph := taskGraph(p)
+	if len(graph.Tasks) != 3 || !reflect.DeepEqual(graph.Tasks[1].WaitFor, []string{"//:ready"}) {
+		t.Fatal("waiting edge changed invocation scope", graph)
+	}
+	if len(p.Tasks[1].waitFor) != 2 {
+		t.Fatal("display projection mutated scheduling plan")
+	}
+}

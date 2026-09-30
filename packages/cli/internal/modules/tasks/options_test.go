@@ -10,7 +10,7 @@ func TestConcurrencyIsIndependentOfTaskName(t *testing.T) {
 			t.Fatalf("%+v %v", opts, err)
 		}
 		opts = Options{Name: name, Jobs: 1, JobsExplicit: true}
-		if err := executionOptions(p, &opts); err != nil || opts.Jobs != 1 {
+		if err := executionOptions(p, &opts); err == nil {
 			t.Fatal(opts, err)
 		}
 		p.Tasks[0].Interactive = true

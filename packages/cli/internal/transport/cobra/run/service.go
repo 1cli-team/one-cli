@@ -36,6 +36,7 @@ func serviceWorker(service tasks.Service) *cobra.Command {
 			if project == "" {
 				return i18n.Errorf("tasks.context_invalid")
 			}
+			fmt.Fprintln(cmd.ErrOrStderr(), i18n.T("tasks.preparing"))
 			plan, err := service.Plan(ctx, w, opts)
 			if err != nil {
 				return err

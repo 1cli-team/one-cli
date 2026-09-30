@@ -17,6 +17,7 @@ type Graph struct {
 type Task struct {
 	Name         string
 	Dependencies []string
+	WaitFor      []string
 }
 
 func (g Graph) names() []string {
@@ -32,6 +33,7 @@ type taskNode struct {
 	parent    int
 	children  []int
 	reference bool
+	wait      bool
 }
 type treeRow struct {
 	id     int
@@ -54,7 +56,7 @@ func newTaskTree(g Graph) taskTree {
 		if task.Name != "" {
 			tasks[task.Name] = task
 		}
-		for _, dep := range task.Dependencies {
+		for _, dep := range append(append([]string(nil), task.Dependencies...), task.WaitFor...) {
 			referenced[dep] = true
 		}
 	}
@@ -68,12 +70,17 @@ func newTaskTree(g Graph) taskTree {
 		}
 		tree.primary[name] = id
 		dependencies := map[string]bool{}
-		for _, dep := range tasks[name].Dependencies {
+		for _, dep := range append(append([]string(nil), tasks[name].Dependencies...), tasks[name].WaitFor...) {
 			if _, ok := tasks[dep]; !ok || dependencies[dep] {
 				continue
 			}
 			dependencies[dep] = true
 			child := add(dep, id)
+			for _, wait := range tasks[name].WaitFor {
+				if wait == dep {
+					tree.nodes[child].wait = true
+				}
+			}
 			tree.nodes[id].children = append(tree.nodes[id].children, child)
 		}
 		return id
@@ -147,28 +154,10 @@ func (t taskTree) label(row treeRow) string {
 			marker = "▸ "
 		}
 	}
+	if node.wait {
+		marker = "◇ " + marker
+	}
 	return row.prefix + marker + strings.TrimPrefix(node.task, "//:")
-}
-func (m model) treePage() ([]treeRow, int) {
-	rows := m.tree.visible()
-	selected := 0
-	for i, row := range rows {
-		if row.id == m.selected {
-			selected = i
-			break
-		}
-	}
-	_, _, height := m.layout()
-	return rows, max(0, selected-height+1)
-}
-func (m *model) moveTask(delta int) {
-	rows := m.tree.visible()
-	for i, row := range rows {
-		if row.id == m.selected {
-			m.selected = rows[min(max(0, i+delta), len(rows)-1)].id
-			return
-		}
-	}
 }
 func (m *model) reveal(id int) {
 	for parent := m.tree.nodes[id].parent; parent > 0; parent = m.tree.nodes[parent].parent {
@@ -211,17 +200,29 @@ func (m *model) treeKey(key string) {
 	}
 }
 
-func (m *model) navigateTask(delta int) tea.Cmd {
-	previous := m.selected
-	m.moveTask(delta)
-	selected := m.selected
-	m.selected = previous
-	return m.selectTask(selected)
-}
+func (m *model) navigateTask(delta int) tea.Cmd { return m.navigateSidebar(delta) }
 func (m *model) navigateTree(key string) tea.Cmd {
 	previous := m.selected
+	if m.runningFocus {
+		switch key {
+		case "right":
+			m.runningFocus = false
+			m.reveal(m.tree.primary[m.task()])
+			m.ensureSidebarSelection()
+			return nil
+		case "enter":
+			m.taskFocus = false
+			return nil
+		case "home", "end":
+			m.runningFocus = false
+		default:
+			return nil
+		}
+	}
 	m.treeKey(key)
 	selected := m.selected
 	m.selected = previous
-	return m.selectTask(selected)
+	cmd := m.selectTask(selected)
+	m.ensureSidebarSelection()
+	return cmd
 }

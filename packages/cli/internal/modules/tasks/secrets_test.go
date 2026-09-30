@@ -6,11 +6,13 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"reflect"
 	"runtime"
 	"strings"
 	"sync"
@@ -21,6 +23,8 @@ import (
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/application/execution"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/core/workspace"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/modules/dependencies"
+	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/i18n"
+	process "github.com/torchstellar-team/one-cli/packages/cli/internal/platform/process"
 	runtimeport "github.com/torchstellar-team/one-cli/packages/cli/internal/ports/runtime"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/ports/secrets"
 )
@@ -106,6 +110,11 @@ func testNativeMiseProjectEnvironmentsAndCache(t *testing.T, symlinked bool) {
 	if value := os.Getenv("ONE_TEST_MISE_BINARY"); value != "" {
 		binary = value
 	}
+	compose, err := exec.Command(binary, "which", "process-compose", "--tool", "process-compose@1.122.0").Output()
+	if err != nil {
+		t.Skipf("official pinned Process Compose is required: %v", err)
+	}
+	t.Setenv("PATH", filepath.Dir(strings.TrimSpace(string(compose)))+string(os.PathListSeparator)+os.Getenv("PATH"))
 	w := taskWorkspace(t)
 	if symlinked {
 		// Reproduce macOS /var -> /private/var path aliases on other platforms.
@@ -143,15 +152,38 @@ func testNativeMiseProjectEnvironmentsAndCache(t *testing.T, symlinked bool) {
 		}
 		return "'" + strings.ReplaceAll(s, "'", "'\"'\"'") + "'"
 	}
-	config := map[string]any{"tasks": map[string]any{"build": map[string]any{"depends": []string{"web:build", "lib:build"}, "run": quote(os.Args[0]) + " -test.run=^TestNativeEnvironmentChild$", "env": map[string]string{"ONE_NATIVE_ROOT": "1"}, "sources": []string{"apps/web/package.json"}, "outputs": []string{"root-dist"}, "cache": map[string]any{"enabled": true}}, "web:build": map[string]any{"dir": "apps/web", "run": quote(os.Args[0]) + " -test.run=^TestNativeEnvironmentChild$", "sources": []string{"package.json"}, "outputs": []string{"dist"}, "cache": map[string]any{"enabled": true}}, "lib:build": map[string]any{"dir": "packages/lib", "run": quote(os.Args[0]) + " -test.run=^TestNativeEnvironmentChild$"}}}
+	// Exercise task shell quoting independently of the Go build cache path,
+	// which may use Windows short names without any spaces.
+	executable, err := os.Executable()
+	if err != nil {
+		t.Fatal(err)
+	}
+	data, err := os.ReadFile(executable)
+	if err != nil {
+		t.Fatal(err)
+	}
+	childDir := filepath.Join(t.TempDir(), "tools with spaces")
+	if err := os.MkdirAll(childDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	child := filepath.Join(childDir, filepath.Base(executable))
+	if err := os.WriteFile(child, data, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	command := quote(child) + " -test.run=^TestNativeEnvironmentChild$"
+	config := map[string]any{"tasks": map[string]any{"build": map[string]any{"depends": []string{"web:build", "lib:build"}, "run": command, "env": map[string]string{"ONE_NATIVE_ROOT": "1"}, "sources": []string{"apps/web/package.json"}, "outputs": []string{"root-dist"}, "cache": map[string]any{"enabled": true}}, "web:build": map[string]any{"dir": "apps/web", "run": command, "sources": []string{"package.json"}, "outputs": []string{"dist"}, "cache": map[string]any{"enabled": true}}, "lib:build": map[string]any{"dir": "packages/lib", "run": command}}}
 	raw, _ := toml.Marshal(config)
 	writeTaskFile(t, w.Root(), "mise.toml", string(raw))
 	writeTaskFile(t, w.Root(), "apps/web/dist/existing", "old output")
 	writeTaskFile(t, w.Root(), "root-dist/existing", "old output")
 	// A local command override must retain both its command and the injected env.
-	local, _ := toml.Marshal(map[string]any{"tasks": map[string]any{"web:build": map[string]any{"dir": "apps/web", "run": quote(os.Args[0]) + " -test.run=^TestNativeEnvironmentChild$", "sources": []string{"package.json"}, "outputs": []string{"dist"}, "cache": map[string]any{"enabled": true}}}})
+	local, _ := toml.Marshal(map[string]any{"tasks": map[string]any{"web:build": map[string]any{"dir": "apps/web", "run": command, "sources": []string{"package.json"}, "outputs": []string{"dist"}, "cache": map[string]any{"enabled": true}}}})
 	writeTaskFile(t, w.Root(), "mise.local.toml", string(local))
-	service := Service{Provider: nativeProvider{binary}, Loaders: secrets.MustRegistry(loader), Prepare: func(context.Context, dependencies.Input) error { return nil }}
+	var selectedLoader secrets.Loader = loader
+	if symlinked {
+		selectedLoader = &fixtureBatchLoader{fixtureLoader: loader}
+	}
+	service := Service{Provider: nativeProvider{binary}, Loaders: secrets.MustRegistry(selectedLoader), Prepare: func(context.Context, dependencies.Input) error { return nil }, WorkerCommand: testWorkerCommand}
 	opts := Options{Name: "build", UI: "stream", Cache: "off", Jobs: 2}
 	for round := 0; round < 3; round++ {
 		if round == 1 {
@@ -247,7 +279,7 @@ func testNativeMiseProjectEnvironmentsAndCache(t *testing.T, symlinked bool) {
 			t.Fatalf("alias lost environment: %s %s", out.String(), stderr.String())
 		}
 	})
-	t.Run("profile replacement fails before running without binding", func(t *testing.T) {
+	t.Run("profile replacement retains the project snapshot", func(t *testing.T) {
 		t.Setenv("MISE_ENV", "one-test")
 		writeTaskFile(t, w.Root(), "mise.one-test.toml", string(local))
 		t.Cleanup(func() { os.Remove(filepath.Join(w.Root(), "mise.one-test.toml")) })
@@ -257,8 +289,8 @@ func testNativeMiseProjectEnvironmentsAndCache(t *testing.T, symlinked bool) {
 		}
 		var out, stderr bytes.Buffer
 		_, err = service.Execute(context.Background(), w, plan, opts, nil, &out, &stderr)
-		if err == nil || strings.Contains(out.String()+stderr.String(), "ENV_HASH=") {
-			t.Fatal("profile replacement launched an unbound command", err)
+		if err != nil || !strings.Contains(out.String()+stderr.String(), "ENV_HASH="+hashValues(loader.values["apps/web"])) {
+			t.Fatalf("profile lost environment: %v %s %s", err, out.String(), stderr.String())
 		}
 	})
 	t.Run("native project scopes with identical task names", func(t *testing.T) {
@@ -341,14 +373,23 @@ func TestEnvironmentSessionContainsNoValuesOnDiskAndCleansUp(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer session.close()
-	raw, err := os.ReadFile(filepath.Join(session.dir, "bindings.toml"))
+	config, err := composeConfig(plan, testWorkerCommand)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if strings.Contains(string(raw), "fake-web") || strings.Contains(string(raw), "web-only") {
-		t.Fatal("values written to disk")
+	for _, values := range loader.values {
+		for _, value := range values {
+			if value != "" && bytes.Contains(config, []byte(value)) {
+				t.Fatal("values written into config")
+			}
+		}
 	}
-	endpoint := envValue(session.env, "ONE_ENV_ENDPOINT") + "/task-0"
+	broker, err := newInvocationBroker(map[string]leafSpec{"task-0": {Task: plan.Tasks[0], Environment: session.env}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer broker.close()
+	endpoint := broker.endpoint + "/task-0"
 	r, err := http.Get(endpoint)
 	if err != nil {
 		t.Fatal(err)
@@ -357,13 +398,90 @@ func TestEnvironmentSessionContainsNoValuesOnDiskAndCleansUp(t *testing.T) {
 	if r.StatusCode != http.StatusUnauthorized {
 		t.Fatal("unauthenticated request accepted")
 	}
-	session.close()
-	if _, err = os.Stat(session.dir); !os.IsNotExist(err) {
-		t.Fatal("context not cleaned")
-	}
+	broker.close()
 	client := http.Client{Timeout: time.Second}
 	if r, err := client.Get(endpoint); err == nil {
 		r.Body.Close()
 		t.Fatal("broker remained open")
 	}
+
+}
+
+// Load deliberately fails so a regression to single-project loading is visible.
+type fixtureBatchLoader struct {
+	*fixtureLoader
+	batches int
+	err     error
+	omit    bool
+}
+
+func (l *fixtureBatchLoader) Load(context.Context, string, string, string) (map[string]string, error) {
+	return nil, errors.New("single-project load called")
+}
+func (l *fixtureBatchLoader) LoadProjects(ctx context.Context, root string, dirs []string, env string) (map[string]map[string]string, error) {
+	l.batches++
+	if l.err != nil {
+		return nil, l.err
+	}
+	values := map[string]map[string]string{}
+	for _, dir := range dirs {
+		if _, exists := values[dir]; exists {
+			return nil, errors.New("duplicate batch directory")
+		}
+		v, err := l.fixtureLoader.Load(ctx, root, dir, env)
+		if err != nil {
+			return nil, err
+		}
+		if !l.omit {
+			values[dir] = v
+		}
+	}
+	return values, nil
+}
+
+func TestEnvironmentBatchFailureLeavesNoSession(t *testing.T) {
+	for _, locale := range []string{"en-US", "zh-CN"} {
+		t.Run(locale, func(t *testing.T) {
+			if err := i18n.Init(locale); err != nil {
+				t.Fatal(err)
+			}
+			t.Cleanup(func() { _ = i18n.Init("en-US") })
+			for _, omit := range []bool{false, true} {
+				w := taskWorkspace(t)
+				w.Manifest().Env = &workspace.EnvironmentConfig{ProjectID: "fixture"}
+				l := &fixtureBatchLoader{fixtureLoader: syntheticLoader(), omit: omit}
+				if !omit {
+					l.err = errors.New("synthetic permission denied")
+				}
+				service := Service{Loaders: secrets.MustRegistry(l)}
+				before, _ := os.ReadDir(w.Root())
+				session, err := service.prepareEnvironment(context.Background(), w, &Plan{Environment: "dev", Tasks: []Task{{Project: "web"}, {Project: "lib"}, {Project: "web"}}}, nil)
+				if session != nil || err == nil || (!omit && !errors.Is(err, l.err)) {
+					t.Fatalf("unexpected result: %v %v", session, err)
+				}
+				if omit && !strings.Contains(err.Error(), "web") && !strings.Contains(err.Error(), "lib") {
+					t.Fatal("missing project context", err)
+				}
+				after, _ := os.ReadDir(w.Root())
+				if !reflect.DeepEqual(before, after) || l.batches != 1 {
+					t.Fatal("failed load created session files or repeated batch")
+				}
+			}
+		})
+	}
+}
+
+func testWorkerCommand(id string) []string {
+	return []string{os.Args[0], "-test.run=^TestProcessLeafChild$", "--", id}
+}
+func TestProcessLeafChild(t *testing.T) {
+	if os.Getenv("ONE_PROCESS_ENDPOINT") == "" {
+		return
+	}
+	err := RunProcessLeaf(context.Background(), os.Args[len(os.Args)-1], os.Stdin, os.Stdout, os.Stderr)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(process.ExitCode(err))
+	}
+	os.Exit(0)
 }

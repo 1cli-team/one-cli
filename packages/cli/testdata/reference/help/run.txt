@@ -1,6 +1,6 @@
 
 DESCRIPTION
-Run named workspace tasks with mise
+Run workspace tasks with Process Compose
 
 USAGE
   one run [task] [flags]
@@ -12,10 +12,10 @@ EXAMPLES
   one run build --dry-run
 
 TIPS
-Lists tasks with no arguments. Runs root tasks or selected project tasks with their dependencies. one <task> is shorthand for one run <task>, including dev, build, test, and lint. Built-in commands take precedence; use one run <task> for a conflicting name.
+Lists tasks with no arguments. Runs supported static tasks from mise.toml through official Process Compose; mise prepares tool versions. one <task> is shorthand for one run <task>. Built-in commands take precedence. One TUI shows running tasks above the full dependency tree. Tab switches focus; y copies logs; c enables native terminal copying.
 
 COMMON OPTIONS
-  --concurrency <value>    Maximum parallel tasks (allocated automatically when omitted)
+  --concurrency <value>    Compatibility flag; limits below the number of command tasks are unsupported by Process Compose
   --dry-run                Preview tasks without preparing tools, dependencies, secrets, or caches
   --env <value>            One project environment name
   --force                  Bypass freshness checks and execute tasks
