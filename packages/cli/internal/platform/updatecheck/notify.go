@@ -6,7 +6,6 @@ package updatecheck
 
 import (
 	"os"
-	"runtime"
 
 	"charm.land/lipgloss/v2"
 	"github.com/gofrs/flock"
@@ -73,7 +72,7 @@ func printWarning(w *os.File, latest, current string) {
 	yellow := lipgloss.NewStyle().Foreground(lipgloss.Color("11")).Bold(true)
 	dim := lipgloss.NewStyle().Foreground(lipgloss.Color("8"))
 	headline := yellow.Render(i18n.Tf("update.available", latest, current))
-	cmd := dim.Render("   " + installCommand(runtime.GOOS))
+	cmd := dim.Render("   one upgrade")
 	lipgloss.Fprintln(w, headline)
 	lipgloss.Fprintln(w, cmd)
 }

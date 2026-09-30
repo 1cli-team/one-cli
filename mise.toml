@@ -94,7 +94,7 @@ depends = ["cli:test:snapshot"]
 depends = ["test:go:plain", "test:dashboard"]
 
 [tasks.check]
-description = "Run the complete local and CI gate"
+description = "Run static checks and tests on the current platform"
 depends = ["check:static", "check:test"]
 
 [tasks."check:templates"]
@@ -111,8 +111,8 @@ description = "Run Go race and Dashboard tests"
 depends = ["test:go", "test:dashboard"]
 
 [tasks.pre-push]
-description = "Run the PR gate and Go race tests"
-depends = ["check", "test:go"]
+description = "Run the local PR gate, Go race tests, and template builds"
+depends = ["check", "test:go", "check:templates"]
 
 [tasks.fmt]
 depends = ["kernel:fmt", "cli:fmt"]

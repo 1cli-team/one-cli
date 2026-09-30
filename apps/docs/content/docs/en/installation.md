@@ -80,7 +80,21 @@ Download, verification, or write failures preserve the installed program. When a
 
 **Development builds skip update checks, downloads, installation, and notifications entirely.** Builds from `go build`, `mise run build`, `mise run build-local`, and `mise run install` default to updates disabled, even when `RELEASE_VERSION` is set. Only the release packager enables the update marker, and a complete stable version is also required. Development, local, snapshot, and other prerelease versions never update automatically.
 
-CI, structured JSON/YAML output, `--dry-run`, and internal task processes do not start updates. Update state lives at `$XDG_CACHE_HOME/one/update-check.json`, defaulting to `~/.cache/one/update-check.json`.
+CI, structured JSON/YAML output, `--dry-run`, and internal task processes do not start automatic updates. Update state lives at `$XDG_CACHE_HOME/one/update-check.json`, defaulting to `~/.cache/one/update-check.json`.
+
+## Manual Updates
+
+Run this command to check for the latest stable release immediately:
+
+```bash
+one upgrade
+```
+
+The command updates the executable you invoked, verifies the archive's SHA256 and the new program's version, and keeps your current version if it is equal to or newer than the latest release. It waits for any active updater and bypasses the 24-hour interval. It also runs when explicitly invoked in CI or with structured output, for example `one upgrade -o json`.
+
+On macOS and Linux, the command reports success after installation. On Windows, it waits for the download and verification, reports a pending installation, then a separate process installs it after the command exits. Run `one --version` to confirm completion. JSON/YAML results use schema `one-cli/upgrade/v1` and status `current`, `updated`, or `pending`.
+
+Only official stable release builds support self-updates. Development and local builds report an error with an installer command instead of replacing your build. Network, verification, and installation failures preserve the existing program; check the reported reason and retry. You can also rerun the installer to install the latest release.
 
 ## Upgrade And Downgrade
 
@@ -93,7 +107,7 @@ CI, structured JSON/YAML output, `--dry-run`, and internal task processes do not
 | Target is the same | **Skip**; set `ONE_FORCE=1` to reinstall a damaged binary |
 | Target is older | **Refuse** downgrade; set `ONE_FORCE=1` if you intentionally want to downgrade |
 
-For normal upgrades, rerun the install command. Use `ONE_FORCE` only for downgrade or repair.
+For normal upgrades, run `one upgrade` or rerun the install command. Use `ONE_FORCE` only for downgrade or repair.
 
 ## mise Runtime
 

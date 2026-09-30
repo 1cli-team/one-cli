@@ -31,7 +31,7 @@ type updater struct {
 	latestURL, releaseURL string
 	goos, goarch          string
 	probe                 func(context.Context, string, string) error
-	beforeInstall         func() error
+	beforeInstall         func(string) error
 }
 
 func defaultUpdater() updater {
@@ -132,10 +132,16 @@ func (u updater) update(ctx context.Context, target, current, expected string) (
 	if err = u.probe(ctx, stagedPath, latest); err != nil {
 		return latest, "", err
 	}
+	if err = unchangedExecutable(target, expected); err != nil {
+		return latest, "", err
+	}
 	if u.beforeInstall != nil {
-		if err = u.beforeInstall(); err != nil {
+		if err = u.beforeInstall(latest); err != nil {
 			return latest, "", err
 		}
+	}
+	if err = ctx.Err(); err != nil {
+		return latest, "", err
 	}
 	if err = unchangedExecutable(target, expected); err != nil {
 		return latest, "", err

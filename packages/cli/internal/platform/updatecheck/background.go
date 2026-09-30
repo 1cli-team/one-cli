@@ -75,32 +75,35 @@ func startUpdate(version, target string, launch func(string, string) error) {
 }
 
 func launchWorker(target, cacheDir string) error {
-	cleanupWorkers(cacheDir)
-	dir, err := os.MkdirTemp(cacheDir, workerPrefix)
+	cmd, dir, err := prepareWorker(target, cacheDir, workerCommand)
 	if err != nil {
 		return err
 	}
-	started := false
-	defer func() {
-		if !started {
-			_ = os.RemoveAll(dir)
-		}
-	}()
+	// Nil streams map to the null device, never to a user's terminal or pipe.
+	if err := cmd.Start(); err != nil {
+		_ = os.RemoveAll(dir)
+		return err
+	}
+	go func() { _ = cmd.Wait() }()
+	return nil
+}
+
+func prepareWorker(target, cacheDir, command string) (*exec.Cmd, string, error) {
+	cleanupWorkers(cacheDir)
+	dir, err := os.MkdirTemp(cacheDir, workerPrefix)
+	if err != nil {
+		return nil, "", err
+	}
 	worker := filepath.Join(dir, executableName())
 	// A separate executable lets Windows install after the invoking process
 	// exits without the updater itself keeping the target binary locked.
 	if err := copyExecutable(target, worker); err != nil {
-		return err
+		_ = os.RemoveAll(dir)
+		return nil, "", err
 	}
-	cmd := exec.Command(worker, workerCommand, target, strconv.Itoa(os.Getpid()))
+	cmd := exec.Command(worker, command, target, strconv.Itoa(os.Getpid()))
 	detachWorker(cmd)
-	// Nil streams map to the null device, never to a user's terminal or pipe.
-	if err := cmd.Start(); err != nil {
-		return err
-	}
-	started = true
-	go func() { _ = cmd.Wait() }()
-	return nil
+	return cmd, dir, nil
 }
 
 func cleanupWorkers(dir string) {
@@ -121,6 +124,9 @@ func cleanupWorkers(dir string) {
 // RunWorker consumes the private worker invocation before Cobra, prompts, or
 // application services are initialized. Non-release builds always do nothing.
 func RunWorker(version string, args []string) bool {
+	if runManualWorker(version, args, defaultUpdater) {
+		return true
+	}
 	return runWorker(version, args, defaultUpdater)
 }
 
@@ -163,22 +169,20 @@ func runWorker(version string, args []string, makeUpdater func() updater) bool {
 	}
 	// Only replace the exact executable that was copied by the parent. A user
 	// rebuilding or reinstalling while we download always wins.
-	storedLocale := preferences.LocaleAuto
-	if prefs, _ := preferences.Load(); prefs != nil {
-		storedLocale = prefs.Locale
-	}
-	_ = i18n.Init(i18n.Resolve(storedLocale))
+	initWorkerLocale()
 	expected, err := executableDigest(worker)
 	if err == nil {
 		updater := makeUpdater()
 		var closeParent func()
-		updater.beforeInstall, closeParent, err = parentExitWaiter(parent)
+		var wait func() error
+		wait, closeParent, err = parentExitWaiter(parent)
 		if err != nil {
 			c.Status, c.Error = "failed", err.Error()
 			_ = saveCache(c)
 			return true
 		}
 		defer closeParent()
+		updater.beforeInstall = func(string) error { return wait() }
 		var latest string
 		latest, c.InstalledVersion, err = updater.update(ctx, target, version, expected)
 		if latest != "" {
@@ -194,6 +198,14 @@ func runWorker(version string, args []string, makeUpdater func() updater) bool {
 	}
 	_ = saveCache(c)
 	return true
+}
+
+func initWorkerLocale() {
+	storedLocale := preferences.LocaleAuto
+	if prefs, _ := preferences.Load(); prefs != nil {
+		storedLocale = prefs.Locale
+	}
+	_ = i18n.Init(i18n.Resolve(storedLocale))
 }
 
 // validatedWorkerDir only accepts a copied worker directly inside the cache.
