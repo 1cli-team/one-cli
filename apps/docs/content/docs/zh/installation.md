@@ -80,7 +80,21 @@ Windows 归档名是 `one-cli_windows_amd64.zip`。
 
 **开发构建完全跳过更新检查、下载、安装和提示。** `go build`、`mise run build`、`mise run build-local`、`mise run install` 生成的包默认关闭更新，即使设置了 `RELEASE_VERSION`。只有发布打包流程启用更新标记，并且版本必须是完整的稳定版本号；`-dev`、`-local`、snapshot 和其他预发布版本都不会自动更新。
 
-CI、JSON/YAML 等结构化输出、`--dry-run` 以及内部任务进程不启动更新。更新状态位于 `$XDG_CACHE_HOME/one/update-check.json`，默认是 `~/.cache/one/update-check.json`。
+CI、JSON/YAML 等结构化输出、`--dry-run` 以及内部任务进程不启动自动更新。更新状态位于 `$XDG_CACHE_HOME/one/update-check.json`，默认是 `~/.cache/one/update-check.json`。
+
+## 手动更新
+
+执行以下命令，立即检查最新稳定版：
+
+```bash
+one upgrade
+```
+
+命令会更新本次调用的可执行文件，校验归档的 SHA256 和新程序版本；当前版本相同或更高时保留现有版本。它会等待正在运行的更新进程，并跳过 24 小时检查间隔。在 CI 或结构化输出模式下显式执行也会更新，例如 `one upgrade -o json`。
+
+macOS 和 Linux 会在安装完成后报告成功。Windows 会等待下载和验证，报告待安装状态，再由独立进程在当前命令退出后安装；可执行 `one --version` 确认完成。JSON/YAML 结果使用 `one-cli/upgrade/v1` schema，状态为 `current`、`updated` 或 `pending`。
+
+仅官方稳定发行版支持自更新。开发版和本地构建会报错并给出安装命令，避免覆盖本地构建。网络、校验和安装失败时保留现有程序，请根据具体原因修复后重试；也可以重新运行安装脚本安装最新发行版。
 
 ## 升级与降级
 
@@ -93,7 +107,7 @@ CI、JSON/YAML 等结构化输出、`--dry-run` 以及内部任务进程不启�
 | 目标相同 | **跳过**；要修复损坏的 binary 设 `ONE_FORCE=1` 强制重装 |
 | 目标更旧 | **拒绝**降级；确认要降级设 `ONE_FORCE=1` |
 
-也就是说升级根本不需要任何 flag，重跑安装命令就行。降级 / 修复才用 `ONE_FORCE`。
+正常升级执行 `one upgrade` 或重跑安装命令即可。降级 / 修复才用 `ONE_FORCE`。
 
 ## One 自动管理 mise
 

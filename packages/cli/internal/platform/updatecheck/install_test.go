@@ -142,7 +142,7 @@ func TestAutomaticUpdateInstallsOnlyVerifiedReleases(t *testing.T) {
 						return os.WriteFile(target, []byte("new developer build"), 0o700)
 					}
 					return nil
-				}, beforeInstall: func() error { waited = true; return nil },
+				}, beforeInstall: func(string) error { waited = true; return nil },
 			}
 			_, installed, err := u.update(context.Background(), target, "1.0.0", expected)
 			if (err != nil) != (tc.failure != "") {

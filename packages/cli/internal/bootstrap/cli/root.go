@@ -41,6 +41,7 @@ import (
 	runcmd "github.com/torchstellar-team/one-cli/packages/cli/internal/transport/cobra/run"
 	servecmd "github.com/torchstellar-team/one-cli/packages/cli/internal/transport/cobra/serve"
 	templatescmd "github.com/torchstellar-team/one-cli/packages/cli/internal/transport/cobra/templates"
+	upgradecmd "github.com/torchstellar-team/one-cli/packages/cli/internal/transport/cobra/upgrade"
 )
 
 func newRootCommand() *cobra.Command {
@@ -53,7 +54,7 @@ func newRootCommand() *cobra.Command {
 	groups := [][]*cobra.Command{
 		addcmd.Commands(deps.creation),
 		authcmd.Commands(),
-		{localecmd.Command(), initcmd.Command()},
+		{localecmd.Command(), initcmd.Command(), upgradecmd.Command()},
 		createcmd.Commands(createcmd.Dependencies{Creation: deps.creation}),
 		misecmd.RuntimeCommands(deps.runtime),
 		hookscmd.Commands(deps.runtime),
@@ -225,7 +226,7 @@ func Execute(version string, args []string) (resultErr error) {
 
 // Execution leaves and previews must not start another background network check.
 func shouldCheckUpdates(args []string) bool {
-	if first, _ := firstPositional(args); strings.HasPrefix(first, "__") || first == "mise" || first == "hk" {
+	if first, _ := firstPositional(args); strings.HasPrefix(first, "__") || first == "mise" || first == "hk" || first == "upgrade" {
 		return false
 	}
 	for _, arg := range args {

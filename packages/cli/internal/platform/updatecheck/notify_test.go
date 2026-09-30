@@ -3,7 +3,6 @@ package updatecheck
 import (
 	"bytes"
 	"os"
-	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -127,7 +126,7 @@ func TestPrintWarning_ContainsBothLines(t *testing.T) {
 		t.Fatalf("read: %v", err)
 	}
 	got := buf.String()
-	for _, want := range []string{"v0.9.0", "v0.8.0", installCommand(runtime.GOOS), "⚠"} {
+	for _, want := range []string{"v0.9.0", "v0.8.0", "one upgrade", "⚠"} {
 		if !strings.Contains(got, want) {
 			t.Errorf("warning missing %q\n  got: %s", want, got)
 		}

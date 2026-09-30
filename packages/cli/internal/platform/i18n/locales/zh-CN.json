@@ -717,5 +717,14 @@
   "tasks.ui.copied": "已复制到剪贴板",
   "tasks.ui.copy_requested": "已向终端发送复制请求 · 不支持时使用 c",
   "tasks.ui.copy_failed": "复制失败：%v · 保留选区，可按 c 原生复制",
-  "tasks.ui.copy_limit": "终端复制超过 100 KiB，请使用原生复制（c）或本地剪贴板。"
+  "tasks.ui.copy_limit": "终端复制超过 100 KiB，请使用原生复制（c）或本地剪贴板。",
+  "upgrade.short": "将 One CLI 更新到最新稳定版",
+  "upgrade.long": "检查 One CLI 的最新稳定版并更新当前可执行文件。\n下载后会校验 SHA256 和程序版本；\n已安装版本相同或更高时保留当前版本。\n\n手动更新会立即检查，包括在 CI 和 JSON/YAML 输出模式下。\n仅官方稳定发行版支持自更新。Windows 会在此命令退出后\n安装已验证的更新。",
+  "upgrade.checking": "正在检查 One CLI 最新版本…",
+  "upgrade.updated": "One CLI 已从 %s 更新到 %s，后续命令将使用新版本。",
+  "upgrade.pending": "One CLI %s 已下载并验证，Windows 将在此命令退出后安装；请运行 `one --version` 确认。",
+  "upgrade.current": "One CLI %s 已是最新版本（最新稳定版：%s）。",
+  "upgrade.release_required": "当前构建（%s）不支持自更新，仅官方稳定发行版支持。请使用以下命令安装最新发行版：%s",
+  "upgrade.failed": "无法更新 %s 处的 One CLI：%w\n请检查网络和安装目录权限后重试 `one upgrade`，或运行：%s",
+  "upgrade.worker_invalid": "更新进程未返回有效结果，请重试 `one upgrade`。"
 }

@@ -1,0 +1,22 @@
+
+DESCRIPTION
+Update One CLI to the latest stable release
+
+USAGE
+  one upgrade [flags]
+
+EXAMPLES
+  one upgrade
+  one upgrade -o json
+
+TIPS
+Check for the latest stable One CLI release and update the current executable.
+Downloads are verified with SHA256 and a version check. An equal or newer
+installed version is kept.
+
+Manual updates check immediately, including in CI and JSON/YAML output.
+Only official stable release builds can upgrade. On Windows, the verified
+update is installed after this command exits.
+
+COMMON OPTIONS
+  -o, --output <value>     Output format: json | yaml | text (default: terminal-friendly text, JSON when piped)

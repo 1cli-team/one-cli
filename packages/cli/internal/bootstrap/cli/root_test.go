@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"slices"
 	"strings"
 	"testing"
 
@@ -161,7 +162,7 @@ func TestIsKnownSubcommand(t *testing.T) {
 	for _, name := range []string{
 		"create", "templates", "add", "exec", "run",
 		"env", "serve", "mise", "hk",
-		"login", "whoami", "logout", "locale", "init",
+		"login", "whoami", "logout", "locale", "init", "upgrade",
 	} {
 		if !isKnownSubcommand(name) {
 			t.Errorf("isKnownSubcommand(%q) = false, want true", name)
@@ -169,7 +170,7 @@ func TestIsKnownSubcommand(t *testing.T) {
 	}
 	// Task names and removed commands are not built-in subcommands.
 	for _, name := range []string{
-		"dev", "build", "test", "lint",
+		"dev", "build", "test", "lint", "update",
 		"doctor", "status", "unknown", "secrets", "skill", "prd", "design",
 		"docker", "infisical", "dotenv", "procs", "compose", "k8s",
 		"plugins", "setup", "profile", "container", "deploy", "ci", "skills",
@@ -177,6 +178,17 @@ func TestIsKnownSubcommand(t *testing.T) {
 	} {
 		if isKnownSubcommand(name) {
 			t.Errorf("isKnownSubcommand(%q) = true, want false", name)
+		}
+	}
+}
+
+func TestManualUpdateDoesNotStartBackgroundUpdater(t *testing.T) {
+	for _, args := range [][]string{{"upgrade"}, {"-o", "json", "upgrade"}, {"--output=yaml", "upgrade"}, {"upgrade", "--help"}} {
+		if shouldCheckUpdates(args) {
+			t.Fatalf("manual update starts background updater: %v", args)
+		}
+		if got := expandTaskShorthand(args, isKnownSubcommand); !slices.Equal(got, args) {
+			t.Fatalf("manual update was rewritten as a task: %v -> %v", args, got)
 		}
 	}
 }

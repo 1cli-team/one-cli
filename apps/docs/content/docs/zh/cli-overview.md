@@ -13,6 +13,7 @@ description: One CLI 日常命令和高级入口。
 | `one exec` | 注入变量后执行命令 |
 | `one serve` | 打开 Dashboard |
 | `one locale` | 本机语言 |
+| `one upgrade` | 将 One CLI 更新到最新稳定版 |
 | `one init mise` / `one init hooks` | 工作区工具配置 |
 | `one run` | 列出和执行工作区任务 |
 | `one templates` | 查看项目模板 |

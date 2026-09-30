@@ -717,5 +717,14 @@
   "tasks.ui.copied": "Copied to clipboard",
   "tasks.ui.copy_requested": "Copy request sent to terminal · use c if unsupported",
   "tasks.ui.copy_failed": "Copy failed: %v · selection kept; use c for native copy",
-  "tasks.ui.copy_limit": "Terminal copy exceeds 100 KiB; use native copy (c) or a local clipboard backend."
+  "tasks.ui.copy_limit": "Terminal copy exceeds 100 KiB; use native copy (c) or a local clipboard backend.",
+  "upgrade.short": "Update One CLI to the latest stable release",
+  "upgrade.long": "Check for the latest stable One CLI release and update the current executable.\nDownloads are verified with SHA256 and a version check. An equal or newer\ninstalled version is kept.\n\nManual updates check immediately, including in CI and JSON/YAML output.\nOnly official stable release builds can upgrade. On Windows, the verified\nupdate is installed after this command exits.",
+  "upgrade.checking": "Checking for the latest One CLI release…",
+  "upgrade.updated": "One CLI was updated from %s to %s. New invocations use the updated version.",
+  "upgrade.pending": "One CLI %s has been downloaded and verified. Windows will install it after this command exits; run `one --version` to confirm.",
+  "upgrade.current": "One CLI %s is up to date (latest stable release: %s).",
+  "upgrade.release_required": "This build (%s) cannot upgrade itself. Only official stable release builds can upgrade. Install the latest release with: %s",
+  "upgrade.failed": "Could not update One CLI at %s: %w\nCheck the network and installation directory permissions, then retry `one upgrade`, or run: %s",
+  "upgrade.worker_invalid": "The update worker did not return a valid result. Retry `one upgrade`."
 }

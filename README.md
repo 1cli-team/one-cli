@@ -35,6 +35,8 @@ irm https://1cli.dev/install.ps1 | iex
 
 Both installers verify the release checksum and add `one` to the normal per-user binary location.
 
+Update an official stable release at any time with `one upgrade`.
+
 Create a workspace and add a project:
 
 ```bash

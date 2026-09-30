@@ -13,6 +13,7 @@ description: Daily commands and advanced entry points.
 | `one exec` | Run a command with injected variables |
 | `one serve` | Open the Dashboard |
 | `one locale` | Local language preference |
+| `one upgrade` | Update One CLI to the latest stable release |
 | `one init mise` / `one init hooks` | Workspace tool configuration |
 | `one run` | List and execute workspace tasks |
 | `one templates` | List project templates |
