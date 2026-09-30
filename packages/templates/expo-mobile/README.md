@@ -67,6 +67,8 @@ pnpm start
 - `react-test-renderer` 与 React 固定为相同版本。
 - 模板使用 TypeScript 7.0.2。SDK 57 官方默认版本仍为 TypeScript 6，因此通过 `expo.install.exclude` 明确保留此版本差异，避免 `expo install --fix` 改回默认版本。
 - `tsconfig.json` 显式加载 Node 和 Jest 全局类型，`src/types/styles.d.ts` 声明 CSS 导入，适配 TypeScript 7 的类型发现与副作用导入检查。
+- 使用 pnpm 更新依赖后运行 `pnpm dedupe`，合并兼容版本的原生模块，再执行下面的检查。
+- After updating dependencies with pnpm, run `pnpm dedupe` to deduplicate compatible native modules before running the checks below.
 - 升级后运行 `pnpm exec expo install --check`、`pnpm dlx expo-doctor`、`pnpm exec tsc --noEmit`、`pnpm exec expo export --platform web`，并在 Android/iOS development build 上验证原生功能。
 
 参考 [Expo 升级指南](https://docs.expo.dev/workflow/upgrading-expo-sdk-walkthrough/) 和 [NativeWind 安装说明](https://www.nativewind.dev/docs/getting-started/installation)。

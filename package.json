@@ -1,7 +1,7 @@
 {
   "name": "one-cli",
   "private": true,
-  "packageManager": "pnpm@10.14.0",
+  "packageManager": "pnpm@12.3.4",
   "scripts": {
     "check": "mise run check",
     "docs:dev": "pnpm --filter one-cli-docs dev",

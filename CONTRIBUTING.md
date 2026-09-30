@@ -14,7 +14,7 @@ mise run install                # 打包 Dashboard + CLI，再创建本地启动
 one --version                   # 验证装好
 ```
 
-工具版本以根 `mise.toml` 为准：Go 1.27.1、Node 24.15.0、pnpm 10.14.0、Task 3.53.1、Process Compose 1.122.0。通过 One 执行时由官方 Process Compose 调度，mise 负责工具环境，Go 子项目使用 Task，Node 项目使用 pnpm。
+工具版本以根 `mise.toml` 为准：Go 1.27.1、Node 24.21.0、pnpm 12.3.4、Task 3.53.1、Process Compose 1.122.0。通过 One 执行时由官方 Process Compose 调度，mise 负责工具环境，Go 子项目使用 Task，Node 项目使用 pnpm。
 
 > **fresh-clone 提示**：`packages/cli/internal/resources/bundled/` 整个目录是 gitignore 的——
 > registry / templates / dashboard dist 都由 `mise run sync-bundled` +

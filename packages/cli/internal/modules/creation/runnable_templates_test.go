@@ -68,7 +68,7 @@ func TestRunnableTemplateSourcesAndProjects(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(root, "package.json"), raw, 0o644); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(root, "pnpm-workspace.yaml"), []byte("packages: []\nonlyBuiltDependencies: [electron]\n"), 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(root, "pnpm-workspace.yaml"), []byte("packages: []\nallowBuilds:\n  electron: true\n  electron-winstaller: false\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 	for _, project := range []struct{ id, name string }{{"go-api", "api"}, {"go-lib", "shared"}, {"electron-app", "Alpha_Desktop"}, {"electron-app", "zulu-desktop"}} {

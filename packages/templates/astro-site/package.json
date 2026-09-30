@@ -17,14 +17,14 @@
   "dependencies": {
     "@astrojs/check": "^0.9.10",
     "@tailwindcss/vite": "^4.3.3",
-    "astro": "^7.3.2",
+    "astro": "^7.3.5",
     "tailwindcss": "^4.3.3",
     "typescript": "^6.0.3"
   },
   "devDependencies": {
     "git-cz": "^4.9.0",
-    "oxfmt": "^0.67.0",
-    "oxlint": "^1.82.0"
+    "oxfmt": "^0.71.0",
+    "oxlint": "^1.86.0"
   },
   "lint-staged": {
     "*.{js,jsx,ts,tsx,mjs,cjs}": [
@@ -38,5 +38,5 @@
   "engines": {
     "node": "^24.15.0 || >=26.0.0"
   },
-  "packageManager": "pnpm@10.14.0"
+  "packageManager": "pnpm@12.3.4"
 }

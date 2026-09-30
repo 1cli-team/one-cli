@@ -412,7 +412,7 @@ func TestE2E_MiseNativeTasksDoNotRequireOneContext(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	configText := strings.ReplaceAll(string(configRaw), "node = '24.15.0'", "node = 'system'")
+	configText := strings.ReplaceAll(string(configRaw), "node = '24.21.0'", "node = 'system'")
 	configText = strings.ReplaceAll(configText, "pnpm = '12.3.4'", "pnpm = 'system'")
 	configText += "\n[env]\nTASK_DEFAULT = 'mise'\n"
 	if err := os.WriteFile(configPath, []byte(configText), 0o644); err != nil {
