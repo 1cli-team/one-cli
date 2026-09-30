@@ -25,14 +25,18 @@ func newSetCmd(deps Dependencies) *cobra.Command {
 		Long:  i18n.T("env.set.tip"),
 		Args:  validateSetArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			value, provided, err := readSetValue(cmd, args)
+			if err != nil {
+				return err
+			}
 			plan, err := deps.Service.PlanSet(environmentmodule.PlanSetInput{
 				Scope: commandScope(cmd), Environment: environment, Project: project,
 			})
 			if err != nil {
 				return err
 			}
-			key, value := parseSetArgs(args)
-			if !setValueProvided(args) {
+			key, _ := parseSetArgs(args)
+			if !provided {
 				if !output.CanPrompt() {
 					return cliErrors.New(cliErrors.ENV_SET_VALUE_REQUIRED, i18n.T("env.value_required"))
 				}
@@ -87,6 +91,8 @@ func newSetCmd(deps Dependencies) *cobra.Command {
 	i18n.MarkFlagUsage(cmd, "env", "env.flag.environment")
 	cmd.Flags().BoolVarP(&yes, "yes", "y", false, i18n.T("env.flag.yes"))
 	i18n.MarkFlagUsage(cmd, "yes", "env.flag.yes")
+	cmd.Flags().Bool("stdin", false, i18n.T("env.flag.stdin"))
+	i18n.MarkFlagUsage(cmd, "stdin", "env.flag.stdin")
 	markEnvFlagUsage(cmd, "project", "env", "yes")
 	i18n.MarkShort(cmd, "env.set.short")
 	i18n.MarkLong(cmd, "env.set.tip")

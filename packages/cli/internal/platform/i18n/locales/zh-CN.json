@@ -255,7 +255,7 @@
   "env.bind.select_environment": "默认浏览环境",
   "env.unset.short": "删除一个 Infisical 环境变量",
   "env.flag.project_selector": "项目名或路径",
-  "env.flag.stdin": "从标准输入读取值，避免写入命令历史（共享凭据）",
+  "env.flag.stdin": "从标准输入读取项目变量或共享凭据，避免写入命令历史",
   "env.path_global_required": "--path 仅用于 --global",
   "env.global_project_conflict": "--global 不能与 --project 同时使用",
   "env.stdin_value_conflict": "--stdin 不能同时提供参数值",

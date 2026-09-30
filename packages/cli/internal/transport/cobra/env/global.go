@@ -1,9 +1,6 @@
 package envcmd
 
 import (
-	"io"
-	"strings"
-
 	"github.com/spf13/cobra"
 
 	environmentmodule "github.com/torchstellar-team/one-cli/packages/cli/internal/modules/environment"
@@ -94,10 +91,6 @@ func configureGlobal(parent *cobra.Command, deps Dependencies) {
 		if c == bind {
 			continue
 		}
-		if c.Name() == "set" {
-			c.Flags().Bool("stdin", false, i18n.T("env.flag.stdin"))
-			i18n.MarkFlagUsage(c, "stdin", "env.flag.stdin")
-		}
 		original := c.RunE
 		if original == nil {
 			continue
@@ -137,21 +130,12 @@ func configureGlobal(parent *cobra.Command, deps Dependencies) {
 			case "unset":
 				result, e = remote.GlobalSecret(cmd.Context(), cmd.Name(), env, folder, args[0], "")
 			case "set":
-				key, value := parseSetArgs(args)
-				stdin, _ := cmd.Flags().GetBool("stdin")
-				if stdin {
-					if setValueProvided(args) {
-						return i18n.Errorf("env.stdin_value_conflict")
-					}
-					b, err := io.ReadAll(io.LimitReader(cmd.InOrStdin(), (1<<20)+1))
-					if err != nil {
-						return err
-					}
-					if len(b) > 1<<20 {
-						return i18n.Errorf("env.value_too_large")
-					}
-					value = strings.TrimSuffix(strings.TrimSuffix(string(b), "\n"), "\r")
-				} else if !setValueProvided(args) {
+				key, _ := parseSetArgs(args)
+				value, provided, err := readSetValue(cmd, args)
+				if err != nil {
+					return err
+				}
+				if !provided {
 					if !output.CanPrompt() {
 						return i18n.Errorf("env.stdin_required")
 					}
