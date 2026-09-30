@@ -26,8 +26,11 @@ Manifest 只记录绑定信息和环境 slug。值保存在 Infisical，登录�
 one env
 one env set DATABASE_URL -p api
 one env set API_URL=https://example.com -p web --env dev --yes
+one env set SIGNING_PRIVATE_KEY -p api --env dev --stdin < /secure/private-key.pem
 one env list -p web --env dev
 ```
+
+多行 PEM 和其他秘密可以通过 `--stdin` 读取，无需把内容放进命令参数。项目变量和 `--global` 共享凭据都支持该方式，保留内部换行，只去掉一个结尾换行符。输入上限为 1 MiB，不能同时提供参数值。覆盖已有变量仍需确认或显式指定 `--yes`。
 
 终端中的 `set KEY` 会隐藏输入值；脚本显式传入值。`--yes` 确认覆盖已有值或新增环境名。`list` 只返回变量名。CLI 不提供明文读取命令；通过 `one exec` 将值注入子进程。`-o json` 或 `-o yaml` 输出结构化结果，保留 `one-cli/env-set/v1`、`one-cli/env-list/v1` 协议。
 

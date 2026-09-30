@@ -253,7 +253,7 @@
   "env.bind.select_environment": "Default browsing environment",
   "env.unset.short": "Delete an Infisical environment variable",
   "env.flag.project_selector": "Project name or path",
-  "env.flag.stdin": "Read the value from standard input to keep it out of shell history (shared credentials)",
+  "env.flag.stdin": "Read a project variable or shared credential from standard input to keep it out of shell history",
   "env.path_global_required": "--path is only available with --global.",
   "env.global_project_conflict": "--global cannot be combined with --project.",
   "env.stdin_value_conflict": "--stdin cannot be combined with a value argument.",

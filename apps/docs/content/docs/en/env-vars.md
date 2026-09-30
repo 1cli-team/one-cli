@@ -26,8 +26,11 @@ The manifest records only binding information and environment slugs. Values stay
 one env
 one env set DATABASE_URL -p api
 one env set API_URL=https://example.com -p web --env dev --yes
+one env set SIGNING_PRIVATE_KEY -p api --env dev --stdin < /secure/private-key.pem
 one env list -p web --env dev
 ```
+
+Use `--stdin` for multiline PEM files and other secrets without passing their contents as arguments. It works for both project variables and `--global` shared credentials, preserves embedded line breaks, and removes only one final line terminator. Input is limited to 1 MiB; combining `--stdin` with an argument value is rejected. Existing-variable overwrites still require confirmation or `--yes`.
 
 `set KEY` prompts for a hidden value in a terminal. Scripts pass a value explicitly. `--yes` confirms overwrites and new environment names. `list` returns names only. The CLI has no plaintext read command; use `one exec` to inject values into a child process. `-o json` or `-o yaml` provides structured output with the stable schemas `one-cli/env-set/v1` and `one-cli/env-list/v1`.
 

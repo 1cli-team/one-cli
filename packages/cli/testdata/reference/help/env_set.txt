@@ -14,5 +14,5 @@ COMMON OPTIONS
   -o, --output <value>     Output format: json | yaml | text (default: terminal-friendly text, JSON when piped)
   --path <value>           Shared credential folder (current level only, not recursive)
   -p, --project <value>    Project name or relative path; defaults to the current project
-  --stdin                  Read the value from standard input to keep it out of shell history (shared credentials)
+  --stdin                  Read a project variable or shared credential from standard input to keep it out of shell history
   -y, --yes                Confirm overwrites and new environments non-interactively
