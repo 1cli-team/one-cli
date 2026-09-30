@@ -173,6 +173,8 @@ one serve                       # Manage this repository in the Dashboard
 
 Root tasks remain native mise commands, so CI and first-time installation can still use `mise run build`, `mise run check`, and `mise run install`. Project tasks come from package scripts and Taskfiles. Only the root `mise.toml` is used: project tasks are namespaced as `cli:build` or `dashboard:dev` and select their directory with `dir`. CLI tasks declare their embedded-resource prerequisites there; CLI tests also build the binary used by E2E tests. Run `one init mise` after changing the project task catalogue to refresh the tracked native tasks. Running or listing tasks does not regenerate configuration. Dashboard discovers access links from process output; dev commands are defined in mise.toml and executed by Process Compose.
 
+Run `mise run hooks:install` after cloning to enable this repository's Git hooks. Pre-commit runs `mise run check` for static checks, ordinary Go tests, and Dashboard tests on your current platform. Pre-push runs `mise run --jobs 1 pre-push`, adding Go race tests and template source/generated-project builds; failures stop the push. Template builds download dependencies and take longer than commit checks. Native Windows and macOS behavior is verified by the PR's CI jobs, even when local Linux checks pass.
+
 Read [CONTRIBUTING.md](./CONTRIBUTING.md) before opening a pull request.
 
 ## Documentation

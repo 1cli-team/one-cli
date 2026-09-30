@@ -43,16 +43,31 @@ func TestManualWorkerChecksImmediatelyAndReportsResult(t *testing.T) {
 	for _, tc := range []struct {
 		name, latest string
 		fail         bool
+		pathAlias    bool
 	}{
-		{"upgrade", "v1.2.3", false},
-		{"already current", "v1.0.0", false},
-		{"no downgrade", "v0.9.0", false},
-		{"checksum failure", "v1.2.3", true},
+		{"upgrade", "v1.2.3", false, false},
+		{"already current", "v1.0.0", false, false},
+		{"no downgrade", "v0.9.0", false, false},
+		{"checksum failure", "v1.2.3", true, false},
+		{"path alias", "v1.2.3", false, true},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			withIsolatedCache(t)
 			target := filepath.Join(t.TempDir(), executableName())
 			if err := copyExecutable(os.Args[0], target); err != nil {
+				t.Fatal(err)
+			}
+			if tc.pathAlias {
+				alias := filepath.Join(t.TempDir(), "install")
+				if err := os.Symlink(filepath.Dir(target), alias); err != nil {
+					t.Skipf("directory symlinks unavailable: %v", err)
+				}
+				target = filepath.Join(alias, executableName())
+			}
+			// Upgrade returns the canonical executable path. macOS /var aliases
+			// and Windows short paths can differ from t.TempDir's spelling.
+			canonicalTarget, err := filepath.EvalSymlinks(target)
+			if err != nil {
 				t.Fatal(err)
 			}
 			payload, err := os.ReadFile(target)
@@ -84,7 +99,7 @@ func TestManualWorkerChecksImmediatelyAndReportsResult(t *testing.T) {
 			}))
 			defer server.Close()
 			// A fresh cache and CI would suppress an automatic update.
-			if err := saveCache(&Cache{LastChecked: time.Now().UTC(), CurrentVersion: "1.0.0", TargetPath: target, Status: "current"}); err != nil {
+			if err := saveCache(&Cache{LastChecked: time.Now().UTC(), CurrentVersion: "1.0.0", TargetPath: canonicalTarget, Status: "current"}); err != nil {
 				t.Fatal(err)
 			}
 			ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
@@ -110,7 +125,7 @@ func TestManualWorkerChecksImmediatelyAndReportsResult(t *testing.T) {
 						want = "pending"
 					}
 				}
-				if reply.Result == nil || reply.Result.Status != want || reply.Result.LatestVersion != tc.latest || reply.Result.TargetPath != target {
+				if reply.Result == nil || reply.Result.Status != want || reply.Result.LatestVersion != tc.latest || reply.Result.TargetPath != canonicalTarget {
 					t.Fatalf("unexpected result: %#v", reply.Result)
 				}
 			}

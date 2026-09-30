@@ -1,0 +1,26 @@
+#!/bin/sh
+set -eu
+
+repo_root=$(git rev-parse --show-toplevel)
+cd "$repo_root"
+
+changes=$(git status --porcelain --untracked-files=normal --ignore-submodules)
+if [ -n "$changes" ]; then
+	printf '%s\n' "pre-push: commit or stash local changes so checks run against the committed snapshot." >&2
+	printf '%s\n' "$changes" >&2
+	exit 1
+fi
+
+if ! command -v mise >/dev/null 2>&1; then
+	printf '%s\n' "pre-push: mise is required; install it before pushing." >&2
+	exit 1
+fi
+
+# Tests create temporary repositories; do not pass the hook's Git context.
+# 测试会创建临时仓库，不向它们传递推送钩子的 Git 仓库环境。
+for git_env_name in $(git rev-parse --local-env-vars); do
+	unset "$git_env_name"
+done
+
+printf '%s\n' "pre-push: running the PR gate, Go race tests, and template builds"
+exec mise run --jobs 1 pre-push

@@ -63,11 +63,11 @@ mise 安装固定的 Process Compose 1.122.0，One 生成每次运行的私有�
 
 ```bash
 mise run install-deps           # 安装锁定的 Node workspace 依赖
-mise run check                  # 完整仓库检查
+mise run check                  # 当前平台的静态检查、Go 和 Dashboard 测试
 mise run build                  # 编译到 packages/cli/bin/one
 mise run test                   # Go race 测试 + Dashboard 测试
 mise run install                # 打包并安装本地启动器，无需预先安装 one
-mise run pre-push               # 推送前检查，包含 race 测试
+mise run pre-push               # 推送前检查，包含 race 测试和模板构建
 ```
 
 项目任务来自各自的 `package.json` 或 `Taskfile.yml`，只在根 `mise.toml` 登记 `cli:build`、`dashboard:dev` 这样的任务入口，并通过 `dir` 指定子项目目录。根文件也声明 Dashboard、模板和嵌入资源的前置步骤，CLI 测试会先构建 E2E 使用的二进制。新增或修改任务目录后，运行 `one init mise` 同步这些受版本控制的原生任务。执行和查询不会重新生成配置；Dashboard 从进程输出发现访问地址，dev 命令在 mise.toml 中定义，由 Process Compose 执行。
@@ -78,18 +78,25 @@ mise run pre-push               # 推送前检查，包含 race 测试
 2. 改代码 + 测试
 3. 提交：commit 消息走 [conventional commits](https://www.conventionalcommits.org/)
    （`feat:`、`fix:`、`chore:`、`docs:`、`test:`、`refactor:` 等）。仓库的
-   pre-commit hook 会自动运行与 PR CI 相同的 `mise run check`；如果当前 checkout 尚未
-   启用 hook，先运行 `mise run hooks:install`。hook 会拒绝混合已暂存、未暂存或未跟踪的
+   pre-commit hook 会自动运行当前平台的 `mise run check`，覆盖静态检查、普通 Go 测试
+   和 Dashboard 测试；如果当前 checkout 尚未启用 hook，先运行 `mise run hooks:install`。
+   该命令同时启用 pre-commit 和 pre-push。pre-commit 会拒绝混合已暂存、未暂存或未跟踪的
    文件，确保本地检查的内容与即将提交、随后由 CI 检查的快照一致
-4. **必跑** `mise run pre-push` 全绿（包含 Go race detector）
-5. 推送 + 开 PR
+4. 推送：pre-push hook 会自动运行 `mise run --jobs 1 pre-push`，包含 `check`、
+   Go race detector 和模板源码/生成项目构建，检查失败会阻止推送。也可提前运行
+   `mise run --jobs 1 pre-push`；模板构建需要下载依赖，因此比提交检查耗时更长。
+   pre-push 要求工作区干净，避免用未提交的修复验证将要推送的旧提交
+5. 开 PR，等待各平台 CI 验证
 
 PR CI 在 Linux 上并行执行 `mise run check:static`、`mise run check:test` 与
-`mise run test:go`（Go race detector），同时在 Windows 上执行 `mise run check`、
+`mise run test:go`（Go race detector）；Linux 的 test job 还执行 `check:templates`。
+同时在 Windows 上执行 `mise run check`、
 macOS 上执行 `mise run check:test`。master 的保护规则要求 `lint`、`test`、
 `test-windows`、`test-macos`、`test-race` 五项检查全部通过才能合并。
 本地 `mise run check` 和 `mise run pre-push` 只验证当前操作系统，不能代替其他平台的
-CI；`mise run pre-push` 额外运行 Go race detector。远端五项检查会在 PR、master
+CI；`mise run pre-push` 额外运行 Go race detector 和模板构建。Windows/macOS 的原生
+运行不能由 Linux 交叉编译代替。路径相关测试应覆盖符号链接、规范化路径，以及
+同一文件的不同路径写法，避免只在 Linux 上通过。远端五项检查会在 PR、master
 推送和手动触发的工作流中运行。
 
 ## 改不同部分的注意事项
