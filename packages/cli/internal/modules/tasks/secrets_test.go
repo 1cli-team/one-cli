@@ -152,13 +152,32 @@ func testNativeMiseProjectEnvironmentsAndCache(t *testing.T, symlinked bool) {
 		}
 		return "'" + strings.ReplaceAll(s, "'", "'\"'\"'") + "'"
 	}
-	config := map[string]any{"tasks": map[string]any{"build": map[string]any{"depends": []string{"web:build", "lib:build"}, "run": quote(os.Args[0]) + " -test.run=^TestNativeEnvironmentChild$", "env": map[string]string{"ONE_NATIVE_ROOT": "1"}, "sources": []string{"apps/web/package.json"}, "outputs": []string{"root-dist"}, "cache": map[string]any{"enabled": true}}, "web:build": map[string]any{"dir": "apps/web", "run": quote(os.Args[0]) + " -test.run=^TestNativeEnvironmentChild$", "sources": []string{"package.json"}, "outputs": []string{"dist"}, "cache": map[string]any{"enabled": true}}, "lib:build": map[string]any{"dir": "packages/lib", "run": quote(os.Args[0]) + " -test.run=^TestNativeEnvironmentChild$"}}}
+	// Exercise task shell quoting independently of the Go build cache path,
+	// which may use Windows short names without any spaces.
+	executable, err := os.Executable()
+	if err != nil {
+		t.Fatal(err)
+	}
+	data, err := os.ReadFile(executable)
+	if err != nil {
+		t.Fatal(err)
+	}
+	childDir := filepath.Join(t.TempDir(), "tools with spaces")
+	if err := os.MkdirAll(childDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	child := filepath.Join(childDir, filepath.Base(executable))
+	if err := os.WriteFile(child, data, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	command := quote(child) + " -test.run=^TestNativeEnvironmentChild$"
+	config := map[string]any{"tasks": map[string]any{"build": map[string]any{"depends": []string{"web:build", "lib:build"}, "run": command, "env": map[string]string{"ONE_NATIVE_ROOT": "1"}, "sources": []string{"apps/web/package.json"}, "outputs": []string{"root-dist"}, "cache": map[string]any{"enabled": true}}, "web:build": map[string]any{"dir": "apps/web", "run": command, "sources": []string{"package.json"}, "outputs": []string{"dist"}, "cache": map[string]any{"enabled": true}}, "lib:build": map[string]any{"dir": "packages/lib", "run": command}}}
 	raw, _ := toml.Marshal(config)
 	writeTaskFile(t, w.Root(), "mise.toml", string(raw))
 	writeTaskFile(t, w.Root(), "apps/web/dist/existing", "old output")
 	writeTaskFile(t, w.Root(), "root-dist/existing", "old output")
 	// A local command override must retain both its command and the injected env.
-	local, _ := toml.Marshal(map[string]any{"tasks": map[string]any{"web:build": map[string]any{"dir": "apps/web", "run": quote(os.Args[0]) + " -test.run=^TestNativeEnvironmentChild$", "sources": []string{"package.json"}, "outputs": []string{"dist"}, "cache": map[string]any{"enabled": true}}}})
+	local, _ := toml.Marshal(map[string]any{"tasks": map[string]any{"web:build": map[string]any{"dir": "apps/web", "run": command, "sources": []string{"package.json"}, "outputs": []string{"dist"}, "cache": map[string]any{"enabled": true}}}})
 	writeTaskFile(t, w.Root(), "mise.local.toml", string(local))
 	var selectedLoader secrets.Loader = loader
 	if symlinked {

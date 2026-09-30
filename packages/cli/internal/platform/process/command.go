@@ -5,8 +5,8 @@ import (
 	"os/exec"
 )
 
-// Command creates a child command and transparently routes Windows batch
-// launchers (.cmd/.bat) through the native command processor.
+// Command creates a child command, routes Windows batch launchers (.cmd/.bat)
+// through the native command processor, and preserves cmd.exe shell source.
 func Command(name string, args ...string) *exec.Cmd {
 	return commandContext(context.Background(), name, args...)
 }
