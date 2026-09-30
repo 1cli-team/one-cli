@@ -3,8 +3,8 @@ monorepo_root = true
 
 [tools]
 go = "1.27.1"
-node = "24.15.0"
-pnpm = "10.14.0"
+node = "24.21.0"
+pnpm = "12.3.4"
 task = "3.53.1"
 process-compose = "1.122.0"
 

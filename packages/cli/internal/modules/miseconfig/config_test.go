@@ -153,7 +153,7 @@ func TestManagedConfigurationConflictDoesNotOverwrite(t *testing.T) {
 	}
 	path := filepath.Join(root, Filename)
 	raw, _ := os.ReadFile(path)
-	modified := strings.Replace(string(raw), "node = '24.15.0'", "node = '25.0.0'", 1) + "\n# My edit\n"
+	modified := strings.Replace(string(raw), "node = '24.21.0'", "node = '25.0.0'", 1) + "\n# My edit\n"
 	writeFixture(t, path, modified)
 	if _, err := Build(root, Options{NodeVersion: "26.0.0"}); err == nil {
 		t.Fatal("expected same-entry conflict")

@@ -23,5 +23,11 @@ if ! command -v mise >/dev/null 2>&1; then
 	exit 1
 fi
 
+# Tests create temporary repositories; do not pass this hook's Git context to them.
+# 测试会创建临时仓库，不向它们传递提交钩子的 Git 仓库环境。
+for git_env_name in $(git rev-parse --local-env-vars); do
+	unset "$git_env_name"
+done
+
 printf '%s\n' "pre-commit: running the PR gate (mise run check)"
 exec mise run check

@@ -23,7 +23,7 @@
     "build": "tsdown"
   },
   "devDependencies": {
-    "electron": "^44.3.0",
+    "electron": "^44.5.1",
     "tsdown": "^0.23.0",
     "typescript": "^7.0.2"
   }

@@ -3,5 +3,14 @@ packages:
   - apps/ui
   - packages/preload
 
-onlyBuiltDependencies:
-  - electron
+allowBuilds:
+  electron: true
+  # Uses NSIS; skip the optional Squirrel installer.
+  # 使用 NSIS，跳过可选的 Squirrel 安装器。
+  electron-winstaller: false
+
+# Explicit upgrades; other packages retain pnpm's release age check.
+# 本次明确升级的版本，其余依赖保留 pnpm 的发布时间检查。
+minimumReleaseAgeExclude:
+  - electron@44.5.1
+  - lucide-react@1.49.0

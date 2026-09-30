@@ -145,7 +145,7 @@ func BuildWithFiles(root string, opts Options, files map[string][]byte) (*Plan, 
 		}
 	}
 	if opts.NodeVersion == "" {
-		opts.NodeVersion = "24.15.0"
+		opts.NodeVersion = "24.21.0"
 	}
 	if !exactVersion.MatchString(opts.NodeVersion) {
 		return nil, i18n.Errorf("miseconfig.node_version")
