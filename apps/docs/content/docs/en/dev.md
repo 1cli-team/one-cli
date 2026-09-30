@@ -19,7 +19,7 @@ Without `-p`, the root dev task must exist. With `-p`, the selected project's de
 
 Named tasks share one preparation policy. Node dependencies are prepared at the workspace root. With pnpm 10.14 or later, One verifies installed dependencies and reuses matching installations, including manual installs. When needed, it runs `pnpm install --no-frozen-lockfile`. Go preparation resolves the fixed module build list without automatically running `go mod tidy` or `go work sync`. Preparation failure prevents task startup; `one exec` does not install dependencies.
 
-One assigns a task to the registered project containing its effective working directory. Enabled projects receive their own Infisical snapshot for the invocation. Parallel projects do not share variable maps, and child processes inherit the correct project environment. No env plugin declaration or secret value is required in your mise file.
+One assigns a task to the registered project containing its effective working directory. When projects enable environment variables, One makes a single recursive request to Infisical at startup for the selected environment, then distributes variables in memory by project directory. Root and ancestor variables are shared; project variables override matching ancestor keys. Variables from other projects or deeper subdirectories are excluded. Parallel projects receive separate variable maps, and child processes inherit the correct project environment. The next invocation fetches fresh values. No env plugin declaration or secret value is required in your mise file.
 
 ## Terminal and exit
 

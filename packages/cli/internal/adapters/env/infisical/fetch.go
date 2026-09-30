@@ -3,7 +3,7 @@ package infisical
 import (
 	"context"
 	"path/filepath"
-	"sync"
+	"strings"
 	"time"
 
 	"github.com/go-resty/resty/v2"
@@ -12,6 +12,7 @@ import (
 	"github.com/infisical/go-sdk/packages/util"
 
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/core/workspace"
+	cliErrors "github.com/torchstellar-team/one-cli/packages/cli/internal/platform/errors"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/i18n"
 )
 
@@ -39,8 +40,12 @@ func FetchSecretsForSubproject(ctx context.Context, projectRoot, relativeDir, en
 	return projects[relativeDir], nil
 }
 
+// Infisical's recursive list endpoint supports at most 20 directory levels.
+const maxSnapshotDepth = 20
+
 // Snapshot lifetime is exactly one call: a later launch always reads fresh
-// values. Unique folders are requested concurrently, then merged in chain order.
+// values. One recursive read supplies all projects, then each project receives
+// only the folders in its inheritance chain, merged from root to leaf.
 func fetchSecretsForProjects(ctx context.Context, projectRoot string, dirs []string, envName string) (map[string]map[string]string, error) {
 	if err := ctx.Err(); err != nil {
 		return nil, err
@@ -66,29 +71,42 @@ func fetchSecretsForProjects(ctx context.Context, projectRoot string, dirs []str
 	}
 	cfg.SiteURL = siteURL
 	chains := make(map[string][]string, len(dirs))
-	indices := map[string]int{}
-	paths := []string{}
+	paths := map[string]bool{}
 	for _, dir := range dirs {
 		resolution, err := resolveRunPath(projectRoot, dir)
 		if err != nil {
 			return nil, err
 		}
+		if len(resolution.Chain)-1 > maxSnapshotDepth {
+			return nil, cliErrors.New(cliErrors.INFISICAL_API_ERROR,
+				i18n.Tf("infisical.snapshot_depth_exceeded", dir, maxSnapshotDepth))
+		}
 		chains[dir] = resolution.Chain
 		for _, path := range resolution.Chain {
-			if _, exists := indices[path]; !exists {
-				indices[path] = len(paths)
-				paths = append(paths, path)
-			}
+			paths[path] = true
 		}
 	}
-	folders, err := fetchFolders(ctx, cfg, creds, env, paths)
+	snapshot, err := fetchSnapshot(ctx, cfg, creds, env)
 	if err != nil {
 		return nil, err
+	}
+	folders := make(map[string][]models.Secret, len(paths))
+	for _, secret := range snapshot {
+		// A recursive response must identify each secret's folder. Treating a
+		// missing path as root would distribute project-only values to siblings.
+		if !strings.HasPrefix(secret.SecretPath, "/") {
+			return nil, cliErrors.New(cliErrors.INFISICAL_API_ERROR,
+				i18n.T("infisical.snapshot_path_missing"))
+		}
+		path := NormalizePath(secret.SecretPath)
+		if paths[path] {
+			folders[path] = append(folders[path], secret)
+		}
 	}
 	for dir, chain := range chains {
 		merged := map[string]string{}
 		for _, path := range chain {
-			for _, secret := range folders[indices[path]] {
+			for _, secret := range folders[path] {
 				merged[secret.SecretKey] = secret.SecretValue
 			}
 		}
@@ -97,14 +115,10 @@ func fetchSecretsForProjects(ctx context.Context, projectRoot string, dirs []str
 	return result, nil
 }
 
-const maxFolderRequests = 6
-
-func fetchFolders(ctx context.Context, cfg *WorkspaceConfig, creds *Credentials, env string, paths []string) ([][]models.Secret, error) {
-	ctx, cancel := context.WithCancel(ctx)
-	defer cancel()
+func fetchSnapshot(ctx context.Context, cfg *WorkspaceConfig, creds *Credentials, env string) ([]models.Secret, error) {
 	// The SDK's high-level client does not pass its constructor context to
 	// HTTP requests. Reuse its list API and error contract with a cancellable
-	// request client so Ctrl-C and a failed sibling stop in-flight reads.
+	// request client so Ctrl-C stops the snapshot read.
 	client := resty.New().
 		SetBaseURL(util.AppendAPIEndpoint(cfg.SiteURLOrDefault())).
 		SetHeader("User-Agent", "one-cli/"+clientVersion).
@@ -116,64 +130,17 @@ func fetchFolders(ctx context.Context, cfg *WorkspaceConfig, creds *Credentials,
 			return ctx.Err()
 		})
 	defer client.GetClient().CloseIdleConnections()
-	results := make([][]models.Secret, len(paths))
-	jobs := make(chan int, len(paths))
-	for i := range paths {
-		jobs <- i
+	response, err := api.CallListSecretsV3(nil, client, api.ListSecretsV3RawRequest{
+		ProjectID: cfg.ProjectID, Environment: env, SecretPath: "/",
+		ExpandSecretReferences: true, Recursive: true,
+	})
+	if ctx.Err() != nil {
+		return nil, ctx.Err()
 	}
-	close(jobs)
-	var wg sync.WaitGroup
-	var once sync.Once
-	var firstErr error
-	for range min(maxFolderRequests, len(paths)) {
-		wg.Go(func() {
-			for i := range jobs {
-				if ctx.Err() != nil {
-					return
-				}
-				response, err := api.CallListSecretsV3(nil, client, api.ListSecretsV3RawRequest{
-					ProjectID: cfg.ProjectID, Environment: env, SecretPath: paths[i],
-					ExpandSecretReferences: true,
-				})
-				if err != nil {
-					if ctx.Err() != nil {
-						return
-					}
-					err = mapAPIError(err)
-					// Missing ancestors are empty, never a reason to hide auth,
-					// network, or project-not-found failures.
-					if isFolderNotFound(err) {
-						continue
-					}
-					once.Do(func() { firstErr = err; cancel() })
-					return
-				}
-				results[i] = response.Secrets
-			}
-		})
+	if err != nil {
+		return nil, mapAPIError(err)
 	}
-	wg.Wait()
-	if firstErr != nil {
-		return nil, firstErr
-	}
-	if err := ctx.Err(); err != nil {
-		return nil, err
-	}
-	return results, nil
-}
-
-// isFolderNotFound reports whether err is the structured
-// INFISICAL_FOLDER_NOT_FOUND envelope (the only "soft" error class in
-// the chain walk).
-func isFolderNotFound(err error) bool {
-	if err == nil {
-		return false
-	}
-	type coded interface{ ErrorCode() string }
-	if c, ok := err.(coded); ok {
-		return c.ErrorCode() == "INFISICAL_FOLDER_NOT_FOUND"
-	}
-	return false
+	return response.Secrets, nil
 }
 
 // resolveRunPath derives the fixed folder inheritance chain for a task directory.
