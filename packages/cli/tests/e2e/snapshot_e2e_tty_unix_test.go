@@ -23,6 +23,7 @@ func TestE2E_EnvSetHidesValueBeforeScopeCancellation(t *testing.T) {
 	if _, stderr, code := runBinaryIn(t, ws, "add", "react-spa", "--name", "web", "--yes", "-o", "json"); code != 0 {
 		t.Fatalf("add failed: exit=%d stderr=%s", code, stderr)
 	}
+	setWorkspaceBindingFixture(t, ws)
 
 	bin := binaryPath(t)
 	cmd := exec.Command(bin, "env", "set", "TEST_KEY", "-o", "text")

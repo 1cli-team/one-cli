@@ -81,6 +81,8 @@ func statusForCode(code string) int {
 		return http.StatusNotFound
 	case string(cliErrors.TARGET_EXISTS):
 		return http.StatusConflict
+	case string(cliErrors.SERVE_MANIFEST_CONFLICT):
+		return http.StatusConflict
 	case string(cliErrors.INVALID_NAME), string(cliErrors.TEMPLATE_REQUIRED), string(cliErrors.SUBPROJECT_NAME_REQUIRED):
 		return http.StatusBadRequest
 	case string(cliErrors.ENV_SET_OVERWRITE_REQUIRED):

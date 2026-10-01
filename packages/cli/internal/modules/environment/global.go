@@ -42,3 +42,6 @@ func CreateRemoteProject(ctx context.Context, name string) (*RemoteProject, erro
 func EnsureDefaultGlobal(ctx context.Context) (*GlobalLocation, error) {
 	return remote.EnsureDefaultGlobal(ctx)
 }
+func BindDefaultGlobal(ctx context.Context, env string) (*GlobalLocation, error) {
+	return remote.BindDefaultGlobal(ctx, env)
+}

@@ -185,7 +185,7 @@ var Codes = map[Code]Definition{
 	SUBPROJECT_NOT_FOUND:       {Summary: "-p / --project named a project that does not exist in manifest.projects.", Remediation: []output.Remediation{{Action: "list-projects", Hint: "Check the project name or switch to its directory."}}},
 	PATCH_CONFLICT:             {Summary: "Two configuration fragments contributed conflicting patches to the same backend target."},
 	BACKEND_INVOKE_FAILED:      {Summary: "Backend's Invoke method returned an error."},
-	BACKEND_NOT_ENABLED:        {Summary: "The requested environment backend is not configured.", Remediation: []output.Remediation{{Action: "configure-domain", Hint: "Save the first environment variable to set up storage.", Command: "one env set <KEY>"}}},
+	BACKEND_NOT_ENABLED:        {Summary: "The requested environment backend is not configured.", Remediation: []output.Remediation{{Action: "configure-domain", Hint: "Explicitly bind environment variable storage with one env bind first.", Command: "one env bind"}}},
 	BACKEND_VERB_NOT_SUPPORTED: {Summary: "The requested environment operation is not supported."},
 	BACKEND_INTERFACE_MISMATCH: {Summary: "Internal: the dispatched backend failed its capability assertion. Build-side bug; should never reach end users."},
 	PREFERENCES_FILE_INVALID:   {Summary: "The local preferences file could not be read or parsed."},
@@ -208,7 +208,7 @@ var Codes = map[Code]Definition{
 	ENV_MIGRATE_CONFLICT:  {Summary: "Reserved error code from the retired local environment workflow."},
 	ENV_MIGRATE_PARTIAL:   {Summary: "Reserved error code from the retired local environment workflow."},
 
-	INFISICAL_NOT_CONFIGURED:           {Summary: "The workspace has no Infisical project binding.", Remediation: []output.Remediation{{Action: "set-first-variable", Hint: "Save the first variable to create and connect an Infisical project.", Command: "one env set <KEY>"}}},
+	INFISICAL_NOT_CONFIGURED:           {Summary: "The workspace has no Infisical project binding.", Remediation: []output.Remediation{{Action: "set-first-variable", Hint: "Explicitly bind an Infisical project with one env bind first.", Command: "one env bind"}}},
 	INFISICAL_AUTH_MISSING:             {Summary: "No active Infisical browser session.", Remediation: []output.Remediation{{Action: "login", Command: "one login"}}},
 	INFISICAL_AUTH_FAILED:              {Summary: "The Infisical session was rejected or expired.", Remediation: []output.Remediation{{Action: "login", Command: "one login"}}},
 	INFISICAL_PROJECT_NOT_FOUND:        {Summary: "Infisical project id does not exist or the current account has no access to it."},

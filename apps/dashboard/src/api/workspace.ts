@@ -34,25 +34,21 @@ export async function getWorkspaceEnvironment(
 	return http.get<WorkspaceEnvironmentSettings>(workspaceEnvironmentKey(entryId, environment));
 }
 
-export interface EnvironmentInitialization extends WorkspaceEnvironmentSettings {
-	binding?: {
-		project_id: string;
-		project_name: string;
-		created: boolean;
-		requested_name?: string;
-	};
+export interface WorkspaceBinding {
+	project_id: string;
+	project_name?: string;
+	created: boolean;
+	requested_name?: string;
+	environments: string[];
 }
 
-export async function initializeWorkspaceEnvironmentBackend(
+export function bindWorkspaceEnvironment(
 	entryId: string | undefined,
-	environment: string,
-	project?: string,
-): Promise<EnvironmentInitialization> {
-	const search = new URLSearchParams({ env: environment });
-	if (project) search.set("project", project);
-	return http.post<EnvironmentInitialization>(
-		`${workspaceBasePath(entryId)}/environment/backend/initialize?${search.toString()}`,
-	);
+	input: { revision: string; create: boolean; projectId?: string },
+): Promise<WorkspaceBinding> {
+	return http.post<WorkspaceBinding>(`${workspaceBasePath(entryId)}/environment/bind`, input, {
+		timeout: 120000,
+	});
 }
 
 function projectBasePath(project: string, entryId?: string): string {

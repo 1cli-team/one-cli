@@ -360,7 +360,7 @@ The workspace has no Infisical project binding.
 
 **Remediation**:
 
-- `set-first-variable` — Save the first variable to create and connect an Infisical project.<br />运行：`one env set <KEY>`
+- `set-first-variable` — Explicitly bind an Infisical project with one env bind first.<br />运行：`one env bind`
 
 ### `INFISICAL_PROJECT_CREATE_FORBIDDEN`
 
@@ -410,7 +410,7 @@ The requested environment backend is not configured.
 
 **Remediation**:
 
-- `configure-domain` — Save the first environment variable to set up storage.<br />运行：`one env set <KEY>`
+- `configure-domain` — Explicitly bind environment variable storage with one env bind first.<br />运行：`one env bind`
 
 ### `BACKEND_VERB_NOT_SUPPORTED`
 

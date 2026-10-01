@@ -32,7 +32,7 @@ import {
 	secretsKey,
 	updateSecret,
 } from "@/api/secrets";
-import { initializeWorkspaceEnvironmentBackend } from "@/api/workspace";
+import { InfisicalBindingDialog } from "@/features/infisical-binding/InfisicalBindingDialog";
 import {
 	AlertDialog,
 	AlertDialogCancel,
@@ -113,7 +113,7 @@ export const SecretsManager: React.FC<{
 	const [deleteKey, setDeleteKey] = useState("");
 	const [deleteConfirmation, setDeleteConfirmation] = useState("");
 	const [saving, setSaving] = useState(false);
-	const [initializing, setInitializing] = useState(false);
+	const [bindingOpen, setBindingOpen] = useState(false);
 	const [retrying, setRetrying] = useState(false);
 	const [recoveryError, setRecoveryError] = useState("");
 	const [search, setSearch] = useState("");
@@ -134,6 +134,7 @@ export const SecretsManager: React.FC<{
 		requestEpoch.current++;
 		setRevealed({});
 		setEditor(null);
+		setBindingOpen(false);
 		setDeleteKey("");
 		setDeleteConfirmation("");
 		setRecoveryError("");
@@ -219,6 +220,10 @@ export const SecretsManager: React.FC<{
 
 	async function saveEditor() {
 		if (!editor || !editor.key.trim() || saving || readOnly) return;
+		if (needsInitialization) {
+			setEditorError(t("secrets.notConfiguredHint"));
+			return;
+		}
 		if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(editor.key.trim())) {
 			setEditorError(t("secrets.invalidKey"));
 			return;
@@ -227,26 +232,6 @@ export const SecretsManager: React.FC<{
 		setEditorError("");
 		try {
 			if (editor.mode === "create") {
-				if (needsInitialization) {
-					setInitializing(true);
-					const initialized = await initializeWorkspaceEnvironmentBackend(
-						workspaceEntryId,
-						environment,
-						project || undefined,
-					);
-					setInitializing(false);
-					if (initialized.binding?.created) {
-						const binding = initialized.binding;
-						toast.success(
-							t(binding.requested_name ? "secrets.storageRenamed" : "secrets.storageCreated", {
-								name: binding.project_name,
-								requested: binding.requested_name,
-							}),
-						);
-					}
-					// A missing remote folder can make listing fail before the first write.
-					await result.mutate().catch(() => undefined);
-				}
 				await createSecret(
 					workspaceEntryId,
 					environment,
@@ -274,7 +259,6 @@ export const SecretsManager: React.FC<{
 		} catch (error) {
 			setEditorError((error as HttpError).message || t("secrets.saveFailed"));
 		} finally {
-			setInitializing(false);
 			setSaving(false);
 		}
 	}
@@ -348,7 +332,7 @@ export const SecretsManager: React.FC<{
 								actionTrigger.current = null;
 								setEditor({ mode: "create", key: "", value: "" });
 							}}
-							disabled={readOnly || (showError && !needsInitialization) || showLoading}
+							disabled={readOnly || showError || showLoading}
 						>
 							<Plus />
 							{t("secrets.add")}
@@ -375,6 +359,12 @@ export const SecretsManager: React.FC<{
 						{recoveryError && listError.code === "INFISICAL_NOT_CONFIGURED" ? (
 							<ErrorNotice>{recoveryError}</ErrorNotice>
 						) : null}
+						{needsInitialization ? (
+							<Button disabled={readOnly} onClick={() => setBindingOpen(true)}>
+								<KeyRound />
+								{t("binding.workspaceTitle")}
+							</Button>
+						) : null}
 						<Button variant="outline" disabled={retrying} onClick={() => void retryList()}>
 							{retrying ? <Spinner /> : <RefreshCw />}
 							{t("secrets.retry")}
@@ -393,7 +383,7 @@ export const SecretsManager: React.FC<{
 								actionTrigger.current = null;
 								setEditor({ mode: "create", key: "", value: "" });
 							}}
-							disabled={readOnly || (showError && !needsInitialization) || showLoading}
+							disabled={readOnly || showError || showLoading}
 						>
 							<Plus />
 							{t("secrets.add")}
@@ -516,12 +506,19 @@ export const SecretsManager: React.FC<{
 				) : null}
 			</CardContent>
 
+			<InfisicalBindingDialog
+				open={bindingOpen}
+				onOpenChange={setBindingOpen}
+				scope="workspace"
+				workspaceEntryId={workspaceEntryId}
+				environment={environment}
+				readOnly={readOnly}
+			/>
 			<SecretEditor
 				editor={editor}
 				error={editorError}
 				returnFocus={actionTrigger.current}
 				saving={saving}
-				initializing={initializing}
 				onChange={setEditor}
 				onSave={() => void saveEditor()}
 				onClose={() => !saving && setEditor(null)}
@@ -579,13 +576,12 @@ export const SecretsManager: React.FC<{
 const SecretEditor: React.FC<{
 	editor: SecretEditorState | null;
 	saving: boolean;
-	initializing: boolean;
 	error: string;
 	returnFocus: HTMLButtonElement | null;
 	onChange(editor: SecretEditorState): void;
 	onSave(): void;
 	onClose(): void;
-}> = ({ editor, saving, initializing, error, returnFocus, onChange, onSave, onClose }) => {
+}> = ({ editor, saving, error, returnFocus, onChange, onSave, onClose }) => {
 	const { t } = useTranslation();
 	const [showValue, setShowValue] = useState(false);
 	const [confirmClose, setConfirmClose] = useState(false);
@@ -702,7 +698,7 @@ const SecretEditor: React.FC<{
 							</Button>
 							<Button type="submit" disabled={saving || !editor?.key.trim()}>
 								{saving ? <Spinner /> : <ShieldCheck />}
-								{t(initializing ? "secrets.initializing" : "secrets.save")}
+								{t("secrets.save")}
 							</Button>
 						</DialogFooter>
 					)}

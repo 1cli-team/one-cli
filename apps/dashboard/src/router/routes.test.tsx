@@ -329,7 +329,7 @@ describe("multi-workspace routing", () => {
 		await user.click(within(inspector).getByRole("button", { name: "Workspace settings" }));
 		const dialog = await screen.findByRole("dialog", { name: "Workspace settings" });
 		expect(
-			(within(dialog).getByRole("combobox", { name: "Storage project" }) as HTMLButtonElement)
+			((await within(dialog).findByRole("button", { name: "Bind Infisical" })) as HTMLButtonElement)
 				.disabled,
 		).toBe(true);
 	});

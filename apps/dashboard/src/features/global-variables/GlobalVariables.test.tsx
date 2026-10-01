@@ -110,23 +110,40 @@ describe("global credential browsing", () => {
 	});
 });
 
+async function openBinding(user: ReturnType<typeof userEvent.setup>, existing = false) {
+	await user.click(
+		await screen.findByRole("button", {
+			name: i18n.t(existing ? "binding.change" : "binding.globalTitle"),
+		}),
+	);
+	return within(await screen.findByRole("dialog", { name: i18n.t("binding.globalTitle") }));
+}
+async function chooseExisting(user: ReturnType<typeof userEvent.setup>) {
+	await user.click(screen.getByRole("combobox", { name: i18n.t("binding.method") }));
+	await user.click(await screen.findByRole("option", { name: i18n.t("binding.existing") }));
+}
 describe("shared credential setup", () => {
-	it("initializes the default location only on click and then opens the credential list", async () => {
-		vi.mocked(api.getLocation).mockResolvedValue({ location: null });
-		vi.mocked(api.initializeGlobalLocation).mockImplementation(async () => {
-			vi.mocked(api.getLocation).mockResolvedValue({ location });
-			return { location };
-		});
-		mount();
-		const user = userEvent.setup();
-		await screen.findByRole("button", { name: "Initialize default location" });
-		expect(api.initializeGlobalLocation).not.toHaveBeenCalled();
-		expect(api.getGlobalListing).not.toHaveBeenCalled();
-		await user.click(screen.getByRole("button", { name: "Initialize default location" }));
-		await screen.findByText("OSS_AK");
-		expect(api.initializeGlobalLocation).toHaveBeenCalledTimes(1);
-	});
-	it("creates and selects a project without changing storage until Save location", async () => {
+	it.each(["en-US", "zh-CN"])(
+		"binds the default storage only after confirmation in %s",
+		async (locale) => {
+			await i18n.changeLanguage(locale);
+			vi.mocked(api.getLocation).mockResolvedValue({ location: null });
+			vi.mocked(api.initializeGlobalLocation).mockImplementation(async () => {
+				vi.mocked(api.getLocation).mockResolvedValue({ location });
+				return { location };
+			});
+			mount();
+			const user = userEvent.setup();
+			const dialog = await openBinding(user);
+			expect(api.initializeGlobalLocation).not.toHaveBeenCalled();
+			expect(api.getGlobalListing).not.toHaveBeenCalled();
+			await user.click(dialog.getByRole("button", { name: i18n.t("binding.prepareAndBind") }));
+			await screen.findByText("OSS_AK");
+			expect(api.initializeGlobalLocation).toHaveBeenCalledTimes(1);
+			await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+		},
+	);
+	it("creates and selects a custom project, then binds only on confirmation", async () => {
 		vi.mocked(api.getLocation).mockResolvedValue({ location: null });
 		const created = {
 			id: "team",
@@ -142,19 +159,17 @@ describe("shared credential setup", () => {
 		});
 		mount();
 		const user = userEvent.setup();
-		await user.click(await screen.findByRole("button", { name: "New project" }));
+		await openBinding(user);
+		await chooseExisting(user);
+		await user.click(screen.getByRole("button", { name: "New project" }));
 		await user.type(screen.getByLabelText("Project name"), "Team");
 		await user.click(screen.getByRole("button", { name: "Create and select" }));
-		await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+		await waitFor(() => expect(screen.queryByRole("dialog", { name: "New project" })).toBeNull());
 		expect(api.createRemoteProject).toHaveBeenCalledWith("Team");
-		expect(screen.getByRole("combobox", { name: "Storage project" }).textContent).toContain("Team");
-		expect(
-			screen.getByRole("combobox", { name: "Default browsing environment" }).textContent,
-		).toContain("dev");
 		expect(api.bindLocation).not.toHaveBeenCalled();
-		await user.click(screen.getByRole("button", { name: "Save location" }));
-		await waitFor(() => expect(api.bindLocation).toHaveBeenCalledWith("team", "dev"));
+		await user.click(screen.getByRole("button", { name: i18n.t("binding.bindExisting") }));
 		await screen.findByText("OSS_AK");
+		expect(api.bindLocation).toHaveBeenCalledWith("team", "dev");
 	});
 	it("keeps a failed creation editable and leaves the existing location alone", async () => {
 		vi.mocked(api.createRemoteProject).mockRejectedValue(
@@ -162,28 +177,31 @@ describe("shared credential setup", () => {
 		);
 		mount();
 		const user = userEvent.setup();
-		await user.click(await screen.findByRole("button", { name: "Default storage location" }));
-		expect(screen.queryByRole("button", { name: "Initialize default location" })).toBeNull();
+		await openBinding(user, true);
 		await user.click(screen.getByRole("button", { name: "New project" }));
 		await user.type(screen.getByLabelText("Project name"), "Team");
 		await user.click(screen.getByRole("button", { name: "Create and select" }));
 		await screen.findByText("No permission to create projects");
-		expect(screen.getByRole("dialog")).toBeTruthy();
 		expect((screen.getByLabelText("Project name") as HTMLInputElement).value).toBe("Team");
 		expect(api.bindLocation).not.toHaveBeenCalled();
 		expect(api.initializeGlobalLocation).not.toHaveBeenCalled();
 	});
-	it("shows default setup failure without falling through to an empty credential list", async () => {
+	it("retains default setup failures and retries without an empty credential list", async () => {
 		vi.mocked(api.getLocation).mockResolvedValue({ location: null });
-		vi.mocked(api.initializeGlobalLocation).mockRejectedValue(
-			new Error("Default environment is missing"),
-		);
+		vi.mocked(api.initializeGlobalLocation)
+			.mockRejectedValueOnce(new Error("Default environment is missing"))
+			.mockImplementationOnce(async () => {
+				vi.mocked(api.getLocation).mockResolvedValue({ location });
+				return { location };
+			});
 		mount();
 		const user = userEvent.setup();
-		await user.click(await screen.findByRole("button", { name: "Initialize default location" }));
-		await screen.findByText("Default environment is missing");
+		const dialog = await openBinding(user);
+		await user.click(dialog.getByRole("button", { name: i18n.t("binding.prepareAndBind") }));
+		await dialog.findByText("Default environment is missing");
 		expect(api.getGlobalListing).not.toHaveBeenCalled();
-		expect(screen.getByRole("button", { name: "New project" })).toBeTruthy();
+		await user.click(dialog.getByRole("button", { name: i18n.t("binding.prepareAndBind") }));
+		await screen.findByText("OSS_AK");
 	});
 });
 

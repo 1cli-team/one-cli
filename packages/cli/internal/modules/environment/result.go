@@ -35,6 +35,13 @@ type BindingResult struct {
 	RequestedName string `json:"requested_name,omitempty"`
 }
 
+type WorkspaceBindingResult struct {
+	BindingResult
+	Schema       string   `json:"schema"`
+	Environments []string `json:"environments"`
+	WrittenTo    string   `json:"written_to"`
+}
+
 type SetResult struct {
 	Binding            *BindingResult `json:"binding,omitempty"`
 	Schema             string         `json:"schema"`

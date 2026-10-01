@@ -7,7 +7,16 @@ Infisical is One CLI's only managed environment source. Variables are fetched fo
 
 ## Setup
 
-New workspaces have no Infisical binding and can run without signing in. Run `one login`, then save the first variable with `one env set` to initialize storage. Dashboard also initializes only when the first variable is saved; opening, refreshing, and cancelling never create a project.
+New workspaces have no Infisical binding and can run without signing in. When managed variables are needed, run `one login`, then explicitly bind storage with `one env bind`. In an interactive terminal, select an existing project or create a workspace project. Scripts use `--create` to create and bind storage, or `--project-id` to bind an existing project. Existing bindings are preserved, and repeated creation commands do not create another project.
+
+```bash
+one login
+one env bind
+one env bind --create
+one env bind --project-id PROJECT_ID
+```
+
+`set`, `list`, reads, and `unset` all require a binding. An unbound workspace returns `INFISICAL_NOT_CONFIGURED` with guidance to run `one env bind`, without creating a project. In Dashboard, use **Bind Infisical** in workspace settings or the variables panel to create workspace storage or select an existing project. Review the target and confirm the binding before adding variables. Saving variables never initializes storage.
 
 The binding lives in the `[env.infisical]` table of `one.manifest.toml`:
 
@@ -40,7 +49,7 @@ Use `--stdin` for multiline PEM files and other secrets without passing their co
 
 `env.infisical.environments` declares remote environment slugs. The default is always `dev`; `--env` selects another declared slug. A new binding defaults to `dev`, `staging`, and `prod`. These identifiers match Infisical's environment slugs, not its display names. Declaring a name does not create an environment remotely.
 
-After a successful remote write, `set` can register a new environment locally with confirmation. The environment must already exist in Infisical. `list` rejects undeclared names with `ENV_UNKNOWN_ENVIRONMENT`. Listing, reading, and `unset` require an existing binding; unbound workspaces show guidance to save the first variable.
+After a successful remote write, `set` can register a new environment locally with confirmation. The environment must already exist in Infisical. `list` rejects undeclared names with `ENV_UNKNOWN_ENVIRONMENT`.
 
 The shared folder is `/`. Project folders derive from their `path`: `services/api` maps to `/services/api`. Variables merge from `/` through `/services` to `/services/api`, with closer folders winning. Parallel tasks receive independent project environments. There are no project-level path, inheritance, key-list, or disable settings.
 
@@ -55,13 +64,13 @@ With an `[env.infisical]` binding, `one run` and `one exec` fetch variables for 
 
 ## Shared credentials
 
-Shared credentials are independent of workspaces. Select storage with `one env bind --global`, browse names with `one env list --global --env dev --path /`, and inject an explicit scope with `one exec --global --env dev --path /folder -- command`. See [login and shared credentials](/en/docs/login/).
+Shared credentials are independent of workspaces. Run `one env bind --global` to create or reuse the default storage project while preserving any saved binding. Use `--project-id` to bind another existing project. Browse names with `one env list --global --env dev --path /`, and inject an explicit scope with `one exec --global --env dev --path /folder -- command`. See [login and shared credentials](/en/docs/login/).
 
 ## Common errors
 
 | Code | Recovery |
 |---|---|
-| `INFISICAL_NOT_CONFIGURED` | Sign in and save the first variable to create and connect a storage project |
+| `INFISICAL_NOT_CONFIGURED` | Sign in and explicitly bind storage with `one env bind` |
 | `INFISICAL_AUTH_MISSING` / `INFISICAL_AUTH_FAILED` | Run `one login` and check access to the bound project |
 | `INFISICAL_PROJECT_NAME_TAKEN` | Select an existing project in Dashboard, or use a different workspace name |
 | `INFISICAL_PROJECT_CREATE_FORBIDDEN` | Select an existing accessible project in Dashboard |
@@ -74,4 +83,4 @@ See [Manifest v2](/en/docs/manifest/) for the configuration structure and [the w
 
 ## Workspaces with the same name
 
-Remote projects default to the workspace name. On a name conflict, One adds a short suffix and displays the actual name. Identically named workspaces do not share variables merely because of their names: writes target the stored `env.infisical.projectId`. Copying or cloning a configuration that already contains a binding reuses that remote project. If saving a variable fails after creation, the binding is retained and retries reuse it.
+`one env bind --create` defaults to the workspace name. On a name conflict, One adds a short suffix and displays the actual name. Identically named workspaces do not share variables merely because of their names: writes target the stored `env.infisical.projectId`. Copying or cloning a configuration that already contains a binding reuses that remote project. Failed variable writes preserve the existing binding.

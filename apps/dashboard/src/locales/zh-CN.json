@@ -253,7 +253,8 @@
 		"deleteDescription": "这会从当前 Infisical 环境和 folder 中移除该值，无法在这里撤销。",
 		"deleteConfirmation": "输入 {{key}} 确认删除",
 		"notConfiguredTitle": "尚未配置环境变量存储",
-		"notConfiguredHint": "添加第一个变量并保存时，One 会自动创建并连接 Infisical 项目。",
+		"notConfiguredHint": "自动创建工作区存储项目，或选择已有项目。确认绑定后即可添加变量。",
+		"connectStorage": "连接 Infisical 项目",
 		"search": "搜索密钥名称",
 		"noMatches": "没有匹配的密钥",
 		"scopeHint": "此处的修改会直接保存到 Infisical。",
@@ -596,5 +597,31 @@
 			"exited": "已退出",
 			"failed": "运行失败"
 		}
+	},
+	"binding": {
+		"workspaceTitle": "绑定 Infisical",
+		"globalTitle": "绑定共享凭据",
+		"change": "更换绑定",
+		"unbound": "尚未绑定 Infisical",
+		"workspaceHint": "自动创建工作区存储项目，或选择已有项目。确认绑定后即可添加变量。",
+		"globalHint": "自动创建或复用 shared-credentials，默认环境为 dev；也可以选择已有项目。",
+		"method": "绑定方式",
+		"automatic": "自动创建",
+		"existing": "选择已有项目",
+		"current": "当前绑定：{{name}}",
+		"target": "目标项目：{{name}}",
+		"defaultEnvironment": "默认环境：dev",
+		"workspaceStorage": "绑定信息写入 one.manifest.toml，变量值保存在 Infisical。",
+		"globalStorage": "绑定信息保存在本机配置，凭据值保存在 Infisical。",
+		"organizationRequired": "请选择组织并重新登录",
+		"devRequired": "工作区项目必须包含 dev 环境。",
+		"noProjects": "暂无可用项目，可切换到自动创建。",
+		"pendingDraft": "此工作区有未保存的配置，请先保存或放弃，再绑定项目。",
+		"conflict": "工作区配置已发生变化。请刷新并核对绑定目标后重试。",
+		"success": "已绑定到项目 {{name}}",
+		"binding": "正在绑定…",
+		"bindExisting": "绑定已有项目",
+		"createAndBind": "创建并绑定",
+		"prepareAndBind": "创建或复用并绑定"
 	}
 }

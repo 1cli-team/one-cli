@@ -35,6 +35,9 @@ type InitInput struct {
 	// Note: skipping verify also disables auto-create — the resolved
 	// projectId must be supplied explicitly.
 	SkipVerify bool
+	// BeforeWrite rejects stale Dashboard requests after remote work and before
+	// publishing any local changes. The caller holds the manifest lock.
+	BeforeWrite func() error
 }
 
 // InitResult is the JSON payload emitted by auto-bind. Mirrors the
@@ -123,6 +126,11 @@ func Init(ctx context.Context, projectRoot string, in InitInput) (*InitResult, e
 		cfg.ProjectName = resolvedName
 		authStatus = "created"
 		created = true
+		if in.BeforeWrite != nil {
+			if err := in.BeforeWrite(); err != nil {
+				return nil, bindingWriteError(projectRoot, cfg, err)
+			}
+		}
 
 		// Back-fill the manifest's workspace identity. New scaffolds set
 		// workspace at create time; older workspaces (or those that lost the
@@ -146,6 +154,11 @@ func Init(ctx context.Context, projectRoot string, in InitInput) (*InitResult, e
 			return nil, err
 		}
 		authStatus = "verified"
+	}
+	if !created && in.BeforeWrite != nil {
+		if err := in.BeforeWrite(); err != nil {
+			return nil, err
+		}
 	}
 
 	configJSON, err := EncodeManifestConfig(cfg)
@@ -301,7 +314,12 @@ func dedupeStrings(in []string) []string {
 }
 
 func bindingWriteError(root string, cfg *WorkspaceConfig, err error) error {
-	return cliErrors.New(cliErrors.ONE_CLI_ERROR,
+	code := cliErrors.ONE_CLI_ERROR
+	var original *output.Error
+	if errors.As(err, &original) && original.Code == string(cliErrors.SERVE_MANIFEST_CONFLICT) {
+		code = cliErrors.SERVE_MANIFEST_CONFLICT
+	}
+	return cliErrors.New(code,
 		i18n.Errorf("infisical.init.binding_write_failed", cfg.ProjectName, cfg.ProjectID, workspace.ManifestPath(root), err).Error()).
 		WithContext(map[string]any{"project_id": cfg.ProjectID, "project_name": cfg.ProjectName, "partial_state": "project_created_binding_unsaved"}).WithCause(err)
 }

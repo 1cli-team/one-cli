@@ -287,7 +287,7 @@ Could not reach Infisical. Check network and site URL.
 
 ### `INFISICAL_NOT_CONFIGURED`
 
-This workspace has no Infisical project binding. Save the first variable with `one env set <KEY>` or Dashboard Save to create one. Reading, refreshing, and deleting do not initialize storage.
+This workspace has no Infisical project binding. Explicitly bind storage with `one env bind`, or select a project in Dashboard and review and save the binding. Saving variables, reading, refreshing, and deleting never initialize storage.
 
 ### `INFISICAL_PROJECT_CREATE_FORBIDDEN`
 

@@ -6,7 +6,7 @@ USAGE
   one env set <KEY[=VALUE]> [VALUE] [flags]
 
 TIPS
-Sets one environment variable. Use `one env set KEY` for hidden interactive input, or pass `KEY VALUE` / `KEY=VALUE` in automation.
+Sets one environment variable. Bind the workspace to Infisical with one env bind first; an unbound workspace fails without creating a project. Use `one env set KEY` for hidden interactive input, or pass `KEY VALUE` / `KEY=VALUE` in automation.
 
 COMMON OPTIONS
   --env <value>            Environment name (default: dev)

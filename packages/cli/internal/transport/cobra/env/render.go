@@ -36,6 +36,38 @@ func (r summaryOutput) RenderTTY(w io.Writer) {
 
 type listOutput struct{ *environmentmodule.ListResult }
 
+type bindOutput struct {
+	*environmentmodule.GlobalLocation
+}
+
+type workspaceBindOutput struct {
+	*environmentmodule.WorkspaceBindingResult
+}
+
+func (r workspaceBindOutput) RenderTTY(w io.Writer) {
+	if r.WorkspaceBindingResult == nil {
+		return
+	}
+	if r.Created {
+		if r.RequestedName != "" {
+			fmt.Fprintln(w, i18n.Tf("env.project_renamed", r.RequestedName, r.ProjectName))
+		}
+		fmt.Fprintln(w, i18n.Tf("env.project_created", r.ProjectName))
+	}
+	name := r.ProjectName
+	if name == "" {
+		name = r.ProjectID
+	}
+	fmt.Fprintln(w, i18n.Tf("env.bind.workspace_success", name, r.ProjectID, r.WrittenTo))
+}
+
+func (r bindOutput) RenderTTY(w io.Writer) {
+	if r.GlobalLocation == nil {
+		return
+	}
+	fmt.Fprintln(w, i18n.Tf("env.bind.success", r.ProjectName, r.ProjectID, r.DefaultEnvironment))
+}
+
 func (r listOutput) RenderTTY(w io.Writer) {
 	if r.ListResult == nil {
 		return

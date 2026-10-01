@@ -17,35 +17,45 @@ func configureGlobal(parent *cobra.Command, deps Dependencies) {
 	i18n.MarkFlagUsage(parent, "path", "env.flag.path")
 	parent.Flags().String("env", "", i18n.T("env.flag.environment_name"))
 	i18n.MarkFlagUsage(parent, "env", "env.flag.environment_name")
-	bind := &cobra.Command{Use: "bind", Short: i18n.T("env.bind.short"), Args: i18n.NoArgs}
+	bind := &cobra.Command{
+		Use:     "bind",
+		Short:   i18n.T("env.bind.short"),
+		Long:    i18n.T("env.bind.tip"),
+		Example: "  one env bind\n  one env bind --create\n  one env bind --project-id PROJECT_ID\n  one env bind --global",
+		Args:    i18n.NoArgs,
+	}
 	i18n.MarkShort(bind, "env.bind.short")
+	i18n.MarkLong(bind, "env.bind.tip")
 	bind.Flags().String("project-id", "", i18n.T("env.flag.project_id"))
 	i18n.MarkFlagUsage(bind, "project-id", "env.flag.project_id")
+	bind.Flags().Bool("create", false, i18n.T("env.bind.flag.create"))
+	i18n.MarkFlagUsage(bind, "create", "env.bind.flag.create")
 	bind.Flags().String("env", "", i18n.T("env.flag.default_environment"))
 	i18n.MarkFlagUsage(bind, "env", "env.flag.default_environment")
 	bind.RunE = func(c *cobra.Command, _ []string) error {
 		global, _ := c.Flags().GetBool("global")
-		if !global {
-			return i18n.Errorf("env.bind.global_required")
-		}
 		id, _ := c.Flags().GetString("project-id")
 		env, _ := c.Flags().GetString("env")
-		if id == "" && output.CanPrompt() {
-			ps, e := remote.Projects(c.Context())
-			if e != nil {
-				return e
+		create, _ := c.Flags().GetBool("create")
+		if create && id != "" {
+			return i18n.Errorf("env.bind.create_conflict")
+		}
+		if !global {
+			if c.Flags().Changed("path") {
+				return i18n.Errorf("env.path_global_required")
 			}
-			if len(ps) == 0 {
-				return i18n.Errorf("env.bind.no_projects")
+			if c.Flags().Changed("env") {
+				return i18n.Errorf("env.bind.workspace_env_fixed")
 			}
-			options := []prompt.Option[string]{}
-			for _, p := range ps {
-				options = append(options, prompt.Option[string]{Label: p.Name, Value: p.ID})
+			return runWorkspaceBind(c, deps, id, create)
+		}
+		if id == "" {
+			location, err := remote.BindDefaultGlobal(c.Context(), env)
+			if err != nil {
+				return err
 			}
-			id, e = prompt.Select(i18n.T("env.bind.select_project"), options)
-			if e != nil {
-				return e
-			}
+			output.Emit(bindOutput{location})
+			return nil
 		}
 		if env == "" && output.CanPrompt() {
 			p, e := remote.Project(c.Context(), id)
@@ -68,7 +78,7 @@ func configureGlobal(parent *cobra.Command, deps Dependencies) {
 		if e != nil {
 			return e
 		}
-		output.Emit(l)
+		output.Emit(bindOutput{l})
 		return nil
 	}
 	unset := &cobra.Command{Use: "unset <KEY>", Short: i18n.T("env.unset.short"), Args: i18n.ExactArgs(1), RunE: func(c *cobra.Command, args []string) error {

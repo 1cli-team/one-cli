@@ -4,7 +4,6 @@ import type React from "react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import {
 	Dialog,
 	DialogContent,
@@ -89,28 +88,12 @@ export const WorkspaceSettingsDialog: React.FC<{
 							/>
 						</TabsContent>
 						<TabsContent value="secrets" className="mt-0">
-							{currentBackend === "infisical" ? (
-								<SecretsManager
-									workspaceEntryId={workspaceEntryId}
-									environment={environment}
-									projects={projects}
-									readOnly={readOnly}
-								/>
-							) : (
-								<Card className="rounded-[6px] border-dashed shadow-none">
-									<CardContent className="flex items-center gap-3 p-4">
-										<span className="grid size-8 place-items-center rounded-[5px] bg-muted text-muted-foreground">
-											<KeyRound className="size-4" />
-										</span>
-										<div>
-											<h2 className="text-sm font-semibold">{t("secrets.unavailableTitle")}</h2>
-											<p className="mt-0.5 text-xs text-muted-foreground">
-												{t("secrets.unavailableDescription")}
-											</p>
-										</div>
-									</CardContent>
-								</Card>
-							)}
+							<SecretsManager
+								workspaceEntryId={workspaceEntryId}
+								environment={environment}
+								projects={projects}
+								readOnly={readOnly}
+							/>
 						</TabsContent>
 					</div>
 				</Tabs>

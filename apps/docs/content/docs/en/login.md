@@ -16,9 +16,9 @@ One keeps one active Infisical account. Complete login in the browser; the sessi
 
 ## Shared credentials
 
-In the Dashboard, open Shared credentials and select **Initialize default location** to create or reuse the `shared-credentials` project with environment `dev` and root folder `/`. You can also create another project or choose an existing Secret Manager project. Existing saved locations are preserved.
+In the Dashboard, open Shared credentials and select **Bind shared credentials** and confirm the target to create or reuse the `shared-credentials` project with environment `dev` and root folder `/`. You can also create another project or choose an existing Secret Manager project. Existing saved locations are preserved.
 
-The CLI continues to use `--global` for shared credentials. To select a location manually:
+The CLI uses `--global` for shared credentials. After signing in, run `one env bind --global`. Without a saved binding, it creates or reuses the `shared-credentials` project in the current organization and binds environment `dev`, without asking you to select a project or enter an ID. Existing bindings are preserved, and repeated runs do not create another project. Use `--env` to select or change the default environment; it must already exist in the remote project. To use another existing project, provide `--project-id`:
 
 ```bash
 one env bind --global
@@ -35,7 +35,7 @@ The CLI never displays secret values. Inject shared credentials with `one exec -
 
 ## Dashboard
 
-Run `one serve`. Settings manages browser login, pending callbacks, cancellation, logout, and language. Shared credentials manages the storage project, browsing environment, folders, and variables. Values are fetched only on reveal or copy and cleared when the account, environment, folder, or page changes. Remote edits take effect immediately. Workspace project bindings are reviewed as Manifest drafts and saved atomically with other draft changes.
+Run `one serve`. Settings manages browser login, pending callbacks, cancellation, logout, and language. Shared credentials manages the storage project, browsing environment, folders, and variables. Values are fetched only on reveal or copy and cleared when the account, environment, folder, or page changes. Remote edits take effect immediately. Workspace bindings are reviewed and confirmed in the **Bind Infisical** dialog. Save or discard pending configuration first; stale configuration requires a refresh. Other Manifest changes keep the draft review and save workflow.
 
 ## Security boundaries
 

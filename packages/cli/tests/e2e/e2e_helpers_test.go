@@ -329,3 +329,20 @@ func bootstrapWorkspace(t *testing.T, tmp, name string) string {
 	}
 	return target
 }
+
+// setWorkspaceBindingFixture supplies a saved binding for tests that stop
+// before authentication or remote access, such as input validation and prompts.
+func setWorkspaceBindingFixture(t *testing.T, workspaceRoot string) {
+	t.Helper()
+	manifest := readManifest(t, workspaceRoot)
+	manifest["env"] = map[string]any{"infisical": map[string]any{
+		"siteUrl": "http://127.0.0.1:1", "projectId": "test-project", "environments": []string{"dev"},
+	}}
+	raw, err := toml.Marshal(manifest)
+	if err != nil {
+		t.Fatalf("encode bound workspace fixture: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(workspaceRoot, "one.manifest.toml"), raw, 0o644); err != nil {
+		t.Fatalf("write bound workspace fixture: %v", err)
+	}
+}

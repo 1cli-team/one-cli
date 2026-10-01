@@ -2,7 +2,7 @@ import { DiscardDialog } from "@/components/ui/discard-dialog";
 import { Database, FolderPlus, RefreshCw, Save } from "lucide-react";
 import { ErrorNotice, SectionHeading } from "@/components/ui/page-layout";
 import { Spinner } from "@/components/ui/spinner";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import useSWR, { useSWRConfig } from "swr";
 import {
@@ -39,10 +39,12 @@ export function LocationPicker({
 	initial,
 	onSaved,
 	onCancel,
+	onBusyChange,
 }: {
 	initial?: GlobalLocation;
-	onSaved: () => Promise<void>;
+	onSaved: (location?: GlobalLocation) => Promise<void>;
 	onCancel?: () => void;
+	onBusyChange?: (busy: boolean) => void;
 }) {
 	const { t } = useTranslation();
 	const { mutate } = useSWRConfig();
@@ -58,6 +60,9 @@ export function LocationPicker({
 	const [name, setName] = useState("");
 	const [createError, setCreateError] = useState("");
 	const [discard, setDiscard] = useState(false);
+	useEffect(() => {
+		onBusyChange?.(busy);
+	}, [busy, onBusyChange]);
 	function closeCreation() {
 		if (busy) return;
 		if (name.trim()) setDiscard(true);
@@ -69,9 +74,10 @@ export function LocationPicker({
 		setBusy(true);
 		setError("");
 		try {
-			if (useDefault) await initializeGlobalLocation();
-			else await bindLocation(project, environment);
-			await onSaved();
+			const result = useDefault
+				? await initializeGlobalLocation()
+				: await bindLocation(project, environment);
+			await onSaved(result.location);
 		} catch (e) {
 			setError(message(e));
 			// Setup may have created the remote project before a later step failed.
@@ -114,7 +120,7 @@ export function LocationPicker({
 						title={t("global.location")}
 						description={t("global.locationHint")}
 					/>
-					{!initial ? (
+					{!initial && !onBusyChange ? (
 						<div className="flex flex-wrap items-center justify-between gap-4 rounded-lg border bg-muted/40 p-4">
 							<div className="space-y-1">
 								<h3 className="font-medium">{t("global.defaultLocation")}</h3>
@@ -214,7 +220,9 @@ export function LocationPicker({
 							onClick={() => void save(false)}
 						>
 							{busy ? <Spinner /> : <Save />}
-							{busy ? t("global.saving") : t("global.saveLocation")}
+							{busy
+								? t("global.saving")
+								: t(onBusyChange ? "binding.bindExisting" : "global.saveLocation")}
 						</Button>
 						{onCancel ? (
 							<Button variant="outline" disabled={busy} onClick={onCancel}>

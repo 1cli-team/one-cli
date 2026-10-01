@@ -12,6 +12,7 @@ import (
 
 	catalog "github.com/torchstellar-team/one-cli/packages/cli/internal/core/backend"
 	workspacecore "github.com/torchstellar-team/one-cli/packages/cli/internal/core/workspace"
+	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/fsutil"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/i18n"
 )
 
@@ -99,6 +100,11 @@ func (s *Service) ApplyManifestDraft(
 ) (ApplyManifestResult, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	unlock, err := fsutil.WorkspaceLock(ctx, root, "manifest")
+	if err != nil {
+		return ApplyManifestResult{}, err
+	}
+	defer unlock()
 
 	hasWorkspaceChange := input.Workspace != nil && input.Workspace.Environment != nil
 	if strings.TrimSpace(input.Revision) == "" || (!hasWorkspaceChange && len(input.Changes) == 0) {
