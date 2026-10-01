@@ -24,6 +24,8 @@ func registerWorkspacesRoutes(mux *http.ServeMux, opts MuxOpts) {
 		handleResolvedWorkspaceRead(opts, handleGetWorkspaceOverview))
 	mux.HandleFunc("GET /workspaces/{entryId}/environment",
 		handleResolvedWorkspaceRead(opts, handleGetWorkspaceEnvironment))
+	mux.HandleFunc("POST /workspaces/{entryId}/environment/bind",
+		handleResolvedWorkspace(opts, handleBindWorkspaceEnvironment))
 	mux.HandleFunc("POST /workspaces/{entryId}/projects",
 		handleResolvedWorkspace(opts, handleCreateProject))
 	mux.HandleFunc("GET /workspaces/{entryId}/projects/{name}",

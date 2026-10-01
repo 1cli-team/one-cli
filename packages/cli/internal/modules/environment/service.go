@@ -106,7 +106,7 @@ func (s *Service) Summary(scope execution.Scope) (*Summary, error) {
 		DefaultEnvironment:    defaultEnvironment,
 		AvailableEnvironments: environments,
 		Scope:                 "workspace",
-		Commands:              []string{"one env set <KEY>", "one env list", "one exec -- <command>"},
+		Commands:              []string{"one env bind", "one env set <KEY>", "one env list", "one exec -- <command>"},
 	}
 	if project, ok := resolution.Workspace.ProjectFromWorkingDirectory(); ok {
 		result.Scope = "project"

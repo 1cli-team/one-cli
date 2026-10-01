@@ -63,6 +63,6 @@ The shared remote folder is `/`. A project with `path = "services/api"` receives
 - Dashboard discovers service URLs from process output.
 - Personal One CLI preferences select stream or TUI output.
 
-`one env set` stores values in Infisical. It persists a binding on first use and can register an environment locally after a successful write, but never writes variable names to the manifest. Dashboard previews the actual TOML before publishing binding changes and checks the file revision to reject stale drafts. Project settings display the conventions without per-project environment controls.
+`one env bind` explicitly persists the Infisical binding. `one env set` requires a binding and stores values in Infisical. It can register an environment locally after a successful write, but never writes variable names to the manifest. Dashboard previews the actual TOML before publishing binding changes and checks the file revision to reject stale drafts. Project settings display the conventions without per-project environment controls.
 
 See [environment variables](/en/docs/env-vars/) for commands and [adding projects](/en/docs/add/) for project registration.

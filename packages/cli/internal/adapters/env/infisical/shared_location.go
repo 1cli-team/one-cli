@@ -49,6 +49,14 @@ func createProjectFor(ctx context.Context, s *session.Session, name string) (*Re
 // EnsureDefaultGlobal is an explicit mutation, never a side effect of GET.
 // Reuse the named project after interrupted setup and preserve any saved location.
 func EnsureDefaultGlobal(ctx context.Context) (*GlobalLocation, error) {
+	return BindDefaultGlobal(ctx, "")
+}
+
+// BindDefaultGlobal preserves the saved project, or creates/reuses the default
+// project when unbound. An empty environment preserves the saved environment,
+// defaulting to dev for a new binding. Explicit environments are validated before
+// saving the location.
+func BindDefaultGlobal(ctx context.Context, environment string) (*GlobalLocation, error) {
 	return withLocationLock(ctx, func() (*GlobalLocation, error) {
 		s, err := session.Require()
 		if err != nil {
@@ -62,7 +70,13 @@ func EnsureDefaultGlobal(ctx context.Context) (*GlobalLocation, error) {
 			if location.SiteURL != s.SiteURL || location.UserID != s.UserID || (s.OrganizationID != "" && location.OrganizationID != s.OrganizationID) {
 				return nil, i18n.Errorf("global.existing_location_mismatch")
 			}
-			return bindGlobalFor(ctx, s, location.ProjectID, location.DefaultEnvironment)
+			if environment == "" {
+				environment = location.DefaultEnvironment
+			}
+			return bindGlobalFor(ctx, s, location.ProjectID, environment)
+		}
+		if environment == "" {
+			environment = DefaultSharedEnvironment
 		}
 		if s.OrganizationID == "" {
 			return nil, i18n.Errorf("infisical.organization_required")
@@ -86,7 +100,7 @@ func EnsureDefaultGlobal(ctx context.Context) (*GlobalLocation, error) {
 				return nil, err
 			}
 		}
-		return bindGlobalFor(ctx, s, selected.ID, DefaultSharedEnvironment)
+		return bindGlobalFor(ctx, s, selected.ID, environment)
 	})
 }
 

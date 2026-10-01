@@ -14,7 +14,15 @@ one whoami
 
 浏览器会话保存在系统 keyring。新工作区可以先不绑定，正常创建和运行；需要托管变量时再登录。
 
-## 2. 设置变量
+## 2. 显式绑定 Infisical
+
+```bash
+one env bind
+```
+
+交互选择已有项目或创建新项目。脚本可以使用 `one env bind --create` 创建并绑定工作区项目，或通过 `one env bind --project-id PROJECT_ID` 绑定已有项目。Dashboard 中也可以选择已有项目，审阅后保存绑定。
+
+## 3. 设置变量
 
 在包含 `api` 项目的工作区中执行：
 
@@ -22,11 +30,11 @@ one whoami
 one env set DATABASE_URL -p api --env dev
 ```
 
-终端会隐藏输入值。首次保存变量在缺少绑定时初始化 Infisical 项目；如需使用已有项目，先在 Dashboard 工作区设置中选择该项目。
+终端会隐藏输入值。未绑定时直接报错并提示运行 `one env bind`；保存变量不会创建远程项目。
 
 工作区根目录省略 `-p` 可操作共享变量，交互式 `set` 提供作用域选择。脚本显式传入值，并使用 `--yes` 确认变更。
 
-## 3. 查看变量名
+## 4. 查看变量名
 
 ```bash
 one env list -p api --env dev
@@ -34,7 +42,7 @@ one env list -p api --env dev
 
 `list` 只显示名称。CLI 不输出密钥值；通过 `one exec` 将其注入命令。
 
-## 4. 运行项目
+## 5. 运行项目
 
 ```bash
 one exec -p api --env dev -- go run ./cmd/server

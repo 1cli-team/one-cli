@@ -3,12 +3,14 @@ package serve
 import (
 	"errors"
 	"net/http"
+	"strings"
 
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/application/execution"
 	manifestapp "github.com/torchstellar-team/one-cli/packages/cli/internal/application/manifest"
 	workspaceapp "github.com/torchstellar-team/one-cli/packages/cli/internal/application/workspace"
 	environmentmodule "github.com/torchstellar-team/one-cli/packages/cli/internal/modules/environment"
 	cliErrors "github.com/torchstellar-team/one-cli/packages/cli/internal/platform/errors"
+	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/i18n"
 )
 
 func registerWorkspaceMutateRoutes(mux *http.ServeMux, opts MuxOpts) {
@@ -20,6 +22,7 @@ func registerWorkspaceMutateRoutes(mux *http.ServeMux, opts MuxOpts) {
 		handleInitializeWorkspaceEnvironmentBackend(opts),
 	)
 	mux.HandleFunc("PUT /workspace/manifest", handlePutWorkspaceManifest(opts))
+	mux.HandleFunc("POST /workspace/environment/bind", handleBindWorkspaceEnvironment(opts))
 	mux.HandleFunc("POST /workspace/manifest/preview", handlePreviewWorkspaceManifest(opts))
 
 	// Keep the former repository-mutation paths stable for older Dashboard
@@ -29,6 +32,38 @@ func registerWorkspaceMutateRoutes(mux *http.ServeMux, opts MuxOpts) {
 		"PUT /workspace/projects/{name}/environment",
 	} {
 		mux.HandleFunc(pattern, handleRepositoryReadOnly())
+	}
+}
+
+func handleBindWorkspaceEnvironment(opts MuxOpts) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		setNoStore(w)
+		if opts.WorkspaceRoot == "" {
+			writeNoWorkspace(w)
+			return
+		}
+		var input struct {
+			Revision  string `json:"revision"`
+			ProjectID string `json:"projectId"`
+			Create    bool   `json:"create"`
+		}
+		if err := decodeJSON(r, &input); err != nil {
+			writeBadPayload(w, err.Error())
+			return
+		}
+		if strings.TrimSpace(input.Revision) == "" || (input.Create == (strings.TrimSpace(input.ProjectID) != "")) {
+			writeBadPayload(w, i18n.T("env.bind.request_invalid"))
+			return
+		}
+		binding, err := opts.EnvironmentService.BindWorkspace(r.Context(), environmentmodule.BindWorkspaceInput{
+			Scope: execution.NewScope(r.Context(), opts.WorkspaceRoot), Revision: input.Revision,
+			ProjectID: input.ProjectID, Create: input.Create,
+		})
+		if err != nil {
+			writeServiceError(w, err)
+			return
+		}
+		writeJSON(w, http.StatusOK, binding)
 	}
 }
 

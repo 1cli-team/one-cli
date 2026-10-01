@@ -52,7 +52,7 @@ a workflow that calls `one run ci` when needed.
 
 ## Infisical binding
 
-Creation does not contact Infisical or write an `env` binding. Sign in with `one login` when you need managed variables. Only the first variable save (`one env set` or Dashboard Save) initializes the binding. Listing, refreshing, reading, and deleting never create a remote project. A name conflict triggers a short suffix, and One displays the actual remote project name. The local workspace name stays unchanged. Later writes use the stored remote project ID. Execution without a binding uses the shell environment.
+Creation does not contact Infisical or write an `env` binding. When managed variables are needed, sign in with `one login`, then explicitly select or create storage with `one env bind`. Use `one env bind --create` to create and bind a workspace project, or `--project-id` to bind an existing project. Saving variables without a binding fails and never creates a project. A name conflict triggers a short suffix, and One displays the actual remote project name. The local workspace name stays unchanged. Later writes use the stored remote project ID. Execution without a binding uses the shell environment.
 
 ## Output
 

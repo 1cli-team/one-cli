@@ -111,6 +111,23 @@ func sessionLock(fn func() error) error {
 	defer lock.Unlock()
 	return fn()
 }
+
+// WithUnchanged serializes a local commit with login and logout. Remote work
+// must finish before calling it; fn must not acquire the session lock again.
+func WithUnchanged(expected *Session, fn func() error) error {
+	return sessionLock(func() error {
+		current, err := Require()
+		if err != nil {
+			return err
+		}
+		if expected == nil || current.SiteURL != expected.SiteURL || current.UserID != expected.UserID ||
+			current.OrganizationID != expected.OrganizationID || current.Token != expected.Token {
+			return cliErrors.New(cliErrors.INFISICAL_AUTH_FAILED, i18n.T("auth.session_changed"))
+		}
+		return fn()
+	})
+}
+
 func Logout() error {
 	return sessionLock(func() error {
 		path, e := ConfigPath("login-generation")

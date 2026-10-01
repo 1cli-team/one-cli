@@ -14,7 +14,15 @@ one whoami
 
 The browser session is stored in the system keyring. New workspaces can be created and run without a binding; sign in when managed variables are needed.
 
-## 2. Set a variable
+## 2. Explicitly bind Infisical
+
+```bash
+one env bind
+```
+
+Select an existing project or create a new one interactively. Scripts can use `one env bind --create` to create and bind a workspace project, or `one env bind --project-id PROJECT_ID` to bind an existing project. In Dashboard, select a project, then review and save the binding.
+
+## 3. Set a variable
 
 From a workspace containing a project named `api`:
 
@@ -22,11 +30,11 @@ From a workspace containing a project named `api`:
 one env set DATABASE_URL -p api --env dev
 ```
 
-The terminal asks for the value with hidden input. The first variable save initializes the Infisical project binding if absent. To use an existing project, select it in Dashboard workspace settings before running the command.
+The terminal asks for the value with hidden input. Without a binding, the command fails with guidance to run `one env bind`. Saving variables never creates a remote project.
 
 At the workspace root, omit `-p` for shared values; interactive `set` offers a scope selector. For scripts, pass a value explicitly and use `--yes` to confirm changes.
 
-## 3. Inspect names
+## 4. Inspect names
 
 ```bash
 one env list -p api --env dev
@@ -34,7 +42,7 @@ one env list -p api --env dev
 
 `list` shows names only. The CLI does not print secret values; use `one exec` to inject them into commands.
 
-## 4. Run the project
+## 5. Run the project
 
 ```bash
 one exec -p api --env dev -- go run ./cmd/server

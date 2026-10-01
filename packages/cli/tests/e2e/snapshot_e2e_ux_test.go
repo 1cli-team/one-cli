@@ -167,6 +167,16 @@ func TestSnapshot_E2E_EnvSummaryRequiresExplicitValue(t *testing.T) {
 		t.Fatalf("unexpected env summary: %v", summary)
 	}
 
+	_, stderr, code = runBinaryIn(t, ws, "env", "set", "TEST_KEY=private-value", "-o", "json")
+	if code == 0 {
+		t.Fatal("unbound workspace should reject variable writes")
+	}
+	unboundErr := mustParseJSON(t, firstJSONLine(stderr))
+	if unboundErr["error"].(map[string]any)["code"] != "INFISICAL_NOT_CONFIGURED" || !strings.Contains(stderr, "one env bind") || strings.Contains(stderr, "private-value") {
+		t.Fatalf("unexpected unbound-workspace error: %v", unboundErr)
+	}
+	setWorkspaceBindingFixture(t, ws)
+
 	_, stderr, code = runBinaryIn(t, ws, "env", "set", "TEST_KEY", "-o", "json")
 	if code == 0 {
 		t.Fatal("non-interactive hidden-value form should require an explicit value")

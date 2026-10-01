@@ -63,11 +63,7 @@ func newSetCmd(deps Dependencies) *cobra.Command {
 				Plan: plan, Key: key, Value: value, Overwrite: yes,
 			}
 			var result *environmentmodule.SetResult
-			progress := i18n.T("env.saving")
-			if plan.NeedsBinding {
-				progress = i18n.T("env.initializing")
-			}
-			err = prompt.Spin(progress, func() error {
+			err = prompt.Spin(i18n.T("env.saving"), func() error {
 				var setErr error
 				result, setErr = deps.Service.Set(cmd.Context(), input)
 				return setErr

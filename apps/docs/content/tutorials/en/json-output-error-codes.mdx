@@ -131,7 +131,7 @@ Handle errors relevant to your operation and preserve the original cause for oth
 | Workspace state | `NOT_ONE_PROJECT`, `WORKSPACE_NESTED_FORBIDDEN`, `MANIFEST_MISSING_OR_EMPTY` | "Run from the workspace root" or "Run `one create` first" |
 | Templates | `TEMPLATE_NOT_FOUND`, `TEMPLATE_REQUIRED`, `INVALID_NAME` | List available templates from `error.context` |
 | Tools and tasks | `MISE_INSTALL_FAILED`, `MISE_CONFIG_CONFLICT`, `RUNTIME_TASK_NOT_FOUND` | Inspect download or configuration errors; list tasks with `one run` |
-| Infisical | `INFISICAL_NOT_CONFIGURED`, `INFISICAL_AUTH_MISSING`, `INFISICAL_AUTH_FAILED` | Sign in and save the first variable to bind storage; sign in again for an expired session |
+| Infisical | `INFISICAL_NOT_CONFIGURED`, `INFISICAL_AUTH_MISSING`, `INFISICAL_AUTH_FAILED` | Sign in and explicitly bind storage with `one env bind`; sign in again for an expired session |
 | Variables | `ENV_UNKNOWN_ENVIRONMENT`, `ENV_SET_OVERWRITE_REQUIRED` | Select a declared environment, or confirm an overwrite with `--yes` |
 | Serve | `SERVE_PORT_BUSY`, `SERVE_BIND_FORBIDDEN` | Change the host or port flag, then restart |
 

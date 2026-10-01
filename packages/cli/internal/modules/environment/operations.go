@@ -2,7 +2,6 @@ package environment
 
 import (
 	"context"
-	"errors"
 	"strings"
 
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/adapters/env/infisical"
@@ -11,7 +10,6 @@ import (
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/core/workspace"
 	cliErrors "github.com/torchstellar-team/one-cli/packages/cli/internal/platform/errors"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/i18n"
-	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/output"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/ports/secrets"
 )
 
@@ -106,7 +104,6 @@ type PlanSetInput struct {
 
 type SetPlan struct {
 	Environment              string
-	NeedsBinding             bool
 	NeedsEnvironmentCreation bool
 	ProjectChoices           []string
 	resolution               resolution
@@ -127,12 +124,10 @@ func (s *Service) PlanSet(input PlanSetInput) (SetPlan, error) {
 	if err := validateWriteEnvironment(resolved); err != nil {
 		return SetPlan{}, err
 	}
-	config, err := infisical.LoadWorkspaceConfig(resolved.Workspace.Root())
-	if err != nil {
+	if err := requireInfisicalBackend(resolved); err != nil {
 		return SetPlan{}, err
 	}
 	plan := SetPlan{
-		NeedsBinding:             config == nil || strings.TrimSpace(config.ProjectID) == "",
 		Environment:              resolved.Scope.Environment(),
 		NeedsEnvironmentCreation: resolved.Scope.Environment() != "" && !contains(resolved.Declared, resolved.Scope.Environment()),
 		resolution:               resolved,
@@ -177,15 +172,15 @@ func (s *Service) Set(ctx context.Context, input SetInput) (*SetResult, error) {
 	if err := validateWriteEnvironment(resolution); err != nil {
 		return nil, err
 	}
-	// Validate selectors before authentication, local writes, or remote creation.
+	if err := requireInfisicalBackend(resolution); err != nil {
+		return nil, err
+	}
+	// Validate selectors before authentication or remote writes.
 	path, err := s.resolveInfisicalFolderPath(resolution.Workspace, nil, input.Plan.project)
 	if err != nil {
 		return nil, err
 	}
 	if input.RepositoryReadOnly {
-		if err := requireInfisicalBackend(resolution); err != nil {
-			return nil, err
-		}
 		if environment != "" && !contains(resolution.Declared, environment) {
 			return nil, cliErrors.New(cliErrors.ENV_UNKNOWN_ENVIRONMENT,
 				i18n.T("env.dashboard_environment_required"))
@@ -195,31 +190,23 @@ func (s *Service) Set(ctx context.Context, input SetInput) (*SetResult, error) {
 	if err != nil {
 		return nil, err
 	}
-	var binding *BindingResult
-	if !input.RepositoryReadOnly {
-		binding, err = s.ensureInfisicalBound(ctx, resolution.Workspace)
-		if err != nil {
-			return nil, err
-		}
-	}
-
 	result, err := infisical.Set(ctx, root, infisical.SetInput{
 		Env: environment, Path: path, Key: input.Key, Value: input.Value,
 		Overwrite: input.Overwrite, Cfg: config, Creds: credentials,
 	})
 	if result == nil || err != nil {
-		return nil, bindingFailure(err, binding)
+		return nil, err
 	}
 	createdEnvironment := false
 	if !input.RepositoryReadOnly && environment != "" && !contains(resolution.Declared, environment) {
 		if _, err := workspace.EnsureEnvironment(root, environment); err != nil {
-			return nil, bindingFailure(err, binding)
+			return nil, err
 		}
 		createdEnvironment = true
 	}
 
 	return &SetResult{
-		Schema: result.Schema, Environment: result.Env, Path: result.Path, Binding: binding,
+		Schema: result.Schema, Environment: result.Env, Path: result.Path,
 		Key: result.Key, Action: result.Action, CreatedEnvironment: createdEnvironment,
 	}, nil
 }
@@ -289,23 +276,4 @@ func validateWriteEnvironment(resolution resolution) error {
 		return err
 	}
 	return nil
-}
-
-// Preserve the specific failure and recovery while reporting a completed binding.
-func bindingFailure(err error, binding *BindingResult) error {
-	if err == nil || binding == nil || !binding.Created {
-		return err
-	}
-	var original *output.Error
-	if !errors.As(err, &original) {
-		original = cliErrors.New(cliErrors.ONE_CLI_ERROR, err.Error())
-	}
-	result := *original
-	result.Message = i18n.Tf("env.bound_before_failure", binding.ProjectName, binding.ProjectID, err)
-	ctx := make(map[string]any, len(original.Context)+3)
-	for key, value := range original.Context {
-		ctx[key] = value
-	}
-	ctx["project_id"], ctx["project_name"], ctx["partial_state"] = binding.ProjectID, binding.ProjectName, "project_bound"
-	return result.WithContext(ctx).WithCause(err)
 }

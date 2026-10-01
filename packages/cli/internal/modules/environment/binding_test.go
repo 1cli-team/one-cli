@@ -43,6 +43,7 @@ func TestReadsAndDeletesNeverInitializeOrModifyAnUnboundWorkspace(t *testing.T) 
 	scope := unboundScope(t)
 	before, _ := os.ReadFile(workspace.ManifestPath(scope.WorkingDirectory()))
 	for _, operation := range []func() error{
+		func() error { _, err := service.PlanSet(PlanSetInput{Scope: scope}); return err },
 		func() error { _, err := service.List(context.Background(), ListInput{Scope: scope}); return err },
 		func() error {
 			_, err := service.Get(context.Background(), GetInput{Scope: scope, Key: "TOKEN"})
@@ -73,6 +74,68 @@ func mockSession(t *testing.T, site string) {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { _ = keyring.Delete("one-cli.infisical", "session") })
+}
+
+func TestWorkspaceBindingRejectsStaleRevisionBeforeRemoteWork(t *testing.T) {
+	service := newTestService(t)
+	scope := unboundScope(t)
+	service.initInfisical = func(context.Context, string, infisical.InitInput) (*infisical.InitResult, error) {
+		t.Fatal("stale binding contacted Infisical")
+		return nil, nil
+	}
+	_, err := service.BindWorkspace(context.Background(), BindWorkspaceInput{Scope: scope, Create: true, Revision: "stale"})
+	var coded *output.Error
+	if !errors.As(err, &coded) || coded.Code != "SERVE_MANIFEST_CONFLICT" {
+		t.Fatalf("expected revision conflict, got %v", err)
+	}
+}
+
+func TestWorkspaceBindingPreservesExternalEditDuringCreation(t *testing.T) {
+	service := newTestService(t)
+	scope := unboundScope(t)
+	root := scope.WorkingDirectory()
+	_, revision, err := workspace.ReadManifestSnapshot(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	creates := 0
+	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		switch r.URL.Path {
+		case "/api/v2/workspace":
+			creates++
+			manifest, err := workspace.ReadManifest(root)
+			if err != nil {
+				t.Error(err)
+			}
+			manifest.Workspace.Name = "edited-during-creation"
+			if err := workspace.WriteManifest(root, manifest); err != nil {
+				t.Error(err)
+			}
+			fmt.Fprint(w, `{"project":{"id":"created","name":"demo"}}`)
+		case "/api/v1/workspace/created":
+			fmt.Fprint(w, `{"workspace":{"id":"created","name":"demo","type":"secret-manager","environments":[{"slug":"dev"}]}}`)
+		case "/api/v3/secrets/raw":
+			fmt.Fprint(w, `{"secrets":[]}`)
+		default:
+			t.Errorf("unexpected request: %s", r.URL)
+		}
+	}))
+	defer upstream.Close()
+	mockSession(t, upstream.URL)
+	_, err = service.BindWorkspace(context.Background(), BindWorkspaceInput{Scope: scope, Create: true, Revision: revision})
+	var coded *output.Error
+	if !errors.As(err, &coded) || coded.Code != "SERVE_MANIFEST_CONFLICT" || coded.Context["project_id"] != "created" {
+		t.Fatalf("expected recoverable created project, got %v", err)
+	}
+	manifest, current, err := workspace.ReadManifestSnapshot(root)
+	if err != nil || manifest.Workspace.Name != "edited-during-creation" || manifest.Env != nil {
+		t.Fatalf("binding overwrote external edits: %+v %v", manifest, err)
+	}
+	result, err := service.BindWorkspace(context.Background(), BindWorkspaceInput{Scope: scope, ProjectID: "created", Revision: current})
+	if err != nil || result.ProjectID != "created" || creates != 1 {
+		t.Fatalf("recovery created another project: %+v %v, creations=%d", result, err, creates)
+	}
 }
 
 func TestSameNamedWorkspacesCreateDistinctProjectsAndRetryUsesBinding(t *testing.T) {
@@ -134,24 +197,31 @@ func TestSameNamedWorkspacesCreateDistinctProjectsAndRetryUsesBinding(t *testing
 	scopes := []execution.Scope{unboundScope(t), unboundScope(t)}
 	ids := []string{}
 	for index, scope := range scopes {
+		binding, err := service.BindWorkspace(context.Background(), BindWorkspaceInput{Scope: scope, Create: true})
+		if err != nil {
+			t.Fatal(err)
+		}
 		plan, err := service.PlanSet(PlanSetInput{Scope: scope})
 		if err != nil {
 			t.Fatal(err)
 		}
-		result, err := service.Set(context.Background(), SetInput{Plan: plan, Key: "TOKEN", Value: fmt.Sprint(index)})
+		_, err = service.Set(context.Background(), SetInput{Plan: plan, Key: "TOKEN", Value: fmt.Sprint(index)})
 		if err != nil {
 			t.Fatal(err)
 		}
-		if result.Binding == nil || !result.Binding.Created {
-			t.Fatalf("binding=%+v", result.Binding)
+		if !binding.Created {
+			t.Fatalf("binding=%+v", binding)
 		}
-		ids = append(ids, result.Binding.ProjectID)
-		if index == 1 && (result.Binding.RequestedName != "demo" || !strings.HasPrefix(result.Binding.ProjectName, "demo-")) {
-			t.Fatalf("collision metadata=%+v", result.Binding)
+		ids = append(ids, binding.ProjectID)
+		if index == 1 && (binding.RequestedName != "demo" || !strings.HasPrefix(binding.ProjectName, "demo-")) {
+			t.Fatalf("collision metadata=%+v", binding)
 		}
-		again, err := service.Set(context.Background(), SetInput{Plan: plan, Key: "TOKEN", Value: fmt.Sprint(index)})
-		if err != nil || again.Binding.Created {
-			t.Fatalf("repeat save=%+v,%v", again, err)
+		again, err := service.BindWorkspace(context.Background(), BindWorkspaceInput{Scope: scope, Create: true})
+		if err != nil || again.Created || again.ProjectID != binding.ProjectID {
+			t.Fatalf("repeat binding=%+v,%v", again, err)
+		}
+		if _, err := service.Set(context.Background(), SetInput{Plan: plan, Key: "TOKEN", Value: fmt.Sprint(index)}); err != nil {
+			t.Fatal(err)
 		}
 	}
 	if ids[0] == ids[1] || len(names) != 2 || writes[ids[0]] != 1 || writes[ids[1]] != 1 {
@@ -184,31 +254,36 @@ func TestSameNamedWorkspacesCreateDistinctProjectsAndRetryUsesBinding(t *testing
 	failSave = true
 	mu.Unlock()
 	scope := unboundScope(t)
+	bound, err := service.BindWorkspace(context.Background(), BindWorkspaceInput{Scope: scope, Create: true})
+	if err != nil {
+		t.Fatal(err)
+	}
 	plan, err := service.PlanSet(PlanSetInput{Scope: scope})
 	if err != nil {
 		t.Fatal(err)
 	}
 	_, err = service.Set(context.Background(), SetInput{Plan: plan, Key: "TOKEN", Value: "third"})
 	var coded *output.Error
-	if !errors.As(err, &coded) || coded.Context["partial_state"] != "project_bound" {
-		t.Fatalf("partial failure=%v", err)
+	if !errors.As(err, &coded) {
+		t.Fatalf("variable write failure=%v", err)
+	}
+	manifest, readErr := workspace.ReadManifest(scope.WorkingDirectory())
+	if readErr != nil || manifest.Env.ProjectID != bound.ProjectID {
+		t.Fatalf("failed variable write changed binding: %+v %v", manifest, readErr)
 	}
 	mu.Lock()
 	failSave = false
 	mu.Unlock()
 	retried, err := service.Set(context.Background(), SetInput{Plan: plan, Key: "TOKEN", Value: "third"})
-	if err != nil || retried.Binding.Created || len(names) != 3 {
+	if err != nil || len(names) != 3 {
 		t.Fatalf("retry=%+v,%v; projects=%v", retried, err, names)
 	}
 }
 
 func TestBindingInitializationIsSerializedAndMalformedConfigIsRejected(t *testing.T) {
+	mockSession(t, "http://127.0.0.1:1")
 	service := newTestService(t)
 	scope := unboundScope(t)
-	active, err := execution.ResolveWorkspaceScope(scope)
-	if err != nil {
-		t.Fatal(err)
-	}
 	calls := 0
 	service.initInfisical = func(_ context.Context, root string, _ infisical.InitInput) (*infisical.InitResult, error) {
 		calls++
@@ -227,7 +302,7 @@ func TestBindingInitializationIsSerializedAndMalformedConfigIsRejected(t *testin
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			if _, err := service.ensureInfisicalBound(context.Background(), active); err != nil {
+			if _, err := service.BindWorkspace(context.Background(), BindWorkspaceInput{Scope: scope, Create: true}); err != nil {
 				t.Error(err)
 			}
 		}()
@@ -239,7 +314,7 @@ func TestBindingInitializationIsSerializedAndMalformedConfigIsRejected(t *testin
 	if err := os.WriteFile(workspace.ManifestPath(scope.WorkingDirectory()), []byte("broken"), 0644); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := service.ensureInfisicalBound(context.Background(), active); err == nil {
+	if _, err := service.BindWorkspace(context.Background(), BindWorkspaceInput{Scope: scope, Create: true}); err == nil {
 		t.Fatal("malformed config accepted")
 	}
 	if calls != 1 {

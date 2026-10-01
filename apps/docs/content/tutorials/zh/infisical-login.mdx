@@ -18,7 +18,7 @@ One 只保留一个 Infisical 账号。登录会打开浏览器，完成后把�
 
 ## 全局变量
 
-在 Infisical 中准备一个已有项目和环境，然后选择存放位置：
+运行 `one env bind --global` 自动创建或复用 `shared-credentials` 项目，并绑定 `dev` 环境。已有绑定会保留，无需手动填写项目 ID；也可以显式指定其他已有项目：
 
 ```bash
 one env bind --global

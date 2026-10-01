@@ -253,7 +253,8 @@
 		"deleteDescription": "This removes the value from the selected Infisical environment and folder. This action cannot be undone here.",
 		"deleteConfirmation": "Type {{key}} to confirm",
 		"notConfiguredTitle": "Environment variable storage is not set up",
-		"notConfiguredHint": "One will create and connect an Infisical project when you save the first variable.",
+		"notConfiguredHint": "Create storage for this workspace or select an existing project. Add variables after confirming the binding.",
+		"connectStorage": "Connect Infisical project",
 		"search": "Search secret keys",
 		"noMatches": "No matching secrets",
 		"scopeHint": "Changes here are saved directly to Infisical.",
@@ -596,5 +597,31 @@
 			"exited": "Exited",
 			"failed": "Failed"
 		}
+	},
+	"binding": {
+		"workspaceTitle": "Bind Infisical",
+		"globalTitle": "Bind shared credentials",
+		"change": "Change binding",
+		"unbound": "Infisical is not bound",
+		"workspaceHint": "Create storage for this workspace or select an existing project. Add variables after confirming the binding.",
+		"globalHint": "Create or reuse shared-credentials with default environment dev, or select an existing project.",
+		"method": "Binding method",
+		"automatic": "Create automatically",
+		"existing": "Select an existing project",
+		"current": "Current binding: {{name}}",
+		"target": "Target project: {{name}}",
+		"defaultEnvironment": "Default environment: dev",
+		"workspaceStorage": "Binding metadata is saved to one.manifest.toml. Variable values are stored in Infisical.",
+		"globalStorage": "Binding metadata is saved in local configuration. Credential values are stored in Infisical.",
+		"organizationRequired": "Select an organization and sign in again",
+		"devRequired": "Workspace projects must include a dev environment.",
+		"noProjects": "No projects are available. Switch to automatic creation.",
+		"pendingDraft": "This workspace has unsaved configuration. Save or discard it before binding a project.",
+		"conflict": "Workspace configuration has changed. Refresh and review the binding target before retrying.",
+		"success": "Bound to project {{name}}",
+		"binding": "Binding…",
+		"bindExisting": "Bind existing project",
+		"createAndBind": "Create and bind",
+		"prepareAndBind": "Create or reuse and bind"
 	}
 }

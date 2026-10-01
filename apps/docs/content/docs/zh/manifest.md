@@ -63,6 +63,6 @@ toolchain = "go"
 - Dashboard 从进程输出发现服务访问地址。
 - stream 或 TUI 输出模式由 One CLI 个人偏好控制。
 
-`one env set` 将变量值保存到 Infisical。首次使用会保存绑定，成功写入后可登记新的环境名，但不会把变量名写入 Manifest。Dashboard 发布绑定修改前展示实际 TOML，并通过文件 revision 拒绝过期草稿。项目设置展示约定，不再提供项目级环境覆盖开关。
+`one env bind` 显式保存 Infisical 绑定。`one env set` 要求已有绑定，将变量值保存到 Infisical；成功写入后可登记新的环境名，但不会把变量名写入 Manifest。Dashboard 发布绑定修改前展示实际 TOML，并通过文件 revision 拒绝过期草稿。项目设置展示约定，不再提供项目级环境覆盖开关。
 
 具体命令参阅[环境变量](/zh/docs/env-vars/)，项目登记参阅[添加项目](/zh/docs/add/)。

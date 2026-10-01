@@ -35,7 +35,7 @@ import {
 	sessionKey,
 	type GlobalLocation,
 } from "@/api/session";
-import { LocationPicker } from "./LocationPicker";
+import { InfisicalBindingDialog } from "@/features/infisical-binding/InfisicalBindingDialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
@@ -113,10 +113,10 @@ export function GlobalVariables() {
 				title={t("global.title")}
 				description={t("global.description")}
 				actions={
-					signedIn && current && !configure && !mismatched ? (
+					signedIn && current ? (
 						<Button variant="outline" onClick={() => setConfigure(true)}>
 							<Settings2 />
-							{t("global.location")}
+							{t("binding.change")}
 						</Button>
 					) : undefined
 				}
@@ -159,22 +159,29 @@ export function GlobalVariables() {
 			) : (
 				<>
 					{mismatched && <ErrorNotice>{t("global.mismatch")}</ErrorNotice>}
-					{!current || configure || mismatched ? (
-						<LocationPicker
-							key={`${session.data?.session.siteUrl}:${session.data?.session.userId}:${session.data?.session.organizationId}`}
-							initial={current ?? undefined}
-							onSaved={async () => {
-								await location.mutate();
-								setConfigure(false);
-							}}
-							onCancel={current && !mismatched ? () => setConfigure(false) : undefined}
-						/>
+					{!current || mismatched ? (
+						<Card>
+							<StatePanel
+								icon={KeyRound}
+								title={t("binding.unbound")}
+								description={t("binding.globalHint")}
+							>
+								<Button onClick={() => setConfigure(true)}>{t("binding.globalTitle")}</Button>
+							</StatePanel>
+						</Card>
 					) : (
 						<VariableBrowser
 							key={`${session.data?.session.userId}:${current.siteUrl}:${current.projectId}`}
 							location={current}
 						/>
 					)}
+					<InfisicalBindingDialog
+						key={`${session.data?.session.siteUrl}:${session.data?.session.userId}:${session.data?.session.organizationId}`}
+						open={configure}
+						onOpenChange={setConfigure}
+						scope="global"
+						initial={current ?? undefined}
+					/>
 				</>
 			)}
 		</div>
