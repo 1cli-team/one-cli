@@ -13,6 +13,7 @@ import (
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/core/workspace"
 	cliErrors "github.com/torchstellar-team/one-cli/packages/cli/internal/platform/errors"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/i18n"
+	session "github.com/torchstellar-team/one-cli/packages/cli/internal/platform/infisicalsession"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/output"
 )
 
@@ -35,6 +36,9 @@ type InitInput struct {
 	// Note: skipping verify also disables auto-create — the resolved
 	// projectId must be supplied explicitly.
 	SkipVerify bool
+	// Session pins all remote work to the caller's snapshot. When omitted, Init
+	// captures the current session once before contacting Infisical.
+	Session *session.Session
 	// BeforeWrite rejects stale Dashboard requests after remote work and before
 	// publishing any local changes. The caller holds the manifest lock.
 	BeforeWrite func() error
@@ -97,24 +101,30 @@ func Init(ctx context.Context, projectRoot string, in InitInput) (*InitResult, e
 
 	authStatus := "skipped"
 	created := false
+	if cfg.ProjectID == "" && in.SkipVerify {
+		return nil, cliErrors.New(cliErrors.INFISICAL_NOT_CONFIGURED,
+			i18n.T("infisical.init.verify_conflict"))
+	}
+	current := in.Session
+	var client *Client
+	if !in.SkipVerify {
+		if current == nil {
+			current, err = session.Require()
+			if err != nil {
+				return nil, err
+			}
+		}
+		cfg.SiteURL = current.SiteURL
+		client, err = NewClient(ctx, cfg, &Credentials{AccessToken: current.Token})
+		if err != nil {
+			return nil, err
+		}
+	}
 
 	// Auto-create branch (Branch 3). Triggered only when we still have no
 	// projectId AND we're allowed to talk to the network.
 	if cfg.ProjectID == "" {
-		if in.SkipVerify {
-			return nil, cliErrors.New(cliErrors.INFISICAL_NOT_CONFIGURED,
-				i18n.T("infisical.init.verify_conflict"))
-		}
 		desiredName, err := resolveProjectName(projectRoot, cfg.ProjectName)
-		if err != nil {
-			return nil, err
-		}
-		creds, siteURL, err := sessionCredentials()
-		if err != nil {
-			return nil, err
-		}
-		cfg.SiteURL = siteURL
-		client, err := NewClient(ctx, cfg, creds)
 		if err != nil {
 			return nil, err
 		}
@@ -126,50 +136,42 @@ func Init(ctx context.Context, projectRoot string, in InitInput) (*InitResult, e
 		cfg.ProjectName = resolvedName
 		authStatus = "created"
 		created = true
-		if in.BeforeWrite != nil {
-			if err := in.BeforeWrite(); err != nil {
-				return nil, bindingWriteError(projectRoot, cfg, err)
-			}
-		}
-
-		// Back-fill the manifest's workspace identity. New scaffolds set
-		// workspace at create time; older workspaces (or those that lost the
-		// field) get it written here so subsequent initialization calls and any
-		// future identity-aware command can rely on it.
-		if err := ensureManifestProject(projectRoot, resolvedName); err != nil {
-			return nil, bindingWriteError(projectRoot, cfg, err)
-		}
 	} else if !in.SkipVerify {
 		// Branch 1 / Branch-2-rewrite: validate the explicit / cached id.
-		creds, siteURL, err := sessionCredentials()
-		if err != nil {
-			return nil, err
-		}
-		cfg.SiteURL = siteURL
-		client, err := NewClient(ctx, cfg, creds)
-		if err != nil {
-			return nil, err
-		}
 		if err := client.VerifyProjectExists(cfg.DefaultEnvOrFallback()); err != nil {
 			return nil, err
 		}
 		authStatus = "verified"
 	}
-	if !created && in.BeforeWrite != nil {
-		if err := in.BeforeWrite(); err != nil {
-			return nil, err
+	publish := func() error {
+		if in.BeforeWrite != nil {
+			if err := in.BeforeWrite(); err != nil {
+				return err
+			}
 		}
+		// Back-fill older workspace identities only after both the revision and
+		// session have been validated, under the same local commit guard.
+		if created {
+			if err := ensureManifestProject(projectRoot, cfg.ProjectName); err != nil {
+				return err
+			}
+		}
+		configJSON, err := EncodeManifestConfig(cfg)
+		if err != nil {
+			return err
+		}
+		return workspace.InitWorkspaceEnv(projectRoot, workspace.EnvInit{
+			Kind:             workspace.EnvBackendInfisical,
+			ConfigJSON:       configJSON,
+			EnvironmentNames: cfg.Environments,
+		})
 	}
-
-	configJSON, err := EncodeManifestConfig(cfg)
+	if in.SkipVerify {
+		err = publish()
+	} else {
+		err = session.WithUnchanged(current, publish)
+	}
 	if err != nil {
-		return nil, err
-	}
-	if err := workspace.InitWorkspaceEnv(projectRoot, workspace.EnvInit{
-		Kind:             workspace.EnvBackendInfisical,
-		ConfigJSON:       configJSON,
-		EnvironmentNames: cfg.Environments,
-	}); err != nil {
 		if created {
 			return nil, bindingWriteError(projectRoot, cfg, err)
 		}
@@ -316,8 +318,11 @@ func dedupeStrings(in []string) []string {
 func bindingWriteError(root string, cfg *WorkspaceConfig, err error) error {
 	code := cliErrors.ONE_CLI_ERROR
 	var original *output.Error
-	if errors.As(err, &original) && original.Code == string(cliErrors.SERVE_MANIFEST_CONFLICT) {
-		code = cliErrors.SERVE_MANIFEST_CONFLICT
+	if errors.As(err, &original) {
+		switch original.Code {
+		case string(cliErrors.SERVE_MANIFEST_CONFLICT), string(cliErrors.INFISICAL_AUTH_MISSING), string(cliErrors.INFISICAL_AUTH_FAILED):
+			code = cliErrors.Code(original.Code)
+		}
 	}
 	return cliErrors.New(code,
 		i18n.Errorf("infisical.init.binding_write_failed", cfg.ProjectName, cfg.ProjectID, workspace.ManifestPath(root), err).Error()).

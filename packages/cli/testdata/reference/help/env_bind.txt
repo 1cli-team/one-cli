@@ -16,10 +16,10 @@ Sign in with one login.
 
 Run one env bind to select an existing project or create a workspace project interactively. Use --create to explicitly create and bind storage, or --project-id to bind an existing Secret Manager project. Existing bindings are preserved. Workspace bindings are saved to one.manifest.toml, with default environment dev. Without a binding, set fails instead of creating a project.
 
-Run one env bind --global to initialize shared credential storage. Without a saved binding, creates or reuses shared-credentials with default environment dev. No project selection or ID is required. Existing bindings are preserved; --env changes the default environment. Shared credential binding metadata is saved in local configuration.
+Run one env bind --global to initialize shared credential storage. Without a saved binding, creates or reuses shared-credentials with default environment dev. No project selection or ID is required. Existing bindings are preserved; --env changes the default environment. Shared credential binding metadata is saved in local configuration. --create is only available for workspace binding and cannot be combined with --global.
 
 COMMON OPTIONS
-  --create                 Create and bind the workspace Infisical project; preserve an existing binding
+  --create                 Workspace only: create and bind the Infisical project; preserve an existing binding
   --env <value>            Default environment
   --global                 Manage Infisical shared credentials, including outside a workspace
   -o, --output <value>     Output format: json | yaml | text (default: terminal-friendly text, JSON when piped)

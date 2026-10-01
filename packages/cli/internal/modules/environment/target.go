@@ -83,9 +83,13 @@ func (s *Service) BindWorkspace(ctx context.Context, input BindWorkspaceInput) (
 	if projectID == "" && !input.Create {
 		return nil, i18n.Errorf("env.bind.selection_required")
 	}
-	initInput := infisical.InitInput{ProjectID: projectID, BeforeWrite: checkRevision}
+	current, err := session.Require()
+	if err != nil {
+		return nil, err
+	}
+	initInput := infisical.InitInput{ProjectID: projectID, Session: current, BeforeWrite: checkRevision}
 	if projectID != "" {
-		project, err := infisical.Project(ctx, projectID)
+		project, err := infisical.ProjectWithSession(ctx, current, projectID)
 		if err != nil {
 			return nil, err
 		}

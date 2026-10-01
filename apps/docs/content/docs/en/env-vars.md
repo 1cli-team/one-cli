@@ -64,7 +64,7 @@ With an `[env.infisical]` binding, `one run` and `one exec` fetch variables for 
 
 ## Shared credentials
 
-Shared credentials are independent of workspaces. Run `one env bind --global` to create or reuse the default storage project while preserving any saved binding. Use `--project-id` to bind another existing project. Browse names with `one env list --global --env dev --path /`, and inject an explicit scope with `one exec --global --env dev --path /folder -- command`. See [login and shared credentials](/en/docs/login/).
+Shared credentials are independent of workspaces. Run `one env bind --global` to create or reuse the default storage project while preserving any saved binding. `--create` is only available for workspace binding and cannot be combined with `--global`. Use `--project-id` to bind another existing project. Browse names with `one env list --global --env dev --path /`, and inject an explicit scope with `one exec --global --env dev --path /folder -- command`. See [login and shared credentials](/en/docs/login/).
 
 ## Common errors
 
@@ -80,6 +80,8 @@ Shared credentials are independent of workspaces. Run `one env bind --global` to
 | `ENV_UNKNOWN_ENVIRONMENT` | Register the environment with `set`, or select an existing name |
 
 See [Manifest v2](/en/docs/manifest/) for the configuration structure and [the walkthrough](/en/tutorials/env-vars/) for a first setup.
+
+If the login changes during workspace binding, One refuses to save the configuration. If a remote project was already created, the error includes its ID; confirm the account and retry with `--project-id` to connect that project.
 
 ## Workspaces with the same name
 

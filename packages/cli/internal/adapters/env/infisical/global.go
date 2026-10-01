@@ -66,6 +66,12 @@ func Project(ctx context.Context, id string) (*RemoteProject, error) {
 	}
 	return projectFor(ctx, s, id)
 }
+
+// ProjectWithSession keeps metadata reads scoped to the binding's session.
+func ProjectWithSession(ctx context.Context, s *session.Session, id string) (*RemoteProject, error) {
+	return projectFor(ctx, s, id)
+}
+
 func projectFor(ctx context.Context, s *session.Session, id string) (*RemoteProject, error) {
 	if strings.TrimSpace(id) == "" {
 		return nil, i18n.Errorf("infisical.project_required")
@@ -137,20 +143,15 @@ func bindGlobalFor(ctx context.Context, s *session.Session, projectID, env strin
 	if e = validateRemoteEnvironment(p, env); e != nil {
 		return nil, e
 	}
-	current, e := session.Require()
-	if e != nil {
-		return nil, e
-	}
-	if current.SiteURL != s.SiteURL || current.UserID != s.UserID || current.OrganizationID != s.OrganizationID || current.Token != s.Token {
-		return nil, i18n.Errorf("global.session_changed")
-	}
 	location := &GlobalLocation{SiteURL: s.SiteURL, UserID: s.UserID, OrganizationID: p.OrganizationID, ProjectID: p.ID, ProjectName: p.Name, DefaultEnvironment: env}
 	file, e := session.ConfigPath("global-env.json")
 	if e != nil {
 		return nil, e
 	}
 	data, _ := json.MarshalIndent(location, "", "  ")
-	if e = fsutil.WriteAtomic(file, append(data, '\n'), 0600); e != nil {
+	if e = session.WithUnchanged(s, func() error {
+		return fsutil.WriteAtomic(file, append(data, '\n'), 0600)
+	}); e != nil {
 		return nil, e
 	}
 	return location, nil

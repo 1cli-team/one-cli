@@ -64,7 +64,7 @@ one run dev --env dev
 
 ## 全局共享凭据
 
-共享凭据独立于工作区。通过 `one env bind --global` 自动创建或复用默认存储项目，已有绑定会保留；也可以通过 `--project-id` 绑定其他已有项目。使用 `one env list --global --env dev --path /` 查看名称，使用 `one exec --global --env dev --path /folder -- command` 注入明确作用域。详见[登录与共享凭据](/zh/docs/login/)。
+共享凭据独立于工作区。通过 `one env bind --global` 自动创建或复用默认存储项目，已有绑定会保留；`--create` 仅用于工作区绑定，不能与 `--global` 同时使用；也可以通过 `--project-id` 绑定其他已有项目。使用 `one env list --global --env dev --path /` 查看名称，使用 `one exec --global --env dev --path /folder -- command` 注入明确作用域。详见[登录与共享凭据](/zh/docs/login/)。
 
 ## 常见错误
 
@@ -80,6 +80,8 @@ one run dev --env dev
 | `ENV_UNKNOWN_ENVIRONMENT` | 通过 `set` 登记新环境，或选择已有名称 |
 
 配置结构参阅 [Manifest v2](/zh/docs/manifest/)，初次配置参阅[操作教程](/zh/tutorials/env-vars/)。
+
+工作区绑定期间如果登录状态变化，One 会拒绝保存配置。若远程项目已创建，错误会返回项目 ID；确认账号后可通过 `--project-id` 重试连接该项目。
 
 ## 同名工作区
 

@@ -40,6 +40,9 @@ func configureGlobal(parent *cobra.Command, deps Dependencies) {
 		if create && id != "" {
 			return i18n.Errorf("env.bind.create_conflict")
 		}
+		if global && create {
+			return i18n.Errorf("env.bind.create_workspace_only")
+		}
 		if !global {
 			if c.Flags().Changed("path") {
 				return i18n.Errorf("env.path_global_required")

@@ -7,7 +7,10 @@ import (
 	"errors"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"path/filepath"
 	"strings"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -34,6 +37,7 @@ func TestGlobalBindCreatesReusesAndPreservesStorage(t *testing.T) {
 		{name: "create default", wantProject: "shared", wantEnv: "dev", wantCreates: 1},
 		{name: "reuse default", defaultExists: true, wantProject: "shared", wantEnv: "dev"},
 		{name: "preserve custom binding", savedCustom: true, wantProject: "custom", wantEnv: "prod"},
+		{name: "explicit false create preserves binding", args: []string{"--create=false"}, savedCustom: true, wantProject: "custom", wantEnv: "prod"},
 		{name: "create with requested environment", args: []string{"--env", "prod"}, wantProject: "shared", wantEnv: "prod", wantCreates: 1},
 		{name: "reuse with requested environment", defaultExists: true, args: []string{"--env", "prod"}, wantProject: "shared", wantEnv: "prod"},
 		{name: "change saved environment", savedCustom: true, args: []string{"--env", "dev"}, wantProject: "custom", wantEnv: "dev"},
@@ -141,6 +145,60 @@ func TestGlobalBindCreatesReusesAndPreservesStorage(t *testing.T) {
 				t.Fatal("saved or explicit binding searched for the default project")
 			}
 		})
+	}
+}
+
+func TestGlobalBindRejectsCreateBeforeRemoteAccessInBothLanguages(t *testing.T) {
+	t.Cleanup(func() { _ = i18n.Init(i18n.DefaultLocale) })
+	for _, locale := range []string{"zh-CN", "en-US"} {
+		for _, loggedIn := range []bool{false, true} {
+			t.Run(locale+"/"+map[bool]string{false: "logged out", true: "logged in"}[loggedIn], func(t *testing.T) {
+				keyring.MockInit()
+				t.Setenv("XDG_CONFIG_HOME", t.TempDir())
+				if err := i18n.Init(locale); err != nil {
+					t.Fatal(err)
+				}
+				var requests atomic.Int32
+				upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+					requests.Add(1)
+					http.Error(w, "unexpected remote access", http.StatusInternalServerError)
+				}))
+				defer upstream.Close()
+				if loggedIn {
+					raw, err := json.Marshal(session.Session{
+						Info: session.Info{SiteURL: upstream.URL, UserID: "user", OrganizationID: "org", ExpiresAt: time.Now().Add(time.Hour)}, Token: "test-token",
+					})
+					if err != nil {
+						t.Fatal(err)
+					}
+					if err := keyring.Set("one-cli.infisical", "session", string(raw)); err != nil {
+						t.Fatal(err)
+					}
+				}
+				path, err := session.ConfigPath("global-env.json")
+				if err != nil {
+					t.Fatal(err)
+				}
+				if err := os.MkdirAll(filepath.Dir(path), 0700); err != nil {
+					t.Fatal(err)
+				}
+				before := []byte(`{"siteUrl":"saved-site","projectId":"saved-project","defaultEnvironment":"prod"}`)
+				if err := os.WriteFile(path, before, 0600); err != nil {
+					t.Fatal(err)
+				}
+				cmd := Commands(Dependencies{})[0]
+				cmd.SilenceErrors, cmd.SilenceUsage = true, true
+				cmd.SetArgs([]string{"bind", "--global", "--create"})
+				err = cmd.Execute()
+				if err == nil || err.Error() != i18n.T("env.bind.create_workspace_only") || !strings.Contains(err.Error(), "one env bind --global") {
+					t.Fatalf("invalid flags did not return the localized recovery command: %v", err)
+				}
+				after, err := os.ReadFile(path)
+				if err != nil || !bytes.Equal(before, after) || requests.Load() != 0 {
+					t.Fatalf("invalid flags contacted Infisical or changed the binding: %v", err)
+				}
+			})
+		}
 	}
 }
 

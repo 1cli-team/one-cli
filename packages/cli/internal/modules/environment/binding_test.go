@@ -281,6 +281,7 @@ func TestSameNamedWorkspacesCreateDistinctProjectsAndRetryUsesBinding(t *testing
 }
 
 func TestBindingInitializationIsSerializedAndMalformedConfigIsRejected(t *testing.T) {
+	mockSession(t, "http://127.0.0.1:1")
 	service := newTestService(t)
 	scope := unboundScope(t)
 	calls := 0
