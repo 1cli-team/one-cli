@@ -61,7 +61,8 @@ func (s Installer) Install(ctx context.Context, root string, selections []Select
 				continue
 			}
 			seen[name] = true
-			if entry, ok := lock[name]; ok && !sameSource(entry, selection.Source) {
+			entry, locked := lock[name]
+			if locked && !sameSource(entry, selection.Source) {
 				warnings = append(warnings, i18n.Tf("skills.source_conflict", name, entry.Source))
 				continue
 			}
@@ -70,7 +71,18 @@ func (s Installer) Install(ctx context.Context, root string, selections []Select
 				warnings = append(warnings, i18n.Tf("skills.install_warning", name, err, "one skills list"))
 				continue
 			}
-			if !exists {
+			retryRegistration := false
+			if exists && !locked && selection.Source == "" && bundledSourceRef == "" {
+				// A failed development registration can leave the copied files
+				// without provenance. Retry only unchanged bundled copies so
+				// unregistered team instructions remain untouched.
+				retryRegistration, err = matchesBundledSkill(root, name)
+				if err != nil {
+					warnings = append(warnings, i18n.Tf("skills.install_warning", name, err, "one skills list"))
+					continue
+				}
+			}
+			if !exists || retryRegistration {
 				missing = append(missing, name)
 			}
 		}
@@ -188,6 +200,37 @@ func installed(root, name string) (bool, error) {
 		}
 	}
 	return false, nil
+}
+
+func matchesBundledSkill(root, name string) (bool, error) {
+	skill, err := fs.Sub(bundled.SkillsFS, bundled.SkillsRoot+"/"+name)
+	if err != nil {
+		return false, err
+	}
+	matches := true
+	err = fs.WalkDir(skill, ".", func(relative string, entry fs.DirEntry, err error) error {
+		if err != nil || entry.IsDir() {
+			return err
+		}
+		original, err := fs.ReadFile(skill, relative)
+		if err != nil {
+			return err
+		}
+		current, err := os.ReadFile(filepath.Join(root, ".agents", "skills", name, filepath.FromSlash(relative)))
+		if errors.Is(err, fs.ErrNotExist) {
+			matches = false
+			return fs.SkipAll
+		}
+		if err != nil {
+			return err
+		}
+		if !bytes.Equal(current, original) {
+			matches = false
+			return fs.SkipAll
+		}
+		return nil
+	})
+	return matches, err
 }
 
 // Development builds write only selected skills into their final project paths.

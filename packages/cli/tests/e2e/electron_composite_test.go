@@ -4,12 +4,21 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 )
 
 func TestE2E_ElectronCompositeNamingAndGroupPlans(t *testing.T) {
 	tmp := t.TempDir()
+	if runtime.GOOS != "windows" {
+		// Exercise the same directory-alias behavior as macOS's /var -> /private/var.
+		alias := filepath.Join(t.TempDir(), "linked-temp")
+		if err := os.Symlink(tmp, alias); err != nil {
+			t.Fatal(err)
+		}
+		tmp = alias
+	}
 	isolateHome(t, tmp)
 	root := bootstrapWorkspace(t, tmp, "workspace")
 	for _, name := range []string{"desktop", "electron"} {
@@ -32,8 +41,20 @@ func TestE2E_ElectronCompositeNamingAndGroupPlans(t *testing.T) {
 		}
 		for i, location := range []struct{ directory, suffix string }{{"apps", "-renderer"}, {"services", "-main"}, {"packages", "-preload"}} {
 			member := result.Projects[i]
-			if member.Name != name+location.suffix || member.Path != filepath.Join(root, location.directory, member.Name) {
-				t.Fatalf("member: %#v", member)
+			if member.Name != name+location.suffix {
+				t.Fatalf("member name=%q want %q", member.Name, name+location.suffix)
+			}
+			wantPath := filepath.Join(root, location.directory, member.Name)
+			wantDirectory, err := os.Stat(wantPath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			gotDirectory, err := os.Stat(member.Path)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !os.SameFile(wantDirectory, gotDirectory) {
+				t.Fatalf("member path=%q want %q", member.Path, wantPath)
 			}
 			if _, err := os.Stat(filepath.Join(member.Path, "package.json")); err != nil {
 				t.Fatal(err)

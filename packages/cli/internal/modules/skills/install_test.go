@@ -80,6 +80,85 @@ func TestInstallIsIdempotentAndPreservesUserChanges(t *testing.T) {
 	}
 }
 
+func TestBundledRegistrationRetriesAfterFailure(t *testing.T) {
+	for _, partial := range []bool{false, true} {
+		t.Run(map[bool]string{false: "unregistered", true: "partially registered"}[partial], func(t *testing.T) {
+			root := t.TempDir()
+			var calls, registrations [][]string
+			register := fakeInstall(t, &registrations)
+			installer := Installer{Run: func(ctx context.Context, directory string, args []string, in io.Reader, out, stderr io.Writer) error {
+				calls = append(calls, append([]string(nil), args...))
+				if len(calls) == 1 {
+					if partial {
+						first := append(append([]string(nil), args[:4]...), args[len(args)-4:]...)
+						if err := register(ctx, directory, first, in, out, stderr); err != nil {
+							t.Fatal(err)
+						}
+					}
+					return errors.New("registration interrupted")
+				}
+				return register(ctx, directory, args, in, out, stderr)
+			}}
+			plan := []Selection{{Names: []string{"one-cli", "one-electron"}}}
+			if warnings := installer.Install(context.Background(), root, plan); len(warnings) != 1 {
+				t.Fatalf("failure was not reported: %v", warnings)
+			}
+			want := plan[0].Names
+			if partial {
+				writeSkill(t, root, "one-cli", "team modifications")
+				want = []string{"one-electron"}
+			}
+			if warnings := installer.Install(context.Background(), root, plan); len(warnings) != 0 || len(calls) != 2 {
+				t.Fatalf("registration did not retry: warnings=%v calls=%v", warnings, calls)
+			}
+			if got := calls[1][3 : len(calls[1])-4]; !reflect.DeepEqual(got, want) {
+				t.Fatalf("retried skills=%v want %v", got, want)
+			}
+			lock, err := readLock(root)
+			if err != nil || len(lock) != 2 {
+				t.Fatalf("retry did not finish registration: %v %v", lock, err)
+			}
+			if partial {
+				content, err := os.ReadFile(filepath.Join(root, ".agents", "skills", "one-cli", "SKILL.md"))
+				if err != nil || string(content) != "team modifications" {
+					t.Fatalf("retry changed an installed skill: %q %v", content, err)
+				}
+			}
+			if warnings := installer.Install(context.Background(), root, plan); len(warnings) != 0 || len(calls) != 2 {
+				t.Fatalf("successful retry was not idempotent: %v %v", warnings, calls)
+			}
+		})
+	}
+}
+
+func TestUnregisteredTeamSkillsArePreserved(t *testing.T) {
+	for _, file := range []string{"SKILL.md", "references/layouts.md"} {
+		t.Run(file, func(t *testing.T) {
+			root := t.TempDir()
+			plan := []Selection{{Names: []string{"one-cli"}}}
+			failed := Installer{Run: func(context.Context, string, []string, io.Reader, io.Writer, io.Writer) error {
+				return errors.New("registration interrupted")
+			}}
+			if warnings := failed.Install(context.Background(), root, plan); len(warnings) != 1 {
+				t.Fatal(warnings)
+			}
+			path := filepath.Join(root, ".agents", "skills", "one-cli", filepath.FromSlash(file))
+			if err := os.WriteFile(path, []byte("team modifications"), 0o644); err != nil {
+				t.Fatal(err)
+			}
+			var calls [][]string
+			warnings := (Installer{Run: fakeInstall(t, &calls)}).Install(context.Background(), root, plan)
+			content, err := os.ReadFile(path)
+			if len(warnings) != 0 || len(calls) != 0 || err != nil || string(content) != "team modifications" {
+				t.Fatalf("unregistered team skill changed: %v %v %q %v", warnings, calls, content, err)
+			}
+			if _, err := os.Stat(filepath.Join(root, "skills-lock.json")); !os.IsNotExist(err) {
+				t.Fatalf("team skill was registered implicitly: %v", err)
+			}
+		})
+	}
+}
+
 func TestSourceConflictAndInvalidLockArePreserved(t *testing.T) {
 	for _, raw := range []string{`{"version":1,"skills":{"shadcn":{"source":"team/custom","sourceType":"github"}}}`, `{"version":99,"skills":{}}`, `invalid json`} {
 		root := t.TempDir()
