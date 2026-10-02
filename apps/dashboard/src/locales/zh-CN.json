@@ -509,7 +509,7 @@
 			},
 			"expo-mobile": {
 				"description": "基于 React Native 和 Expo，以同一项目开发 iOS 与 Android 移动应用。",
-				"stack": "Expo · React Native · NativeWind",
+				"stack": "Expo · React Native · StyleSheet",
 				"feature1": "Expo Router 导航与标签页面",
 				"feature2": "SWR、Zustand 与 MMKV 本地存储",
 				"feature3": "原生模块通过 Expo 开发构建运行"

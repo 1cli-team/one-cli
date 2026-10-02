@@ -1,5 +1,5 @@
-import { useColorScheme as useNativeColorScheme } from "react-native";
+import { useConfigStore } from "@/store/config";
 
 export function useColorScheme() {
-  return useNativeColorScheme() === "dark" ? "dark" : "light";
+  return useConfigStore((state) => state.theme);
 }

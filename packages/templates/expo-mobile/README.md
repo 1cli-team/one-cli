@@ -1,6 +1,7 @@
 # Mobile RN Expo Template
 
-基于 Expo Router 的 React Native 模板，适合快速起一个带路由、状态管理、SWR 请求缓存和 NativeWind 样式体系的移动端项目。
+基于 Expo Router 的 React Native 模板，预置路由、状态管理、SWR 请求缓存和 React Native 原生样式。
+An Expo Router starter with state management, SWR request caching, and native React Native styles.
 
 依赖以 Expo SDK 57 的兼容版本表为准；React、React Native、Reanimated 和 Worklets 需要随 SDK 一起升级。
 
@@ -15,7 +16,7 @@
 - React Native 0.86
 - React 19.2
 - TypeScript 7
-- NativeWind 4 + Tailwind CSS 3.4
+- React Native StyleSheet
 - SWR
 - Zustand
 - Axios
@@ -62,16 +63,15 @@ pnpm start
 
 - `expo-*`、React 和 React Native 相关原生依赖采用 SDK 57 推荐的兼容组合，不单独追随各包的最新主版本。
 - 导航组件和主题从 `expo-router/js-tabs`、`expo-router/react-navigation` 导入，使用 Router 内置的导航实现。
-- NativeWind 4 的样式运行时依赖 Tailwind CSS 3，当前使用该系列最新的 3.4.19；NativeWind 5 仍处于预览阶段。
 - Expo 的 Babel preset 和 Jest preset 使用 Babel 7、Jest 29，保留这两个兼容系列的最新版本。
 - `react-test-renderer` 与 React 固定为相同版本。
 - 模板使用 TypeScript 7.0.2。SDK 57 官方默认版本仍为 TypeScript 6，因此通过 `expo.install.exclude` 明确保留此版本差异，避免 `expo install --fix` 改回默认版本。
-- `tsconfig.json` 显式加载 Node 和 Jest 全局类型，`src/types/styles.d.ts` 声明 CSS 导入，适配 TypeScript 7 的类型发现与副作用导入检查。
+- `tsconfig.json` 显式加载 Node 和 Jest 全局类型，适配 TypeScript 7 的类型发现。
 - 使用 pnpm 更新依赖后运行 `pnpm dedupe`，合并兼容版本的原生模块，再执行下面的检查。
 - After updating dependencies with pnpm, run `pnpm dedupe` to deduplicate compatible native modules before running the checks below.
 - 升级后运行 `pnpm exec expo install --check`、`pnpm dlx expo-doctor`、`pnpm exec tsc --noEmit`、`pnpm exec expo export --platform web`，并在 Android/iOS development build 上验证原生功能。
 
-参考 [Expo 升级指南](https://docs.expo.dev/workflow/upgrading-expo-sdk-walkthrough/) 和 [NativeWind 安装说明](https://www.nativewind.dev/docs/getting-started/installation)。
+参考 [Expo 升级指南](https://docs.expo.dev/workflow/upgrading-expo-sdk-walkthrough/)。
 
 ## 常用命令
 
@@ -126,7 +126,10 @@ const { data } = useSWR(user ? [commonAuthApiKey, user] : null, () => commonAuth
 - `src/hooks/setup/swr.ts` 负责 SWR 全局配置
 - `src/lib/mmkv.ts` 提供本地持久化能力
 - `src/store/config.ts`、`src/store/session.ts`、`src/store/secure.ts` 分别承载普通状态、会话状态和敏感状态
-- `global.css` 与 `tailwind.config.js` 负责 NativeWind 样式基线
+- 页面与组件使用 `StyleSheet.create` 和 `style` 属性；共享颜色定义在 `src/constants/colors.ts`
+- Screens and components use `StyleSheet.create` and the `style` prop; shared colors live in `src/constants/colors.ts`.
+- `src/hooks/useColorScheme.ts` 读取持久化的主题设置，`useThemeColor` 为组件提供明暗主题颜色
+- `src/hooks/useColorScheme.ts` reads the persisted theme setting, and `useThemeColor` supplies light / dark colors.
 
 ## 说明
 

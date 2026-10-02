@@ -8,11 +8,8 @@ import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { initialWindowMetrics, SafeAreaProvider } from "react-native-safe-area-context";
 import { SWRConfig } from "swr";
 import { useSetup } from "@/hooks/setup";
-import { StyleSheet } from "react-native";
-import "../../global.css";
-import { useColorScheme } from "nativewind";
-import { configSelector, useConfigStore } from "@/store/config";
-import { useShallow } from "zustand/react/shallow";
+import { Appearance, Platform, StyleSheet } from "react-native";
+import { useColorScheme } from "@/hooks/useColorScheme";
 import { DarkTheme, DefaultTheme, ThemeProvider } from "expo-router/react-navigation";
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
@@ -20,9 +17,13 @@ SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
   const { swrConfig, loaded, onLayoutRootView } = useSetup();
-  const { theme } = useConfigStore(useShallow(configSelector));
-  const { setColorScheme } = useColorScheme();
-  setColorScheme(theme);
+  const theme = useColorScheme();
+
+  useEffect(() => {
+    if (Platform.OS !== "web") {
+      Appearance.setColorScheme(theme);
+    }
+  }, [theme]);
 
   useEffect(() => {
     if (loaded) {
@@ -43,7 +44,7 @@ export default function RootLayout() {
               <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
               <Stack.Screen name="+not-found" />
             </Stack>
-            <StatusBar style="auto" />
+            <StatusBar style={theme === "dark" ? "light" : "dark"} />
           </ThemeProvider>
         </GestureHandlerRootView>
       </SWRConfig>

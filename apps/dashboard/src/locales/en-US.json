@@ -509,7 +509,7 @@
 			},
 			"expo-mobile": {
 				"description": "Build iOS and Android apps with React Native and a shared Expo project.",
-				"stack": "Expo · React Native · NativeWind",
+				"stack": "Expo · React Native · StyleSheet",
 				"feature1": "Expo Router navigation and tab pages",
 				"feature2": "SWR, Zustand, and MMKV local storage",
 				"feature3": "Native modules use an Expo development build"

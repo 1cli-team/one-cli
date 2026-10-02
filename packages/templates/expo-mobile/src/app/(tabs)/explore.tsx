@@ -1,18 +1,40 @@
 import React from "react";
-import { View, Text } from "react-native";
+import { StyleSheet, View } from "react-native";
+import { ThemedText } from "@/components/ThemedText";
+import { ThemedView } from "@/components/ThemedView";
+import { useThemeColor } from "@/hooks/useThemeColor";
 
 export default function TabTwoScreen() {
+  const borderColor = useThemeColor({}, "border");
+
   return (
-    <View>
-      <Text>REM 方案</Text>
-      <View className="w-[1rem] bg-red-500 h-[1rem] dark:text-white text-sm p-[0.1rem]">
-        <Text className="text-red-800">Hello</Text>
+    <ThemedView style={styles.container}>
+      <ThemedText type="subtitle">原生样式 / Native styles</ThemedText>
+      <View style={[styles.example, { borderColor }]}>
+        <ThemedText style={styles.exampleText}>StyleSheet</ThemedText>
       </View>
 
-      <Text>px 方案</Text>
-      <View className="w-[100px] bg-red-500 h-[100px] dark:text-white text-sm p-[10px]">
-        <Text className="text-red-800">Hello</Text>
+      <ThemedText type="subtitle">内联样式 / Inline styles</ThemedText>
+      <View style={{ width: 100, height: 100, padding: 10, borderWidth: 1, borderColor }}>
+        <ThemedText style={styles.exampleText}>style</ThemedText>
       </View>
-    </View>
+    </ThemedView>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    padding: 24,
+    gap: 16,
+  },
+  example: {
+    width: 100,
+    height: 100,
+    padding: 10,
+    borderWidth: 1,
+  },
+  exampleText: {
+    fontSize: 14,
+  },
+});
