@@ -3,7 +3,7 @@
  *
  * Pre-wired infrastructure (don't recreate; import from these paths):
  *   - Theme:           src/components/theme-provider.tsx + theme-toggle.tsx (next-themes)
- *   - Toast:           sonner via src/components/ui/sonner.tsx (mounted in layout.tsx)
+ *   - Toast:           Base UI Toast via src/components/ui/toast.tsx (mounted in layout.tsx)
  *   - HTTP client:     src/lib/http.ts                         (axios instance)
  *   - Server data:     src/lib/server-data.ts                  (use in async server components)
  *   - API conventions: src/api/<feature>.ts — `key + pure function`, e.g. src/api/hello.ts

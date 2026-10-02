@@ -15,9 +15,9 @@ description: 13 个内置模板按用途分组的决策树。30 秒判断到底�
 
 ```
 要起一个后端 API ----------------→ nestjs-api / go-api
-要起一个前端 Web 项目 -------------→ nextjs-app / react-spa / astro-site
+要起一个前端 Web 项目 -------------→ nextjs-app / react-spa / nextjs-site
 要写一个跨项目复用的库 ----------→ ts-library / go-lib
-要起一个文档站 -------------------→ starlight-docs
+要起一个文档站 -------------------→ fumadocs-docs
 要起一个移动 app -----------------→ expo-mobile
 要起一个桌面 app -----------------→ electron-app
 ```
@@ -32,8 +32,8 @@ description: 13 个内置模板按用途分组的决策树。30 秒判断到底�
 | `go-api` | API | Go, Gin, GORM | 高吞吐 / 低内存 / 团队混语言 | - |
 | `nextjs-app` | Web | Next.js, SSR, React | 通用 Web 应用 / C 端内容站首选 | [源码](https://github.com/1cli-team/one-cli/tree/master/packages/templates/nextjs-app) |
 | `react-spa` | Web | Vite, React, SPA | 控制台 / 内部应用 / 无 SEO | [源码](https://github.com/1cli-team/one-cli/tree/master/packages/templates/react-spa) |
-| `astro-site` | Web | Astro, 静态优先 | 营销页 / 内容站 | [源码](https://github.com/1cli-team/one-cli/tree/master/packages/templates/astro-site) |
-| `starlight-docs` | Docs | Starlight, Astro | 文档站 / 知识库 | [源码](https://github.com/1cli-team/one-cli/tree/master/packages/templates/starlight-docs) |
+| `nextjs-site` | Web | Next.js, React, 静态导出 | 营销页 / 内容站 | [源码](https://github.com/1cli-team/one-cli/tree/master/packages/templates/nextjs-site) |
+| `fumadocs-docs` | Docs | Fumadocs, Next.js, Base UI | 文档站 / 知识库 | [源码](https://github.com/1cli-team/one-cli/tree/master/packages/templates/fumadocs-docs) |
 | `expo-mobile` | Mobile | Expo, React Native | iOS + Android 跨平台 | [源码](https://github.com/1cli-team/one-cli/tree/master/packages/templates/expo-mobile) |
 | `electron-app` | Desktop | Electron, React, Vite | 桌面 app（macOS / Windows / Linux） | [源码](https://github.com/1cli-team/one-cli/tree/master/packages/templates/electron-app) |
 | `ts-library` | Library | TS, 严格 semver | 跨项目复用的 TS 库 | - |
@@ -79,11 +79,11 @@ one add ts-library   --name shared
 
 ```bash
 one add go-api     --name api
-one add astro-site --name marketing
+one add nextjs-site --name marketing
 one add react-spa --name console
 ```
 
-为什么：Go API 顶住流量；Astro 静态化首页便于 SEO；React 控制台只给登录用户用，无 SEO 需求。
+为什么：Go API 顶住流量；Next.js 静态导出首页便于 SEO；React 控制台只给登录用户用，无 SEO 需求。
 
 ### 移动 + API
 
@@ -100,6 +100,15 @@ one add ts-library     --name shared
 跑 `one templates -o json` 看每个模板的完整描述，或者直接 `one add` 进入交互式选择 —— 选择器里会带上类别和一句话提示。
 
 或者直接选 [推荐组合](#推荐组合) 里的栈，先跑起来，跑不通再换。
+
+## 静态网站与文档模板
+
+`nextjs-site` 使用 Next.js、React、Tailwind CSS 和 shadcn Base UI，默认导出 `out/`。
+`fumadocs-docs` 使用 Next.js + Fumadocs 的 Base UI 实现，内置中英文 MDX、侧边栏、
+本页目录、代码高亮和浏览器静态搜索；同样部署 `out/`，无需 Node 服务。
+
+旧 ID `astro-site` 和 `starlight-docs` 已下架。新建项目分别使用 `nextjs-site` 和
+`fumadocs-docs`；旧 ID 会显示替代指引。已有项目的目录、依赖和任务保持原状。
 
 ## 模板依赖和 Electron 工作区
 
@@ -204,6 +213,7 @@ mise run check
 mise run check:templates
 ```
 
-`check:templates` 会安装 Electron 模板依赖，构建 Go/Electron 源码，检查全部
-Node 模板的生成格式，并在临时工作区构建两个不同名称的 Electron 项目和两个 Go 项目。
+`check:templates` 会安装模板依赖，构建 Go/Electron 源码与生成的 Next.js 静态站点，检查全部
+Node 模板的生成格式，并在临时工作区构建两个不同名称的 Electron 项目、两个 Go 项目与两种
+Next.js 静态站点，同时验证中英文页面和文档静态搜索。
 该检查需要网络及对应工具链；它不会修改开发者的全局语言偏好。

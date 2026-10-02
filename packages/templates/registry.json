@@ -36,34 +36,35 @@
       "domains": {}
     },
     {
-      "id": "astro-site",
-      "name": "Astro 静态网站",
-      "description": "前端静态站模板，适合官网、营销站与内容站点",
+      "id": "nextjs-site",
+      "name": "Next.js 静态网站",
+      "description": "Next.js + React 静态导出，适合官网、营销页与内容站点",
       "category": "frontend",
       "tags": [
         "web",
-        "astro",
+        "nextjs",
+        "react",
         "static",
         "frontend"
       ],
       "toolchain": "node",
-      "repo": "local:astro-site",
+      "repo": "local:nextjs-site",
       "domains": {}
     },
     {
-      "id": "starlight-docs",
-      "name": "Starlight 文档站点",
-      "description": "基于 Astro + Starlight 的文档项目模板",
+      "id": "fumadocs-docs",
+      "name": "Fumadocs 文档站点",
+      "description": "Next.js + Fumadocs + Base UI，支持中英文文档与静态搜索",
       "category": "frontend",
       "tags": [
         "web",
+        "nextjs",
+        "react",
         "docs",
-        "starlight",
-        "astro",
         "frontend"
       ],
       "toolchain": "node",
-      "repo": "local:starlight-docs",
+      "repo": "local:fumadocs-docs",
       "domains": {}
     },
     {

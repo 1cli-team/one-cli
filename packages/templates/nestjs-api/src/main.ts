@@ -25,9 +25,9 @@ async function bootstrap() {
     credentials: true,
   });
 
-  // Set global prefix for all routes except /metrics and /health
+  // Set global prefix for all routes except /health
   app.setGlobalPrefix("api/v1", {
-    exclude: ["/metrics", "/health"],
+    exclude: ["/health"],
   });
 
   // Global validation pipe

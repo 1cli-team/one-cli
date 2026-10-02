@@ -8,7 +8,7 @@ package template
 // Caller: `one add <tpl>` — after rendering the subproject, compare its
 // `compat` map against the existing workspace selection. Surface any
 // mismatch so the user knows e.g. "kustomize won't help your
-// starlight-docs subproject deploy".
+// fumadocs-docs subproject deploy".
 //
 // Semantics of compat[domain]:
 //

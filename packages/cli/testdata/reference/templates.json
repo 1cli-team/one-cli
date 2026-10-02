@@ -35,13 +35,14 @@
     },
     {
       "category": "frontend",
-      "description": "前端静态站模板，适合官网、营销站与内容站点",
-      "id": "astro-site",
-      "name": "Astro 静态网站",
-      "repo": "local:astro-site",
+      "description": "Next.js + React 静态导出，适合官网、营销页与内容站点",
+      "id": "nextjs-site",
+      "name": "Next.js 静态网站",
+      "repo": "local:nextjs-site",
       "tags": [
         "web",
-        "astro",
+        "nextjs",
+        "react",
         "static",
         "frontend"
       ],
@@ -49,15 +50,15 @@
     },
     {
       "category": "frontend",
-      "description": "基于 Astro + Starlight 的文档项目模板",
-      "id": "starlight-docs",
-      "name": "Starlight 文档站点",
-      "repo": "local:starlight-docs",
+      "description": "Next.js + Fumadocs + Base UI，支持中英文文档与静态搜索",
+      "id": "fumadocs-docs",
+      "name": "Fumadocs 文档站点",
+      "repo": "local:fumadocs-docs",
       "tags": [
         "web",
+        "nextjs",
+        "react",
         "docs",
-        "starlight",
-        "astro",
         "frontend"
       ],
       "toolchain": "node"

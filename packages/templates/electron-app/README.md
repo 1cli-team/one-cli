@@ -51,11 +51,19 @@ explicit user settings.
 ## UI / 界面
 
 renderer 使用 shadcn/ui 的 `base-nova`（Base UI）。在 renderer 项目目录运行
-`pnpm dlx shadcn@latest add dialog` 添加组件，保留 `components.json` 和 Sonner。
+`pnpm dlx shadcn@latest add dialog` 添加组件，保留 `components.json`。Toast 也使用 Base UI。
 
 The renderer uses shadcn/ui's `base-nova` (Base UI). Run
 `pnpm dlx shadcn@latest add dialog` in the renderer project to add components;
-`components.json` and Sonner remain available.
+`components.json` remains available, and toasts also use Base UI.
+
+Toast 示例 / Toast example:
+
+```tsx
+import { toast } from "@/components/ui/toast";
+
+toast.add({ title: "保存成功 / Saved", type: "success" });
+```
 
 ## 主进程和 IPC / Main process and IPC
 

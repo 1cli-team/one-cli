@@ -9,7 +9,7 @@
  *   - IPC events:       EVENT.update.downloadProgress, etc. — subscribe via electron.on()
  *   - Store:            useAppStore (zustand + immer) in src/store/app-store.ts
  *   - HTTP client:      src/lib/http.ts (axios fetcher, e.g. for SWR with public APIs)
- *   - Toast:            sonner via src/components/ui/sonner.tsx (mounted by parent shell)
+ *   - Toast:            Base UI Toast via src/components/ui/toast.tsx (mounted by parent shell)
  *   - Routing:          react-router; routes defined alongside App.tsx
  *   - Design tokens:    src/styles/globals.css (CSS vars, light + dark via shadcn convention)
  *

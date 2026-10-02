@@ -1,4 +1,4 @@
-import { toast as sonnerToast } from "sonner";
+import { toast as toastManager } from "@/components/ui/toast";
 
 // Toast提示类型
 export type ToastType = "success" | "info" | "warning" | "error" | "loading";
@@ -21,7 +21,6 @@ const DEFAULT_DURATION = 3;
 const generateToastId = () => Math.random().toString(36).substring(2, 15);
 
 const toDuration = (duration?: number) => {
-	if (duration === 0) return Number.POSITIVE_INFINITY;
 	return (duration ?? DEFAULT_DURATION) * 1000;
 };
 
@@ -29,12 +28,12 @@ const resolveToastId = (options?: ToastOptions) => options?.key ?? generateToast
 
 const toToastOptions = (options?: ToastOptions, key?: string) => ({
 	id: key ?? options?.key,
-	duration: toDuration(options?.duration),
-	className: options?.className,
+	timeout: toDuration(options?.duration),
+	data: { className: options?.className },
 	description: options?.description,
-	action: options?.onClick
+	actionProps: options?.onClick
 		? {
-				label: "查看",
+				children: "查看 / View",
 				onClick: options.onClick,
 			}
 		: undefined,
@@ -52,7 +51,7 @@ const Toast = {
 	 */
 	success(content: string, options?: ToastOptions) {
 		const key = resolveToastId(options);
-		sonnerToast.success(content, toToastOptions(options, key));
+		toastManager.add({ title: content, type: "success", ...toToastOptions(options, key) });
 		return key;
 	},
 
@@ -64,7 +63,7 @@ const Toast = {
 	 */
 	info(content: string, options?: ToastOptions) {
 		const key = resolveToastId(options);
-		sonnerToast.info(content, toToastOptions(options, key));
+		toastManager.add({ title: content, type: "info", ...toToastOptions(options, key) });
 		return key;
 	},
 
@@ -76,10 +75,11 @@ const Toast = {
 	 */
 	warning(content: string, options?: ToastOptions) {
 		const key = resolveToastId(options);
-		sonnerToast.warning(
-			content,
-			toToastOptions({ ...options, duration: options?.duration ?? 4 }, key),
-		);
+		toastManager.add({
+			title: content,
+			type: "warning",
+			...toToastOptions({ ...options, duration: options?.duration ?? 4 }, key),
+		});
 		return key;
 	},
 
@@ -91,10 +91,11 @@ const Toast = {
 	 */
 	error(content: string, options?: ToastOptions) {
 		const key = resolveToastId(options);
-		sonnerToast.error(
-			content,
-			toToastOptions({ ...options, duration: options?.duration ?? 5 }, key),
-		);
+		toastManager.add({
+			title: content,
+			type: "error",
+			...toToastOptions({ ...options, duration: options?.duration ?? 5 }, key),
+		});
 		return key;
 	},
 
@@ -106,10 +107,11 @@ const Toast = {
 	 */
 	loading(content: string, options?: ToastOptions) {
 		const key = resolveToastId(options);
-		sonnerToast.loading(
-			content,
-			toToastOptions({ ...options, duration: options?.duration ?? 0 }, key),
-		);
+		toastManager.add({
+			title: content,
+			type: "loading",
+			...toToastOptions({ ...options, duration: options?.duration ?? 0 }, key),
+		});
 		return key;
 	},
 
@@ -126,20 +128,11 @@ const Toast = {
 		type: ToastType = "info",
 		options?: Omit<ToastOptions, "key">,
 	) {
-		const config = toToastOptions(options, key);
-
-		switch (type) {
-			case "success":
-				return sonnerToast.success(content, config);
-			case "warning":
-				return sonnerToast.warning(content, config);
-			case "error":
-				return sonnerToast.error(content, config);
-			case "loading":
-				return sonnerToast.loading(content, toToastOptions({ ...options, duration: 0 }, key));
-			default:
-				return sonnerToast.info(content, config);
-		}
+		return toastManager.add({
+			title: content,
+			type,
+			...toToastOptions({ ...options, duration: type === "loading" ? 0 : options?.duration }, key),
+		});
 	},
 
 	/**
@@ -147,11 +140,7 @@ const Toast = {
 	 * @param key 消息key，不传则销毁所有
 	 */
 	destroy(key?: string) {
-		if (key) {
-			sonnerToast.dismiss(key);
-		} else {
-			sonnerToast.dismiss();
-		}
+		toastManager.close(key);
 	},
 
 	/**

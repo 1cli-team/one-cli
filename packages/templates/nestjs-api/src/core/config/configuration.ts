@@ -51,11 +51,6 @@ export const databaseConfig = registerAs("database", () => ({
 }));
 
 export const appConfig = registerAs("app", () => ({
-  responseInterceptorExcludePaths: [
-    "stream",
-    "yungouos/callback",
-    "/metrics",
-    "/health",
-  ],
-  authGuardExcludePaths: ["/metrics", "/health"],
+  responseInterceptorExcludePaths: ["stream", "yungouos/callback", "/health"],
+  authGuardExcludePaths: ["/health"],
 }));

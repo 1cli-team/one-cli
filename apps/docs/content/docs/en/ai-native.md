@@ -62,8 +62,8 @@ One CLI errors use a single envelope:
       "available_templates": [
         "nestjs-api",
         "go-api",
-        "astro-site",
-        "starlight-docs",
+        "nextjs-site",
+        "fumadocs-docs",
         "nextjs-app",
         "react-spa",
         "expo-mobile",

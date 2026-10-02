@@ -25,7 +25,7 @@ func TestCheckAllowedBackends_EmptySelection(t *testing.T) {
 
 func TestCheckAllowedBackends_OptedOut(t *testing.T) {
 	tpl := Template{
-		ID:     "starlight-docs",
+		ID:     "fumadocs-docs",
 		Compat: map[string][]string{"deploy": {"vercel", "s3"}},
 	}
 	// User explicitly skipped deploy at create time → "deploy" is not
@@ -62,7 +62,7 @@ func TestCheckAllowedBackends_Compatible(t *testing.T) {
 
 func TestCheckAllowedBackends_Incompatible(t *testing.T) {
 	tpl := Template{
-		ID:     "starlight-docs",
+		ID:     "fumadocs-docs",
 		Compat: map[string][]string{"deploy": {"vercel", "s3"}},
 	}
 	got := CheckAllowedBackends(tpl, map[string]string{"deploy": "deploy/k8s"}, "")
@@ -70,7 +70,7 @@ func TestCheckAllowedBackends_Incompatible(t *testing.T) {
 		t.Fatalf("expected 1 warning, got %d (%v)", len(got), got)
 	}
 	w := got[0]
-	if w.Domain != "deploy" || w.SelectedID != "deploy/k8s" || w.TemplateID != "starlight-docs" {
+	if w.Domain != "deploy" || w.SelectedID != "deploy/k8s" || w.TemplateID != "fumadocs-docs" {
 		t.Errorf("warning fields wrong: %+v", w)
 	}
 	if w.SubprojectName != "" {
@@ -84,7 +84,7 @@ func TestCheckAllowedBackends_Incompatible(t *testing.T) {
 
 func TestCheckAllowedBackends_WithSubprojectName(t *testing.T) {
 	tpl := Template{
-		ID:     "starlight-docs",
+		ID:     "fumadocs-docs",
 		Compat: map[string][]string{"deploy": {"vercel"}},
 	}
 	got := CheckAllowedBackends(tpl, map[string]string{"deploy": "deploy/k8s"}, "my-docs")

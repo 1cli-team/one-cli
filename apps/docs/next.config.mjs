@@ -10,7 +10,7 @@ const config = {
   // managed Next.js runtime, including the Image Optimization API.
   distDir: "dist",
   outputFileTracingRoot: workspaceRoot,
-  // 让生成的 URL 与 Starlight 的 trailing-slash 行为一致。
+  // 使用目录式 URL，便于静态托管与直接访问文档链接。
   trailingSlash: true,
   reactStrictMode: true,
   async redirects() {

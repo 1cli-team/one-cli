@@ -401,13 +401,13 @@
 				"name": "Go API 服务",
 				"description": "Gin + Gorm + Viper + Zap，适合 API 服务与业务后台"
 			},
-			"astro-site": {
-				"name": "Astro 静态网站",
-				"description": "前端静态站模板，适合官网、营销站与内容站点"
+			"nextjs-site": {
+				"name": "Next.js 静态网站",
+				"description": "Next.js + React 静态导出，适合官网、营销页与内容站点"
 			},
-			"starlight-docs": {
-				"name": "Starlight 文档站点",
-				"description": "基于 Astro + Starlight 的文档项目模板"
+			"fumadocs-docs": {
+				"name": "Fumadocs 文档站点",
+				"description": "Next.js + Fumadocs + Base UI，支持中英文文档与静态搜索"
 			},
 			"nextjs-app": {
 				"name": "Next.js 全栈应用",
@@ -472,7 +472,7 @@
 				"stack": "NestJS · TypeScript · Drizzle",
 				"feature1": "JWT 鉴权与用户业务模块",
 				"feature2": "Drizzle 数据访问与数据库迁移",
-				"feature3": "Swagger 文档、健康检查与监控指标"
+				"feature3": "Swagger 文档、健康检查与请求日志"
 			},
 			"go-api": {
 				"description": "构建 Go API 服务，按 HTTP 接口、业务逻辑和数据访问分层组织代码。",
@@ -481,19 +481,19 @@
 				"feature2": "Gorm 数据访问与 SQL 迁移",
 				"feature3": "OpenAPI 文档、配置管理与日志"
 			},
-			"astro-site": {
-				"description": "通过静态页面构建官网、营销落地页和内容站点，适合以内容展示为主的项目。",
-				"stack": "Astro · TypeScript · Tailwind CSS",
-				"feature1": "基于文件的页面路由与共享布局",
-				"feature2": "统一设计变量与 Tailwind 样式",
-				"feature3": "类型检查、代码检查与格式化"
+			"nextjs-site": {
+				"description": "Next.js + React 静态导出，适合官网、营销页与内容站点",
+				"stack": "Next.js · React · TypeScript · Base UI",
+				"feature1": "静态导出与中英文页面",
+				"feature2": "Base UI 组件、主题与设计令牌",
+				"feature3": "SEO 元数据与静态托管"
 			},
-			"starlight-docs": {
-				"description": "快速搭建产品文档、开发者指南和团队知识库，专注于文档内容的编写。",
-				"stack": "Astro · Starlight · Markdown / MDX",
-				"feature1": "Markdown 与 MDX 文档页面",
-				"feature2": "指南、参考文档与预设侧边栏",
-				"feature3": "可定制的文档主题样式"
+			"fumadocs-docs": {
+				"description": "Next.js + Fumadocs + Base UI，支持中英文文档与静态搜索",
+				"stack": "Next.js · Fumadocs · Base UI · MDX",
+				"feature1": "Markdown / MDX 与中英文内容",
+				"feature2": "侧边栏、本页目录与代码高亮",
+				"feature3": "浏览器静态搜索与语言切换"
 			},
 			"nextjs-app": {
 				"description": "构建需要服务端渲染、API 路由和搜索引擎友好页面的 Web 应用。",

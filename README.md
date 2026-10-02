@@ -66,9 +66,9 @@ One CLI includes starters for common product work:
 
 | Need | Starters |
 |---|---|
-| Web apps | Next.js, React SPA, Astro |
+| Web apps | Next.js, React SPA, Next.js static website |
 | Backends | NestJS API, Go API |
-| Documentation | Starlight docs |
+| Documentation | Next.js + Fumadocs Base UI + MDX |
 | Mobile apps | Expo |
 | Desktop apps | Electron |
 | Shared libraries | TypeScript library, Go library |

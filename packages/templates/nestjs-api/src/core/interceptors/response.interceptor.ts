@@ -1,5 +1,5 @@
 // 统一接口响应格式拦截器，将响应数据包装为 { code, message, data } 结构。
-// 通过配置 app.responseInterceptorExcludePaths 可排除特定路径（如 stream、metrics 等）。
+// 通过配置 app.responseInterceptorExcludePaths 可排除特定路径（如 stream、health 等）。
 import {
   type CallHandler,
   type ExecutionContext,

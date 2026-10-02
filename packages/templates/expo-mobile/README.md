@@ -20,7 +20,6 @@ An Expo Router starter with state management, SWR request caching, and native Re
 - SWR
 - Zustand
 - Axios
-- ahooks
 - React Native Reanimated 4 + Worklets
 - React Native Gesture Handler
 - react-native-mmkv 4 + Nitro Modules

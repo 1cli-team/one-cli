@@ -94,15 +94,9 @@ func handleCreateProject(opts MuxOpts) http.HandlerFunc {
 			writeServiceError(w, err)
 			return
 		}
-		var selected *template.Template
-		for i := range registry.Templates {
-			if registry.Templates[i].ID == body.TemplateID {
-				selected = &registry.Templates[i]
-				break
-			}
-		}
-		if selected == nil {
-			writeServiceError(w, cliErrors.New(cliErrors.TEMPLATE_NOT_FOUND, i18n.Tf("add.template_missing", body.TemplateID)))
+		selected, err := registry.Resolve(body.TemplateID)
+		if err != nil {
+			writeServiceError(w, err)
 			return
 		}
 		result, err := opts.CreationService.AddProject(r.Context(), opts.WorkspaceRoot, creationmodule.ProjectInput{

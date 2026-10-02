@@ -401,13 +401,13 @@
 				"name": "Go API service",
 				"description": "Gin + Gorm + Viper + Zap for APIs and backend services"
 			},
-			"astro-site": {
-				"name": "Astro static site",
-				"description": "Static site template for company, marketing, and content websites"
+			"nextjs-site": {
+				"name": "Next.js static site",
+				"description": "Next.js + React static export for company, marketing, and content websites"
 			},
-			"starlight-docs": {
-				"name": "Starlight documentation",
-				"description": "Documentation project based on Astro + Starlight"
+			"fumadocs-docs": {
+				"name": "Fumadocs documentation",
+				"description": "Next.js + Fumadocs + Base UI with English/Chinese docs and static search"
 			},
 			"nextjs-app": {
 				"name": "Next.js application",
@@ -472,7 +472,7 @@
 				"stack": "NestJS · TypeScript · Drizzle",
 				"feature1": "JWT authentication and user modules",
 				"feature2": "Drizzle data access and database migrations",
-				"feature3": "Swagger documentation, health checks, and metrics"
+				"feature3": "Swagger documentation, health checks, and request logging"
 			},
 			"go-api": {
 				"description": "Build Go APIs with separate HTTP, service, and data-access layers.",
@@ -481,19 +481,19 @@
 				"feature2": "Gorm data access and SQL migrations",
 				"feature3": "OpenAPI documentation, configuration, and logging"
 			},
-			"astro-site": {
-				"description": "Create company websites, landing pages, and content sites with static page output.",
-				"stack": "Astro · TypeScript · Tailwind CSS",
-				"feature1": "File-based pages and shared layouts",
-				"feature2": "Shared design tokens and Tailwind styles",
-				"feature3": "Type checking, linting, and formatting"
+			"nextjs-site": {
+				"description": "Next.js + React static export for company, marketing, and content websites",
+				"stack": "Next.js · React · TypeScript · Base UI",
+				"feature1": "Static export with English and Chinese pages",
+				"feature2": "Base UI components, themes, and design tokens",
+				"feature3": "SEO metadata and static hosting"
 			},
-			"starlight-docs": {
-				"description": "Publish product documentation, developer guides, and team knowledge bases.",
-				"stack": "Astro · Starlight · Markdown / MDX",
-				"feature1": "Markdown and MDX documentation pages",
-				"feature2": "Guide and reference sections with a configured sidebar",
-				"feature3": "Customizable documentation theme"
+			"fumadocs-docs": {
+				"description": "Next.js + Fumadocs + Base UI with English/Chinese docs and static search",
+				"stack": "Next.js · Fumadocs · Base UI · MDX",
+				"feature1": "Markdown / MDX in English and Chinese",
+				"feature2": "Sidebar, table of contents, and syntax highlighting",
+				"feature3": "Browser-side static search and language switching"
 			},
 			"nextjs-app": {
 				"description": "Build web applications with server rendering, API routes, and search-friendly pages.",

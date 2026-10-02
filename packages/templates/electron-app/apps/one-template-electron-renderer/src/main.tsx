@@ -2,7 +2,7 @@ import React, { StrictMode } from "react";
 import ReactDOM from "react-dom/client";
 import { BrowserRouter, Route, Routes } from "react-router-dom";
 import App from "@/App";
-import { Toaster } from "@/components/ui/sonner";
+import { Toaster } from "@/components/ui/toast";
 import AboutPage from "@/nodes/AboutPage";
 import HomePage from "@/nodes/HomePage";
 import "@/styles/globals.css";

@@ -4,7 +4,7 @@ import { useShallow } from "zustand/react/shallow";
 import useSWRMutation from "swr/mutation";
 import { login, loginKey } from "@/api/auth";
 import { LoginParams } from "@/types/auth";
-import { useMemoizedFn } from "ahooks";
+import { useCallback } from "react";
 
 export function useAuth() {
   const { isLogin, setIsLogin } = useConfigStore(useShallow(configSelector));
@@ -15,20 +15,23 @@ export function useAuth() {
     return login(arg);
   });
 
-  const userLogin = useMemoizedFn(async (code: string) => {
-    try {
-      const token = await trigger({ code });
-      setIsLogin(true);
-      setToken(token);
-    } catch (error) {
-      console.error(error);
-    }
-  });
+  const userLogin = useCallback(
+    async (code: string) => {
+      try {
+        const token = await trigger({ code });
+        setIsLogin(true);
+        setToken(token);
+      } catch (error) {
+        console.error(error);
+      }
+    },
+    [trigger, setIsLogin, setToken],
+  );
 
-  const userLogout = useMemoizedFn(() => {
+  const userLogout = useCallback(() => {
     setIsLogin(false);
     setToken(null);
-  });
+  }, [setIsLogin, setToken]);
 
   return {
     isLogin,

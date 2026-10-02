@@ -502,10 +502,6 @@
   "template.nestjs-api.description": "NestJS + TypeScript，适合 API 服务与业务后台",
   "template.go-api.name": "Go API 服务",
   "template.go-api.description": "Gin + Gorm + Viper + Zap，适合 API 服务与业务后台",
-  "template.astro-site.name": "Astro 静态网站",
-  "template.astro-site.description": "前端静态站模板，适合官网、营销站与内容站点",
-  "template.starlight-docs.name": "Starlight 文档站点",
-  "template.starlight-docs.description": "基于 Astro + Starlight 的文档项目模板",
   "template.nextjs-app.name": "Next.js 全栈应用",
   "template.nextjs-app.description": "Next.js 前端模板，适合 SEO 与首屏性能要求较高场景",
   "template.react-spa.name": "React 单页应用",
@@ -749,5 +745,10 @@
   "add.group_success": "项目组 %s 创建成功。",
   "add.group_projects": "已创建的项目：",
   "add.group_next_steps": "运行组合任务启动桌面应用：",
-  "add.group_member": "  %s：%s"
+  "add.group_member": "  %s：%s",
+  "template.nextjs-site.name": "Next.js 静态网站",
+  "template.nextjs-site.description": "Next.js + React 静态导出，适合官网、营销页与内容站点",
+  "template.fumadocs-docs.name": "Fumadocs 文档站点",
+  "template.fumadocs-docs.description": "Next.js + Fumadocs + Base UI，支持中英文文档与静态搜索",
+  "template.retired": "模板 %s 已被替换。请使用 one add %s --name <项目名>；已有项目的任务仍可运行。"
 }

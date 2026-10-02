@@ -12,7 +12,7 @@
 - SWR
 - Zustand
 - Axios
-- sonner
+- Base UI Toast
 - oxlint + oxfmt
 
 ## 目录结构
@@ -26,7 +26,7 @@ src/
 ├── hooks/               # 组合 hooks（如 toast）
 ├── lib/
 │   ├── http.ts          # Axios 客户端
-│   ├── toast.ts         # sonner 封装
+│   ├── toast.ts         # Base UI Toast 封装
 │   ├── utils.ts         # cn 等工具函数
 │   └── stores/          # Zustand stores
 ├── pages/               # 页面组件
@@ -97,12 +97,12 @@ const { data, isLoading } = useSWR(demoKey, getDemo);
 - `src/styles/index.css` 是样式入口，负责串联 reset、tokens 与 Tailwind
 - `src/styles/tokens.css` 是唯一 design token 源
 - `src/styles/tailwind.css` 负责 Tailwind v4 的 `@theme inline` 映射与全局样式层
-- `src/lib/toast.ts` 封装 `sonner`，避免页面直接依赖第三方通知 API
+- `src/lib/toast.ts` 封装 Base UI Toast，保留提示创建、更新和关闭接口 / Wraps Base UI Toast with create, update, and close helpers
 
 ### shadcn/ui Base UI
 
-模板使用 shadcn/ui 的 `base-nova` 风格，保留 `components.json` 和 Tailwind CSS 设计令牌。交互组件基于 `@base-ui/react`；Sonner 继续沿用模板的主题集成与通知接口。
-The template uses shadcn/ui's `base-nova` style with `components.json` and Tailwind CSS design tokens. Interactive components use `@base-ui/react`; Sonner keeps the template's theme integration and notification API.
+模板使用 shadcn/ui 的 `base-nova` 风格，保留 `components.json` 和 Tailwind CSS 设计令牌。交互组件与 Toast 均基于 `@base-ui/react`，提示沿用模板的主题颜色。
+The template uses shadcn/ui's `base-nova` style with `components.json` and Tailwind CSS design tokens. Interactive components and toasts use `@base-ui/react`; notifications retain the template's theme colors.
 
 在生成的项目目录添加组件 / Add components from the generated project directory:
 
@@ -114,6 +114,17 @@ pnpm dlx shadcn@latest add dialog
 
 ```tsx
 <Button render={<button type="button" />}>Submit</Button>
+```
+
+Toast 示例 / Toast example:
+
+```tsx
+import { toast } from "@/components/ui/toast";
+
+toast.add({
+  title: "保存成功 / Saved",
+  type: "success",
+});
 ```
 
 ## 说明

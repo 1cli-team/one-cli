@@ -90,18 +90,9 @@ func runAdd(cmd *cobra.Command, service *creationmodule.Service, positional stri
 		}
 		templateID = picked
 	}
-	entry := findTemplate(registry.Templates, templateID)
-	if entry == nil {
-		ids := make([]string, 0, len(registry.Templates))
-		for _, t := range registry.Templates {
-			ids = append(ids, t.ID)
-		}
-		return cliErrors.New(cliErrors.TEMPLATE_NOT_FOUND,
-			i18n.Tf("add.template_missing", templateID)).
-			WithContext(map[string]any{
-				"requested_template":  templateID,
-				"available_templates": ids,
-			})
+	entry, err := registry.Resolve(templateID)
+	if err != nil {
+		return err
 	}
 
 	name := strings.TrimSpace(flags.name)
@@ -227,15 +218,6 @@ func (r *addResult) RenderTTY(w io.Writer) {
 		return
 	}
 	fmt.Fprintf(w, "  one dev -p %s\n", r.SubprojectName)
-}
-
-func findTemplate(items []template.Template, id string) *template.Template {
-	for i := range items {
-		if items[i].ID == id {
-			return &items[i]
-		}
-	}
-	return nil
 }
 
 type projectKind string

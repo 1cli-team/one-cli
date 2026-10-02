@@ -22,7 +22,6 @@ graph TB
                 VP["ValidationPipe<br/>参数校验"]
                 AuthGuard["AuthGuard<br/>JWT 认证守卫"]
                 RI["ResponseInterceptor<br/>响应格式化"]
-                MI["MetricsInterceptor<br/>指标采集"]
                 LI["LoggingInterceptor<br/>请求日志"]
                 EF["HttpExceptionFilter<br/>异常过滤器"]
             end
@@ -32,7 +31,6 @@ graph TB
                 UserMod["User Module<br/>用户 CRUD"]
                 CommonMod["Common Module<br/>公共接口"]
                 HealthMod["Health Module<br/>健康检查"]
-                MetricsMod["Metrics Module<br/>Prometheus 指标"]
             end
 
             subgraph DAO["数据访问层"]
@@ -52,19 +50,17 @@ graph TB
 
     subgraph External["外部服务"]
         PG[("PostgreSQL 15<br/>数据库")]
-        Prom["Prometheus<br/>监控采集"]
     end
 
     Browser -->|"HTTP Request"| Main
     Main --> Swagger
 
-    Main --> VP --> AuthGuard --> RI --> MI --> LI --> EF
+    Main --> VP --> AuthGuard --> RI --> LI --> EF
 
     EF --> AuthMod
     EF --> UserMod
     EF --> CommonMod
     EF --> HealthMod
-    EF --> MetricsMod
 
     AuthMod --> JWT
     UserMod --> Repo
@@ -72,7 +68,6 @@ graph TB
     Repo --> Drizzle
 
     HealthMod --> Drizzle
-    MetricsMod --> Prom
 
     Drizzle --> PG
     Config -.->|"环境变量"| Drizzle
@@ -88,7 +83,6 @@ sequenceDiagram
     participant VP as ValidationPipe
     participant AG as AuthGuard
     participant RI as ResponseInterceptor
-    participant MI as MetricsInterceptor
     participant LI as LoggingInterceptor
     participant Ctrl as Controller
     participant Svc as Service
@@ -101,8 +95,7 @@ sequenceDiagram
     AG->>AG: 检查 @Public() 装饰器
     AG->>AG: 验证 JWT Token
     AG->>RI: 认证通过
-    RI->>MI: 进入拦截器链
-    MI->>LI: 记录开始时间
+    RI->>LI: 进入拦截器链
     LI->>Ctrl: 记录请求日志
     Ctrl->>Svc: 调用业务逻辑
     Svc->>Repo: 数据操作
@@ -111,8 +104,7 @@ sequenceDiagram
     Repo-->>Svc: 返回数据
     Svc-->>Ctrl: 返回结果
     Ctrl-->>LI: 原始响应
-    LI-->>MI: 记录响应日志
-    MI-->>RI: 记录请求耗时
+    LI-->>RI: 记录响应日志
     RI-->>C: { code: 0, message: "success", data: ... }
 ```
 
@@ -123,19 +115,16 @@ graph LR
     App["AppModule"] --> Config["ConfigModule<br/>(Global)"]
     App --> Drizzle["DrizzleModule<br/>(Global)"]
     App --> JWT["JwtModule<br/>(Global)"]
-    App --> Prom["PrometheusModule"]
     App --> Auth["AuthModule"]
     App --> User["UserModule"]
     App --> Common["CommonModule"]
     App --> Health["HealthModule"]
-    App --> Metrics["MetricsModule"]
 
     Auth -->|"APP_GUARD"| AuthGuard["AuthGuard"]
     Auth --> JWT
     User --> UserRepo["UserRepository"]
     UserRepo --> Drizzle
     Health --> Drizzle
-    Metrics --> Prom
 
     style App fill:#e1f5fe
     style Config fill:#fff9c4
@@ -174,7 +163,6 @@ nest-template/
     │   │   └── http-exception.filter.ts   # 全局异常过滤器
     │   └── interceptors/
     │       ├── response.interceptor.ts    # 响应格式统一 {code, message, data}
-    │       ├── metrics.interceptor.ts     # Prometheus 指标采集
     │       └── logging.interceptor.ts     # 请求/响应日志 (敏感字段脱敏)
     │
     ├── dao/                   # 数据访问层
@@ -199,12 +187,10 @@ nest-template/
     │   │   ├── common.module.ts
     │   │   ├── common.controller.ts
     │   │   └── common.service.ts
-    │   ├── health/            # 健康检查模块
-    │   │   ├── health.module.ts
-    │   │   ├── health.controller.ts # GET /health
-    │   │   └── health.service.ts
-    │   └── metrics/           # 指标模块
-    │       └── metrics.module.ts    # Prometheus 注册
+    │   └── health/            # 健康检查模块
+    │       ├── health.module.ts
+    │       ├── health.controller.ts # GET /health
+    │       └── health.service.ts
     │
     ├── service/               # 基础设施层
     │   └── drizzle/
@@ -230,7 +216,6 @@ nest-template/
 | ORM      | Drizzle ORM       | 类型安全的 SQL 查询构建器         |
 | 认证     | JWT               | 无状态令牌认证                    |
 | 文档     | Swagger / OpenAPI | 自动生成 API 文档                 |
-| 监控     | Prometheus        | 指标采集 (请求计数、耗时)         |
 | 日志     | Pino              | 高性能 JSON 日志，按级别/日期切分 |
 | 校验     | class-validator   | DTO 参数校验                      |
 | 部署     | Docker + PM2      | 多阶段构建，进程管理              |
@@ -288,7 +273,6 @@ ALLOWED_ORIGINS=http://localhost:3000,http://localhost:5173
 | `POST` | `/api/v1/common`        | 受保护接口示例  | 需要认证 |
 | `POST` | `/api/v1/common/public` | 公共接口示例    | 公开     |
 | `GET`  | `/health`               | 健康检查        | 公开     |
-| `GET`  | `/metrics`              | Prometheus 指标 | 公开     |
 
 ## 示例接口
 
@@ -372,7 +356,7 @@ export class UserRepository {
 
 ### 响应格式
 
-所有接口统一返回格式（`/metrics` 和 `/health` 除外）：
+所有接口统一返回格式（`/health` 除外）：
 
 ```json
 { "code": 0, "message": "success", "data": "..." }

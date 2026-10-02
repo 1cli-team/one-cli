@@ -31,8 +31,7 @@ describe("AuthGuard", () => {
           provide: ConfigService,
           useValue: {
             get: jest.fn((key: string) => {
-              if (key === "app.authGuardExcludePaths")
-                return ["/metrics", "/health"];
+              if (key === "app.authGuardExcludePaths") return ["/health"];
               if (key === "jwt.secret") return "test-secret";
               return undefined;
             }),
@@ -60,7 +59,7 @@ describe("AuthGuard", () => {
   }
 
   it("should allow access for exclude paths", async () => {
-    const context = createMockContext("/metrics");
+    const context = createMockContext("/health");
 
     const result = await guard.canActivate(context);
 

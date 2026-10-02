@@ -2,7 +2,6 @@ package http
 
 import (
 	"github.com/gin-gonic/gin"
-	"github.com/prometheus/client_golang/prometheus/promhttp"
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
 	"go.uber.org/zap"
@@ -34,13 +33,11 @@ func NewRouter(deps Dependencies) *Router {
 		middleware.RequestID(),
 		middleware.Recovery(deps.Logger),
 		middleware.Logger(deps.Logger),
-		middleware.Metrics(),
 		middleware.CORS(deps.Config),
 	)
 
 	engine.GET("/", deps.Handler.App.Info)
 	engine.GET("/health", deps.Handler.Health.Check)
-	engine.GET("/metrics", gin.WrapH(promhttp.Handler()))
 	engine.GET("/api/docs", deps.Handler.App.Docs)
 	engine.StaticFile("/api/openapi.yaml", "api/openapi.yaml")
 	engine.GET("/api/docs/*any", ginSwagger.WrapHandler(

@@ -15,9 +15,9 @@ Run [`one templates`](/en/docs/templates-cmd/) to list the templates in your ins
 
 ```text
 Need a backend API -----------------------> nestjs-api / go-api
-Need a browser-facing web project --------> nextjs-app / react-spa / astro-site
+Need a browser-facing web project --------> nextjs-app / react-spa / nextjs-site
 Need a reusable package ------------------> ts-library / go-lib
-Need a documentation site ----------------> starlight-docs
+Need a documentation site ----------------> fumadocs-docs
 Need a mobile app ------------------------> expo-mobile
 Need a desktop app -----------------------> electron-app
 ```
@@ -32,8 +32,8 @@ If unsure, ask one question: **how does the user consume this thing?** Browser -
 | `go-api` | API | Go, Gin, GORM | High-throughput / low-memory / mixed-language teams | - |
 | `nextjs-app` | Web | Next.js, SSR, React | Default consumer web or full-stack app | [Source](https://github.com/1cli-team/one-cli/tree/master/packages/templates/nextjs-app) |
 | `react-spa` | Web | Vite, React, SPA | Console / internal app / no SEO | [Source](https://github.com/1cli-team/one-cli/tree/master/packages/templates/react-spa) |
-| `astro-site` | Web | Astro, static-first | Marketing or content site | [Source](https://github.com/1cli-team/one-cli/tree/master/packages/templates/astro-site) |
-| `starlight-docs` | Docs | Starlight, Astro | Documentation site or knowledge base | [Source](https://github.com/1cli-team/one-cli/tree/master/packages/templates/starlight-docs) |
+| `nextjs-site` | Web | Next.js, React, static export | Marketing or content site | [Source](https://github.com/1cli-team/one-cli/tree/master/packages/templates/nextjs-site) |
+| `fumadocs-docs` | Docs | Fumadocs, Next.js, Base UI | Documentation site or knowledge base | [Source](https://github.com/1cli-team/one-cli/tree/master/packages/templates/fumadocs-docs) |
 | `expo-mobile` | Mobile | Expo, React Native | Cross-platform iOS + Android | [Source](https://github.com/1cli-team/one-cli/tree/master/packages/templates/expo-mobile) |
 | `electron-app` | Desktop | Electron, React, Vite | Desktop app for macOS / Windows / Linux | [Source](https://github.com/1cli-team/one-cli/tree/master/packages/templates/electron-app) |
 | `ts-library` | Library | TS, strict semver | Reusable TypeScript package | - |
@@ -79,11 +79,11 @@ Why: TypeScript across the stack lets `shared` be used by both API and web. Next
 
 ```bash
 one add go-api --name api
-one add astro-site --name marketing
+one add nextjs-site --name marketing
 one add react-spa --name console
 ```
 
-Why: Go handles traffic; Astro keeps the public site fast and SEO-friendly; React SPA works for an authenticated console.
+Why: Go handles traffic; Next.js static export serves the public site with SEO metadata; React SPA works for an authenticated console.
 
 ### Mobile + API
 
@@ -100,6 +100,17 @@ one add ts-library --name shared
 Run `one templates -o json` for full template metadata, or run `one add` interactively. The picker includes category and one-line descriptions.
 
 You can also pick one of the recommended combos above, get it running, and change course once you know more.
+
+## Static website and documentation templates
+
+`nextjs-site` uses Next.js, React, Tailwind CSS, and shadcn Base UI and exports `out/`.
+`fumadocs-docs` uses the Base UI implementation of Next.js + Fumadocs with English/Chinese MDX,
+sidebar navigation, a table of contents, syntax highlighting, and browser-side static search.
+Deploy its `out/` directory without a Node server.
+
+The retired IDs `astro-site` and `starlight-docs` now provide replacement guidance.
+Use `nextjs-site` and `fumadocs-docs` for new projects. Existing project directories,
+dependencies, and tasks stay as they are.
 
 ## Template dependencies and Electron workspaces
 
@@ -216,8 +227,9 @@ mise run check
 mise run check:templates
 ```
 
-`check:templates` installs the Electron template dependencies, builds the Go and
+`check:templates` installs the template dependencies, builds the Go and
 Electron sources, checks generated formatting for every Node template, and
-builds two differently named Electron projects plus two Go projects in a
-temporary workspace. It requires network access and the corresponding
+builds two differently named Electron projects, two Go projects, and both new
+Next.js static sites in a temporary workspace. It checks bilingual pages and
+static documentation search. It requires network access and the corresponding
 toolchains, and does not change the developer's global language preference.

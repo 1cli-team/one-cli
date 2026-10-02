@@ -502,10 +502,6 @@
   "template.nestjs-api.description": "NestJS + TypeScript for APIs and backend services",
   "template.go-api.name": "Go API service",
   "template.go-api.description": "Gin + Gorm + Viper + Zap for APIs and backend services",
-  "template.astro-site.name": "Astro static site",
-  "template.astro-site.description": "Static site template for company, marketing, and content websites",
-  "template.starlight-docs.name": "Starlight documentation",
-  "template.starlight-docs.description": "Documentation project based on Astro + Starlight",
   "template.nextjs-app.name": "Next.js application",
   "template.nextjs-app.description": "Next.js application for SEO and fast initial page loads",
   "template.react-spa.name": "React single-page application",
@@ -749,5 +745,10 @@
   "add.group_success": "Project group %s created successfully.",
   "add.group_projects": "Created projects:",
   "add.group_next_steps": "Run the group task to start the desktop application:",
-  "add.group_member": "  %s: %s"
+  "add.group_member": "  %s: %s",
+  "template.nextjs-site.name": "Next.js static site",
+  "template.nextjs-site.description": "Next.js + React static export for company, marketing, and content websites",
+  "template.fumadocs-docs.name": "Fumadocs documentation",
+  "template.fumadocs-docs.description": "Next.js + Fumadocs + Base UI with English/Chinese docs and static search",
+  "template.retired": "Template %s has been replaced. Use one add %s --name <project-name>; existing project tasks can still run."
 }

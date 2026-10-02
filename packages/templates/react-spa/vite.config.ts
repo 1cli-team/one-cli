@@ -30,7 +30,6 @@ export default defineConfig({
 								if (
 									id.includes("@base-ui") ||
 									id.includes("lucide-react") ||
-									id.includes("sonner") ||
 									id.includes("class-variance-authority")
 								) {
 									return "ui";

@@ -17,7 +17,7 @@ describe("ResponseInterceptor", () => {
           useValue: {
             get: jest.fn((key: string) => {
               if (key === "app.responseInterceptorExcludePaths") {
-                return ["/metrics", "/health", "stream"];
+                return ["/health", "stream"];
               }
               return undefined;
             }),
@@ -56,7 +56,7 @@ describe("ResponseInterceptor", () => {
   });
 
   it("should pass through for exact exclude path", async () => {
-    const context = createMockContext("/metrics");
+    const context = createMockContext("/health");
     const testData = { metric: "value" };
     const handler = createMockCallHandler(testData);
 
@@ -78,7 +78,7 @@ describe("ResponseInterceptor", () => {
   it("should use empty array when config returns undefined", async () => {
     jest.spyOn(configService, "get").mockReturnValue(undefined);
 
-    const context = createMockContext("/metrics");
+    const context = createMockContext("/health");
     const handler = createMockCallHandler("data");
 
     const result = await lastValueFrom(interceptor.intercept(context, handler));

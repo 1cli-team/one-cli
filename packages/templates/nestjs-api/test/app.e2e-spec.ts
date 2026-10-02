@@ -28,4 +28,18 @@ describe("AppController (e2e)", () => {
         expect(res.body.data).toHaveProperty("version");
       });
   });
+
+  it("/health (GET)", () => {
+    return request(app.getHttpServer())
+      .get("/health")
+      .expect(200)
+      .expect((res) => {
+        expect(res.body.status).toBe("ok");
+        expect(res.body.database.status).toBe("connected");
+      });
+  });
+
+  it("/metrics (GET) is unavailable", () => {
+    return request(app.getHttpServer()).get("/metrics").expect(404);
+  });
 });

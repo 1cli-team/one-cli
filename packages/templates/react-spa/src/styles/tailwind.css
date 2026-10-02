@@ -102,56 +102,50 @@
 }
 
 @layer components {
-	[data-sonner-toaster] {
-		--normal-bg: transparent;
-		--normal-border: transparent;
-		--normal-text: inherit;
-	}
-
-	[data-sonner-toast] {
-		background: var(--toast-bg) !important;
-		border: 1px solid var(--toast-border) !important;
-		color: var(--toast-text) !important;
+	[data-slot="toast"] {
+		background: var(--toast-bg, var(--popover)) !important;
+		border: 1px solid var(--toast-border, var(--border)) !important;
+		color: var(--toast-text, var(--popover-foreground)) !important;
 		box-shadow: 0 22px 40px -24px rgb(15 23 42 / 0.45) !important;
 	}
 
-	[data-sonner-toast][data-type="success"] {
+	[data-slot="toast"][data-type="success"] {
 		--toast-bg: var(--success-surface);
 		--toast-border: var(--success-border);
 		--toast-text: var(--success-foreground);
 	}
 
-	[data-sonner-toast][data-type="error"] {
+	[data-slot="toast"][data-type="error"] {
 		--toast-bg: var(--error-surface);
 		--toast-border: var(--error-border);
 		--toast-text: var(--error-foreground);
 	}
 
-	[data-sonner-toast][data-type="warning"] {
+	[data-slot="toast"][data-type="warning"] {
 		--toast-bg: var(--warning-surface);
 		--toast-border: var(--warning-border);
 		--toast-text: var(--warning-foreground);
 	}
 
-	[data-sonner-toast][data-type="info"] {
+	[data-slot="toast"][data-type="info"] {
 		--toast-bg: var(--info-surface);
 		--toast-border: var(--info-border);
 		--toast-text: var(--info-foreground);
 	}
 
-	[data-sonner-toast] [data-title] {
-		color: var(--toast-text) !important;
+	[data-slot="toast"] [data-slot="toast-title"] {
+		color: var(--toast-text, var(--popover-foreground)) !important;
 		font-weight: 600;
 	}
 
-	[data-sonner-toast] [data-description] {
-		color: var(--toast-text) !important;
+	[data-slot="toast"] [data-slot="toast-description"] {
+		color: var(--toast-text, var(--popover-foreground)) !important;
 		opacity: 0.8;
 	}
 
-	[data-sonner-toast] [data-button] {
-		background: var(--toast-border) !important;
-		border: none !important;
-		color: white !important;
+	[data-slot="toast"] [data-slot="toast-action"] {
+		background: var(--toast-bg, var(--popover)) !important;
+		border: 1px solid var(--toast-border, var(--border)) !important;
+		color: var(--toast-text, var(--popover-foreground)) !important;
 	}
 }

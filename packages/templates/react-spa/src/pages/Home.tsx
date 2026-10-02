@@ -3,7 +3,7 @@
  *
  * Pre-wired infrastructure (don't recreate; import from these paths):
  *   - Theme store:   src/lib/stores/theme.ts        (zustand, toggles `data-theme`)
- *   - Toast:         src/hooks/useToast.ts          (sonner-backed, see src/lib/toast.ts)
+ *   - Toast:         src/hooks/useToast.ts          (Base UI Toast-backed, see src/lib/toast.ts)
  *   - HTTP client:   src/lib/http.ts                (axios instance)
  *   - SWR provider:  src/providers/SWRProvider.tsx  (mounted in src/main.tsx)
  *   - Theme provider: src/providers/ThemeProvider.tsx
