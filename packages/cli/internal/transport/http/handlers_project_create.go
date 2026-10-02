@@ -19,6 +19,11 @@ type projectTemplate struct {
 	Category    template.Category  `json:"category"`
 	Directory   string             `json:"directory"`
 	Toolchain   template.Toolchain `json:"toolchain"`
+	Projects    []projectLocation  `json:"projects,omitempty"`
+}
+type projectLocation struct {
+	Directory string `json:"directory"`
+	Suffix    string `json:"suffix"`
 }
 
 func handleProjectTemplates() http.HandlerFunc {
@@ -33,9 +38,19 @@ func handleProjectTemplates() http.HandlerFunc {
 			template.CategoryFrontend: "apps", template.CategoryBackend: "services", template.CategoryLibrary: "packages",
 		}
 		for _, entry := range registry.Templates {
+			layouts, err := template.ProjectLayouts(strings.TrimPrefix(entry.Repo, template.LocalTemplatePrefix))
+			if err != nil {
+				writeServiceError(w, err)
+				return
+			}
+			var locations []projectLocation
+			for _, layout := range layouts {
+				locations = append(locations, projectLocation{Directory: directories[layout.Category], Suffix: layout.Suffix})
+			}
 			templates = append(templates, projectTemplate{
 				ID: entry.ID, Name: entry.DisplayName(), Description: entry.DisplayDescription(),
 				Category: entry.Category, Directory: directories[entry.Category], Toolchain: entry.Toolchain,
+				Projects: locations,
 			})
 		}
 		writeJSON(w, http.StatusOK, map[string]any{"templates": templates})
@@ -45,13 +60,15 @@ func handleProjectTemplates() http.HandlerFunc {
 type createProjectRequest struct {
 	Name       string `json:"name"`
 	TemplateID string `json:"templateId"`
+	SkipSkills bool   `json:"skipSkills,omitempty"`
 }
 
 type createProjectResponse struct {
-	Name        string   `json:"name"`
-	RelativeDir string   `json:"relativeDir"`
-	TemplateID  string   `json:"templateId"`
-	Warnings    []string `json:"warnings,omitempty"`
+	Name        string                  `json:"name"`
+	RelativeDir string                  `json:"relativeDir"`
+	TemplateID  string                  `json:"templateId"`
+	Warnings    []string                `json:"warnings,omitempty"`
+	Projects    []createProjectResponse `json:"projects,omitempty"`
 }
 
 // The registry gateway resolves the selected Workspace; the request only
@@ -78,19 +95,13 @@ func handleCreateProject(opts MuxOpts) http.HandlerFunc {
 			writeServiceError(w, err)
 			return
 		}
-		var selected *template.Template
-		for i := range registry.Templates {
-			if registry.Templates[i].ID == body.TemplateID {
-				selected = &registry.Templates[i]
-				break
-			}
-		}
-		if selected == nil {
-			writeServiceError(w, cliErrors.New(cliErrors.TEMPLATE_NOT_FOUND, i18n.Tf("add.template_missing", body.TemplateID)))
+		selected, err := registry.Resolve(body.TemplateID)
+		if err != nil {
+			writeServiceError(w, err)
 			return
 		}
 		result, err := opts.CreationService.AddProject(r.Context(), opts.WorkspaceRoot, creationmodule.ProjectInput{
-			Template: selected, Name: body.Name,
+			Template: selected, Name: body.Name, SkipSkills: body.SkipSkills,
 		})
 		if err != nil {
 			writeServiceError(w, err)
@@ -101,9 +112,18 @@ func handleCreateProject(opts MuxOpts) http.HandlerFunc {
 			writeServiceError(w, err)
 			return
 		}
-		writeJSON(w, http.StatusCreated, createProjectResponse{
+		response := createProjectResponse{
 			Name: result.Project.Name, RelativeDir: filepath.ToSlash(relativeDir),
 			TemplateID: result.Project.TemplateID, Warnings: result.Project.Warnings,
-		})
+		}
+		for _, project := range result.Project.Projects {
+			rel, err := filepath.Rel(opts.WorkspaceRoot, project.TargetPath)
+			if err != nil {
+				writeServiceError(w, err)
+				return
+			}
+			response.Projects = append(response.Projects, createProjectResponse{Name: project.Name, RelativeDir: filepath.ToSlash(rel), TemplateID: project.TemplateID})
+		}
+		writeJSON(w, http.StatusCreated, response)
 	}
 }

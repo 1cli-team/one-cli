@@ -62,8 +62,8 @@ One CLI 的错误使用统一 envelope：
       "available_templates": [
         "nestjs-api",
         "go-api",
-        "astro-site",
-        "starlight-docs",
+        "nextjs-site",
+        "fumadocs-docs",
         "nextjs-app",
         "react-spa",
         "expo-mobile",
@@ -149,3 +149,7 @@ one add api-fastify --name api --yes -o json
 one add nestjs-api --name api --yes -o json
 cat one.manifest.toml
 ```
+
+## 可选业务 skills
+
+开发 skills 补充团队维护的 AGENTS.md。业务 skills 在独立 GitHub 仓库维护，需要用户手动安装。`one skills` 透传上游 Skills CLI，其原始输出和参数不遵循 One 的结构化输出协议，详见 [skills](/zh/docs/skills/)。

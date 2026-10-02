@@ -1,0 +1,3 @@
+interface:
+  display_name: "One CLI"
+  short_description: "Work with One workspaces and their project layouts"

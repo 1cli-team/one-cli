@@ -1,0 +1,4 @@
+{
+	"schemaVersion": 1,
+	"exclude": [".source", "pnpm-workspace.yaml"]
+}

@@ -57,8 +57,8 @@ The current registry has 13 templates:
 |---|---|---|
 | `nestjs-api` | backend | [->](/en/docs/templates/) |
 | `go-api` | backend | [->](/en/docs/templates/) |
-| `astro-site` | frontend | [->](/en/docs/templates/) |
-| `starlight-docs` | frontend / docs | [->](/en/docs/templates/) |
+| `nextjs-site` | frontend | [->](/en/docs/templates/) |
+| `fumadocs-docs` | frontend / docs | [->](/en/docs/templates/) |
 | `nextjs-app` | frontend | [->](/en/docs/templates/) |
 | `react-spa` | frontend | [->](/en/docs/templates/) |
 | `expo-mobile` | frontend / mobile | [->](/en/docs/templates/) |

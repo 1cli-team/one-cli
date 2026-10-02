@@ -401,13 +401,13 @@
 				"name": "Go API service",
 				"description": "Gin + Gorm + Viper + Zap for APIs and backend services"
 			},
-			"astro-site": {
-				"name": "Astro static site",
-				"description": "Static site template for company, marketing, and content websites"
+			"nextjs-site": {
+				"name": "Next.js static site",
+				"description": "Next.js + React static export for company, marketing, and content websites"
 			},
-			"starlight-docs": {
-				"name": "Starlight documentation",
-				"description": "Documentation project based on Astro + Starlight"
+			"fumadocs-docs": {
+				"name": "Fumadocs documentation",
+				"description": "Next.js + Fumadocs + Base UI with English/Chinese docs and static search"
 			},
 			"nextjs-app": {
 				"name": "Next.js application",
@@ -431,7 +431,7 @@
 			},
 			"electron-app": {
 				"name": "Electron desktop app",
-				"description": "Electron + React + Vite with inversify, electron-log, electron-store, and electron-updater"
+				"description": "Electron + React + Vite with top-level renderer, main, and preload projects, using Awilix in main."
 			},
 			"empty-app": {
 				"name": "Empty application",
@@ -445,7 +445,11 @@
 				"name": "Empty library",
 				"description": "Create an empty project under packages/ and configure a technology stack later."
 			}
-		}
+		},
+		"groupSuccess": "Created project group {{name}} with {{count}} projects",
+		"groupLocationHint": "Creates related projects using your name and the workspace root dependency configuration.",
+		"installSkills": "Install development skills",
+		"skillsHint": "Add One usage and technology-stack guidance. Business skills are installed separately on request."
 	},
 	"appMenu": {
 		"label": "One CLI navigation menu"
@@ -470,7 +474,7 @@
 				"stack": "NestJS · TypeScript · Drizzle",
 				"feature1": "JWT authentication and user modules",
 				"feature2": "Drizzle data access and database migrations",
-				"feature3": "Swagger documentation, health checks, and metrics"
+				"feature3": "Swagger documentation, health checks, and request logging"
 			},
 			"go-api": {
 				"description": "Build Go APIs with separate HTTP, service, and data-access layers.",
@@ -479,37 +483,37 @@
 				"feature2": "Gorm data access and SQL migrations",
 				"feature3": "OpenAPI documentation, configuration, and logging"
 			},
-			"astro-site": {
-				"description": "Create company websites, landing pages, and content sites with static page output.",
-				"stack": "Astro · TypeScript · Tailwind CSS",
-				"feature1": "File-based pages and shared layouts",
-				"feature2": "Shared design tokens and Tailwind styles",
-				"feature3": "Type checking, linting, and formatting"
+			"nextjs-site": {
+				"description": "Next.js + React static export for company, marketing, and content websites",
+				"stack": "Next.js · React · TypeScript · Base UI",
+				"feature1": "Static export with English and Chinese pages",
+				"feature2": "Base UI components, themes, and design tokens",
+				"feature3": "SEO metadata and static hosting"
 			},
-			"starlight-docs": {
-				"description": "Publish product documentation, developer guides, and team knowledge bases.",
-				"stack": "Astro · Starlight · Markdown / MDX",
-				"feature1": "Markdown and MDX documentation pages",
-				"feature2": "Guide and reference sections with a configured sidebar",
-				"feature3": "Customizable documentation theme"
+			"fumadocs-docs": {
+				"description": "Next.js + Fumadocs + Base UI with English/Chinese docs and static search",
+				"stack": "Next.js · Fumadocs · Base UI · MDX",
+				"feature1": "Markdown / MDX in English and Chinese",
+				"feature2": "Sidebar, table of contents, and syntax highlighting",
+				"feature3": "Browser-side static search and language switching"
 			},
 			"nextjs-app": {
 				"description": "Build web applications with server rendering, API routes, and search-friendly pages.",
 				"stack": "Next.js · React · TypeScript",
 				"feature1": "App Router pages and route handlers",
-				"feature2": "shadcn/ui components and theme switching",
+				"feature2": "shadcn/ui (Base UI) components and theme switching",
 				"feature3": "SWR data fetching and Zustand state management"
 			},
 			"react-spa": {
 				"description": "Create interactive dashboards, admin panels, and browser-based business applications.",
 				"stack": "React · Vite · TypeScript",
 				"feature1": "Client-side routing and error boundaries",
-				"feature2": "shadcn/ui components and light / dark themes",
+				"feature2": "shadcn/ui (Base UI) components and light / dark themes",
 				"feature3": "SWR data fetching and Zustand state management"
 			},
 			"expo-mobile": {
 				"description": "Build iOS and Android apps with React Native and a shared Expo project.",
-				"stack": "Expo · React Native · NativeWind",
+				"stack": "Expo · React Native · StyleSheet",
 				"feature1": "Expo Router navigation and tab pages",
 				"feature2": "SWR, Zustand, and MMKV local storage",
 				"feature3": "Native modules use an Expo development build"
@@ -530,9 +534,9 @@
 			},
 			"electron-app": {
 				"description": "Create desktop applications with an Electron main process and a React user interface.",
-				"stack": "Electron · React · Vite · Inversify",
-				"feature1": "Separate main, renderer, and preload packages",
-				"feature2": "Typed IPC bridge and dependency injection",
+				"stack": "Electron · React · Vite · Awilix",
+				"feature1": "Top-level apps, services, and packages projects",
+				"feature2": "Typed IPC bridge and Awilix factory functions",
 				"feature3": "Logging, local settings, and updater modules"
 			},
 			"empty-app": {

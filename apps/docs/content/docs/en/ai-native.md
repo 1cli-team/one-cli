@@ -62,8 +62,8 @@ One CLI errors use a single envelope:
       "available_templates": [
         "nestjs-api",
         "go-api",
-        "astro-site",
-        "starlight-docs",
+        "nextjs-site",
+        "fumadocs-docs",
         "nextjs-app",
         "react-spa",
         "expo-mobile",
@@ -149,3 +149,7 @@ After adding a real template, inspect its manifest entry:
 one add nestjs-api --name api --yes -o json
 cat one.manifest.toml
 ```
+
+## Optional business skills
+
+Development skills supplement the team-owned AGENTS.md. Business skills live in independent GitHub repositories and require manual installation. `one skills` transparently forwards to the upstream Skills CLI, whose raw output and flags do not follow One’s structured-output envelope. See [skills](/en/docs/skills/).

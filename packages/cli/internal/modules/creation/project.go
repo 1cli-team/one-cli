@@ -23,7 +23,8 @@ type ProjectInput struct {
 	Template *template.Template
 	// Name is the subproject name (validated for the IsValidProjectName
 	// regex by the caller).
-	Name string
+	Name       string
+	SkipSkills bool
 }
 
 // ProjectResult is the transport-neutral outcome of materialising a Template.
@@ -34,6 +35,7 @@ type ProjectResult struct {
 	Toolchain      string
 	PackageManager string
 	Warnings       []string
+	Projects       []ProjectResult
 }
 
 // materializeProject renders the template into projectRoot, upserts the
@@ -76,6 +78,33 @@ func materializeProject(ctx context.Context, projectRoot string, in ProjectInput
 	}
 
 	entry := in.Template
+	templateLocalID, err := parseLocalTemplateID(entry.Repo)
+	if err != nil {
+		return ProjectResult{}, err
+	}
+
+	packageManager := defaultPackageManagerFor(string(entry.Toolchain))
+	if entry.Toolchain == "node" {
+		packageManager, err = nodePackageManager(files)
+		if err != nil {
+			return ProjectResult{}, err
+		}
+	}
+	vars := template.CommonVariables(in.Name, packageManager)
+	outputs, err := template.PrepareProjects(templateLocalID, vars)
+	if err != nil {
+		return ProjectResult{}, err
+	}
+	if len(outputs) > 0 {
+		return materializeComposite(ctx, projectRoot, in, files, manifest, outputs, packageManager, miseEnabled)
+	}
+
+	for _, group := range manifest.Groups {
+		if group.Name == in.Name {
+			return ProjectResult{}, cliErrors.New(cliErrors.TARGET_EXISTS, i18n.Tf("creation.group_exists", in.Name))
+		}
+	}
+
 	categoryDir, err := categoryDirFor(string(entry.Category))
 	if err != nil {
 		return ProjectResult{}, err
@@ -96,20 +125,6 @@ func materializeProject(ctx context.Context, projectRoot string, in ProjectInput
 				"target_path":     targetDir,
 			})
 	}
-
-	templateLocalID, err := parseLocalTemplateID(entry.Repo)
-	if err != nil {
-		return ProjectResult{}, err
-	}
-
-	packageManager := defaultPackageManagerFor(string(entry.Toolchain))
-	if entry.Toolchain == "node" {
-		packageManager, err = nodePackageManager(files)
-		if err != nil {
-			return ProjectResult{}, err
-		}
-	}
-	vars := template.CommonVariables(in.Name, packageManager)
 
 	if err := template.Render(templateLocalID, targetDir, vars); err != nil {
 		if createdFromScratch {
@@ -160,37 +175,7 @@ func materializeProject(ctx context.Context, projectRoot string, in ProjectInput
 			return ProjectResult{}, err
 		}
 	}
-	if hk, err := files.Read(workspace.HooksConfigFilename); err != nil {
-		return ProjectResult{}, err
-	} else if hk != nil {
-		if err := hooks.PlanFiles(files, manifest); err != nil {
-			return ProjectResult{}, err
-		}
-	}
-	manifestRaw, err := workspace.MarshalManifest(manifest)
-	if err != nil {
-		return ProjectResult{}, err
-	}
-	if err := files.Set(workspace.ManifestFilename, manifestRaw, 0o644); err != nil {
-		return ProjectResult{}, err
-	}
-	if miseEnabled {
-		plan, err := miseconfig.BuildWithFiles(projectRoot, miseconfig.Options{}, files.Overlay())
-		if err != nil {
-			return ProjectResult{}, err
-		}
-		for path, content := range plan.ReadInputs() {
-			if err := files.Expect(path, content); err != nil {
-				return ProjectResult{}, err
-			}
-		}
-		for _, change := range plan.Changes {
-			if err := files.Set(change.Path, []byte(change.After), 0o644); err != nil {
-				return ProjectResult{}, err
-			}
-		}
-	}
-	if err := files.Apply(ctx); err != nil {
+	if err := finishProjectPlan(ctx, projectRoot, files, manifest, miseEnabled); err != nil {
 		return ProjectResult{}, err
 	}
 	registered = true
@@ -200,13 +185,43 @@ func materializeProject(ctx context.Context, projectRoot string, in ProjectInput
 	warnings := template.CheckAllowedBackends(*entry, compatSelection, "")
 
 	return ProjectResult{
-		Name:           in.Name,
-		TargetPath:     targetDir,
-		TemplateID:     entry.ID,
-		Toolchain:      string(entry.Toolchain),
-		PackageManager: manifestPM,
-		Warnings:       warningMessages(warnings),
+		Name: in.Name, TargetPath: targetDir, TemplateID: entry.ID, Toolchain: string(entry.Toolchain),
+		PackageManager: manifestPM, Warnings: warningMessages(warnings),
 	}, nil
+}
+
+func finishProjectPlan(ctx context.Context, projectRoot string, files *fsutil.FilePlan, manifest *workspace.Manifest, miseEnabled bool) error {
+	if hk, err := files.Read(workspace.HooksConfigFilename); err != nil {
+		return err
+	} else if hk != nil {
+		if err := hooks.PlanFiles(files, manifest); err != nil {
+			return err
+		}
+	}
+	manifestRaw, err := workspace.MarshalManifest(manifest)
+	if err != nil {
+		return err
+	}
+	if err := files.Set(workspace.ManifestFilename, manifestRaw, 0o644); err != nil {
+		return err
+	}
+	if miseEnabled {
+		plan, err := miseconfig.BuildWithFiles(projectRoot, miseconfig.Options{}, files.Overlay())
+		if err != nil {
+			return err
+		}
+		for path, content := range plan.ReadInputs() {
+			if err := files.Expect(path, content); err != nil {
+				return err
+			}
+		}
+		for _, change := range plan.Changes {
+			if err := files.Set(change.Path, []byte(change.After), 0o644); err != nil {
+				return err
+			}
+		}
+	}
+	return files.Apply(ctx)
 }
 
 // warningMessages flattens compat warnings to strings; empty / nil is

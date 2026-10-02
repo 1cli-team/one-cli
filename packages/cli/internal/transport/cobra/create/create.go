@@ -1,6 +1,7 @@
 package createcmd
 
 import (
+	"context"
 	"errors"
 	"os"
 	"path/filepath"
@@ -79,14 +80,15 @@ func runCreate(deps Dependencies, cmd *cobra.Command, rawDir string, flags *crea
 	enables := append([]string(nil), workspaceDefaultEnables...)
 
 	var result creationmodule.WorkspaceResult
-	if err := prompt.Spin(i18n.T("create.generating"), func() error {
+	if err := prompt.SpinContext(cmd.Context(), i18n.T("create.generating"), func(ctx context.Context) error {
 		var createErr error
-		result, createErr = deps.Creation.CreateWorkspace(cmd.Context(), creationmodule.WorkspaceInput{
+		result, createErr = deps.Creation.CreateWorkspace(ctx, creationmodule.WorkspaceInput{
 			TargetDir:      targetDir,
 			DisplayPath:    displayPath,
 			Name:           projectName,
 			EnvBackend:     selectedEnvironmentBackend(enables),
 			CreatedInPlace: useCurrentDir,
+			SkipSkills:     flags.skipSkills,
 		})
 		return createErr
 	}); err != nil {
@@ -134,6 +136,7 @@ func runCreate(deps Dependencies, cmd *cobra.Command, rawDir string, flags *crea
 	if result.HooksWarn != nil {
 		payload.Warnings = append(payload.Warnings, i18n.Tf("create.hooks_warning", result.HooksWarn))
 	}
+	payload.Warnings = append(payload.Warnings, result.SkillsWarnings...)
 	output.Emit(&payload)
 
 	return nil

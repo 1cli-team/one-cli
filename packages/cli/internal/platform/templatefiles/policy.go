@@ -14,7 +14,7 @@ func Excluded(name string) bool {
 	for _, part := range strings.Split(name, "/") {
 		switch part {
 		case ".git", ".one", ".agents", "AGENTS.md", "CLAUDE.md", "SKILL.md",
-			"node_modules", "dist", "build", "bin", "coverage", ".next", ".astro", ".expo", ".turbo", ".cache",
+			"node_modules", "dist", "out", "build", "bin", "coverage", ".next", ".source", ".astro", ".expo", ".turbo", ".cache",
 			"pnpm-lock.yaml", "package-lock.json", "npm-shrinkwrap.json", "yarn.lock", "bun.lock", "bun.lockb",
 			"go.work", "go.work.sum", "coverage.out", ".DS_Store":
 			return true

@@ -5,8 +5,6 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
-
-	"github.com/example/one-template-go-api/internal/http/response"
 )
 
 func Recovery(log *zap.Logger) gin.HandlerFunc {
@@ -14,7 +12,7 @@ func Recovery(log *zap.Logger) gin.HandlerFunc {
 		defer func() {
 			if recovered := recover(); recovered != nil {
 				log.Error("panic recovered", zap.Any("panic", recovered), zap.String("request_id", requestID(c)))
-				response.Error(c, http.StatusInternalServerError, 50000, "internal server error")
+				c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": "internal server error"})
 			}
 		}()
 		c.Next()

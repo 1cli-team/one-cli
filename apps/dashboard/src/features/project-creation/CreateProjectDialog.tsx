@@ -25,6 +25,7 @@ import {
 	SelectValue,
 } from "@/components/ui/select";
 import { Spinner } from "@/components/ui/spinner";
+import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/useToast";
 import type { HttpError } from "@/types/api";
 
@@ -44,6 +45,7 @@ export function CreateProjectDialog({ entryId, projectNames, onClose, onCreated 
 	const submitting = useRef(false);
 	const [name, setName] = useState("");
 	const [templateId, setTemplateId] = useState("react-spa");
+	const [installSkills, setInstallSkills] = useState(true);
 	const [pending, setPending] = useState(false);
 	const [nameError, setNameError] = useState("");
 	const [failure, setFailure] = useState<HttpError>();
@@ -52,6 +54,9 @@ export function CreateProjectDialog({ entryId, projectNames, onClose, onCreated 
 	const selected = templates.find((entry) => entry.id === templateId) ?? templates[0];
 	const cleanName = name.trim();
 	const validName = /^[a-zA-Z0-9][a-zA-Z0-9_-]*$/.test(cleanName);
+	const generatedNames = selected?.projects?.map((project) => `${cleanName}${project.suffix}`) ?? [
+		cleanName,
+	];
 	const categoryKeys = ["frontend", "backend", "library"] as const;
 
 	async function submit(event: React.FormEvent) {
@@ -59,7 +64,7 @@ export function CreateProjectDialog({ entryId, projectNames, onClose, onCreated 
 		if (submitting.current || !selected) return;
 		const validation = !validName
 			? "projectCreate.nameInvalid"
-			: projectNames.includes(cleanName)
+			: [cleanName, ...generatedNames].some((project) => projectNames.includes(project))
 				? "projectCreate.nameExists"
 				: "";
 		setNameError(validation);
@@ -72,7 +77,11 @@ export function CreateProjectDialog({ entryId, projectNames, onClose, onCreated 
 		setFailure(undefined);
 		let result;
 		try {
-			result = await createProject(entryId, { name: cleanName, templateId: selected.id });
+			result = await createProject(entryId, {
+				name: cleanName,
+				templateId: selected.id,
+				...(!installSkills && { skipSkills: true }),
+			});
 		} catch (cause) {
 			setFailure(cause as HttpError);
 			setPending(false);
@@ -84,8 +93,13 @@ export function CreateProjectDialog({ entryId, projectNames, onClose, onCreated 
 			mutate((key) => typeof key === "string" && key.startsWith(`${workspaceBasePath(entryId)}/`)),
 			mutate(workspacesKey),
 		]);
-		onCreated(result.name);
-		toast.success(t("projectCreate.success", { name: result.name }));
+		onCreated(result.projects?.[0]?.name ?? result.name);
+		toast.success(
+			t(result.projects?.length ? "projectCreate.groupSuccess" : "projectCreate.success", {
+				name: result.name,
+				count: result.projects?.length,
+			}),
+		);
 		for (const warning of result.warnings ?? []) toast.warning(warning);
 		if (refreshed.some((item) => item.status === "rejected"))
 			toast.warning(t("projectCreate.refreshFailed"));
@@ -201,14 +215,41 @@ export function CreateProjectDialog({ entryId, projectNames, onClose, onCreated 
 					{selected && (
 						<div className="rounded-md border border-border bg-muted/40 p-3">
 							<p className="text-xs text-muted-foreground">{t("projectCreate.location")}</p>
-							<p className="mt-1 break-all font-mono text-sm">
-								{selected.directory}/{validName ? cleanName : "…"}
-							</p>
+							{(selected.projects ?? [{ directory: selected.directory, suffix: "" }]).map(
+								(project) => (
+									<p
+										key={`${project.directory}${project.suffix}`}
+										className="mt-1 break-all font-mono text-sm"
+									>
+										{project.directory}/{validName ? cleanName : "…"}
+										{project.suffix}
+									</p>
+								),
+							)}
 							<p className="mt-2 text-xs leading-relaxed text-muted-foreground">
-								{t("projectCreate.locationHint")}
+								{t(
+									selected.projects?.length
+										? "projectCreate.groupLocationHint"
+										: "projectCreate.locationHint",
+								)}
 							</p>
 						</div>
 					)}
+					<Field>
+						<div className="flex items-center justify-between gap-3">
+							<FieldLabel htmlFor={`${id}-skills`}>{t("projectCreate.installSkills")}</FieldLabel>
+							<Switch
+								id={`${id}-skills`}
+								checked={installSkills}
+								onCheckedChange={setInstallSkills}
+								disabled={pending}
+								aria-describedby={`${id}-skills-help`}
+							/>
+						</div>
+						<FieldDescription id={`${id}-skills-help`}>
+							{t("projectCreate.skillsHint")}
+						</FieldDescription>
+					</Field>
 					{failure && (
 						<Alert variant="destructive" role="alert">
 							<AlertTitle>{t("projectCreate.failed")}</AlertTitle>

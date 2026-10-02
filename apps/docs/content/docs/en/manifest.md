@@ -48,6 +48,21 @@ Templates are used only when creating projects and are not recorded in the manif
 
 Project paths cannot be absolute or escape the workspace. Unknown fields, unsupported versions, and invalid field values produce `MANIFEST_INVALID`. TOML syntax errors include the file path and source location.
 
+## Project groups
+
+Composite templates can add a named group of existing projects:
+
+```toml
+[groups.desktop]
+projects = ["desktop-renderer", "desktop-main", "desktop-preload"]
+```
+
+`groups.<name>.projects` must be a nonempty list of unique registered project names.
+Group names cannot collide with project names. Groups generate task aliases such as
+`desktop:dev` and `desktop:build`; they have no directory or environment binding.
+Member tasks use their own project environments. Update group membership when
+removing or renaming a project. `one init mise` regenerates aliases from this record.
+
 ## Environment conventions
 
 Omit `[env.infisical]` to run with the existing process environment. The manifest never contains variable values or a variable-name registry.

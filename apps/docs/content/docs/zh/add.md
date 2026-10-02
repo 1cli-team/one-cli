@@ -28,6 +28,7 @@ one add [template-id] --name <project-name> [options]
 |---|---|
 | `template-id` | 模板 ID（如 `nestjs-api`）；不传走交互式选择 |
 | `-n, --name` | 项目名（必填，非交互模式） |
+| `--skip-skills` | 跳过开发 skills 安装 |
 | `-y, --yes` | 非交互模式 |
 | `-o, --output <fmt>` | `json` / `yaml` / `text` |
 
@@ -56,6 +57,24 @@ one add empty-library --name shared --yes
 三个模板分别创建 `apps/web/`、`services/api/`、`packages/shared/`，仅包含用于 Git 跟踪目录的 `.gitkeep`。它们以 `toolchain = "none"` 登记，不生成 `package.json`、`go.mod`、依赖或启动任务。交互式 `one add` 和 Dashboard 的新建项目选择器也提供这三个选项。
 
 如果使用 Node 或 Go，在 `one.manifest.toml` 中将项目的 `toolchain` 改为 `node` 或 `go`；Node 项目在根 `package.json` 中声明 `packageManager`，并补齐根工作区的包成员配置，Go 项目则将模块加入根 `go.work`。在 `package.json` / `Taskfile.yml` 中定义任务，然后运行 `one init mise` 更新任务配置。使用其他语言时，可以保留 `toolchain = "none"`，在根 `mise.toml` 中自行定义工具和任务。配置好命令后再使用 `one dev` / `one build`。
+
+## 添加 Electron 应用
+
+```bash
+one add electron-app --name desktop --yes
+one run desktop:dev
+one run desktop:pack
+```
+
+这会注册 `apps/desktop-renderer`、`services/desktop-main` 和
+`packages/desktop-preload` 三个项目，以及名为 `desktop` 的项目组。
+main 开发任务会等待 Vite 就绪再打开 Electron；打包任务会先构建整组项目，
+再将产物汇集到 main。多个应用使用各自派生的包名；同时开发多个应用时，
+为每个应用的 main 和 renderer 配置相同且与其他应用不同的 `ELECTRON_RENDERER_PORT`。
+
+组合模板的 JSON 输出额外包含 `projects[]`，每项有 `name`、`target_path` 和
+`toolchain`。`subproject_name` 为项目组名称，`target_path` 为工作区根目录。
+普通模板保持以下输出结构。
 
 ## 输出
 
@@ -143,3 +162,7 @@ one add nestjs-api --name user-api --yes -o json | jq
 - `one add` 同步任务配置，保留已有 `AGENTS.md` 和团队修改
 - 下一步运行 `one dev -p <project>` 开发，使用 `one build -p <project>` 构建
 - `one add` 只生成项目和工作区配置；`one dev` 会自动准备工具与应用依赖。JS/TS 在根目录统一安装，Go 按当前模块或 `go.work` 构建图准备依赖。修改 imports 或模块声明需要修复时，显式运行 `one exec <project> -- go mod tidy`。
+
+## 开发 skills
+
+项目生成完成后，One 在工作区根目录安装缺少的基础和技术栈 skills。Electron 的三个成员全部创建完成后，只安装一次合并后的 skills。已有 skills 和团队修改会被保留，来源冲突会给出提示。使用 `--skip-skills` 跳过，Dashboard 也提供同样的选项。安装失败仍保留项目并返回恢复提示，详见 [skills](/zh/docs/skills/)。

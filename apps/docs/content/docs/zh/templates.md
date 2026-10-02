@@ -15,9 +15,9 @@ description: 13 个内置模板按用途分组的决策树。30 秒判断到底�
 
 ```
 要起一个后端 API ----------------→ nestjs-api / go-api
-要起一个前端 Web 项目 -------------→ nextjs-app / react-spa / astro-site
+要起一个前端 Web 项目 -------------→ nextjs-app / react-spa / nextjs-site
 要写一个跨项目复用的库 ----------→ ts-library / go-lib
-要起一个文档站 -------------------→ starlight-docs
+要起一个文档站 -------------------→ fumadocs-docs
 要起一个移动 app -----------------→ expo-mobile
 要起一个桌面 app -----------------→ electron-app
 ```
@@ -26,21 +26,21 @@ description: 13 个内置模板按用途分组的决策树。30 秒判断到底�
 
 ## 完整对比表
 
-| ID | 类别 | 关键词 | 一句话 | 详细 |
-|---|---|---|---|---|
-| `nestjs-api` | API | TypeScript, NestJS, REST | TS 团队默认 API 模板 | [源码](https://github.com/1cli-team/one-cli/tree/master/packages/templates/nestjs-api) |
-| `go-api` | API | Go, Gin, GORM | 高吞吐 / 低内存 / 团队混语言 | - |
-| `nextjs-app` | Web | Next.js, SSR, React | 通用 Web 应用 / C 端内容站首选 | [源码](https://github.com/1cli-team/one-cli/tree/master/packages/templates/nextjs-app) |
-| `react-spa` | Web | Vite, React, SPA | 控制台 / 内部应用 / 无 SEO | [源码](https://github.com/1cli-team/one-cli/tree/master/packages/templates/react-spa) |
-| `astro-site` | Web | Astro, 静态优先 | 营销页 / 内容站 | [源码](https://github.com/1cli-team/one-cli/tree/master/packages/templates/astro-site) |
-| `starlight-docs` | Docs | Starlight, Astro | 文档站 / 知识库 | [源码](https://github.com/1cli-team/one-cli/tree/master/packages/templates/starlight-docs) |
-| `expo-mobile` | Mobile | Expo, React Native | iOS + Android 跨平台 | [源码](https://github.com/1cli-team/one-cli/tree/master/packages/templates/expo-mobile) |
-| `electron-app` | Desktop | Electron, React, Vite | 桌面 app（macOS / Windows / Linux） | [源码](https://github.com/1cli-team/one-cli/tree/master/packages/templates/electron-app) |
-| `ts-library` | Library | TS, 严格 semver | 跨项目复用的 TS 库 | - |
-| `go-lib` | Library | Go, module, package layout | 跨项目复用的 Go module | - |
-| `empty-app` | App | 无技术栈 | 从空应用目录开始 | - |
-| `empty-service` | API | 无技术栈 | 从空服务目录开始 | - |
-| `empty-library` | Library | 无技术栈 | 从空共享库目录开始 | - |
+| ID              | 类别    | 关键词                     | 一句话                              | 详细                                                                                      |
+| --------------- | ------- | -------------------------- | ----------------------------------- | ----------------------------------------------------------------------------------------- |
+| `nestjs-api`    | API     | TypeScript, NestJS, REST   | TS 团队默认 API 模板                | [源码](https://github.com/1cli-team/one-cli/tree/master/packages/templates/nestjs-api)    |
+| `go-api`        | API     | Go, Gin, GORM              | 高吞吐 / 低内存 / 团队混语言        | -                                                                                         |
+| `nextjs-app`    | Web     | Next.js, SSR, React        | 通用 Web 应用 / C 端内容站首选      | [源码](https://github.com/1cli-team/one-cli/tree/master/packages/templates/nextjs-app)    |
+| `react-spa`     | Web     | Vite, React, SPA           | 控制台 / 内部应用 / 无 SEO          | [源码](https://github.com/1cli-team/one-cli/tree/master/packages/templates/react-spa)     |
+| `nextjs-site`   | Web     | Next.js, React, 静态导出   | 营销页 / 内容站                     | [源码](https://github.com/1cli-team/one-cli/tree/master/packages/templates/nextjs-site)   |
+| `fumadocs-docs` | Docs    | Fumadocs, Next.js, Base UI | 文档站 / 知识库                     | [源码](https://github.com/1cli-team/one-cli/tree/master/packages/templates/fumadocs-docs) |
+| `expo-mobile`   | Mobile  | Expo, React Native         | iOS + Android 跨平台                | [源码](https://github.com/1cli-team/one-cli/tree/master/packages/templates/expo-mobile)   |
+| `electron-app`  | Desktop | Electron, React, Vite      | 桌面 app（macOS / Windows / Linux） | [源码](https://github.com/1cli-team/one-cli/tree/master/packages/templates/electron-app)  |
+| `ts-library`    | Library | TS, 严格 semver            | 跨项目复用的 TS 库                  | -                                                                                         |
+| `go-lib`        | Library | Go, module, package layout | 跨项目复用的 Go module              | -                                                                                         |
+| `empty-app`     | App     | 无技术栈                   | 从空应用目录开始                    | -                                                                                         |
+| `empty-service` | API     | 无技术栈                   | 从空服务目录开始                    | -                                                                                         |
+| `empty-library` | Library | 无技术栈                   | 从空共享库目录开始                  | -                                                                                         |
 
 ## 选好之后怎么加
 
@@ -79,11 +79,11 @@ one add ts-library   --name shared
 
 ```bash
 one add go-api     --name api
-one add astro-site --name marketing
+one add nextjs-site --name marketing
 one add react-spa --name console
 ```
 
-为什么：Go API 顶住流量；Astro 静态化首页便于 SEO；React 控制台只给登录用户用，无 SEO 需求。
+为什么：Go API 顶住流量；Next.js 静态导出首页便于 SEO；React 控制台只给登录用户用，无 SEO 需求。
 
 ### 移动 + API
 
@@ -101,22 +101,48 @@ one add ts-library     --name shared
 
 或者直接选 [推荐组合](#推荐组合) 里的栈，先跑起来，跑不通再换。
 
+## 静态网站与文档模板
+
+`nextjs-site` 使用 Next.js、React、Tailwind CSS 和 shadcn Base UI，默认导出 `out/`。
+`fumadocs-docs` 使用 Next.js + Fumadocs 的 Base UI 实现，内置中英文 MDX、侧边栏、
+本页目录、代码高亮和浏览器静态搜索；同样部署 `out/`，无需 Node 服务。
+
+旧 ID `astro-site` 和 `starlight-docs` 已下架。新建项目分别使用 `nextjs-site` 和
+`fumadocs-docs`；旧 ID 会显示替代指引。已有项目的目录、依赖和任务保持原状。
+
 ## 模板依赖和 Electron 工作区
 
 Node 模板不复制预生成的锁文件。`one dev`、`one build` 等任务共用依赖准备流程：
 复用匹配的依赖，需要安装时允许生成或更新根锁文件。请审阅并提交锁文件变更。
 需要严格校验锁文件的 CI，可显式执行 `one mise exec -- pnpm install --frozen-lockfile`。
 
-`electron-app` 需要 pnpm 工作区。它仍是一个 One 项目，内部的主进程、UI 和 preload
-包会自动加入根 `pnpm-workspace.yaml`，共享根锁文件。包名以项目名作为 scope，
-例如 `@desktop/electron`、`@desktop/ui`、`@desktop/preload`，可在同一仓库中添加多个桌面应用。
+`electron-app` 会创建三个顶层 One 项目。输入 `--name desktop` 时，目录分别为
+`apps/desktop-renderer`、`services/desktop-main` 和 `packages/desktop-preload`，
+npm 包名分别为 `desktop-renderer`、`desktop-main` 和 `desktop-preload`。
+目录保留用户输入的项目名，npm 包名转换为 kebab-case。三个项目共用根目录的
+pnpm workspace 和 lockfile，不再创建嵌套工作区。
+
+清单通过 `[groups.desktop]` 记录三个成员。使用 `one run desktop:dev`、
+`one run desktop:build`、`one run desktop:test` 和 `one run desktop:pack`
+操作整组项目；重新运行 `one init mise` 后这些任务仍会保留。
+每个成员仍可独立操作，例如 `one build -p desktop-main`。
+主进程使用 Awilix 函数工厂，renderer 使用 React、Vite 和基于 Base UI 的 shadcn/ui。
+打包时会将 renderer 和 preload 的构建产物复制到 main 的构建目录。
 
 模板沿用根目录包管理器版本、registry 和镜像配置。已有安装脚本策略会保留；未配置时
 使用内置模板默认规则。若显式禁用了 Electron 安装脚本，需要在根目录调整策略。
-多个桌面应用同时开发时，通过各项目环境中的 `ELECTRON_RENDERER_PORT` 配置不同端口。
+多个桌面应用同时开发时，为每组配置不同的 `ELECTRON_RENDERER_PORT`；
+同组 main 和 renderer 使用相同端口值。
+
+Electron 开发启动仅在系统标识为 Ubuntu（`ID=ubuntu`）时检查沙箱权限。
+首次遇到 AppArmor 用户命名空间限制，会生成当前 Electron 专用的规则文件，
+显示供管理员审阅、安装与加载的命令；配置后重新运行即可，脚本不会自行提权。
+Electron 可执行文件路径变化后会重新检查。Linux 会保留已有显示变量（包括
+SSH X11 转发和 Xvfb），缺失时自动识别当前用户可用的 Wayland / X11 桌面。
+多个候选无法确定时提示显式选择；无桌面时提示使用图形终端、X11 转发或 Xvfb。
+macOS 和 Windows 跳过这些检查。详细流程见生成项目的 README。
 
 这些规则适用于新生成的项目，已有 Electron 项目不会自动改写目录或依赖配置。
-
 
 ## 在模板目录直接开发
 
@@ -133,7 +159,9 @@ go test ./...
 go run ./cmd/server
 ```
 
-Go API 默认使用内存 SQLite。需要 PostgreSQL 或其他运行配置时，按模板说明设置环境变量。
+NestJS API 和 Go API 默认不连接数据库，也不包含 JWT、登录或用户 CRUD。保留 Drizzle ORM/Kit 与 Gorm；选择数据库后再安装驱动并显式添加连接与迁移。
+
+应用模板保留 Axios、SWR、Zustand：Axios 负责 HTTP，SWR 管理远程数据和缓存，Zustand 只管理共享 UI。Expo 保留 MMKV 与原生开发客户端，使用 React Native 样式。Electron 保留 Awilix 函数工厂，preload 仅提供应用信息接口。业务功能通过手动安装的业务 skills 或项目代码扩展。
 
 ```sh
 cd packages/templates/electron-app
@@ -159,13 +187,15 @@ pnpm --ignore-workspace run dev
 
 默认按原始字节复制文件。只有需要参数化的模板才包含 `template.json`，目前支持：
 
-| 配置 | 用途 |
-| --- | --- |
-| `schemaVersion: 1` | 声明描述文件版本 |
-| `go.modulePrefix` | 生成 module 路径，并同步改写对应 Go import |
-| `node.scope`、`node.sourceFiles` | 修改内部 Node 包名、依赖键、scripts 和指定源码中的 scope |
-| `text` | 在明确列出的文件中替换示例文字 |
-| `exclude` | 排除模板开发专用的文件或目录 |
+| 配置                             | 用途                                                                                                     |
+| -------------------------------- | -------------------------------------------------------------------------------------------------------- |
+| `schemaVersion: 1`               | 声明描述文件版本                                                                                         |
+| `go.modulePrefix`                | 生成 module 路径，并同步改写对应 Go import                                                               |
+| `node.scope`、`node.sourceFiles` | 修改内部 Node 包名、依赖键、scripts 和指定源码中的 scope                                                 |
+| `text`                           | 在明确列出的文件中替换示例文字                                                                           |
+| `exclude`                        | 排除模板开发专用的文件或目录                                                                             |
+| `projects`                       | 组合模板的成员，每个成员声明 `source`、名称 `suffix` 和 `category`（`frontend`、`backend` 或 `library`） |
+| `sharedFiles`                    | 复制到组合模板每个成员的模板相对路径文件                                                                 |
 
 `text` 的每条规则使用 `files`、`from`、`value`；`value` 仅支持
 `projectName` 和 `projectNameKebabCase`。可选 `minMatches` 默认为 1，
@@ -184,6 +214,7 @@ mise run check
 mise run check:templates
 ```
 
-`check:templates` 会安装 Electron 模板依赖，构建 Go/Electron 源码，检查全部
-Node 模板的生成格式，并在临时工作区构建两个不同名称的 Electron 项目和两个 Go 项目。
+`check:templates` 会安装模板依赖，构建 Go/Electron 源码与生成的 Next.js 静态站点，检查全部
+Node 模板的生成格式，并在临时工作区构建两个不同名称的 Electron 项目、两个 Go 项目与两种
+Next.js 静态站点，同时验证中英文页面和文档静态搜索。
 该检查需要网络及对应工具链；它不会修改开发者的全局语言偏好。

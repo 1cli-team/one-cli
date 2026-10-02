@@ -28,6 +28,7 @@ one add [template-id] --name <project-name> [options]
 |---|---|
 | `template-id` | Template ID, such as `nestjs-api`. Omit it for interactive selection |
 | `-n, --name` | Project name; required in non-interactive mode |
+| `--skip-skills` | Skip development skills installation |
 | `-y, --yes` | Non-interactive mode |
 | `-o, --output <fmt>` | `json` / `yaml` / `text` |
 
@@ -60,6 +61,25 @@ one add empty-library --name shared --yes
 These templates create `apps/web/`, `services/api/`, and `packages/shared/`, respectively, containing only a `.gitkeep` file so Git tracks the directory. They register `toolchain = "none"` and generate no `package.json`, `go.mod`, dependencies, or startup tasks. Interactive `one add` and the Dashboard's new-project picker also offer these choices.
 
 For Node or Go code, set the project's `toolchain` in `one.manifest.toml` to `node` or `go`. Node projects declare `packageManager` in the root `package.json` and need membership in the root package workspace; Go modules need membership in the root `go.work`. Define tasks in `package.json` / `Taskfile.yml`, then run `one init mise` to update task configuration. For other languages, keep `toolchain = "none"` and define your own tools and tasks in the root `mise.toml`. Configure the commands before using `one dev` / `one build`.
+
+## Add an Electron app
+
+```bash
+one add electron-app --name desktop --yes
+one run desktop:dev
+one run desktop:pack
+```
+
+This registers `desktop-renderer` in `apps/`, `desktop-main` in `services/`, and
+`desktop-preload` in `packages/`, plus the `desktop` project group. The main task
+waits for Vite before opening Electron. Packaging builds the group and assembles
+its outputs in main. Multiple desktop apps use their own derived package names;
+set a different `ELECTRON_RENDERER_PORT` for both main and renderer when running
+several apps concurrently.
+
+For composite templates, JSON output includes `projects[]` entries with `name`,
+`target_path`, and `toolchain`. `subproject_name` identifies the group and
+`target_path` is the workspace root. Ordinary templates keep the output below.
 
 ## Output
 
@@ -148,3 +168,7 @@ Not sure which one to use? Read the [template decision tree](/en/docs/templates/
 - `one add` updates task configuration and preserves existing `AGENTS.md` files and team edits
 - Run `one dev -p <project>` for development and `one build -p <project>` to build
 - `one add` generates project and workspace configuration; `one dev` prepares tools and dependencies automatically. Node dependencies are installed at the workspace root; Go dependencies follow the module or `go.work` build graph. After changing imports or module declarations, use `one exec <project> -- go mod tidy` when repairs are needed
+
+## Development skills
+
+After generating the project, One installs missing common and stack skills in the workspace root. Electron installs the combined skills once after all three members are created. Existing skills and team edits are preserved; source conflicts produce a warning. Pass `--skip-skills` to skip. Dashboard offers the same choice. Failures preserve the project and return recovery warnings. See [skills](/en/docs/skills/).

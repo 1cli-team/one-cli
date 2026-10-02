@@ -1,61 +1,27 @@
 package http
 
 import (
+	"github.com/example/one-template-go-api/internal/config"
+	"github.com/example/one-template-go-api/internal/http/middleware"
 	"github.com/gin-gonic/gin"
-	"github.com/prometheus/client_golang/prometheus/promhttp"
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
 	"go.uber.org/zap"
-
-	"github.com/example/one-template-go-api/internal/config"
-	"github.com/example/one-template-go-api/internal/http/handlers"
-	"github.com/example/one-template-go-api/internal/http/middleware"
-	"github.com/example/one-template-go-api/internal/platform/jwt"
+	"net/http"
 )
 
-type Router struct {
-	*gin.Engine
-}
+type Router struct{ *gin.Engine }
 
-type Dependencies struct {
-	Config  config.Config
-	Logger  *zap.Logger
-	JWT     *jwt.Manager
-	Handler handlers.Set
-}
-
-func NewRouter(deps Dependencies) *Router {
-	if deps.Config.AppEnv == "production" {
+func NewRouter(cfg config.Config, log *zap.Logger) *Router {
+	if cfg.AppEnv == "production" {
 		gin.SetMode(gin.ReleaseMode)
 	}
-
 	engine := gin.New()
-	engine.Use(
-		middleware.RequestID(),
-		middleware.Recovery(deps.Logger),
-		middleware.Logger(deps.Logger),
-		middleware.Metrics(),
-		middleware.CORS(deps.Config),
-	)
-
-	engine.GET("/", deps.Handler.App.Info)
-	engine.GET("/health", deps.Handler.Health.Check)
-	engine.GET("/metrics", gin.WrapH(promhttp.Handler()))
-	engine.GET("/api/docs", deps.Handler.App.Docs)
+	engine.Use(middleware.RequestID(), middleware.Recovery(log), middleware.Logger(log), middleware.CORS(cfg))
+	engine.GET("/", func(c *gin.Context) { c.JSON(http.StatusOK, gin.H{"name": cfg.AppName, "version": "0.1.0"}) })
+	engine.GET("/health", func(c *gin.Context) { c.JSON(http.StatusOK, gin.H{"status": "ok"}) })
+	engine.GET("/api/docs", func(c *gin.Context) { c.Redirect(http.StatusTemporaryRedirect, "/api/docs/index.html") })
 	engine.StaticFile("/api/openapi.yaml", "api/openapi.yaml")
-	engine.GET("/api/docs/*any", ginSwagger.WrapHandler(
-		swaggerFiles.Handler,
-		ginSwagger.URL("/api/openapi.yaml"),
-	))
-
-	engine.POST("/auth/login", deps.Handler.Auth.Login)
-
-	api := engine.Group("/api")
-	api.Use(middleware.Auth(deps.JWT))
-	{
-		api.GET("/users", deps.Handler.Users.List)
-		api.POST("/users", deps.Handler.Users.Create)
-	}
-
+	engine.GET("/api/docs/*any", ginSwagger.WrapHandler(swaggerFiles.Handler, ginSwagger.URL("/api/openapi.yaml")))
 	return &Router{Engine: engine}
 }

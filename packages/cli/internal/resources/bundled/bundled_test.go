@@ -81,6 +81,23 @@ func TestRegistryBytes_MatchesOnDisk(t *testing.T) {
 	}
 }
 
+func TestSkillsFS_MatchesOnDisk(t *testing.T) {
+	embedded := mustWalk(t, bundled.SkillsFS, bundled.SkillsRoot)
+	diskRoot := filepath.Join(repoRoot(t), "packages", "agent-skills", "skills")
+	disk := mustWalkOSFiltered(t, diskRoot, nil)
+	assertSameFiles(t, "skills", embedded, disk)
+	for _, name := range disk {
+		want, err := os.ReadFile(filepath.Join(diskRoot, filepath.FromSlash(name)))
+		if err != nil {
+			t.Fatal(err)
+		}
+		got, err := fs.ReadFile(bundled.SkillsFS, bundled.SkillsRoot+"/"+name)
+		if err != nil || !bytes.Equal(got, want) {
+			t.Errorf("skill differs: %s: %v", name, err)
+		}
+	}
+}
+
 // WebDistFS is special: its content is a build artefact (Vite bundle), not
 // a copy of source files. Vite chunk hashes vary per machine, so we don't
 // byte-compare against a fresh build like the template tests do.

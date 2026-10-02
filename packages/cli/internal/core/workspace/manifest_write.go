@@ -68,6 +68,15 @@ func MarshalManifest(m *Manifest) ([]byte, error) {
 			return nil, err
 		}
 	}
+	groups := append([]ManifestGroup(nil), m.Groups...)
+	sort.Slice(groups, func(i, j int) bool { return groups[i].Name < groups[j].Name })
+	for _, group := range groups {
+		key, _ := toml.Marshal(map[string]int{group.Name: 0})
+		name := strings.TrimSpace(strings.SplitN(string(key), " = ", 2)[0])
+		if err := table("groups."+name, manifestGroupDocument{Projects: group.Projects}); err != nil {
+			return nil, err
+		}
+	}
 	if len(m.source) > 0 {
 		return configedit.UpdateTOML(m.source, out.Bytes())
 	}

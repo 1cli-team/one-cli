@@ -34,6 +34,7 @@ type Manifest struct {
 	Workspace *ManifestWorkspace `json:"workspace,omitempty"`
 	Env       *EnvironmentConfig `json:"env,omitempty"`
 	Projects  []ManifestProject  `json:"projects"`
+	Groups    []ManifestGroup    `json:"groups,omitempty"`
 	source    []byte
 }
 
@@ -56,11 +57,21 @@ type ManifestProject struct {
 	Toolchain   string `json:"toolchain"`
 }
 
+// ManifestGroup preserves a product's component membership across task refreshes.
+type ManifestGroup struct {
+	Name     string   `json:"name"`
+	Projects []string `json:"projects" toml:"projects"`
+}
+
 type manifestDocument struct {
 	Version   int                                `toml:"version"`
 	Workspace *ManifestWorkspace                 `toml:"workspace"`
 	Env       *manifestEnvironment               `toml:"env"`
 	Projects  map[string]manifestProjectDocument `toml:"projects"`
+	Groups    map[string]manifestGroupDocument   `toml:"groups"`
+}
+type manifestGroupDocument struct {
+	Projects []string `toml:"projects"`
 }
 type manifestEnvironment struct {
 	Infisical *EnvironmentConfig `toml:"infisical"`
@@ -91,6 +102,10 @@ func ParseManifest(raw []byte) (*Manifest, error) {
 	for name, p := range doc.Projects {
 		m.Projects = append(m.Projects, ManifestProject{Name: name, RelativeDir: p.Path, Toolchain: p.Toolchain})
 	}
+	for name, group := range doc.Groups {
+		m.Groups = append(m.Groups, ManifestGroup{Name: name, Projects: group.Projects})
+	}
+	sort.Slice(m.Groups, func(i, j int) bool { return m.Groups[i].Name < m.Groups[j].Name })
 	sort.Slice(m.Projects, func(i, j int) bool { return m.Projects[i].RelativeDir < m.Projects[j].RelativeDir })
 	if err := ValidateManifest(m); err != nil {
 		return nil, err
@@ -138,6 +153,20 @@ func ValidateManifest(m *Manifest) error {
 		paths[path] = true
 		if p.Toolchain != "node" && p.Toolchain != "go" && p.Toolchain != "none" {
 			return invalid(i18n.Tf("manifest.toolchain_invalid", p.Name, p.Toolchain))
+		}
+	}
+	groupNames := map[string]bool{}
+	for _, group := range m.Groups {
+		if !IsValidProjectName(group.Name) || names[group.Name] || groupNames[group.Name] || len(group.Projects) == 0 {
+			return invalid(i18n.Tf("manifest.group_invalid", group.Name))
+		}
+		groupNames[group.Name] = true
+		members := map[string]bool{}
+		for _, name := range group.Projects {
+			if !names[name] || members[name] {
+				return invalid(i18n.Tf("manifest.group_member_invalid", group.Name, name))
+			}
+			members[name] = true
 		}
 	}
 	return nil

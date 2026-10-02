@@ -73,21 +73,28 @@ func TestGeneratedNodeProjectsPassFormatting(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			cmd := exec.Command(formatter, "--check", ".")
-			cmd.Dir = result.Project.TargetPath
-			if out, err := cmd.CombinedOutput(); err != nil {
-				t.Fatalf("generated %s formatting: %v\n%s", entry.ID, err, out)
+			projects := result.Project.Projects
+			if len(projects) == 0 {
+				projects = []ProjectResult{result.Project}
 			}
-			cmd = exec.Command(formatter, "--check", "package.json")
+			for _, project := range projects {
+				cmd := exec.Command(formatter, "--check", ".")
+				cmd.Dir = project.TargetPath
+				if out, err := cmd.CombinedOutput(); err != nil {
+					t.Fatalf("generated %s formatting: %v\n%s", project.Name, err, out)
+				}
+				b, err := os.ReadFile(filepath.Join(project.TargetPath, "package.json"))
+				var pkg struct{ Name string }
+				if err != nil || json.Unmarshal(b, &pkg) != nil || pkg.Name != project.Name {
+					t.Fatalf("generated package name: %s (%v)", b, err)
+				}
+			}
+			cmd := exec.Command(formatter, "--check", "package.json")
 			cmd.Dir = root
 			if out, err := cmd.CombinedOutput(); err != nil {
 				t.Fatalf("workspace package formatting: %v\n%s", err, out)
 			}
-			b, err := os.ReadFile(filepath.Join(result.Project.TargetPath, "package.json"))
-			var pkg struct{ Name string }
-			if err != nil || json.Unmarshal(b, &pkg) != nil || pkg.Name != "sample" {
-				t.Fatalf("generated package name: %s (%v)", b, err)
-			}
+
 		})
 	}
 }

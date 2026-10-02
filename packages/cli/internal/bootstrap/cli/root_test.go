@@ -26,6 +26,8 @@ func TestScanOutputValue(t *testing.T) {
 		{"first wins", []string{"-o", "json", "--output", "text"}, "json"},
 		{"flag mid-args", []string{"add", "nestjs-api", "-o", "json", "--name", "x"}, "json"},
 		{"unknown flag without value", []string{"-x", "templates"}, ""},
+		{"skills flags belong upstream", []string{"skills", "find", "x", "--output", "json"}, ""},
+		{"One output before skills", []string{"-o", "text", "skills", "list", "--output", "json"}, "text"},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
@@ -161,7 +163,7 @@ func TestIsKnownSubcommand(t *testing.T) {
 	// Every command is assembled by the composition root.
 	for _, name := range []string{
 		"create", "templates", "add", "exec", "run",
-		"env", "serve", "mise", "hk",
+		"env", "serve", "mise", "hk", "skills",
 		"login", "whoami", "logout", "locale", "init", "upgrade",
 	} {
 		if !isKnownSubcommand(name) {
@@ -173,7 +175,7 @@ func TestIsKnownSubcommand(t *testing.T) {
 		"dev", "build", "test", "lint", "update",
 		"doctor", "status", "unknown", "secrets", "skill", "prd", "design",
 		"docker", "infisical", "dotenv", "procs", "compose", "k8s",
-		"plugins", "setup", "profile", "container", "deploy", "ci", "skills",
+		"plugins", "setup", "profile", "container", "deploy", "ci",
 		"",
 	} {
 		if isKnownSubcommand(name) {

@@ -48,6 +48,20 @@ toolchain = "go"
 
 项目目录不能是绝对路径，也不能越出工作区。未知字段、不支持的版本或无效字段返回 `MANIFEST_INVALID`。TOML 语法错误会标明文件和位置。
 
+## 项目组
+
+组合模板可以将已注册的项目归为一组：
+
+```toml
+[groups.desktop]
+projects = ["desktop-renderer", "desktop-main", "desktop-preload"]
+```
+
+`groups.<name>.projects` 必须是非空列表，成员必须是已注册的项目名且不能重复。
+项目组名称不能与项目名称冲突。项目组生成 `desktop:dev`、`desktop:build`
+等任务别名，自身没有目录或环境绑定；成员任务各自使用所属项目的环境变量。
+删除或重命名成员时需同步更新项目组。`one init mise` 根据此记录重新生成别名。
+
 ## 环境变量约定
 
 未配置 `[env.infisical]` 时，任务继承现有进程环境。Manifest 不保存变量值，也不登记变量名。

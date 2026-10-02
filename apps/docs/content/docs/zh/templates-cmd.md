@@ -57,8 +57,8 @@ one templates [-o <fmt>]
 |---|---|---|
 | `nestjs-api` | backend | [→](/zh/docs/templates/) |
 | `go-api` | backend | [→](/zh/docs/templates/) |
-| `astro-site` | frontend | [→](/zh/docs/templates/) |
-| `starlight-docs` | frontend / docs | [→](/zh/docs/templates/) |
+| `nextjs-site` | frontend | [→](/zh/docs/templates/) |
+| `fumadocs-docs` | frontend / docs | [→](/zh/docs/templates/) |
 | `nextjs-app` | frontend | [→](/zh/docs/templates/) |
 | `react-spa` | frontend | [→](/zh/docs/templates/) |
 | `expo-mobile` | frontend / mobile | [→](/zh/docs/templates/) |

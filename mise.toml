@@ -98,7 +98,7 @@ description = "Run static checks and tests on the current platform"
 depends = ["check:static", "check:test"]
 
 [tasks."check:templates"]
-description = "Build runnable template sources and generated Go/Electron projects"
+description = "Build all generated starters and verify health, IPC, native listeners, and static search"
 depends = ["sync-bundled", "sync-web"]
 run = "go test -count=1 -timeout=20m -v ./packages/cli/internal/modules/creation -run ^TestRunnableTemplateSourcesAndProjects$"
 env = { ONE_TEST_TEMPLATE_BUILDS = "1" }

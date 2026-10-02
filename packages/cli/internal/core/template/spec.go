@@ -14,11 +14,20 @@ import (
 
 // Spec describes a runnable starter. No scripts or expressions are evaluated.
 type Spec struct {
-	SchemaVersion int        `json:"schemaVersion"`
-	Go            *GoSpec    `json:"go,omitempty"`
-	Node          *NodeSpec  `json:"node,omitempty"`
-	Text          []TextRule `json:"text,omitempty"`
-	Exclude       []string   `json:"exclude,omitempty"`
+	SchemaVersion int           `json:"schemaVersion"`
+	Go            *GoSpec       `json:"go,omitempty"`
+	Node          *NodeSpec     `json:"node,omitempty"`
+	Text          []TextRule    `json:"text,omitempty"`
+	Exclude       []string      `json:"exclude,omitempty"`
+	Projects      []ProjectSpec `json:"projects,omitempty"`
+	SharedFiles   []string      `json:"sharedFiles,omitempty"`
+}
+
+// ProjectSpec maps a component of a composite starter to a top-level One project.
+type ProjectSpec struct {
+	Source   string   `json:"source"`
+	Suffix   string   `json:"suffix"`
+	Category Category `json:"category"`
 }
 type GoSpec struct {
 	ModulePrefix string `json:"modulePrefix"`
@@ -73,6 +82,33 @@ func readSpec(source fs.FS) (Spec, error) {
 	}
 	if err := validatePaths(spec.Exclude); err != nil {
 		return spec, err
+	}
+	if err := validatePaths(spec.SharedFiles); err != nil {
+		return spec, err
+	}
+	if len(spec.SharedFiles) > 0 && len(spec.Projects) == 0 {
+		return spec, i18n.Errorf("template.spec_invalid", "sharedFiles")
+	}
+	seenSources, seenSuffixes := map[string]bool{}, map[string]bool{}
+	for _, project := range spec.Projects {
+		if err := validatePaths([]string{project.Source}); err != nil {
+			return spec, err
+		}
+		if !projectSuffixRE.MatchString(project.Suffix) || seenSources[project.Source] || seenSuffixes[project.Suffix] {
+			return spec, i18n.Errorf("template.spec_invalid", "projects")
+		}
+		if _, ok := validCategories[project.Category]; !ok {
+			return spec, i18n.Errorf("template.spec_invalid", "projects.category")
+		}
+		for source := range seenSources {
+			if strings.HasPrefix(source, project.Source+"/") || strings.HasPrefix(project.Source, source+"/") {
+				return spec, i18n.Errorf("template.spec_invalid", "projects.source")
+			}
+		}
+		seenSources[project.Source], seenSuffixes[project.Suffix] = true, true
+	}
+	if len(spec.Projects) > 0 && spec.Go != nil {
+		return spec, i18n.Errorf("template.spec_invalid", "projects/go")
 	}
 	for _, rule := range spec.Text {
 		if rule.From == "" || len(rule.Files) == 0 || (rule.Value != "projectName" && rule.Value != "projectNameKebabCase") || (rule.MinMatches != nil && *rule.MinMatches < 1) {

@@ -1,0 +1,40 @@
+{
+  "name": "@one-template-electron/main",
+  "version": "0.1.0",
+  "description": "electron-template electron main process",
+  "license": "MIT",
+  "author": "",
+  "type": "module",
+  "main": "build/main/index.js",
+  "scripts": {
+    "dev": "node scripts/dev.mjs",
+    "build": "tsc --noEmit && cross-env NODE_ENV=production tsdown",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "sandbox:profile": "node scripts/sandbox-profile.mjs",
+    "pack": "cross-env NODE_ENV=development node scripts/release.mjs",
+    "release": "cross-env NODE_ENV=production node scripts/release.mjs",
+    "lint": "oxlint .",
+    "lint:fix": "oxlint --fix .",
+    "format": "oxfmt --check .",
+    "format:fix": "oxfmt --write .",
+    "check": "pnpm run typecheck && pnpm run lint && pnpm run format"
+  },
+  "dependencies": {
+    "@one-template-electron/preload": "workspace:*",
+    "awilix": "^13.0.5",
+    "electron-log": "^5.4.4"
+  },
+  "devDependencies": {
+    "@one-template-electron/renderer": "workspace:*",
+    "@types/node": "^24.19.0",
+    "cross-env": "^10.1.0",
+    "electron": "^44.5.1",
+    "electron-builder": "^26.15.3",
+    "oxfmt": "^0.71.0",
+    "oxlint": "^1.86.0",
+    "tsdown": "^0.23.0",
+    "typescript": "^7.0.2",
+    "vitest": "^5.0.2"
+  }
+}

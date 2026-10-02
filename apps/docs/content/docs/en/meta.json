@@ -9,6 +9,7 @@
     "cli-overview",
     "create",
     "add",
+    "skills",
     "env-vars",
     "login",
     "templates-cmd",

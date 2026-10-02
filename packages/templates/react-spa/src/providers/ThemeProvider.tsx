@@ -1,6 +1,6 @@
 import type React from "react";
 import { useEffect } from "react";
-import { Toaster } from "@/components/ui/sonner";
+import { Toaster } from "@/components/ui/toast";
 import { useThemeStore } from "@/lib/stores/theme";
 
 export const ThemeProvider: React.FC<React.PropsWithChildren> = ({ children }) => {

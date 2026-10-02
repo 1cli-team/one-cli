@@ -79,12 +79,8 @@ func TestSnapshot_E2E_Add_DefersDeploymentDefaults(t *testing.T) {
 			t.Errorf("rendered router.go missing Swagger wiring %q:\n%s", want, router)
 		}
 	}
-	appHandlerRaw, err := os.ReadFile(filepath.Join(svcDir, "internal", "http", "handlers", "app_handler.go"))
-	if err != nil {
-		t.Fatalf("read rendered app_handler.go: %v", err)
-	}
-	if !strings.Contains(string(appHandlerRaw), `c.Redirect(http.StatusTemporaryRedirect, "/api/docs/index.html")`) {
-		t.Errorf("rendered app handler should redirect /api/docs to Swagger UI:\n%s", appHandlerRaw)
+	if !strings.Contains(router, `c.Redirect(http.StatusTemporaryRedirect, "/api/docs/index.html")`) {
+		t.Errorf("rendered router should redirect /api/docs to Swagger UI:\n%s", router)
 	}
 	openAPIRaw, err := os.ReadFile(filepath.Join(svcDir, "api", "openapi.yaml"))
 	if err != nil {

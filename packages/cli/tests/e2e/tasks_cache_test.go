@@ -100,6 +100,13 @@ func TestE2E_GoTaskBuildRebuildsExecutableAndForwardsArguments(t *testing.T) {
 		taskBinary = strings.TrimSpace(string(out))
 	}
 	root := buildFixture(t, true)
+	// Own the fixture's VCS boundary rather than inheriting a parent repository
+	// or a sandbox's placeholder .git directory under the temporary root.
+	gitInit := exec.Command("git", "init", "--quiet")
+	gitInit.Dir = root
+	if err := gitInit.Run(); err != nil {
+		t.Fatal(err)
+	}
 	if err := os.Symlink(taskBinary, filepath.Join(root, "tools/task")); err != nil {
 		t.Fatal(err)
 	}

@@ -9,6 +9,7 @@
 package addcmd
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -33,8 +34,9 @@ func buildContributions(service *creationmodule.Service) []*cobra.Command {
 }
 
 type addFlags struct {
-	name string
-	yes  bool
+	name       string
+	yes        bool
+	skipSkills bool
 }
 
 func newAddCmd(service *creationmodule.Service) *cobra.Command {
@@ -54,6 +56,8 @@ func newAddCmd(service *creationmodule.Service) *cobra.Command {
 	}
 	cmd.Flags().StringVarP(&flags.name, "name", "n", "", i18n.T("add.flag.name"))
 	cmd.Flags().BoolVarP(&flags.yes, "yes", "y", false, i18n.T("add.flag.yes"))
+	cmd.Flags().BoolVar(&flags.skipSkills, "skip-skills", false, i18n.T("skills.flag.skip"))
+	i18n.MarkFlagUsage(cmd, "skip-skills", "skills.flag.skip")
 	i18n.MarkFlagUsage(cmd, "name", "add.flag.name")
 	i18n.MarkFlagUsage(cmd, "yes", "add.flag.yes")
 	i18n.MarkShort(cmd, "add.short")
@@ -90,18 +94,9 @@ func runAdd(cmd *cobra.Command, service *creationmodule.Service, positional stri
 		}
 		templateID = picked
 	}
-	entry := findTemplate(registry.Templates, templateID)
-	if entry == nil {
-		ids := make([]string, 0, len(registry.Templates))
-		for _, t := range registry.Templates {
-			ids = append(ids, t.ID)
-		}
-		return cliErrors.New(cliErrors.TEMPLATE_NOT_FOUND,
-			i18n.Tf("add.template_missing", templateID)).
-			WithContext(map[string]any{
-				"requested_template":  templateID,
-				"available_templates": ids,
-			})
+	entry, err := registry.Resolve(templateID)
+	if err != nil {
+		return err
 	}
 
 	name := strings.TrimSpace(flags.name)
@@ -137,13 +132,14 @@ func runAdd(cmd *cobra.Command, service *creationmodule.Service, positional stri
 	// Ordinary add deliberately leaves deployment unset. An explicit advanced
 	// flag retains the automation path that configures it immediately.
 	projectInput := creationmodule.ProjectInput{
-		Template: entry,
-		Name:     name,
+		Template:   entry,
+		Name:       name,
+		SkipSkills: flags.skipSkills,
 	}
 	var result creationmodule.AddProjectResult
-	if err := prompt.Spin(i18n.Tf("add.generating", entry.ID), func() error {
+	if err := prompt.SpinContext(cmd.Context(), i18n.Tf("add.generating", entry.ID), func(ctx context.Context) error {
 		var createErr error
-		result, createErr = service.AddProject(cmd.Context(), projectRoot, projectInput)
+		result, createErr = service.AddProject(ctx, projectRoot, projectInput)
 		return createErr
 	}); err != nil {
 		return err
@@ -162,6 +158,7 @@ func runAdd(cmd *cobra.Command, service *creationmodule.Service, positional stri
 		Toolchain:      project.Toolchain,
 		PackageManager: project.PackageManager,
 		Warnings:       project.Warnings,
+		Projects:       addedProjects(project.Projects),
 	})
 
 	return nil
@@ -177,12 +174,40 @@ type addResult struct {
 	// Warnings (v0.5+) carries one entry per template `compat` mismatch.
 	// Empty slice / nil is omitted from the JSON envelope so clean adds
 	// match the pre-v0.5 wire shape.
-	Warnings []string `json:"warnings,omitempty"`
+	Warnings []string     `json:"warnings,omitempty"`
+	Projects []addProject `json:"projects,omitempty"`
+}
+
+type addProject struct {
+	Name       string `json:"name"`
+	TargetPath string `json:"target_path"`
+	Toolchain  string `json:"toolchain"`
+}
+
+func addedProjects(projects []creationmodule.ProjectResult) []addProject {
+	if len(projects) == 0 {
+		return nil
+	}
+	result := make([]addProject, 0, len(projects))
+	for _, project := range projects {
+		result = append(result, addProject{Name: project.Name, TargetPath: project.TargetPath, Toolchain: project.Toolchain})
+	}
+	return result
 }
 
 // RenderTTY prints a friendly add-success summary.
 func (r *addResult) RenderTTY(w io.Writer) {
 	if r == nil {
+		return
+	}
+	if len(r.Projects) > 0 {
+		fmt.Fprintf(w, i18n.T("add.group_success")+"\n", r.SubprojectName)
+		fmt.Fprintln(w, i18n.T("add.group_projects"))
+		for _, project := range r.Projects {
+			fmt.Fprintf(w, i18n.T("add.group_member")+"\n", project.Name, project.TargetPath)
+		}
+		fmt.Fprintln(w, i18n.T("add.group_next_steps"))
+		fmt.Fprintf(w, "  one run %s:dev\n", r.SubprojectName)
 		return
 	}
 	fmt.Fprintf(w, i18n.T("add.success")+"\n", r.SubprojectName)
@@ -198,15 +223,6 @@ func (r *addResult) RenderTTY(w io.Writer) {
 		return
 	}
 	fmt.Fprintf(w, "  one dev -p %s\n", r.SubprojectName)
-}
-
-func findTemplate(items []template.Template, id string) *template.Template {
-	for i := range items {
-		if items[i].ID == id {
-			return &items[i]
-		}
-	}
-	return nil
 }
 
 type projectKind string

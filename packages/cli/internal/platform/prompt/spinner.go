@@ -1,12 +1,16 @@
 package prompt
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"os"
+	"sync"
 	"time"
 
 	"charm.land/lipgloss/v2"
+	"github.com/charmbracelet/x/ansi"
+	"golang.org/x/term"
 
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/output"
 )
@@ -30,20 +34,46 @@ const frameInterval = 80 * time.Millisecond
 // program with progress; for sub-100 ms operations, don't wrap — the
 // spinner flash is more distracting than the work.
 func Spin(title string, action func() error) error {
+	return SpinContext(context.Background(), title, func(context.Context) error { return action() })
+}
+
+type spinnerContextKey struct{}
+
+type spinnerStatus struct {
+	mu    sync.Mutex
+	title string
+}
+
+// SpinContext attaches a progress sink to this action's context, so its phase
+// updates replace the spinner title instead of interleaving terminal output.
+func SpinContext(ctx context.Context, title string, action func(context.Context) error) error {
 	if !output.IsTTY() {
-		return action()
+		return action(ctx)
 	}
 
 	stop := make(chan struct{})
 	done := make(chan struct{})
+	status := &spinnerStatus{title: title}
+	ctx = context.WithValue(ctx, spinnerContextKey{}, status)
 
-	go renderSpinner(os.Stderr, title, stop, done)
+	go renderSpinner(os.Stderr, status, stop, done)
+	defer func() {
+		close(stop)
+		<-done
+	}()
+	return action(ctx)
+}
 
-	err := action()
-
-	close(stop)
-	<-done
-	return err
+// ReportProgress updates the active action's spinner, or writes a normal status
+// line when no spinner is attached (structured CLI output or Dashboard calls).
+func ReportProgress(ctx context.Context, message string) {
+	if status, ok := ctx.Value(spinnerContextKey{}).(*spinnerStatus); ok {
+		status.mu.Lock()
+		status.title = message
+		status.mu.Unlock()
+		return
+	}
+	fmt.Fprintln(os.Stderr, message)
 }
 
 // renderSpinner writes spinner frames to w until stop is closed, then
@@ -55,7 +85,7 @@ func Spin(title string, action func() error) error {
 //     spinner frames into stdout breaks `... | jq` even in TTY mode
 //   - stderr is interactive-by-default — terminals show it inline, but
 //     redirected `2>` consumers don't see the carriage-return overwrites
-func renderSpinner(w io.Writer, title string, stop <-chan struct{}, done chan<- struct{}) {
+func renderSpinner(w io.Writer, status *spinnerStatus, stop <-chan struct{}, done chan<- struct{}) {
 	defer close(done)
 
 	// Use the terminal's cyan palette entry. Importing lipgloss/compat probes
@@ -69,7 +99,20 @@ func renderSpinner(w io.Writer, title string, stop <-chan struct{}, done chan<- 
 	idx := 0
 	// Print initial frame so the spinner appears immediately.
 	render := func() {
-		lipgloss.Fprintf(w, "\r%s %s ", frameStyle.Render(frames[idx]), title)
+		status.mu.Lock()
+		title := status.title
+		status.mu.Unlock()
+		// Clear the previous title, including when a new phase is shorter or
+		// contains wide characters, before drawing the next frame.
+		line := fmt.Sprintf("%s %s ", frameStyle.Render(frames[idx]), title)
+		if terminal, ok := w.(interface{ Fd() uintptr }); ok {
+			if columns, _, err := term.GetSize(int(terminal.Fd())); err == nil && columns > 0 {
+				// Leave the last column free to avoid terminal auto-wrap. ANSI
+				// truncation preserves styles and handles Chinese display width.
+				line = ansi.Truncate(line, columns-1, "…")
+			}
+		}
+		lipgloss.Fprintf(w, "\r\033[2K%s", line)
 		idx = (idx + 1) % len(frames)
 	}
 	render()

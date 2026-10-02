@@ -15,10 +15,22 @@ func TestElectronSandboxProfileUsesInstalledBinaryWithoutDisablingSandbox(t *tes
 		t.Skip("node is not installed")
 	}
 	root := t.TempDir()
-	if err := Render("electron-app", root, CommonVariables("desktop", "pnpm")); err != nil {
+	outputs, err := PrepareProjects("electron-app", CommonVariables("desktop", "pnpm"))
+	if err != nil {
 		t.Fatal(err)
 	}
-	project := filepath.Join(root, "apps/electron")
+	for _, output := range outputs {
+		for name, raw := range output.Files {
+			file := filepath.Join(root, output.Name, filepath.FromSlash(name))
+			if err := os.MkdirAll(filepath.Dir(file), 0o755); err != nil {
+				t.Fatal(err)
+			}
+			if err := os.WriteFile(file, raw, 0o644); err != nil {
+				t.Fatal(err)
+			}
+		}
+	}
+	project := filepath.Join(root, "desktop-main")
 	module := filepath.Join(project, "node_modules/electron")
 	if err := os.MkdirAll(module, 0o755); err != nil {
 		t.Fatal(err)
@@ -28,7 +40,7 @@ func TestElectronSandboxProfileUsesInstalledBinaryWithoutDisablingSandbox(t *tes
 	if err := os.WriteFile(filepath.Join(module, "index.js"), []byte("module.exports = "+string(value)), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	cmd := exec.Command(node, "script/sandbox-profile.mjs")
+	cmd := exec.Command(node, "scripts/sandbox-profile.mjs")
 	cmd.Dir = project
 	out, err := cmd.CombinedOutput()
 	if err != nil {
@@ -43,7 +55,7 @@ func TestElectronSandboxProfileUsesInstalledBinaryWithoutDisablingSandbox(t *tes
 		t.Fatalf("profile contains shell commands: %s", out)
 	}
 	// Production/default development keeps Chromium's sandbox enabled.
-	for _, rel := range []string{"package.json", "apps/electron/package.json", "apps/electron/src/index.ts", "apps/electron/src/windows/main.window.ts"} {
+	for _, rel := range []string{"desktop-main/package.json", "desktop-main/src/index.ts", "desktop-main/src/windows/main.window.ts"} {
 		raw, err := os.ReadFile(filepath.Join(root, rel))
 		if err != nil {
 			t.Fatal(err)

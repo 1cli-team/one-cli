@@ -149,8 +149,8 @@ const moduleConfigs: ModuleConfig[] = [
     id: "docs",
     labels: { zh: "Docs", en: "Docs" },
     spotlight: {
-      zh: { title: "Docs", subtitle: "Starlight 文档站" },
-      en: { title: "Docs", subtitle: "Starlight docs site" },
+      zh: { title: "Docs", subtitle: "Fumadocs 文档站" },
+      en: { title: "Docs", subtitle: "Fumadocs documentation" },
     },
     x: 0.9,
     y: -0.08,

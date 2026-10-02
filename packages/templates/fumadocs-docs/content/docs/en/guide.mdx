@@ -1,0 +1,18 @@
+---
+title: Writing guide
+description: Organize pages and publish your docs.
+---
+
+## Content structure
+
+Add Markdown or MDX files in `content/docs/en/`. Use the same file names in
+`content/docs/zh/` so the language selector opens the corresponding page.
+
+## Navigation
+
+Set page order in `meta.json`. Headings create the table of contents automatically.
+
+## Publish
+
+Run `pnpm build`, then deploy `out/` to your static hosting provider. Search uses
+the exported index and runs in the browser.

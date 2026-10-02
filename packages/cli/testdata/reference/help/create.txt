@@ -11,10 +11,11 @@ EXAMPLES
   one create demo --yes
 
 TIPS
-Create an empty workspace named after its target folder. Empty directories and empty Git repositories are supported. Run one add afterward to add a project.
+Create an empty workspace named after its target folder. Empty directories and empty Git repositories are supported. Run one add afterward to add a project. Installs one-cli usage and find-skills discovery guidance in the workspace's .agents/skills by default; use --skip-skills to skip. Business skills are installed manually.
 
 COMMON OPTIONS
   -o, --output <value>     Output format: json | yaml | text (default: terminal-friendly text, JSON when piped)
+  --skip-skills            Skip automatic installation of workspace and technology-stack skills
   -y, --yes                Use defaults without prompting
 
 AUTOMATION AND ADVANCED OPTIONS

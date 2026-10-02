@@ -120,7 +120,7 @@ func prepare(source fs.FS, vars Variables) (map[string][]byte, error) {
 		}
 	}
 	if spec.Node != nil {
-		if err := rewriteNode(files, *spec.Node, vars); err != nil {
+		if err := rewriteNodeProjects(files, *spec.Node, vars, spec.Projects); err != nil {
 			return nil, err
 		}
 	}

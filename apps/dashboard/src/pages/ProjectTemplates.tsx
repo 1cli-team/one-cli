@@ -27,8 +27,8 @@ const CATEGORIES = ["all", "frontend", "backend", "library"] as const;
 const TEMPLATE_ICONS: Record<string, LucideIcon> = {
 	"nestjs-api": Server,
 	"go-api": Server,
-	"astro-site": Globe,
-	"starlight-docs": BookOpen,
+	"nextjs-site": Globe,
+	"fumadocs-docs": BookOpen,
 	"nextjs-app": Globe,
 	"react-spa": Braces,
 	"expo-mobile": Smartphone,
