@@ -8,23 +8,23 @@
   "main": "build/main/index.js",
   "scripts": {
     "dev": "cross-env NODE_ENV=development tsdown && cross-env NODE_ENV=development electron build/main/index.js",
-    "build": "cross-env NODE_ENV=production tsdown",
+    "build": "tsc --noEmit && cross-env NODE_ENV=production tsdown",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
     "sandbox:profile": "node script/sandbox-profile.mjs",
     "pack": "cross-env NODE_ENV=development node script/release.mjs",
     "release": "cross-env NODE_ENV=production node script/release.mjs"
   },
   "dependencies": {
-    "@inversifyjs/binding-decorators": "^3.0.0",
     "@one-template-electron/preload": "workspace:*",
+    "awilix": "^13.0.5",
     "dayjs": "^1.11.23",
     "electron-devtools-installer": "^4.0.0",
     "electron-is-dev": "^3.0.1",
     "electron-log": "^5.4.4",
     "electron-store": "^11.0.2",
     "electron-updater": "^6.8.9",
-    "inversify": "^8.2.3",
-    "mime-types": "^3.0.2",
-    "reflect-metadata": "^0.2.2"
+    "mime-types": "^3.0.2"
   },
   "devDependencies": {
     "@types/mime-types": "^3.0.1",
@@ -33,6 +33,7 @@
     "electron": "^44.5.1",
     "electron-builder": "^26.15.3",
     "tsdown": "^0.23.0",
-    "typescript": "^7.0.2"
+    "typescript": "^7.0.2",
+    "vitest": "^5.0.2"
   }
 }

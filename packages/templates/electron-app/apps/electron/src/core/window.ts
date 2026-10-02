@@ -1,43 +1,44 @@
 import { BrowserWindow, type BrowserWindowConstructorOptions } from "electron";
 import isDev from "electron-is-dev";
 
-// 所有业务窗口继承这个基类
-// 职责：封装 BrowserWindow 生命周期 + 提供 send() 快捷方法
-// 子类只需要：设置 this.url、实现 init()，按需重写 readyToShow/windowClose 钩子
-export default class Window {
-  window: BrowserWindow | null = null;
+interface WindowOptions {
   options: BrowserWindowConstructorOptions;
-  url: string = "";
+  url: string;
+  onClose?: (window: BrowserWindow) => void;
+}
 
-  constructor(options: BrowserWindowConstructorOptions) {
-    this.options = options;
-  }
+// Each factory call owns its window reference; callbacks share it through a closure.
+export function createWindow({ options, url, onClose }: WindowOptions) {
+  let window: BrowserWindow | null = null;
 
-  create(): BrowserWindow {
-    if (!this.url) throw new Error("url is required");
+  const create = (): BrowserWindow => {
+    if (!url) throw new Error("url is required");
 
-    const window = new BrowserWindow(this.options);
-    void window.loadURL(this.url);
+    const current = new BrowserWindow(options);
+    window = current;
+    void current.loadURL(url);
 
-    window.once("ready-to-show", this.readyToShow);
-    window.on("close", this.windowClose);
+    current.once("ready-to-show", () => {
+      current.show();
+      if (isDev) current.webContents.openDevTools();
+    });
+    current.on("close", () => onClose?.(current));
+    current.once("closed", () => {
+      if (window === current) window = null;
+    });
 
-    return window;
-  }
-
-  readyToShow = () => {
-    if (!this.window) return;
-    this.window.show();
-    if (isDev) this.window.webContents.openDevTools();
+    return current;
   };
 
-  windowClose = () => {
-    if (!this.window) return;
-    this.window = null;
+  const send = (channel: string, ...args: unknown[]): void => {
+    window?.webContents.send(channel, ...args);
   };
 
-  send(channel: string, ...args: unknown[]): void {
-    if (!this.window) return;
-    this.window.webContents.send(channel, ...args);
-  }
+  return {
+    get window() {
+      return window;
+    },
+    create,
+    send,
+  };
 }

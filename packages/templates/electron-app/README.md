@@ -13,6 +13,28 @@ The renderer uses shadcn/ui's `base-nova` (Base UI) components and keeps
 `apps/ui/components.json`. Run `pnpm dlx shadcn@latest add dialog` from `apps/ui`
 to add components, and compose them with `render`. Sonner keeps the existing notification and theme API.
 
+## 主进程 / Main process
+
+主进程使用 Awilix 装配工厂函数。`apps/electron/src/container.ts` 显式注册单例服务，
+其他模块通过 `createXxx({ dependencies })` 接收依赖，并用闭包保存窗口等内部状态。
+启动顺序由 `src/app.ts` 控制，服务模块无需访问容器。
+
+The main process uses Awilix to compose factory functions. `apps/electron/src/container.ts`
+explicitly registers singleton services. Other modules receive dependencies through
+`createXxx({ dependencies })` and keep internal state, such as windows, in closures.
+`src/app.ts` controls startup order; service modules do not access the container.
+
+控制器返回显式的 `handle` / `on` 映射，IPC 参数与返回值沿用 preload 包的类型契约。
+新增控制器时在 `src/controller/index.ts` 导出工厂，并在 `src/container.ts` 中注册和聚合。
+
+Controllers return explicit `handle` / `on` maps. IPC arguments and return values follow
+the preload package's type contracts. Export new controller factories from
+`src/controller/index.ts`, then register and collect them in `src/container.ts`.
+
+在项目目录运行 `pnpm test` 验证依赖装配、IPC 和窗口行为；测试使用模拟的 Electron API。
+Run `pnpm test` from this project to verify dependency composition, IPC, and window behavior
+with mocked Electron APIs.
+
 ## 工作区 / Workspace
 
 这是一个 One 项目，内部包共享仓库根目录的 `pnpm-workspace.yaml` 和

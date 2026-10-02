@@ -1,50 +1,48 @@
 import { app, BrowserWindow } from "electron";
-import { provide } from "@inversifyjs/binding-decorators";
-import { inject, injectable } from "inversify";
-import ProtocolService from "./core/protocol";
-import Router from "./core/router";
-import ElectronDevtools from "./vendor/ElectronDevtools";
-import ElectronUpdater from "./vendor/ElectronUpdater";
-import ElectronLogger from "./vendor/ElectronLogger";
-import MainWindow from "./windows/main.window";
-import "./controller";
+import type { ProtocolService } from "./core/protocol";
+import type { AppRouter } from "./core/router";
+import type { ElectronDevtools } from "./vendor/ElectronDevtools";
+import type { ElectronUpdater } from "./vendor/ElectronUpdater";
+import type { ElectronLogger } from "./vendor/ElectronLogger";
+import type { MainWindow } from "./windows/main.window";
 
-// 编排器：定义启动顺序
-// 1. 协议注册（whenReady 后尽早）
-// 2. IPC 路由（绑定所有控制器）
-// 3. Vendor init（日志、更新器、DevTools）
-// 4. 平台事件（activate / second-instance / quit）
-// 5. 业务窗口创建
-@injectable()
-@provide()
-export default class ElectronApp {
-  constructor(
-    @inject(MainWindow) private readonly mainWindow: MainWindow,
-    @inject(ProtocolService) private readonly protocol: ProtocolService,
-    @inject(Router) private readonly router: Router,
-    @inject(ElectronUpdater) private readonly updater: ElectronUpdater,
-    @inject(ElectronDevtools) private readonly devTools: ElectronDevtools,
-    @inject(ElectronLogger) private readonly logger: ElectronLogger,
-  ) {}
+interface AppDependencies {
+  mainWindow: MainWindow;
+  protocol: ProtocolService;
+  router: AppRouter;
+  updater: ElectronUpdater;
+  devTools: ElectronDevtools;
+  logger: ElectronLogger;
+}
 
-  async init(): Promise<void> {
-    this.protocol.create();
-    this.router.init();
-
-    await this.devTools.init();
-    await this.updater.init();
+// Startup order stays explicit and independent of the DI container.
+export function createElectronApp({
+  mainWindow,
+  protocol,
+  router,
+  updater,
+  devTools,
+  logger,
+}: AppDependencies) {
+  const init = async (): Promise<void> => {
+    protocol.create();
+    router.init();
+    await devTools.init();
+    await updater.init();
 
     app.on("activate", () => {
-      if (BrowserWindow.getAllWindows().length === 0) this.mainWindow.init();
+      if (BrowserWindow.getAllWindows().length === 0) mainWindow.init();
     });
 
-    this.mainWindow.init();
-
-    this.logger.info("app ready");
-  }
-
-  // 第二实例启动时把焦点还给已有窗口
-  secondInstance = (): void => {
-    this.mainWindow.init();
+    mainWindow.init();
+    logger.info("app ready");
   };
+
+  const secondInstance = (): void => {
+    mainWindow.init();
+  };
+
+  return { init, secondInstance };
 }
+
+export type ElectronApp = ReturnType<typeof createElectronApp>;

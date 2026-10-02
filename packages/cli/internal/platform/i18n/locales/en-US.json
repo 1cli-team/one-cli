@@ -517,7 +517,7 @@
   "template.go-lib.name": "Go library",
   "template.go-lib.description": "Go library following golang-standards/project-layout, ready to publish and import",
   "template.electron-app.name": "Electron desktop app",
-  "template.electron-app.description": "Electron + React + Vite with inversify, electron-log, electron-store, and electron-updater",
+  "template.electron-app.description": "Electron + React + Vite with Awilix factory functions, electron-log, electron-store, and electron-updater",
   "templates.headings": "CATEGORY\tID\tTOOLCHAIN\tDESCRIPTION",
   "template.category.frontend": "Application",
   "template.category.backend": "Service",

@@ -431,7 +431,7 @@
 			},
 			"electron-app": {
 				"name": "Electron desktop app",
-				"description": "Electron + React + Vite with inversify, electron-log, electron-store, and electron-updater"
+				"description": "Electron + React + Vite with Awilix factory functions, electron-log, electron-store, and electron-updater"
 			},
 			"empty-app": {
 				"name": "Empty application",
@@ -530,9 +530,9 @@
 			},
 			"electron-app": {
 				"description": "Create desktop applications with an Electron main process and a React user interface.",
-				"stack": "Electron · React · Vite · Inversify",
+				"stack": "Electron · React · Vite · Awilix",
 				"feature1": "Separate main, renderer, and preload packages",
-				"feature2": "Typed IPC bridge and dependency injection",
+				"feature2": "Typed IPC bridge and Awilix factory functions",
 				"feature3": "Logging, local settings, and updater modules"
 			},
 			"empty-app": {

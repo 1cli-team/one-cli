@@ -517,7 +517,7 @@
   "template.go-lib.name": "Go 通用库",
   "template.go-lib.description": "Go 库模板，遵循 golang-standards/project-layout，适合发包与被 import 场景",
   "template.electron-app.name": "Electron 桌面应用",
-  "template.electron-app.description": "Electron + React + Vite 桌面应用模板，主进程基于 inversify，内置 electron-log/store/updater",
+  "template.electron-app.description": "Electron + React + Vite 桌面应用模板，主进程使用 Awilix 工厂函数，内置 electron-log/store/updater",
   "templates.headings": "分类\t标识\t工具链\t说明",
   "template.category.frontend": "应用",
   "template.category.backend": "服务",

@@ -137,7 +137,7 @@
     },
     {
       "category": "frontend",
-      "description": "Electron + React + Vite 桌面应用模板，主进程基于 inversify，内置 electron-log/store/updater",
+      "description": "Electron + React + Vite 桌面应用模板，主进程使用 Awilix 工厂函数，内置 electron-log/store/updater",
       "id": "electron-app",
       "name": "Electron 桌面应用",
       "repo": "local:electron-app",

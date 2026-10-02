@@ -1,6 +1,6 @@
 import type { ControllerHandlerBinder } from "./registerControllerHandlers";
 import { error, success } from "../utils/ipcResponse";
-import type ElectronLogger from "../vendor/ElectronLogger";
+import type { ElectronLogger } from "../vendor/ElectronLogger";
 
 export type IpcMainHandlers = {
   handle: (channel: string, listener: (...args: unknown[]) => unknown) => void;
@@ -9,26 +9,15 @@ export type IpcMainHandlers = {
 
 type LoggerLike = Pick<ElectronLogger, "error">;
 
-function isPromiseLike(value: unknown): value is PromiseLike<unknown> {
-  return typeof (value as PromiseLike<unknown>)?.then === "function";
-}
-
-// 把扫描到的 handler 真正绑到 ipcMain 上
-// 所有处理器统一加 try/catch + 走 success/error 信封
+// Invoke and event handlers share the existing response envelope and error logging.
 export function createElectronControllerBinder(
   ipc: IpcMainHandlers,
   logger: LoggerLike,
 ): ControllerHandlerBinder {
-  return ({ controller, handler, event, method }) => {
-    if (method !== "on" && method !== "handle") return;
-
+  return ({ handler, event, method }) => {
     ipc[method](event, async (...args: unknown[]) => {
       try {
-        let result: unknown = handler.call(controller, ...args);
-        if (isPromiseLike(result)) {
-          result = await result;
-        }
-        return success(result);
+        return success(await handler(...args));
       } catch (e: unknown) {
         logger.error(`process ipc [${event}] failed: `, e);
         if (e instanceof Error) return error(e.message);

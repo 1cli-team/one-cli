@@ -1,7 +1,16 @@
-// 框架契约：所有控制器实现 Controller（空接口，只作类型标记）
-export interface Controller {}
+import type { IpcMainEvent, IpcMainInvokeEvent } from "electron";
+import type { InvokeChannel, InvokeMap } from "./events";
 
-// Router 只暴露 init()，编排器启动时调用一次完成 IPC 绑定
-export interface AppRouter {
-  init(): void;
+export type InvokeHandlers = {
+  [Channel in InvokeChannel]?: (
+    event: IpcMainInvokeEvent,
+    ...args: InvokeMap[Channel]["args"]
+  ) => InvokeMap[Channel]["return"] | Promise<InvokeMap[Channel]["return"]>;
+};
+
+export type IpcListener = (...args: unknown[]) => unknown;
+
+export interface Controller {
+  handle: InvokeHandlers;
+  on?: Record<string, (event: IpcMainEvent, ...args: unknown[]) => unknown>;
 }

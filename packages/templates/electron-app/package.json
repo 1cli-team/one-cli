@@ -14,6 +14,7 @@
   "scripts": {
     "dev": "pnpm -F @one-template-electron/preload build && pnpm -r --parallel -F @one-template-electron/electron -F @one-template-electron/ui run dev",
     "build": "pnpm -F @one-template-electron/preload run build && pnpm -r --parallel -F @one-template-electron/electron -F @one-template-electron/ui run build",
+    "test": "pnpm -F @one-template-electron/preload run build && pnpm -F @one-template-electron/electron run test",
     "pack": "pnpm -F @one-template-electron/electron run pack",
     "sandbox:profile": "pnpm --silent -F @one-template-electron/electron run sandbox:profile",
     "release": "pnpm run build && pnpm -F @one-template-electron/electron run release",

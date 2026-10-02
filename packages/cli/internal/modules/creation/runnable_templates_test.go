@@ -44,6 +44,7 @@ func TestRunnableTemplateSourcesAndProjects(t *testing.T) {
 	run(desktopSource, "pnpm", "install", "--no-frozen-lockfile")
 	run(desktopSource, "pnpm", "run", "format:check")
 	run(desktopSource, "pnpm", "run", "build")
+	run(desktopSource, "pnpm", "run", "test")
 	formatter := filepath.Join(desktopSource, "node_modules/.bin/oxfmt")
 	if runtime.GOOS == "windows" {
 		formatter += ".cmd"
@@ -82,6 +83,7 @@ func TestRunnableTemplateSourcesAndProjects(t *testing.T) {
 	}
 	for _, dir := range []string{"apps/Alpha_Desktop", "apps/zulu-desktop"} {
 		run(filepath.Join(root, dir), "pnpm", "run", "build")
+		run(filepath.Join(root, dir), "pnpm", "run", "test")
 		run(filepath.Join(root, dir), formatter, "--check", ".")
 	}
 }
