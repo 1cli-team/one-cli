@@ -497,14 +497,14 @@
 				"description": "构建需要服务端渲染、API 路由和搜索引擎友好页面的 Web 应用。",
 				"stack": "Next.js · React · TypeScript",
 				"feature1": "App Router 页面与接口路由",
-				"feature2": "shadcn/ui 组件与主题切换",
+				"feature2": "shadcn/ui (Base UI) 组件与主题切换",
 				"feature3": "SWR 数据请求与 Zustand 状态管理"
 			},
 			"react-spa": {
 				"description": "构建交互丰富的仪表盘、管理后台和浏览器端业务系统。",
 				"stack": "React · Vite · TypeScript",
 				"feature1": "客户端路由与错误边界",
-				"feature2": "shadcn/ui 组件与明暗主题",
+				"feature2": "shadcn/ui (Base UI) 组件与明暗主题",
 				"feature3": "SWR 数据请求与 Zustand 状态管理"
 			},
 			"expo-mobile": {

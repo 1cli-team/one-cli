@@ -48,8 +48,8 @@ const HomePage: FC = () => (
         Welcome to One CLI
       </h1>
       <p className="text-muted-foreground text-base sm:text-lg">
-        一个由 One CLI 生成的 Electron 桌面端脚手架，已预置 shadcn/ui、Tailwind
-        v4、IPC 桥与状态管理。
+        一个由 One CLI 生成的 Electron 桌面端脚手架，已预置 shadcn/ui (Base
+        UI)、Tailwind v4、IPC 桥与状态管理。
       </p>
     </div>
 

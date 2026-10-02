@@ -84,6 +84,7 @@
 		--radius-scale-sm: 0.125rem;
 		--radius-scale-md: 0.375rem;
 		--radius-scale-lg: 0.5rem;
+		--radius: var(--radius-scale-lg);
 		--radius-scale-xl: 0.75rem;
 		--radius-scale-2xl: 1rem;
 		--radius-scale-full: 9999px;

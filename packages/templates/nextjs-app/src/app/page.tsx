@@ -44,7 +44,8 @@ export default function HomePage() {
 						Welcome to One CLI
 					</h1>
 					<p className="text-base text-muted-foreground sm:text-lg">
-						一个由 One CLI 生成的 Next.js 脚手架，已预置 shadcn/ui、Tailwind v4、SWR 与设计令牌。
+						一个由 One CLI 生成的 Next.js 脚手架，已预置 shadcn/ui (Base UI)、Tailwind v4、SWR
+						与设计令牌。
 					</p>
 				</div>
 

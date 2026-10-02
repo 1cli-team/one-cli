@@ -21,7 +21,7 @@ export const App: React.FC = () => {
 								web-csr-react
 							</p>
 							<p className="truncate text-base font-medium text-foreground">
-								React 19 + shadcn/ui starter
+								React 19 + shadcn/ui (Base UI) starter
 							</p>
 						</div>
 					</div>
@@ -44,7 +44,7 @@ export const App: React.FC = () => {
 
 			<footer className="border-t border-border/60 bg-background/75">
 				<div className="mx-auto flex max-w-7xl flex-col gap-2 px-6 py-6 text-sm text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
-					<p>CSR WebApp Template powered by shadcn/ui, Tailwind CSS v4 and Vite.</p>
+					<p>CSR WebApp Template powered by shadcn/ui (Base UI), Tailwind CSS v4 and Vite.</p>
 					<p>© {new Date().getFullYear()} Template</p>
 				</div>
 			</footer>

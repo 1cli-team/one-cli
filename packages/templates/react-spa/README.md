@@ -1,13 +1,13 @@
 # Web CSR React Template
 
-面向浏览器端单页应用的 React 模板，当前基线已经切到 `shadcn/ui + Tailwind CSS v4 + CSS variables`，并保留了 SWR、Zustand、Axios、主题切换和错误兜底这些常用能力。
+面向浏览器端单页应用的 React 模板，当前基线已经切到 `shadcn/ui (Base UI) + Tailwind CSS v4 + CSS variables`，并保留了 SWR、Zustand、Axios、主题切换和错误兜底这些常用能力。
 
 ## 技术栈
 
 - React 19
 - TypeScript 7
 - Vite 8
-- shadcn/ui + Radix UI
+- shadcn/ui (Base UI, base-nova)
 - Tailwind CSS v4
 - SWR
 - Zustand
@@ -98,6 +98,23 @@ const { data, isLoading } = useSWR(demoKey, getDemo);
 - `src/styles/tokens.css` 是唯一 design token 源
 - `src/styles/tailwind.css` 负责 Tailwind v4 的 `@theme inline` 映射与全局样式层
 - `src/lib/toast.ts` 封装 `sonner`，避免页面直接依赖第三方通知 API
+
+### shadcn/ui Base UI
+
+模板使用 shadcn/ui 的 `base-nova` 风格，保留 `components.json` 和 Tailwind CSS 设计令牌。交互组件基于 `@base-ui/react`；Sonner 继续沿用模板的主题集成与通知接口。
+The template uses shadcn/ui's `base-nova` style with `components.json` and Tailwind CSS design tokens. Interactive components use `@base-ui/react`; Sonner keeps the template's theme integration and notification API.
+
+在生成的项目目录添加组件 / Add components from the generated project directory:
+
+```sh
+pnpm dlx shadcn@latest add dialog
+```
+
+组合组件使用 `render` / Compose components using `render`:
+
+```tsx
+<Button render={<button type="button" />}>Submit</Button>
+```
 
 ## 说明
 

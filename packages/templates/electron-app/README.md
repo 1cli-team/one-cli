@@ -3,6 +3,16 @@
 Electron + React + Vite，包含主进程、渲染进程和 preload 三个内部包。
 Electron + React + Vite, with separate main, renderer, and preload packages.
 
+## UI / 界面
+
+渲染进程使用 shadcn/ui 的 `base-nova`（Base UI）组件，保留 `apps/ui/components.json`。
+在 `apps/ui` 目录执行 `pnpm dlx shadcn@latest add dialog` 可继续添加组件；组合使用 `render`。
+Sonner 保留现有通知与主题接口。
+
+The renderer uses shadcn/ui's `base-nova` (Base UI) components and keeps
+`apps/ui/components.json`. Run `pnpm dlx shadcn@latest add dialog` from `apps/ui`
+to add components, and compose them with `render`. Sonner keeps the existing notification and theme API.
+
 ## 工作区 / Workspace
 
 这是一个 One 项目，内部包共享仓库根目录的 `pnpm-workspace.yaml` 和

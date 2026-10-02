@@ -28,7 +28,7 @@ export default defineConfig({
 							name(id) {
 								if (!id.includes("node_modules")) return null;
 								if (
-									id.includes("@radix-ui") ||
+									id.includes("@base-ui") ||
 									id.includes("lucide-react") ||
 									id.includes("sonner") ||
 									id.includes("class-variance-authority")

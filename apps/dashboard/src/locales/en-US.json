@@ -497,14 +497,14 @@
 				"description": "Build web applications with server rendering, API routes, and search-friendly pages.",
 				"stack": "Next.js · React · TypeScript",
 				"feature1": "App Router pages and route handlers",
-				"feature2": "shadcn/ui components and theme switching",
+				"feature2": "shadcn/ui (Base UI) components and theme switching",
 				"feature3": "SWR data fetching and Zustand state management"
 			},
 			"react-spa": {
 				"description": "Create interactive dashboards, admin panels, and browser-based business applications.",
 				"stack": "React · Vite · TypeScript",
 				"feature1": "Client-side routing and error boundaries",
-				"feature2": "shadcn/ui components and light / dark themes",
+				"feature2": "shadcn/ui (Base UI) components and light / dark themes",
 				"feature3": "SWR data fetching and Zustand state management"
 			},
 			"expo-mobile": {

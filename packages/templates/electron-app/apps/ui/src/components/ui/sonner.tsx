@@ -1,18 +1,41 @@
+"use client";
+
 import { Toaster as Sonner, type ToasterProps } from "sonner";
 
-// 简化版：不接 next-themes，由父层自行控制 className=dark
-// 需要夜间模式时把 theme 传进来或从全局 store 读
-const Toaster = (props: ToasterProps) => {
+import {
+  CircleCheckIcon,
+  InfoIcon,
+  Loader2Icon,
+  OctagonXIcon,
+  TriangleAlertIcon,
+} from "lucide-react";
+
+const Toaster = ({ ...props }: ToasterProps) => {
   return (
     <Sonner
       className="toaster group"
+      icons={{
+        success: <CircleCheckIcon aria-hidden="true" className="size-4" />,
+        info: <InfoIcon aria-hidden="true" className="size-4" />,
+        warning: <TriangleAlertIcon aria-hidden="true" className="size-4" />,
+        error: <OctagonXIcon aria-hidden="true" className="size-4" />,
+        loading: (
+          <Loader2Icon aria-hidden="true" className="size-4 animate-spin" />
+        ),
+      }}
       style={
         {
           "--normal-bg": "var(--popover)",
           "--normal-text": "var(--popover-foreground)",
           "--normal-border": "var(--border)",
+          "--border-radius": "var(--radius)",
         } as React.CSSProperties
       }
+      toastOptions={{
+        classNames: {
+          toast: "cn-toast",
+        },
+      }}
       {...props}
     />
   );

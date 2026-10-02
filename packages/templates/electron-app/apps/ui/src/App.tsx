@@ -9,7 +9,7 @@ const App: FC = () => {
           <div>
             <h1 className="text-xl font-semibold">electron-template</h1>
             <p className="text-muted-foreground text-sm">
-              electron + react 19 + tailwind v4 + shadcn
+              electron + react 19 + tailwind v4 + shadcn/ui (Base UI)
             </p>
           </div>
           <nav className="flex gap-4 text-sm">
