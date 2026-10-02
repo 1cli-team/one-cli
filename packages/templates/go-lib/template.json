@@ -5,16 +5,12 @@
   },
   "text": [
     {
-      "files": [
-        "README.md"
-      ],
+      "files": ["README.md"],
       "from": "one-template-go-lib",
       "value": "projectNameKebabCase"
     },
     {
-      "files": [
-        "pkg/greeter/greeter.go"
-      ],
+      "files": ["pkg/greeter/greeter.go"],
       "from": "one-template-go-lib",
       "value": "projectNameKebabCase"
     }

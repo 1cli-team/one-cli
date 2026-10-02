@@ -68,6 +68,11 @@ func runBinary(t *testing.T, args ...string) (stdout, stderr string, exitCode in
 func runBinaryIn(t *testing.T, dir string, args ...string) (stdout, stderr string, exitCode int) {
 	t.Helper()
 	bin := binaryPath(t)
+	// Legacy scaffold/contract fixtures stay offline. Skills installation has
+	// dedicated integration tests; those launch the binary explicitly.
+	if len(args) > 0 && (args[0] == "create" || args[0] == "add") {
+		args = append(append([]string(nil), args...), "--skip-skills")
+	}
 	cmd := exec.Command(bin, args...)
 	if dir != "" {
 		cmd.Dir = dir

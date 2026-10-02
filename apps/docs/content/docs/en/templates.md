@@ -26,21 +26,21 @@ If unsure, ask one question: **how does the user consume this thing?** Browser -
 
 ## Full Comparison
 
-| ID | Category | Keywords | One-line fit | Details |
-|---|---|---|---|---|
-| `nestjs-api` | API | TypeScript, NestJS, REST | Default API template for TypeScript teams | [Source](https://github.com/1cli-team/one-cli/tree/master/packages/templates/nestjs-api) |
-| `go-api` | API | Go, Gin, GORM | High-throughput / low-memory / mixed-language teams | - |
-| `nextjs-app` | Web | Next.js, SSR, React | Default consumer web or full-stack app | [Source](https://github.com/1cli-team/one-cli/tree/master/packages/templates/nextjs-app) |
-| `react-spa` | Web | Vite, React, SPA | Console / internal app / no SEO | [Source](https://github.com/1cli-team/one-cli/tree/master/packages/templates/react-spa) |
-| `nextjs-site` | Web | Next.js, React, static export | Marketing or content site | [Source](https://github.com/1cli-team/one-cli/tree/master/packages/templates/nextjs-site) |
-| `fumadocs-docs` | Docs | Fumadocs, Next.js, Base UI | Documentation site or knowledge base | [Source](https://github.com/1cli-team/one-cli/tree/master/packages/templates/fumadocs-docs) |
-| `expo-mobile` | Mobile | Expo, React Native | Cross-platform iOS + Android | [Source](https://github.com/1cli-team/one-cli/tree/master/packages/templates/expo-mobile) |
-| `electron-app` | Desktop | Electron, React, Vite | Desktop app for macOS / Windows / Linux | [Source](https://github.com/1cli-team/one-cli/tree/master/packages/templates/electron-app) |
-| `ts-library` | Library | TS, strict semver | Reusable TypeScript package | - |
-| `go-lib` | Library | Go, module, package layout | Reusable Go module | - |
-| `empty-app` | App | No stack | Start with an empty application directory | - |
-| `empty-service` | API | No stack | Start with an empty service directory | - |
-| `empty-library` | Library | No stack | Start with an empty shared library directory | - |
+| ID              | Category | Keywords                      | One-line fit                                        | Details                                                                                     |
+| --------------- | -------- | ----------------------------- | --------------------------------------------------- | ------------------------------------------------------------------------------------------- |
+| `nestjs-api`    | API      | TypeScript, NestJS, REST      | Default API template for TypeScript teams           | [Source](https://github.com/1cli-team/one-cli/tree/master/packages/templates/nestjs-api)    |
+| `go-api`        | API      | Go, Gin, GORM                 | High-throughput / low-memory / mixed-language teams | -                                                                                           |
+| `nextjs-app`    | Web      | Next.js, SSR, React           | Default consumer web or full-stack app              | [Source](https://github.com/1cli-team/one-cli/tree/master/packages/templates/nextjs-app)    |
+| `react-spa`     | Web      | Vite, React, SPA              | Console / internal app / no SEO                     | [Source](https://github.com/1cli-team/one-cli/tree/master/packages/templates/react-spa)     |
+| `nextjs-site`   | Web      | Next.js, React, static export | Marketing or content site                           | [Source](https://github.com/1cli-team/one-cli/tree/master/packages/templates/nextjs-site)   |
+| `fumadocs-docs` | Docs     | Fumadocs, Next.js, Base UI    | Documentation site or knowledge base                | [Source](https://github.com/1cli-team/one-cli/tree/master/packages/templates/fumadocs-docs) |
+| `expo-mobile`   | Mobile   | Expo, React Native            | Cross-platform iOS + Android                        | [Source](https://github.com/1cli-team/one-cli/tree/master/packages/templates/expo-mobile)   |
+| `electron-app`  | Desktop  | Electron, React, Vite         | Desktop app for macOS / Windows / Linux             | [Source](https://github.com/1cli-team/one-cli/tree/master/packages/templates/electron-app)  |
+| `ts-library`    | Library  | TS, strict semver             | Reusable TypeScript package                         | -                                                                                           |
+| `go-lib`        | Library  | Go, module, package layout    | Reusable Go module                                  | -                                                                                           |
+| `empty-app`     | App      | No stack                      | Start with an empty application directory           | -                                                                                           |
+| `empty-service` | API      | No stack                      | Start with an empty service directory               | -                                                                                           |
+| `empty-library` | Library  | No stack                      | Start with an empty shared library directory        | -                                                                                           |
 
 ## Add The Template You Chose
 
@@ -151,7 +151,6 @@ skip these checks. See the generated README for details.
 These rules apply to newly generated projects. Existing Electron projects are not
 automatically rewritten or migrated.
 
-
 ## Develop directly in a template directory
 
 Bundled templates contain ordinary source files that you can run and debug in
@@ -168,8 +167,9 @@ go test ./...
 go run ./cmd/server
 ```
 
-The Go API defaults to in-memory SQLite. Configure environment variables as
-described by the template when using PostgreSQL or other runtime settings.
+NestJS API and Go API start without database connections, JWT, login, or user CRUD. Drizzle ORM/Kit and Gorm are retained. Choose a database, install its driver, and explicitly add connections and migrations.
+
+Application templates retain Axios for HTTP, SWR for remote data and caching, and Zustand for shared UI state. Expo keeps MMKV and native development clients with React Native styles. Electron keeps Awilix function factories and an app-information-only preload API. Add business features through manually installed business skills or application code.
 
 ```sh
 cd packages/templates/electron-app
@@ -198,15 +198,15 @@ lockfiles and build artifacts are excluded from the CLI bundle.
 Files are copied verbatim by default. Only starters needing parameterization
 include a `template.json` file, with these supported settings:
 
-| Setting | Purpose |
-| --- | --- |
-| `schemaVersion: 1` | Declare the descriptor version |
-| `go.modulePrefix` | Set the generated module path and rewrite its Go imports |
-| `node.scope`, `node.sourceFiles` | Rename internal Node packages, dependency keys, scripts and the scope in listed source files |
-| `text` | Replace example text in explicitly listed files |
-| `exclude` | Exclude files or directories used only for template development |
-| `projects` | Composite components, each declaring `source`, name `suffix`, and `category` (`frontend`, `backend`, or `library`) |
-| `sharedFiles` | Template-relative files copied into every composite component |
+| Setting                          | Purpose                                                                                                            |
+| -------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| `schemaVersion: 1`               | Declare the descriptor version                                                                                     |
+| `go.modulePrefix`                | Set the generated module path and rewrite its Go imports                                                           |
+| `node.scope`, `node.sourceFiles` | Rename internal Node packages, dependency keys, scripts and the scope in listed source files                       |
+| `text`                           | Replace example text in explicitly listed files                                                                    |
+| `exclude`                        | Exclude files or directories used only for template development                                                    |
+| `projects`                       | Composite components, each declaring `source`, name `suffix`, and `category` (`frontend`, `backend`, or `library`) |
+| `sharedFiles`                    | Template-relative files copied into every composite component                                                      |
 
 Each `text` rule contains `files`, `from` and `value`. The supported values are
 `projectName` and `projectNameKebabCase`. Optional `minMatches` defaults to 1;

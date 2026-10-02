@@ -26,16 +26,17 @@ func TestSyncBundledCopiesCanonicalAssetsAndMapsModuleFiles(t *testing.T) {
 	writeTestFile(t, root, "skills/one-cli/SKILL.md", "one-cli skill")
 	writeTestFile(t, root, "skills/one-migrate/SKILL.md", "retired skill")
 	writeTestFile(t, root, "skills/one-cli/references/old.md", "retired reference")
+	writeTestFile(t, root, "packages/agent-skills/skills/one-cli/SKILL.md", "current skill")
 	if err := syncBundled(root); err != nil {
 		t.Fatalf("syncBundled: %v", err)
 	}
 	bundled := filepath.Join(root, "packages", "cli", "internal", "resources", "bundled")
-	for _, rel := range []string{"registry.json", "_templates/go-api/main.go", "_templates/go-api/_go.mod"} {
+	for _, rel := range []string{"registry.json", "_templates/go-api/main.go", "_templates/go-api/_go.mod", "_skills/one-cli/SKILL.md"} {
 		if _, err := os.Stat(filepath.Join(bundled, filepath.FromSlash(rel))); err != nil {
 			t.Errorf("expected %s: %v", rel, err)
 		}
 	}
-	for _, rel := range []string{"_templates/registry.json", "_templates/go-api/go.mod", "_skills"} {
+	for _, rel := range []string{"_templates/registry.json", "_templates/go-api/go.mod", "_skills/one-migrate", "_skills/one-cli/references/old.md"} {
 		if _, err := os.Stat(filepath.Join(bundled, filepath.FromSlash(rel))); !os.IsNotExist(err) {
 			t.Errorf("expected %s to be stripped, stat err=%v", rel, err)
 		}

@@ -1,28 +1,24 @@
-import { app, protocol } from "electron";
+import { app } from "electron";
 import { createMainContainer } from "./container";
-import { defaultScheme, noop } from "./utils";
 
-const gotTheLock = app.requestSingleInstanceLock();
-
-const start = async (): Promise<void> => {
-  if (!gotTheLock) {
+async function start() {
+  if (!app.requestSingleInstanceLock()) {
     app.quit();
     return;
   }
-
-  // Privileged schemes must be registered before Electron is ready.
-  protocol.registerSchemesAsPrivileged([
-    { scheme: defaultScheme, privileges: { secure: true, standard: true } },
-  ]);
-
   await app.whenReady();
-
   const container = createMainContainer();
   const application = container.resolve("application");
-  await application.init();
-
-  app.on("window-all-closed", noop);
-  app.on("second-instance", application.secondInstance);
-};
-
+  app.once("will-quit", () => {
+    application.dispose();
+    void container.dispose();
+  });
+  try {
+    await application.init();
+  } catch (error) {
+    container.resolve("logger").error(error);
+    application.dispose();
+    app.exit(1);
+  }
+}
 void start();

@@ -1,0 +1,23 @@
+
+DESCRIPTION
+Forward commands to the upstream Skills CLI
+
+USAGE
+  one skills [args...] [flags]
+
+EXAMPLES
+  one skills find react
+  one skills add owner/repo --skill skill-name
+  one skills list
+  one skills update
+
+TIPS
+Run npx skills@1.7.0 with all arguments unchanged in the current directory.
+One prepares Node when it is missing and preserves upstream interaction, output,
+and exit codes. Use one skills --help for upstream help.
+
+Business skills are installed only on request from their GitHub repositories.
+One does not add --global, --agent, or the Skills CLI --yes flag to manual commands.
+
+COMMON OPTIONS
+  -o, --output <value>     Output format: json | yaml | text (default: terminal-friendly text, JSON when piped)

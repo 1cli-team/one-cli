@@ -1,45 +1,41 @@
 import type { INestApplication } from "@nestjs/common";
-import { Test, type TestingModule } from "@nestjs/testing";
+import { Test } from "@nestjs/testing";
 import request from "supertest";
-import { AppModule } from "./../src/app.module";
+import { AppModule } from "../src/app.module";
 
-describe("AppController (e2e)", () => {
+describe("Starter API", () => {
   let app: INestApplication;
-
-  beforeEach(async () => {
-    const moduleFixture: TestingModule = await Test.createTestingModule({
+  beforeAll(async () => {
+    const module = await Test.createTestingModule({
       imports: [AppModule],
     }).compile();
-
-    app = moduleFixture.createNestApplication();
+    app = module.createNestApplication();
     await app.init();
   });
-
-  afterEach(async () => {
+  afterAll(async () => {
     await app.close();
   });
-
-  it("/ (GET)", () => {
-    return request(app.getHttpServer())
+  it("starts without database or authentication configuration", async () => {
+    await request(app.getHttpServer())
       .get("/")
       .expect(200)
-      .expect((res) => {
-        expect(res.body.data).toHaveProperty("name", "NestJS Template API");
-        expect(res.body.data).toHaveProperty("version");
-      });
-  });
-
-  it("/health (GET)", () => {
-    return request(app.getHttpServer())
+      .expect({ name: "nestjs-api", version: "0.1.0" });
+    const response = await request(app.getHttpServer())
       .get("/health")
-      .expect(200)
-      .expect((res) => {
-        expect(res.body.status).toBe("ok");
-        expect(res.body.database.status).toBe("connected");
-      });
+      .expect(200);
+    expect(response.body.status).toBe("ok");
+    expect(response.body).not.toHaveProperty("database");
   });
-
-  it("/metrics (GET) is unavailable", () => {
-    return request(app.getHttpServer()).get("/metrics").expect(404);
+  it("does not include login", async () => {
+    await request(app.getHttpServer())
+      .post("/auth/login")
+      .send({ code: "demo" })
+      .expect(404);
   });
+  it.each(["/users", "/api/v1/users"])(
+    "does not include business routes: %s",
+    async (path) => {
+      await request(app.getHttpServer()).get(path).expect(404);
+    },
+  );
 });

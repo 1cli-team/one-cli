@@ -67,12 +67,12 @@ func TestSnapshot_E2E_HelpDailyAndCompleteCatalogues(t *testing.T) {
 			if code != 0 || stderr != "" {
 				t.Fatalf("one help --all failed: exit=%d stderr=%q", code, stderr)
 			}
-			for _, command := range []string{"create", "add", "env", "login", "logout", "whoami", "run", "exec", "templates", "serve", "init", "locale", "mise", "hk"} {
+			for _, command := range []string{"create", "add", "env", "login", "logout", "whoami", "run", "exec", "templates", "serve", "init", "locale", "mise", "hk", "skills"} {
 				if !strings.Contains(all, "\n  "+command+" ") {
 					t.Errorf("complete help missing %q:\n%s", command, all)
 				}
 			}
-			for _, command := range []string{"dev", "build", "test", "lint", "ci", "skills"} {
+			for _, command := range []string{"dev", "build", "test", "lint", "ci"} {
 				for _, help := range []string{daily, all} {
 					if strings.Contains(help, "\n  "+command+" ") {
 						t.Errorf("help advertises task or removed command %q as built-in:\n%s", command, help)

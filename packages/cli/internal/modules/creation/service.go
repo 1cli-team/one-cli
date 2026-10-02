@@ -13,6 +13,7 @@ import (
 	environmentmodule "github.com/torchstellar-team/one-cli/packages/cli/internal/modules/environment"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/modules/hooks"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/modules/miseconfig"
+	skillsmodule "github.com/torchstellar-team/one-cli/packages/cli/internal/modules/skills"
 	cliErrors "github.com/torchstellar-team/one-cli/packages/cli/internal/platform/errors"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/fsutil"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/i18n"
@@ -21,8 +22,13 @@ import (
 
 type Service struct {
 	Runtime      runtimeport.Provider
+	Skills       SkillInstaller
 	environments *environmentmodule.Service
 	observer     WorkspaceObserver
+}
+
+type SkillInstaller interface {
+	Install(context.Context, string, []skillsmodule.Selection) []string
 }
 
 // WorkspaceObserver is the optional machine-local discovery hook invoked
@@ -50,6 +56,7 @@ type WorkspaceInput struct {
 	Name           string
 	EnvBackend     string
 	CreatedInPlace bool
+	SkipSkills     bool
 }
 
 type WorkspaceResult struct {
@@ -63,6 +70,7 @@ type WorkspaceResult struct {
 	RegistryWarn    error
 	MiseTrustWarn   error
 	HooksWarn       error
+	SkillsWarnings  []string
 }
 
 // ValidateWorkspaceTarget performs the same final safety check used by
@@ -177,6 +185,9 @@ func (s *Service) CreateWorkspace(ctx context.Context, input WorkspaceInput) (Wo
 	if s.observer != nil {
 		result.RegistryWarn = s.observer(ctx, input.TargetDir, "create")
 	}
+	if !input.SkipSkills && s.Skills != nil {
+		result.SkillsWarnings = s.Skills.Install(ctx, input.TargetDir, skillsmodule.Defaults("", ""))
+	}
 	return result, nil
 }
 
@@ -201,6 +212,10 @@ func (s *Service) AddProject(
 		if trustErr != nil {
 			project.Warnings = append(project.Warnings, i18n.Tf("creation.mise_trust_warning", trustErr))
 		}
+	}
+	if !input.SkipSkills && s.Skills != nil {
+		project.Warnings = append(project.Warnings, s.Skills.Install(ctx, projectRoot,
+			skillsmodule.Defaults(input.Template.ID, input.Template.Repo))...)
 	}
 	return AddProjectResult{
 		Project: project,

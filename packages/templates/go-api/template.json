@@ -5,9 +5,7 @@
   },
   "text": [
     {
-      "files": [
-        "README.md"
-      ],
+      "files": ["README.md"],
       "from": "one-template-go-api",
       "value": "projectNameKebabCase"
     }

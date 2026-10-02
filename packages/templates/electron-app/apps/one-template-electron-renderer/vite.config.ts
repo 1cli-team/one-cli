@@ -4,6 +4,7 @@ import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 
 export default defineConfig({
+  base: "./",
   server: {
     port: Number(process.env.ELECTRON_RENDERER_PORT || 5173),
     strictPort: true,

@@ -7,13 +7,7 @@ export default defineConfig({
   platform: "node",
   target: "node24",
   fixedExtension: false,
-  deps: {
-    neverBundle: [
-      "electron",
-      "electron-updater",
-      "electron-devtools-installer",
-    ],
-  },
+  deps: { neverBundle: ["electron"] },
   dts: false,
   clean: true,
   sourcemap: true,

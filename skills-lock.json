@@ -1,0 +1,103 @@
+{
+  "version": 1,
+  "skills": {
+    "find-skills": {
+      "source": "vercel-labs/skills",
+      "ref": "3694740352eeef5cdd689af694c485f1ff62eec3",
+      "sourceType": "github",
+      "skillPath": "skills/find-skills/SKILL.md",
+      "computedHash": "913b9d37d0d54047dd65222bb8c67b2bf04e3cb87dcad1729068d7a8b2c8c396"
+    },
+    "golang-patterns": {
+      "source": "affaan-m/ecc",
+      "ref": "ef648e01899ba3e8dc6371642deaaf64b4477775",
+      "sourceType": "github",
+      "skillPath": "skills/golang-patterns/SKILL.md",
+      "computedHash": "8cbfb90287390c9f09d46d5266f0e7f61ba5bd74400c1431b74a334be7bfdd6f"
+    },
+    "golang-testing": {
+      "source": "affaan-m/ecc",
+      "ref": "ef648e01899ba3e8dc6371642deaaf64b4477775",
+      "sourceType": "github",
+      "skillPath": "skills/golang-testing/SKILL.md",
+      "computedHash": "12195f2589c4a7b741523bed09db8b64f243c635b4c78297136c6becd7b1e032"
+    },
+    "one-cli": {
+      "source": "./packages/agent-skills",
+      "sourceType": "local",
+      "computedHash": "539603c5bf7a33f7de37c81bb8c10c8a50bf0e611487b06e27c1b3e1b78ff4f5"
+    },
+    "one-electron": {
+      "source": "./packages/agent-skills",
+      "sourceType": "local",
+      "computedHash": "2c1cc0dfedcab2545a5a5e7e89c1369f1d461f6c2051bbd2f996d825eee5801f"
+    },
+    "one-expo": {
+      "source": "./packages/agent-skills",
+      "sourceType": "local",
+      "computedHash": "cb75a4e696383b3962eca034bbac313e3fc16fb6d0812adda0aacc1490955a8f"
+    },
+    "one-fumadocs": {
+      "source": "./packages/agent-skills",
+      "sourceType": "local",
+      "computedHash": "cde384108aeb23c85af21fb8669fecbf032cb630020fbae1011c3aa2e6ca4059"
+    },
+    "one-go": {
+      "source": "./packages/agent-skills",
+      "sourceType": "local",
+      "computedHash": "e9c728d280ffef2c5951ba3ad977f185a544dae7997c7b10efcf2ac944039555"
+    },
+    "one-nestjs": {
+      "source": "./packages/agent-skills",
+      "sourceType": "local",
+      "computedHash": "01e4f4b9755be71a1df45dfb87fffd9b71bb63cbcdfbcf2e754bea8fefaa5a5a"
+    },
+    "one-web": {
+      "source": "./packages/agent-skills",
+      "sourceType": "local",
+      "computedHash": "b835af65e77f37a45bc38a6a7be60c37a64d2a1db853054ca5df5ae08fb56583"
+    },
+    "pnpm": {
+      "source": "antfu/skills",
+      "ref": "e53a142a2420e8cd812cfe9ed0484ab01bc856aa",
+      "sourceType": "github",
+      "skillPath": "skills/pnpm/SKILL.md",
+      "computedHash": "d1bd6f4fd38ff1ba33b857223c58a832d1cd5b488163ba0d389db449be472603"
+    },
+    "shadcn": {
+      "source": "shadcn-ui/ui",
+      "ref": "295a1f114a138f23b5dfee0e0c6812394dfeb90c",
+      "sourceType": "github",
+      "skillPath": "skills/shadcn/SKILL.md",
+      "computedHash": "f615de216e085a84e31593ad0fa9062232adc40cd87b7c7ab2b8e49abf6500be"
+    },
+    "vercel-composition-patterns": {
+      "source": "vercel-labs/agent-skills",
+      "ref": "063bee94c3f4df8453406c830b0a7df0f2860278",
+      "sourceType": "github",
+      "skillPath": "skills/composition-patterns/SKILL.md",
+      "computedHash": "f98931159fa9c7fed043bcd18a891a46dcf89ababa38df13a4c5b7b30dc0ce07"
+    },
+    "vercel-react-best-practices": {
+      "source": "vercel-labs/agent-skills",
+      "ref": "063bee94c3f4df8453406c830b0a7df0f2860278",
+      "sourceType": "github",
+      "skillPath": "skills/react-best-practices/SKILL.md",
+      "computedHash": "3219a1944e404ffc14d1d9d6aef6dd2e3855b81387ee0a044ccbfe14d34c2357"
+    },
+    "vite": {
+      "source": "antfu/skills",
+      "ref": "e53a142a2420e8cd812cfe9ed0484ab01bc856aa",
+      "sourceType": "github",
+      "skillPath": "skills/vite/SKILL.md",
+      "computedHash": "88ee465fd10f711efecc76e91e96accae2b229dda371614dcf219099c264a486"
+    },
+    "vitest": {
+      "source": "antfu/skills",
+      "ref": "e53a142a2420e8cd812cfe9ed0484ab01bc856aa",
+      "sourceType": "github",
+      "skillPath": "skills/vitest/SKILL.md",
+      "computedHash": "21af2b13d47d31f3094b61c0f41abc8d6a7eed0df3c9a4029ea671f6978b7209"
+    }
+  }
+}

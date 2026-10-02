@@ -80,6 +80,32 @@ afterEach(() => server.resetHandlers());
 afterAll(() => server.close());
 
 describe("project creation", () => {
+	it.each(["en-US", "zh-CN"])("can skip development skills in %s", async (locale) => {
+		await i18n.changeLanguage(locale);
+		const user = userEvent.setup();
+		let payload: unknown;
+		server.use(
+			http.post("http://localhost/api/workspaces/:entryId/projects", async ({ request }) => {
+				payload = await request.json();
+				return HttpResponse.json({ name: "web", relativeDir: "apps/web", templateId: "react-spa" });
+			}),
+		);
+		const { onCreated } = show();
+		await user.type(screen.getByLabelText(i18n.t("projectCreate.name")), "web");
+		const toggle = screen.getByRole("switch", { name: i18n.t("projectCreate.installSkills") });
+		expect(toggle.getAttribute("aria-checked")).toBe("true");
+		await user.click(toggle);
+		await waitFor(() =>
+			expect(
+				screen
+					.getByRole("button", { name: i18n.t("projectCreate.submit") })
+					.hasAttribute("disabled"),
+			).toBe(false),
+		);
+		await user.click(screen.getByRole("button", { name: i18n.t("projectCreate.submit") }));
+		await waitFor(() => expect(onCreated).toHaveBeenCalledWith("web"));
+		expect(payload).toEqual({ name: "web", templateId: "react-spa", skipSkills: true });
+	});
 	it.each(
 		["en-US", "zh-CN"].flatMap((locale) =>
 			[...emptyTemplates, { id: "go-api", directory: "services" }].map((template) => ({

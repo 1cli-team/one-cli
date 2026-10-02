@@ -25,7 +25,8 @@
     "lint:fix": "oxlint --fix .",
     "format": "oxfmt --check .",
     "format:fix": "oxfmt --write .",
-    "check": "pnpm run lint && pnpm run format"
+    "check": "pnpm run typecheck && pnpm run lint && pnpm run format",
+    "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
     "electron": "^44.5.1",

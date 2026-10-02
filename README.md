@@ -210,3 +210,7 @@ Drag in the log pane and press `y` to copy the selection. With no selection, `y`
 Ctrl+C or a task failure stops the invocation and its child processes. The terminal restores automatically when execution ends. Raw mode requires a graph with one executable task and preserves terminal input. Structured results stay on stdout and child logs go to stderr. Save `"taskUI": "tui"` or `"taskUI": "stream"` in `~/.config/one/preferences.json` for a personal default.
 
 Process Compose has no global concurrency limit. One rejects `--concurrency` values below the number of command tasks. `one run build --force` bypasses timestamp freshness; artifact caching is disabled. Unsupported selected task fields fail before commands start. See the [task guide](apps/docs/content/docs/en/run.md) for the static compatibility subset, variables, and terminal behavior.
+
+### Agent skills
+
+`one skills` forwards directly to `npx skills@1.7.0`. Workspace creation and project addition install curated usage and stack skills by default; pass `--skip-skills` to opt out. Business skills are maintained in independent GitHub repositories and installed manually. See the [English](apps/docs/content/docs/en/skills.md) and [Chinese](apps/docs/content/docs/zh/skills.md) guides.

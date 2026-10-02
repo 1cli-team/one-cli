@@ -7,19 +7,25 @@
 - Read the relevant `README.md` and applicable `AGENTS.md` before changing a project.
 - Consult `one --help` and command-specific `--help`; do not guess commands or flags. Before adding a project, discover templates with `one templates -o json`, then use `one add`.
 
+## Stack and project structure
+
+- `empty-app`, `empty-service`, and `empty-library` do not prescribe a stack. The user chooses the language, frameworks, UI, database, and development tools. Do not infer a required stack for an empty project from sibling projects or installed skills.
+- One places projects in `apps/`, `services/`, or `packages/`; organize each project's internal directories around the user's chosen stack and architecture. If the user has not chosen a stack, propose options based on the requirements rather than automatically applying another template's dependencies or layout.
+- For existing projects, follow their actual dependencies, configuration, and team instructions. Stack and layout examples in skills apply only to the corresponding projects. Configure the relevant toolchains, tasks, and development skills after a stack is chosen.
+
 ## Use one task entry point
 
 - Tests, checks, builds, dependency preparation, and project scripts must run through `one run <task>`. Select project tasks with `one run <task> -p <project>`.
 - Inspect existing tasks with `one run` and reuse them first. Do not bypass this entry point by directly running commands such as `pnpm test`, `go test`, `node`, `docker`, or `mise run`; task definitions may call these native tools internally.
-- If a required task is missing, define it in the project's `package.json`, `Taskfile.yml`, or the root `mise.toml`. After changing project tasks, synchronize with `one init mise` when needed, then execute through `one run`.
-- One CLI help, task discovery, project creation, and variable management commands may be used directly without wrapping them in tasks.
+- If a required task is missing, define it in an applicable project task file (such as `package.json` or `Taskfile.yml`) or the root `mise.toml`. After changing project tasks, synchronize with `one init mise` when needed, then execute through `one run`.
+- One CLI help, task discovery, project creation, skills management, and variable management commands may be used directly without wrapping them in tasks.
 - After making changes, use `one run` for the affected checks, tests, and necessary builds. Use task names from the actual configuration.
 
 ## Complex scripts
 
-- For operations with multiple steps, complex branches, or repeated use, write TypeScript in `scripts/<name>.mts` instead of assembling long shell commands.
+- For operations with multiple steps, complex branches, or repeated use, write `scripts/<name>.<extension>` in the project's chosen language instead of assembling long shell commands. TypeScript projects may use `.mts`; do not introduce another stack just for scripts.
 - Put scripts shared across projects in the workspace root's `scripts/`; put project-specific scripts in that project's `scripts/`.
-- Configure the required Node version in mise and register the script as a task that calls `node scripts/<name>.mts`. The agent still executes it through `one run`.
+- Configure the tools required by the chosen script language in mise and register the script as a task. The agent still executes it through `one run`.
 - Read variables from the process environment. Do not write, expand, or print secret values in source code, command arguments, or logs.
 
 ## Environment variables
@@ -44,7 +50,11 @@ Then use `one run push-image`. The folder and variable names must match the user
 
 ## Automation and delivery
 
-- Use `-o json` when parsing One CLI results. Handle errors using `error.code` and `error.context`, not translated messages; treat child-process output as logs.
+- Consult installed workspace skills in `.agents/skills` for One usage, project layouts, and the target project's stack. The manifest and team instructions take precedence over upstream examples.
+- Choose relevant skills from their names and descriptions. Read the selected `SKILL.md` when the task needs it, then open references or scripts only as needed; do not read every installed skill in advance.
+- Install project-scoped skills from the workspace root into `.agents/skills`; do not use `--global` to install them in the user's global directory.
+- `one skills` forwards arguments to `npx skills`; its output and help belong to that tool. Business skills live in independent GitHub repositories and are installed only when the user requests them. Installing a skill does not authorize implementing a business feature.
+- Use `-o json` when parsing One's own structured results. Handle errors using `error.code` and `error.context`, not translated messages. `one skills`, `one mise`, and `one hk` preserve upstream output and flags without One's JSON envelope; treat child-process output as logs.
 - Report what changed, which checks actually ran and their results, and which checks remain unrun.
 
 This file is maintained by the team. Later `one add` operations and language changes do not rewrite existing content.

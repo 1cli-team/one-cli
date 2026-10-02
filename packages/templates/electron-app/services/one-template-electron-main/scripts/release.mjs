@@ -31,12 +31,6 @@ const config = {
     createDesktopShortcut: true,
     createStartMenuShortcut: true,
   },
-  publish: {
-    provider: "github",
-    repo: "repo",
-    owner: "owner",
-    releaseType: "draft",
-  },
 };
 
 await builder.build({
@@ -44,6 +38,6 @@ await builder.build({
   targets: builder.Platform.current().createTarget(
     development ? builder.DIR_TARGET : builder.DEFAULT_TARGET,
   ),
-  publish: development ? "never" : undefined,
+  publish: "never",
   config,
 });

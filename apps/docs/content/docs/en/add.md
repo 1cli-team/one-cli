@@ -28,6 +28,7 @@ one add [template-id] --name <project-name> [options]
 |---|---|
 | `template-id` | Template ID, such as `nestjs-api`. Omit it for interactive selection |
 | `-n, --name` | Project name; required in non-interactive mode |
+| `--skip-skills` | Skip development skills installation |
 | `-y, --yes` | Non-interactive mode |
 | `-o, --output <fmt>` | `json` / `yaml` / `text` |
 
@@ -167,3 +168,7 @@ Not sure which one to use? Read the [template decision tree](/en/docs/templates/
 - `one add` updates task configuration and preserves existing `AGENTS.md` files and team edits
 - Run `one dev -p <project>` for development and `one build -p <project>` to build
 - `one add` generates project and workspace configuration; `one dev` prepares tools and dependencies automatically. Node dependencies are installed at the workspace root; Go dependencies follow the module or `go.work` build graph. After changing imports or module declarations, use `one exec <project> -- go mod tidy` when repairs are needed
+
+## Development skills
+
+After generating the project, One installs missing common and stack skills in the workspace root. Electron installs the combined skills once after all three members are created. Existing skills and team edits are preserved; source conflicts produce a warning. Pass `--skip-skills` to skip. Dashboard offers the same choice. Failures preserve the project and return recovery warnings. See [skills](/en/docs/skills/).

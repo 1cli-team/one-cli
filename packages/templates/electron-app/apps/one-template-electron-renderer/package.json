@@ -13,7 +13,8 @@
     "lint:fix": "oxlint --fix .",
     "format": "oxfmt --check .",
     "format:fix": "oxfmt --write .",
-    "check": "pnpm run lint && pnpm run format"
+    "check": "pnpm run typecheck && pnpm run lint && pnpm run format",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@base-ui/react": "^1.8.0",
@@ -21,7 +22,6 @@
     "axios": "^1.20.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
-    "immer": "^11.1.18",
     "lucide-react": "^1.49.0",
     "react": "^19.3.0",
     "react-dom": "^19.3.0",

@@ -33,8 +33,9 @@ var workspaceDefaultEnables = []string{
 var canonicalDomainOrder = []string{"dev", "ci", "env"}
 
 type createFlags struct {
-	name string
-	yes  bool
+	name       string
+	yes        bool
+	skipSkills bool
 }
 
 func newCreateCmd(deps Dependencies) *cobra.Command {
@@ -54,6 +55,8 @@ func newCreateCmd(deps Dependencies) *cobra.Command {
 	}
 	cmd.Flags().StringVarP(&flags.name, "name", "n", "", i18n.T("create.flag.name"))
 	cmd.Flags().BoolVarP(&flags.yes, "yes", "y", false, i18n.T("create.flag.yes"))
+	cmd.Flags().BoolVar(&flags.skipSkills, "skip-skills", false, i18n.T("skills.flag.skip"))
+	i18n.MarkFlagUsage(cmd, "skip-skills", "skills.flag.skip")
 	i18n.MarkFlagUsage(cmd, "name", "create.flag.name")
 	i18n.MarkFlagUsage(cmd, "yes", "create.flag.yes")
 	helpui.MarkAdvanced(cmd, "name")

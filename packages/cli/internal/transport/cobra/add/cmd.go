@@ -9,6 +9,7 @@
 package addcmd
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -33,8 +34,9 @@ func buildContributions(service *creationmodule.Service) []*cobra.Command {
 }
 
 type addFlags struct {
-	name string
-	yes  bool
+	name       string
+	yes        bool
+	skipSkills bool
 }
 
 func newAddCmd(service *creationmodule.Service) *cobra.Command {
@@ -54,6 +56,8 @@ func newAddCmd(service *creationmodule.Service) *cobra.Command {
 	}
 	cmd.Flags().StringVarP(&flags.name, "name", "n", "", i18n.T("add.flag.name"))
 	cmd.Flags().BoolVarP(&flags.yes, "yes", "y", false, i18n.T("add.flag.yes"))
+	cmd.Flags().BoolVar(&flags.skipSkills, "skip-skills", false, i18n.T("skills.flag.skip"))
+	i18n.MarkFlagUsage(cmd, "skip-skills", "skills.flag.skip")
 	i18n.MarkFlagUsage(cmd, "name", "add.flag.name")
 	i18n.MarkFlagUsage(cmd, "yes", "add.flag.yes")
 	i18n.MarkShort(cmd, "add.short")
@@ -128,13 +132,14 @@ func runAdd(cmd *cobra.Command, service *creationmodule.Service, positional stri
 	// Ordinary add deliberately leaves deployment unset. An explicit advanced
 	// flag retains the automation path that configures it immediately.
 	projectInput := creationmodule.ProjectInput{
-		Template: entry,
-		Name:     name,
+		Template:   entry,
+		Name:       name,
+		SkipSkills: flags.skipSkills,
 	}
 	var result creationmodule.AddProjectResult
-	if err := prompt.Spin(i18n.Tf("add.generating", entry.ID), func() error {
+	if err := prompt.SpinContext(cmd.Context(), i18n.Tf("add.generating", entry.ID), func(ctx context.Context) error {
 		var createErr error
-		result, createErr = service.AddProject(cmd.Context(), projectRoot, projectInput)
+		result, createErr = service.AddProject(ctx, projectRoot, projectInput)
 		return createErr
 	}); err != nil {
 		return err

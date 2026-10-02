@@ -50,7 +50,11 @@ async function start() {
       child = spawn(
         process.platform === "win32" ? "pnpm.cmd" : "pnpm",
         ["run", "build"],
-        { cwd: root, stdio: "inherit", shell: process.platform === "win32" },
+        {
+          cwd: root,
+          stdio: "inherit",
+          shell: process.platform === "win32",
+        },
       );
       child.once("error", reject);
       child.once("exit", (code) =>

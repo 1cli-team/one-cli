@@ -16,6 +16,7 @@ description: One CLI 日常命令和高级入口。
 | `one upgrade` | 将 One CLI 更新到最新稳定版 |
 | `one init mise` / `one init hooks` | 工作区工具配置 |
 | `one run` | 列出和执行工作区任务 |
+| `one skills` | 透传命令到 `npx skills` |
 | `one templates` | 查看项目模板 |
 | `one hk` | 执行 Git hooks 检查 |
 

@@ -1,34 +1,23 @@
 import { create } from "zustand";
-import { immer } from "zustand/middleware/immer";
+import { createJSONStorage, persist } from "zustand/middleware";
 
-// 全局状态 store：zustand + immer
-// immer 让嵌套字段可以直接赋值（不用展开）
-interface AppState {
-  count: number;
+interface UIState {
   theme: "light" | "dark";
-}
-
-interface AppActions {
-  increase: (step?: number) => void;
-  reset: () => void;
   toggleTheme: () => void;
 }
-
-export const useAppStore = create<AppState & AppActions>()(
-  immer((set) => ({
-    count: 0,
-    theme: "light",
-    increase: (step = 1) =>
-      set((state) => {
-        state.count += step;
-      }),
-    reset: () =>
-      set((state) => {
-        state.count = 0;
-      }),
-    toggleTheme: () =>
-      set((state) => {
-        state.theme = state.theme === "light" ? "dark" : "light";
-      }),
-  })),
+export const useAppStore = create<UIState>()(
+  persist(
+    (set) => ({
+      theme: window.matchMedia("(prefers-color-scheme: dark)").matches
+        ? "dark"
+        : "light",
+      toggleTheme: () =>
+        set((state) => ({ theme: state.theme === "dark" ? "light" : "dark" })),
+    }),
+    {
+      name: "ui-theme-v1",
+      storage: createJSONStorage(() => localStorage),
+      partialize: (state) => ({ theme: state.theme }),
+    },
+  ),
 );

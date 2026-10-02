@@ -21,6 +21,7 @@ import (
 
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/application/execution"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/core/workspace"
+	skillsmodule "github.com/torchstellar-team/one-cli/packages/cli/internal/modules/skills"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/modules/tasks"
 	cliErrors "github.com/torchstellar-team/one-cli/packages/cli/internal/platform/errors"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/helpui"
@@ -40,6 +41,7 @@ import (
 	misecmd "github.com/torchstellar-team/one-cli/packages/cli/internal/transport/cobra/mise"
 	runcmd "github.com/torchstellar-team/one-cli/packages/cli/internal/transport/cobra/run"
 	servecmd "github.com/torchstellar-team/one-cli/packages/cli/internal/transport/cobra/serve"
+	skillscmd "github.com/torchstellar-team/one-cli/packages/cli/internal/transport/cobra/skills"
 	templatescmd "github.com/torchstellar-team/one-cli/packages/cli/internal/transport/cobra/templates"
 	upgradecmd "github.com/torchstellar-team/one-cli/packages/cli/internal/transport/cobra/upgrade"
 )
@@ -57,6 +59,7 @@ func newRootCommand() *cobra.Command {
 		{localecmd.Command(), initcmd.Command(), upgradecmd.Command()},
 		createcmd.Commands(createcmd.Dependencies{Creation: deps.creation}),
 		misecmd.RuntimeCommands(deps.runtime),
+		skillscmd.Commands((skillsmodule.Runner{Runtime: deps.runtime}).Run),
 		hookscmd.Commands(deps.runtime),
 		envcmd.Commands(envcmd.Dependencies{Service: deps.environments}),
 		execcmd.Commands(deps.loaders, deps.runtime),
@@ -226,7 +229,7 @@ func Execute(version string, args []string) (resultErr error) {
 
 // Execution leaves and previews must not start another background network check.
 func shouldCheckUpdates(args []string) bool {
-	if first, _ := firstPositional(args); strings.HasPrefix(first, "__") || first == "mise" || first == "hk" || first == "upgrade" {
+	if first, _ := firstPositional(args); strings.HasPrefix(first, "__") || first == "mise" || first == "hk" || first == "skills" || first == "upgrade" {
 		return false
 	}
 	for _, arg := range args {
@@ -378,6 +381,9 @@ func scanOutputValue(args []string) string {
 		a := args[i]
 		if a == "--" {
 			break
+		}
+		if a == "skills" {
+			break // All following flags belong to the upstream Skills CLI.
 		}
 		switch {
 		case a == "-o" || a == "--output":

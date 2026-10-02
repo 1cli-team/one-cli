@@ -23,7 +23,8 @@ type ProjectInput struct {
 	Template *template.Template
 	// Name is the subproject name (validated for the IsValidProjectName
 	// regex by the caller).
-	Name string
+	Name       string
+	SkipSkills bool
 }
 
 // ProjectResult is the transport-neutral outcome of materialising a Template.

@@ -1,85 +1,28 @@
 # OneTemplateElectron
 
-Electron + React + Vite 桌面应用，由三个顶层 One 项目组成。
-Electron + React + Vite desktop application composed of three top-level One projects.
+Electron · React · TypeScript · shadcn/ui (Base UI) · Tailwind CSS · Axios · SWR · Zustand · Awilix.
 
-```text
-apps/OneTemplateElectron-renderer/     React renderer
-services/OneTemplateElectron-main/     Electron main process
-packages/OneTemplateElectron-preload/  Preload bridge and IPC contracts
-```
+## 中文
 
-三个项目共用工作区根目录的 `pnpm-workspace.yaml` 和 `pnpm-lock.yaml`。
-目录与 One 项目名使用用户输入的名称加角色后缀；npm 包名遵循 kebab-case。
-组合关系记录在根目录的 `one.manifest.toml`，支持在同一工作区添加多个桌面应用。
+- `apps/one-template-electron-renderer`：React UI；`services/one-template-electron-main`：主进程；`packages/one-template-electron-preload`：隔离桥接。
+- 生成后使用用户项目名，例如 `desktop-renderer`、`desktop-main`、`desktop-preload`。
+- `one run <项目名>:dev` 开发；`one run <项目名>:build` 构建。主进程的 `pack` / `release` 生成本地制品，不自动发布。
+- Awilix 只在 composition root 使用，业务通过函数工厂接收显式依赖。
+- preload 只暴露 `getAppInfo()`；主进程校验请求所属窗口、主 frame、URL 和参数。
+- 生产界面通过 `loadFile` 加载，Vite 使用相对资源路径，路由使用 HashRouter。
+- SWR 管理远程数据与应用信息，Zustand 保存 UI 主题。初始项目没有文件操作、自动更新或业务功能。
+- Ubuntu 开发启动时检查沙箱权限并自动识别 X11/Wayland 桌面；按提示安装 AppArmor profile，保留 Electron 沙箱。可运行主进程 `sandbox:profile` 生成配置。
 
-The three projects share the workspace root's `pnpm-workspace.yaml` and `pnpm-lock.yaml`.
-Directory and One project names append a role suffix to the supplied name; npm package
-names use kebab-case. The group is recorded in the root `one.manifest.toml`, allowing
-multiple desktop applications in one workspace.
+## English
 
-## 开发、构建与打包 / Development, builds, and packaging
-
-从工作区根目录运行 / Run from the workspace root:
-
-```sh
-one run OneTemplateElectron:dev
-one run OneTemplateElectron:build
-one run OneTemplateElectron:test
-one run OneTemplateElectron:pack
-```
-
-开发任务先构建共享依赖，再启动 Vite、preload watcher 和 Electron。
-主进程会等待 Vite 就绪。多个桌面应用同时开发时，为各组设置不同的
-`ELECTRON_RENDERER_PORT`（默认 `5173`）；同组 renderer 和 main 使用相同值。
-
-Development builds shared dependencies before starting Vite, the preload watcher,
-and Electron. The main process waits for Vite to become ready. For concurrent desktop
-apps, configure different `ELECTRON_RENDERER_PORT` values (default `5173`) per group;
-use the same value for a group's renderer and main.
-
-各项目在自己的目录构建。`pack` 会先构建整组，再由 main 收集 renderer 与 preload
-产物，生成当前平台的本地应用目录。`release` 生成安装包；使用前配置应用信息、
-签名与发布目标。开发安装沿用根目录 registry 和安装脚本策略，保留用户的显式设置。
-
-Each project builds in its own directory. `pack` builds the group, then main collects
-renderer and preload outputs and creates a local application directory for the current
-platform. `release` creates installers; configure app metadata, signing, and the publishing
-target first. Installation follows the root registry and build-script policy, preserving
-explicit user settings.
-
-## UI / 界面
-
-renderer 使用 shadcn/ui 的 `base-nova`（Base UI）。在 renderer 项目目录运行
-`pnpm dlx shadcn@latest add dialog` 添加组件，保留 `components.json`。Toast 也使用 Base UI。
-
-The renderer uses shadcn/ui's `base-nova` (Base UI). Run
-`pnpm dlx shadcn@latest add dialog` in the renderer project to add components;
-`components.json` remains available, and toasts also use Base UI.
-
-Toast 示例 / Toast example:
-
-```tsx
-import { toast } from "@/components/ui/toast";
-
-toast.add({ title: "保存成功 / Saved", type: "success" });
-```
-
-## 主进程和 IPC / Main process and IPC
-
-main 使用 Awilix 装配 `createXxx({ dependencies })` 工厂函数，闭包保存内部状态。
-`src/container.ts` 显式注册单例；`src/app.ts` 控制启动顺序。
-控制器返回 `handle` / `on` 映射，IPC 常量与类型来自 `one-template-electron-preload`。
-renderer 仅导入类型和通道常量，通过 `window.electron` 调用桥接 API。
-
-Main uses Awilix to compose `createXxx({ dependencies })` factories with state in
-closures. `src/container.ts` registers singletons and `src/app.ts` controls startup.
-Controllers return `handle` / `on` maps; IPC constants and types come from
-`one-template-electron-preload`. The renderer imports only types and channel constants,
-and calls bridge APIs through `window.electron`.
-
-主进程测试模拟 Electron API；打包资源测试使用临时目录。
-Main-process tests mock Electron APIs; packaging resource tests use temporary directories.
+- `apps/one-template-electron-renderer`: React UI; `services/one-template-electron-main`: main process; `packages/one-template-electron-preload`: isolated bridge.
+- Generated member names use the project name, e.g. `desktop-renderer`, `desktop-main`, `desktop-preload`.
+- Develop with `one run <project>:dev`; build with `one run <project>:build`. Main's `pack` / `release` produce local artifacts without publishing.
+- Awilix is accessed only in the composition root. Function factories receive explicit dependencies.
+- Preload exposes only `getAppInfo()`. Main validates the window, main frame, URL, and arguments.
+- Production loads the renderer with `loadFile`, relative Vite asset URLs, and HashRouter.
+- SWR owns remote data and app information; Zustand stores the UI theme. No file operations, automatic updates, or business features are included.
+- On Ubuntu, development checks sandbox permissions and detects an X11/Wayland desktop. Follow the AppArmor profile instructions while keeping Electron's sandbox enabled. Main's `sandbox:profile` generates the profile.
 
 ## Ubuntu 首次启动与桌面识别 / Ubuntu first launch and desktop detection
 

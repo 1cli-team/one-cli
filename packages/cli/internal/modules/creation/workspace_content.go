@@ -23,7 +23,8 @@ allowBuilds:
   unrs-resolver: true
 `
 
-const gitignoreContent = `.one-run-*/
+const gitignoreContent = `/.one/
+.one-run-*/
 
 # dependencies
 node_modules

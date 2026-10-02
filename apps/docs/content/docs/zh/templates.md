@@ -26,21 +26,21 @@ description: 13 个内置模板按用途分组的决策树。30 秒判断到底�
 
 ## 完整对比表
 
-| ID | 类别 | 关键词 | 一句话 | 详细 |
-|---|---|---|---|---|
-| `nestjs-api` | API | TypeScript, NestJS, REST | TS 团队默认 API 模板 | [源码](https://github.com/1cli-team/one-cli/tree/master/packages/templates/nestjs-api) |
-| `go-api` | API | Go, Gin, GORM | 高吞吐 / 低内存 / 团队混语言 | - |
-| `nextjs-app` | Web | Next.js, SSR, React | 通用 Web 应用 / C 端内容站首选 | [源码](https://github.com/1cli-team/one-cli/tree/master/packages/templates/nextjs-app) |
-| `react-spa` | Web | Vite, React, SPA | 控制台 / 内部应用 / 无 SEO | [源码](https://github.com/1cli-team/one-cli/tree/master/packages/templates/react-spa) |
-| `nextjs-site` | Web | Next.js, React, 静态导出 | 营销页 / 内容站 | [源码](https://github.com/1cli-team/one-cli/tree/master/packages/templates/nextjs-site) |
-| `fumadocs-docs` | Docs | Fumadocs, Next.js, Base UI | 文档站 / 知识库 | [源码](https://github.com/1cli-team/one-cli/tree/master/packages/templates/fumadocs-docs) |
-| `expo-mobile` | Mobile | Expo, React Native | iOS + Android 跨平台 | [源码](https://github.com/1cli-team/one-cli/tree/master/packages/templates/expo-mobile) |
-| `electron-app` | Desktop | Electron, React, Vite | 桌面 app（macOS / Windows / Linux） | [源码](https://github.com/1cli-team/one-cli/tree/master/packages/templates/electron-app) |
-| `ts-library` | Library | TS, 严格 semver | 跨项目复用的 TS 库 | - |
-| `go-lib` | Library | Go, module, package layout | 跨项目复用的 Go module | - |
-| `empty-app` | App | 无技术栈 | 从空应用目录开始 | - |
-| `empty-service` | API | 无技术栈 | 从空服务目录开始 | - |
-| `empty-library` | Library | 无技术栈 | 从空共享库目录开始 | - |
+| ID              | 类别    | 关键词                     | 一句话                              | 详细                                                                                      |
+| --------------- | ------- | -------------------------- | ----------------------------------- | ----------------------------------------------------------------------------------------- |
+| `nestjs-api`    | API     | TypeScript, NestJS, REST   | TS 团队默认 API 模板                | [源码](https://github.com/1cli-team/one-cli/tree/master/packages/templates/nestjs-api)    |
+| `go-api`        | API     | Go, Gin, GORM              | 高吞吐 / 低内存 / 团队混语言        | -                                                                                         |
+| `nextjs-app`    | Web     | Next.js, SSR, React        | 通用 Web 应用 / C 端内容站首选      | [源码](https://github.com/1cli-team/one-cli/tree/master/packages/templates/nextjs-app)    |
+| `react-spa`     | Web     | Vite, React, SPA           | 控制台 / 内部应用 / 无 SEO          | [源码](https://github.com/1cli-team/one-cli/tree/master/packages/templates/react-spa)     |
+| `nextjs-site`   | Web     | Next.js, React, 静态导出   | 营销页 / 内容站                     | [源码](https://github.com/1cli-team/one-cli/tree/master/packages/templates/nextjs-site)   |
+| `fumadocs-docs` | Docs    | Fumadocs, Next.js, Base UI | 文档站 / 知识库                     | [源码](https://github.com/1cli-team/one-cli/tree/master/packages/templates/fumadocs-docs) |
+| `expo-mobile`   | Mobile  | Expo, React Native         | iOS + Android 跨平台                | [源码](https://github.com/1cli-team/one-cli/tree/master/packages/templates/expo-mobile)   |
+| `electron-app`  | Desktop | Electron, React, Vite      | 桌面 app（macOS / Windows / Linux） | [源码](https://github.com/1cli-team/one-cli/tree/master/packages/templates/electron-app)  |
+| `ts-library`    | Library | TS, 严格 semver            | 跨项目复用的 TS 库                  | -                                                                                         |
+| `go-lib`        | Library | Go, module, package layout | 跨项目复用的 Go module              | -                                                                                         |
+| `empty-app`     | App     | 无技术栈                   | 从空应用目录开始                    | -                                                                                         |
+| `empty-service` | API     | 无技术栈                   | 从空服务目录开始                    | -                                                                                         |
+| `empty-library` | Library | 无技术栈                   | 从空共享库目录开始                  | -                                                                                         |
 
 ## 选好之后怎么加
 
@@ -144,7 +144,6 @@ macOS 和 Windows 跳过这些检查。详细流程见生成项目的 README。
 
 这些规则适用于新生成的项目，已有 Electron 项目不会自动改写目录或依赖配置。
 
-
 ## 在模板目录直接开发
 
 内置模板使用正常源码文件，可以在 `packages/templates/<id>` 内直接运行和调试。
@@ -160,7 +159,9 @@ go test ./...
 go run ./cmd/server
 ```
 
-Go API 默认使用内存 SQLite。需要 PostgreSQL 或其他运行配置时，按模板说明设置环境变量。
+NestJS API 和 Go API 默认不连接数据库，也不包含 JWT、登录或用户 CRUD。保留 Drizzle ORM/Kit 与 Gorm；选择数据库后再安装驱动并显式添加连接与迁移。
+
+应用模板保留 Axios、SWR、Zustand：Axios 负责 HTTP，SWR 管理远程数据和缓存，Zustand 只管理共享 UI。Expo 保留 MMKV 与原生开发客户端，使用 React Native 样式。Electron 保留 Awilix 函数工厂，preload 仅提供应用信息接口。业务功能通过手动安装的业务 skills 或项目代码扩展。
 
 ```sh
 cd packages/templates/electron-app
@@ -186,15 +187,15 @@ pnpm --ignore-workspace run dev
 
 默认按原始字节复制文件。只有需要参数化的模板才包含 `template.json`，目前支持：
 
-| 配置 | 用途 |
-| --- | --- |
-| `schemaVersion: 1` | 声明描述文件版本 |
-| `go.modulePrefix` | 生成 module 路径，并同步改写对应 Go import |
-| `node.scope`、`node.sourceFiles` | 修改内部 Node 包名、依赖键、scripts 和指定源码中的 scope |
-| `text` | 在明确列出的文件中替换示例文字 |
-| `exclude` | 排除模板开发专用的文件或目录 |
-| `projects` | 组合模板的成员，每个成员声明 `source`、名称 `suffix` 和 `category`（`frontend`、`backend` 或 `library`） |
-| `sharedFiles` | 复制到组合模板每个成员的模板相对路径文件 |
+| 配置                             | 用途                                                                                                     |
+| -------------------------------- | -------------------------------------------------------------------------------------------------------- |
+| `schemaVersion: 1`               | 声明描述文件版本                                                                                         |
+| `go.modulePrefix`                | 生成 module 路径，并同步改写对应 Go import                                                               |
+| `node.scope`、`node.sourceFiles` | 修改内部 Node 包名、依赖键、scripts 和指定源码中的 scope                                                 |
+| `text`                           | 在明确列出的文件中替换示例文字                                                                           |
+| `exclude`                        | 排除模板开发专用的文件或目录                                                                             |
+| `projects`                       | 组合模板的成员，每个成员声明 `source`、名称 `suffix` 和 `category`（`frontend`、`backend` 或 `library`） |
+| `sharedFiles`                    | 复制到组合模板每个成员的模板相对路径文件                                                                 |
 
 `text` 的每条规则使用 `files`、`from`、`value`；`value` 仅支持
 `projectName` 和 `projectNameKebabCase`。可选 `minMatches` 默认为 1，

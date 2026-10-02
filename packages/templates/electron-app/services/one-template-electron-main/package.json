@@ -18,22 +18,15 @@
     "lint:fix": "oxlint --fix .",
     "format": "oxfmt --check .",
     "format:fix": "oxfmt --write .",
-    "check": "pnpm run lint && pnpm run format"
+    "check": "pnpm run typecheck && pnpm run lint && pnpm run format"
   },
   "dependencies": {
     "@one-template-electron/preload": "workspace:*",
     "awilix": "^13.0.5",
-    "dayjs": "^1.11.23",
-    "electron-devtools-installer": "^4.0.0",
-    "electron-is-dev": "^3.0.1",
-    "electron-log": "^5.4.4",
-    "electron-store": "^11.0.2",
-    "electron-updater": "^6.8.9",
-    "mime-types": "^3.0.2"
+    "electron-log": "^5.4.4"
   },
   "devDependencies": {
     "@one-template-electron/renderer": "workspace:*",
-    "@types/mime-types": "^3.0.1",
     "@types/node": "^24.19.0",
     "cross-env": "^10.1.0",
     "electron": "^44.5.1",

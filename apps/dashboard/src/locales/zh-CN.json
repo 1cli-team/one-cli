@@ -447,7 +447,9 @@
 			}
 		},
 		"groupSuccess": "已创建项目组 {{name}}，包含 {{count}} 个项目",
-		"groupLocationHint": "使用输入的名称生成关联项目，统一使用工作区根目录的依赖配置。"
+		"groupLocationHint": "使用输入的名称生成关联项目，统一使用工作区根目录的依赖配置。",
+		"installSkills": "安装开发 skills",
+		"skillsHint": "安装 One 用法和技术栈指导。业务 skills 由用户另行手动安装。"
 	},
 	"appMenu": {
 		"label": "One CLI 导航菜单"

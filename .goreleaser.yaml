@@ -37,6 +37,9 @@ builds:
       - -s -w
       - -X main.version={{.Version}}
       - -X github.com/torchstellar-team/one-cli/packages/cli/internal/platform/updatecheck.buildChannel=release
+      # Published releases restore One skills from this exact source commit.
+      # Local snapshots retain their embedded, unpublished skill files.
+      - -X github.com/torchstellar-team/one-cli/packages/cli/internal/modules/skills.bundledSourceRef={{ if not .IsSnapshot }}{{ .FullCommit }}{{ end }}
     flags:
       - -trimpath
 

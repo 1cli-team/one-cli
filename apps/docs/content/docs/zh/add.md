@@ -28,6 +28,7 @@ one add [template-id] --name <project-name> [options]
 |---|---|
 | `template-id` | 模板 ID（如 `nestjs-api`）；不传走交互式选择 |
 | `-n, --name` | 项目名（必填，非交互模式） |
+| `--skip-skills` | 跳过开发 skills 安装 |
 | `-y, --yes` | 非交互模式 |
 | `-o, --output <fmt>` | `json` / `yaml` / `text` |
 
@@ -161,3 +162,7 @@ one add nestjs-api --name user-api --yes -o json | jq
 - `one add` 同步任务配置，保留已有 `AGENTS.md` 和团队修改
 - 下一步运行 `one dev -p <project>` 开发，使用 `one build -p <project>` 构建
 - `one add` 只生成项目和工作区配置；`one dev` 会自动准备工具与应用依赖。JS/TS 在根目录统一安装，Go 按当前模块或 `go.work` 构建图准备依赖。修改 imports 或模块声明需要修复时，显式运行 `one exec <project> -- go mod tidy`。
+
+## 开发 skills
+
+项目生成完成后，One 在工作区根目录安装缺少的基础和技术栈 skills。Electron 的三个成员全部创建完成后，只安装一次合并后的 skills。已有 skills 和团队修改会被保留，来源冲突会给出提示。使用 `--skip-skills` 跳过，Dashboard 也提供同样的选项。安装失败仍保留项目并返回恢复提示，详见 [skills](/zh/docs/skills/)。

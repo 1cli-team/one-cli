@@ -33,6 +33,7 @@ go-dist/
 packages/cli/internal/resources/bundled/registry.json
 packages/cli/internal/resources/bundled/_templates/
 packages/cli/internal/resources/bundled/_web/
+packages/cli/internal/resources/bundled/_skills/
 
 # go-task
 .task/
@@ -60,4 +61,5 @@ bin-go/
 /packages/templates/**/pnpm-lock.yaml
 /packages/templates/**/go.work.sum
 .one-run-*/
+/.one/
 /.cache

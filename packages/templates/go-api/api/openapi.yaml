@@ -1,48 +1,31 @@
 openapi: 3.0.3
 info:
-  title: Go API Service
+  title: Go API
   version: 0.1.0
+  description: Application information and health / 服务信息与健康检查
 paths:
   /:
     get:
-      summary: Service metadata
+      summary: Application information / 服务信息
       responses:
         "200":
-          description: Service metadata
+          description: Application name and version
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  name: { type: string }
+                  version: { type: string }
   /health:
     get:
-      summary: Health check
+      summary: Liveness check / 存活检查
       responses:
         "200":
-          description: Healthy
-        "503":
-          description: Dependency unavailable
-  /auth/login:
-    post:
-      summary: Login
-      responses:
-        "200":
-          description: JWT token
-        "401":
-          description: Invalid credentials
-  /api/users:
-    get:
-      summary: List users
-      security:
-        - bearerAuth: []
-      responses:
-        "200":
-          description: Users
-    post:
-      summary: Create user
-      security:
-        - bearerAuth: []
-      responses:
-        "201":
-          description: Created user
-components:
-  securitySchemes:
-    bearerAuth:
-      type: http
-      scheme: bearer
-      bearerFormat: JWT
+          description: Service is running
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status: { type: string, enum: [ok] }

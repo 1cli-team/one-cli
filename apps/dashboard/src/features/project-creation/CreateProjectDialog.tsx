@@ -25,6 +25,7 @@ import {
 	SelectValue,
 } from "@/components/ui/select";
 import { Spinner } from "@/components/ui/spinner";
+import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/useToast";
 import type { HttpError } from "@/types/api";
 
@@ -44,6 +45,7 @@ export function CreateProjectDialog({ entryId, projectNames, onClose, onCreated 
 	const submitting = useRef(false);
 	const [name, setName] = useState("");
 	const [templateId, setTemplateId] = useState("react-spa");
+	const [installSkills, setInstallSkills] = useState(true);
 	const [pending, setPending] = useState(false);
 	const [nameError, setNameError] = useState("");
 	const [failure, setFailure] = useState<HttpError>();
@@ -75,7 +77,11 @@ export function CreateProjectDialog({ entryId, projectNames, onClose, onCreated 
 		setFailure(undefined);
 		let result;
 		try {
-			result = await createProject(entryId, { name: cleanName, templateId: selected.id });
+			result = await createProject(entryId, {
+				name: cleanName,
+				templateId: selected.id,
+				...(!installSkills && { skipSkills: true }),
+			});
 		} catch (cause) {
 			setFailure(cause as HttpError);
 			setPending(false);
@@ -229,6 +235,21 @@ export function CreateProjectDialog({ entryId, projectNames, onClose, onCreated 
 							</p>
 						</div>
 					)}
+					<Field>
+						<div className="flex items-center justify-between gap-3">
+							<FieldLabel htmlFor={`${id}-skills`}>{t("projectCreate.installSkills")}</FieldLabel>
+							<Switch
+								id={`${id}-skills`}
+								checked={installSkills}
+								onCheckedChange={setInstallSkills}
+								disabled={pending}
+								aria-describedby={`${id}-skills-help`}
+							/>
+						</div>
+						<FieldDescription id={`${id}-skills-help`}>
+							{t("projectCreate.skillsHint")}
+						</FieldDescription>
+					</Field>
 					{failure && (
 						<Alert variant="destructive" role="alert">
 							<AlertTitle>{t("projectCreate.failed")}</AlertTitle>

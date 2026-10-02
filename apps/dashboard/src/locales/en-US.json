@@ -447,7 +447,9 @@
 			}
 		},
 		"groupSuccess": "Created project group {{name}} with {{count}} projects",
-		"groupLocationHint": "Creates related projects using your name and the workspace root dependency configuration."
+		"groupLocationHint": "Creates related projects using your name and the workspace root dependency configuration.",
+		"installSkills": "Install development skills",
+		"skillsHint": "Add One usage and technology-stack guidance. Business skills are installed separately on request."
 	},
 	"appMenu": {
 		"label": "One CLI navigation menu"

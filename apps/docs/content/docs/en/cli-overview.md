@@ -16,6 +16,7 @@ description: Daily commands and advanced entry points.
 | `one upgrade` | Update One CLI to the latest stable release |
 | `one init mise` / `one init hooks` | Workspace tool configuration |
 | `one run` | List and execute workspace tasks |
+| `one skills` | Forward commands to `npx skills` |
 | `one templates` | List project templates |
 | `one hk` | Run Git hook checks |
 

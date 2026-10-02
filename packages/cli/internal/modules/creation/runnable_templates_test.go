@@ -23,7 +23,7 @@ func TestRunnableTemplateSourcesAndProjects(t *testing.T) {
 	_, here, _, _ := runtime.Caller(0)
 	repo := filepath.Clean(filepath.Join(filepath.Dir(here), "../../../../.."))
 	sources := filepath.Join(repo, "packages/templates")
-	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Minute)
+	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Minute)
 	defer cancel()
 	run := func(dir string, args ...string) {
 		t.Helper()
@@ -69,10 +69,11 @@ func TestRunnableTemplateSourcesAndProjects(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(root, "package.json"), raw, 0o644); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(root, "pnpm-workspace.yaml"), []byte("packages: []\nallowBuilds:\n  electron: true\n  electron-winstaller: false\n  esbuild: true\n"), 0o644); err != nil {
+	policy := "packages: []\n" + pnpmWorkspaceContent[strings.Index(pnpmWorkspaceContent, "# Native"):]
+	if err := os.WriteFile(filepath.Join(root, "pnpm-workspace.yaml"), []byte(policy), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	for _, project := range []struct{ id, name string }{{"go-api", "api"}, {"go-lib", "shared"}, {"electron-app", "Alpha_Desktop"}, {"electron-app", "zulu-desktop"}, {"nextjs-site", "website"}, {"fumadocs-docs", "docs"}} {
+	for _, project := range []struct{ id, name string }{{"go-api", "api"}, {"go-lib", "shared"}, {"electron-app", "Alpha_Desktop"}, {"electron-app", "zulu-desktop"}, {"nextjs-site", "website"}, {"fumadocs-docs", "docs"}, {"nestjs-api", "nest-api"}, {"react-spa", "web"}, {"nextjs-app", "app"}, {"expo-mobile", "mobile"}, {"ts-library", "utils"}, {"empty-app", "custom-app"}, {"empty-service", "custom-service"}, {"empty-library", "custom-library"}} {
 		if err := addLanguageProject(t, s, root, project.id, project.name); err != nil {
 			t.Fatal(err)
 		}
@@ -102,6 +103,20 @@ func TestRunnableTemplateSourcesAndProjects(t *testing.T) {
 	for _, dir := range []string{"services/api", "packages/shared"} {
 		run(filepath.Join(root, dir), "go", "test", "-mod=readonly", "./...")
 	}
+	// Check the complete application stack in one workspace, including the
+	// Expo/Next.js React type versions that previously conflicted.
+	for _, dir := range []string{"services/nest-api", "apps/web", "apps/app", "apps/mobile", "packages/utils"} {
+		run(filepath.Join(root, dir), "pnpm", "run", "check")
+	}
+	for _, dir := range []string{"services/nest-api", "apps/web", "apps/app", "packages/utils"} {
+		run(filepath.Join(root, dir), "pnpm", "run", "build")
+	}
+	for _, dir := range []string{"services/nest-api", "apps/mobile", "packages/utils"} {
+		run(filepath.Join(root, dir), "pnpm", "run", "test")
+	}
+	run(filepath.Join(root, "services/nest-api"), "pnpm", "run", "test:e2e")
+	run(filepath.Join(root, "apps/mobile"), "pnpm", "exec", "expo", "install", "--check")
+	run(filepath.Join(root, "apps/mobile"), "pnpm", "exec", "expo", "export", "--platform", "web")
 	for _, project := range []struct{ name, pkg string }{{"Alpha_Desktop", "alpha-desktop"}, {"zulu-desktop", "zulu-desktop"}} {
 		run(root, "pnpm", "--filter", project.pkg+"-main...", "run", "build")
 		run(filepath.Join(root, "services", project.name+"-main"), "pnpm", "run", "test")

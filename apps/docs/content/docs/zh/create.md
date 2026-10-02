@@ -3,7 +3,7 @@ title: one create
 description: 起一个新的 one 工作区根骨架。
 ---
 
-`one create` 只创建空工作区：不问项目、不问部署，也不修改本机 AI 工具配置。需要项目时使用 `one add`。
+`one create` 只创建空工作区：不问项目、不问部署，默认安装项目级开发 skills，保留本机 AI 工具的全局配置。需要项目时使用 `one add`。
 
 ## 用法
 
@@ -17,6 +17,7 @@ one create [dir] [options]
 |---|---|
 | `dir` | 目标目录（位置参数）。传 `.` 在当前目录就地创建，自动使用当前文件夹名；支持新目录、空目录或只有有效 Git 元数据的仓库 |
 | `-n, --name <name>` | 高级选项：覆盖自动使用的文件夹名称 |
+| `--skip-skills` | 跳过开发 skills 安装 |
 | `-y, --yes` | 非交互模式：使用默认值；必须显式传 `dir` |
 | `-o, --output <fmt>` | `json` / `yaml` / `text`（默认按 TTY 检测） |
 
@@ -136,4 +137,8 @@ one dev -p api
 
 源码模板直接使用 Markdown，位于 `packages/cli/internal/modules/creation/templates/` 下的 `AGENTS.zh-CN.md` 和 `AGENTS.en-US.md`。修改后重新构建 CLI，即可应用到以后创建的工作区。
 
-指引要求 Agent 通过 `one run` 执行测试及项目命令，将复杂 TypeScript 脚本放在 `scripts/*.mts` 并登记为任务，统一通过 One 管理环境变量。Docker 镜像上传账号等发布、运维凭据放在全局变量中；缺少时提示用户到 Dashboard 的“共享凭据”页面配置，然后由任务内部通过 `one exec --global` 注入。
+指引要求 Agent 通过 `one run` 执行测试及项目命令，将复杂脚本按项目选择的语言放在 `scripts/` 并登记为任务，统一通过 One 管理环境变量。空模板的技术栈由用户选择。Docker 镜像上传账号等发布、运维凭据放在全局变量中；缺少时提示用户到 Dashboard 的“共享凭据”页面配置，然后由任务内部通过 `one exec --global` 注入。
+
+## 开发 skills
+
+创建工作区时默认在工作区根目录的 `.agents/skills` 中安装 `one-cli` 和 `find-skills`，不安装到用户全局目录，安装过程只显示 One 的简洁进度。生成的 `.gitignore` 默认忽略根目录 `.one/`，已安装的 skills 和 `skills-lock.json` 仍可提交，安装过程不生成重复的 skill 来源目录。之后 `one add` 再安装所选模板的技术栈 skills。业务 skills 在独立 GitHub 仓库维护，由用户手动安装。安装失败会保留工作区，并在 `warnings` 中给出重试命令。即使工作区为空或只有 Go 项目，也可能为 skills 准备 Node/npx，但不会因此添加 Node 项目或包管理器。使用 `--skip-skills` 跳过安装，来源及锁文件说明见 [skills](/zh/docs/skills/)。

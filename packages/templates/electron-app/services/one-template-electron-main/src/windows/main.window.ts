@@ -1,45 +1,56 @@
-import isDev from "electron-is-dev";
-import { createWindow } from "../core/window";
+import { BrowserWindow } from "electron";
+import { pathToFileURL } from "node:url";
 import { DEV_RENDERER_URL } from "../constants";
-import { defaultScheme, preloadPath } from "../utils";
-import type { ElectronStore } from "../vendor/ElectronStore";
+import { preloadPath, rendererPath } from "../utils";
 
-// Restore and persist bounds while keeping BrowserWindow state inside the factory.
-export function createMainWindow({ store }: { store: ElectronStore }) {
-  const bounds = store.get("mainBounds");
-  const windowService = createWindow({
-    options: {
-      width: bounds?.width ?? 1100,
-      height: bounds?.height ?? 680,
-      x: bounds?.x,
-      y: bounds?.y,
+export function createMainWindow() {
+  let window: BrowserWindow | null = null;
+  const development = process.env.NODE_ENV === "development";
+  const trustedURL = development
+    ? DEV_RENDERER_URL
+    : pathToFileURL(rendererPath).href;
+  const isTrustedURL = (url: string) => url.split("#")[0] === trustedURL;
+  const init = async (): Promise<void> => {
+    if (window) {
+      if (window.isMinimized()) window.restore();
+      window.show();
+      window.focus();
+      return;
+    }
+    const current = new BrowserWindow({
+      width: 1100,
+      height: 680,
       show: false,
       autoHideMenuBar: true,
       webPreferences: {
         preload: preloadPath,
         contextIsolation: true,
         nodeIntegration: false,
+        sandbox: true,
       },
-    },
-    url: isDev ? DEV_RENDERER_URL : `${defaultScheme}://index.html/`,
-    onClose: (window) => store.set("mainBounds", window.getBounds()),
-  });
-
-  const init = (): void => {
-    if (windowService.window) {
-      windowService.window.show();
-      return;
+    });
+    window = current;
+    current.webContents.setWindowOpenHandler(() => ({ action: "deny" }));
+    current.webContents.on("will-navigate", (event) => event.preventDefault());
+    current.once("closed", () => {
+      if (window === current) window = null;
+    });
+    current.once("ready-to-show", () => current.show());
+    try {
+      if (development) await current.loadURL(DEV_RENDERER_URL);
+      else await current.loadFile(rendererPath);
+    } catch (error) {
+      if (!current.isDestroyed()) current.destroy();
+      if (window === current) window = null;
+      throw error;
     }
-    windowService.create();
   };
-
   return {
     get window() {
-      return windowService.window;
+      return window;
     },
     init,
-    send: windowService.send,
+    isTrustedURL,
   };
 }
-
 export type MainWindow = ReturnType<typeof createMainWindow>;

@@ -60,6 +60,7 @@ func handleProjectTemplates() http.HandlerFunc {
 type createProjectRequest struct {
 	Name       string `json:"name"`
 	TemplateID string `json:"templateId"`
+	SkipSkills bool   `json:"skipSkills,omitempty"`
 }
 
 type createProjectResponse struct {
@@ -100,7 +101,7 @@ func handleCreateProject(opts MuxOpts) http.HandlerFunc {
 			return
 		}
 		result, err := opts.CreationService.AddProject(r.Context(), opts.WorkspaceRoot, creationmodule.ProjectInput{
-			Template: selected, Name: body.Name,
+			Template: selected, Name: body.Name, SkipSkills: body.SkipSkills,
 		})
 		if err != nil {
 			writeServiceError(w, err)

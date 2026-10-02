@@ -26,7 +26,7 @@ export async function getProjectTemplates(): Promise<{ templates: ProjectTemplat
 
 export async function createProject(
 	entryId: string,
-	input: { name: string; templateId: string },
+	input: { name: string; templateId: string; skipSkills?: boolean },
 ): Promise<CreatedProject> {
-	return http.post(`${workspaceBasePath(entryId)}/projects`, input, { timeout: 60000 });
+	return http.post(`${workspaceBasePath(entryId)}/projects`, input, { timeout: 360000 });
 }

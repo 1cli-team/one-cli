@@ -1,48 +1,42 @@
-import { app, BrowserWindow } from "electron";
-import type { ProtocolService } from "./core/protocol";
-import type { AppRouter } from "./core/router";
-import type { ElectronDevtools } from "./vendor/ElectronDevtools";
-import type { ElectronUpdater } from "./vendor/ElectronUpdater";
+import { app } from "electron";
+import type { AppIPC } from "./ipc";
 import type { ElectronLogger } from "./vendor/ElectronLogger";
 import type { MainWindow } from "./windows/main.window";
 
-interface AppDependencies {
-  mainWindow: MainWindow;
-  protocol: ProtocolService;
-  router: AppRouter;
-  updater: ElectronUpdater;
-  devTools: ElectronDevtools;
-  logger: ElectronLogger;
-}
-
-// Startup order stays explicit and independent of the DI container.
 export function createElectronApp({
   mainWindow,
-  protocol,
-  router,
-  updater,
-  devTools,
+  ipc,
   logger,
-}: AppDependencies) {
-  const init = async (): Promise<void> => {
-    protocol.create();
-    router.init();
-    await devTools.init();
-    await updater.init();
-
-    app.on("activate", () => {
-      if (BrowserWindow.getAllWindows().length === 0) mainWindow.init();
-    });
-
-    mainWindow.init();
+}: {
+  mainWindow: MainWindow;
+  ipc: AppIPC;
+  logger: ElectronLogger;
+}) {
+  const show = () => {
+    void mainWindow.init().catch((error) => logger.error(error));
+  };
+  const closed = () => {
+    if (process.platform !== "darwin") app.quit();
+  };
+  let initialized = false;
+  const init = async () => {
+    if (initialized) return;
+    initialized = true;
+    ipc.init();
+    app.on("activate", show);
+    app.on("second-instance", show);
+    app.on("window-all-closed", closed);
+    await mainWindow.init();
     logger.info("app ready");
   };
-
-  const secondInstance = (): void => {
-    mainWindow.init();
+  const dispose = () => {
+    if (!initialized) return;
+    initialized = false;
+    ipc.dispose();
+    app.removeListener("activate", show);
+    app.removeListener("second-instance", show);
+    app.removeListener("window-all-closed", closed);
   };
-
-  return { init, secondInstance };
+  return { init, dispose };
 }
-
 export type ElectronApp = ReturnType<typeof createElectronApp>;

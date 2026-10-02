@@ -23,10 +23,7 @@ func main() {
 		_ = log.Sync()
 	}()
 
-	application, err := app.New(cfg, log)
-	if err != nil {
-		log.Fatal("failed to initialize application", zap.Error(err))
-	}
+	application := app.New(cfg, log)
 
 	server := &http.Server{
 		Addr:              ":" + cfg.Port,

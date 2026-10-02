@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowRight } from "lucide-react";
-import { NoticeButton } from "@/components/notice-button";
 import { isLocale, messages } from "@/lib/i18n";
 
 export async function generateMetadata({
@@ -39,12 +38,7 @@ export default async function Page({ params }: { params: Promise<{ lang: string 
 						{text.start}
 						<ArrowRight className="size-4" />
 					</Link>
-					<NoticeButton locale={lang} />
 				</div>
-			</section>
-			<section className="mt-20 rounded-2xl border bg-card p-8">
-				<h2 className="mb-3 text-2xl font-semibold">{text.featureTitle}</h2>
-				<p className="text-muted-foreground">{text.featureDescription}</p>
 			</section>
 		</main>
 	);

@@ -97,7 +97,8 @@ func syncBundled(root string) error {
 		return err
 	}
 
-	return nil
+	return replaceDir(root, filepath.Join(root, "packages", "agent-skills", "skills"),
+		filepath.Join(bundled, "_skills"), nil, false)
 }
 
 func syncWeb(root string) error {

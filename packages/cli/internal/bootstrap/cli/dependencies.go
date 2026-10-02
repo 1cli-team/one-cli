@@ -12,7 +12,9 @@ import (
 	catalog "github.com/torchstellar-team/one-cli/packages/cli/internal/core/backend"
 	creationmodule "github.com/torchstellar-team/one-cli/packages/cli/internal/modules/creation"
 	environmentmodule "github.com/torchstellar-team/one-cli/packages/cli/internal/modules/environment"
+	skillsmodule "github.com/torchstellar-team/one-cli/packages/cli/internal/modules/skills"
 	tasksmodule "github.com/torchstellar-team/one-cli/packages/cli/internal/modules/tasks"
+	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/prompt"
 	runtimeport "github.com/torchstellar-team/one-cli/packages/cli/internal/ports/runtime"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/ports/secrets"
 )
@@ -97,6 +99,7 @@ func mustCreationService(
 		panic(err)
 	}
 	service.Runtime = miseruntime.Provider{}
+	service.Skills = skillsmodule.Installer{Run: (skillsmodule.Runner{Runtime: service.Runtime}).Run, Progress: prompt.ReportProgress}
 	return service
 }
 

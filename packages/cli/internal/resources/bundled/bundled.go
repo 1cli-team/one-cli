@@ -1,15 +1,15 @@
 // Package bundled exposes the assets the CLI ships with: the template
 // registry, the templates themselves,
-// and the built `one serve` web UI.
+// development skills, and the built `one serve` web UI.
 //
 // The files in this directory are physical copies of canonical sources
-// elsewhere in the monorepo (packages/templates/,
+// elsewhere in the monorepo (packages/templates/, packages/agent-skills/skills/,
 // apps/dashboard/dist/). Go's embed directive cannot traverse upward
 // with "../" and rejects symlinks ("cannot embed irregular file"), so
 // the copies have to live inside this package directory.
 //
 // The whole tree is gitignored. Two tasks regenerate it:
-//   - `mise run sync-bundled` — copy templates and registry.json.
+//   - `mise run sync-bundled` — copy templates, registry.json, and skills.
 //   - `mise run sync-web`     — pnpm install + vite build of
 //     apps/dashboard/ → _web/.
 //
@@ -53,6 +53,14 @@ var TemplatesFS embed.FS
 // subtree. Use it as the base when constructing fs paths to a specific
 // template directory.
 const TemplatesRoot = "_templates"
+
+// SkillsFS contains One's usage/layout and template adaptation skills, kept
+// separately from runnable templates. Business skills are never bundled.
+//
+//go:embed all:_skills
+var SkillsFS embed.FS
+
+const SkillsRoot = "_skills"
 
 // WebDistFS is the built React UI for `one serve` (sources at apps/dashboard,
 // built via `mise run build-web`, copied into this package by `mise run sync-web`).

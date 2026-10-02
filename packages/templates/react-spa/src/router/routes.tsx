@@ -4,7 +4,7 @@ import { Home } from "@/pages/Home";
 
 const routes: RouteObject[] = [
 	{ path: "/", element: <Home /> },
-	{ path: "*", element: <div>404 - 页面未找到</div> },
+	{ path: "*", element: <div>404 · 页面未找到 / Page not found</div> },
 ];
 
 export const AppRoutes: React.FC = () => useRoutes(routes);

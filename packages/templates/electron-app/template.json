@@ -7,8 +7,8 @@
       "services/one-template-electron-main/src/types/events.ts",
       "apps/one-template-electron-renderer/src/nodes/HomePage/index.tsx",
       "apps/one-template-electron-renderer/src/renderer.d.ts",
-      "apps/one-template-electron-renderer/src/hooks/electron.ts",
-      "services/one-template-electron-main/scripts/release.mjs"
+      "services/one-template-electron-main/scripts/release.mjs",
+      "services/one-template-electron-main/test/main.test.ts"
     ]
   },
   "text": [

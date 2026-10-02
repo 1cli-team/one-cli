@@ -1,34 +1,21 @@
-import { createStore } from "@/lib/utils";
+import { create } from "zustand";
+import { createJSONStorage, persist } from "zustand/middleware";
 
-export type ThemeMode = "light" | "dark";
-
+type ThemeMode = "light" | "dark";
 interface ThemeState {
 	mode: ThemeMode;
-	setMode: (m: ThemeMode) => void;
 	toggle: () => void;
 }
-
-const THEME_KEY = "app_theme_mode";
-
-const getInitial = (): ThemeMode => {
-	const cached = localStorage.getItem(THEME_KEY) as ThemeMode | null;
-	if (cached) return cached;
-	// 跟随系统
-	return window.matchMedia?.("(prefers-color-scheme: dark)").matches ? "dark" : "light";
-};
-
-export const useThemeStore = createStore<ThemeState>(
-	(set, get) => ({
-		mode: getInitial(),
-		setMode: (m) => {
-			localStorage.setItem(THEME_KEY, m);
-			set({ mode: m });
+export const useThemeStore = create<ThemeState>()(
+	persist(
+		(set) => ({
+			mode: window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light",
+			toggle: () => set((state) => ({ mode: state.mode === "dark" ? "light" : "dark" })),
+		}),
+		{
+			name: "ui-theme-v1",
+			storage: createJSONStorage(() => localStorage),
+			partialize: (state) => ({ mode: state.mode }),
 		},
-		toggle: () => {
-			const next = get().mode === "light" ? "dark" : "light";
-			localStorage.setItem(THEME_KEY, next);
-			set({ mode: next });
-		},
-	}),
-	"themeStore",
+	),
 );
