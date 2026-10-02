@@ -81,11 +81,14 @@ func TestRunnableTemplateSourcesAndProjects(t *testing.T) {
 	for _, dir := range []string{"services/api", "packages/shared"} {
 		run(filepath.Join(root, dir), "go", "test", "-mod=readonly", "./...")
 	}
-	for _, dir := range []string{"apps/Alpha_Desktop", "apps/zulu-desktop"} {
-		run(filepath.Join(root, dir), "pnpm", "run", "build")
-		run(filepath.Join(root, dir), "pnpm", "run", "test")
-		run(filepath.Join(root, dir), formatter, "--check", ".")
+	for _, project := range []struct{ name, pkg string }{{"Alpha_Desktop", "alpha-desktop"}, {"zulu-desktop", "zulu-desktop"}} {
+		run(root, "pnpm", "--filter", project.pkg+"-main...", "run", "build")
+		run(filepath.Join(root, "services", project.name+"-main"), "pnpm", "run", "test")
+		for _, member := range []struct{ dir, suffix string }{{"apps", "-renderer"}, {"services", "-main"}, {"packages", "-preload"}} {
+			run(filepath.Join(root, member.dir, project.name+member.suffix), formatter, "--check", ".")
+		}
 	}
+
 }
 
 func packageManagerFromTestJSON(t *testing.T, raw []byte) string {

@@ -1,133 +1,125 @@
 # OneTemplateElectron
 
-Electron + React + Vite，包含主进程、渲染进程和 preload 三个内部包。
-Electron + React + Vite, with separate main, renderer, and preload packages.
+Electron + React + Vite 桌面应用，由三个顶层 One 项目组成。
+Electron + React + Vite desktop application composed of three top-level One projects.
+
+```text
+apps/OneTemplateElectron-renderer/     React renderer
+services/OneTemplateElectron-main/     Electron main process
+packages/OneTemplateElectron-preload/  Preload bridge and IPC contracts
+```
+
+三个项目共用工作区根目录的 `pnpm-workspace.yaml` 和 `pnpm-lock.yaml`。
+目录与 One 项目名使用用户输入的名称加角色后缀；npm 包名遵循 kebab-case。
+组合关系记录在根目录的 `one.manifest.toml`，支持在同一工作区添加多个桌面应用。
+
+The three projects share the workspace root's `pnpm-workspace.yaml` and `pnpm-lock.yaml`.
+Directory and One project names append a role suffix to the supplied name; npm package
+names use kebab-case. The group is recorded in the root `one.manifest.toml`, allowing
+multiple desktop applications in one workspace.
+
+## 开发、构建与打包 / Development, builds, and packaging
+
+从工作区根目录运行 / Run from the workspace root:
+
+```sh
+one run OneTemplateElectron:dev
+one run OneTemplateElectron:build
+one run OneTemplateElectron:test
+one run OneTemplateElectron:pack
+```
+
+开发任务先构建共享依赖，再启动 Vite、preload watcher 和 Electron。
+主进程会等待 Vite 就绪。多个桌面应用同时开发时，为各组设置不同的
+`ELECTRON_RENDERER_PORT`（默认 `5173`）；同组 renderer 和 main 使用相同值。
+
+Development builds shared dependencies before starting Vite, the preload watcher,
+and Electron. The main process waits for Vite to become ready. For concurrent desktop
+apps, configure different `ELECTRON_RENDERER_PORT` values (default `5173`) per group;
+use the same value for a group's renderer and main.
+
+各项目在自己的目录构建。`pack` 会先构建整组，再由 main 收集 renderer 与 preload
+产物，生成当前平台的本地应用目录。`release` 生成安装包；使用前配置应用信息、
+签名与发布目标。开发安装沿用根目录 registry 和安装脚本策略，保留用户的显式设置。
+
+Each project builds in its own directory. `pack` builds the group, then main collects
+renderer and preload outputs and creates a local application directory for the current
+platform. `release` creates installers; configure app metadata, signing, and the publishing
+target first. Installation follows the root registry and build-script policy, preserving
+explicit user settings.
 
 ## UI / 界面
 
-渲染进程使用 shadcn/ui 的 `base-nova`（Base UI）组件，保留 `apps/ui/components.json`。
-在 `apps/ui` 目录执行 `pnpm dlx shadcn@latest add dialog` 可继续添加组件；组合使用 `render`。
-Sonner 保留现有通知与主题接口。
+renderer 使用 shadcn/ui 的 `base-nova`（Base UI）。在 renderer 项目目录运行
+`pnpm dlx shadcn@latest add dialog` 添加组件，保留 `components.json` 和 Sonner。
 
-The renderer uses shadcn/ui's `base-nova` (Base UI) components and keeps
-`apps/ui/components.json`. Run `pnpm dlx shadcn@latest add dialog` from `apps/ui`
-to add components, and compose them with `render`. Sonner keeps the existing notification and theme API.
+The renderer uses shadcn/ui's `base-nova` (Base UI). Run
+`pnpm dlx shadcn@latest add dialog` in the renderer project to add components;
+`components.json` and Sonner remain available.
 
-## 主进程 / Main process
+## 主进程和 IPC / Main process and IPC
 
-主进程使用 Awilix 装配工厂函数。`apps/electron/src/container.ts` 显式注册单例服务，
-其他模块通过 `createXxx({ dependencies })` 接收依赖，并用闭包保存窗口等内部状态。
-启动顺序由 `src/app.ts` 控制，服务模块无需访问容器。
+main 使用 Awilix 装配 `createXxx({ dependencies })` 工厂函数，闭包保存内部状态。
+`src/container.ts` 显式注册单例；`src/app.ts` 控制启动顺序。
+控制器返回 `handle` / `on` 映射，IPC 常量与类型来自 `one-template-electron-preload`。
+renderer 仅导入类型和通道常量，通过 `window.electron` 调用桥接 API。
 
-The main process uses Awilix to compose factory functions. `apps/electron/src/container.ts`
-explicitly registers singleton services. Other modules receive dependencies through
-`createXxx({ dependencies })` and keep internal state, such as windows, in closures.
-`src/app.ts` controls startup order; service modules do not access the container.
+Main uses Awilix to compose `createXxx({ dependencies })` factories with state in
+closures. `src/container.ts` registers singletons and `src/app.ts` controls startup.
+Controllers return `handle` / `on` maps; IPC constants and types come from
+`one-template-electron-preload`. The renderer imports only types and channel constants,
+and calls bridge APIs through `window.electron`.
 
-控制器返回显式的 `handle` / `on` 映射，IPC 参数与返回值沿用 preload 包的类型契约。
-新增控制器时在 `src/controller/index.ts` 导出工厂，并在 `src/container.ts` 中注册和聚合。
+主进程测试模拟 Electron API；打包资源测试使用临时目录。
+Main-process tests mock Electron APIs; packaging resource tests use temporary directories.
 
-Controllers return explicit `handle` / `on` maps. IPC arguments and return values follow
-the preload package's type contracts. Export new controller factories from
-`src/controller/index.ts`, then register and collect them in `src/container.ts`.
+## Ubuntu 首次启动与桌面识别 / Ubuntu first launch and desktop detection
 
-在项目目录运行 `pnpm test` 验证依赖装配、IPC 和窗口行为；测试使用模拟的 Electron API。
-Run `pnpm test` from this project to verify dependency composition, IPC, and window behavior
-with mocked Electron APIs.
+`dev` 在启动前读取 `/etc/os-release`，仅在 `ID=ubuntu` 时检查 Ubuntu 沙箱权限。
+如 AppArmor 阻止当前 Electron 使用用户命名空间，会自动生成专用规则文件，
+并显示两条 `sudo` 安装与加载命令。请先审阅文件，再按提示执行并重新运行开发任务。
+脚本不会自动提权或修改系统策略。权限已配置时直接继续；升级 Electron 或移动
+工作区导致可执行文件路径变化时，重新检查并引导配置。已正确安装 SUID 沙箱的环境
+也可直接通过检查。
 
-## 工作区 / Workspace
+Before launch, `dev` reads `/etc/os-release` and checks Ubuntu sandbox permissions only
+when `ID=ubuntu`. If AppArmor blocks the installed Electron binary's user namespaces,
+it generates a dedicated profile file and prints two `sudo` commands to install and
+load it. Review the file, follow the instructions, and rerun the development task.
+The script does not elevate privileges or change system policy. Configured permissions
+pass automatically; a changed binary path after an Electron upgrade or workspace move
+triggers another check and setup guidance. A correctly installed SUID sandbox also passes.
 
-这是一个 One 项目，内部包共享仓库根目录的 `pnpm-workspace.yaml` 和
-`pnpm-lock.yaml`。包名使用 `@one-template-electron/` 前缀，支持在一个仓库中添加多个桌面应用。
-
-This is one One project. Its internal packages share the repository's root
-`pnpm-workspace.yaml` and `pnpm-lock.yaml`. Package names use the
-`@one-template-electron/` scope so multiple desktop apps can coexist.
-
-```text
-apps/electron/     Electron main process
-apps/ui/           React renderer
-packages/preload/  Preload bridge and shared IPC types
-```
-
-需要 pnpm 工作区。Node.js 和 pnpm 版本沿用仓库根目录配置。
-Requires a pnpm workspace. Node.js and pnpm versions follow the root configuration.
-
-## 开发和构建 / Development and builds
-
-从仓库根目录运行 / Run from the repository root:
+仍可手动输出当前 Electron 的规则 / You can also print the current Electron profile manually:
 
 ```sh
-one dev -p OneTemplateElectron
-one build -p OneTemplateElectron
+one run OneTemplateElectron-main:sandbox:profile
 ```
 
-开发时会按需更新根锁文件；请将其提交 Git。已有锁文件在构建时严格校验。
-Development updates the root lockfile when needed; commit it to Git.
-Builds validate an existing lockfile without rewriting it.
+Linux 开发启动保留已有 `DISPLAY`（包括 SSH X11 转发和 Xvfb）。仅配置
+`WAYLAND_DISPLAY` 时，会补齐当前用户的运行目录和 Wayland 会话类型；显示变量缺失时，
+先查询当前用户桌面会话，再检查活跃的 Wayland / X11 socket。自动识别 X11 时还需要
+当前用户的认证文件。发现多个候选且会话无法确定时，提示显式设置显示变量。
+通过 SSH 使用本机桌面时，窗口显示在该机器的桌面上。无桌面环境会给出明确提示，
+请使用图形桌面终端、SSH X11 转发，或在 CI 中使用 Xvfb。
 
-也可以在本项目目录运行 `pnpm run dev`、`pnpm run build`。
-You can also run `pnpm run dev` and `pnpm run build` from this project directory.
+Linux development preserves an existing `DISPLAY`, including SSH X11 forwarding and
+Xvfb. With only `WAYLAND_DISPLAY` set, it fills the current user's runtime directory
+and Wayland session type. When display variables are missing, it queries the current
+user's desktop session, then looks for live Wayland / X11 sockets. X11 discovery also
+requires the current user's authentication file. Ambiguous displays require an explicit
+display variable. When using a local desktop from SSH, windows appear on that machine's
+desktop. A headless environment receives guidance to use a graphical terminal, SSH X11
+forwarding, or Xvfb in CI.
 
-先构建 preload，再运行主进程和 UI。多个桌面应用同时开发时，分别在各项目环境中设置
-`ELECTRON_RENDERER_PORT`（默认 `5173`），主进程和 Vite 会使用相同端口。
+macOS 和 Windows 跳过 Ubuntu 权限与 Linux 桌面检查。模板保留 Chromium 沙箱。
+启动提示沿用 One 的语言偏好；`auto` 按 `LC_ALL`、`LC_MESSAGES`、`LANG` 判断。
 
-Preload builds first, followed by the main process and UI. When developing multiple
-desktop apps at once, set a different `ELECTRON_RENDERER_PORT` in each project's
-environment (default `5173`). The main process and Vite use the same port.
-
-## 依赖 / Dependencies
-
-安装依赖使用仓库根目录配置，包括 registry、镜像和安装脚本策略。
-模板不会携带独立锁文件或覆盖根目录 `.npmrc`。Electron 需要允许运行安装脚本；
-已有策略中的显式禁用会保留，需要在根目录自行调整后重新安装。
-
-Dependency installation uses the root configuration, including the registry,
-mirrors, and build-script policy. The template does not carry a separate lockfile
-or override the root `.npmrc`. Electron needs its installation script enabled;
-existing explicit denials are preserved and must be adjusted at the root before reinstalling.
-
-新增内部包时，在本项目 `package.json` 的 `workspaces` 和根 `pnpm-workspace.yaml`
-中登记路径。
-
-When adding an internal package, register its path in this project's `package.json`
-`workspaces` and the root `pnpm-workspace.yaml`.
-
-## Ubuntu 沙箱启动错误 / Ubuntu sandbox startup errors
-
-如果启动时报 `The SUID sandbox helper binary was found, but is not configured correctly`，
-先检查系统的 AppArmor 用户命名空间限制。构建成功并不代表系统已允许 Electron 创建沙箱。
-
-If startup reports `The SUID sandbox helper binary was found, but is not configured correctly`,
-check the system's AppArmor user-namespace restrictions. A successful build does not
-mean that the operating system permits Electron to create its sandbox.
-
-在本项目目录生成当前 Electron 的规则 / Generate a profile for the installed Electron
-from this project directory:
-
-```sh
-node apps/electron/script/sandbox-profile.mjs > /tmp/one-electron.apparmor
-cat /tmp/one-electron.apparmor
-apparmor_parser --skip-kernel-load --skip-cache /tmp/one-electron.apparmor
-```
-
-规则只匹配当前 Electron 可执行文件的完整路径。管理员审核后，可安装到
-`/etc/apparmor.d/` 并使用 `apparmor_parser -r` 加载。此操作会持续允许该可执行文件使用
-用户命名空间，需管理员权限。升级 Electron 或移动工作区后，需要重新生成规则。
-
-The profile matches only the full path of the installed Electron executable. After
-review, an administrator can install it under `/etc/apparmor.d/` and load it with
-`apparmor_parser -r`. This persistently grants that executable access to user namespaces
-and requires administrator privileges. Regenerate the profile after upgrading Electron
-or moving the workspace.
-
-模板保持 Chromium 沙箱开启。`--no-sandbox` 只适合临时测试，会关闭所有进程的沙箱，
-不要写入正式启动或发布配置。
-
-The template keeps Chromium sandboxing enabled. `--no-sandbox` is for temporary testing
-and disables sandboxing for all processes; keep it out of normal startup and release configuration.
+macOS and Windows skip Ubuntu permission and Linux desktop checks. Chromium sandboxing
+remains enabled. Startup guidance follows One's language preference; `auto` uses
+`LC_ALL`, `LC_MESSAGES`, then `LANG`.
 
 参考 / References:
 
-- [Ubuntu: user namespace restrictions](https://discourse.ubuntu.com/t/ubuntu-24-04-lts-noble-numbat-release-notes/39890)
-- [Electron: process sandboxing](https://www.electronjs.org/docs/latest/tutorial/sandbox)
+- [Ubuntu user namespace restrictions](https://discourse.ubuntu.com/t/ubuntu-24-04-lts-noble-numbat-release-notes/39890)
+- [Electron process sandboxing](https://www.electronjs.org/docs/latest/tutorial/sandbox)

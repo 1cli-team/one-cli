@@ -56,7 +56,7 @@ const HomePage: FC = () => (
     <p className="text-muted-foreground text-sm">
       Edit{" "}
       <code className="bg-muted text-foreground rounded px-2 py-1 font-mono text-xs">
-        apps/ui/src/nodes/HomePage/index.tsx
+        src/nodes/HomePage/index.tsx
       </code>{" "}
       and save to start.
     </p>

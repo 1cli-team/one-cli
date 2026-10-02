@@ -8,6 +8,7 @@ export interface ProjectTemplate {
 	category: "frontend" | "backend" | "library";
 	directory: string;
 	toolchain: "node" | "go" | "none";
+	projects?: { directory: string; suffix: string }[];
 }
 
 export interface CreatedProject {
@@ -15,6 +16,7 @@ export interface CreatedProject {
 	relativeDir: string;
 	templateId: string;
 	warnings?: string[];
+	projects?: CreatedProject[];
 }
 
 export const projectTemplatesKey = "/project-templates";

@@ -93,6 +93,10 @@ func fsPathPattern(p string) bool {
 }
 
 func rewriteNode(files map[string][]byte, spec NodeSpec, vars Variables) error {
+	return rewriteNodeProjects(files, spec, vars, nil)
+}
+
+func rewriteNodeProjects(files map[string][]byte, spec NodeSpec, vars Variables, projects []ProjectSpec) error {
 	targetScope := "@" + vars["projectNameKebabCase"]
 	if !scopeRE.MatchString(targetScope) {
 		return i18n.Errorf("template.spec_invalid", "projectNameKebabCase")
@@ -119,6 +123,11 @@ func rewriteNode(files map[string][]byte, spec NodeSpec, vars Variables) error {
 				return i18n.Errorf("template.spec_invalid", file+": name")
 			}
 			target = targetScope + strings.TrimPrefix(pkg.Name, spec.Scope)
+			for _, project := range projects {
+				if file == path.Join(project.Source, "package.json") {
+					target = vars["projectNameKebabCase"] + project.Suffix
+				}
+			}
 		}
 		names[pkg.Name] = target
 	}
@@ -186,7 +195,12 @@ func rewriteNode(files map[string][]byte, spec NodeSpec, vars Variables) error {
 		if !bytes.Contains(raw, []byte(from)) {
 			return i18n.Errorf("template.text_matches", file, from, 1, 0)
 		}
-		files[file] = bytes.ReplaceAll(raw, []byte(from), []byte(targetScope+"/"))
+		files[file] = []byte(packageTokenRE.ReplaceAllStringFunc(string(raw), func(token string) string {
+			if target, ok := names[token]; ok {
+				return target
+			}
+			return token
+		}))
 	}
 	return nil
 }

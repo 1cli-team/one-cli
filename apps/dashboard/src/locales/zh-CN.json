@@ -431,7 +431,7 @@
 			},
 			"electron-app": {
 				"name": "Electron 桌面应用",
-				"description": "Electron + React + Vite 桌面应用模板，主进程使用 Awilix 工厂函数，内置 electron-log/store/updater"
+				"description": "Electron + React + Vite 桌面应用，生成 renderer、main、preload 三个顶层项目，主进程使用 Awilix。"
 			},
 			"empty-app": {
 				"name": "空应用",
@@ -445,7 +445,9 @@
 				"name": "空共享库",
 				"description": "在 packages/ 下创建空项目，稍后自行配置技术栈。"
 			}
-		}
+		},
+		"groupSuccess": "已创建项目组 {{name}}，包含 {{count}} 个项目",
+		"groupLocationHint": "使用输入的名称生成关联项目，统一使用工作区根目录的依赖配置。"
 	},
 	"appMenu": {
 		"label": "One CLI 导航菜单"
@@ -531,7 +533,7 @@
 			"electron-app": {
 				"description": "使用 Electron 主进程和 React 界面构建桌面应用，适合桌面工具与业务客户端。",
 				"stack": "Electron · React · Vite · Awilix",
-				"feature1": "主进程、渲染进程与 preload 分包",
+				"feature1": "顶层 apps、services、packages 项目组合",
 				"feature2": "带类型的 IPC 桥接与 Awilix 工厂函数",
 				"feature3": "日志、本地设置与更新器模块"
 			},

@@ -517,7 +517,7 @@
   "template.go-lib.name": "Go library",
   "template.go-lib.description": "Go library following golang-standards/project-layout, ready to publish and import",
   "template.electron-app.name": "Electron desktop app",
-  "template.electron-app.description": "Electron + React + Vite with Awilix factory functions, electron-log, electron-store, and electron-updater",
+  "template.electron-app.description": "Electron + React + Vite with top-level renderer, main, and preload projects and Awilix factory functions",
   "templates.headings": "CATEGORY\tID\tTOOLCHAIN\tDESCRIPTION",
   "template.category.frontend": "Application",
   "template.category.backend": "Service",
@@ -742,5 +742,12 @@
   "upgrade.failed": "Could not update One CLI at %s: %w\nCheck the network and installation directory permissions, then retry `one upgrade`, or run: %s",
   "upgrade.worker_invalid": "The update worker did not return a valid result. Retry `one upgrade`.",
   "env.bind.revision_conflict": "Workspace configuration has changed. Refresh before binding again.",
-  "env.bind.request_invalid": "Binding requires a configuration revision and exactly one of creation or an existing project."
+  "env.bind.request_invalid": "Binding requires a configuration revision and exactly one of creation or an existing project.",
+  "manifest.group_invalid": "Invalid project group: %s",
+  "manifest.group_member_invalid": "Project group %s contains a missing or duplicate project: %s",
+  "creation.group_exists": "Project or project group %s already exists. Choose another name.",
+  "add.group_success": "Project group %s created successfully.",
+  "add.group_projects": "Created projects:",
+  "add.group_next_steps": "Run the group task to start the desktop application:",
+  "add.group_member": "  %s: %s"
 }

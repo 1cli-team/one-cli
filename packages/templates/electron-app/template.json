@@ -3,11 +3,12 @@
   "node": {
     "scope": "@one-template-electron",
     "sourceFiles": [
-      "apps/electron/src/utils/index.ts",
-      "apps/electron/src/types/events.ts",
-      "apps/ui/src/nodes/HomePage/index.tsx",
-      "apps/ui/src/renderer.d.ts",
-      "apps/ui/src/hooks/electron.ts"
+      "services/one-template-electron-main/src/utils/index.ts",
+      "services/one-template-electron-main/src/types/events.ts",
+      "apps/one-template-electron-renderer/src/nodes/HomePage/index.tsx",
+      "apps/one-template-electron-renderer/src/renderer.d.ts",
+      "apps/one-template-electron-renderer/src/hooks/electron.ts",
+      "services/one-template-electron-main/scripts/release.mjs"
     ]
   },
   "text": [
@@ -22,5 +23,23 @@
       "value": "projectNameKebabCase"
     }
   ],
-  "exclude": ["pnpm-workspace.yaml"]
+  "exclude": ["pnpm-workspace.yaml"],
+  "projects": [
+    {
+      "source": "apps/one-template-electron-renderer",
+      "suffix": "-renderer",
+      "category": "frontend"
+    },
+    {
+      "source": "services/one-template-electron-main",
+      "suffix": "-main",
+      "category": "backend"
+    },
+    {
+      "source": "packages/one-template-electron-preload",
+      "suffix": "-preload",
+      "category": "library"
+    }
+  ],
+  "sharedFiles": ["README.md", ".editorconfig"]
 }

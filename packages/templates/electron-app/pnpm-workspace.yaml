@@ -1,7 +1,7 @@
 packages:
-  - apps/electron
-  - apps/ui
-  - packages/preload
+  - services/one-template-electron-main
+  - apps/one-template-electron-renderer
+  - packages/one-template-electron-preload
 
 allowBuilds:
   electron: true

@@ -517,7 +517,7 @@
   "template.go-lib.name": "Go 通用库",
   "template.go-lib.description": "Go 库模板，遵循 golang-standards/project-layout，适合发包与被 import 场景",
   "template.electron-app.name": "Electron 桌面应用",
-  "template.electron-app.description": "Electron + React + Vite 桌面应用模板，主进程使用 Awilix 工厂函数，内置 electron-log/store/updater",
+  "template.electron-app.description": "Electron + React + Vite 桌面应用模板，生成 renderer、main、preload 三个顶层项目，主进程使用 Awilix 工厂函数",
   "templates.headings": "分类\t标识\t工具链\t说明",
   "template.category.frontend": "应用",
   "template.category.backend": "服务",
@@ -742,5 +742,12 @@
   "upgrade.failed": "无法更新 %s 处的 One CLI：%w\n请检查网络和安装目录权限后重试 `one upgrade`，或运行：%s",
   "upgrade.worker_invalid": "更新进程未返回有效结果，请重试 `one upgrade`。",
   "env.bind.revision_conflict": "工作区配置已发生变化，请刷新后重新绑定。",
-  "env.bind.request_invalid": "绑定请求需要配置版本，并且只能选择创建或绑定已有项目。"
+  "env.bind.request_invalid": "绑定请求需要配置版本，并且只能选择创建或绑定已有项目。",
+  "manifest.group_invalid": "项目组无效：%s",
+  "manifest.group_member_invalid": "项目组 %s 包含不存在或重复的项目：%s",
+  "creation.group_exists": "项目或项目组 %s 已存在，请使用其他名称。",
+  "add.group_success": "项目组 %s 创建成功。",
+  "add.group_projects": "已创建的项目：",
+  "add.group_next_steps": "运行组合任务启动桌面应用：",
+  "add.group_member": "  %s：%s"
 }

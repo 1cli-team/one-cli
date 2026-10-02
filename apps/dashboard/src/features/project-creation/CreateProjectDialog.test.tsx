@@ -29,6 +29,19 @@ const templates = [
 		toolchain: "node",
 	},
 	{
+		id: "electron-app",
+		name: "Electron",
+		description: "Electron",
+		category: "frontend",
+		directory: "apps",
+		toolchain: "node",
+		projects: [
+			{ directory: "apps", suffix: "-renderer" },
+			{ directory: "services", suffix: "-main" },
+			{ directory: "packages", suffix: "-preload" },
+		],
+	},
+	{
 		id: "go-api",
 		name: "Go",
 		description: "Go",
@@ -104,6 +117,78 @@ describe("project creation", () => {
 		await waitFor(() => expect(onCreated).toHaveBeenCalledWith("api"));
 		expect(payload).toEqual({ name: "api", templateId: id });
 		expect(onClose).toHaveBeenCalledOnce();
+	});
+
+	it.each(["en-US", "zh-CN"])("previews and creates all Electron members in %s", async (locale) => {
+		await i18n.changeLanguage(locale);
+		const user = userEvent.setup();
+		server.use(
+			http.post("http://localhost/api/workspaces/:entryId/projects", async ({ request }) => {
+				expect(await request.json()).toEqual({ name: "desktop", templateId: "electron-app" });
+				return HttpResponse.json(
+					{
+						name: "desktop",
+						relativeDir: ".",
+						templateId: "electron-app",
+						projects: [
+							{
+								name: "desktop-renderer",
+								relativeDir: "apps/desktop-renderer",
+								templateId: "electron-app",
+							},
+							{
+								name: "desktop-main",
+								relativeDir: "services/desktop-main",
+								templateId: "electron-app",
+							},
+							{
+								name: "desktop-preload",
+								relativeDir: "packages/desktop-preload",
+								templateId: "electron-app",
+							},
+						],
+					},
+					{ status: 201 },
+				);
+			}),
+		);
+		const { onCreated } = show();
+		await user.type(screen.getByLabelText(i18n.t("projectCreate.name")), "desktop");
+		const select = await screen.findByRole("combobox", { name: i18n.t("projectCreate.template") });
+		await waitFor(() => expect((select as HTMLButtonElement).disabled).toBe(false));
+		await user.click(select);
+		await user.click(
+			await screen.findByRole("option", {
+				name: i18n.t("projectCreate.templates.electron-app.name"),
+			}),
+		);
+		for (const dir of [
+			"apps/desktop-renderer",
+			"services/desktop-main",
+			"packages/desktop-preload",
+		])
+			expect(screen.getByText(dir)).toBeDefined();
+		await user.click(screen.getByRole("button", { name: i18n.t("projectCreate.submit") }));
+		await waitFor(() => expect(onCreated).toHaveBeenCalledWith("desktop-renderer"));
+	});
+
+	it("rejects a conflicting Electron member before creation", async () => {
+		const user = userEvent.setup();
+		const post = vi.fn();
+		server.use(http.post("http://localhost/api/workspaces/:entryId/projects", post));
+		show(["desktop-main"]);
+		await user.type(screen.getByLabelText("Project name"), "desktop");
+		const select = await screen.findByRole("combobox", { name: i18n.t("projectCreate.template") });
+		await waitFor(() => expect((select as HTMLButtonElement).disabled).toBe(false));
+		await user.click(select);
+		await user.click(
+			await screen.findByRole("option", {
+				name: i18n.t("projectCreate.templates.electron-app.name"),
+			}),
+		);
+		await user.click(screen.getByRole("button", { name: "Create project" }));
+		expect(screen.getByRole("alert")).toBeDefined();
+		expect(post).not.toHaveBeenCalled();
 	});
 
 	it("validates names and duplicates without sending requests", async () => {

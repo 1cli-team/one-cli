@@ -25,6 +25,8 @@ export const noop = () => {};
 // preload 脚本绝对路径 —— 主窗口 webPreferences.preload 要指向这里
 // @one-template-electron/preload 包的 main 指向 dist/index.cjs，这里 resolve 出真实路径
 const preloadPackage = "@one-template-electron/preload";
-export const preloadPath = requireFromHere.resolve(preloadPackage);
+export const preloadPath = app.isPackaged
+  ? path.resolve(__dirname, "../preload/index.cjs")
+  : requireFromHere.resolve(preloadPackage);
 
 export { __dirname, __filename };

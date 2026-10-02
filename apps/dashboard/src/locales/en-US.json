@@ -431,7 +431,7 @@
 			},
 			"electron-app": {
 				"name": "Electron desktop app",
-				"description": "Electron + React + Vite with Awilix factory functions, electron-log, electron-store, and electron-updater"
+				"description": "Electron + React + Vite with top-level renderer, main, and preload projects, using Awilix in main."
 			},
 			"empty-app": {
 				"name": "Empty application",
@@ -445,7 +445,9 @@
 				"name": "Empty library",
 				"description": "Create an empty project under packages/ and configure a technology stack later."
 			}
-		}
+		},
+		"groupSuccess": "Created project group {{name}} with {{count}} projects",
+		"groupLocationHint": "Creates related projects using your name and the workspace root dependency configuration."
 	},
 	"appMenu": {
 		"label": "One CLI navigation menu"
@@ -531,7 +533,7 @@
 			"electron-app": {
 				"description": "Create desktop applications with an Electron main process and a React user interface.",
 				"stack": "Electron · React · Vite · Awilix",
-				"feature1": "Separate main, renderer, and preload packages",
+				"feature1": "Top-level apps, services, and packages projects",
 				"feature2": "Typed IPC bridge and Awilix factory functions",
 				"feature3": "Logging, local settings, and updater modules"
 			},

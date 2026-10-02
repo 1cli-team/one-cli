@@ -20,10 +20,17 @@
   },
   "scripts": {
     "dev": "tsdown --watch",
-    "build": "tsdown"
+    "build": "tsdown",
+    "lint": "oxlint .",
+    "lint:fix": "oxlint --fix .",
+    "format": "oxfmt --check .",
+    "format:fix": "oxfmt --write .",
+    "check": "pnpm run lint && pnpm run format"
   },
   "devDependencies": {
     "electron": "^44.5.1",
+    "oxfmt": "^0.71.0",
+    "oxlint": "^1.86.0",
     "tsdown": "^0.23.0",
     "typescript": "^7.0.2"
   }

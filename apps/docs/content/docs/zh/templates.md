@@ -107,13 +107,31 @@ Node 模板不复制预生成的锁文件。`one dev`、`one build` 等任务共
 复用匹配的依赖，需要安装时允许生成或更新根锁文件。请审阅并提交锁文件变更。
 需要严格校验锁文件的 CI，可显式执行 `one mise exec -- pnpm install --frozen-lockfile`。
 
-`electron-app` 需要 pnpm 工作区。它仍是一个 One 项目，内部的主进程、UI 和 preload
-包会自动加入根 `pnpm-workspace.yaml`，共享根锁文件。包名以项目名作为 scope，
-例如 `@desktop/electron`、`@desktop/ui`、`@desktop/preload`，可在同一仓库中添加多个桌面应用。
+`electron-app` 会创建三个顶层 One 项目。输入 `--name desktop` 时，目录分别为
+`apps/desktop-renderer`、`services/desktop-main` 和 `packages/desktop-preload`，
+npm 包名分别为 `desktop-renderer`、`desktop-main` 和 `desktop-preload`。
+目录保留用户输入的项目名，npm 包名转换为 kebab-case。三个项目共用根目录的
+pnpm workspace 和 lockfile，不再创建嵌套工作区。
+
+清单通过 `[groups.desktop]` 记录三个成员。使用 `one run desktop:dev`、
+`one run desktop:build`、`one run desktop:test` 和 `one run desktop:pack`
+操作整组项目；重新运行 `one init mise` 后这些任务仍会保留。
+每个成员仍可独立操作，例如 `one build -p desktop-main`。
+主进程使用 Awilix 函数工厂，renderer 使用 React、Vite 和基于 Base UI 的 shadcn/ui。
+打包时会将 renderer 和 preload 的构建产物复制到 main 的构建目录。
 
 模板沿用根目录包管理器版本、registry 和镜像配置。已有安装脚本策略会保留；未配置时
 使用内置模板默认规则。若显式禁用了 Electron 安装脚本，需要在根目录调整策略。
-多个桌面应用同时开发时，通过各项目环境中的 `ELECTRON_RENDERER_PORT` 配置不同端口。
+多个桌面应用同时开发时，为每组配置不同的 `ELECTRON_RENDERER_PORT`；
+同组 main 和 renderer 使用相同端口值。
+
+Electron 开发启动仅在系统标识为 Ubuntu（`ID=ubuntu`）时检查沙箱权限。
+首次遇到 AppArmor 用户命名空间限制，会生成当前 Electron 专用的规则文件，
+显示供管理员审阅、安装与加载的命令；配置后重新运行即可，脚本不会自行提权。
+Electron 可执行文件路径变化后会重新检查。Linux 会保留已有显示变量（包括
+SSH X11 转发和 Xvfb），缺失时自动识别当前用户可用的 Wayland / X11 桌面。
+多个候选无法确定时提示显式选择；无桌面时提示使用图形终端、X11 转发或 Xvfb。
+macOS 和 Windows 跳过这些检查。详细流程见生成项目的 README。
 
 这些规则适用于新生成的项目，已有 Electron 项目不会自动改写目录或依赖配置。
 
@@ -166,6 +184,8 @@ pnpm --ignore-workspace run dev
 | `node.scope`、`node.sourceFiles` | 修改内部 Node 包名、依赖键、scripts 和指定源码中的 scope |
 | `text` | 在明确列出的文件中替换示例文字 |
 | `exclude` | 排除模板开发专用的文件或目录 |
+| `projects` | 组合模板的成员，每个成员声明 `source`、名称 `suffix` 和 `category`（`frontend`、`backend` 或 `library`） |
+| `sharedFiles` | 复制到组合模板每个成员的模板相对路径文件 |
 
 `text` 的每条规则使用 `files`、`from`、`value`；`value` 仅支持
 `projectName` 和 `projectNameKebabCase`。可选 `minMatches` 默认为 1，

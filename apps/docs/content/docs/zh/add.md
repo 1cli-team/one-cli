@@ -57,6 +57,24 @@ one add empty-library --name shared --yes
 
 如果使用 Node 或 Go，在 `one.manifest.toml` 中将项目的 `toolchain` 改为 `node` 或 `go`；Node 项目在根 `package.json` 中声明 `packageManager`，并补齐根工作区的包成员配置，Go 项目则将模块加入根 `go.work`。在 `package.json` / `Taskfile.yml` 中定义任务，然后运行 `one init mise` 更新任务配置。使用其他语言时，可以保留 `toolchain = "none"`，在根 `mise.toml` 中自行定义工具和任务。配置好命令后再使用 `one dev` / `one build`。
 
+## 添加 Electron 应用
+
+```bash
+one add electron-app --name desktop --yes
+one run desktop:dev
+one run desktop:pack
+```
+
+这会注册 `apps/desktop-renderer`、`services/desktop-main` 和
+`packages/desktop-preload` 三个项目，以及名为 `desktop` 的项目组。
+main 开发任务会等待 Vite 就绪再打开 Electron；打包任务会先构建整组项目，
+再将产物汇集到 main。多个应用使用各自派生的包名；同时开发多个应用时，
+为每个应用的 main 和 renderer 配置相同且与其他应用不同的 `ELECTRON_RENDERER_PORT`。
+
+组合模板的 JSON 输出额外包含 `projects[]`，每项有 `name`、`target_path` 和
+`toolchain`。`subproject_name` 为项目组名称，`target_path` 为工作区根目录。
+普通模板保持以下输出结构。
+
 ## 输出
 
 ```json

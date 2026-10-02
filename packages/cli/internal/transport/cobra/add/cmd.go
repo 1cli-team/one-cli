@@ -162,6 +162,7 @@ func runAdd(cmd *cobra.Command, service *creationmodule.Service, positional stri
 		Toolchain:      project.Toolchain,
 		PackageManager: project.PackageManager,
 		Warnings:       project.Warnings,
+		Projects:       addedProjects(project.Projects),
 	})
 
 	return nil
@@ -177,12 +178,40 @@ type addResult struct {
 	// Warnings (v0.5+) carries one entry per template `compat` mismatch.
 	// Empty slice / nil is omitted from the JSON envelope so clean adds
 	// match the pre-v0.5 wire shape.
-	Warnings []string `json:"warnings,omitempty"`
+	Warnings []string     `json:"warnings,omitempty"`
+	Projects []addProject `json:"projects,omitempty"`
+}
+
+type addProject struct {
+	Name       string `json:"name"`
+	TargetPath string `json:"target_path"`
+	Toolchain  string `json:"toolchain"`
+}
+
+func addedProjects(projects []creationmodule.ProjectResult) []addProject {
+	if len(projects) == 0 {
+		return nil
+	}
+	result := make([]addProject, 0, len(projects))
+	for _, project := range projects {
+		result = append(result, addProject{Name: project.Name, TargetPath: project.TargetPath, Toolchain: project.Toolchain})
+	}
+	return result
 }
 
 // RenderTTY prints a friendly add-success summary.
 func (r *addResult) RenderTTY(w io.Writer) {
 	if r == nil {
+		return
+	}
+	if len(r.Projects) > 0 {
+		fmt.Fprintf(w, i18n.T("add.group_success")+"\n", r.SubprojectName)
+		fmt.Fprintln(w, i18n.T("add.group_projects"))
+		for _, project := range r.Projects {
+			fmt.Fprintf(w, i18n.T("add.group_member")+"\n", project.Name, project.TargetPath)
+		}
+		fmt.Fprintln(w, i18n.T("add.group_next_steps"))
+		fmt.Fprintf(w, "  one run %s:dev\n", r.SubprojectName)
 		return
 	}
 	fmt.Fprintf(w, i18n.T("add.success")+"\n", r.SubprojectName)

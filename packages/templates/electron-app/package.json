@@ -7,17 +7,17 @@
   "license": "MIT",
   "author": "",
   "workspaces": [
-    "apps/electron",
-    "apps/ui",
-    "packages/preload"
+    "apps/one-template-electron-renderer",
+    "services/one-template-electron-main",
+    "packages/one-template-electron-preload"
   ],
   "scripts": {
-    "dev": "pnpm -F @one-template-electron/preload build && pnpm -r --parallel -F @one-template-electron/electron -F @one-template-electron/ui run dev",
-    "build": "pnpm -F @one-template-electron/preload run build && pnpm -r --parallel -F @one-template-electron/electron -F @one-template-electron/ui run build",
-    "test": "pnpm -F @one-template-electron/preload run build && pnpm -F @one-template-electron/electron run test",
-    "pack": "pnpm -F @one-template-electron/electron run pack",
-    "sandbox:profile": "pnpm --silent -F @one-template-electron/electron run sandbox:profile",
-    "release": "pnpm run build && pnpm -F @one-template-electron/electron run release",
+    "dev": "pnpm -F @one-template-electron/preload build && pnpm -r --parallel -F @one-template-electron/main -F @one-template-electron/renderer -F @one-template-electron/preload run dev",
+    "build": "pnpm --filter @one-template-electron/main... run build",
+    "test": "pnpm -F @one-template-electron/preload run build && pnpm -F @one-template-electron/main run test",
+    "pack": "pnpm run build && pnpm -F @one-template-electron/main run pack",
+    "sandbox:profile": "pnpm --silent -F @one-template-electron/main run sandbox:profile",
+    "release": "pnpm run build && pnpm -F @one-template-electron/main run release",
     "lint": "oxlint",
     "lint:fix": "oxlint --fix",
     "format": "oxfmt",

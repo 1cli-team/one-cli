@@ -1,5 +1,5 @@
 {
-  "name": "@one-template-electron/ui",
+  "name": "@one-template-electron/renderer",
   "version": "0.1.0",
   "private": true,
   "description": "electron-template ui (renderer)",
@@ -8,7 +8,12 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "lint": "oxlint .",
+    "lint:fix": "oxlint --fix .",
+    "format": "oxfmt --check .",
+    "format:fix": "oxfmt --write .",
+    "check": "pnpm run lint && pnpm run format"
   },
   "dependencies": {
     "@base-ui/react": "^1.8.0",
@@ -34,6 +39,8 @@
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
     "@vitejs/plugin-react": "^6.1.1",
+    "oxfmt": "^0.71.0",
+    "oxlint": "^1.86.0",
     "tailwindcss": "^4.3.3",
     "typescript": "^7.0.2",
     "vite": "^8.3.1"

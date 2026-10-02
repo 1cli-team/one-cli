@@ -155,6 +155,9 @@ func TestProjectTemplatesLocalized(t *testing.T) {
 			t.Fatal("no templates")
 		}
 		for _, entry := range result.Templates {
+			if entry.ID == "electron-app" && len(entry.Projects) != 3 {
+				t.Fatalf("missing composite locations: %#v", entry)
+			}
 			if entry.Directory == "" || entry.Name != i18n.T("template."+entry.ID+".name") {
 				t.Fatalf("template = %#v", entry)
 			}
@@ -204,4 +207,55 @@ func TestCreateEmptyProjectsInSelectedWorkspace(t *testing.T) {
 			t.Fatalf("empty project = %#v", project)
 		}
 	}
+}
+
+func TestCreateElectronGroupAndRejectMemberConflicts(t *testing.T) {
+	registry := newRegistryService(t)
+	root := seedRegistryWorkspace(t, "desktop", "Desktop", "")
+	selected := observeRegistryWorkspace(t, registry, root)
+	handler := newRegistryMux(t, root, registry)
+	endpoint := "/api/workspaces/" + selected.EntryID + "/projects"
+	response := registryRequest(t, handler, http.MethodPost, endpoint, strings.NewReader(`{"name":"desktop","templateId":"electron-app"}`))
+	if response.Code != http.StatusCreated {
+		t.Fatalf("create: %d %s", response.Code, response.Body.String())
+	}
+	var created createProjectResponse
+	if err := json.Unmarshal(response.Body.Bytes(), &created); err != nil {
+		t.Fatal(err)
+	}
+	if created.Name != "desktop" || len(created.Projects) != 3 {
+		t.Fatalf("created = %#v", created)
+	}
+	for i, relative := range []string{"apps/desktop-renderer", "services/desktop-main", "packages/desktop-preload"} {
+		if created.Projects[i].RelativeDir != relative {
+			t.Fatalf("member = %#v", created.Projects[i])
+		}
+		if _, err := os.Stat(filepath.Join(root, relative, "package.json")); err != nil {
+			t.Fatal(err)
+		}
+	}
+	before := snapshotRepositoryTree(t, root)
+	for _, body := range []string{
+		`{"name":"desktop","templateId":"electron-app"}`,
+		`{"name":"desktop","templateId":"react-spa"}`,
+		`{"name":"desktop-main","templateId":"react-spa"}`,
+	} {
+		response = registryRequest(t, handler, http.MethodPost, endpoint, strings.NewReader(body))
+		if response.Code != http.StatusConflict {
+			t.Fatalf("duplicate: %d %s", response.Code, response.Body.String())
+		}
+		assertRepositoryUnchanged(t, root, before)
+	}
+	if err := os.MkdirAll(filepath.Join(root, "services/studio-main"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(root, "services/studio-main/keep.txt"), []byte("keep"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	before = snapshotRepositoryTree(t, root)
+	response = registryRequest(t, handler, http.MethodPost, endpoint, strings.NewReader(`{"name":"studio","templateId":"electron-app"}`))
+	if response.Code != http.StatusConflict {
+		t.Fatalf("member conflict: %d %s", response.Code, response.Body.String())
+	}
+	assertRepositoryUnchanged(t, root, before)
 }

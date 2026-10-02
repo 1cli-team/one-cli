@@ -297,6 +297,35 @@ func BuildWithFiles(root string, opts Options, files map[string][]byte) (*Plan, 
 		}
 	}
 	var ci Task
+	for _, group := range m.Groups {
+		operations := map[string][]string{}
+		var builds []string
+		for _, member := range group.Projects {
+			for name := range configs[member].Tasks {
+				operations[name] = append(operations[name], "//:"+member+":"+name)
+			}
+			if _, ok := configs[member].Tasks["build"]; ok {
+				builds = append(builds, "//:"+member+":build")
+			}
+		}
+		for name, targets := range operations {
+			rootConfig.Tasks[group.Name+":"+name] = Task{Depends: targets}
+			// Packaging consumes every component's output, including renderer assets.
+			if name == "pack" || name == "release" {
+				for _, member := range group.Projects {
+					key := member + ":" + name
+					if task, ok := rootConfig.Tasks[key]; ok {
+						for _, build := range builds {
+							if !slices.Contains(task.Depends, build) {
+								task.Depends = append(task.Depends, build)
+							}
+						}
+						rootConfig.Tasks[key] = task
+					}
+				}
+			}
+		}
+	}
 	for _, name := range []string{"check", "test", "build"} {
 		if _, ok := rootConfig.Tasks[name]; ok {
 			ci.Depends = append(ci.Depends, name)

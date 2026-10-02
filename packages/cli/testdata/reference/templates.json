@@ -137,7 +137,7 @@
     },
     {
       "category": "frontend",
-      "description": "Electron + React + Vite 桌面应用模板，主进程使用 Awilix 工厂函数，内置 electron-log/store/updater",
+      "description": "Electron + React + Vite 桌面应用模板，生成 renderer、main、preload 三个顶层项目，主进程使用 Awilix 工厂函数",
       "id": "electron-app",
       "name": "Electron 桌面应用",
       "repo": "local:electron-app",

@@ -108,16 +108,34 @@ Node templates do not copy pre-generated lockfiles. Tasks such as `one dev` and
 installation may create or update the root lockfile. Review and commit those changes.
 For strict lockfile validation in CI, explicitly run `one mise exec -- pnpm install --frozen-lockfile`.
 
-`electron-app` requires a pnpm workspace. It remains one One project, while its main,
-UI, and preload packages join the root `pnpm-workspace.yaml` and share the root lockfile.
-Package names use the project name as their scope, for example `@desktop/electron`,
-`@desktop/ui`, and `@desktop/preload`, so multiple desktop apps can coexist.
+`electron-app` creates three top-level One projects. With `--name desktop`, they are
+`apps/desktop-renderer`, `services/desktop-main`, and `packages/desktop-preload`.
+Their npm package names are `desktop-renderer`, `desktop-main`, and `desktop-preload`.
+Directories preserve the supplied project name; npm names use kebab-case. All three
+join the root pnpm workspace and share its lockfile, without a nested workspace.
 
+The manifest records `[groups.desktop]` with these three members. Use
+`one run desktop:dev`, `one run desktop:build`, `one run desktop:test`, and
+`one run desktop:pack` to operate on the group. These aliases survive `one init mise`.
+Each member remains independently addressable, such as `one build -p desktop-main`.
+The main process uses Awilix function factories; the renderer uses React, Vite,
+and shadcn/ui backed by Base UI. Packaging copies renderer and preload outputs
+into the main project's build directory.
 The template follows the root package-manager version, registry, and mirror settings.
 Existing build-script policies are preserved; configurations without a policy receive
 the bundled template defaults. Explicit denials of Electron's installation script
 must be adjusted at the root. For concurrent desktop development, set a different
-`ELECTRON_RENDERER_PORT` in each project's environment.
+`ELECTRON_RENDERER_PORT` for both the renderer and main projects of each desktop app.
+
+Electron development checks sandbox permissions only when the OS identifies as Ubuntu
+(`ID=ubuntu`). On the first AppArmor user-namespace denial, it generates a profile for
+the installed Electron binary and prints commands for an administrator to review,
+install, and load it. Rerun development after setup; the script never elevates itself.
+A changed Electron binary path triggers another check. Linux preserves explicit displays,
+including SSH X11 forwarding and Xvfb; otherwise it discovers the current user's live
+Wayland / X11 desktop. Ambiguous displays require an explicit selection; headless systems
+receive guidance to use a graphical terminal, X11 forwarding, or Xvfb. macOS and Windows
+skip these checks. See the generated README for details.
 
 These rules apply to newly generated projects. Existing Electron projects are not
 automatically rewritten or migrated.
@@ -176,6 +194,8 @@ include a `template.json` file, with these supported settings:
 | `node.scope`, `node.sourceFiles` | Rename internal Node packages, dependency keys, scripts and the scope in listed source files |
 | `text` | Replace example text in explicitly listed files |
 | `exclude` | Exclude files or directories used only for template development |
+| `projects` | Composite components, each declaring `source`, name `suffix`, and `category` (`frontend`, `backend`, or `library`) |
+| `sharedFiles` | Template-relative files copied into every composite component |
 
 Each `text` rule contains `files`, `from` and `value`. The supported values are
 `projectName` and `projectNameKebabCase`. Optional `minMatches` defaults to 1;

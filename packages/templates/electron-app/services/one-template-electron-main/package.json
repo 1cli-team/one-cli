@@ -1,5 +1,5 @@
 {
-  "name": "@one-template-electron/electron",
+  "name": "@one-template-electron/main",
   "version": "0.1.0",
   "description": "electron-template electron main process",
   "license": "MIT",
@@ -7,13 +7,18 @@
   "type": "module",
   "main": "build/main/index.js",
   "scripts": {
-    "dev": "cross-env NODE_ENV=development tsdown && cross-env NODE_ENV=development electron build/main/index.js",
+    "dev": "node scripts/dev.mjs",
     "build": "tsc --noEmit && cross-env NODE_ENV=production tsdown",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "sandbox:profile": "node script/sandbox-profile.mjs",
-    "pack": "cross-env NODE_ENV=development node script/release.mjs",
-    "release": "cross-env NODE_ENV=production node script/release.mjs"
+    "sandbox:profile": "node scripts/sandbox-profile.mjs",
+    "pack": "cross-env NODE_ENV=development node scripts/release.mjs",
+    "release": "cross-env NODE_ENV=production node scripts/release.mjs",
+    "lint": "oxlint .",
+    "lint:fix": "oxlint --fix .",
+    "format": "oxfmt --check .",
+    "format:fix": "oxfmt --write .",
+    "check": "pnpm run lint && pnpm run format"
   },
   "dependencies": {
     "@one-template-electron/preload": "workspace:*",
@@ -27,11 +32,14 @@
     "mime-types": "^3.0.2"
   },
   "devDependencies": {
+    "@one-template-electron/renderer": "workspace:*",
     "@types/mime-types": "^3.0.1",
     "@types/node": "^24.19.0",
     "cross-env": "^10.1.0",
     "electron": "^44.5.1",
     "electron-builder": "^26.15.3",
+    "oxfmt": "^0.71.0",
+    "oxlint": "^1.86.0",
     "tsdown": "^0.23.0",
     "typescript": "^7.0.2",
     "vitest": "^5.0.2"

@@ -61,6 +61,25 @@ These templates create `apps/web/`, `services/api/`, and `packages/shared/`, res
 
 For Node or Go code, set the project's `toolchain` in `one.manifest.toml` to `node` or `go`. Node projects declare `packageManager` in the root `package.json` and need membership in the root package workspace; Go modules need membership in the root `go.work`. Define tasks in `package.json` / `Taskfile.yml`, then run `one init mise` to update task configuration. For other languages, keep `toolchain = "none"` and define your own tools and tasks in the root `mise.toml`. Configure the commands before using `one dev` / `one build`.
 
+## Add an Electron app
+
+```bash
+one add electron-app --name desktop --yes
+one run desktop:dev
+one run desktop:pack
+```
+
+This registers `desktop-renderer` in `apps/`, `desktop-main` in `services/`, and
+`desktop-preload` in `packages/`, plus the `desktop` project group. The main task
+waits for Vite before opening Electron. Packaging builds the group and assembles
+its outputs in main. Multiple desktop apps use their own derived package names;
+set a different `ELECTRON_RENDERER_PORT` for both main and renderer when running
+several apps concurrently.
+
+For composite templates, JSON output includes `projects[]` entries with `name`,
+`target_path`, and `toolchain`. `subproject_name` identifies the group and
+`target_path` is the workspace root. Ordinary templates keep the output below.
+
 ## Output
 
 ```json

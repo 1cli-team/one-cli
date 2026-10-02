@@ -5,9 +5,13 @@ import { fileURLToPath } from "node:url";
 
 // Generate an application-specific user-namespace permission for Ubuntu.
 // This command only prints a profile; installing it requires an administrator.
+export function sandboxProfileName(binary) {
+  return `one-electron-${createHash("sha256").update(binary).digest("hex").slice(0, 12)}`;
+}
+
 export function sandboxProfile(binary) {
-  const name = `one-electron-${createHash("sha256").update(binary).digest("hex").slice(0, 12)}`;
-  const quoted = `"${binary.replace(/[\\"*?\[\]{}\n\r]/g, (char) => `\\${char}`)}"`;
+  const name = sandboxProfileName(binary);
+  const quoted = `"${binary.replace(/[\\"*?[\]{}\n\r]/g, (char) => `\\${char}`)}"`;
   return `abi <abi/4.0>,
 include <tunables/global>
 

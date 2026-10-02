@@ -14,10 +14,10 @@ export default defineConfig({
       "@": path.resolve(import.meta.dirname, "./src"),
     },
   },
-  envDir: "../../",
+  envDir: ".",
   envPrefix: "APP",
   build: {
-    outDir: path.resolve(import.meta.dirname, "../electron/build/renderer"),
+    outDir: path.resolve(import.meta.dirname, "dist"),
     emptyOutDir: true,
   },
 });
