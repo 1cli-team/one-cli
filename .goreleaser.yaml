@@ -1,0 +1,87 @@
+# Local releases: mise run release -- build patch --notes <file>
+# See RELEASING.md. The release task prepares a clean source checkout,
+# builds with this configuration, then uploads the verified archives to a draft.
+# 本地发布流程见 RELEASING.md；版本来自 tag，不修改源码版本文件。
+
+version: 2
+
+project_name: one-cli
+
+builds:
+  - id: one
+    dir: packages/cli
+    main: ./cmd/one
+    binary: one
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - darwin
+      - linux
+      - windows
+    goarch:
+      - amd64
+      - arm64
+    # No need for windows/arm64 yet — too few users.
+    ignore:
+      - goos: windows
+        goarch: arm64
+    ldflags:
+      - -s -w
+      - -X main.version={{.Version}}
+      - -X github.com/torchstellar-team/one-cli/packages/cli/internal/platform/updatecheck.buildChannel=release
+      # Published releases restore One skills from this exact source commit.
+      # Local snapshots retain their embedded, unpublished skill files.
+      - -X github.com/torchstellar-team/one-cli/packages/cli/internal/modules/skills.bundledSourceRef={{ if not .IsSnapshot }}{{ .FullCommit }}{{ end }}
+    flags:
+      - -trimpath
+
+archives:
+  - id: default
+    formats:
+      - tar.gz
+    format_overrides:
+      - goos: windows
+        formats:
+          - zip
+    # install.sh resolves binaries by archive name. Keep the template shape
+    # (one-cli_{os}_{arch}) stable so older installers keep working when we
+    # cut newer releases.
+    name_template: "one-cli_{{ .Os }}_{{ .Arch }}"
+    files:
+      - README*
+      - third_party/mise/LICENSE
+
+checksum:
+  name_template: "checksums.txt"
+  algorithm: sha256
+
+snapshot:
+  version_template: "{{ incpatch .Version }}-snapshot"
+
+changelog:
+  # Release notes are reviewed separately and passed to the local release task.
+  disable: true
+
+release:
+  # install.sh downloads from <repo>/releases/download/<tag>/<asset> so the
+  # exact GitHub repo coordinates here matter. Adjust if the repo moves.
+  github:
+    owner: 1cli-team
+    name: one-cli
+  draft: true
+  # A failed publish may already have created the tag and part of its draft.
+  # Reuse that draft and replace duplicate assets so the publish operation is
+  # safe to retry instead of silently skipping to the next version.
+  use_existing_draft: true
+  replace_existing_artifacts: true
+  make_latest: true
+  prerelease: auto
+  header: |
+    # one-cli {{ .Tag }}
+
+    Pre-built binaries for darwin/linux/windows × amd64/arm64.
+    Install via the curl one-liner (see README), or download the
+    matching archive below and extract `one` onto your PATH.
+
+  footer: |
+    Verify your download with `sha256sum -c checksums.txt`.

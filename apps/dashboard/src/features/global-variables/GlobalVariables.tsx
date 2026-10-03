@@ -42,12 +42,7 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Field, FieldLabel } from "@/components/ui/field";
 import { IconButton } from "@/components/ui/icon-button";
-import {
-	ErrorNotice,
-	SearchInput,
-	SectionHeading,
-	StatePanel,
-} from "@/components/ui/page-layout";
+import { ErrorNotice, SearchInput, SectionHeading, StatePanel } from "@/components/ui/page-layout";
 import { DiscardDialog } from "@/components/ui/discard-dialog";
 import { Spinner } from "@/components/ui/spinner";
 import { Skeleton } from "@/components/ui/skeleton";
