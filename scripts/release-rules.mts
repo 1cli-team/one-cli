@@ -133,3 +133,27 @@ export function parseChecksums(text: string): Map<string, string> {
   assertAssets(["checksums.txt", ...checksums.keys()]);
   return checksums;
 }
+
+export function assertBuildSettings(info: string, sha: string, os: string, architecture: string) {
+  const settings = new Map(
+    info.split("\n").flatMap((line) => {
+      const match = /^\s*build\s+([^=]+)=(.*)$/.exec(line);
+      return match ? [[match[1], match[2]] as [string, string]] : [];
+    }),
+  );
+  // Go intentionally omits -ldflags from build info when -trimpath is used.
+  for (const [key, value] of Object.entries({
+    "-trimpath": "true",
+    CGO_ENABLED: "0",
+    GOOS: os,
+    GOARCH: architecture,
+    "vcs.revision": sha,
+    "vcs.modified": "false",
+  })) {
+    if (settings.get(key) !== value)
+      fail(
+        `Unexpected build setting ${key}: expected ${value}.`,
+        `构建设置 ${key} 不正确，应为 ${value}。`,
+      );
+  }
+}
