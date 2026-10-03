@@ -9,12 +9,13 @@ import {
   unlinkSync,
   writeFileSync,
 } from "node:fs";
-import { arch, platform } from "node:os";
+import { arch, platform, tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import {
   assets,
   assertAssets,
+  assertBuildSettings,
   compareTags,
   decidePlan,
   fail,
@@ -181,9 +182,9 @@ function verifyArchives(build: Build) {
   }
 }
 
-function smoke(build: Build) {
+export function smoke(build: Build) {
   const p = build.plan;
-  const verify = mkdtempSync(join(dirname(build.source), "verify-"));
+  const verify = mkdtempSync(join(tmpdir(), "one-cli-release-smoke-"));
   const hostOS = platform() === "darwin" ? "darwin" : platform() === "linux" ? "linux" : "";
   const hostArch = arch() === "x64" ? "amd64" : arch() === "arm64" ? "arm64" : "";
   if (!hostOS || !hostArch)
@@ -210,18 +211,8 @@ function smoke(build: Build) {
       );
     }
     const info = read("mise", ["exec", "--", "go", "version", "-m", exe], { cwd: build.source });
-    for (const value of [
-      `main.version=${p.version}`,
-      "updatecheck.buildChannel=release",
-      `skills.bundledSourceRef=${p.sourceSha}`,
-      "CGO_ENABLED=0",
-    ]) {
-      if (!info.includes(value))
-        fail(
-          `Archive ${name} lacks build setting ${value}.`,
-          `归档 ${name} 缺少构建设置 ${value}。`,
-        );
-    }
+    const target = /^one-cli_(darwin|linux|windows)_(amd64|arm64)\./.exec(name)!;
+    assertBuildSettings(info, p.sourceSha, target[1], target[2]);
     if (name === `one-cli_${hostOS}_${hostArch}.tar.gz`) binary = exe;
   }
   const config = join(verify, "config");
@@ -235,15 +226,68 @@ function smoke(build: Build) {
   };
   if (read(binary, ["--version"], { cwd: verify, env }) !== p.version)
     fail("Packaged CLI version is incorrect.", "发布包中的 CLI 版本不正确。");
-  for (const [locale, helpText] of [
-    ["zh-CN", "创建工作区"],
-    ["en-US", "Create a workspace"],
-  ]) {
-    read(binary, ["locale", locale, "-o", "json"], { cwd: verify, env });
-    if (!read(binary, ["--help"], { cwd: verify, env }).includes(helpText))
+  for (const locale of ["zh-CN", "en-US"]) {
+    const switched = JSON.parse(
+      read(binary, ["locale", locale, "-o", "json"], { cwd: verify, env }),
+    );
+    const dictionary = JSON.parse(
+      readFileSync(
+        join(build.source, "packages/cli/internal/platform/i18n/locales", `${locale}.json`),
+        "utf8",
+      ),
+    );
+    if (
+      switched.resolved !== locale ||
+      read(binary, ["--help"], { cwd: verify, env }) !== dictionary["root.help"].trim()
+    )
       fail(`CLI help did not switch to ${locale}.`, `CLI 帮助未切换到 ${locale}。`);
     JSON.parse(read(binary, ["templates", "-o", "json"], { cwd: verify, env }));
   }
+  // Validate the release channel through the real manual-upgrade worker.
+  // The worker and any replacement stay inside this temporary extraction.
+  const upgrade = JSON.parse(read(binary, ["upgrade", "-o", "json"], { cwd: verify, env }));
+  if (
+    upgrade.schema !== "one-cli/upgrade/v1" ||
+    upgrade.current_version !== p.version ||
+    upgrade.status !== "current"
+  ) {
+    fail(
+      "The packaged CLI did not report a current release-channel installation.",
+      "发布包中的 CLI 未确认当前正式发布通道版本。",
+    );
+  }
+  // Record the external skills command instead of installing third-party skills.
+  // This checks the source SHA actually injected into the host executable.
+  const bin = join(verify, "bin");
+  mkdirSync(bin);
+  const calls = join(verify, "skills-calls.jsonl");
+  writeFileSync(
+    join(bin, "npx"),
+    `#!/usr/bin/env node
+import { appendFileSync, mkdirSync, writeFileSync } from "node:fs";
+const args = process.argv.slice(2);
+appendFileSync(${JSON.stringify(calls)}, JSON.stringify(args) + "\\n");
+for (const name of args.slice(args.indexOf("--skill") + 1, args.indexOf("--agent"))) {
+  mkdirSync(".agents/skills/" + name, { recursive: true });
+  writeFileSync(".agents/skills/" + name + "/SKILL.md", "---\\nname: " + name + "\\ndescription: Release smoke fixture\\n---\\n");
+}
+`,
+    { mode: 0o755 },
+  );
+  read(binary, ["create", join(verify, "workspace"), "--yes", "-o", "json"], {
+    cwd: verify,
+    env: { ...env, PATH: `${bin}:${process.env.PATH ?? ""}` },
+  });
+  const source = `1cli-team/one-cli/packages/agent-skills#${p.sourceSha}`;
+  const commands = readFileSync(calls, "utf8")
+    .trim()
+    .split("\n")
+    .map((line) => JSON.parse(line));
+  if (!commands.some((args) => args.includes(source)))
+    fail(
+      "The packaged CLI did not use its exact skill-source commit.",
+      "发布包中的 CLI 未使用精确的技能来源提交。",
+    );
   say(
     "All five archives, build metadata, versions, and bilingual CLI smoke checks passed.",
     "五个平台的归档、构建信息、版本及中英文 CLI 冒烟检查均通过。",

@@ -3,6 +3,7 @@ import test from "node:test";
 import {
   assets,
   assertAssets,
+  assertBuildSettings,
   bumpTag,
   compareTags,
   decidePlan,
@@ -96,4 +97,22 @@ test("asset set and checksum manifest reject duplicates, extras, traversal and o
   assert.throws(() => parseChecksums(`${checksums}\n${"a".repeat(64)}  ../one`), /Invalid/);
   assert.throws(() => parseChecksums(`${checksums}\n${checksums.split("\n")[0]}`), /duplicate/);
   assert.throws(() => parseChecksums(checksums.split("\n").slice(1).join("\n")), /Unexpected/);
+});
+
+test("trimpath builds verify source/platform metadata without expecting linker flags", () => {
+  const info =
+    "\tbuild\t-trimpath=true\n\tbuild\tCGO_ENABLED=0\n\tbuild\tGOOS=darwin\n\tbuild\tGOARCH=arm64\n\tbuild\tvcs.revision=source-sha\n\tbuild\tvcs.modified=false\n";
+  assertBuildSettings(info, "source-sha", "darwin", "arm64");
+  assert.throws(() => assertBuildSettings(info, "other-sha", "darwin", "arm64"), /vcs.revision/);
+  assert.throws(() => assertBuildSettings(info, "source-sha", "linux", "arm64"), /GOOS/);
+  assert.throws(
+    () =>
+      assertBuildSettings(
+        info.replace("CGO_ENABLED=0", "CGO_ENABLED=1"),
+        "source-sha",
+        "darwin",
+        "arm64",
+      ),
+    /CGO_ENABLED/,
+  );
 });

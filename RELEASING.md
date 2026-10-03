@@ -81,7 +81,9 @@ registry、模板和技能。原 `pre-push` 与测试流水线已经删除，当
 文件名是安装脚本及升级器的兼容协议，保持原样。Unix 归档内的程序名为 `one`，
 Windows 为 `one.exe`；每个归档包含 README 和 `third_party/mise/LICENSE`。
 自动验证全部归档的校验值及 Go 构建信息，并运行本机平台的 `--version`、
-中英文帮助、语言切换和模板列表。语言检查使用临时 XDG 目录，保护开发者设置。
+中英文帮助、语言切换和模板列表。本机程序通过真实升级 worker 确认正式发布通道，
+并用模拟 npx 记录工作区创建时生成的技能安装命令，确认技能来源提交。冒烟检查
+在仓库外的临时目录执行，使用临时 XDG 目录，保护开发者设置。
 
 ### 发布及失败恢复
 
@@ -162,7 +164,9 @@ above and `checksums.txt` containing their SHA256 hashes. Archive names are the
 installer/updater compatibility contract. Every archive contains `one` (`one.exe`
 on Windows), README, and the mise license. Check all hashes and Go build settings;
 run the host binary's version, both help languages, locale switching, and template
-list with temporary XDG directories.
+list. Check the release channel through the real upgrade worker and record the
+skill-install command with a simulated npx to verify its source commit. Smoke
+checks use a temporary directory outside the workspace and temporary XDG directories.
 
 ### Publishing and recovery
 
