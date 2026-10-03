@@ -56,7 +56,7 @@
 			"emptyTitle": "尚未登记工作区",
 			"emptyDescription": "运行 one create 创建工作区，或在已有工作区中运行 one serve 进行登记。",
 			"listLabel": "已登记的工作区",
-			"registrationHint": "运行 one serve 后，新的 Workspace 会显示在这里。",
+			"registrationHint": "one create 自动登记新工作区；在已有工作区或其子目录运行 one serve，也会自动登记。",
 			"refresh": "刷新",
 			"search": "搜索名称、路径或 ID…",
 			"clearSearch": "清除搜索",
@@ -162,23 +162,12 @@
 	"http": {
 		"networkError": "网络请求失败，请检查网络连接。"
 	},
-	"projects": {
-		"search": "搜索项目、路径或 backend",
-		"empty": {
-			"title": "没有匹配的项目"
-		}
-	},
 	"projectInspector": {
 		"workspaceTitle": "项目设置",
 		"projectsTitle": "项目",
+		"groupLabel": "{{group}}，{{count}} 个项目",
 		"projectListLabel": "工作区项目",
 		"empty": "这个工作区还没有项目。",
-		"tabs": {
-			"label": "项目配置分区",
-			"overview": "概览",
-			"environment": "环境",
-			"runtime": "运行"
-		},
 		"loadFailed": "无法加载项目配置",
 		"retry": "重试",
 		"manifestReadOnly": "Manifest · 只读",
@@ -187,44 +176,14 @@
 		"unsavedChanges": "当前修改尚未保存。要放弃修改并继续吗？",
 		"discardAndContinue": "放弃并继续",
 		"general": {
-			"toolchain": "Toolchain",
 			"path": "项目路径",
-			"buildVersion": "构建版本",
-			"packageManager": "包管理器",
-			"buildCommand": "构建命令",
-			"buildSource": "one build 自动读取 {{source}}，请在该文件中修改构建任务。 工作区依赖与缓存由 mise 管理，one run build 使用相同入口。",
-			"buildMissing": "未配置构建任务",
-			"buildUnavailable": "无法读取构建配置",
-			"buildUnsupported": "此项目没有可用的构建任务。",
-			"metadata": "项目信息",
-			"runtime": "开发与构建",
-			"tasks": "已配置任务",
-			"tasksUnavailable": "无法读取任务配置，请使用 one run 检查。",
-			"tasksEmpty": "此项目没有配置任务。",
-			"taskSource": "来源：{{source}}",
-			"taskCacheOn": "已配置产物缓存。",
-			"taskCacheOff": "未配置产物缓存。",
-			"taskDepends": "依赖：{{tasks}}",
-			"taskOutputs": "产物：{{outputs}}",
-			"devURL": "开发服务访问地址（可选）",
-			"devURLHint": "留空时从日志自动识别。仅支持不含凭据及查询参数的本机 HTTP(S) 地址。"
-		},
-		"environment": {
-			"title": "环境配置",
-			"path": "Infisical 文件夹路径",
-			"inherits": "继承工作区环境",
-			"inheritsHint": "项目变量会覆盖同名工作区变量。",
-			"disabled": "禁用项目环境",
-			"disabledHint": "运行项目命令时不注入环境变量。",
-			"keys": "已声明变量名",
-			"conventionHint": "变量目录由项目路径确定，自动继承父级目录；同名变量以更具体的目录为准。"
-		},
-		"draftHint": "修改将暂存为草稿，预览并保存后生效。"
+			"metadata": "项目信息"
+		}
 	},
 	"secrets": {
 		"title": "Infisical 密钥",
 		"unavailableTitle": "远端密钥尚未启用",
-		"unavailableDescription": "请在工作区设置中绑定 Infisical 项目，以管理远端变量。",
+		"unavailableDescription": "请点击项目信息中的「绑定项目」，连接存储项目后管理远端变量。",
 		"scope": "密钥作用域",
 		"workspaceScope": "Workspace 共享",
 		"add": "新增密钥",
@@ -263,30 +222,12 @@
 		"initializing": "正在创建存储项目…",
 		"invalidKey": "变量名只能包含字母、数字和下划线，并以字母或下划线开头，例如 API_TOKEN。",
 		"storageCreated": "已创建 Infisical 项目：{{name}}",
-		"storageRenamed": "名称 {{requested}} 已被占用，已创建 Infisical 项目：{{name}}"
+		"storageRenamed": "名称 {{requested}} 已被占用，已创建 Infisical 项目：{{name}}",
+		"loading": "正在加载密钥…"
 	},
 	"project": {
 		"fields": {
 			"environment": "部署环境"
-		}
-	},
-	"overview": {
-		"projects": "子项目",
-		"workspaceEnv": {
-			"title": "工作区环境变量",
-			"description": "配置工作区环境存储，并管理共享密钥。",
-			"backend": "Backend",
-			"backendPending": "等待审阅",
-			"backendSource": "Infisical 项目绑定变更经审阅后写入 one.manifest.toml。",
-			"signInHint": "请先在设置中登录 Infisical，再选择存储项目。",
-			"noProjects": "暂无可用的存储项目，可在共享凭据中创建。"
-		},
-		"tabs": {
-			"environment": "工作区环境变量",
-			"secrets": "Infisical 密钥"
-		},
-		"navigation": {
-			"settings": "工作区设置"
 		}
 	},
 	"session": {
@@ -315,22 +256,16 @@
 	},
 	"global": {
 		"title": "共享凭据",
-		"description": "集中管理跨项目使用的凭据与变量。",
 		"loginRequired": "登录 Infisical 后即可查看和管理共享凭据。",
-		"location": "默认存放位置",
-		"mismatch": "当前账号或实例与已保存的位置不匹配，请重新选择存放项目。",
-		"locationHint": "选择或新建存放项目。这里只保存位置，凭据值保存在 Infisical。",
 		"project": "存放项目",
 		"selectProject": "选择存放项目",
-		"defaultEnv": "默认浏览环境",
-		"selectEnv": "选择环境",
-		"noProjects": "暂无可用的凭据项目，可以使用默认位置或新建项目。",
-		"saveLocation": "保存位置",
-		"browseHint": "切换浏览环境不会修改 CLI 的默认环境。",
 		"environment": "浏览环境",
 		"parent": "上级目录",
 		"refresh": "刷新",
 		"folders": "目录",
+		"rootFolder": "根目录",
+		"expandFolder": "展开 {{name}}",
+		"collapseFolder": "收起 {{name}}",
 		"addFolder": "新建目录",
 		"search": "搜索变量名",
 		"add": "新增变量",
@@ -348,15 +283,6 @@
 		"discard": "放弃修改",
 		"deleteHint": "确认删除 {{project}} / {{environment}} / {{path}} 中的 {{key}}？此操作立即生效。",
 		"folderName": "目录名",
-		"defaultLocation": "使用默认位置",
-		"defaultLocationHint": "一键准备存放项目并保存位置；已有同名项目会直接复用。",
-		"useDefault": "初始化默认位置",
-		"saving": "正在保存…",
-		"createProject": "新建项目",
-		"createProjectHint": "在当前 Infisical 组织中创建用于存放凭据的项目。创建后选中它，再保存为默认位置。",
-		"projectName": "项目名称",
-		"createAndSelect": "创建并选中",
-		"creatingProject": "正在创建…",
 		"copied": "已复制变量值",
 		"saved": "变量已保存",
 		"folderCreated": "文件夹已创建",
@@ -366,7 +292,9 @@
 		"more": "{{key}} 的更多操作",
 		"noMatches": "没有匹配的变量",
 		"noMatchesHint": "尝试其他名称，或清除搜索条件。",
-		"emptyHint": "添加变量，让多个项目共享使用。"
+		"emptyHint": "添加变量，让多个项目共享使用。",
+		"preparing": "正在准备共享凭据…",
+		"preparationFailed": "已登录，但共享凭据准备失败。"
 	},
 	"projectCreate": {
 		"title": "新建项目",
@@ -423,7 +351,7 @@
 			},
 			"ts-library": {
 				"name": "TypeScript 通用库",
-				"description": "通用库模板，适合发包场景，内置 tsdown + vitest + oxlint/oxfmt"
+				"description": "通用库模板，适合发包场景，内置 tsdown + oxlint/oxfmt"
 			},
 			"go-lib": {
 				"name": "Go 通用库",
@@ -454,169 +382,21 @@
 	"appMenu": {
 		"label": "One CLI 导航菜单"
 	},
-	"templateCatalog": {
-		"title": "项目模板",
-		"description": "浏览内置项目模板，了解适用场景、技术栈和内置功能，选择合适的项目起点。",
-		"getStarted": "从模板开始创建项目",
-		"getStartedHint": "打开工作区，点击「新建项目」，选择模板并填写项目名称即可创建。",
-		"chooseWorkspace": "选择工作区",
-		"filter": "按分类筛选模板",
-		"all": "全部模板",
-		"search": "搜索模板、技术栈或功能…",
-		"resultCount": "显示 {{count}} / {{total}} 个模板",
-		"includes": "内置功能",
-		"noResults": "没有匹配的模板",
-		"noResultsHint": "试试其他关键词，或切换模板分类。",
-		"reset": "清除筛选",
-		"templates": {
-			"nestjs-api": {
-				"description": "使用模块化 NestJS 架构构建 TypeScript API，适合业务后台与后端服务。",
-				"stack": "NestJS · TypeScript · Drizzle",
-				"feature1": "JWT 鉴权与用户业务模块",
-				"feature2": "Drizzle 数据访问与数据库迁移",
-				"feature3": "Swagger 文档、健康检查与请求日志"
-			},
-			"go-api": {
-				"description": "构建 Go API 服务，按 HTTP 接口、业务逻辑和数据访问分层组织代码。",
-				"stack": "Go · Gin · Gorm · Viper · Zap",
-				"feature1": "JWT 鉴权与用户接口",
-				"feature2": "Gorm 数据访问与 SQL 迁移",
-				"feature3": "OpenAPI 文档、配置管理与日志"
-			},
-			"nextjs-site": {
-				"description": "Next.js + React 静态导出，适合官网、营销页与内容站点",
-				"stack": "Next.js · React · TypeScript · Base UI",
-				"feature1": "静态导出与中英文页面",
-				"feature2": "Base UI 组件、主题与设计令牌",
-				"feature3": "SEO 元数据与静态托管"
-			},
-			"fumadocs-docs": {
-				"description": "Next.js + Fumadocs + Base UI，支持中英文文档与静态搜索",
-				"stack": "Next.js · Fumadocs · Base UI · MDX",
-				"feature1": "Markdown / MDX 与中英文内容",
-				"feature2": "侧边栏、本页目录与代码高亮",
-				"feature3": "浏览器静态搜索与语言切换"
-			},
-			"nextjs-app": {
-				"description": "构建需要服务端渲染、API 路由和搜索引擎友好页面的 Web 应用。",
-				"stack": "Next.js · React · TypeScript",
-				"feature1": "App Router 页面与接口路由",
-				"feature2": "shadcn/ui (Base UI) 组件与主题切换",
-				"feature3": "SWR 数据请求与 Zustand 状态管理"
-			},
-			"react-spa": {
-				"description": "构建交互丰富的仪表盘、管理后台和浏览器端业务系统。",
-				"stack": "React · Vite · TypeScript",
-				"feature1": "客户端路由与错误边界",
-				"feature2": "shadcn/ui (Base UI) 组件与明暗主题",
-				"feature3": "SWR 数据请求与 Zustand 状态管理"
-			},
-			"expo-mobile": {
-				"description": "基于 React Native 和 Expo，以同一项目开发 iOS 与 Android 移动应用。",
-				"stack": "Expo · React Native · StyleSheet",
-				"feature1": "Expo Router 导航与标签页面",
-				"feature2": "SWR、Zustand 与 MMKV 本地存储",
-				"feature3": "原生模块通过 Expo 开发构建运行"
-			},
-			"ts-library": {
-				"description": "开发可复用的 TypeScript 模块，适合共享工具库和发布到 npm 的包。",
-				"stack": "TypeScript · tsdown · Vitest",
-				"feature1": "tsdown 库构建与类型声明生成",
-				"feature2": "Vitest 单元测试与覆盖率",
-				"feature3": "代码检查、格式化与发包脚本"
-			},
-			"go-lib": {
-				"description": "开发可被其他项目导入的 Go 模块，使用清晰的公共包目录组织可复用代码。",
-				"stack": "Go · Go modules · go-task",
-				"feature1": "pkg/greeter 公共 API 起点",
-				"feature2": "示例包与单元测试",
-				"feature3": "构建、格式化、静态检查与测试任务"
-			},
-			"electron-app": {
-				"description": "使用 Electron 主进程和 React 界面构建桌面应用，适合桌面工具与业务客户端。",
-				"stack": "Electron · React · Vite · Awilix",
-				"feature1": "顶层 apps、services、packages 项目组合",
-				"feature2": "带类型的 IPC 桥接与 Awilix 工厂函数",
-				"feature3": "日志、本地设置与更新器模块"
-			},
-			"empty-app": {
-				"description": "在 apps/ 下创建空项目，稍后自行配置技术栈。",
-				"stack": "技术栈由你选择",
-				"feature1": "仅包含用于 Git 跟踪的 .gitkeep 文件",
-				"feature2": "自动登记到工作区",
-				"feature3": "添加代码后自行配置开发命令"
-			},
-			"empty-service": {
-				"description": "在 services/ 下创建空项目，稍后自行配置技术栈。",
-				"stack": "技术栈由你选择",
-				"feature1": "仅包含用于 Git 跟踪的 .gitkeep 文件",
-				"feature2": "自动登记到工作区",
-				"feature3": "添加代码后自行配置开发命令"
-			},
-			"empty-library": {
-				"description": "在 packages/ 下创建空项目，稍后自行配置技术栈。",
-				"stack": "技术栈由你选择",
-				"feature1": "仅包含用于 Git 跟踪的 .gitkeep 文件",
-				"feature2": "自动登记到工作区",
-				"feature3": "添加代码后自行配置开发命令"
-			}
-		},
-		"noToolchain": "未配置"
-	},
-	"services": {
-		"title": "开发服务",
-		"description": "在这里启动项目，查看输出并打开页面进行测试。",
-		"start": "启动服务",
-		"stop": "停止",
-		"restart": "重启",
-		"open": "打开访问",
-		"console": "控制台",
-		"live": "已连接",
-		"reconnecting": "正在连接…",
-		"search": "搜索日志",
-		"pause": "暂停滚动",
-		"follow": "跟随日志",
-		"copy": "复制",
-		"copied": "日志已复制",
-		"copyFailed": "无法复制，请在控制台选择文本后复制。",
-		"actionFailed": "操作失败，请重试。",
-		"saveFirst": "有未保存的配置，请先保存或丢弃，再启动或重启服务。",
-		"noDev": "mise 中没有 dev 任务。请定义 dev 任务，或添加项目 dev 脚本后执行 one init mise。",
-		"environmentMismatch": "当前服务使用 {{environment}} 环境。重启后将使用所选的 {{next}} 环境。",
-		"exitCode": "退出码：{{code}}",
-		"reachable": "本机端口可连接",
-		"unreachable": "本机端口尚不可连接",
-		"waitingURL": "等待服务输出本机访问地址。没有页面的服务也可正常运行。",
-		"urlHint": "启动后自动识别本机地址，也可在概览中设置访问地址。",
-		"waitingLogs": "正在准备运行环境，等待输出…",
-		"emptyLogs": "启动服务后，运行日志会显示在这里。",
-		"noMatches": "没有匹配的日志。",
-		"consoleHint": "显示子进程原始日志，最多保留最近 256 KiB。关闭页面不影响服务；关闭 one serve 会停止服务。",
-		"truncated": "较早的日志已移除，仅显示最近的输出。",
-		"status": {
-			"preparing": "准备中",
-			"running": "运行中",
-			"stopping": "停止中",
-			"stopped": "已停止",
-			"exited": "已退出",
-			"failed": "运行失败"
-		}
-	},
 	"binding": {
-		"workspaceTitle": "绑定 Infisical",
-		"globalTitle": "绑定共享凭据",
-		"change": "更换绑定",
+		"workspaceTitle": "绑定项目",
+		"change": "更换项目",
 		"unbound": "尚未绑定 Infisical",
 		"workspaceHint": "自动创建工作区存储项目，或选择已有项目。确认绑定后即可添加变量。",
-		"globalHint": "自动创建或复用 shared-credentials，默认环境为 dev；也可以选择已有项目。",
 		"method": "绑定方式",
 		"automatic": "自动创建",
 		"existing": "选择已有项目",
+		"unavailable": "当前绑定的项目在此账号和组织下不可用。请选择其他项目，或切换为自动创建。",
+		"replaceHint": "确认后将替换工作区绑定。原项目中的变量会保留，不会复制到新项目。",
+		"createdUnsaved": "项目 {{name}}（{{id}}）已创建，但绑定保存失败：{{reason}}。请重试绑定此项目，避免重复创建。",
 		"current": "当前绑定：{{name}}",
 		"target": "目标项目：{{name}}",
 		"defaultEnvironment": "默认环境：dev",
 		"workspaceStorage": "绑定信息写入 one.manifest.toml，变量值保存在 Infisical。",
-		"globalStorage": "绑定信息保存在本机配置，凭据值保存在 Infisical。",
 		"organizationRequired": "请选择组织并重新登录",
 		"devRequired": "工作区项目必须包含 dev 环境。",
 		"noProjects": "暂无可用项目，可切换到自动创建。",
@@ -625,7 +405,6 @@
 		"success": "已绑定到项目 {{name}}",
 		"binding": "正在绑定…",
 		"bindExisting": "绑定已有项目",
-		"createAndBind": "创建并绑定",
-		"prepareAndBind": "创建或复用并绑定"
+		"createAndBind": "创建并绑定"
 	}
 }

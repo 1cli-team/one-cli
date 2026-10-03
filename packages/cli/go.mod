@@ -8,7 +8,6 @@ require (
 	charm.land/huh/v2 v2.0.3
 	charm.land/lipgloss/v2 v2.0.6
 	github.com/charmbracelet/x/ansi v0.11.8
-	github.com/creack/pty v1.1.24
 	github.com/go-resty/resty/v2 v2.17.2
 	github.com/gofrs/flock v0.13.1
 	github.com/infisical/go-sdk v0.8.0

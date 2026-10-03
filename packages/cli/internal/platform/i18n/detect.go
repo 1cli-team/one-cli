@@ -71,7 +71,7 @@ func DetectFromEnv() string {
 
 // normalise turns a raw POSIX locale string ("zh_CN.UTF-8",
 // "en-US", "C", "ja_JP@yen") into one of our catalog keys. Used by
-// DetectFromEnv; exported for tests.
+// DetectFromEnv.
 func normalise(raw string) string {
 	// Strip codeset (".UTF-8") and modifier ("@yen") suffixes.
 	v := raw

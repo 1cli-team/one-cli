@@ -129,8 +129,6 @@ packages/cli/internal/
 packages/cli/
   cmd/one/             thin executable entry point
   pkg/                 intentionally public Go packages
-  testdata/            stable fixtures and compatibility snapshots
-  tests/e2e/           binary and full-command contract tests
   tools/               repository verification programs
 
 apps/dashboard/src/
@@ -173,13 +171,11 @@ Rules:
    reversible transaction.
 10. Command, runtime, toolchain, and secrets provider sets are constructed explicitly.
     Provider packages do not register themselves through `init()`.
-11. `internal/architecture/dependencies_test.go` enforces these boundaries for
-    production Go files, including leaf-layer and transport/adapter rules.
-12. `packages/kernel` imports only the Go standard library. It never owns
+11. `packages/kernel` imports only the Go standard library. It never owns
     Workspace, Project, Environment, Backend, Profile, or Template policy.
-13. Workspace modules are listed explicitly in `go.work`; embedded Go template
+12. Workspace modules are listed explicitly in `go.work`; embedded Go template
     modules under `packages/templates` remain standalone template fixtures.
-14. `packages/kernel` follows the applicable parts of the Go project-layout
+13. `packages/kernel` follows the applicable parts of the Go project-layout
     convention: public APIs live under `pkg/kernel`, private implementation
     lives under `internal`, and design notes live under `docs`. Executable and
     deployment directories are intentionally absent because Kernel is a
@@ -275,9 +271,11 @@ Historical manifest-mutation route paths fail closed with HTTP 409 and
 `SERVE_REPOSITORY_READ_ONLY`; they never silently ignore a requested write.
 
 Workspace discovery across invocations is a separate machine-local registry,
-not Profile state and not Kernel state. `one create` observes a Workspace only
-after successful creation; `one serve` observes the nearest manifest found by
-walking up from its launch directory. Both update the XDG-aware
+not Profile state and not Kernel state. `one create` registers a Workspace as soon
+as its generated manifest is valid, before optional tooling and skills setup;
+`one serve` registers the nearest manifest found by walking up from its launch
+directory. With no enclosing manifest, it opens the global Dashboard and loads
+the existing registry. Both update the XDG-aware
 `workspaces.json` through `application/workspace.RegistryService` and the local
 registry adapter. The registry stores only an opaque local entry id, manifest
 identity, canonical root, display name, and observation timestamps. Projects,
@@ -304,7 +302,7 @@ Finite workspace tasks are owned by `modules/tasks` and `modules/miseconfig`:
 - Hidden task adapters consume the same temporary context for cache fingerprints and execution. Context values never enter generated configuration or result envelopes.
 - mise owns task concurrency and artifact storage. One reports overall success/failure and leaves unsupported per-task event state unknown.
 - `one build` and `one run build` share this implementation. `one exec` handles arbitrary commands, while development keeps the existing terminal supervisor after finite prerequisite builds.
-- GitHub Actions files stay repository-owned and call the ordinary `ci` aggregate. Hooks remain supported.
+- Hooks remain optional and are configured explicitly with `one init hooks`.
 
 Environment is a vertical deep module because its two built-in backends are
 compiled implementation components rather than independently distributed
@@ -393,14 +391,12 @@ Dashboard dependencies point inward: `router` composes `pages`, pages compose
 features, and features may use API wrappers and shared UI primitives. Only the
 router imports routed pages; features never import pages or the router. API
 wrappers do not import presentation code, and `components/ui` remains a leaf
-view layer. `src/architecture/dependencies.test.ts` enforces these rules and
-rejects local TypeScript barrel entrypoints so imports stay directly
-analyzable.
+view layer. Local TypeScript imports use direct module paths rather than barrel
+entrypoints so dependencies stay directly analyzable.
 
 Repository verification has one public contract: `mise run check` (also exposed as
-root `pnpm check`). It composes `check:static` and `check:test`; CI runs those
-same two subtasks in parallel. `mise run pre-push` adds Go race detection without
-creating a separate definition of the PR gate.
+root `pnpm check`). It runs `check:static` for documentation, Go vet and
+formatting, and Dashboard lint and formatting.
 
 Node dependency resolution is likewise repository-owned: root
 `pnpm-workspace.yaml`, `package.json`, and `pnpm-lock.yaml` are the only

@@ -67,11 +67,10 @@ func Defaults(templateID, repo string) []Selection {
 			"expo-overview", "expo-router", "expo-data-fetching", "expo-dev-client", "expo-upgrade", "expo-project-structure",
 		}})
 	case "ts-library":
-		node.Names = append(node.Names, "vitest")
 		plan = append(plan, node, Selection{Source: tsSource, Names: []string{"tsdown"}})
 	case "electron-app":
 		plan[0].Names = append(plan[0].Names, "one-electron", "one-web")
-		node.Names = append(node.Names, "vite", "vitest")
+		node.Names = append(node.Names, "vite")
 		plan = append(plan, node, Selection{Source: tsSource, Names: []string{"tsdown"}})
 		plan = append(plan, web...)
 	}

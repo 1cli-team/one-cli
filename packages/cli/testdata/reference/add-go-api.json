@@ -1,7 +1,0 @@
-{
-  "schema": "one-cli/add/v1",
-  "subproject_name": "user-api",
-  "target_path": "\u003cvolatile\u003e",
-  "template_id": "go-api",
-  "toolchain": "go"
-}

@@ -16,9 +16,11 @@ One keeps one active Infisical account. Complete login in the browser; the sessi
 
 ## Shared credentials
 
-In the Dashboard, open Shared credentials and select **Bind shared credentials** and confirm the target to create or reuse the `shared-credentials` project with environment `dev` and root folder `/`. You can also create another project or choose an existing Secret Manager project. Existing saved locations are preserved.
+Both the Dashboard and `one login` prepare shared credentials after successful authentication. They reuse an accessible `shared-credentials` project in the current instance and organization, or create it if absent, with `dev` as the initial default environment. A project created by another account can be reused; an old account's local binding is updated silently. Legacy bindings to differently named projects switch to `shared-credentials`; the original projects and credentials are retained without migration or deletion.
 
-The CLI uses `--global` for shared credentials. After signing in, run `one env bind --global`. Without a saved binding, it creates or reuses the `shared-credentials` project in the current organization and binds environment `dev`, without asking you to select a project or enter an ID. Existing bindings are preserved, and repeated runs do not create another project. Use `--env` to select or change the default environment; it must already exist in the remote project. To use another existing project, provide `--project-id`:
+Bindings are stored locally per instance, account and organization. Signing in again preserves a valid default environment for that identity. Signing out clears the session and displayed values and cancels preparation, while retaining bindings and remote data. `one serve` also checks an existing signed-in session at startup. Permission, network or preparation failures do not undo authentication. The Dashboard shows the reason and a retry action; use `one env bind --global` for CLI recovery.
+
+Use `--global` to access shared credentials. `one env bind --global --env ENV` changes the default environment, which must exist remotely. `--project-id` remains an advanced compatibility option; subsequent login or Dashboard startup reapplies automatic binding to `shared-credentials`:
 
 ```bash
 one env bind --global
@@ -39,7 +41,7 @@ Run `one serve`. Settings manages browser login, pending callbacks, cancellation
 
 ## Security boundaries
 
-One's own messages and structured results omit injected values. Child logs pass through unchanged, with no secret scanning or replacement; values printed by a child can appear in the terminal, Dashboard, and log files. Injection does not isolate an Agent running as the same OS user. Limit Infisical and cloud permissions, folders, environments, and credential lifetime to the task. External tools such as Docker may persist credentials themselves.
+One's own messages and structured results omit injected values. Child logs pass through unchanged, with no secret scanning or replacement; values printed by a child can appear in the terminal and log files. Injection does not isolate an Agent running as the same OS user. Limit Infisical and cloud permissions, folders, environments, and credential lifetime to the task. External tools such as Docker may persist credentials themselves.
 
 ## Preferences and workspace tools
 

@@ -4,6 +4,7 @@ import (
 	"context"
 
 	remote "github.com/torchstellar-team/one-cli/packages/cli/internal/adapters/env/infisical"
+	session "github.com/torchstellar-team/one-cli/packages/cli/internal/platform/infisicalsession"
 )
 
 // Global variables are independent of workspace resolution. Both transports
@@ -39,9 +40,10 @@ func GlobalSummary(ctx context.Context) (*GlobalLocation, []remote.RemoteEnviron
 func CreateRemoteProject(ctx context.Context, name string) (*RemoteProject, error) {
 	return remote.CreateRemoteProject(ctx, name)
 }
-func EnsureDefaultGlobal(ctx context.Context) (*GlobalLocation, error) {
-	return remote.EnsureDefaultGlobal(ctx)
-}
 func BindDefaultGlobal(ctx context.Context, env string) (*GlobalLocation, error) {
 	return remote.BindDefaultGlobal(ctx, env)
+}
+
+func PrepareSharedCredentials(ctx context.Context, expected *session.Session) (*GlobalLocation, error) {
+	return remote.PrepareSharedCredentials(ctx, expected)
 }

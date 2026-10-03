@@ -1,7 +1,6 @@
 package serve
 
 import (
-	"context"
 	"net/http"
 	"sync"
 
@@ -9,7 +8,7 @@ import (
 	session "github.com/torchstellar-team/one-cli/packages/cli/internal/platform/infisicalsession"
 )
 
-func registerSessionRoutes(mux *http.ServeMux) {
+func registerSessionRoutes(mux *http.ServeMux, opts MuxOpts) {
 	var mu sync.Mutex
 	var attempt *session.Attempt
 	mux.HandleFunc("GET /session", func(w http.ResponseWriter, r *http.Request) {
@@ -19,7 +18,7 @@ func registerSessionRoutes(mux *http.ServeMux) {
 			writeServiceError(w, e)
 			return
 		}
-		result := map[string]any{"session": info}
+		result := map[string]any{"session": info, "sharedCredentials": opts.SharedCredentials.State(info)}
 		mu.Lock()
 		defer mu.Unlock()
 		if attempt != nil {
@@ -54,7 +53,7 @@ func registerSessionRoutes(mux *http.ServeMux) {
 				return
 			}
 		}
-		a, e := session.Start(context.Background(), body.SiteURL)
+		a, e := session.Start(opts.Lifecycle, body.SiteURL)
 		if e != nil {
 			writeServiceError(w, e)
 			return
@@ -79,10 +78,12 @@ func registerSessionRoutes(mux *http.ServeMux) {
 			attempt.Cancel()
 			attempt = nil
 		}
+		opts.SharedCredentials.Stop()
 		if e := session.Logout(); e != nil {
 			writeServiceError(w, e)
 			return
 		}
+		opts.SharedCredentials.Stop()
 		setNoStore(w)
 		writeJSON(w, 200, map[string]bool{"loggedIn": false})
 	})
@@ -121,36 +122,19 @@ func registerSessionRoutes(mux *http.ServeMux) {
 		writeJSON(w, 200, p)
 	})
 }
-func registerGlobalRoutes(mux *http.ServeMux) {
+func registerGlobalRoutes(mux *http.ServeMux, opts MuxOpts) {
 	mux.HandleFunc("POST /global-env/location/default", func(w http.ResponseWriter, r *http.Request) {
 		setNoStore(w)
-		location, err := remote.EnsureDefaultGlobal(r.Context())
+		state, err := opts.SharedCredentials.Retry(opts.Lifecycle)
 		if err != nil {
 			writeServiceError(w, err)
 			return
 		}
-		writeJSON(w, http.StatusOK, map[string]any{"location": location})
+		writeJSON(w, http.StatusAccepted, map[string]any{"sharedCredentials": state})
 	})
 	mux.HandleFunc("GET /global-env/location", func(w http.ResponseWriter, r *http.Request) {
 		setNoStore(w)
 		l, e := remote.LoadGlobalLocation()
-		if e != nil {
-			writeServiceError(w, e)
-			return
-		}
-		writeJSON(w, 200, map[string]any{"location": l})
-	})
-	mux.HandleFunc("PUT /global-env/location", func(w http.ResponseWriter, r *http.Request) {
-		setNoStore(w)
-		var b struct {
-			ProjectID   string `json:"projectId"`
-			Environment string `json:"environment"`
-		}
-		if e := decodeJSON(r, &b); e != nil {
-			writeBadPayload(w, e.Error())
-			return
-		}
-		l, e := remote.BindGlobal(r.Context(), b.ProjectID, b.Environment)
 		if e != nil {
 			writeServiceError(w, e)
 			return

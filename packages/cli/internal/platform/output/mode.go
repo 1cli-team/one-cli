@@ -1,9 +1,7 @@
 // Package output centralises every result payload (one-cli/<cmd>/v1) and
 // error envelope (one-cli/error/v1) the CLI emits. All structured output
 // MUST flow through Emit/EmitError so the wire shape stays uniform across
-// commands. See testdata/reference/ for the snapshot fixtures that lock
-// the structural contract; comparison is structural (json.Unmarshal +
-// reflect.DeepEqual) so whitespace and key ordering are flexible.
+// commands.
 package output
 
 import (

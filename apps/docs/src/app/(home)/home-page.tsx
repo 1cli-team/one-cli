@@ -38,7 +38,7 @@ const homeCopy = {
     meta: {
       title: "One CLI | 创建工作区，运行每个项目",
       description:
-        "One CLI 帮助你创建多项目工作区，统一运行开发、构建和测试，通过 Dashboard 管理项目、变量与开发服务。",
+        "One CLI 帮助你创建多项目工作区，统一运行开发、构建和测试，通过 Dashboard 管理项目、变量与共享凭据。",
     },
     nav: {
       docs: "文档",
@@ -58,7 +58,7 @@ const homeCopy = {
           用同一套命令。
         </>
       ),
-      body: "创建多项目工作区，统一运行开发、构建和测试。通过 Dashboard 管理项目、变量与开发服务，让人和 AI 使用同一套项目约定。",
+      body: "创建多项目工作区，统一运行开发、构建和测试。通过 Dashboard 管理项目、变量与共享凭据，让人和 AI 使用同一套项目约定。",
       canvasAria:
         "One CLI 工作区模块画布，展示应用、API、文档、Packages、Manifest、Env、Build 和 CLI 接口模块",
       install: "开始使用",
@@ -210,15 +210,15 @@ const homeCopy = {
           eyebrow: "one serve",
           title: (
             <>
-              项目和开发服务，
+              项目和环境变量，
               <br />
               在浏览器里管理。
             </>
           ),
-          body: "one serve 打开本机 Dashboard，浏览工作区、添加项目、管理环境变量和共享凭据，也能启动开发服务并查看控制台。",
+          body: "one serve 打开本机 Dashboard，浏览工作区、添加项目、管理环境变量和共享凭据。",
           bullets: [
             ["项目管理", "查看项目配置、选择模板添加项目，审阅 Manifest 修改后保存。"],
-            ["开发服务", "启动、停止或重启服务，查看原始日志与本机访问入口。"],
+            ["共享凭据", "集中管理发布与运维凭据，在终端任务中按需注入。"],
             ["账号与变量", "在设置中登录 Infisical，按环境和目录管理变量。"],
           ],
           href: ["serve"],
@@ -227,7 +227,7 @@ const homeCopy = {
           output: [
             "在本机浏览器中打开 Dashboard",
             "管理工作区、项目与共享凭据",
-            "运行开发服务并查看控制台",
+            "按环境管理项目变量",
           ],
         },
         {
@@ -367,7 +367,7 @@ const homeCopy = {
     meta: {
       title: "One CLI | Create workspaces. Run your projects.",
       description:
-        "Create workspaces, run development, builds, and tests, and manage projects, variables, and dev services in Dashboard.",
+        "Create workspaces, run development, builds, and tests, and manage projects, variables, and shared credentials in Dashboard.",
     },
     nav: {
       docs: "Docs",
@@ -387,7 +387,7 @@ const homeCopy = {
           One workflow.
         </>
       ),
-      body: "Create workspaces and run development, builds, and tests. Manage projects, variables, and dev services in Dashboard, with shared conventions for people and AI.",
+      body: "Create workspaces and run development, builds, and tests. Manage projects, variables, and shared credentials in Dashboard, with shared conventions for people and AI.",
       canvasAria:
         "One CLI workspace module canvas showing apps, API, docs, packages, manifest, env, build, and CLI interface modules",
       install: "Start building",
@@ -544,10 +544,10 @@ const homeCopy = {
               in your browser.
             </>
           ),
-          body: "one serve opens your local Dashboard to browse workspaces, add projects, manage variables and shared credentials, and run dev services with a console.",
+          body: "one serve opens your local Dashboard to browse workspaces, add projects, and manage variables and shared credentials.",
           bullets: [
             ["PROJECTS", "Inspect configuration, add projects from templates, and review Manifest changes before saving."],
-            ["DEV SERVICES", "Start, stop, or restart services. View original logs and local access links."],
+            ["SHARED CREDENTIALS", "Manage publishing and operations credentials centrally, and inject them into terminal tasks when needed."],
             ["ACCOUNTS AND VARIABLES", "Sign in to Infisical in Settings and manage variables by environment and folder."],
           ],
           href: ["serve"],
@@ -556,7 +556,7 @@ const homeCopy = {
           output: [
             "open Dashboard in your local browser",
             "manage workspaces, projects, and shared credentials",
-            "run dev services and follow their console output",
+            "manage project variables by environment",
           ],
         },
         {

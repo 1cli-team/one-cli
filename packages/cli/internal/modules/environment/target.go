@@ -137,40 +137,6 @@ func (s *Service) RequireInfisicalBackend(
 	return requireInfisicalBackend(resolution)
 }
 
-// EnsureInfisicalReady is the explicit Dashboard initialization endpoint.
-// Saving variables never calls it.
-func (s *Service) EnsureInfisicalReady(
-	ctx context.Context,
-	scope execution.Scope,
-	environment, project string,
-) (*BindingResult, error) {
-	resolution, err := s.resolve(resolveInput{
-		Scope: scope, Requested: environment, AllowUnknown: true,
-	})
-	if err != nil {
-		return nil, err
-	}
-	if err := validateWriteEnvironment(resolution); err != nil {
-		return nil, err
-	}
-	declared := resolution.Declared
-	if len(declared) == 0 {
-		declared = workspace.DefaultEnvironments
-	}
-	if environment != "" && !contains(declared, environment) {
-		return nil, cliErrors.New(cliErrors.ENV_UNKNOWN_ENVIRONMENT,
-			i18n.Tf("env.environment_unknown", environment, strings.Join(declared, ", ")))
-	}
-	if _, err := s.resolveInfisicalFolderPath(resolution.Workspace, nil, project); err != nil {
-		return nil, err
-	}
-	result, err := s.BindWorkspace(ctx, BindWorkspaceInput{Scope: scope, Create: true})
-	if err != nil {
-		return nil, err
-	}
-	return &result.BindingResult, nil
-}
-
 func (s *Service) resolveInfisicalFolderPath(
 	activeWorkspace execution.Workspace,
 	config *infisical.WorkspaceConfig,

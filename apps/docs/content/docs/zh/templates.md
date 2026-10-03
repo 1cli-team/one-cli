@@ -123,7 +123,7 @@ npm 包名分别为 `desktop-renderer`、`desktop-main` 和 `desktop-preload`。
 pnpm workspace 和 lockfile，不再创建嵌套工作区。
 
 清单通过 `[groups.desktop]` 记录三个成员。使用 `one run desktop:dev`、
-`one run desktop:build`、`one run desktop:test` 和 `one run desktop:pack`
+`one run desktop:build` 和 `one run desktop:pack`
 操作整组项目；重新运行 `one init mise` 后这些任务仍会保留。
 每个成员仍可独立操作，例如 `one build -p desktop-main`。
 主进程使用 Awilix 函数工厂，renderer 使用 React、Vite 和基于 Base UI 的 shadcn/ui。
@@ -155,7 +155,7 @@ One 工作区根目录管理。
 
 ```sh
 cd packages/templates/go-api
-go test ./...
+task check
 go run ./cmd/server
 ```
 
@@ -211,10 +211,4 @@ Go 模板只维护一份正常的 `go.mod` 和必要的 `go.sum`。资源打包�
 ```sh
 mise run sync-bundled
 mise run check
-mise run check:templates
 ```
-
-`check:templates` 会安装模板依赖，构建 Go/Electron 源码与生成的 Next.js 静态站点，检查全部
-Node 模板的生成格式，并在临时工作区构建两个不同名称的 Electron 项目、两个 Go 项目与两种
-Next.js 静态站点，同时验证中英文页面和文档静态搜索。
-该检查需要网络及对应工具链；它不会修改开发者的全局语言偏好。

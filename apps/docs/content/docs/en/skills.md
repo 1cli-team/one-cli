@@ -37,8 +37,8 @@ Every template gets the common skills `one-cli` and `find-skills`. Node template
 | `fumadocs-docs`                               | The Next/React skills above plus `one-fumadocs`                                                                               |
 | `react-spa`                                   | `one-web`, React best practices, composition patterns, `shadcn`, `vite`                                                       |
 | `expo-mobile`                                 | `one-expo`, `expo-overview`, `expo-router`, `expo-data-fetching`, `expo-dev-client`, `expo-upgrade`, `expo-project-structure` |
-| `ts-library`                                  | `tsdown`, `vitest`                                                                                                            |
-| `electron-app`                                | `one-web`, React best practices, composition patterns, `shadcn`, `vite`, `vitest`, `tsdown`, `one-electron`                   |
+| `ts-library`                                  | `tsdown`                                                                                                            |
+| `electron-app`                                | `one-web`, React best practices, composition patterns, `shadcn`, `vite`, `tsdown`, `one-electron`                   |
 | `empty-app`, `empty-service`, `empty-library` | Common skills only                                                                                                            |
 
 Empty templates do not prescribe a language, framework, UI, database, or internal architecture; the user chooses the stack. Common skills guide the One workspace layout and workflow without requiring another template's stack. Once the stack is chosen, install matching development skills as needed with `one skills add`. The generated `AGENTS.md` follows the same rule: complex scripts use the project's chosen language without requiring Node or TypeScript.

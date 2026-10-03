@@ -18,7 +18,7 @@ one --version                   # 验证装好
 
 > **fresh-clone 提示**：`packages/cli/internal/resources/bundled/` 整个目录是 gitignore 的——
 > registry / templates / dashboard dist 都由 `mise run sync-bundled` +
-> `mise run sync-web` 按需重建。这些任务作为 `mise run vet` / `test` / `build` 的依赖自动运行；
+> `mise run sync-web` 按需重建。这些任务作为 `mise run vet` / `build` 的依赖自动运行；
 > One 使用官方 Process Compose；贡献者先安装 mise，再使用根任务准备和构建资源。
 > 第一次 `mise run install` 会准备依赖并构建 Dashboard；之后输入未变时复用 Dashboard 产物缓存。
 > 如果你直接跑 `go build` 而不走 mise，
@@ -36,7 +36,7 @@ one --version                   # 验证装好
 | `cli` | `packages/cli` | Go CLI 和公开 Go 包 |
 | `kernel` | `packages/kernel` | 共享 Go 内核 |
 
-`packages/templates` 和测试 fixture 是源码素材，不登记为项目。`packages/cli` 保留现有路径，因为公开 Go 包的 module path 已包含该目录。
+`packages/templates` 是源码素材，不登记为项目。`packages/cli` 保留现有路径，因为公开 Go 包的 module path 已包含该目录。
 
 已有 checkout 升级后也先运行 `mise run install`，重新构建本地新版并将 `one` 启动器指向 `packages/cli/bin/one`，避免继续调用旧发行版。
 
@@ -48,63 +48,41 @@ one run                         # 查看根任务和项目任务
 one run dev                     # Go Dashboard API + Vite UI，管理当前真实工作区
 one run dev -p docs              # 文档站：http://localhost:3000
 one run build -p cli             # 准备嵌入资源并构建 CLI
-one run test -p kernel           # 测试共享 Go 内核
 one run check                   # 完整仓库检查；也可简写 one check
 one serve                       # 在 Dashboard 中管理当前真实仓库
 ```
 
-单独运行 `one run dev -p dashboard` 只启动 Vite 前端，需要在另一终端运行 `one run dev -p cli` 提供 API；通常直接使用联合任务 `one run dev`。开发 API 与 `one serve` 都管理当前真实仓库。构建、测试和开发不需要绑定 Infisical。
+单独运行 `one run dev -p dashboard` 只启动 Vite 前端，需要在另一终端运行 `one run dev -p cli` 提供 API；通常直接使用联合任务 `one run dev`。开发 API 与 `one serve` 都管理当前真实仓库。构建、静态检查和开发不需要绑定 Infisical。
 
 `one run dev --ui tui` 使用 One 的运行中列表、完整任务树和日志界面，官方 Process Compose 以 headless 模式调度；`--ui stream` 使用流式输出。Tab 切换焦点，方向键展开/定位；拖选后 y 复制，c 关闭鼠标报告并固定全宽日志供终端原生复制，Esc 返回。无需声明 service。状态来自实际命令开始/结束事件，不从输出猜测。多任务交互终端默认 TUI，CI 和结构化输出使用 stream；全部完成后自动关闭，Ctrl+C 取消并恢复终端。完整日志保存在私有临时 journal，不受上游 10,000 行缓存限制。
 
 mise 安装固定的 Process Compose 1.122.0，One 生成每次运行的私有配置；变量通过内存认证通道传给叶子进程。无需 Rust、补丁或嵌入调度器构建。首版仅支持静态任务子集，能力和限制见 [one run 文档](apps/docs/content/docs/zh/run.md)。Process Compose 没有全局并发上限，不再承诺任意 `--concurrency` 生效。
 
-根 `mise.toml` 继续维护原生任务，供首次安装、CI 和 Git hooks 使用：
+根 `mise.toml` 继续维护原生任务，供首次安装和本地检查使用：
 
 ```bash
 mise run install-deps           # 安装锁定的 Node workspace 依赖
-mise run check                  # 当前平台的静态检查、Go 和 Dashboard 测试
+mise run check                  # Go、Dashboard 和文档静态检查
 mise run build                  # 编译到 packages/cli/bin/one
-mise run test                   # Go race 测试 + Dashboard 测试
 mise run install                # 打包并安装本地启动器，无需预先安装 one
-mise run pre-push               # 推送前检查，包含 race 测试和模板构建
 ```
 
-项目任务来自各自的 `package.json` 或 `Taskfile.yml`，只在根 `mise.toml` 登记 `cli:build`、`dashboard:dev` 这样的任务入口，并通过 `dir` 指定子项目目录。根文件也声明 Dashboard、模板和嵌入资源的前置步骤，CLI 测试会先构建 E2E 使用的二进制。新增或修改任务目录后，运行 `one init mise` 同步这些受版本控制的原生任务。执行和查询不会重新生成配置；Dashboard 从进程输出发现访问地址，dev 命令在 mise.toml 中定义，由 Process Compose 执行。
+项目任务来自各自的 `package.json` 或 `Taskfile.yml`，只在根 `mise.toml` 登记 `cli:build`、`dashboard:dev` 这样的任务入口，并通过 `dir` 指定子项目目录。根文件也声明 Dashboard、模板和嵌入资源的前置步骤。新增或修改任务目录后，运行 `one init mise` 同步这些受版本控制的原生任务。执行和查询不会重新生成配置；Dashboard 从进程输出发现访问地址，dev 命令在 mise.toml 中定义，由 Process Compose 执行。
 
 ## 提交流程
 
-1. 起一个分支：`git checkout -b feat/<short-name>` 或 `fix/<short-name>`
-2. 改代码 + 测试
+1. 起一个分支：`git checkout -b feat/<short-name>` 或 `fix/<short-name>`。
+2. 改代码，运行 `mise run check` 和相关构建。
 3. 提交：commit 消息走 [conventional commits](https://www.conventionalcommits.org/)
-   （`feat:`、`fix:`、`chore:`、`docs:`、`test:`、`refactor:` 等）。仓库的
-   pre-commit hook 会自动运行当前平台的 `mise run check`，覆盖静态检查、普通 Go 测试
-   和 Dashboard 测试；如果当前 checkout 尚未启用 hook，先运行 `mise run hooks:install`。
-   该命令同时启用 pre-commit 和 pre-push。pre-commit 会拒绝混合已暂存、未暂存或未跟踪的
-   文件，确保本地检查的内容与即将提交、随后由 CI 检查的快照一致
-4. 推送：pre-push hook 会自动运行 `mise run --jobs 1 pre-push`，包含 `check`、
-   Go race detector 和模板源码/生成项目构建，检查失败会阻止推送。也可提前运行
-   `mise run --jobs 1 pre-push`；模板构建需要下载依赖，因此比提交检查耗时更长。
-   pre-push 要求工作区干净，避免用未提交的修复验证将要推送的旧提交
-5. 开 PR，等待各平台 CI 验证
-
-PR CI 在 Linux 上并行执行 `mise run check:static`、`mise run check:test` 与
-`mise run test:go`（Go race detector）；Linux 的 test job 还执行 `check:templates`。
-同时在 Windows 上执行 `mise run check`、
-macOS 上执行 `mise run check:test`。master 的保护规则要求 `lint`、`test`、
-`test-windows`、`test-macos`、`test-race` 五项检查全部通过才能合并。
-本地 `mise run check` 和 `mise run pre-push` 只验证当前操作系统，不能代替其他平台的
-CI；`mise run pre-push` 额外运行 Go race detector 和模板构建。Windows/macOS 的原生
-运行不能由 Linux 交叉编译代替。路径相关测试应覆盖符号链接、规范化路径，以及
-同一文件的不同路径写法，避免只在 Linux 上通过。远端五项检查会在 PR、master
-推送和手动触发的工作流中运行。
+   （`feat:`、`fix:`、`chore:`、`docs:`、`refactor:` 等）。
+4. 推送并开 PR，附上本地验证结果。
 
 ## 改不同部分的注意事项
 
 ### 改 Go 代码（`packages/cli/internal/` / `packages/cli/pkg/`）
 
 - 公开 API（`packages/cli/pkg/`）改动要考虑 semver；详见 [CLAUDE.md 的 Public API stability](./CLAUDE.md)
-- 加新错误码：在 `packages/cli/internal/platform/errors/codes.go` 注册 `Code` 常量 + `Codes` map 条目；测试会强制对应；改完跑 `mise run gen-error-codes` 刷新文档
+- 加新错误码：在 `packages/cli/internal/platform/errors/codes.go` 注册 `Code` 常量 + `Codes` map 条目；改完跑 `mise run gen-error-codes` 刷新文档
 
 ### mise 运行时
 
@@ -113,8 +91,6 @@ CI；`mise run pre-push` 额外运行 Go race detector 和模板构建。Windows
 托管程序位于 `$XDG_DATA_HOME/one/runtimes/mise/<version>/<platform>/`，默认 `~/.local/share/one/runtimes/mise/`；工具、配置、状态和缓存分别使用对应 XDG 根下的 `one/mise/`。One 在托管子进程中设置四个 `MISE_*_DIR`，并关闭自动更新。外部 mise 沿用原目录。旧版 One 缓存中校验通过的同版本程序可以离线迁移，原缓存保留。
 
 升级时验证上游校验文件的签名，更新 `packages/cli/internal/adapters/runtime/mise/miserelease/release.go` 中的版本、压缩包和程序 SHA256，再更新需要提高的 runtime 最低版本及相关文档。托管版本随 One 更新，不通过 `mise self-update` 维护。上游许可证保留于 `third_party/mise/LICENSE` 和 One 发布归档。
-
-下载器及安装器测试使用本地 HTTP fixture，覆盖并发、重试、取消、摘要和删除修复。`ONE_TEST_MISE_BINARY=/absolute/path/to/mise go test ./packages/cli/tests/e2e -run Mise` 启用真实配置与信任测试；其中托管迁移测试要求与仓库固定摘要一致的官方程序。真实下载和多平台冒烟验证在发布前单独执行，不作为普通构建的资源依赖。
 
 ### 改 templates（`packages/templates/<id>/`）
 
@@ -127,57 +103,26 @@ CI；`mise run pre-push` 额外运行 Go race detector 和模板构建。Windows
 - 前后端联调：在仓库根目录运行 `one run dev`，打开 `http://localhost:5173/`
 - 开发 API 使用当前仓库的真实项目与任务；页面保存项目配置会更新当前仓库的 manifest，账号使用本机 One 登录会话
 - 本地开发：先在仓库根目录运行 `pnpm install`，再运行 `pnpm --filter one-serve-web dev`
-- 静态检查：`mise run check:dashboard`；架构护栏和交互测试包含在 `mise run check:test`
-- 改完后 `mise run vet` / `test` / `build` 会自动跑 `sync-web`（pnpm install + vite build）
+- 静态检查：`mise run check:dashboard`；完整仓库检查：`mise run check`
+- 改完后 `mise run vet` / `build` 会自动跑 `sync-web`（pnpm install + vite build）
   并刷 `packages/cli/internal/resources/bundled/_web/`
 
 ### 改文档站（`apps/docs/`）
 
 - 文档站是 Next.js + Fumadocs SSG
 - 本地预览：在仓库根目录运行 `one run dev -p docs`
-- 线上部署：Vercel 项目 Root Directory 指向 `apps/docs`，Output Directory 用 `dist`，域名绑定 `1cli.dev`
 - `apps/docs/content/docs/reference/error-codes.md` **不要手工编辑**——跑 `mise run gen-error-codes` 重生成
 - 新增页面要更新对应目录的 `meta.json`（sidebar 顺序）
 
 ### 改 install.sh（`apps/docs/public/install.sh`）
 
-- 改完跑 `mise run test` —— `packages/cli/tests/e2e/install_sh_test.go` 会做静态检查（语法、必要 sentinels、wrap-in-main 不变量）
-
-## 测试约定
-
-```bash
-mise run test                                                 # 默认全套
-(cd packages/cli && go test ./internal/foo)               # 单个包
-(cd packages/cli && go test -run TestX ./...)             # 单个 test
-(cd packages/cli && UPDATE_SNAPSHOTS=1 go test ./tests/e2e)     # 重生成 e2e snapshot fixtures
-```
-
-E2E snapshot 测试位于 `packages/cli/tests/e2e/snapshot_e2e_*_test.go`，依赖 `packages/cli/bin/one` 存在 —— 跑 `mise run build` 之后再跑。
-
-## 发布流程
-
-发布统一从 GitHub Actions 的 **Build and Release** 手动触发：
-
-1. 在 `master` 上运行工作流，选择 `patch`（默认）、`minor` 或 `major`。
-2. 工作流从最高稳定 tag 自动计算下一版本，并把结果作为 `RELEASE_VERSION`；若最高 tag 位于 `master` 且尚未完成发布，则优先续跑该版本。
-3. 工作流执行完整 `mise run pre-push` 和 GoReleaser no-publish 预构建；验证通过后创建计算出的 tag，生成 5 个平台归档及 `checksums.txt`。
-4. 只有 asset 集合完整时，GitHub Release 才会从 draft 转为公开发布。
-
-不需要为了发布修改或提交任何版本文件，也不要手工推 tag。若发布在 tag 或 draft 创建后失败，修复问题后重新运行；工作流会自动识别安全的未完成 tag 并复用 draft。已经完整发布的版本不会被重复发布。
-
-发布 channel：
-
-- **GitHub Releases** — `install.sh` 下载二进制和 `checksums.txt` 的来源
-- **Vercel** `https://1cli.dev` — 文档站和 `install.sh`
-- ~~**npm `qzkpwoxtl`**~~ — v0.4.1 起停发
+- 改完运行 `bash -n apps/docs/public/install.sh` 检查脚本语法。
 
 ## 环境变量（开发时常用）
 
 | 变量 | 用途 |
 |---|---|
 | `ONE_BINARY_PATH` | 让 wrapper / 子 shell 用某个特定 binary |
-| `UPDATE_SNAPSHOTS=1` | E2E 测试重写 snapshot |
-| `INFISICAL_UNIVERSAL_AUTH_*` | secrets 测试需要（一般 mock，跳过 live） |
 
 ## 仓库布局
 
@@ -188,14 +133,12 @@ packages/cli/                    # Go module（module path 含 /packages/cli 后
   pkg/                           # 公开 Go API（semver 保护）
   internal/resources/bundled/              # go:embed 镜像，目录整个 gitignore，
                                  # 由 mise run sync-bundled + sync-web 重建
-  testdata/                      # Go 测试 fixtures
   tools/                         # 内部生成器 / 校验器
                                  #   gen-error-codes / verify-cli-references / verify-help
 packages/templates/              # 模板源 + registry.json（被 go:embed）
 apps/docs/                       # 文档站 Next.js + Fumadocs
 apps/dashboard/                  # `one serve` 用的 React + Vite UI（被 go:embed）
-.github/workflows/               # ci / cli / docs
-mise.toml / .goreleaser.yaml  # 顶层编排（路径都按上面这套）
+mise.toml                        # 本地任务编排
 pnpm-workspace.yaml              # apps/* + packages/*
 DESIGN.md / apps/docs/design/    # 设计源
 ```

@@ -6,6 +6,7 @@ import (
 	"github.com/pkg/browser"
 	"github.com/spf13/cobra"
 
+	authentication "github.com/torchstellar-team/one-cli/packages/cli/internal/application/authentication"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/i18n"
 	session "github.com/torchstellar-team/one-cli/packages/cli/internal/platform/infisicalsession"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/output"
@@ -25,7 +26,15 @@ func Commands() []*cobra.Command {
 		if e != nil {
 			return e
 		}
-		output.Emit(info)
+		fmt.Fprintln(c.ErrOrStderr(), i18n.T("auth.shared_preparing"))
+		shared := authentication.PrepareAfterLogin(c.Context(), info)
+		if shared.Status == "failed" {
+			fmt.Fprintln(c.ErrOrStderr(), i18n.Tf("auth.shared_failed", shared.Error))
+		}
+		output.Emit(struct {
+			session.Info
+			SharedCredentials authentication.SharedCredentialsState `json:"sharedCredentials"`
+		}{info, shared})
 		return nil
 	}}
 	i18n.MarkShort(login, "auth.login.short")

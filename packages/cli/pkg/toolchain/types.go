@@ -1,13 +1,12 @@
 // Package toolchain is the public contract for one-cli toolchain adapters.
 //
-// Adapters generate Dockerfiles, GitHub Actions workflows, and runtime
-// resolution (entrypoint command + container port) for newly-added
-// subprojects. Each language family ships one adapter.
+// Adapters describe package-manager requirements and dependency installation
+// for newly added projects. Each language family ships one adapter.
 //
 // Stability: this package's exported surface is the integration point
 // for future external extensions. Implementations live in
-// internal/toolchain/, which the CLI composition root registers explicitly
-// for side-effects from internal/bootstrap/cli.
+// internal/adapters/toolchain/, which the CLI composition root registers
+// explicitly from internal/bootstrap/cli.
 package toolchain
 
 // Toolchain is the canonical id stamped into the registry / manifest.

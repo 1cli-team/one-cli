@@ -119,9 +119,9 @@ The assistant can read `one.manifest.toml` and project README files, then use On
 
 One CLI manages variables in Infisical and injects them directly into commands. Workspace bindings live in the manifest `[env.infisical]` table; `.env` files are not loaded or exported. Run `one login` to sign in with your browser; the single session is stored in the OS keyring, with no plaintext fallback. Use `one whoami` to inspect status and `one logout` to remove the local session.
 
-Run `one serve` for account settings, workspaces, and shared credentials. Workspace binding changes use a reviewed, revision-checked TOML draft; project settings display derived configuration. Remote variable edits take effect immediately; lists omit values and reveal/copy fetch plaintext only on demand.
+Run `one serve` from any directory for account settings, workspaces, and shared credentials. `one create` registers new workspaces automatically; running `one serve` inside an existing workspace or its subdirectories registers it and opens its page. Workspace binding changes use a reviewed, revision-checked TOML draft; project settings display derived configuration. Remote variable edits take effect immediately; lists omit values and reveal/copy fetch plaintext only on demand.
 
-Choose shared credential storage with `one env bind --global`. Agents discover environments and folders through `one env --global` and `one env list --global`, then execute with `one exec --global --env dev --path /folder --keys KEY -- command`. One does not print injected values. Child logs preserve their original content and formatting.
+Login automatically creates or reuses accessible `shared-credentials` in the current organization. Old account bindings are updated silently, and remote data is retained. Retry failed preparation with `one env bind --global`. Agents discover environments and folders through `one env --global` and `one env list --global`, then execute with `one exec --global --env dev --path /folder --keys KEY -- command`. One does not print injected values. Child logs preserve their original content and formatting.
 
 ## Project Map
 
@@ -144,7 +144,7 @@ If you want to work on One CLI itself, the repository is organized like this:
 | `apps/dashboard` | Local workspace, account, and global-variable Dashboard opened by `one serve` |
 | `assets` | Brand assets, including the logo |
 
-This repository is also a One CLI workspace: `dashboard`, `docs`, `cli`, and `kernel`. Template directories under `packages/templates` and test fixtures are source assets, not registered projects. `packages/cli` keeps its existing location because it also exports Go packages with that module path.
+This repository is also a One CLI workspace: `dashboard`, `docs`, `cli`, and `kernel`. Template directories under `packages/templates` are source assets, not registered projects. `packages/cli` keeps its existing location because it also exports Go packages with that module path.
 
 Bootstrap a fresh checkout without requiring an installed `one`:
 
@@ -164,16 +164,15 @@ one run                         # List root and project tasks
 one run dev                     # Dashboard API + Vite UI for this workspace
 one run dev -p docs              # Documentation at http://localhost:3000
 one run build -p cli             # Prepare embedded resources and build the CLI
-one run test -p kernel           # Test the shared Go kernel
 one run check                   # The complete repository gate; one check is shorthand
 one serve                       # Manage this repository in the Dashboard
 ```
 
-`one run dev -p dashboard` starts the Vite UI; run `one run dev -p cli` in another terminal for its API, or use the combined `one run dev` task. Both the development API and `one serve` use this repository as their workspace. No Infisical binding is required to build, test, or start these projects.
+`one run dev -p dashboard` starts the Vite UI; run `one run dev -p cli` in another terminal for its API, or use the combined `one run dev` task. Both the development API and `one serve` use this repository as their workspace. No Infisical binding is required to build, check, or start these projects.
 
-Root tasks remain native mise commands, so CI and first-time installation can still use `mise run build`, `mise run check`, and `mise run install`. Project tasks come from package scripts and Taskfiles. Only the root `mise.toml` is used: project tasks are namespaced as `cli:build` or `dashboard:dev` and select their directory with `dir`. CLI tasks declare their embedded-resource prerequisites there; CLI tests also build the binary used by E2E tests. Run `one init mise` after changing the project task catalogue to refresh the tracked native tasks. Running or listing tasks does not regenerate configuration. Dashboard discovers access links from process output; dev commands are defined in mise.toml and executed by Process Compose.
+Root tasks remain native mise commands, so local checks and first-time installation can use `mise run build`, `mise run check`, and `mise run install`. Project tasks come from package scripts and Taskfiles. Only the root `mise.toml` is used: project tasks are namespaced as `cli:build` or `dashboard:dev` and select their directory with `dir`. CLI tasks declare their embedded-resource prerequisites there. Run `one init mise` after changing the project task catalogue to refresh the tracked native tasks. Running or listing tasks does not regenerate configuration. Dev commands are defined in mise.toml and executed by Process Compose in the terminal.
 
-Run `mise run hooks:install` after cloning to enable this repository's Git hooks. Pre-commit runs `mise run check` for static checks, ordinary Go tests, and Dashboard tests on your current platform. Pre-push runs `mise run --jobs 1 pre-push`, adding Go race tests and template source/generated-project builds; failures stop the push. Template builds download dependencies and take longer than commit checks. Native Windows and macOS behavior is verified by the PR's CI jobs, even when local Linux checks pass.
+Run `mise run check` for Go vet, formatting, Dashboard lint, and documentation checks.
 
 Read [CONTRIBUTING.md](./CONTRIBUTING.md) before opening a pull request.
 

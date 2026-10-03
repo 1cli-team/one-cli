@@ -1,116 +1,42 @@
-import { Blocks, Terminal } from "lucide-react";
-import { SectionHeading } from "@/components/ui/page-layout";
+import { Blocks } from "lucide-react";
 import type React from "react";
 import { useTranslation } from "react-i18next";
-import { Input } from "@/components/ui/input";
-import {
-	ProjectField,
-	type ProjectSettingsFormProps,
-	ManifestDraftLayout,
-	ReadOnlyDatum,
-} from "@/features/project-settings/forms/FormLayout";
+import type { ProjectSettingsFormProps } from "@/features/project-settings/forms/FormLayout";
 
-export const GeneralForm: React.FC<ProjectSettingsFormProps> = ({ project }) => {
+export const GeneralForm: React.FC<
+	Pick<ProjectSettingsFormProps, "project"> & {
+		projectSelector?: React.ReactNode;
+		actions?: React.ReactNode;
+	}
+> = ({ project, projectSelector, actions }) => {
 	const { t } = useTranslation();
-	const build = project.build;
 
 	return (
-		<ManifestDraftLayout>
-			<div className="space-y-5 rounded-lg border border-border bg-card p-5">
-				<SectionHeading icon={Blocks} title={t("projectInspector.general.metadata")} />
-				<div className="grid gap-x-6 gap-y-5 ud-sm:grid-cols-2 @xl:grid-cols-3">
-					<ReadOnlyDatum
-						label={t("projectInspector.general.toolchain")}
-						value={project.toolchain}
-					/>
-					<ReadOnlyDatum
-						label={t("projectInspector.general.packageManager")}
-						value={project.packageManager}
-					/>
-					<ReadOnlyDatum
-						label={t("projectInspector.general.path")}
-						value={project.relativeDir}
-						mono
-					/>
+		<section className="shrink-0 rounded-lg border border-border bg-card p-3">
+			<div className="flex flex-wrap items-center justify-between gap-3">
+				<div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-3 gap-y-2">
+					<h2 className="flex shrink-0 items-center gap-2 text-sm font-semibold">
+						<Blocks className="size-4 text-primary-text" aria-hidden="true" />
+						{t("projectInspector.general.metadata")}
+					</h2>
+					{projectSelector}
+					<p
+						className="hidden max-w-36 shrink-0 truncate text-sm font-medium ud-md:block"
+						title={project.name}
+					>
+						{project.name}
+					</p>
+					<dl className="flex min-w-0 basis-full items-baseline gap-2 ud-md:flex-1 ud-md:basis-auto">
+						<dt className="shrink-0 text-xs text-muted-foreground">
+							{t("projectInspector.general.path")}
+						</dt>
+						<dd className="min-w-0 truncate font-mono text-sm" title={project.relativeDir}>
+							{project.relativeDir}
+						</dd>
+					</dl>
 				</div>
+				{actions}
 			</div>
-			<div className="space-y-5 rounded-lg border border-border bg-card p-5">
-				<SectionHeading icon={Terminal} title={t("projectInspector.general.runtime")} />
-				<div className="grid gap-x-6 gap-y-5 @xl:grid-cols-2">
-					<div className="@xl:col-span-2">
-						<ProjectField
-							label={t("projectInspector.general.buildCommand")}
-							htmlFor="project-build-command"
-						>
-							<Input
-								id="project-build-command"
-								className="font-mono"
-								value={build?.command ?? ""}
-								placeholder={t(
-									build?.status === "missing"
-										? "projectInspector.general.buildMissing"
-										: "projectInspector.general.buildUnavailable",
-								)}
-								readOnly
-								aria-describedby="project-build-command-hint"
-							/>
-							<p id="project-build-command-hint" className="text-xs text-muted-foreground">
-								{build?.source
-									? t("projectInspector.general.buildSource", { source: build.source })
-									: t("projectInspector.general.buildUnsupported")}
-							</p>
-						</ProjectField>
-					</div>
-				</div>
-			</div>
-			{project.tasks && (
-				<section
-					className="space-y-3 rounded-lg border border-border bg-card p-5"
-					aria-label={t("projectInspector.general.tasks")}
-				>
-					<SectionHeading icon={Terminal} title={t("projectInspector.general.tasks")} />
-					{project.tasks.status === "unavailable" ? (
-						<p className="text-sm text-muted-foreground">
-							{t("projectInspector.general.tasksUnavailable")}
-						</p>
-					) : project.tasks.entries.length === 0 ? (
-						<p className="text-sm text-muted-foreground">
-							{t("projectInspector.general.tasksEmpty")}
-						</p>
-					) : (
-						project.tasks.entries.map((task) => (
-							<div
-								key={task.name}
-								className="space-y-1 border-t border-border pt-3 text-sm break-words"
-							>
-								<p className="font-mono">{task.name}</p>
-								<p className="text-muted-foreground">
-									{t("projectInspector.general.taskSource", { source: task.source })}
-								</p>
-								<p>
-									{t(
-										task.cacheEnabled
-											? "projectInspector.general.taskCacheOn"
-											: "projectInspector.general.taskCacheOff",
-									)}
-								</p>
-								{!!task.depends?.length && (
-									<p>
-										{t("projectInspector.general.taskDepends", { tasks: task.depends.join(", ") })}
-									</p>
-								)}
-								{!!task.outputs?.length && (
-									<p>
-										{t("projectInspector.general.taskOutputs", {
-											outputs: task.outputs.join(", "),
-										})}
-									</p>
-								)}
-							</div>
-						))
-					)}
-				</section>
-			)}
-		</ManifestDraftLayout>
+		</section>
 	);
 };

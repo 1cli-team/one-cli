@@ -43,13 +43,13 @@ one build -p web
 
 `one run` lists workspace tasks. `one dev` and `one build` are shorthand for `one run dev` and `one run build`.
 
-To manage projects and dev services in your browser, run:
+To manage projects and environment variables in your browser, run:
 
 ```bash
 one serve
 ```
 
-Dashboard lets you add projects, manage variables, start dev services, and view their consoles.
+Dashboard lets you add projects and manage environment variables and shared credentials.
 
 ## Next
 

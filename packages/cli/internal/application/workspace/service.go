@@ -1,13 +1,11 @@
-// Package workspace owns transport-neutral Workspace overview and selection
-// mutations used by the local Dashboard HTTP boundary.
+// Package workspace owns read-only Workspace metadata used by the local
+// Dashboard HTTP boundary.
 package workspace
 
 import (
 	"errors"
 	"strings"
-	"sync"
 
-	catalog "github.com/torchstellar-team/one-cli/packages/cli/internal/core/backend"
 	workspacecore "github.com/torchstellar-team/one-cli/packages/cli/internal/core/workspace"
 )
 
@@ -16,26 +14,13 @@ var (
 	ErrProjectNotFound = errors.New("workspace: project not found")
 )
 
-type Service struct {
-	catalog *catalog.Catalog
-	mu      sync.RWMutex
-	tasks   TaskReader
-}
+type Service struct{}
 
-func NewService(backendCatalog *catalog.Catalog, taskReaders ...TaskReader) (*Service, error) {
-	if backendCatalog == nil {
-		return nil, errors.New("workspace: backend catalog is required")
-	}
-	service := &Service{catalog: backendCatalog}
-	if len(taskReaders) > 0 {
-		service.tasks = taskReaders[0]
-	}
-	return service, nil
+func NewService() *Service {
+	return &Service{}
 }
 
 func (s *Service) Overview(root string, environments ...string) (workspacecore.Overview, error) {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
 	environment := ""
 	if len(environments) > 0 {
 		environment = strings.TrimSpace(environments[0])

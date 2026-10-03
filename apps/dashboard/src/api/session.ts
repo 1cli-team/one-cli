@@ -10,6 +10,7 @@ export interface SessionInfo {
 }
 export interface SessionState {
 	session: SessionInfo;
+	sharedCredentials?: SharedCredentialsState | null;
 	login?: { status: "waiting" | "complete" | "failed"; url: string };
 	error?: string;
 }
@@ -30,6 +31,11 @@ export const createRemoteProject = (name: string) =>
 	http.post<RemoteProject>("/infisical/projects", { name }, { timeout: 120000 });
 export const getProject = (id: string) =>
 	http.get<RemoteProject>(`/infisical/projects/${encodeURIComponent(id)}`);
+// Metadata from another account or instance must not populate a binding form.
+export const remoteProjectsKey = (account?: SessionInfo, projectId = "") =>
+	account?.loggedIn
+		? ["/infisical/projects", account.siteUrl, account.userId, account.organizationId, projectId]
+		: null;
 export interface GlobalLocation {
 	siteUrl: string;
 	userId: string;
@@ -38,6 +44,11 @@ export interface GlobalLocation {
 	projectName: string;
 	defaultEnvironment: string;
 }
+export interface SharedCredentialsState {
+	status: "preparing" | "ready" | "failed";
+	location?: GlobalLocation;
+	error?: string;
+}
 export interface GlobalListing {
 	location: GlobalLocation;
 	environment: string;
@@ -45,14 +56,16 @@ export interface GlobalListing {
 	folders: string[];
 	variables: { key: string; description?: string }[];
 }
-export const locationKey = "/global-env/location";
-export const getLocation = () => http.get<{ location: GlobalLocation | null }>(locationKey);
-export const bindLocation = (projectId: string, environment: string) =>
-	http.put<{ location: GlobalLocation }>(locationKey, { projectId, environment });
 export const initializeGlobalLocation = () =>
-	http.post<{ location: GlobalLocation }>(`${locationKey}/default`, {}, { timeout: 120000 });
+	http.post<{ sharedCredentials: SharedCredentialsState }>(
+		"/global-env/location/default",
+		{},
+		{ timeout: 120000 },
+	);
 export const globalQuery = (environment: string, path: string) =>
 	`?${new URLSearchParams({ env: environment, path })}`;
+export const globalListingKey = (location: GlobalLocation, query: string) =>
+	`/global-env/secrets:${JSON.stringify([location.siteUrl, location.userId, location.organizationId, location.projectId])}${query}`;
 export const getGlobalListing = (query: string) =>
 	http.get<GlobalListing>(`/global-env/secrets${query}`);
 export const readGlobalSecret = (key: string, query: string) =>

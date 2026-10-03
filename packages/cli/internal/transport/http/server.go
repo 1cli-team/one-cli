@@ -15,11 +15,11 @@ import (
 	"syscall"
 	"time"
 
+	authentication "github.com/torchstellar-team/one-cli/packages/cli/internal/application/authentication"
 	manifestapp "github.com/torchstellar-team/one-cli/packages/cli/internal/application/manifest"
 	workspaceapp "github.com/torchstellar-team/one-cli/packages/cli/internal/application/workspace"
 	catalog "github.com/torchstellar-team/one-cli/packages/cli/internal/core/backend"
 	creationmodule "github.com/torchstellar-team/one-cli/packages/cli/internal/modules/creation"
-	"github.com/torchstellar-team/one-cli/packages/cli/internal/modules/devservice"
 	environmentmodule "github.com/torchstellar-team/one-cli/packages/cli/internal/modules/environment"
 	cliErrors "github.com/torchstellar-team/one-cli/packages/cli/internal/platform/errors"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/i18n"
@@ -117,15 +117,19 @@ func Run(ctx context.Context, opts Opts, ready func(Result)) error {
 		Port:   port,
 	}
 
-	manager := devservice.New()
-	defer manager.Close()
+	authCtx, cancelAuth := context.WithCancel(ctx)
+	shared := authentication.NewSharedCredentialsService()
+	authDone := make(chan struct{})
+	go func() { defer close(authDone); shared.Run(authCtx) }()
+	defer func() { cancelAuth(); <-authDone }()
 	mux := BuildMux(MuxOpts{
-		ServiceManager: manager,
-		UIDisabled:     opts.UIDisabled,
-		ExpectedHosts:  expectedHosts(opts.Host, port),
-		SelfOrigin:     selfOrigin,
-		WorkspaceRoot:  opts.WorkspaceRoot,
-		Catalog:        opts.Catalog,
+		Lifecycle:         authCtx,
+		SharedCredentials: shared,
+		UIDisabled:        opts.UIDisabled,
+		ExpectedHosts:     expectedHosts(opts.Host, port),
+		SelfOrigin:        selfOrigin,
+		WorkspaceRoot:     opts.WorkspaceRoot,
+		Catalog:           opts.Catalog,
 
 		ManifestService:    opts.ManifestService,
 		CreationService:    opts.CreationService,

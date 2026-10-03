@@ -1,8 +1,7 @@
 package toolchain
 
-// Adapter is the contract every toolchain must satisfy. The render
-// methods produce string content; callers (internal/adapters, internal/ci)
-// decide where on disk to write it.
+// Adapter is the contract every toolchain must satisfy for package-manager
+// selection and dependency installation planning.
 //
 // The CLI composition root registers bundled implementations explicitly.
 // Register remains public for compatibility with downstream adapters.

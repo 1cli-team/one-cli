@@ -16,7 +16,7 @@ one env bind --create
 one env bind --project-id PROJECT_ID
 ```
 
-`set`、`list`、读取与 `unset` 都要求已有绑定。未绑定时返回 `INFISICAL_NOT_CONFIGURED` 并提示运行 `one env bind`，不会自动创建项目。Dashboard 在工作区设置和变量页面提供「绑定 Infisical」按钮，可自动创建工作区项目或选择已有项目。面板展示绑定目标，确认后保存绑定并允许添加变量；保存变量不会初始化绑定。
+`set`、`list`、读取与 `unset` 都要求已有绑定。未绑定时返回 `INFISICAL_NOT_CONFIGURED` 并提示运行 `one env bind`，不会自动创建项目。Dashboard 在项目管理右上角和变量页面提供「绑定 Infisical」按钮，点击后直接进入绑定流程，可自动创建工作区项目或选择已有项目。面板展示绑定目标，确认后保存绑定并允许添加变量；保存变量不会初始化绑定。
 
 绑定保存在 `one.manifest.toml` 中的 `[env.infisical]` 表：
 
@@ -64,7 +64,7 @@ one run dev --env dev
 
 ## 全局共享凭据
 
-共享凭据独立于工作区。通过 `one env bind --global` 自动创建或复用默认存储项目，已有绑定会保留；`--create` 仅用于工作区绑定，不能与 `--global` 同时使用；也可以通过 `--project-id` 绑定其他已有项目。使用 `one env list --global --env dev --path /` 查看名称，使用 `one exec --global --env dev --path /folder -- command` 注入明确作用域。详见[登录与共享凭据](/zh/docs/login/)。
+共享凭据独立于工作区。登录后自动创建或复用当前组织中可访问的 `shared-credentials`，并静默恢复旧账号的绑定。`one env bind --global` 用于失败重试，`--env` 可调整默认环境；`--create` 仅用于工作区绑定。`--project-id` 保留为高级兼容入口，后续登录或 Dashboard 启动会重新应用自动绑定规则。使用 `one env list --global --env dev --path /` 查看名称，使用 `one exec --global --env dev --path /folder -- command` 注入明确作用域。详见[登录与共享凭据](/zh/docs/login/)。
 
 ## 常见错误
 

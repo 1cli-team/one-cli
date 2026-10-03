@@ -116,14 +116,13 @@
     {
       "id": "ts-library",
       "name": "TypeScript 通用库",
-      "description": "通用库模板，适合发包场景，内置 tsdown + vitest + oxlint/oxfmt",
+      "description": "通用库模板，适合发包场景，内置 tsdown + oxlint/oxfmt",
       "category": "library",
       "tags": [
         "library",
         "typescript",
         "npm",
-        "tsdown",
-        "vitest"
+        "tsdown"
       ],
       "toolchain": "node",
       "repo": "local:ts-library",

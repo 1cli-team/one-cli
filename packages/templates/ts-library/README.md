@@ -3,7 +3,6 @@
 面向可发布 npm 包的通用库模板，内置：
 
 - 构建：`tsdown`
-- 测试：`vitest`
 - 代码质量：`oxlint` + `oxfmt`
 
 ## 开发
@@ -17,13 +16,6 @@ pnpm dev
 
 ```bash
 pnpm build
-```
-
-## 测试
-
-```bash
-pnpm test
-pnpm test:coverage
 ```
 
 ## 发包

@@ -1,6 +1,5 @@
 import {
 	ExternalLink,
-	KeyRound,
 	Languages,
 	LogIn,
 	LogOut,
@@ -10,7 +9,7 @@ import {
 	Settings2,
 	ShieldCheck,
 } from "lucide-react";
-import { Link } from "react-router-dom";
+import { SharedCredentialsNotice } from "./SharedCredentialsNotice";
 import { Badge } from "@/components/ui/badge";
 import { ErrorNotice, PageHeader, SectionHeading } from "@/components/ui/page-layout";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -109,13 +108,17 @@ export function AccountSettings() {
 									</p>
 								</div>
 							</div>
-							<div className="flex flex-wrap items-center justify-between gap-3">
-								<Button asChild variant="outline">
-									<Link to="/global">
-										<KeyRound />
-										{t("global.title")}
-									</Link>
-								</Button>
+							<SharedCredentialsNotice
+								key={JSON.stringify([
+									state.data.session.siteUrl,
+									state.data.session.userId,
+									state.data.session.organizationId,
+									state.data.session.expiresAt,
+								])}
+								state={state.data.sharedCredentials}
+								account={state.data.session}
+							/>
+							<div className="flex flex-wrap items-center justify-end gap-3">
 								<Button
 									variant="ghost"
 									disabled={busy}
@@ -123,9 +126,17 @@ export function AccountSettings() {
 										void perform(async () => {
 											await logout();
 											await mutate(
+												sessionKey,
+												{ session: { loggedIn: false, expired: false } },
+												{ revalidate: false },
+											);
+											await mutate(
 												(key) =>
-													typeof key === "string" &&
-													(key.includes("secrets") || key.includes("infisical")),
+													(typeof key === "string" &&
+														(key.includes("secrets") ||
+															key.includes("infisical") ||
+															key === "/global-env/location")) ||
+													(Array.isArray(key) && key[0] === "/infisical/projects"),
 												undefined,
 												{ revalidate: false },
 											);

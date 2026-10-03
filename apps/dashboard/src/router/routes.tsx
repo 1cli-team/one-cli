@@ -18,7 +18,6 @@ import { Overview } from "@/pages/Overview";
 import { AccountSettings } from "@/features/infisical-session/AccountSettings";
 import { GlobalVariables } from "@/features/global-variables/GlobalVariables";
 
-import { ProjectTemplates } from "@/pages/ProjectTemplates";
 import { WorkspaceHome } from "@/pages/WorkspaceHome";
 import type { WorkspaceRegistryEntry } from "@/types/api";
 
@@ -67,6 +66,11 @@ const LegacyProfileRedirect: React.FC = () => {
 
 const WorkspaceRoute: React.FC = () => {
 	const { entryId = "" } = useParams<{ entryId: string }>();
+	return <WorkspaceContent key={entryId} />;
+};
+
+const WorkspaceContent: React.FC = () => {
+	const { entryId = "" } = useParams<{ entryId: string }>();
 	const { search } = useLocation();
 	const environment = environmentFromSearch(search);
 	const registry = useSWR(workspacesKey, getWorkspaces);
@@ -76,6 +80,7 @@ const WorkspaceRoute: React.FC = () => {
 	const overviewKey = entryId && canLoadOverview ? overviewKeyFor(entryId, environment) : null;
 	const overview = useSWR(overviewKey, () => getOverview(entryId, environment), {
 		shouldRetryOnError: false,
+		keepPreviousData: true,
 	});
 
 	if (registry.isLoading && !registry.data)
@@ -110,7 +115,7 @@ const WorkspaceRoute: React.FC = () => {
 			</WorkspaceStateLayout>
 		);
 	}
-	if (overview.isLoading || !overview.data)
+	if (!overview.data)
 		return (
 			<WorkspaceStateLayout>
 				<WorkspaceLoading />
@@ -251,7 +256,6 @@ const UnknownWorkspace: React.FC = () => {
 
 const routes: RouteObject[] = [
 	{ path: "/", element: <WorkspaceHome /> },
-	{ path: "/templates", element: <ProjectTemplates /> },
 	{ path: "/workspace/:entryId", element: <WorkspaceRoute /> },
 	{ path: "/settings", element: <AccountSettings /> },
 	{ path: "/global", element: <GlobalVariables /> },

@@ -21,8 +21,6 @@ type WorkspaceEnvironmentSettings struct {
 }
 
 func (s *Service) WorkspaceEnvironment(_ context.Context, root, environment string) (WorkspaceEnvironmentSettings, error) {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
 	manifest, revision, e := workspacecore.ReadManifestSnapshot(root)
 	if e != nil {
 		return WorkspaceEnvironmentSettings{}, e

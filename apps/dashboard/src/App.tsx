@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils";
 
 export const App: React.FC = () => {
 	const workspaceMode = Boolean(useMatch("/workspace/:entryId"));
+	const globalMode = Boolean(useMatch("/global"));
 
 	return (
 		<div className="flex h-dvh min-w-0 overflow-hidden bg-background text-foreground">
@@ -18,7 +19,11 @@ export const App: React.FC = () => {
 					)}
 				>
 					<div
-						className={cn("w-full", workspaceMode ? "h-full min-h-0" : "mx-auto max-w-[1600px]")}
+						className={cn(
+							"w-full",
+							(workspaceMode || globalMode) && "h-full min-h-0",
+							!workspaceMode && "mx-auto max-w-[1600px]",
+						)}
 					>
 						<AppRoutes />
 					</div>

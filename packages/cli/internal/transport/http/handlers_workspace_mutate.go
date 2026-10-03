@@ -17,10 +17,6 @@ func registerWorkspaceMutateRoutes(mux *http.ServeMux, opts MuxOpts) {
 	// Profile bindings persist in machine-local One configuration. Manifest
 	// publication has its own revision-checked, typed endpoint below.
 
-	mux.HandleFunc(
-		"POST /workspace/environment/backend/initialize",
-		handleInitializeWorkspaceEnvironmentBackend(opts),
-	)
 	mux.HandleFunc("PUT /workspace/manifest", handlePutWorkspaceManifest(opts))
 	mux.HandleFunc("POST /workspace/environment/bind", handleBindWorkspaceEnvironment(opts))
 	mux.HandleFunc("POST /workspace/manifest/preview", handlePreviewWorkspaceManifest(opts))
@@ -64,36 +60,6 @@ func handleBindWorkspaceEnvironment(opts MuxOpts) http.HandlerFunc {
 			return
 		}
 		writeJSON(w, http.StatusOK, binding)
-	}
-}
-
-func handleInitializeWorkspaceEnvironmentBackend(opts MuxOpts) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		if opts.WorkspaceRoot == "" {
-			writeNoWorkspace(w)
-			return
-		}
-		binding, err := opts.EnvironmentService.EnsureInfisicalReady(
-			r.Context(),
-			execution.NewScope(r.Context(), opts.WorkspaceRoot),
-			r.URL.Query().Get("env"),
-			secretProject(r),
-		)
-		if err != nil {
-			writeServiceError(w, err)
-			return
-		}
-		settings, err := opts.WorkspaceService.WorkspaceEnvironment(
-			r.Context(), opts.WorkspaceRoot, r.URL.Query().Get("env"),
-		)
-		if err != nil {
-			writeWorkspaceMutationErr(w, err)
-			return
-		}
-		writeJSON(w, http.StatusOK, struct {
-			workspaceapp.WorkspaceEnvironmentSettings
-			Binding *environmentmodule.BindingResult `json:"binding,omitempty"`
-		}{settings, binding})
 	}
 }
 

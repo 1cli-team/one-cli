@@ -3,13 +3,14 @@ import { useTranslation } from "react-i18next";
 import { Link, useSearchParams } from "react-router-dom";
 import useSWR, { useSWRConfig } from "swr";
 import {
+	createRemoteProject,
 	getProject,
 	getProjects,
 	getSession,
-	initializeGlobalLocation,
 	message,
+	remoteProjectsKey,
 	sessionKey,
-	type GlobalLocation,
+	type RemoteProject,
 } from "@/api/session";
 import {
 	bindWorkspaceEnvironment,
@@ -38,7 +39,6 @@ import {
 	SelectValue,
 } from "@/components/ui/select";
 import { Spinner } from "@/components/ui/spinner";
-import { LocationPicker } from "@/features/global-variables/LocationPicker";
 import { ManifestSaveControl } from "@/features/manifest-draft/ManifestSaveControl";
 import {
 	manifestDraftKey,
@@ -50,10 +50,8 @@ import type { HttpError } from "@/types/api";
 type Props = {
 	open: boolean;
 	onOpenChange(open: boolean): void;
-	scope: "global" | "workspace";
 	workspaceEntryId?: string;
 	environment?: string;
-	initial?: GlobalLocation;
 	readOnly?: boolean;
 };
 
@@ -65,7 +63,7 @@ export function InfisicalBindingDialog(props: Props) {
 		<Dialog open={props.open} onOpenChange={props.onOpenChange}>
 			{props.open && (
 				<BindingForm
-					key={`${props.scope}:${props.workspaceEntryId}:${account?.siteUrl}:${account?.userId}:${account?.organizationId}`}
+					key={`${props.workspaceEntryId}:${account?.siteUrl}:${account?.userId}:${account?.organizationId}`}
 					{...props}
 				/>
 			)}
@@ -73,68 +71,63 @@ export function InfisicalBindingDialog(props: Props) {
 	);
 }
 
-function BindingForm({
-	scope,
-	workspaceEntryId,
-	environment,
-	initial,
-	readOnly,
-	onOpenChange,
-}: Props) {
+function BindingForm({ workspaceEntryId, environment, readOnly, onOpenChange }: Props) {
 	const { t } = useTranslation();
 	const toast = useToast();
 	const { mutate } = useSWRConfig();
 	const [, setSearchParams] = useSearchParams();
 	const session = useSWR(sessionKey, getSession);
-	const workspace = scope === "workspace";
-	const settings = useSWR(workspace ? workspaceEnvironmentKey(workspaceEntryId) : null, () =>
+	const account = session.data?.session;
+	const identity = `${account?.siteUrl}:${account?.userId}:${account?.organizationId}`;
+	const settings = useSWR(workspaceEnvironmentKey(workspaceEntryId), () =>
 		getWorkspaceEnvironment(workspaceEntryId),
 	);
-	const overview = useSWR(workspace ? overviewKeyFor(workspaceEntryId) : null, () =>
-		getOverview(workspaceEntryId),
-	);
-	const projects = useSWR(
-		session.data?.session.loggedIn ? "/infisical/projects" : null,
-		getProjects,
-	);
+	const overview = useSWR(overviewKeyFor(workspaceEntryId), () => getOverview(workspaceEntryId));
+	const projects = useSWR(remoteProjectsKey(account), getProjects);
 	const [mode, setMode] = useState("automatic");
 	const [project, setProject] = useState("");
+	const selectedProject = projects.data?.find((p) => p.id === project);
 	const detail = useSWR(
-		workspace && mode === "existing" && project ? `/infisical/projects/${project}` : null,
+		mode === "existing" && selectedProject && !projects.error
+			? remoteProjectsKey(account, project)
+			: null,
 		() => getProject(project),
 	);
+	const selectedEnvironment = "dev";
 	const [busy, setBusy] = useState(false);
 	const pending = useRef(false);
 	const active = useRef(true);
 	const [error, setError] = useState("");
 	const [conflict, setConflict] = useState(false);
-	const draft = useManifestDraftStore((s) =>
-		workspace ? s.drafts[manifestDraftKey(workspaceEntryId)] : undefined,
-	);
-	const initialId = workspace ? settings.data?.projectId : initial?.projectId;
+	const draft = useManifestDraftStore((s) => s.drafts[manifestDraftKey(workspaceEntryId)]);
+	const initialId = settings.data?.projectId;
 	const initialized = useRef(false);
 	useEffect(() => {
-		if (initialized.current || (workspace && !settings.data)) return;
+		if (initialized.current || !settings.data) return;
 		initialized.current = true;
 		if (initialId) {
 			setMode("existing");
 			setProject(initialId);
 		}
-	}, [workspace, settings.data, initialId]);
+	}, [settings.data, initialId]);
 	useEffect(() => {
 		active.current = true;
 		return () => {
 			active.current = false;
 		};
 	}, []);
-	const account = session.data?.session;
-	const identity = `${account?.siteUrl}:${account?.userId}:${account?.organizationId}`;
 	const currentIdentity = useRef(identity);
 	currentIdentity.current = identity;
-	const currentName =
-		projects.data?.find((p) => p.id === initialId)?.name || initial?.projectName || initialId;
-	const targetName = workspace ? overview.data?.workspace?.name : "shared-credentials";
+	const currentName = projects.data?.find((p) => p.id === initialId)?.name || initialId;
+	const [creationSuffix] = useState(() => crypto.randomUUID().slice(0, 4));
+	const workspaceName = overview.data?.workspace?.name;
+	const targetName =
+		initialId && workspaceName
+			? `${Array.from(workspaceName).slice(0, 59).join("")}-${creationSuffix}`
+			: workspaceName;
 	const isExisting = mode === "existing";
+	const unavailableBinding =
+		initialId && projects.data && !projects.error && !projects.data.some((p) => p.id === initialId);
 	const canBind =
 		!readOnly &&
 		!busy &&
@@ -142,10 +135,17 @@ function BindingForm({
 		!conflict &&
 		account?.loggedIn &&
 		account.organizationId &&
-		(!workspace || (settings.data && overview.data && !settings.error && !overview.error)) &&
+		settings.data &&
+		overview.data &&
+		!settings.error &&
+		!overview.error &&
+		(isExisting || !!targetName) &&
 		(!isExisting ||
-			!workspace ||
-			(detail.data?.environments.some((e) => e.slug === "dev") && !detail.error));
+			(selectedProject &&
+				!projects.error &&
+				detail.data?.id === project &&
+				detail.data.environments.some((e) => e.slug === selectedEnvironment) &&
+				!detail.error));
 
 	async function finish(name: string) {
 		if (!active.current) return;
@@ -154,12 +154,9 @@ function BindingForm({
 		await Promise.allSettled([
 			mutate(
 				(key) =>
-					typeof key === "string" &&
-					(workspace
-						? key.startsWith(`${workspaceBasePath(workspaceEntryId)}/`)
-						: key === "/global-env/location"),
+					typeof key === "string" && key.startsWith(`${workspaceBasePath(workspaceEntryId)}/`),
 			),
-			mutate("/infisical/projects"),
+			projects.mutate(),
 		]);
 	}
 	async function bind() {
@@ -168,31 +165,49 @@ function BindingForm({
 		setBusy(true);
 		setError("");
 		const submittedIdentity = identity;
+		let createdProject: RemoteProject | undefined;
 		try {
-			if (workspace) {
-				const result = await bindWorkspaceEnvironment(workspaceEntryId, {
-					revision: settings.data!.revision,
-					create: !isExisting,
-					...(isExisting ? { projectId: project } : {}),
+			// The workspace initializer preserves existing bindings. Create explicitly
+			// before selecting the replacement, and retain it if saving fails.
+			if (!isExisting && initialId) {
+				createdProject = await createRemoteProject(targetName!);
+				if (!active.current || submittedIdentity !== currentIdentity.current) return;
+				await mutate(remoteProjectsKey(account, createdProject.id)!, createdProject, {
+					revalidate: false,
 				});
-				if (active.current && submittedIdentity === currentIdentity.current) {
-					if (environment && !result.environments.includes(environment)) {
-						setSearchParams((current) => {
-							const next = new URLSearchParams(current);
-							next.set("env", "dev");
-							return next;
-						});
-					}
-					await finish(result.project_name || result.project_id);
+				const created = createdProject;
+				await projects.mutate(
+					(current) => [...(current ?? []).filter((p) => p.id !== created.id), created],
+					{ revalidate: false },
+				);
+			}
+			const result = await bindWorkspaceEnvironment(workspaceEntryId, {
+				revision: settings.data!.revision,
+				create: !isExisting && !createdProject,
+				...(createdProject
+					? { projectId: createdProject.id }
+					: isExisting
+						? { projectId: project }
+						: {}),
+			});
+			if (active.current && submittedIdentity === currentIdentity.current) {
+				if (environment && !result.environments.includes(environment)) {
+					setSearchParams((current) => {
+						const next = new URLSearchParams(current);
+						next.set("env", "dev");
+						return next;
+					});
 				}
-			} else {
-				const result = await initializeGlobalLocation();
-				if (submittedIdentity === currentIdentity.current)
-					await finish(result.location.projectName);
+				await finish(result.project_name || result.project_id);
 			}
 		} catch (cause) {
 			if (!active.current || submittedIdentity !== currentIdentity.current) return;
 			const failure = cause as HttpError;
+			if (createdProject) {
+				setMode("existing");
+				setProject(createdProject.id);
+				void projects.mutate().catch(() => undefined);
+			}
 			if (
 				failure.context?.partial_state === "project_created_binding_unsaved" &&
 				typeof failure.context.project_id === "string"
@@ -202,7 +217,17 @@ function BindingForm({
 				void projects.mutate().catch(() => undefined);
 			}
 			setConflict(failure.code === "SERVE_MANIFEST_CONFLICT");
-			setError(failure.code === "SERVE_MANIFEST_CONFLICT" ? t("binding.conflict") : message(cause));
+			const reason =
+				failure.code === "SERVE_MANIFEST_CONFLICT" ? t("binding.conflict") : message(cause);
+			setError(
+				createdProject
+					? t("binding.createdUnsaved", {
+							name: createdProject.name,
+							id: createdProject.id,
+							reason,
+						})
+					: reason,
+			);
 		} finally {
 			pending.current = false;
 			if (active.current) setBusy(false);
@@ -219,10 +244,8 @@ function BindingForm({
 			}}
 		>
 			<DialogHeader>
-				<DialogTitle>{t(workspace ? "binding.workspaceTitle" : "binding.globalTitle")}</DialogTitle>
-				<DialogDescription>
-					{t(workspace ? "binding.workspaceHint" : "binding.globalHint")}
-				</DialogDescription>
+				<DialogTitle>{t(initialId ? "binding.change" : "binding.workspaceTitle")}</DialogTitle>
+				<DialogDescription>{t("binding.workspaceHint")}</DialogDescription>
 			</DialogHeader>
 			{session.error ? (
 				<ErrorNotice>{message(session.error)}</ErrorNotice>
@@ -260,7 +283,7 @@ function BindingForm({
 						<Label>{t("binding.method")}</Label>
 						<Select
 							value={mode}
-							disabled={busy || readOnly || !!initialId}
+							disabled={busy || readOnly}
 							onValueChange={(v) => {
 								setMode(v);
 								setError("");
@@ -275,119 +298,112 @@ function BindingForm({
 							</SelectContent>
 						</Select>
 					</div>
-					{isExisting && !workspace ? (
-						<LocationPicker
-							initial={initial}
-							onSaved={async (location) => {
-								await finish(location?.projectName || t("global.title"));
-							}}
-							onCancel={() => onOpenChange(false)}
-							onBusyChange={setBusy}
-						/>
-					) : (
-						<>
-							{isExisting ? (
-								<div className="space-y-2">
-									<Label>{t("global.project")}</Label>
-									<Select
-										value={project}
-										onValueChange={setProject}
-										disabled={busy || readOnly || projects.isLoading}
-									>
-										<SelectTrigger aria-label={t("global.project")}>
-											<SelectValue placeholder={t("global.selectProject")} />
-										</SelectTrigger>
-										<SelectContent>
-											{projects.data?.map((p) => (
-												<SelectItem key={p.id} value={p.id}>
-													{p.name}
-												</SelectItem>
-											))}
-										</SelectContent>
-									</Select>
-									{detail.data && !detail.data.environments.some((e) => e.slug === "dev") && (
-										<ErrorNotice>{t("binding.devRequired")}</ErrorNotice>
-									)}
-									{projects.data?.length === 0 && (
-										<p className="text-sm text-muted-foreground">{t("binding.noProjects")}</p>
-									)}
-								</div>
-							) : null}
-							<div className="space-y-1 rounded-md border p-4 text-sm">
-								<p className="break-all font-medium">
-									{t("binding.target", {
-										name: isExisting
-											? detail.data?.name || project
-											: targetName || t("session.loading"),
-									})}
-								</p>
-								<p>{t("binding.defaultEnvironment")}</p>
-								<p className="text-muted-foreground">
-									{t(workspace ? "binding.workspaceStorage" : "binding.globalStorage")}
-								</p>
-							</div>
-							{settings.error ||
-							overview.error ||
-							(isExisting && (projects.error || detail.error)) ? (
-								<ErrorNotice>
-									{message(settings.error || overview.error || projects.error || detail.error)}
-								</ErrorNotice>
-							) : null}
-							{draft && (
-								<div className="space-y-3 rounded-md border p-3">
-									<p className="text-sm">{t("binding.pendingDraft")}</p>
-									<div className="flex flex-wrap gap-2">
-										{workspaceEntryId && <ManifestSaveControl entryId={workspaceEntryId} />}
-										<Button
-											variant="outline"
-											onClick={() =>
-												useManifestDraftStore.getState().clearWorkspace(workspaceEntryId)
-											}
-										>
-											{t("manifestDraft.discard")}
-										</Button>
-									</div>
-								</div>
+					{isExisting ? (
+						<div className="space-y-2">
+							<Label>{t("global.project")}</Label>
+							<Select
+								value={selectedProject ? project : ""}
+								onValueChange={(id) => {
+									setProject(id);
+									setError("");
+								}}
+								disabled={busy || readOnly || projects.isLoading}
+							>
+								<SelectTrigger aria-label={t("global.project")}>
+									<SelectValue placeholder={t("global.selectProject")} />
+								</SelectTrigger>
+								<SelectContent>
+									{projects.data?.map((p) => (
+										<SelectItem key={p.id} value={p.id}>
+											{p.name}
+										</SelectItem>
+									))}
+								</SelectContent>
+							</Select>
+							{unavailableBinding && (!project || project === initialId) && (
+								<ErrorNotice>{t("binding.unavailable")}</ErrorNotice>
 							)}
-							{error && (
-								<ErrorNotice
-									action={
-										conflict ? (
-											<Button
-												variant="outline"
-												onClick={async () => {
-													await Promise.allSettled([settings.mutate(), overview.mutate()]);
-													setConflict(false);
-													setError("");
-												}}
-											>
-												{t("secrets.retry")}
-											</Button>
-										) : undefined
-									}
+							{detail.isLoading && (
+								<p role="status" className="text-sm text-muted-foreground">
+									{t("session.loading")}
+								</p>
+							)}
+							{detail.data && !detail.data.environments.some((e) => e.slug === "dev") && (
+								<ErrorNotice>{t("binding.devRequired")}</ErrorNotice>
+							)}
+							{projects.data?.length === 0 && (
+								<p className="text-sm text-muted-foreground">{t("binding.noProjects")}</p>
+							)}
+						</div>
+					) : null}
+					<div className="space-y-1 rounded-md border p-4 text-sm">
+						<p className="break-all font-medium">
+							{t("binding.target", {
+								name: isExisting
+									? detail.data?.name || selectedProject?.name || t("global.selectProject")
+									: targetName || t("session.loading"),
+							})}
+						</p>
+						{initialId && (!isExisting || project !== initialId) && (
+							<p className="text-muted-foreground">{t("binding.replaceHint")}</p>
+						)}
+						<p>{t("binding.defaultEnvironment")}</p>
+						<p className="text-muted-foreground">{t("binding.workspaceStorage")}</p>
+					</div>
+					{settings.error || overview.error || (isExisting && (projects.error || detail.error)) ? (
+						<ErrorNotice>
+							{message(settings.error || overview.error || projects.error || detail.error)}
+						</ErrorNotice>
+					) : null}
+					{draft && (
+						<div className="space-y-3 rounded-md border p-3">
+							<p className="text-sm">{t("binding.pendingDraft")}</p>
+							<div className="flex flex-wrap gap-2">
+								{workspaceEntryId && <ManifestSaveControl entryId={workspaceEntryId} />}
+								<Button
+									variant="outline"
+									onClick={() => useManifestDraftStore.getState().clearWorkspace(workspaceEntryId)}
 								>
-									{error}
-								</ErrorNotice>
-							)}
-							<DialogFooter>
-								<Button variant="outline" disabled={busy} onClick={() => onOpenChange(false)}>
-									{t("session.cancel")}
+									{t("manifestDraft.discard")}
 								</Button>
-								<Button disabled={!canBind} onClick={() => void bind()}>
-									{busy && <Spinner aria-hidden="true" />}
-									{t(
-										busy
-											? "binding.binding"
-											: isExisting
-												? "binding.bindExisting"
-												: workspace
-													? "binding.createAndBind"
-													: "binding.prepareAndBind",
-									)}
-								</Button>
-							</DialogFooter>
-						</>
+							</div>
+						</div>
 					)}
+					{error && (
+						<ErrorNotice
+							action={
+								conflict ? (
+									<Button
+										variant="outline"
+										onClick={async () => {
+											await Promise.allSettled([settings.mutate(), overview.mutate()]);
+											setConflict(false);
+											setError("");
+										}}
+									>
+										{t("secrets.retry")}
+									</Button>
+								) : undefined
+							}
+						>
+							{error}
+						</ErrorNotice>
+					)}
+					<DialogFooter>
+						<Button variant="outline" disabled={busy} onClick={() => onOpenChange(false)}>
+							{t("session.cancel")}
+						</Button>
+						<Button disabled={!canBind} onClick={() => void bind()}>
+							{busy && <Spinner aria-hidden="true" />}
+							{t(
+								busy
+									? "binding.binding"
+									: isExisting
+										? "binding.bindExisting"
+										: "binding.createAndBind",
+							)}
+						</Button>
+					</DialogFooter>
 				</>
 			)}
 		</DialogContent>

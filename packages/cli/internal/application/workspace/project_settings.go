@@ -2,15 +2,10 @@ package workspace
 
 import (
 	"context"
-	"errors"
 	"fmt"
-	"path/filepath"
 	"strings"
 
-	"github.com/torchstellar-team/one-cli/packages/cli/internal/application/execution"
 	workspacecore "github.com/torchstellar-team/one-cli/packages/cli/internal/core/workspace"
-	cliErrors "github.com/torchstellar-team/one-cli/packages/cli/internal/platform/errors"
-	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/output"
 )
 
 // ProjectSettingsSchema versions the safe, project-focused Dashboard
@@ -29,22 +24,9 @@ type ProjectSettingsProject struct {
 	Name                  string                     `json:"name"`
 	RelativeDir           string                     `json:"relativeDir"`
 	Kind                  string                     `json:"kind"`
-	Toolchain             string                     `json:"toolchain,omitempty"`
-	PackageManager        string                     `json:"packageManager,omitempty"`
-	DevAvailable          bool                       `json:"devAvailable"`
-	Build                 ProjectBuildSettings       `json:"build"`
-	Tasks                 *ProjectTasks              `json:"tasks,omitempty"`
 	DefaultEnvironment    string                     `json:"defaultEnvironment,omitempty"`
 	AvailableEnvironments []string                   `json:"availableEnvironments"`
 	Environment           ProjectEnvironmentSettings `json:"environment"`
-}
-
-// ProjectBuildSettings is a read-only projection of the live build task.
-// Source is project-relative; Status is ready, missing, or invalid.
-type ProjectBuildSettings struct {
-	Command string `json:"command,omitempty"`
-	Source  string `json:"source,omitempty"`
-	Status  string `json:"status"`
 }
 
 type ProjectEnvironmentSettings struct {
@@ -53,19 +35,10 @@ type ProjectEnvironmentSettings struct {
 	Inherits bool   `json:"inherits"`
 }
 
-// ProjectSettings returns manifest-owned settings, the live build command,
-// and environment metadata. Credential values never enter the response.
+// ProjectSettings returns manifest-owned project and environment metadata.
+// It does not inspect task configuration or retrieve credential values.
 func (s *Service) ProjectSettings(
-	ctx context.Context,
-	root, projectName, environment string,
-) (ProjectSettings, error) {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-	return s.projectSettings(ctx, root, projectName, environment)
-}
-
-func (s *Service) projectSettings(
-	ctx context.Context,
+	_ context.Context,
 	root, projectName, environment string,
 ) (ProjectSettings, error) {
 	manifest, revision, err := workspacecore.ReadManifestSnapshot(root)
@@ -87,25 +60,6 @@ func (s *Service) projectSettings(
 		Inherits: true,
 		Path:     "/" + project.RelativeDir,
 	}
-	packageManager := ""
-	if project.Toolchain == "node" {
-		pkg, _ := workspacecore.ReadPackageJSON(filepath.Join(root, project.RelativeDir))
-		if pkg == nil || pkg.PackageManager == "" {
-			pkg, _ = workspacecore.ReadPackageJSON(root)
-		}
-		if pkg != nil {
-			packageManager, _, _ = strings.Cut(pkg.PackageManager, "@")
-		}
-	}
-	tasks := s.projectTasks(ctx, root, project.Name)
-	devAvailable := false
-	if tasks != nil && tasks.Status == "ready" {
-		for _, task := range tasks.Entries {
-			if task.Name == "//:"+project.Name+":dev" || task.Name == "//"+filepath.ToSlash(project.RelativeDir)+":dev" {
-				devAvailable = true
-			}
-		}
-	}
 	return ProjectSettings{
 		Schema:      ProjectSettingsSchema,
 		Root:        root,
@@ -115,41 +69,11 @@ func (s *Service) projectSettings(
 			Name:                  project.Name,
 			RelativeDir:           project.RelativeDir,
 			Kind:                  projectKind(project.RelativeDir),
-			Toolchain:             project.Toolchain,
-			PackageManager:        packageManager,
-			DevAvailable:          devAvailable,
-			Build:                 projectBuildSettings(root, *project),
-			Tasks:                 tasks,
 			DefaultEnvironment:    defaultEnvironment,
 			AvailableEnvironments: environments,
 			Environment:           env,
 		},
 	}, nil
-}
-
-func projectBuildSettings(root string, project workspacecore.ManifestProject) ProjectBuildSettings {
-	build := ProjectBuildSettings{Status: "missing"}
-	switch project.Toolchain {
-	case "node":
-		build.Source = "package.json#scripts.build"
-	case "go":
-		build.Source = "Taskfile.yml#tasks.build"
-	}
-	args, err := execution.ProjectOperationArgs(root, workspacecore.Project{
-		Name: project.Name, RelativeDir: project.RelativeDir,
-		TargetDir: filepath.Join(root, filepath.FromSlash(project.RelativeDir)),
-		Toolchain: project.Toolchain,
-	}, "build")
-	if err != nil {
-		var taskError *output.Error
-		if !errors.As(err, &taskError) || taskError.Code != string(cliErrors.RUNTIME_TASK_NOT_FOUND) {
-			build.Status = "invalid"
-		}
-		return build
-	}
-	build.Command = strings.Join(args, " ")
-	build.Status = "ready"
-	return build
 }
 
 func projectKind(relativeDir string) string {

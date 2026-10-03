@@ -9,7 +9,12 @@
     "resolveJsonModule": true,
     "forceConsistentCasingInFileNames": true,
     "outDir": "build/main",
-    "types": ["node", "electron"]
+    "types": [
+      "node",
+      "electron"
+    ]
   },
-  "include": ["./src/**/*", "./test/**/*"]
+  "include": [
+    "./src/**/*"
+  ]
 }

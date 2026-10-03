@@ -122,13 +122,19 @@ export const SecretsManager: React.FC<{
 	const result = useSWR(
 		key,
 		() => listSecrets(workspaceEntryId, environment, project || undefined),
-		{ revalidateIfStale: false },
+		{ revalidateIfStale: false, keepPreviousData: true },
 	);
 	const listError = result.error as HttpError | undefined;
 	const needsInitialization = listError?.code === "INFISICAL_NOT_CONFIGURED";
 	const showLoading = result.isLoading && !result.data;
-	const showError = !showLoading && !result.data && Boolean(listError);
+	const showError = !result.isLoading && Boolean(listError);
+	const refreshing = result.isLoading && !!result.data;
 	const showEmpty = !showLoading && !showError && result.data?.keys.length === 0;
+	const searchQuery = variant === "standalone" ? search.trim().toLowerCase() : "";
+	const keys = result.data?.keys ?? [];
+	const visibleKeys = searchQuery
+		? keys.filter((secretKey) => secretKey.toLowerCase().includes(searchQuery))
+		: keys;
 
 	useEffect(() => {
 		requestEpoch.current++;
@@ -167,10 +173,10 @@ export const SecretsManager: React.FC<{
 
 	async function toggleReveal(secretKey: string) {
 		const epoch = requestEpoch.current;
-		if (revealed[secretKey] !== undefined) {
+		if (revealed[`${key}:${secretKey}`] !== undefined) {
 			setRevealed((current) => {
 				const next = { ...current };
-				delete next[secretKey];
+				delete next[`${key}:${secretKey}`];
 				return next;
 			});
 			return;
@@ -184,7 +190,7 @@ export const SecretsManager: React.FC<{
 				secretKey,
 			);
 			if (epoch === requestEpoch.current)
-				setRevealed((current) => ({ ...current, [secretKey]: secret.value }));
+				setRevealed((current) => ({ ...current, [`${key}:${secretKey}`]: secret.value }));
 		} catch (error) {
 			showSecretError(toast, t("secrets.revealFailed"), error);
 		} finally {
@@ -250,7 +256,7 @@ export const SecretsManager: React.FC<{
 			}
 			setRevealed((current) => {
 				const next = { ...current };
-				delete next[editor.key];
+				delete next[`${key}:${editor.key}`];
 				return next;
 			});
 			setEditor(null);
@@ -270,7 +276,7 @@ export const SecretsManager: React.FC<{
 			await deleteSecret(workspaceEntryId, environment, project || undefined, deleteKey);
 			setRevealed((current) => {
 				const next = { ...current };
-				delete next[deleteKey];
+				delete next[`${key}:${deleteKey}`];
 				return next;
 			});
 			setDeleteKey("");
@@ -288,18 +294,29 @@ export const SecretsManager: React.FC<{
 		<Card
 			className={cn(
 				"overflow-hidden rounded-lg border-border shadow-none",
-				variant === "embedded" && "rounded-lg",
+				variant === "embedded" && "min-h-0 flex-1",
 			)}
 		>
-			<CardHeader className="border-b border-border px-4 py-3.5">
+			<CardHeader
+				className={cn(
+					"border-b border-border px-4 py-3.5",
+					variant === "embedded" && "shrink-0 px-3 py-2",
+				)}
+			>
 				<div className="flex flex-col items-start justify-between gap-3 sm:flex-row sm:items-center">
 					<div className="flex items-center gap-3">
-						<div className="grid size-9 place-items-center rounded-lg bg-primary/8 text-primary">
-							<KeyRound className="h-4 w-4" />
-						</div>
+						{variant !== "embedded" && (
+							<div className="grid size-9 place-items-center rounded-lg bg-primary/8 text-primary">
+								<KeyRound className="h-4 w-4" />
+							</div>
+						)}
 						<div>
-							<CardTitle className="text-base">{t("secrets.title")}</CardTitle>
-							<p className="mt-1 text-xs text-muted-foreground">{t("secrets.scopeHint")}</p>
+							<CardTitle className={variant === "embedded" ? "text-sm" : "text-base"}>
+								{t("secrets.title")}
+							</CardTitle>
+							{variant !== "embedded" && (
+								<p className="mt-1 text-xs text-muted-foreground">{t("secrets.scopeHint")}</p>
+							)}
 						</div>
 					</div>
 					<div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
@@ -332,7 +349,7 @@ export const SecretsManager: React.FC<{
 								actionTrigger.current = null;
 								setEditor({ mode: "create", key: "", value: "" });
 							}}
-							disabled={readOnly || showError || showLoading}
+							disabled={readOnly || showError || result.isLoading}
 						>
 							<Plus />
 							{t("secrets.add")}
@@ -340,81 +357,98 @@ export const SecretsManager: React.FC<{
 					</div>
 				</div>
 			</CardHeader>
-			<CardContent className="p-0">
-				{showLoading ? <SecretListLoading /> : null}
-				{showError && listError ? (
-					<StatePanel
-						icon={KeyRound}
-						title={t(
-							listError.code === "INFISICAL_NOT_CONFIGURED"
-								? "secrets.notConfiguredTitle"
-								: "secrets.loadError",
-						)}
-						description={
-							listError.code === "INFISICAL_NOT_CONFIGURED"
-								? t("secrets.notConfiguredHint")
-								: recoveryError || listError.message
-						}
-					>
-						{recoveryError && listError.code === "INFISICAL_NOT_CONFIGURED" ? (
-							<ErrorNotice>{recoveryError}</ErrorNotice>
-						) : null}
-						{needsInitialization ? (
-							<Button disabled={readOnly} onClick={() => setBindingOpen(true)}>
-								<KeyRound />
-								{t("binding.workspaceTitle")}
-							</Button>
-						) : null}
-						<Button variant="outline" disabled={retrying} onClick={() => void retryList()}>
-							{retrying ? <Spinner /> : <RefreshCw />}
-							{t("secrets.retry")}
-						</Button>
-					</StatePanel>
-				) : null}
-				{showEmpty ? (
-					<Empty className="min-h-36">
-						<EmptyHeader>
-							<EmptyDescription>{t("secrets.empty")}</EmptyDescription>
-						</EmptyHeader>
-						<Button
-							size="sm"
-							onClick={() => {
-								setEditorError("");
-								actionTrigger.current = null;
-								setEditor({ mode: "create", key: "", value: "" });
-							}}
-							disabled={readOnly || showError || showLoading}
+			<CardContent
+				className={cn("relative p-0", variant === "embedded" && "min-h-0 flex-1 overflow-auto")}
+				aria-busy={result.isLoading}
+			>
+				<div
+					inert={refreshing}
+					className={cn(variant === "embedded" && "flex min-h-full flex-col")}
+				>
+					{showLoading ? (
+						variant === "embedded" ? (
+							<div
+								role="status"
+								className="flex flex-1 items-center justify-center gap-2 p-6 text-sm text-muted-foreground"
+							>
+								<Spinner />
+								{t("secrets.loading")}
+							</div>
+						) : (
+							<SecretListLoading />
+						)
+					) : null}
+					{showError && listError ? (
+						<StatePanel
+							icon={KeyRound}
+							title={t(
+								listError.code === "INFISICAL_NOT_CONFIGURED"
+									? "secrets.notConfiguredTitle"
+									: "secrets.loadError",
+							)}
+							description={
+								listError.code === "INFISICAL_NOT_CONFIGURED"
+									? t("secrets.notConfiguredHint")
+									: recoveryError || listError.message
+							}
 						>
-							<Plus />
-							{t("secrets.add")}
-						</Button>
-					</Empty>
-				) : null}
-				{!showLoading && !showError && result.data && result.data.keys.length > 0 ? (
-					<>
-						<div className="p-4">
-							<SearchInput
-								value={search}
-								onChange={(e) => setSearch(e.target.value)}
-								aria-label={t("secrets.search")}
-								placeholder={t("secrets.search")}
-							/>
-						</div>
-						<Table className="min-w-[28rem]">
-							<TableHeader>
-								<TableRow>
-									<TableHead>{t("secrets.key")}</TableHead>
-									<TableHead className="w-1/3">{t("secrets.value")}</TableHead>
-									<TableHead className="w-28 text-right">{t("secrets.actions")}</TableHead>
-								</TableRow>
-							</TableHeader>
-							<TableBody>
-								{result.data.keys
-									.filter((secretKey) =>
-										secretKey.toLowerCase().includes(search.trim().toLowerCase()),
-									)
-									.map((secretKey) => {
-										const value = revealed[secretKey];
+							{recoveryError && listError.code === "INFISICAL_NOT_CONFIGURED" ? (
+								<ErrorNotice>{recoveryError}</ErrorNotice>
+							) : null}
+							{needsInitialization ? (
+								<Button disabled={readOnly} onClick={() => setBindingOpen(true)}>
+									<KeyRound />
+									{t("binding.workspaceTitle")}
+								</Button>
+							) : null}
+							<Button variant="outline" disabled={retrying} onClick={() => void retryList()}>
+								{retrying ? <Spinner /> : <RefreshCw />}
+								{t("secrets.retry")}
+							</Button>
+						</StatePanel>
+					) : null}
+					{showEmpty ? (
+						<Empty className="min-h-36">
+							<EmptyHeader>
+								<EmptyDescription>{t("secrets.empty")}</EmptyDescription>
+							</EmptyHeader>
+							<Button
+								size="sm"
+								onClick={() => {
+									setEditorError("");
+									actionTrigger.current = null;
+									setEditor({ mode: "create", key: "", value: "" });
+								}}
+								disabled={readOnly || showError || result.isLoading}
+							>
+								<Plus />
+								{t("secrets.add")}
+							</Button>
+						</Empty>
+					) : null}
+					{!showLoading && !showError && result.data && result.data.keys.length > 0 ? (
+						<>
+							{variant === "standalone" && (
+								<div className="p-4">
+									<SearchInput
+										value={search}
+										onChange={(e) => setSearch(e.target.value)}
+										aria-label={t("secrets.search")}
+										placeholder={t("secrets.search")}
+									/>
+								</div>
+							)}
+							<Table className="min-w-[28rem]">
+								<TableHeader>
+									<TableRow>
+										<TableHead>{t("secrets.key")}</TableHead>
+										<TableHead className="w-1/3">{t("secrets.value")}</TableHead>
+										<TableHead className="w-28 text-right">{t("secrets.actions")}</TableHead>
+									</TableRow>
+								</TableHeader>
+								<TableBody>
+									{visibleKeys.map((secretKey) => {
+										const value = refreshing ? undefined : revealed[`${key}:${secretKey}`];
 										const busy = loadingKey === secretKey;
 										return (
 											<TableRow key={secretKey}>
@@ -491,25 +525,32 @@ export const SecretsManager: React.FC<{
 											</TableRow>
 										);
 									})}
-							</TableBody>
-						</Table>
-						{result.data.keys.every(
-							(secretKey) => !secretKey.toLowerCase().includes(search.trim().toLowerCase()),
-						) ? (
-							<StatePanel icon={SearchX} title={t("secrets.noMatches")}>
-								<Button variant="outline" onClick={() => setSearch("")}>
-									{t("workspaces.home.clearSearch")}
-								</Button>
-							</StatePanel>
-						) : null}
-					</>
-				) : null}
+								</TableBody>
+							</Table>
+							{visibleKeys.length === 0 ? (
+								<StatePanel icon={SearchX} title={t("secrets.noMatches")}>
+									<Button variant="outline" onClick={() => setSearch("")}>
+										{t("workspaces.home.clearSearch")}
+									</Button>
+								</StatePanel>
+							) : null}
+						</>
+					) : null}
+				</div>
+				{refreshing && (
+					<div
+						role="status"
+						className="absolute inset-0 flex items-center justify-center gap-2 bg-card/80 text-sm text-muted-foreground"
+					>
+						<Spinner />
+						{t("secrets.loading")}
+					</div>
+				)}
 			</CardContent>
 
 			<InfisicalBindingDialog
 				open={bindingOpen}
 				onOpenChange={setBindingOpen}
-				scope="workspace"
 				workspaceEntryId={workspaceEntryId}
 				environment={environment}
 				readOnly={readOnly}

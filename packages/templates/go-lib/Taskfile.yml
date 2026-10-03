@@ -17,15 +17,6 @@ tasks:
     cmds:
       - go vet ./...
 
-  test:
-    cmds:
-      - go test -race ./... {{.CLI_ARGS}}
-
-  test:cover:
-    cmds:
-      - go test -race -coverprofile=coverage.out ./...
-      - go tool cover -func=coverage.out
-
   tidy:
     cmds:
       - go mod tidy

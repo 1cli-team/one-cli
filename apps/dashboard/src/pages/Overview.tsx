@@ -29,10 +29,9 @@ export const Overview: React.FC<{
 
 			<div className="min-h-0 flex-1">
 				<ProjectInspector
-					key={`${workspaceEntryId ?? "current"}:${environment}`}
+					key={workspaceEntryId ?? "current"}
 					projects={projects}
 					environments={data.workspace?.environments}
-					currentBackend={data.workspace?.domains?.env}
 					environment={environment}
 					workspaceEntryId={workspaceEntryId}
 					readOnly={readOnly}

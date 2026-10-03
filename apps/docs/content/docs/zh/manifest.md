@@ -74,7 +74,6 @@ projects = ["desktop-renderer", "desktop-main", "desktop-preload"]
 
 - `mise.toml` 定义任务、依赖、工具版本和缓存；存在对应 mise 任务时，才可以使用 `one run dev` 或 `one dev` 任务快捷入口。
 - `package.json` 保存包管理器信息；项目版本保留在各自原生文件中。
-- Dashboard 从进程输出发现服务访问地址。
 - stream 或 TUI 输出模式由 One CLI 个人偏好控制。
 
 `one env bind` 显式保存 Infisical 绑定。`one env set` 要求已有绑定，将变量值保存到 Infisical；成功写入后可登记新的环境名，但不会把变量名写入 Manifest。Dashboard 发布绑定修改前展示实际 TOML，并通过文件 revision 拒绝过期草稿。项目设置展示约定，不再提供项目级环境覆盖开关。

@@ -161,28 +161,9 @@ export interface ProjectSettings {
 	name: string;
 	relativeDir: string;
 	kind: OverviewProjectKind;
-	toolchain?: string;
-	packageManager?: string;
-	devAvailable?: boolean;
-	build?: {
-		command?: string;
-		source?: string;
-		status: "ready" | "missing" | "invalid";
-	};
 	defaultEnvironment?: string;
 	availableEnvironments?: string[];
 	environment: ProjectEnvironmentSettings;
-	tasks?: {
-		status: "ready" | "unavailable";
-		entries: Array<{
-			name: string;
-			operation?: string;
-			source: string;
-			depends: string[] | null;
-			outputs: string[] | null;
-			cacheEnabled: boolean;
-		}>;
-	};
 }
 
 export interface ProjectSettingsResponse {
@@ -267,19 +248,4 @@ export interface WorkspaceEnvironmentSettings {
 	backend: string;
 	projectId: string;
 	siteUrl: string;
-}
-
-export type ServiceStatus = "preparing" | "running" | "stopping" | "stopped" | "exited" | "failed";
-export interface DevService {
-	id: string;
-	project: string;
-	environment: string;
-	status: ServiceStatus;
-	startedAt: string;
-	finishedAt?: string;
-	exitCode?: number;
-	endpoints: Array<{ url: string; reachable: boolean }>;
-	logs: Array<{ seq: number; text: string }>;
-	firstSeq: number;
-	nextSeq: number;
 }
