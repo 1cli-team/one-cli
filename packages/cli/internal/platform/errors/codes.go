@@ -5,7 +5,7 @@
 // the catalogue from one place.
 //
 // Adding a new code: register it in the Codes map below, then add a typed
-// constant. Tests assert that every constant has an entry.
+// constant. Every constant must have an entry.
 package errors
 
 import "github.com/torchstellar-team/one-cli/packages/cli/internal/platform/output"
@@ -138,7 +138,7 @@ type Definition struct {
 	Remediation []output.Remediation
 }
 
-// Codes is the registry. Documentation generators and tests both read
+// Codes is the registry. Documentation generators read
 // from here, so any published error-code reference can be made
 // authoritative by template-rendering this map.
 var Codes = map[Code]Definition{
@@ -230,7 +230,6 @@ var Codes = map[Code]Definition{
 }
 
 // Definition returns the metadata for a code, or zero-value if unknown.
-// Tests catch unknown codes; production callers can ignore.
 func (c Code) Definition() Definition {
 	return Codes[c]
 }

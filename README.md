@@ -144,7 +144,7 @@ If you want to work on One CLI itself, the repository is organized like this:
 | `apps/dashboard` | Local workspace, account, and global-variable Dashboard opened by `one serve` |
 | `assets` | Brand assets, including the logo |
 
-This repository is also a One CLI workspace: `dashboard`, `docs`, `cli`, and `kernel`. Template directories under `packages/templates` and test fixtures are source assets, not registered projects. `packages/cli` keeps its existing location because it also exports Go packages with that module path.
+This repository is also a One CLI workspace: `dashboard`, `docs`, `cli`, and `kernel`. Template directories under `packages/templates` are source assets, not registered projects. `packages/cli` keeps its existing location because it also exports Go packages with that module path.
 
 Bootstrap a fresh checkout without requiring an installed `one`:
 
@@ -164,16 +164,15 @@ one run                         # List root and project tasks
 one run dev                     # Dashboard API + Vite UI for this workspace
 one run dev -p docs              # Documentation at http://localhost:3000
 one run build -p cli             # Prepare embedded resources and build the CLI
-one run test -p kernel           # Test the shared Go kernel
 one run check                   # The complete repository gate; one check is shorthand
 one serve                       # Manage this repository in the Dashboard
 ```
 
-`one run dev -p dashboard` starts the Vite UI; run `one run dev -p cli` in another terminal for its API, or use the combined `one run dev` task. Both the development API and `one serve` use this repository as their workspace. No Infisical binding is required to build, test, or start these projects.
+`one run dev -p dashboard` starts the Vite UI; run `one run dev -p cli` in another terminal for its API, or use the combined `one run dev` task. Both the development API and `one serve` use this repository as their workspace. No Infisical binding is required to build, check, or start these projects.
 
-Root tasks remain native mise commands, so CI and first-time installation can still use `mise run build`, `mise run check`, and `mise run install`. Project tasks come from package scripts and Taskfiles. Only the root `mise.toml` is used: project tasks are namespaced as `cli:build` or `dashboard:dev` and select their directory with `dir`. CLI tasks declare their embedded-resource prerequisites there; CLI tests also build the binary used by E2E tests. Run `one init mise` after changing the project task catalogue to refresh the tracked native tasks. Running or listing tasks does not regenerate configuration. Dashboard discovers access links from process output; dev commands are defined in mise.toml and executed by Process Compose.
+Root tasks remain native mise commands, so local checks and first-time installation can use `mise run build`, `mise run check`, and `mise run install`. Project tasks come from package scripts and Taskfiles. Only the root `mise.toml` is used: project tasks are namespaced as `cli:build` or `dashboard:dev` and select their directory with `dir`. CLI tasks declare their embedded-resource prerequisites there. Run `one init mise` after changing the project task catalogue to refresh the tracked native tasks. Running or listing tasks does not regenerate configuration. Dashboard discovers access links from process output; dev commands are defined in mise.toml and executed by Process Compose.
 
-Run `mise run hooks:install` after cloning to enable this repository's Git hooks. Pre-commit runs `mise run check` for static checks, ordinary Go tests, and Dashboard tests on your current platform. Pre-push runs `mise run --jobs 1 pre-push`, adding Go race tests and template source/generated-project builds; failures stop the push. Template builds download dependencies and take longer than commit checks. Native Windows and macOS behavior is verified by the PR's CI jobs, even when local Linux checks pass.
+Run `mise run check` for Go vet, formatting, Dashboard lint, and documentation checks.
 
 Read [CONTRIBUTING.md](./CONTRIBUTING.md) before opening a pull request.
 

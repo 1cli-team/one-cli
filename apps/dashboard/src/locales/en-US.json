@@ -423,7 +423,7 @@
 			},
 			"ts-library": {
 				"name": "TypeScript library",
-				"description": "Publishable library with tsdown, vitest, and oxlint/oxfmt"
+				"description": "Publishable library with tsdown and oxlint/oxfmt"
 			},
 			"go-lib": {
 				"name": "Go library",
@@ -520,17 +520,17 @@
 			},
 			"ts-library": {
 				"description": "Create reusable TypeScript modules and packages for publishing to npm.",
-				"stack": "TypeScript · tsdown · Vitest",
+				"stack": "TypeScript · tsdown",
 				"feature1": "Library builds and type declarations with tsdown",
-				"feature2": "Unit tests and coverage with Vitest",
+				"feature2": "ESM and CommonJS outputs",
 				"feature3": "Linting, formatting, and publishing scripts"
 			},
 			"go-lib": {
 				"description": "Create reusable Go modules with a public package layout for other projects to import.",
 				"stack": "Go · Go modules · go-task",
 				"feature1": "Public API starter in pkg/greeter",
-				"feature2": "Example package and unit tests",
-				"feature3": "Build, format, vet, and test tasks"
+				"feature2": "Dependency management with Go modules",
+				"feature3": "Build, format, and vet tasks"
 			},
 			"electron-app": {
 				"description": "Create desktop applications with an Electron main process and a React user interface.",

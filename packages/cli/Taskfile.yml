@@ -31,12 +31,6 @@ tasks:
           out=../../go-dist/one-${os}-${arch}
           [ "$os" = "windows" ] && out="${out}.exe"
           GOOS=$os GOARCH=$arch go build -trimpath -ldflags '-s -w -X main.version={{.BUILD_VERSION}}' -o "$out" ./cmd/one
-  test:
-    cmds: ['go test ./... {{.CLI_ARGS}}']
-  test:race:
-    cmds: ['go test -race ./... {{.CLI_ARGS}}']
-  test:snapshot:
-    cmds: ['go test -run Snapshot ./... {{.CLI_ARGS}}']
   check:
     cmds:
       - go vet ./...

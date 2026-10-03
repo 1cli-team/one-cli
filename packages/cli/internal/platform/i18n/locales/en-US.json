@@ -509,7 +509,7 @@
   "template.expo-mobile.name": "Expo mobile app",
   "template.expo-mobile.description": "React Native + Expo template for iOS and Android",
   "template.ts-library.name": "TypeScript library",
-  "template.ts-library.description": "Publishable library with tsdown, vitest, and oxlint/oxfmt",
+  "template.ts-library.description": "Publishable library with tsdown and oxlint/oxfmt",
   "template.go-lib.name": "Go library",
   "template.go-lib.description": "Go library following golang-standards/project-layout, ready to publish and import",
   "template.electron-app.name": "Electron desktop app",

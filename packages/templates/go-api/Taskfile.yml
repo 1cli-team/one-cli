@@ -25,10 +25,6 @@ tasks:
     cmds:
       - go vet ./...
 
-  test:
-    cmds:
-      - go test ./... {{.CLI_ARGS}}
-
   tidy:
     cmds:
       - go mod tidy

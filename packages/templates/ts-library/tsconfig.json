@@ -1,7 +1,9 @@
 {
   "compilerOptions": {
     "target": "ES2022",
-    "lib": ["ES2022"],
+    "lib": [
+      "ES2022"
+    ],
     "module": "ESNext",
     "moduleResolution": "Bundler",
     "strict": true,
@@ -10,7 +12,12 @@
     "sourceMap": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
-    "types": ["node", "vitest/globals"]
+    "types": [
+      "node"
+    ]
   },
-  "include": ["src", "tsdown.config.ts", "vitest.config.ts"]
+  "include": [
+    "src",
+    "tsdown.config.ts"
+  ]
 }

@@ -92,9 +92,6 @@ func emitErrorTo(w io.Writer, err *Error) {
 	}
 }
 
-// emitTo is kept for tests that exercise the JSON path directly.
-func emitTo(w io.Writer, v any) { emitJSON(w, v) }
-
 func emitJSON(w io.Writer, v any) {
 	b, err := json.MarshalIndent(v, "", "  ")
 	if err != nil {

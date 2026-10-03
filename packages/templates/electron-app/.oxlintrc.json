@@ -10,8 +10,7 @@
     "**/node_modules/**",
     "**/dist/**",
     "**/build/**",
-    "**/.vite/**",
-    "**/coverage/**"
+    "**/.vite/**"
   ],
   "rules": {
     "no-console": "off",

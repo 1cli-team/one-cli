@@ -11,7 +11,6 @@ Requires Go 1.27 or newer. Use the latest patch release for your Go version.
 go mod tidy
 task build
 task check
-task test
 ```
 
 ## Layout
@@ -19,7 +18,7 @@ task test
 ```text
 pkg/greeter/           # public API — what consumers import
 go.mod                 # module declaration
-Taskfile.yml           # go-task tasks (build / fmt / vet / test / tidy / check)
+Taskfile.yml           # go-task tasks (build / fmt / vet / tidy / check)
 LICENSE                # MIT
 ```
 

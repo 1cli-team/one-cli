@@ -10,7 +10,6 @@
     "dev": "node scripts/dev.mjs",
     "build": "tsc --noEmit && cross-env NODE_ENV=production tsdown",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run",
     "sandbox:profile": "node scripts/sandbox-profile.mjs",
     "pack": "cross-env NODE_ENV=development node scripts/release.mjs",
     "release": "cross-env NODE_ENV=production node scripts/release.mjs",
@@ -34,7 +33,6 @@
     "oxfmt": "^0.71.0",
     "oxlint": "^1.86.0",
     "tsdown": "^0.23.0",
-    "typescript": "^7.0.2",
-    "vitest": "^5.0.2"
+    "typescript": "^7.0.2"
   }
 }

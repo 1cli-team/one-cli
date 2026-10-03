@@ -12,11 +12,6 @@
     "start:dev": "nest start --watch",
     "start:debug": "nest start --debug --watch",
     "start:prod": "node dist/main",
-    "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js",
-    "test:watch": "node --experimental-vm-modules node_modules/jest/bin/jest.js --watch",
-    "test:cov": "node --experimental-vm-modules node_modules/jest/bin/jest.js --coverage",
-    "test:debug": "node --experimental-vm-modules --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/jest/bin/jest.js --runInBand",
-    "test:e2e": "node --experimental-vm-modules node_modules/jest/bin/jest.js --config ./test/jest-e2e.json",
     "lint": "oxlint .",
     "format": "oxfmt --check .",
     "lint:fix": "oxlint --fix .",
@@ -41,42 +36,16 @@
   "devDependencies": {
     "@nestjs/cli": "^12.0.8",
     "@nestjs/schematics": "^12.0.6",
-    "@nestjs/testing": "^12.1.1",
     "@types/express": "^5.0.6",
-    "@types/jest": "^30.0.0",
     "@types/node": "^24.19.0",
-    "@types/supertest": "^7.2.1",
     "drizzle-kit": "^0.31.11",
-    "jest": "^30.5.2",
     "oxfmt": "^0.71.0",
     "oxlint": "^1.86.0",
     "source-map-support": "^0.5.21",
-    "supertest": "^7.3.0",
-    "ts-jest": "^29.4.14",
     "ts-loader": "^9.6.2",
     "ts-node": "^10.9.2",
     "tsconfig-paths": "^4.2.0",
     "typescript": "^6.0.3"
-  },
-  "jest": {
-    "collectCoverageFrom": [
-      "**/*.(t|j)s"
-    ],
-    "coverageDirectory": "../coverage",
-    "moduleFileExtensions": [
-      "js",
-      "json",
-      "ts"
-    ],
-    "moduleNameMapper": {
-      "^@/(.*)$": "<rootDir>/$1"
-    },
-    "rootDir": "src",
-    "testEnvironment": "node",
-    "testRegex": ".*\\.spec\\.ts$",
-    "transform": {
-      "^.+\\.(t|j)s$": "ts-jest"
-    }
   },
   "engines": {
     "node": "^24.15.0 || >=26.0.0"

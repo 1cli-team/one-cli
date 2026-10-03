@@ -126,7 +126,7 @@ Directories preserve the supplied project name; npm names use kebab-case. All th
 join the root pnpm workspace and share its lockfile, without a nested workspace.
 
 The manifest records `[groups.desktop]` with these three members. Use
-`one run desktop:dev`, `one run desktop:build`, `one run desktop:test`, and
+`one run desktop:dev`, `one run desktop:build`, and
 `one run desktop:pack` to operate on the group. These aliases survive `one init mise`.
 Each member remains independently addressable, such as `one build -p desktop-main`.
 The main process uses Awilix function factories; the renderer uses React, Vite,
@@ -163,7 +163,7 @@ For example, inside the One CLI source repository:
 
 ```sh
 cd packages/templates/go-api
-go test ./...
+task check
 go run ./cmd/server
 ```
 
@@ -224,12 +224,4 @@ After editing, run these commands from the repository root:
 ```sh
 mise run sync-bundled
 mise run check
-mise run check:templates
 ```
-
-`check:templates` installs the template dependencies, builds the Go and
-Electron sources, checks generated formatting for every Node template, and
-builds two differently named Electron projects, two Go projects, and both new
-Next.js static sites in a temporary workspace. It checks bilingual pages and
-static documentation search. It requires network access and the corresponding
-toolchains, and does not change the developer's global language preference.

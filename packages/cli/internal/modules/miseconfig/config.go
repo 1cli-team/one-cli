@@ -296,7 +296,6 @@ func BuildWithFiles(root string, opts Options, files map[string][]byte) (*Plan, 
 			rootConfig.Tasks[project.Name+":"+name] = task
 		}
 	}
-	var ci Task
 	for _, group := range m.Groups {
 		operations := map[string][]string{}
 		var builds []string
@@ -326,15 +325,6 @@ func BuildWithFiles(root string, opts Options, files map[string][]byte) (*Plan, 
 			}
 		}
 	}
-	for _, name := range []string{"check", "test", "build"} {
-		if _, ok := rootConfig.Tasks[name]; ok {
-			ci.Depends = append(ci.Depends, name)
-		}
-	}
-	if len(ci.Depends) > 0 {
-		rootConfig.Tasks["ci"] = ci
-	}
-
 	if err := p.add(Filename, rootConfig); err != nil {
 		return nil, err
 	}

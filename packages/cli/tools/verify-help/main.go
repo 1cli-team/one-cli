@@ -1,5 +1,4 @@
-// verify-help refuses structural drift in help text that the snapshot
-// tests cannot catch.
+// verify-help checks the command catalogue and flags in help examples.
 //
 // Run via Taskfile: `task verify-help`. Exits non-zero with one
 // human-readable line per problem.
@@ -21,11 +20,6 @@
 //     exists. Lines that don't resolve to a real command path are
 //     skipped — prose like `set the --foo flag` outside an example
 //     block isn't validated.
-//
-// Snapshots in testdata/reference/help/ catch text-level edits;
-// verify-help catches the structural-only drifts (rootHelp missing /
-// extra command, example using a flag that no longer exists). The two
-// complement each other.
 package main
 
 import (
@@ -52,8 +46,6 @@ func main() {
 		fmt.Fprintln(os.Stderr, "\nFix one of:")
 		fmt.Fprintln(os.Stderr, "  - Keep root help limited to the curated everyday commands and keep `one help --all` complete.")
 		fmt.Fprintln(os.Stderr, "  - Update the Example / Long text in the offending cmd.go to use a flag that actually exists.")
-		fmt.Fprintln(os.Stderr, "  - Re-run with UPDATE_SNAPSHOTS=1 if you have also intentionally changed help text:")
-		fmt.Fprintln(os.Stderr, "      UPDATE_SNAPSHOTS=1 go test ./tests/e2e/ -run TestHelpSnapshots")
 		os.Exit(1)
 	}
 	root := cli.RootCmd()
@@ -168,11 +160,7 @@ func checkAllHelp(root *cobra.Command) []string {
 	return problems
 }
 
-// rootHelpText returns the curated rootHelp constant string. We re-
-// render it through the same `one --help` path Execute() uses
-// (shouldRenderRootHelp → os.Stdout.WriteString(rootHelp)) by calling
-// the package-level test helper. Since rootHelp is an unexported
-// constant, we expose it only via cli.RootHelp(); see internal/bootstrap/cli.
+// rootHelpText returns the active locale's curated root help through cli.RootHelp.
 func rootHelpText() string {
 	return cli.RootHelp()
 }

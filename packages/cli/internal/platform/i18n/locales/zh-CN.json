@@ -509,7 +509,7 @@
   "template.expo-mobile.name": "Expo 移动 App",
   "template.expo-mobile.description": "React Native + Expo App 模板，适合 iOS/Android 双端开发",
   "template.ts-library.name": "TypeScript 通用库",
-  "template.ts-library.description": "通用库模板，适合发包场景，内置 tsdown + vitest + oxlint/oxfmt",
+  "template.ts-library.description": "通用库模板，适合发包场景，内置 tsdown + oxlint/oxfmt",
   "template.go-lib.name": "Go 通用库",
   "template.go-lib.description": "Go 库模板，遵循 golang-standards/project-layout，适合发包与被 import 场景",
   "template.electron-app.name": "Electron 桌面应用",

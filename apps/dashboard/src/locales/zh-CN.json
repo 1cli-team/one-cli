@@ -423,7 +423,7 @@
 			},
 			"ts-library": {
 				"name": "TypeScript 通用库",
-				"description": "通用库模板，适合发包场景，内置 tsdown + vitest + oxlint/oxfmt"
+				"description": "通用库模板，适合发包场景，内置 tsdown + oxlint/oxfmt"
 			},
 			"go-lib": {
 				"name": "Go 通用库",
@@ -520,17 +520,17 @@
 			},
 			"ts-library": {
 				"description": "开发可复用的 TypeScript 模块，适合共享工具库和发布到 npm 的包。",
-				"stack": "TypeScript · tsdown · Vitest",
+				"stack": "TypeScript · tsdown",
 				"feature1": "tsdown 库构建与类型声明生成",
-				"feature2": "Vitest 单元测试与覆盖率",
+				"feature2": "ESM 与 CommonJS 双格式输出",
 				"feature3": "代码检查、格式化与发包脚本"
 			},
 			"go-lib": {
 				"description": "开发可被其他项目导入的 Go 模块，使用清晰的公共包目录组织可复用代码。",
 				"stack": "Go · Go modules · go-task",
 				"feature1": "pkg/greeter 公共 API 起点",
-				"feature2": "示例包与单元测试",
-				"feature3": "构建、格式化、静态检查与测试任务"
+				"feature2": "Go modules 依赖管理",
+				"feature3": "构建、格式化与静态检查任务"
 			},
 			"electron-app": {
 				"description": "使用 Electron 主进程和 React 界面构建桌面应用，适合桌面工具与业务客户端。",

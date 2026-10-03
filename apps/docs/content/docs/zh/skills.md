@@ -37,8 +37,8 @@ one add react-spa --name web --skip-skills
 | `fumadocs-docs`                               | 上述 Next/React skills，以及 `one-fumadocs`                                                                                   |
 | `react-spa`                                   | `one-web`、React 最佳实践、组合模式、`shadcn`、`vite`                                                                         |
 | `expo-mobile`                                 | `one-expo`、`expo-overview`、`expo-router`、`expo-data-fetching`、`expo-dev-client`、`expo-upgrade`、`expo-project-structure` |
-| `ts-library`                                  | `tsdown`、`vitest`                                                                                                            |
-| `electron-app`                                | `one-web`、React 最佳实践、组合模式、`shadcn`、`vite`、`vitest`、`tsdown`、`one-electron`                                     |
+| `ts-library`                                  | `tsdown`                                                                                                            |
+| `electron-app`                                | `one-web`、React 最佳实践、组合模式、`shadcn`、`vite`、`tsdown`、`one-electron`                                     |
 | `empty-app`、`empty-service`、`empty-library` | 仅基础 skills                                                                                                                 |
 
 空模板不预设语言、框架、UI、数据库或项目内部架构，技术栈由用户自由选择。基础 skills 只指导 One 工作区目录与操作流程，不要求采用其他模板的技术栈。确定技术栈后，再按需通过 `one skills add` 安装匹配的开发 skills。默认生成的 `AGENTS.md` 也遵循这一规则，复杂脚本使用项目选择的语言，不强制引入 Node 或 TypeScript。
