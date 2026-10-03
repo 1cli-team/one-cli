@@ -162,23 +162,12 @@
 	"http": {
 		"networkError": "Network request failed. Check your connection."
 	},
-	"projects": {
-		"search": "Search project, path, or backend",
-		"empty": {
-			"title": "No matching projects"
-		}
-	},
 	"projectInspector": {
 		"workspaceTitle": "Project settings",
 		"projectsTitle": "Projects",
+		"groupLabel": "{{group}}, {{count}} projects",
 		"projectListLabel": "Workspace projects",
 		"empty": "This workspace has no projects.",
-		"tabs": {
-			"label": "Project configuration sections",
-			"overview": "Overview",
-			"environment": "Environment",
-			"runtime": "Run"
-		},
 		"loadFailed": "Unable to load project configuration",
 		"retry": "Retry",
 		"manifestReadOnly": "Manifest · read-only",
@@ -187,44 +176,14 @@
 		"unsavedChanges": "You have unsaved changes. Discard them and continue?",
 		"discardAndContinue": "Discard and continue",
 		"general": {
-			"toolchain": "Toolchain",
 			"path": "Project path",
-			"buildVersion": "Build version",
-			"packageManager": "Package manager",
-			"buildCommand": "Build command",
-			"buildSource": "one build reads {{source}}. Edit that file to change the build task. Workspace dependencies and caching are managed by mise; one run build uses the same entry point.",
-			"buildMissing": "No build task configured",
-			"buildUnavailable": "Unable to read build configuration",
-			"buildUnsupported": "No build task is available for this project.",
-			"metadata": "Project information",
-			"runtime": "Development and build",
-			"tasks": "Configured tasks",
-			"tasksUnavailable": "Task configuration could not be read. Check it with one run.",
-			"tasksEmpty": "No project tasks are configured.",
-			"taskSource": "Source: {{source}}",
-			"taskCacheOn": "Artifact caching is configured.",
-			"taskCacheOff": "Artifact caching is not configured.",
-			"taskDepends": "Dependencies: {{tasks}}",
-			"taskOutputs": "Outputs: {{outputs}}",
-			"devURL": "Development URL (optional)",
-			"devURLHint": "Leave empty to detect from logs. Use a local HTTP(S) URL without credentials or query parameters."
-		},
-		"environment": {
-			"title": "Environment configuration",
-			"path": "Infisical folder path",
-			"inherits": "Inherit workspace environment",
-			"inheritsHint": "Project variables override workspace variables with the same name.",
-			"disabled": "Disable project environment",
-			"disabledHint": "Do not inject environment variables into project commands.",
-			"keys": "Declared variable names",
-			"conventionHint": "Variables follow the project directory and inherit parent folders. More specific folders take precedence."
-		},
-		"draftHint": "Changes are kept in a draft. Review and save them to apply."
+			"metadata": "Project information"
+		}
 	},
 	"secrets": {
 		"title": "Infisical secrets",
 		"unavailableTitle": "Remote secrets are not enabled",
-		"unavailableDescription": "Bind an Infisical project in workspace settings to manage remote variables.",
+		"unavailableDescription": "Click Bind project in Project information to connect storage and manage remote variables.",
 		"scope": "Secret scope",
 		"workspaceScope": "Workspace shared",
 		"add": "Add secret",
@@ -263,30 +222,12 @@
 		"initializing": "Setting up storage…",
 		"invalidKey": "Use letters, digits, and underscores for the key, starting with a letter or underscore, such as API_TOKEN.",
 		"storageCreated": "Created Infisical project: {{name}}",
-		"storageRenamed": "Name {{requested}} was taken. Created Infisical project: {{name}}"
+		"storageRenamed": "Name {{requested}} was taken. Created Infisical project: {{name}}",
+		"loading": "Loading secrets…"
 	},
 	"project": {
 		"fields": {
 			"environment": "Deployment environment"
-		}
-	},
-	"overview": {
-		"projects": "Projects",
-		"workspaceEnv": {
-			"title": "Workspace environment",
-			"description": "Configure workspace environment storage and manage shared secrets.",
-			"backend": "Backend",
-			"backendPending": "Pending review",
-			"backendSource": "Infisical project binding changes are reviewed before being written to one.manifest.toml.",
-			"signInHint": "Sign in to Infisical in Settings to choose a storage project.",
-			"noProjects": "No storage projects available. Create one from Shared credentials."
-		},
-		"tabs": {
-			"environment": "Workspace environment",
-			"secrets": "Infisical secrets"
-		},
-		"navigation": {
-			"settings": "Workspace settings"
 		}
 	},
 	"session": {
@@ -315,22 +256,16 @@
 	},
 	"global": {
 		"title": "Shared credentials",
-		"description": "Manage credentials and variables shared across projects.",
 		"loginRequired": "Sign in to Infisical to manage shared credentials.",
-		"location": "Default storage location",
-		"mismatch": "The saved location belongs to another account or instance. Select a project again.",
-		"locationHint": "Select or create a storage project. Only its location is saved here; credential values stay in Infisical.",
 		"project": "Storage project",
 		"selectProject": "Select a project",
-		"defaultEnv": "Default browsing environment",
-		"selectEnv": "Select an environment",
-		"noProjects": "No credential projects available. Use the default location or create a project.",
-		"saveLocation": "Save location",
-		"browseHint": "Browsing another environment does not change the CLI default.",
 		"environment": "Browsing environment",
 		"parent": "Parent folder",
 		"refresh": "Refresh",
 		"folders": "Folders",
+		"rootFolder": "Root",
+		"expandFolder": "Expand {{name}}",
+		"collapseFolder": "Collapse {{name}}",
 		"addFolder": "New folder",
 		"search": "Search variable names",
 		"add": "Add variable",
@@ -348,15 +283,6 @@
 		"discard": "Discard changes",
 		"deleteHint": "Delete {{key}} from {{project}} / {{environment}} / {{path}}? This takes effect immediately.",
 		"folderName": "Folder name",
-		"defaultLocation": "Use the default location",
-		"defaultLocationHint": "Prepare the storage project and save its location. An existing project with this name will be reused.",
-		"useDefault": "Initialize default location",
-		"saving": "Saving…",
-		"createProject": "New project",
-		"createProjectHint": "Create a credential storage project in the current Infisical organization. It will be selected so you can save it as your default location.",
-		"projectName": "Project name",
-		"createAndSelect": "Create and select",
-		"creatingProject": "Creating…",
 		"copied": "Value copied",
 		"saved": "Variable saved",
 		"folderCreated": "Folder created",
@@ -366,7 +292,9 @@
 		"more": "More actions for {{key}}",
 		"noMatches": "No matching variables",
 		"noMatchesHint": "Try another name or clear the search.",
-		"emptyHint": "Add a variable to share it across your projects."
+		"emptyHint": "Add a variable to share it across your projects.",
+		"preparing": "Preparing shared credentials…",
+		"preparationFailed": "You are signed in, but shared credentials could not be prepared."
 	},
 	"projectCreate": {
 		"title": "New project",
@@ -454,169 +382,21 @@
 	"appMenu": {
 		"label": "One CLI navigation menu"
 	},
-	"templateCatalog": {
-		"title": "Project templates",
-		"description": "Explore the built-in starters and compare their use cases, technology stacks, and included features.",
-		"getStarted": "Start a project from a template",
-		"getStartedHint": "Open a workspace, click New project, then choose a template and enter a project name.",
-		"chooseWorkspace": "Choose a workspace",
-		"filter": "Filter templates by category",
-		"all": "All templates",
-		"search": "Search templates, stacks, or features…",
-		"resultCount": "Showing {{count}} of {{total}} templates",
-		"includes": "Included features",
-		"noResults": "No matching templates",
-		"noResultsHint": "Try another search term or select a different category.",
-		"reset": "Clear filters",
-		"templates": {
-			"nestjs-api": {
-				"description": "Build TypeScript APIs and business backends with a modular NestJS structure.",
-				"stack": "NestJS · TypeScript · Drizzle",
-				"feature1": "JWT authentication and user modules",
-				"feature2": "Drizzle data access and database migrations",
-				"feature3": "Swagger documentation, health checks, and request logging"
-			},
-			"go-api": {
-				"description": "Build Go APIs with separate HTTP, service, and data-access layers.",
-				"stack": "Go · Gin · Gorm · Viper · Zap",
-				"feature1": "JWT authentication and user endpoints",
-				"feature2": "Gorm data access and SQL migrations",
-				"feature3": "OpenAPI documentation, configuration, and logging"
-			},
-			"nextjs-site": {
-				"description": "Next.js + React static export for company, marketing, and content websites",
-				"stack": "Next.js · React · TypeScript · Base UI",
-				"feature1": "Static export with English and Chinese pages",
-				"feature2": "Base UI components, themes, and design tokens",
-				"feature3": "SEO metadata and static hosting"
-			},
-			"fumadocs-docs": {
-				"description": "Next.js + Fumadocs + Base UI with English/Chinese docs and static search",
-				"stack": "Next.js · Fumadocs · Base UI · MDX",
-				"feature1": "Markdown / MDX in English and Chinese",
-				"feature2": "Sidebar, table of contents, and syntax highlighting",
-				"feature3": "Browser-side static search and language switching"
-			},
-			"nextjs-app": {
-				"description": "Build web applications with server rendering, API routes, and search-friendly pages.",
-				"stack": "Next.js · React · TypeScript",
-				"feature1": "App Router pages and route handlers",
-				"feature2": "shadcn/ui (Base UI) components and theme switching",
-				"feature3": "SWR data fetching and Zustand state management"
-			},
-			"react-spa": {
-				"description": "Create interactive dashboards, admin panels, and browser-based business applications.",
-				"stack": "React · Vite · TypeScript",
-				"feature1": "Client-side routing and error boundaries",
-				"feature2": "shadcn/ui (Base UI) components and light / dark themes",
-				"feature3": "SWR data fetching and Zustand state management"
-			},
-			"expo-mobile": {
-				"description": "Build iOS and Android apps with React Native and a shared Expo project.",
-				"stack": "Expo · React Native · StyleSheet",
-				"feature1": "Expo Router navigation and tab pages",
-				"feature2": "SWR, Zustand, and MMKV local storage",
-				"feature3": "Native modules use an Expo development build"
-			},
-			"ts-library": {
-				"description": "Create reusable TypeScript modules and packages for publishing to npm.",
-				"stack": "TypeScript · tsdown",
-				"feature1": "Library builds and type declarations with tsdown",
-				"feature2": "ESM and CommonJS outputs",
-				"feature3": "Linting, formatting, and publishing scripts"
-			},
-			"go-lib": {
-				"description": "Create reusable Go modules with a public package layout for other projects to import.",
-				"stack": "Go · Go modules · go-task",
-				"feature1": "Public API starter in pkg/greeter",
-				"feature2": "Dependency management with Go modules",
-				"feature3": "Build, format, and vet tasks"
-			},
-			"electron-app": {
-				"description": "Create desktop applications with an Electron main process and a React user interface.",
-				"stack": "Electron · React · Vite · Awilix",
-				"feature1": "Top-level apps, services, and packages projects",
-				"feature2": "Typed IPC bridge and Awilix factory functions",
-				"feature3": "Logging, local settings, and updater modules"
-			},
-			"empty-app": {
-				"description": "Create an empty project under apps/ and configure a technology stack later.",
-				"stack": "Choose your own technology stack",
-				"feature1": "Only a .gitkeep file for Git tracking",
-				"feature2": "Registered in the workspace",
-				"feature3": "Configure a development command after adding code"
-			},
-			"empty-service": {
-				"description": "Create an empty project under services/ and configure a technology stack later.",
-				"stack": "Choose your own technology stack",
-				"feature1": "Only a .gitkeep file for Git tracking",
-				"feature2": "Registered in the workspace",
-				"feature3": "Configure a development command after adding code"
-			},
-			"empty-library": {
-				"description": "Create an empty project under packages/ and configure a technology stack later.",
-				"stack": "Choose your own technology stack",
-				"feature1": "Only a .gitkeep file for Git tracking",
-				"feature2": "Registered in the workspace",
-				"feature3": "Configure a development command after adding code"
-			}
-		},
-		"noToolchain": "Not configured"
-	},
-	"services": {
-		"title": "Development service",
-		"description": "Start the project, view its output, and open it for testing.",
-		"start": "Start service",
-		"stop": "Stop",
-		"restart": "Restart",
-		"open": "Open",
-		"console": "Console",
-		"live": "Connected",
-		"reconnecting": "Connecting…",
-		"search": "Search logs",
-		"pause": "Pause scrolling",
-		"follow": "Follow logs",
-		"copy": "Copy",
-		"copied": "Logs copied",
-		"copyFailed": "Could not copy. Select and copy text in the console.",
-		"actionFailed": "Action failed. Try again.",
-		"saveFirst": "Save or discard pending configuration changes before starting or restarting.",
-		"noDev": "No dev task is configured in mise. Define a dev task, or run one init mise after adding a project dev script.",
-		"environmentMismatch": "This service uses {{environment}}. Restart to use the selected {{next}} environment.",
-		"exitCode": "Exit code: {{code}}",
-		"reachable": "Local port is reachable",
-		"unreachable": "Local port is not reachable",
-		"waitingURL": "Waiting for a local URL in the output. Services without a web page can still run.",
-		"urlHint": "Local URLs are detected after startup. You can also set one in Overview.",
-		"waitingLogs": "Preparing the runtime. Waiting for output…",
-		"emptyLogs": "Start a service to see its output here.",
-		"noMatches": "No matching logs.",
-		"consoleHint": "Original child logs; up to 256 KiB is retained. Closing this page keeps services running; closing one serve stops them.",
-		"truncated": "Older logs were removed. Only recent output is shown.",
-		"status": {
-			"preparing": "Preparing",
-			"running": "Running",
-			"stopping": "Stopping",
-			"stopped": "Stopped",
-			"exited": "Exited",
-			"failed": "Failed"
-		}
-	},
 	"binding": {
-		"workspaceTitle": "Bind Infisical",
-		"globalTitle": "Bind shared credentials",
-		"change": "Change binding",
+		"workspaceTitle": "Bind project",
+		"change": "Change project",
 		"unbound": "Infisical is not bound",
 		"workspaceHint": "Create storage for this workspace or select an existing project. Add variables after confirming the binding.",
-		"globalHint": "Create or reuse shared-credentials with default environment dev, or select an existing project.",
 		"method": "Binding method",
 		"automatic": "Create automatically",
 		"existing": "Select an existing project",
+		"unavailable": "The current project is unavailable in this account and organization. Select another project or switch to automatic creation.",
+		"replaceHint": "Confirming will replace the workspace binding. Existing variables stay in the original project and are not copied.",
+		"createdUnsaved": "Project {{name}} ({{id}}) was created, but the binding could not be saved: {{reason}} Retry binding this project to avoid creating another one.",
 		"current": "Current binding: {{name}}",
 		"target": "Target project: {{name}}",
 		"defaultEnvironment": "Default environment: dev",
 		"workspaceStorage": "Binding metadata is saved to one.manifest.toml. Variable values are stored in Infisical.",
-		"globalStorage": "Binding metadata is saved in local configuration. Credential values are stored in Infisical.",
 		"organizationRequired": "Select an organization and sign in again",
 		"devRequired": "Workspace projects must include a dev environment.",
 		"noProjects": "No projects are available. Switch to automatic creation.",
@@ -625,7 +405,6 @@
 		"success": "Bound to project {{name}}",
 		"binding": "Binding…",
 		"bindExisting": "Bind existing project",
-		"createAndBind": "Create and bind",
-		"prepareAndBind": "Create or reuse and bind"
+		"createAndBind": "Create and bind"
 	}
 }

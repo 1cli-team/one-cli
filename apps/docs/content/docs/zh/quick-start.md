@@ -43,13 +43,13 @@ one build -p web
 
 `one run` 列出当前工作区任务。`one dev` 和 `one build` 分别是 `one run dev` 和 `one run build` 的简写。
 
-想在浏览器里管理项目和开发服务，可以运行：
+想在浏览器里管理项目和环境变量，可以运行：
 
 ```bash
 one serve
 ```
 
-Dashboard 支持添加项目、管理变量、启动开发服务与查看控制台。
+Dashboard 支持添加项目、管理环境变量与共享凭据。
 
 ## 下一步
 

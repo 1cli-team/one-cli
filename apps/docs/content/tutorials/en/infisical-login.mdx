@@ -16,7 +16,7 @@ One keeps one active Infisical account. Complete login in the browser; the sessi
 
 ## Global variables
 
-Run `one env bind --global` to create or reuse `shared-credentials` with environment `dev`. Existing bindings are preserved, and no project ID is required. You can also explicitly select another existing project:
+Successful login automatically creates or reuses accessible `shared-credentials` in the current organization, initially with environment `dev`. An old account binding is updated silently; original remote credentials are retained. Preparation failure does not undo login: retry in the Dashboard or run `one env bind --global`. Bindings are stored per instance, account and organization; logout cancels preparation and clears displayed values. `--project-id` remains an advanced compatibility option, and subsequent login or Dashboard startup reapplies automatic binding:
 
 ```bash
 one env bind --global
@@ -37,7 +37,7 @@ Run `one serve`. Settings manages browser login, pending callbacks, cancellation
 
 ## Security boundaries
 
-One's own messages and structured results omit injected values. Child logs pass through unchanged, with no secret scanning or replacement; values printed by a child can appear in the terminal, Dashboard, and log files. Injection does not isolate an Agent running as the same OS user. Limit Infisical and cloud permissions, folders, environments, and credential lifetime to the task. External tools such as Docker may persist credentials themselves.
+One's own messages and structured results omit injected values. Child logs pass through unchanged, with no secret scanning or replacement; values printed by a child can appear in the terminal and log files. Injection does not isolate an Agent running as the same OS user. Limit Infisical and cloud permissions, folders, environments, and credential lifetime to the task. External tools such as Docker may persist credentials themselves.
 
 ## Preferences and workspace tools
 

@@ -21,11 +21,11 @@ import (
 	"net/http"
 	"strings"
 
+	authentication "github.com/torchstellar-team/one-cli/packages/cli/internal/application/authentication"
 	manifestapp "github.com/torchstellar-team/one-cli/packages/cli/internal/application/manifest"
 	workspaceapp "github.com/torchstellar-team/one-cli/packages/cli/internal/application/workspace"
 	catalog "github.com/torchstellar-team/one-cli/packages/cli/internal/core/backend"
 	creationmodule "github.com/torchstellar-team/one-cli/packages/cli/internal/modules/creation"
-	"github.com/torchstellar-team/one-cli/packages/cli/internal/modules/devservice"
 	environmentmodule "github.com/torchstellar-team/one-cli/packages/cli/internal/modules/environment"
 	cliErrors "github.com/torchstellar-team/one-cli/packages/cli/internal/platform/errors"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/i18n"
@@ -36,10 +36,11 @@ import (
 // MuxOpts is the static configuration for one running server. Tests
 // construct it directly; production goes through Run.
 type MuxOpts struct {
-	ServiceManager *devservice.Manager
-	UIDisabled     bool
-	ExpectedHosts  map[string]struct{}
-	SelfOrigin     string
+	Lifecycle         context.Context
+	SharedCredentials *authentication.SharedCredentialsService
+	UIDisabled        bool
+	ExpectedHosts     map[string]struct{}
+	SelfOrigin        string
 	// WorkspaceRoot is the absolute path to the workspace `one serve` was
 	// launched in, or "" when launched outside a workspace. Handlers read
 	// it through opts capture; we don't auto-detect per request because
@@ -60,25 +61,26 @@ type MuxOpts struct {
 	// filled from Catalog for compatibility with direct BuildMux tests.
 	WorkspaceService *workspaceapp.Service
 	// RegistryService owns the persisted machine-local Workspace index. It is
-	// optional so older embedders and focused tests keep working; when absent,
+	// optional for compatibility with older embedders; when absent,
 	// GET /workspaces returns an empty compatibility response and scoped routes
 	// fail closed instead of accepting a client-supplied filesystem path.
 	RegistryService *workspaceapp.RegistryService
 }
 
 // BuildMux returns the http.Handler that serves /api/* (always) plus the
-// SPA fallback (when UIDisabled is false). Exposed as a test seam so
-// httptest can construct it without binding a port.
+// SPA fallback (when UIDisabled is false), without binding a port.
 func BuildMux(opts MuxOpts) http.Handler {
+	if opts.Lifecycle == nil {
+		opts.Lifecycle = context.Background()
+	}
+	if opts.SharedCredentials == nil {
+		opts.SharedCredentials = authentication.NewSharedCredentialsService()
+	}
 	if opts.Catalog == nil {
 		opts.Catalog = catalog.Builtin()
 	}
 	if opts.WorkspaceService == nil {
-		service, err := workspaceapp.NewService(opts.Catalog)
-		if err != nil {
-			panic(err)
-		}
-		opts.WorkspaceService = service
+		opts.WorkspaceService = workspaceapp.NewService()
 	}
 	if opts.ManifestService == nil {
 		service, err := manifestapp.NewService(opts.Catalog)
@@ -110,15 +112,14 @@ func BuildMux(opts MuxOpts) http.Handler {
 	}
 	api := http.NewServeMux()
 	api.HandleFunc("GET /project-templates", handleProjectTemplates())
-	registerSessionRoutes(api)
-	registerGlobalRoutes(api)
+	registerSessionRoutes(api, opts)
+	registerGlobalRoutes(api, opts)
 	registerCatalogRoutes(api, opts)
 	registerPreferencesRoutes(api, opts)
 	registerWorkspaceRoutes(api, opts)
 	registerWorkspaceMutateRoutes(api, opts)
 	registerSecretRoutes(api, opts)
 	registerWorkspacesRoutes(api, opts)
-	registerServiceRoutes(api, opts)
 
 	root := http.NewServeMux()
 	root.Handle("/api/", http.StripPrefix("/api", api))

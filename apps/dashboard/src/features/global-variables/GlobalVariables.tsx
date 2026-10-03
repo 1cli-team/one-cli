@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import useSWR from "swr";
+import useSWR, { useSWRConfig } from "swr";
 import { Link } from "react-router-dom";
 import {
 	ArrowUp,
@@ -16,7 +16,6 @@ import {
 	Plus,
 	RefreshCw,
 	SearchX,
-	Settings2,
 	ShieldCheck,
 	Trash2,
 } from "lucide-react";
@@ -24,18 +23,19 @@ import {
 	createGlobalFolder,
 	deleteGlobalSecret,
 	getGlobalListing,
-	getLocation,
 	getProject,
 	getSession,
 	globalQuery,
-	locationKey,
+	globalListingKey,
 	message,
+	remoteProjectsKey,
 	readGlobalSecret,
 	saveGlobalSecret,
 	sessionKey,
 	type GlobalLocation,
 } from "@/api/session";
-import { InfisicalBindingDialog } from "@/features/infisical-binding/InfisicalBindingDialog";
+import { FolderTree } from "./FolderTree";
+import { SharedCredentialsNotice } from "@/features/infisical-session/SharedCredentialsNotice";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
@@ -44,7 +44,6 @@ import { Field, FieldLabel } from "@/components/ui/field";
 import { IconButton } from "@/components/ui/icon-button";
 import {
 	ErrorNotice,
-	PageHeader,
 	SearchInput,
 	SectionHeading,
 	StatePanel,
@@ -96,56 +95,39 @@ import { useToast } from "@/hooks/useToast";
 export function GlobalVariables() {
 	const { t } = useTranslation();
 	const session = useSWR(sessionKey, getSession, { refreshInterval: 2000 });
-	const location = useSWR(locationKey, getLocation);
-	const [configure, setConfigure] = useState(false);
-	const current = location.data?.location;
-	const signedIn = session.data?.session.loggedIn;
-	const mismatched =
+	const account = session.data?.session;
+	const preparation = session.data?.sharedCredentials;
+	const current = preparation?.status === "ready" ? preparation.location : undefined;
+	const usable =
 		current &&
-		signedIn &&
-		(current.userId !== session.data?.session.userId ||
-			current.siteUrl !== session.data?.session.siteUrl ||
-			(session.data?.session.organizationId &&
-				current.organizationId !== session.data?.session.organizationId));
+		account?.loggedIn &&
+		current.userId === account.userId &&
+		current.siteUrl === account.siteUrl &&
+		current.organizationId === account.organizationId;
 	return (
-		<div className="mx-auto w-full max-w-6xl space-y-6">
-			<PageHeader
-				title={t("global.title")}
-				description={t("global.description")}
-				actions={
-					signedIn && current ? (
-						<Button variant="outline" onClick={() => setConfigure(true)}>
-							<Settings2 />
-							{t("binding.change")}
-						</Button>
-					) : undefined
-				}
-			/>
-			{session.error || location.error ? (
+		<div className="mx-auto flex h-full min-h-0 w-full max-w-6xl flex-col gap-4">
+			{session.error ? (
 				<ErrorNotice
 					action={
-						<Button
-							variant="outline"
-							size="sm"
-							onClick={() => {
-								void session.mutate();
-								void location.mutate();
-							}}
-						>
+						<Button variant="outline" size="sm" onClick={() => void session.mutate()}>
 							<RefreshCw />
 							{t("secrets.retry")}
 						</Button>
 					}
 				>
-					{message(session.error || location.error)}
+					{message(session.error)}
 				</ErrorNotice>
-			) : session.isLoading || location.isLoading ? (
-				<div role="status" aria-label={t("session.loading")} className="space-y-4">
-					<Skeleton className="h-24" />
-					<Skeleton className="h-64" />
+			) : session.isLoading ? (
+				<div
+					role="status"
+					aria-label={t("session.loading")}
+					className="flex min-h-0 flex-1 flex-col gap-4"
+				>
+					<Skeleton className="h-20" />
+					<Skeleton className="min-h-0 flex-1" />
 				</div>
-			) : !signedIn ? (
-				<Card>
+			) : !account?.loggedIn ? (
+				<Card className="min-h-0 flex-1">
 					<StatePanel
 						icon={LockKeyhole}
 						title={t("session.signedOut")}
@@ -156,33 +138,30 @@ export function GlobalVariables() {
 						</Button>
 					</StatePanel>
 				</Card>
+			) : usable ? (
+				<VariableBrowser
+					key={JSON.stringify([
+						account.siteUrl,
+						account.userId,
+						account.organizationId,
+						account.expiresAt,
+						current.projectId,
+					])}
+					location={current}
+				/>
 			) : (
-				<>
-					{mismatched && <ErrorNotice>{t("global.mismatch")}</ErrorNotice>}
-					{!current || mismatched ? (
-						<Card>
-							<StatePanel
-								icon={KeyRound}
-								title={t("binding.unbound")}
-								description={t("binding.globalHint")}
-							>
-								<Button onClick={() => setConfigure(true)}>{t("binding.globalTitle")}</Button>
-							</StatePanel>
-						</Card>
-					) : (
-						<VariableBrowser
-							key={`${session.data?.session.userId}:${current.siteUrl}:${current.projectId}`}
-							location={current}
-						/>
-					)}
-					<InfisicalBindingDialog
-						key={`${session.data?.session.siteUrl}:${session.data?.session.userId}:${session.data?.session.organizationId}`}
-						open={configure}
-						onOpenChange={setConfigure}
-						scope="global"
-						initial={current ?? undefined}
+				<Card className="min-h-0 flex-1 p-4">
+					<SharedCredentialsNotice
+						key={JSON.stringify([
+							account.siteUrl,
+							account.userId,
+							account.organizationId,
+							account.expiresAt,
+						])}
+						state={preparation}
+						account={account}
 					/>
-				</>
+				</Card>
 			)}
 		</div>
 	);
@@ -191,17 +170,16 @@ export function GlobalVariables() {
 function VariableBrowser({ location }: { location: GlobalLocation }) {
 	const { t } = useTranslation();
 	const toast = useToast();
+	const { mutate } = useSWRConfig();
 	const [environment, setEnvironment] = useState(location.defaultEnvironment);
 	const [path, setPath] = useState("/");
 	const [search, setSearch] = useState("");
-	const detail = useSWR(`/infisical/projects/${location.projectId}`, () =>
-		getProject(location.projectId),
+	const detail = useSWR(
+		remoteProjectsKey({ loggedIn: true, expired: false, ...location }, location.projectId),
+		() => getProject(location.projectId),
 	);
 	const query = globalQuery(environment, path);
-	const listing = useSWR(
-		`/global-env/secrets:${location.userId}:${location.siteUrl}:${location.projectId}${query}`,
-		() => getGlobalListing(query),
-	);
+	const listing = useSWR(globalListingKey(location, query), () => getGlobalListing(query));
 	const [revealed, setRevealed] = useState<Record<string, string>>({});
 	const epoch = useRef(0);
 	const pending = useRef(false);
@@ -260,7 +238,7 @@ function VariableBrowser({ location }: { location: GlobalLocation }) {
 			if (copy) {
 				await navigator.clipboard.writeText(value);
 				toast.success(t("global.copied"));
-			} else setRevealed((v) => ({ ...v, [key]: value }));
+			} else setRevealed((v) => ({ ...v, [`${query}:${key}`]: value }));
 		});
 	}
 	function openEditor(key = "", existing = false) {
@@ -286,12 +264,11 @@ function VariableBrowser({ location }: { location: GlobalLocation }) {
 	const unavailable = busy || editing || listing.isLoading || Boolean(listing.error);
 	return (
 		<>
-			<Card className="gap-0 overflow-hidden">
-				<div className="border-b border-border p-5">
+			<Card className="min-h-0 flex-1 gap-0 overflow-hidden">
+				<div className="shrink-0 border-b border-border p-4">
 					<SectionHeading
 						icon={ShieldCheck}
 						title={location.projectName}
-						description={t("global.browseHint")}
 						actions={
 							<div className="flex items-center gap-2">
 								<Select
@@ -314,7 +291,13 @@ function VariableBrowser({ location }: { location: GlobalLocation }) {
 									label={t("global.refresh")}
 									disabled={busy || listing.isValidating || editing}
 									onClick={() => {
-										void listing.mutate();
+										void mutate(
+											(key) =>
+												typeof key === "string" &&
+												key.startsWith(
+													`${globalListingKey(location, "")}?${new URLSearchParams({ env: environment })}&`,
+												),
+										);
 										void detail.mutate();
 									}}
 								>
@@ -329,12 +312,12 @@ function VariableBrowser({ location }: { location: GlobalLocation }) {
 						<ErrorNotice>{error || message(listing.error || detail.error)}</ErrorNotice>
 					</div>
 				) : null}
-				<div className="grid ud-md:grid-cols-[180px_minmax(0,1fr)]">
+				<div className="grid min-h-0 flex-1 grid-rows-[minmax(100px,180px)_minmax(0,1fr)] ud-sm:grid-cols-[200px_minmax(0,1fr)] ud-sm:grid-rows-[minmax(0,1fr)] ud-md:grid-cols-[220px_minmax(0,1fr)]">
 					<nav
 						aria-label={t("global.folders")}
-						className="border-b border-border bg-muted/25 p-3 ud-md:border-r ud-md:border-b-0"
+						className="flex min-h-0 min-w-0 flex-col border-b border-border bg-muted/25 p-2 ud-sm:border-r ud-sm:border-b-0"
 					>
-						<div className="mb-3 flex items-center justify-between gap-2 px-1">
+						<div className="mb-1 flex shrink-0 items-center justify-between gap-2 px-1">
 							<h3 className="text-xs font-medium text-muted-foreground">{t("global.folders")}</h3>
 							<IconButton
 								label={t("global.addFolder")}
@@ -347,26 +330,19 @@ function VariableBrowser({ location }: { location: GlobalLocation }) {
 								<FolderPlus />
 							</IconButton>
 						</div>
-						<div className="flex flex-wrap gap-1 ud-md:flex-col">
-							{listing.data?.folders.map((f) => (
-								<Button
-									key={f}
-									variant="ghost"
-									className="justify-start"
-									disabled={editing || busy}
-									onClick={() => setPath(f)}
-								>
-									<Folder />
-									<span className="truncate">{f.split("/").pop()}</span>
-								</Button>
-							))}
-							{listing.data && !listing.data.folders.length && (
-								<p className="px-1 text-xs text-muted-foreground">{t("global.noFolders")}</p>
-							)}
+						<div className="min-h-0 flex-1 overflow-auto">
+							<FolderTree
+								key={environment}
+								location={location}
+								environment={environment}
+								selectedPath={path}
+								onSelect={setPath}
+								disabled={editing || busy}
+							/>
 						</div>
 					</nav>
-					<div className="min-w-0">
-						<div className="flex flex-wrap items-center gap-2 border-b border-border px-4 py-3">
+					<div className="flex min-h-0 min-w-0 flex-col overflow-hidden">
+						<div className="flex shrink-0 flex-wrap items-center gap-2 border-b border-border px-4 py-2">
 							<IconButton
 								label={t("global.parent")}
 								disabled={path === "/" || editing || busy}
@@ -382,7 +358,7 @@ function VariableBrowser({ location }: { location: GlobalLocation }) {
 								</Badge>
 							)}
 						</div>
-						<div className="flex flex-wrap gap-3 p-4">
+						<div className="flex shrink-0 flex-wrap gap-3 p-3">
 							<div className="min-w-40 flex-1">
 								<SearchInput
 									aria-label={t("global.search")}
@@ -396,120 +372,124 @@ function VariableBrowser({ location }: { location: GlobalLocation }) {
 								{t("global.add")}
 							</Button>
 						</div>
-						{listing.isLoading ? (
-							<div role="status" aria-label={t("session.loading")} className="space-y-3 p-4">
-								<Skeleton className="h-10" />
-								<Skeleton className="h-10" />
-								<Skeleton className="h-10" />
-							</div>
-						) : listing.data && variables.length > 0 ? (
-							<Table>
-								<TableHeader>
-									<TableRow>
-										<TableHead>{t("global.key")}</TableHead>
-										<TableHead>{t("global.value")}</TableHead>
-										<TableHead className="w-28 text-right">{t("global.actions")}</TableHead>
-									</TableRow>
-								</TableHeader>
-								<TableBody>
-									{variables.map((v) => (
-										<TableRow key={v.key}>
-											<TableCell className="max-w-64">
-												<code className="break-all font-medium">{v.key}</code>
-												{v.description && (
-													<p className="mt-1 whitespace-pre-wrap text-xs text-muted-foreground">
-														{v.description}
-													</p>
-												)}
-											</TableCell>
-											<TableCell className="max-w-64 break-all font-mono text-xs">
-												{revealed[v.key] ?? "••••••••"}
-											</TableCell>
-											<TableCell>
-												<div className="flex justify-end gap-1">
-													<IconButton
-														label={t(
-															revealed[v.key] !== undefined ? "global.hide" : "global.reveal",
-														)}
-														disabled={busy}
-														onClick={() =>
-															revealed[v.key] !== undefined
-																? setRevealed((r) => {
-																		const next = { ...r };
-																		delete next[v.key];
-																		return next;
-																	})
-																: void read(v.key, false)
-														}
-													>
-														{revealed[v.key] !== undefined ? <EyeOff /> : <Eye />}
-													</IconButton>
-													<IconButton
-														label={t("global.copy")}
-														disabled={busy}
-														onClick={() => void read(v.key, true)}
-													>
-														<Copy />
-													</IconButton>
-													<DropdownMenu>
-														<DropdownMenuTrigger asChild>
-															<Button
-																variant="ghost"
-																size="icon"
-																aria-label={t("global.more", { key: v.key })}
-																onPointerDown={(event) => {
-																	actionTrigger.current = event.currentTarget;
-																}}
-																onFocus={(event) => {
-																	actionTrigger.current = event.currentTarget;
-																}}
-																disabled={busy}
-															>
-																<MoreHorizontal />
-															</Button>
-														</DropdownMenuTrigger>
-														<DropdownMenuContent align="end">
-															<DropdownMenuItem onSelect={() => openEditor(v.key, true)}>
-																<Pencil />
-																{t("global.edit")}
-															</DropdownMenuItem>
-															<DropdownMenuSeparator />
-															<DropdownMenuItem
-																variant="destructive"
-																onSelect={() => {
-																	setError("");
-																	setDeleting(v.key);
-																}}
-															>
-																<Trash2 />
-																{t("global.delete")}
-															</DropdownMenuItem>
-														</DropdownMenuContent>
-													</DropdownMenu>
-												</div>
-											</TableCell>
+						<div className="min-h-0 flex-1 overflow-auto">
+							{listing.isLoading ? (
+								<div role="status" aria-label={t("session.loading")} className="space-y-3 p-4">
+									<Skeleton className="h-10" />
+									<Skeleton className="h-10" />
+									<Skeleton className="h-10" />
+								</div>
+							) : listing.data && variables.length > 0 ? (
+								<Table>
+									<TableHeader>
+										<TableRow>
+											<TableHead>{t("global.key")}</TableHead>
+											<TableHead>{t("global.value")}</TableHead>
+											<TableHead className="w-28 text-right">{t("global.actions")}</TableHead>
 										</TableRow>
-									))}
-								</TableBody>
-							</Table>
-						) : listing.data && !listing.error ? (
-							<StatePanel
-								icon={search.trim() ? SearchX : KeyRound}
-								title={t(search.trim() ? "global.noMatches" : "global.empty")}
-								description={t(search.trim() ? "global.noMatchesHint" : "global.emptyHint")}
-							>
-								{search.trim() ? (
-									<Button variant="outline" onClick={() => setSearch("")}>
-										{t("workspaces.home.clearSearch")}
-									</Button>
-								) : (
-									<Button variant="outline" onClick={() => openEditor()} disabled={unavailable}>
-										<Plus />
-										{t("global.add")}
-									</Button>
-								)}
-							</StatePanel>
-						) : null}
+									</TableHeader>
+									<TableBody>
+										{variables.map((v) => (
+											<TableRow key={v.key}>
+												<TableCell className="max-w-64">
+													<code className="break-all font-medium">{v.key}</code>
+													{v.description && (
+														<p className="mt-1 whitespace-pre-wrap text-xs text-muted-foreground">
+															{v.description}
+														</p>
+													)}
+												</TableCell>
+												<TableCell className="max-w-64 break-all font-mono text-xs">
+													{revealed[`${query}:${v.key}`] ?? "••••••••"}
+												</TableCell>
+												<TableCell>
+													<div className="flex justify-end gap-1">
+														<IconButton
+															label={t(
+																revealed[`${query}:${v.key}`] !== undefined
+																	? "global.hide"
+																	: "global.reveal",
+															)}
+															disabled={busy}
+															onClick={() =>
+																revealed[`${query}:${v.key}`] !== undefined
+																	? setRevealed((r) => {
+																			const next = { ...r };
+																			delete next[`${query}:${v.key}`];
+																			return next;
+																		})
+																	: void read(v.key, false)
+															}
+														>
+															{revealed[`${query}:${v.key}`] !== undefined ? <EyeOff /> : <Eye />}
+														</IconButton>
+														<IconButton
+															label={t("global.copy")}
+															disabled={busy}
+															onClick={() => void read(v.key, true)}
+														>
+															<Copy />
+														</IconButton>
+														<DropdownMenu>
+															<DropdownMenuTrigger asChild>
+																<Button
+																	variant="ghost"
+																	size="icon"
+																	aria-label={t("global.more", { key: v.key })}
+																	onPointerDown={(event) => {
+																		actionTrigger.current = event.currentTarget;
+																	}}
+																	onFocus={(event) => {
+																		actionTrigger.current = event.currentTarget;
+																	}}
+																	disabled={busy}
+																>
+																	<MoreHorizontal />
+																</Button>
+															</DropdownMenuTrigger>
+															<DropdownMenuContent align="end">
+																<DropdownMenuItem onSelect={() => openEditor(v.key, true)}>
+																	<Pencil />
+																	{t("global.edit")}
+																</DropdownMenuItem>
+																<DropdownMenuSeparator />
+																<DropdownMenuItem
+																	variant="destructive"
+																	onSelect={() => {
+																		setError("");
+																		setDeleting(v.key);
+																	}}
+																>
+																	<Trash2 />
+																	{t("global.delete")}
+																</DropdownMenuItem>
+															</DropdownMenuContent>
+														</DropdownMenu>
+													</div>
+												</TableCell>
+											</TableRow>
+										))}
+									</TableBody>
+								</Table>
+							) : listing.data && !listing.error ? (
+								<StatePanel
+									icon={search.trim() ? SearchX : KeyRound}
+									title={t(search.trim() ? "global.noMatches" : "global.empty")}
+									description={t(search.trim() ? "global.noMatchesHint" : "global.emptyHint")}
+								>
+									{search.trim() ? (
+										<Button variant="outline" onClick={() => setSearch("")}>
+											{t("workspaces.home.clearSearch")}
+										</Button>
+									) : (
+										<Button variant="outline" onClick={() => openEditor()} disabled={unavailable}>
+											<Plus />
+											{t("global.add")}
+										</Button>
+									)}
+								</StatePanel>
+							) : null}
+						</div>
 					</div>
 				</div>
 			</Card>

@@ -16,7 +16,7 @@ one env bind --create
 one env bind --project-id PROJECT_ID
 ```
 
-`set`, `list`, reads, and `unset` all require a binding. An unbound workspace returns `INFISICAL_NOT_CONFIGURED` with guidance to run `one env bind`, without creating a project. In Dashboard, use **Bind Infisical** in workspace settings or the variables panel to create workspace storage or select an existing project. Review the target and confirm the binding before adding variables. Saving variables never initializes storage.
+`set`, `list`, reads, and `unset` all require a binding. An unbound workspace returns `INFISICAL_NOT_CONFIGURED` with guidance to run `one env bind`, without creating a project. In Dashboard, click **Bind Infisical** at the top right of project management or in the variables panel to open the binding flow directly, then create workspace storage or select an existing project. Review the target and confirm the binding before adding variables. Saving variables never initializes storage.
 
 The binding lives in the `[env.infisical]` table of `one.manifest.toml`:
 
@@ -64,7 +64,7 @@ With an `[env.infisical]` binding, `one run` and `one exec` fetch variables for 
 
 ## Shared credentials
 
-Shared credentials are independent of workspaces. Run `one env bind --global` to create or reuse the default storage project while preserving any saved binding. `--create` is only available for workspace binding and cannot be combined with `--global`. Use `--project-id` to bind another existing project. Browse names with `one env list --global --env dev --path /`, and inject an explicit scope with `one exec --global --env dev --path /folder -- command`. See [login and shared credentials](/en/docs/login/).
+Shared credentials are independent of workspaces. Login automatically creates or reuses accessible `shared-credentials` in the current organization and silently restores an old account binding. Use `one env bind --global` to retry preparation and `--env` to change the default environment; `--create` is only for workspace binding. `--project-id` remains an advanced compatibility option, and subsequent login or Dashboard startup reapplies automatic binding. Browse names with `one env list --global --env dev --path /`, and inject an explicit scope with `one exec --global --env dev --path /folder -- command`. See [login and shared credentials](/en/docs/login/).
 
 ## Common errors
 

@@ -23,6 +23,7 @@ const buttonVariants = cva(
 			},
 			size: {
 				navigation: "h-auto min-h-14 w-full gap-3 px-3 py-2",
+				"navigation-compact": "h-8 w-full min-w-0 max-w-full gap-2 px-2 py-1",
 				default: "h-8 px-3 py-1 has-[>svg]:px-3",
 				xs: "h-6 gap-1 px-2 text-xs has-[>svg]:px-1.5 [&_svg:not([class*='size-'])]:size-3",
 				sm: "h-7 gap-1.5 px-3 text-xs has-[>svg]:px-2.5",

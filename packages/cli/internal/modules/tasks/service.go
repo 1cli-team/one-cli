@@ -23,11 +23,9 @@ import (
 )
 
 type Service struct {
-	// OnStarted runs after the scheduler starts, before waiting for its exit.
-	OnStarted func()
-	Provider  runtimeport.Provider
-	Loaders   *secrets.Registry
-	Prepare   func(context.Context, dependencies.Input) error
+	Provider runtimeport.Provider
+	Loaders  *secrets.Registry
+	Prepare  func(context.Context, dependencies.Input) error
 	// WorkerCommand substitutes the private leaf transport in process integration tests.
 	WorkerCommand func(string) []string
 }
@@ -182,13 +180,10 @@ func (s Service) Execute(ctx context.Context, w execution.Workspace, p *Plan, op
 	}
 	child.WaitDelay = 8 * time.Second
 	if opts.UI == "tui" {
-		err = taskui.Run(ctx, func() { cancel(&process.ExitStatus{Code: 130}) }, child, taskGraph(p), in, errOut, s.OnStarted, broker.snapshot)
+		err = taskui.Run(ctx, func() { cancel(&process.ExitStatus{Code: 130}) }, child, taskGraph(p), in, errOut, broker.snapshot)
 	} else {
 		err = child.Start()
 		if err == nil {
-			if s.OnStarted != nil {
-				s.OnStarted()
-			}
 			err = child.Wait()
 		}
 	}

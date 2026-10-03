@@ -32,7 +32,6 @@ export const TopBar: React.FC<TopBarProps> = () => {
 	const profileMatch = useMatch("/profile");
 	const settingsSectionMatch = useMatch("/settings/:domain/:backend");
 	const settingsMatch = useMatch("/settings");
-	const templatesMatch = useMatch("/templates");
 	const globalMatch = useMatch("/global");
 	const workspaceMatch = useMatch("/workspace/:entryId");
 
@@ -52,10 +51,6 @@ export const TopBar: React.FC<TopBarProps> = () => {
 									match={detailMatch.params}
 									settingsRoute={Boolean(settingsSectionMatch)}
 								/>
-							) : templatesMatch ? (
-								<BreadcrumbItem>
-									<BreadcrumbPage>{t("templateCatalog.title")}</BreadcrumbPage>
-								</BreadcrumbItem>
 							) : globalMatch ? (
 								<BreadcrumbItem>
 									<BreadcrumbPage>{t("global.title")}</BreadcrumbPage>

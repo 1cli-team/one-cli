@@ -1,4 +1,4 @@
-import { Boxes, ChevronDown, House, KeyRound, Settings2 } from "lucide-react";
+import { ChevronDown, House, KeyRound, Settings2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import {
@@ -64,15 +64,6 @@ export function AppMenu() {
 						>
 							<KeyRound aria-hidden="true" />
 							<span>{t("global.title")}</span>
-						</EnvironmentNavLink>
-					</DropdownMenuItem>
-					<DropdownMenuItem asChild>
-						<EnvironmentNavLink
-							to="/templates"
-							className="min-h-9 aria-[current=page]:bg-accent aria-[current=page]:text-primary-text"
-						>
-							<Boxes aria-hidden="true" />
-							<span>{t("templateCatalog.title")}</span>
 						</EnvironmentNavLink>
 					</DropdownMenuItem>
 				</DropdownMenuGroup>

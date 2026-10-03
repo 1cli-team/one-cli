@@ -13,6 +13,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/gofrs/flock"
@@ -45,12 +46,31 @@ type Session struct {
 var getSecret = keyring.Get
 var setSecret = keyring.Set
 var deleteSecret = keyring.Delete
+var keyringMu sync.Mutex
+
+func readSessionSecret() (string, error) {
+	keyringMu.Lock()
+	defer keyringMu.Unlock()
+	return getSecret(service, account)
+}
+
+func writeSessionSecret(raw string) error {
+	keyringMu.Lock()
+	defer keyringMu.Unlock()
+	return setSecret(service, account, raw)
+}
+
+func removeSessionSecret() error {
+	keyringMu.Lock()
+	defer keyringMu.Unlock()
+	return deleteSecret(service, account)
+}
 
 func Missing() error {
 	return cliErrors.New(cliErrors.INFISICAL_AUTH_MISSING, i18n.T("auth.login_required"))
 }
 func Load() (*Session, error) {
-	raw, err := getSecret(service, account)
+	raw, err := readSessionSecret()
 	if errors.Is(err, keyring.ErrNotFound) {
 		return nil, Missing()
 	}
@@ -91,7 +111,7 @@ func save(s *Session) error {
 	if err != nil {
 		return err
 	}
-	if err = setSecret(service, account, string(raw)); err != nil {
+	if err = writeSessionSecret(string(raw)); err != nil {
 		return i18n.Errorf("auth.store_write_failed", err)
 	}
 	return nil
@@ -137,7 +157,7 @@ func Logout() error {
 		if e = os.WriteFile(path, []byte(time.Now().UTC().Format(time.RFC3339Nano)), 0600); e != nil {
 			return e
 		}
-		e = deleteSecret(service, account)
+		e = removeSessionSecret()
 		if errors.Is(e, keyring.ErrNotFound) {
 			return nil
 		}
@@ -166,6 +186,15 @@ func NormalizeSite(raw string) (string, error) {
 	return u.String(), nil
 }
 
+type requestFailure struct {
+	cause error
+	key   string
+	args  []any
+}
+
+func (e *requestFailure) Error() string { return i18n.Tf(e.key, e.args...) }
+func (e *requestFailure) Unwrap() error { return e.cause }
+
 // Request never follows redirects with bearer credentials, and never exposes
 // upstream response bodies in errors: those can contain secret values.
 func Request(ctx context.Context, s *Session, method, path string, body io.Reader, out any) error {
@@ -181,20 +210,23 @@ func Request(ctx context.Context, s *Session, method, path string, body io.Reade
 	client := &http.Client{Timeout: 30 * time.Second, CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}
 	resp, e := client.Do(req)
 	if e != nil {
-		return cliErrors.New(cliErrors.INFISICAL_NETWORK_ERROR, i18n.T("auth.network_failed"))
+		if ctx.Err() != nil {
+			return ctx.Err()
+		}
+		return &requestFailure{cause: cliErrors.New(cliErrors.INFISICAL_NETWORK_ERROR, i18n.T("auth.network_failed")), key: "auth.network_failed"}
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode == 401 {
-		return cliErrors.New(cliErrors.INFISICAL_AUTH_FAILED, i18n.T("infisical.relogin"))
+		return &requestFailure{cause: cliErrors.New(cliErrors.INFISICAL_AUTH_FAILED, i18n.T("infisical.relogin")), key: "infisical.relogin"}
 	}
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return cliErrors.New(cliErrors.INFISICAL_API_ERROR, i18n.Tf("auth.api_failed", resp.StatusCode))
+		return &requestFailure{cause: cliErrors.New(cliErrors.INFISICAL_API_ERROR, i18n.Tf("auth.api_failed", resp.StatusCode)), key: "auth.api_failed", args: []any{resp.StatusCode}}
 	}
 	if out == nil {
 		return nil
 	}
 	if json.NewDecoder(io.LimitReader(resp.Body, 8<<20)).Decode(out) != nil {
-		return cliErrors.New(cliErrors.INFISICAL_API_ERROR, i18n.T("auth.response_invalid"))
+		return &requestFailure{cause: cliErrors.New(cliErrors.INFISICAL_API_ERROR, i18n.T("auth.response_invalid")), key: "auth.response_invalid"}
 	}
 	return nil
 }

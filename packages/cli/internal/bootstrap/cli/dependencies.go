@@ -13,7 +13,6 @@ import (
 	creationmodule "github.com/torchstellar-team/one-cli/packages/cli/internal/modules/creation"
 	environmentmodule "github.com/torchstellar-team/one-cli/packages/cli/internal/modules/environment"
 	skillsmodule "github.com/torchstellar-team/one-cli/packages/cli/internal/modules/skills"
-	tasksmodule "github.com/torchstellar-team/one-cli/packages/cli/internal/modules/tasks"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/prompt"
 	runtimeport "github.com/torchstellar-team/one-cli/packages/cli/internal/ports/runtime"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/ports/secrets"
@@ -51,7 +50,7 @@ func composeDependencies() dependencies {
 		environments: environments,
 		manifest:     manifest,
 		loaders:      secrets.MustRegistry(infisical.Loader()),
-		workspaces:   mustWorkspaceService(backendCatalog),
+		workspaces:   workspaceapp.NewService(),
 		registry:     registry,
 	}
 }
@@ -70,16 +69,6 @@ func mustWorkspaceRegistryService() *workspaceapp.RegistryService {
 		panic(err)
 	}
 	service, err := workspaceapp.NewRegistryService(repository)
-	if err != nil {
-		panic(err)
-	}
-	return service
-}
-
-func mustWorkspaceService(
-	backendCatalog *catalog.Catalog,
-) *workspaceapp.Service {
-	service, err := workspaceapp.NewService(backendCatalog, (tasksmodule.Service{Provider: miseruntime.Provider{}}).ProjectSettings)
 	if err != nil {
 		panic(err)
 	}

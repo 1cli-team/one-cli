@@ -11,9 +11,7 @@ import (
 	"net/http"
 
 	workspaceapp "github.com/torchstellar-team/one-cli/packages/cli/internal/application/workspace"
-	"github.com/torchstellar-team/one-cli/packages/cli/internal/modules/devservice"
 	cliErrors "github.com/torchstellar-team/one-cli/packages/cli/internal/platform/errors"
-	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/i18n"
 )
 
 func registerWorkspacesRoutes(mux *http.ServeMux, opts MuxOpts) {
@@ -31,8 +29,6 @@ func registerWorkspacesRoutes(mux *http.ServeMux, opts MuxOpts) {
 	mux.HandleFunc("GET /workspaces/{entryId}/projects/{name}",
 		handleResolvedWorkspaceRead(opts, handleGetWorkspaceProject))
 
-	mux.HandleFunc("POST /workspaces/{entryId}/environment/backend/initialize",
-		handleResolvedWorkspace(opts, handleInitializeWorkspaceEnvironmentBackend))
 	mux.HandleFunc("PUT /workspaces/{entryId}/manifest",
 		handleResolvedWorkspace(opts, handlePutWorkspaceManifest))
 	mux.HandleFunc("POST /workspaces/{entryId}/manifest/preview",
@@ -84,16 +80,6 @@ func handleForgetWorkspace(opts MuxOpts) http.HandlerFunc {
 		if opts.RegistryService == nil {
 			writeWorkspaceRegistryErr(w, entryID, workspaceapp.ErrRegistryEntryNotFound)
 			return
-		}
-		if opts.ServiceManager != nil {
-			if resolved, err := opts.RegistryService.ResolveRead(r.Context(), entryID); err == nil {
-				for _, service := range opts.ServiceManager.List(resolved.Root) {
-					if devservice.Active(service.Status) {
-						writeError(w, http.StatusConflict, cliErrors.ONE_CLI_ERROR, i18n.T("devservice.forget_active"), nil)
-						return
-					}
-				}
-			}
 		}
 		if err := opts.RegistryService.Forget(r.Context(), entryID); err != nil {
 			writeWorkspaceRegistryErr(w, entryID, err)

@@ -71,7 +71,7 @@ func colorDisabled(values map[string]string) bool {
 
 // Run restores the terminal and removes the private log journal before returning.
 // The caller owns cancellation and the subprocess tree.
-func Run(ctx context.Context, cancel context.CancelFunc, child *exec.Cmd, graph Graph, in io.Reader, out io.Writer, started func(), sources ...StateSource) error {
+func Run(ctx context.Context, cancel context.CancelFunc, child *exec.Cmd, graph Graph, in io.Reader, out io.Writer, sources ...StateSource) error {
 	logs, err := newLogStore(graph.names())
 	if err != nil {
 		err = i18n.Errorf("tasks.ui.log_error", err)
@@ -112,9 +112,6 @@ func Run(ctx context.Context, cancel context.CancelFunc, child *exec.Cmd, graph 
 	go func() {
 		err := child.Start()
 		if err == nil {
-			if started != nil {
-				started()
-			}
 			err = child.Wait()
 		}
 		stdout.flush()

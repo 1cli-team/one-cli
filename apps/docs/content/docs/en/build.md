@@ -16,4 +16,4 @@ one build -p web --ui raw
 
 Node commands come from `package.json` and use the workspace package manager (pnpm for new workspaces). Go commands come from Taskfile. Full builds include available build tasks; explicitly selecting a project without one fails. Local Node dependencies build before their consumers. Concurrency is allocated automatically from the task graph; `--concurrency 4` sets an explicit limit.
 
-The Dashboard displays the project build command and its source. Edit the source file to change it. Workspace dependencies and sources / outputs freshness checks live in mise configuration. Artifact caching is disabled through One; `--force` bypasses freshness checks. See [one run](/en/docs/run/) for task management and terminal modes.
+Use `one run` to inspect project tasks. Workspace dependencies and sources / outputs freshness checks live in mise configuration. Artifact caching is disabled through One; `--force` bypasses freshness checks. See [one run](/en/docs/run/) for task management and terminal modes.

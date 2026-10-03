@@ -108,7 +108,18 @@ type GlobalLocation struct {
 	DefaultEnvironment string `json:"defaultEnvironment"`
 }
 
-func LoadGlobalLocation() (*GlobalLocation, error) {
+// Keep the active location at the top level for older clients, and retain
+// per-identity bindings in the same atomic file. No secret values are stored.
+type globalConfig struct {
+	GlobalLocation
+	Bindings []GlobalLocation `json:"bindings,omitempty"`
+}
+
+func sameLocationIdentity(a, b *GlobalLocation) bool {
+	return a.SiteURL == b.SiteURL && a.UserID == b.UserID && a.OrganizationID == b.OrganizationID
+}
+
+func loadGlobalConfig() (*globalConfig, error) {
 	p, e := session.ConfigPath("global-env.json")
 	if e != nil {
 		return nil, e
@@ -120,11 +131,41 @@ func LoadGlobalLocation() (*GlobalLocation, error) {
 	if e != nil {
 		return nil, e
 	}
-	var location GlobalLocation
-	if json.Unmarshal(data, &location) != nil {
-		return nil, i18n.Errorf("global.location_invalid")
+	var config globalConfig
+	if json.Unmarshal(data, &config) != nil || config.ProjectID == "" {
+		return nil, sharedBindingError("global.location_invalid")
 	}
-	return &location, nil
+	return &config, nil
+}
+
+func (c *globalConfig) forSession(s *session.Session) *GlobalLocation {
+	if c == nil {
+		return nil
+	}
+	identity := GlobalLocation{SiteURL: s.SiteURL, UserID: s.UserID, OrganizationID: s.OrganizationID}
+	if sameLocationIdentity(&c.GlobalLocation, &identity) {
+		location := c.GlobalLocation
+		return &location
+	}
+	for _, binding := range c.Bindings {
+		if sameLocationIdentity(&binding, &identity) {
+			return &binding
+		}
+	}
+	return nil
+}
+
+func LoadGlobalLocation() (*GlobalLocation, error) {
+	config, err := loadGlobalConfig()
+	if err != nil || config == nil {
+		return nil, err
+	}
+	if current, err := session.Require(); err == nil {
+		if location := config.forSession(current); location != nil {
+			return location, nil
+		}
+	}
+	return &config.GlobalLocation, nil
 }
 func BindGlobal(ctx context.Context, projectID, env string) (*GlobalLocation, error) {
 	return withLocationLock(ctx, func() (*GlobalLocation, error) {
@@ -140,16 +181,50 @@ func bindGlobalFor(ctx context.Context, s *session.Session, projectID, env strin
 	if e != nil {
 		return nil, e
 	}
-	if e = validateRemoteEnvironment(p, env); e != nil {
+	return saveGlobalBinding(ctx, s, p, env)
+}
+
+func saveGlobalBinding(ctx context.Context, s *session.Session, p *RemoteProject, env string) (*GlobalLocation, error) {
+	if e := validateRemoteEnvironment(p, env); e != nil {
 		return nil, e
 	}
 	location := &GlobalLocation{SiteURL: s.SiteURL, UserID: s.UserID, OrganizationID: p.OrganizationID, ProjectID: p.ID, ProjectName: p.Name, DefaultEnvironment: env}
+	config, e := loadGlobalConfig()
+	if e != nil {
+		return nil, e
+	}
+	if config == nil {
+		config = &globalConfig{}
+	}
+	bindings := []GlobalLocation{}
+	for _, binding := range append(config.Bindings, config.GlobalLocation) {
+		if binding.ProjectID == "" || sameLocationIdentity(&binding, location) {
+			continue
+		}
+		duplicate := false
+		for _, previous := range bindings {
+			if sameLocationIdentity(&previous, &binding) {
+				duplicate = true
+				break
+			}
+		}
+		if !duplicate {
+			bindings = append(bindings, binding)
+		}
+	}
+	config.GlobalLocation, config.Bindings = *location, bindings
 	file, e := session.ConfigPath("global-env.json")
 	if e != nil {
 		return nil, e
 	}
-	data, _ := json.MarshalIndent(location, "", "  ")
+	data, e := json.MarshalIndent(config, "", "  ")
+	if e != nil {
+		return nil, e
+	}
 	if e = session.WithUnchanged(s, func() error {
+		if err := ctx.Err(); err != nil {
+			return err
+		}
 		return fsutil.WriteAtomic(file, append(data, '\n'), 0600)
 	}); e != nil {
 		return nil, e
@@ -162,7 +237,7 @@ func validateRemoteEnvironment(p *RemoteProject, env string) error {
 			return nil
 		}
 	}
-	return i18n.Errorf("global.environment_missing", p.Name, env)
+	return sharedBindingError("global.environment_missing", p.Name, env)
 }
 func ValidateGlobalPath(raw string) (string, error) {
 	if raw == "" {
