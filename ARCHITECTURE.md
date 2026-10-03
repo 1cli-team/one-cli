@@ -271,9 +271,11 @@ Historical manifest-mutation route paths fail closed with HTTP 409 and
 `SERVE_REPOSITORY_READ_ONLY`; they never silently ignore a requested write.
 
 Workspace discovery across invocations is a separate machine-local registry,
-not Profile state and not Kernel state. `one create` observes a Workspace only
-after successful creation; `one serve` observes the nearest manifest found by
-walking up from its launch directory. Both update the XDG-aware
+not Profile state and not Kernel state. `one create` registers a Workspace as soon
+as its generated manifest is valid, before optional tooling and skills setup;
+`one serve` registers the nearest manifest found by walking up from its launch
+directory. With no enclosing manifest, it opens the global Dashboard and loads
+the existing registry. Both update the XDG-aware
 `workspaces.json` through `application/workspace.RegistryService` and the local
 registry adapter. The registry stores only an opaque local entry id, manifest
 identity, canonical root, display name, and observation timestamps. Projects,

@@ -5,6 +5,8 @@ description: Create a new One workspace root skeleton.
 
 `one create` creates an empty workspace. It does not ask for projects or deployment. It installs project-scoped development skills by default; global AI-tool settings are preserved. Add projects later with `one add`.
 
+Once a valid workspace is generated, One registers it in the local workspace list before preparing tools, Git hooks, and skills. Run `one serve` from any directory to open Dashboard afterward. A registration failure preserves the workspace and reports the reason in text output or the structured `warnings` field. Running `one serve` inside that workspace or its subdirectories retries registration.
+
 ## Usage
 
 ```bash

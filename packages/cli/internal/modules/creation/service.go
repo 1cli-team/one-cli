@@ -31,21 +31,19 @@ type SkillInstaller interface {
 	Install(context.Context, string, []skillsmodule.Selection) []string
 }
 
-// WorkspaceObserver is the optional machine-local discovery hook invoked
-// after a workspace has been created successfully. Discovery is auxiliary:
-// a registry failure must never roll back an otherwise valid workspace.
+// WorkspaceObserver records each newly created workspace in the machine-local
+// registry. A registry failure must never roll back an otherwise valid workspace.
 type WorkspaceObserver func(context.Context, string, string) error
 
 func NewService(
 	environments *environmentmodule.Service,
-	observers ...WorkspaceObserver,
+	observer WorkspaceObserver,
 ) (*Service, error) {
 	if environments == nil {
 		return nil, errors.New(i18n.T("creation.environment_required"))
 	}
-	var observer WorkspaceObserver
-	if len(observers) > 0 {
-		observer = observers[0]
+	if observer == nil {
+		return nil, errors.New(i18n.T("creation.workspace_observer_required"))
 	}
 	return &Service{environments: environments, observer: observer}, nil
 }
@@ -148,6 +146,9 @@ func (s *Service) CreateWorkspace(ctx context.Context, input WorkspaceInput) (Wo
 	if err != nil {
 		return result, err
 	}
+	// Register the durable workspace before preparing local tooling and skills.
+	result.RegistryWarn = s.observer(ctx, input.TargetDir, "create")
+
 	files := fsutil.NewFilePlan(input.TargetDir)
 	if err := hooks.PlanFiles(files, manifest); err != nil {
 		return result, err
@@ -181,9 +182,6 @@ func (s *Service) CreateWorkspace(ctx context.Context, input WorkspaceInput) (Wo
 			err = install.Apply(ctx)
 		}
 		result.HooksWarn = err
-	}
-	if s.observer != nil {
-		result.RegistryWarn = s.observer(ctx, input.TargetDir, "create")
 	}
 	if !input.SkipSkills && s.Skills != nil {
 		result.SkillsWarnings = s.Skills.Install(ctx, input.TargetDir, skillsmodule.Defaults("", ""))

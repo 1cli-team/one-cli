@@ -6,6 +6,7 @@ package servecmd
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"net/url"
@@ -22,6 +23,7 @@ import (
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/core/workspace"
 	creationmodule "github.com/torchstellar-team/one-cli/packages/cli/internal/modules/creation"
 	environmentmodule "github.com/torchstellar-team/one-cli/packages/cli/internal/modules/environment"
+	cliErrors "github.com/torchstellar-team/one-cli/packages/cli/internal/platform/errors"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/i18n"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/output"
 	serve "github.com/torchstellar-team/one-cli/packages/cli/internal/transport/http"
@@ -79,10 +81,8 @@ func newServeCmd(deps Dependencies) *cobra.Command {
 				WorkspaceService:   deps.Workspaces,
 				RegistryService:    deps.Registry,
 			}, func(res serve.Result) {
+				res.URL = workspaceDashboardURL(res.URL, target.EntryID)
 				output.Emit(res)
-				if cmd.Name() == "serve" {
-					res.URL = workspaceDashboardURL(res.URL, target.EntryID)
-				}
 				maybeOpenBrowser(cmd.ErrOrStderr(), res, open)
 			})
 		},
@@ -103,6 +103,8 @@ type serveWorkspaceTarget struct {
 	EntryID string
 }
 
+// discoverServeWorkspaceTarget optionally discovers and registers the enclosing
+// workspace. Any directory can launch the Dashboard; discovery failures are warnings.
 func discoverServeWorkspaceTarget(
 	ctx context.Context,
 	start string,
@@ -110,7 +112,11 @@ func discoverServeWorkspaceTarget(
 ) (serveWorkspaceTarget, error) {
 	root, err := workspace.WalkUpToManifest(start)
 	if err != nil {
-		return serveWorkspaceTarget{}, nil
+		var cliErr *output.Error
+		if errors.As(err, &cliErr) && cliErr.Code == string(cliErrors.NOT_ONE_PROJECT) {
+			return serveWorkspaceTarget{}, nil
+		}
+		return serveWorkspaceTarget{}, err
 	}
 	target := serveWorkspaceTarget{Root: root}
 	if registry == nil {
@@ -122,18 +128,6 @@ func discoverServeWorkspaceTarget(
 	}
 	target.EntryID = registered.EntryID
 	return target, nil
-}
-
-// discoverServeWorkspace keeps optional Workspace discovery and registration
-// in one testable boundary. Running outside a Workspace is valid: the server
-// still exposes machine-level profiles and the previously observed registry.
-func discoverServeWorkspace(
-	ctx context.Context,
-	start string,
-	registry *workspaceapp.RegistryService,
-) (string, error) {
-	target, err := discoverServeWorkspaceTarget(ctx, start, registry)
-	return target.Root, err
 }
 
 func workspaceDashboardURL(baseURL, entryID string) string {

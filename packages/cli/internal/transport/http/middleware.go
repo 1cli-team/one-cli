@@ -14,7 +14,9 @@ package serve
 //     vector. We skip GET to avoid breaking direct browser navigation /
 //     bookmarks.
 import (
+	"context"
 	"encoding/json"
+	"errors"
 	"io/fs"
 	"net/http"
 	"strings"
@@ -26,6 +28,7 @@ import (
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/modules/devservice"
 	environmentmodule "github.com/torchstellar-team/one-cli/packages/cli/internal/modules/environment"
 	cliErrors "github.com/torchstellar-team/one-cli/packages/cli/internal/platform/errors"
+	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/i18n"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/output"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/resources/bundled"
 )
@@ -92,7 +95,14 @@ func BuildMux(opts MuxOpts) http.Handler {
 		opts.EnvironmentService = service
 	}
 	if opts.CreationService == nil {
-		service, err := creationmodule.NewService(opts.EnvironmentService)
+		observe := func(ctx context.Context, root, source string) error {
+			if opts.RegistryService == nil {
+				return errors.New(i18n.T("creation.workspace_observer_required"))
+			}
+			_, err := opts.RegistryService.Observe(ctx, root, source)
+			return err
+		}
+		service, err := creationmodule.NewService(opts.EnvironmentService, observe)
 		if err != nil {
 			panic(err)
 		}

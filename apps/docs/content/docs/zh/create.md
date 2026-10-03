@@ -5,6 +5,8 @@ description: 起一个新的 one 工作区根骨架。
 
 `one create` 只创建空工作区：不问项目、不问部署，默认安装项目级开发 skills，保留本机 AI 工具的全局配置。需要项目时使用 `one add`。
 
+生成有效工作区后，One 会立即将其登记到本机工作区列表，再准备工具、Git hooks 和 skills。随后可在任意目录运行 `one serve` 打开 Dashboard。登记失败会保留工作区，并在文本输出或结构化输出的 `warnings` 中给出具体原因；在该工作区或其子目录运行 `one serve` 会再次尝试登记。
+
 ## 用法
 
 ```bash

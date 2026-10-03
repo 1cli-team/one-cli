@@ -101,9 +101,6 @@ func runCreate(deps Dependencies, cmd *cobra.Command, rawDir string, flags *crea
 			result.EnvironmentWarn,
 		))
 	}
-	if result.RegistryWarn != nil {
-		prompt.Step(i18n.Tf("create.registry_warning", result.RegistryWarn))
-	}
 
 	// v2 envelope: replaces the v1 `enabled_backends []string` with
 	// per-domain semantic fields. `secrets_backend` names the env
@@ -129,6 +126,9 @@ func runCreate(deps Dependencies, cmd *cobra.Command, rawDir string, flags *crea
 		PackageManager: result.PackageManager,
 		SecretsBackend: secretsBackend,
 		DevEnabled:     devEnabled,
+	}
+	if result.RegistryWarn != nil {
+		payload.Warnings = append(payload.Warnings, i18n.Tf("create.registry_warning", result.RegistryWarn))
 	}
 	if result.MiseTrustWarn != nil {
 		payload.Warnings = append(payload.Warnings, i18n.Tf("creation.mise_trust_warning", result.MiseTrustWarn))

@@ -56,7 +56,7 @@
 			"emptyTitle": "尚未登记工作区",
 			"emptyDescription": "运行 one create 创建工作区，或在已有工作区中运行 one serve 进行登记。",
 			"listLabel": "已登记的工作区",
-			"registrationHint": "运行 one serve 后，新的 Workspace 会显示在这里。",
+			"registrationHint": "one create 自动登记新工作区；在已有工作区或其子目录运行 one serve，也会自动登记。",
 			"refresh": "刷新",
 			"search": "搜索名称、路径或 ID…",
 			"clearSearch": "清除搜索",

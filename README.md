@@ -119,7 +119,7 @@ The assistant can read `one.manifest.toml` and project README files, then use On
 
 One CLI manages variables in Infisical and injects them directly into commands. Workspace bindings live in the manifest `[env.infisical]` table; `.env` files are not loaded or exported. Run `one login` to sign in with your browser; the single session is stored in the OS keyring, with no plaintext fallback. Use `one whoami` to inspect status and `one logout` to remove the local session.
 
-Run `one serve` for account settings, workspaces, and shared credentials. Workspace binding changes use a reviewed, revision-checked TOML draft; project settings display derived configuration. Remote variable edits take effect immediately; lists omit values and reveal/copy fetch plaintext only on demand.
+Run `one serve` from any directory for account settings, workspaces, and shared credentials. `one create` registers new workspaces automatically; running `one serve` inside an existing workspace or its subdirectories registers it and opens its page. Workspace binding changes use a reviewed, revision-checked TOML draft; project settings display derived configuration. Remote variable edits take effect immediately; lists omit values and reveal/copy fetch plaintext only on demand.
 
 Choose shared credential storage with `one env bind --global`. Agents discover environments and folders through `one env --global` and `one env list --global`, then execute with `one exec --global --env dev --path /folder --keys KEY -- command`. One does not print injected values. Child logs preserve their original content and formatting.
 

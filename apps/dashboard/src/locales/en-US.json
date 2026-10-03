@@ -56,7 +56,7 @@
 			"emptyTitle": "No Workspaces yet",
 			"emptyDescription": "Run one create to create a Workspace, or run one serve inside an existing Workspace to register it.",
 			"listLabel": "Registered Workspaces",
-			"registrationHint": "New Workspaces appear here after you run one serve.",
+			"registrationHint": "one create registers new workspaces automatically. Run one serve inside an existing workspace or its subdirectories to register it.",
 			"refresh": "Refresh",
 			"search": "Search name, path or ID…",
 			"clearSearch": "Clear search",
