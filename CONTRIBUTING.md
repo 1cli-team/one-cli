@@ -79,6 +79,10 @@ mise run install                # 打包并安装本地启动器，无需预先�
 
 ## 改不同部分的注意事项
 
+打包与发布流程见 [RELEASING.md](./RELEASING.md)。先运行 `mise run release -- plan patch` 查看版本与源码，再通过 `build` 验证产物、通过 `publish` 发布；GoReleaser 固定为 2.18.0。流程会在独立源码副本中检查和构建，并保留草稿及失败重试规则。
+
+For packaging and publishing, see [RELEASING.md](./RELEASING.md). Start with `mise run release -- plan patch`, then validate with `build` and publish with `publish`. GoReleaser is pinned to 2.18.0; checks and builds use an independent source checkout and retain draft/retry safeguards.
+
 ### 改 Go 代码（`packages/cli/internal/` / `packages/cli/pkg/`）
 
 - 公开 API（`packages/cli/pkg/`）改动要考虑 semver；详见 [CLAUDE.md 的 Public API stability](./CLAUDE.md)

@@ -8,6 +8,15 @@ pnpm = "12.3.4"
 task = "3.53.1"
 process-compose = "1.122.0"
 
+[tasks.release]
+description = "Plan, build, or publish a release / 规划、打包或发布版本"
+run = "node scripts/release.mts"
+raw_args = true
+
+[tasks."release:check"]
+description = "Check release state and artifact rules / 检查发布状态与产物规则"
+run = "node scripts/release-rules.test.mts"
+
 [tasks.install-deps]
 description = "Install the root pnpm workspace dependencies"
 run = "pnpm install --frozen-lockfile"
@@ -74,7 +83,7 @@ run = "pnpm run check"
 
 [tasks."check:static"]
 description = "Check documentation, Go, and Dashboard"
-depends = ["verify-node-workspace", "verify-docs", "check:go", "check:dashboard"]
+depends = ["verify-node-workspace", "verify-docs", "check:go", "check:dashboard", "release:check"]
 
 [tasks.check]
 description = "Run static checks on the current platform"
