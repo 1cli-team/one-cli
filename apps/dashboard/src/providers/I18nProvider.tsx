@@ -46,7 +46,7 @@ export function I18nProvider({ children }: I18nProviderProps) {
 					setMode(p.stored_locale);
 				}
 			} catch {
-				// API may be unreachable in --no-ui dev mode; ignore and
+				// API may be temporarily unreachable; ignore and
 				// fall back to whatever the local default produced.
 			}
 		})();

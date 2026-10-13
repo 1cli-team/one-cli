@@ -86,7 +86,7 @@ interface SecretEditorState {
 const WORKSPACE_SECRET_SCOPE = "__workspace_secret_scope__";
 
 export const SecretsManager: React.FC<{
-	workspaceEntryId?: string;
+	workspaceEntryId: string;
 	environment: string;
 	projects?: OverviewProject[];
 	fixedProject?: string;

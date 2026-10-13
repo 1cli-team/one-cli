@@ -13,19 +13,8 @@ import (
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/i18n"
 )
 
-// CreateProject calls Infisical's POST /api/v2/workspace endpoint to create
-// a new secret-manager project named `projectName`. It does not use the
-// Infisical Go SDK because the SDK's public surface is secrets-only — we
-// reuse the active browser session access token
-// and issue the HTTP request directly.
-//
-// Returned (id, resolvedName) reflect what Infisical actually accepted; the
-// caller may have to retry with a suffix when the API surfaces a name
-// collision (INFISICAL_PROJECT_NAME_TAKEN).
-func (c *Client) CreateProject(projectName string) (string, string, error) {
-	return c.CreateProjectContext(context.Background(), projectName)
-}
-
+// CreateProjectContext creates a Secret Manager project using the active
+// session and returns the ID and name accepted by Infisical.
 func (c *Client) CreateProjectContext(ctx context.Context, projectName string) (string, string, error) {
 	token := c.accessToken
 	if token == "" && c.sdk != nil {

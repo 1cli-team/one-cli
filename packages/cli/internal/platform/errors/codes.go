@@ -58,11 +58,8 @@ const (
 
 	// Workspace post-write sync failure. Raised by `create` / `add` when a
 	// per-domain backend sync fails (or rolls back manifest) after the
-	// initial write. DOCTOR_FAILED is retained only as a Go-side alias so
-	// older internal references compile; public docs and wire payloads use
-	// STATUS_FIX_FAILED.
+	// initial write.
 	STATUS_FIX_FAILED Code = "STATUS_FIX_FAILED"
-	DOCTOR_FAILED          = STATUS_FIX_FAILED // internal compatibility alias; do not document.
 
 	// Environment backend selection.
 	// Surface when one.manifest.toml references a backend the build doesn't

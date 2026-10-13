@@ -29,21 +29,6 @@ func SelectionForProject(m *Manifest, project *ManifestProject) map[string]strin
 	return out
 }
 
-// findProject returns a pointer into m.Projects matching projectName, or
-// nil when not found. Internal helper for the per-project read accessors
-// below — keeps each helper compact.
-func findProject(m *Manifest, projectName string) *ManifestProject {
-	if m == nil {
-		return nil
-	}
-	for i := range m.Projects {
-		if m.Projects[i].Name == projectName {
-			return &m.Projects[i]
-		}
-	}
-	return nil
-}
-
 // EnvironmentEnabled reports whether the workspace has an Infisical binding.
 func EnvironmentEnabled(m *Manifest, relativeDir string) bool {
 	return m != nil && m.Env != nil && m.Env.ProjectID != ""

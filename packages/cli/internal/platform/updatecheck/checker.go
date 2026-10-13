@@ -23,14 +23,6 @@ const latestEndpoint = "https://github.com/1cli-team/one-cli/releases/latest"
 // boundary than slow down the user's command.
 const fetchTimeout = 5 * time.Second
 
-// fetchLatest GETs the latest version string. Returns the normalized
-// `vX.Y.Z` form. Any failure (network, HTTP non-2xx, garbage response) is
-// surfaced as an error; the caller treats all errors as "skip cache update,
-// try again next time".
-func fetchLatest(ctx context.Context, currentVersion string) (string, error) {
-	return fetchLatestUsing(ctx, http.DefaultClient, latestEndpoint, currentVersion)
-}
-
 func fetchLatestUsing(ctx context.Context, client *http.Client, endpoint, currentVersion string) (string, error) {
 	ctx, cancel := context.WithTimeout(ctx, fetchTimeout)
 	defer cancel()

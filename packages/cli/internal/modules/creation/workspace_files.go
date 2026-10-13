@@ -1,7 +1,6 @@
 package creation
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io/fs"
@@ -51,19 +50,6 @@ func generateWorkspaceFiles(targetDir string, opts workspaceFilesOptions) error 
 	return nil
 }
 
-// isDirectoryEmpty returns true if targetDir does not exist OR exists
-// and contains no entries.
-func isDirectoryEmpty(targetDir string) (bool, error) {
-	entries, err := os.ReadDir(targetDir)
-	if err != nil {
-		if errors.Is(err, fs.ErrNotExist) {
-			return true, nil
-		}
-		return false, err
-	}
-	return len(entries) == 0, nil
-}
-
 func initGitRepo(cwd string) error {
 	if _, err := os.Lstat(filepath.Join(cwd, ".git")); err == nil {
 		return validateGitRoot(cwd)
@@ -75,19 +61,6 @@ func initGitRepo(cwd string) error {
 	cmd.Stdout = nil
 	cmd.Stderr = nil
 	return cmd.Run()
-}
-
-// writeJSON writes v as 2-space-indented JSON to path, matching fs.writeJSON
-// from fs-extra (the TS codebase relies on this exact spacing for file
-// readability + diffability). fs-extra appends a trailing newline; we do too,
-// otherwise byte-level fixture diffs would flag every JSON file as drifted.
-func writeJSON(path string, v any) error {
-	b, err := json.MarshalIndent(v, "", "  ")
-	if err != nil {
-		return err
-	}
-	b = append(b, '\n')
-	return os.WriteFile(path, b, 0o644)
 }
 
 // validateEmptyTarget allows only a new directory or an empty Git worktree.

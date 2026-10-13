@@ -33,7 +33,7 @@ const (
 	IssueReasonBackend = "backend"
 )
 
-// Overview is the response shape for GET /api/workspace/overview. Present is
+// Overview is the response shape for GET /api/workspaces/{entryId}/overview. Present is
 // false when there is no manifest at the captured root; in that case all
 // other fields are zero.
 type Overview struct {

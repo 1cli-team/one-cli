@@ -31,9 +31,7 @@ const (
 )
 
 // Opts is the input to Run. Zero values get sensible defaults: Host falls
-// back to 127.0.0.1 and Port=0 asks the kernel for a free one. UIDisabled is a
-// development flag (PR-1 era) that keeps only /api/* mounted; PR-2 removes the
-// cobra-side --no-ui that exposes it.
+// back to 127.0.0.1 and Port=0 asks the kernel for a free one.
 //
 // WorkspaceRoot is the absolute path to the One workspace the user ran
 // `one serve` from (resolved by walking up from cwd for one.manifest.toml).
@@ -42,7 +40,6 @@ const (
 type Opts struct {
 	Host               string
 	Port               int
-	UIDisabled         bool
 	WorkspaceRoot      string
 	Catalog            *catalog.Catalog
 	ManifestService    *manifestapp.Service
@@ -125,7 +122,6 @@ func Run(ctx context.Context, opts Opts, ready func(Result)) error {
 	mux := BuildMux(MuxOpts{
 		Lifecycle:         authCtx,
 		SharedCredentials: shared,
-		UIDisabled:        opts.UIDisabled,
 		ExpectedHosts:     expectedHosts(opts.Host, port),
 		SelfOrigin:        selfOrigin,
 		WorkspaceRoot:     opts.WorkspaceRoot,

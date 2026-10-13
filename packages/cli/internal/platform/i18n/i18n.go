@@ -239,19 +239,6 @@ func RefreshTree(root *cobra.Command) {
 	}
 }
 
-// AvailableLocales returns the sorted list of locale tags we have
-// catalogs for. Used by `one locale` to print the choices.
-func AvailableLocales() []string {
-	ensureLoaded()
-	mu.RLock()
-	defer mu.RUnlock()
-	out := make([]string, 0, len(catalogs))
-	for k := range catalogs {
-		out = append(out, k)
-	}
-	return out
-}
-
 // LocalizedValue translates known catalog metadata, preserving custom text.
 // Template IDs alone are insufficient because custom registries can reuse them.
 func LocalizedValue(key, value string) string {

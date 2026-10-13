@@ -13,24 +13,6 @@ import (
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/i18n"
 )
 
-func registerWorkspaceMutateRoutes(mux *http.ServeMux, opts MuxOpts) {
-	// Profile bindings persist in machine-local One configuration. Manifest
-	// publication has its own revision-checked, typed endpoint below.
-
-	mux.HandleFunc("PUT /workspace/manifest", handlePutWorkspaceManifest(opts))
-	mux.HandleFunc("POST /workspace/environment/bind", handleBindWorkspaceEnvironment(opts))
-	mux.HandleFunc("POST /workspace/manifest/preview", handlePreviewWorkspaceManifest(opts))
-
-	// Keep the former repository-mutation paths stable for older Dashboard
-	// clients, but reject them before reading a body or resolving a workspace.
-	for _, pattern := range []string{
-		"PUT /workspace/projects/{name}",
-		"PUT /workspace/projects/{name}/environment",
-	} {
-		mux.HandleFunc(pattern, handleRepositoryReadOnly())
-	}
-}
-
 func handleBindWorkspaceEnvironment(opts MuxOpts) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		setNoStore(w)
@@ -100,18 +82,6 @@ func handlePreviewWorkspaceManifest(opts MuxOpts) http.HandlerFunc {
 			return
 		}
 		writeJSON(w, http.StatusOK, result)
-	}
-}
-
-func handleRepositoryReadOnly() http.HandlerFunc {
-	return func(w http.ResponseWriter, _ *http.Request) {
-		writeError(
-			w,
-			http.StatusConflict,
-			cliErrors.SERVE_REPOSITORY_READ_ONLY,
-			"This legacy route cannot write repository configuration; use the revision-checked /manifest endpoint.",
-			nil,
-		)
 	}
 }
 

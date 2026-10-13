@@ -19,8 +19,6 @@ type environmentSession struct {
 	uncached  map[string]bool
 }
 
-func (s *environmentSession) close() {}
-
 // Batch-load an immutable invocation snapshot. Values never enter a task plan,
 // a temporary config, a plugin or a cache. Even an empty snapshot bypasses freshness.
 func (s Service) prepareEnvironment(ctx context.Context, w execution.Workspace, p *Plan, base []string) (*environmentSession, error) {

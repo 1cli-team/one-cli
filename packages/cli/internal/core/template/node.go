@@ -92,10 +92,6 @@ func fsPathPattern(p string) bool {
 	return err == nil
 }
 
-func rewriteNode(files map[string][]byte, spec NodeSpec, vars Variables) error {
-	return rewriteNodeProjects(files, spec, vars, nil)
-}
-
 func rewriteNodeProjects(files map[string][]byte, spec NodeSpec, vars Variables, projects []ProjectSpec) error {
 	targetScope := "@" + vars["projectNameKebabCase"]
 	if !scopeRE.MatchString(targetScope) {

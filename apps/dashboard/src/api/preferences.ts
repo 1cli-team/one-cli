@@ -1,5 +1,4 @@
-// Thin client over /api/preferences. Mirrors api/configure.ts's style
-// (HttpClient + typed result). Used by the locale store to read the
+// Typed client over /api/preferences. Used by the locale store to read the
 // initial preference and persist user choices so the CLI and the
 // dashboard share one source of truth.
 

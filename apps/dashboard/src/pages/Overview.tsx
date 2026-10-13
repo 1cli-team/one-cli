@@ -9,7 +9,7 @@ import type { Overview as OverviewPayload } from "@/types/api";
 
 export const Overview: React.FC<{
 	data: OverviewPayload;
-	workspaceEntryId?: string;
+	workspaceEntryId: string;
 	readOnly?: boolean;
 }> = ({ data, workspaceEntryId, readOnly }) => {
 	const { t } = useTranslation();
@@ -29,7 +29,7 @@ export const Overview: React.FC<{
 
 			<div className="min-h-0 flex-1">
 				<ProjectInspector
-					key={workspaceEntryId ?? "current"}
+					key={workspaceEntryId}
 					projects={projects}
 					environments={data.workspace?.environments}
 					environment={environment}

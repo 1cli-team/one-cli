@@ -68,56 +68,22 @@ type ResolvedWorkspace struct {
 	Manifest *workspacecore.Manifest `json:"-"`
 }
 
-// RegistryServiceOption customizes deterministic dependencies for tests.
-type RegistryServiceOption func(*RegistryService)
-
-// WithRegistryClock replaces the wall clock used for observation timestamps.
-func WithRegistryClock(clock func() time.Time) RegistryServiceOption {
-	return func(service *RegistryService) {
-		service.now = clock
-	}
-}
-
-// WithRegistryEntryIDGenerator replaces the opaque entry-ID generator.
-func WithRegistryEntryIDGenerator(generator func() (string, error)) RegistryServiceOption {
-	return func(service *RegistryService) {
-		service.newEntryID = generator
-	}
-}
-
 // RegistryService owns the machine-local Workspace observation, listing and
 // trusted-resolution use cases.
 type RegistryService struct {
 	repository registryport.Repository
-	now        func() time.Time
-	newEntryID func() (string, error)
 }
 
 // NewRegistryService constructs the Workspace registry use-case boundary.
 func NewRegistryService(
 	repository registryport.Repository,
-	options ...RegistryServiceOption,
 ) (*RegistryService, error) {
 	if repository == nil {
 		return nil, errors.New("workspace registry: repository is required")
 	}
-	service := &RegistryService{
+	return &RegistryService{
 		repository: repository,
-		now:        time.Now,
-		newEntryID: generateRegistryEntryID,
-	}
-	for _, option := range options {
-		if option != nil {
-			option(service)
-		}
-	}
-	if service.now == nil {
-		return nil, errors.New("workspace registry: clock is required")
-	}
-	if service.newEntryID == nil {
-		return nil, errors.New("workspace registry: entry ID generator is required")
-	}
-	return service, nil
+	}, nil
 }
 
 // Observe validates root as a One Workspace and atomically records that it
@@ -143,7 +109,7 @@ func (s *RegistryService) Observe(
 		)
 	}
 
-	now := s.now().UTC()
+	now := time.Now().UTC()
 	workspaceID := inspection.id
 	name := inspection.name
 	if name == "" {
@@ -401,7 +367,7 @@ func (s *RegistryService) uniqueEntryID(entries []workspacecore.RegistryEntry) (
 		existing[entry.EntryID] = struct{}{}
 	}
 	for attempt := 0; attempt < 16; attempt++ {
-		entryID, err := s.newEntryID()
+		entryID, err := generateRegistryEntryID()
 		if err != nil {
 			return "", err
 		}

@@ -20,6 +20,12 @@ Project pages show project information followed by environment configuration. Wo
 
 See [login and local settings](/en/docs/login/) for CLI usage and security boundaries.
 
+## Local HTTP API
+
+Workspace requests use `/api/workspaces/{entryId}/*`, with `entryId` obtained from `GET /api/workspaces`. Configuration changes use the Manifest preview and save endpoints with revision checks.
+
+The legacy `/api/workspace/*` routes, both PUT endpoints for direct project configuration changes, and `GET /api/global-env/location` have been removed. These old calls return 404 or 405; legacy project writes no longer receive a 409 compatibility response. Read the shared credentials location from `sharedCredentials.location` in `GET /api/session`; the field may be absent while initialization is incomplete.
+
 ## Development services
 
 Start development services in a terminal with `one dev -p <project> --env <environment>`. The terminal provides command input, output, and process control.

@@ -133,9 +133,7 @@ export function AccountSettings() {
 											await mutate(
 												(key) =>
 													(typeof key === "string" &&
-														(key.includes("secrets") ||
-															key.includes("infisical") ||
-															key === "/global-env/location")) ||
+														(key.includes("secrets") || key.includes("infisical"))) ||
 													(Array.isArray(key) && key[0] === "/infisical/projects"),
 												undefined,
 												{ revalidate: false },

@@ -4,11 +4,6 @@
 
 export type BackendDomain = "env";
 export type SectionKey = `${BackendDomain}/${string}`;
-export type JsonValue = string | number | boolean | null | JsonObject | JsonValue[];
-export interface JsonObject {
-	[key: string]: JsonValue | undefined;
-}
-
 export interface BackendRequirement {
 	kind: "binary" | "capability";
 	name: string;
@@ -76,9 +71,8 @@ export interface HttpError {
 
 // ──────────────────────────── workspace overview ────────────────────────
 //
-// Mirrors workspace.Overview in packages/cli/internal/workspace/overview.go.
-// Returned by singular or registry-scoped Workspace overview routes.
-// `present: false` is retained for the legacy launch-root route.
+// Mirrors workspace.Overview in internal/core/workspace/overview.go.
+// Returned by registry-scoped Workspace overview routes.
 
 export type OverviewIssueDomain = "env";
 export type OverviewIssueSeverity = "missing";
