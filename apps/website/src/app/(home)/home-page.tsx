@@ -5,6 +5,7 @@ import {
 	CheckCircle2,
 	ClipboardCheck,
 	Code2,
+	Download,
 	FileJson2,
 	Layers3,
 	PackageCheck,
@@ -20,6 +21,7 @@ import { BrandMark } from "@/components/brand-mark";
 import { LanguageSwitcher } from "@/components/language-switcher";
 import { HomeHeroCanvas } from "./hero-canvas";
 import { HomeInstallCommand } from "./home-install-command";
+import { DesktopDownloadDialog, DesktopDownloadTrigger } from "./desktop-download-dialog";
 import { HomeCopyButton } from "@/components/copy-button";
 import { WorkflowSidebarNav, type WorkflowNavIcon } from "./workflow-nav";
 import {
@@ -55,6 +57,7 @@ const homeCopy = {
 			canvasAria:
 				"One CLI 工作区模块画布，展示应用、API、文档、Packages、Manifest、Env、Build 和 CLI 接口模块",
 			install: "开始使用",
+			desktop: "下载桌面版",
 			github: "查看 GitHub",
 			copy: "复制",
 			copied: "已复制",
@@ -375,6 +378,7 @@ const homeCopy = {
 			canvasAria:
 				"One CLI workspace module canvas showing apps, API, docs, packages, manifest, env, build, and CLI interface modules",
 			install: "Start building",
+			desktop: "Download desktop",
 			github: "View on GitHub",
 			copy: "copy",
 			copied: "copied",
@@ -761,17 +765,19 @@ export function LocalizedHomePage({ lang }: { lang: Locale }) {
 	const text = homeCopy[lang];
 
 	return (
-		<main className="min-h-screen w-full bg-[#0a0a0a] text-[#fafaf9]">
-			<script {...jsonLdScriptProps([websiteJsonLd(lang), softwareApplicationJsonLd(lang)])} />
-			<HomeNav lang={lang} text={text} />
-			<Hero lang={lang} text={text} />
-			<StartWaysSection text={text} />
-			<WorkflowSection text={text} />
-			<WhySection text={text} />
-			<JsonSection text={text} />
-			<FinalCTA text={text} />
-			<Footer text={text} />
-		</main>
+		<DesktopDownloadDialog lang={lang}>
+			<main className="min-h-screen w-full bg-[#0a0a0a] text-[#fafaf9]">
+				<script {...jsonLdScriptProps([websiteJsonLd(lang), softwareApplicationJsonLd(lang)])} />
+				<HomeNav lang={lang} text={text} />
+				<Hero lang={lang} text={text} />
+				<StartWaysSection text={text} />
+				<WorkflowSection text={text} />
+				<WhySection text={text} />
+				<JsonSection text={text} />
+				<FinalCTA text={text} />
+				<Footer text={text} />
+			</main>
+		</DesktopDownloadDialog>
 	);
 }
 
@@ -818,13 +824,17 @@ function Hero({ lang, text }: { lang: Locale; text: HomeText }) {
 					<p className="w-full max-w-[520px] text-base leading-7 text-stone-400">
 						{text.hero.body}
 					</p>
-					<div className="flex flex-col gap-3 sm:flex-row">
+					<div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap">
 						<Link
 							href="#installation"
 							className="inline-flex h-11 items-center justify-center gap-2 rounded-md bg-[#ea580c] px-5 text-sm font-semibold text-white transition hover:bg-[#c2410c]"
 						>
 							{text.hero.install}
 						</Link>
+						<DesktopDownloadTrigger className="inline-flex h-11 items-center justify-center gap-2 whitespace-nowrap rounded-md border border-white/10 px-5 text-sm font-semibold text-stone-100 transition hover:border-orange-500/60 hover:bg-white/5">
+							<Download aria-hidden="true" className="size-4" />
+							{text.hero.desktop}
+						</DesktopDownloadTrigger>
 						<a
 							href="https://github.com/1cli-team/one-cli"
 							target="_blank"
@@ -925,13 +935,20 @@ function WorkflowSection({ text }: { text: HomeText }) {
 										))}
 									</div>
 									<div className="mt-9 flex flex-col gap-3 sm:flex-row sm:items-center">
-										<Link
-											href={item.href}
-											className="no-style inline-flex h-10 w-fit min-w-[136px] items-center justify-center gap-2 whitespace-nowrap rounded-md bg-[#ea580c] px-4 text-sm font-semibold text-white transition hover:bg-[#c2410c]"
-										>
-											<span className="relative z-10">{item.cta}</span>
-											<ArrowRight className="relative z-10 size-4" />
-										</Link>
+										{item.command === "One Desktop" ? (
+											<DesktopDownloadTrigger className="inline-flex h-10 w-fit min-w-[136px] items-center justify-center gap-2 whitespace-nowrap rounded-md bg-[#ea580c] px-4 text-sm font-semibold text-white transition hover:bg-[#c2410c]">
+												{item.cta}
+												<Download aria-hidden="true" className="size-4" />
+											</DesktopDownloadTrigger>
+										) : (
+											<Link
+												href={item.href}
+												className="no-style inline-flex h-10 w-fit min-w-[136px] items-center justify-center gap-2 whitespace-nowrap rounded-md bg-[#ea580c] px-4 text-sm font-semibold text-white transition hover:bg-[#c2410c]"
+											>
+												<span className="relative z-10">{item.cta}</span>
+												<ArrowRight className="relative z-10 size-4" />
+											</Link>
+										)}
 										{"secondaryCta" in item && item.secondaryHref === "templates" ? (
 											<Link
 												href={templatesUrl}
@@ -1303,7 +1320,14 @@ function FooterLinks({ title, links }: { title: string; links: [string, string][
 		<nav className="flex flex-col gap-2.5">
 			<h3 className="text-xs font-semibold text-stone-400">{title}</h3>
 			{links.map(([label, href]) =>
-				href.startsWith("http") ? (
+				href === releasesUrl ? (
+					<DesktopDownloadTrigger
+						key={href}
+						className="w-fit text-left text-sm leading-6 text-stone-500 transition hover:text-white"
+					>
+						{label}
+					</DesktopDownloadTrigger>
+				) : href.startsWith("http") ? (
 					<a
 						key={href}
 						href={href}
