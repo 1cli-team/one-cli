@@ -7,8 +7,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/i18n"
-	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/userdirs"
+	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/platform/i18n"
+	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/platform/userdirs"
 )
 
 type createResult struct {

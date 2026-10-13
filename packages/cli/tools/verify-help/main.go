@@ -33,7 +33,7 @@ import (
 	"github.com/spf13/pflag"
 
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/bootstrap/cli"
-	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/helpui"
+	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/platform/helpui"
 )
 
 func main() {

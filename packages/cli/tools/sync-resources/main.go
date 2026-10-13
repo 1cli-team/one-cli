@@ -12,12 +12,12 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/templatefiles"
+	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/platform/templatefiles"
 )
 
 func main() {
 	if len(os.Args) != 2 {
-		fatalf("usage: sync-resources <bundled|web>")
+		fatalf("usage: sync-resources <bundled>")
 	}
 	root, err := findRepoRoot()
 	if err != nil {
@@ -26,8 +26,6 @@ func main() {
 	switch os.Args[1] {
 	case "bundled":
 		err = syncBundled(root)
-	case "web":
-		err = syncWeb(root)
 	default:
 		err = fmt.Errorf("unknown resource set %q", os.Args[1])
 	}
@@ -60,7 +58,7 @@ func findRepoRoot() (string, error) {
 
 func syncBundled(root string) error {
 	templates := filepath.Join(root, "packages", "templates")
-	bundled := filepath.Join(root, "packages", "cli", "internal", "resources", "bundled")
+	bundled := filepath.Join(root, "packages", "one-core", "internal", "resources", "bundled")
 	if err := os.MkdirAll(bundled, 0o755); err != nil {
 		return err
 	}
@@ -101,20 +99,11 @@ func syncBundled(root string) error {
 		filepath.Join(bundled, "_skills"), nil, false)
 }
 
-func syncWeb(root string) error {
-	source := filepath.Join(root, "apps", "dashboard", "dist")
-	target := filepath.Join(root, "packages", "cli", "internal", "resources", "bundled", "_web")
-	if _, err := os.Stat(filepath.Join(source, "index.html")); err != nil {
-		return fmt.Errorf("dashboard build is missing: %w", err)
-	}
-	return replaceDir(root, source, target, nil, false)
-}
-
 // ensureGeneratedTarget prevents a future path typo from turning RemoveAll
 // into a broad repository deletion. Every replace target must stay inside the
 // generated bundled directory and may not be that directory itself.
 func ensureGeneratedTarget(root, target string) error {
-	generated, err := filepath.Abs(filepath.Join(root, "packages", "cli", "internal", "resources", "bundled"))
+	generated, err := filepath.Abs(filepath.Join(root, "packages", "one-core", "internal", "resources", "bundled"))
 	if err != nil {
 		return err
 	}

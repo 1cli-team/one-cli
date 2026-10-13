@@ -204,7 +204,7 @@ pnpm --ignore-workspace run dev
 
 Go 模板只维护一份正常的 `go.mod` 和必要的 `go.sum`。资源打包层临时把
 `go.mod` 改名为 `_go.mod`，避开 Go 嵌入的子模块限制，生成时自动还原。
-不要手动编辑 `packages/cli/internal/resources/bundled/` 中的生成资源。
+不要手动编辑 `packages/one-core/internal/resources/bundled/` 中的生成资源。
 
 修改后从仓库根目录运行：
 

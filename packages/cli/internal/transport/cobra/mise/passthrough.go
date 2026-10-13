@@ -4,9 +4,9 @@ import (
 	"os"
 
 	"github.com/spf13/cobra"
-	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/i18n"
-	platformprocess "github.com/torchstellar-team/one-cli/packages/cli/internal/platform/process"
-	runtimeport "github.com/torchstellar-team/one-cli/packages/cli/internal/ports/runtime"
+	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/platform/i18n"
+	platformprocess "github.com/torchstellar-team/one-cli/packages/one-core/pkg/platform/process"
+	runtimeport "github.com/torchstellar-team/one-cli/packages/one-core/pkg/ports/runtime"
 )
 
 // RuntimeCommands exposes maintenance of the same mise executable used by

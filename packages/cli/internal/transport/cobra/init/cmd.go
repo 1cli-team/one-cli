@@ -3,9 +3,9 @@ package initcmd
 import (
 	"github.com/spf13/cobra"
 
-	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/i18n"
 	hooks "github.com/torchstellar-team/one-cli/packages/cli/internal/transport/cobra/hooks"
 	mise "github.com/torchstellar-team/one-cli/packages/cli/internal/transport/cobra/mise"
+	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/platform/i18n"
 )
 
 func Command() *cobra.Command {

@@ -1,0 +1,27 @@
+package infisical
+
+// loader.go adapts Infisical to secrets.Loader so an explicit composition
+// root can include it without package-initialization side effects.
+
+import (
+	"context"
+
+	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/ports/secrets"
+)
+
+type runLoader struct{}
+
+func (runLoader) ID() string { return "infisical" }
+
+func (runLoader) Load(ctx context.Context, projectRoot, relativeDir, envName string) (map[string]string, error) {
+	return FetchSecretsForSubproject(ctx, projectRoot, relativeDir, envName)
+}
+
+func (runLoader) LoadProjects(ctx context.Context, root string, dirs []string, env string) (map[string]map[string]string, error) {
+	return fetchSecretsForProjects(ctx, root, dirs, env)
+}
+
+var _ secrets.BatchLoader = runLoader{}
+
+// Loader constructs the Infisical adapter for an explicit composition root.
+func Loader() secrets.Loader { return runLoader{} }

@@ -3,10 +3,10 @@ package envcmd
 import (
 	"github.com/spf13/cobra"
 
-	environmentmodule "github.com/torchstellar-team/one-cli/packages/cli/internal/modules/environment"
-	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/i18n"
-	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/output"
-	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/prompt"
+	environmentmodule "github.com/torchstellar-team/one-cli/packages/one-core/pkg/modules/environment"
+	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/platform/i18n"
+	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/platform/output"
+	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/platform/prompt"
 )
 
 func runWorkspaceBind(cmd *cobra.Command, deps Dependencies, projectID string, create bool) error {

@@ -6,10 +6,10 @@ import (
 	"strings"
 
 	"github.com/spf13/cobra"
-	cliErrors "github.com/torchstellar-team/one-cli/packages/cli/internal/platform/errors"
-	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/i18n"
-	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/output"
-	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/preferences"
+	cliErrors "github.com/torchstellar-team/one-cli/packages/one-core/pkg/platform/errors"
+	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/platform/i18n"
+	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/platform/output"
+	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/platform/preferences"
 )
 
 // ───────────────────── locale ─────────────────────

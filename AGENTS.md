@@ -6,9 +6,11 @@
 
 | 项目 | 路径 | 用途 |
 |---|---|---|
-| CLI | `packages/cli` | One 命令行工具，负责创建项目、执行任务、管理环境变量，并提供 Dashboard 后端。 |
+| CLI | `packages/cli` | One 命令行工具，负责创建项目、执行任务、管理环境变量，不包含 HTTP 服务或前端资源。 |
 | Kernel | `packages/kernel` | 通用 Go 运行基础库，管理执行上下文和资源清理。 |
-| Dashboard | `apps/dashboard` | `one serve` 打开的管理界面，用于管理工作区、项目配置、变量和开发服务。 |
+| One Core | `packages/one-core` | CLI 与桌面 API 共用的 Go 业务和平台能力。 |
+| Desktop API | `services/desktop-api` | 桌面版独立 Go HTTP 后端，编译为 `one-api`。 |
+| Desktop | `apps/desktop` | React 管理界面与 `src-tauri` 原生宿主，内置 `one-api` 和 `one`。 |
 | Docs | `apps/docs` | One CLI 文档网站，提供安装说明、使用指南和命令参考。 |
 
 ## 默认考虑多语言
@@ -17,16 +19,16 @@
 
 ### CLI 文案
 
-- 复用 `packages/cli/internal/platform/i18n` 的 `T`、`Tf` 和 `Errorf`，同步维护 `locales/zh-CN.json` 与 `locales/en-US.json`。使用能表达用途的语义键，避免在业务代码中硬编码用户可见的中文或英文句子。
+- 复用 `packages/one-core/pkg/platform/i18n` 的 `T`、`Tf` 和 `Errorf`，同步维护 `locales/zh-CN.json` 与 `locales/en-US.json`。使用能表达用途的语义键，避免在业务代码中硬编码用户可见的中文或英文句子。
 - 覆盖命令帮助、参数说明、交互选项、校验错误、进度、结果、恢复建议、TUI 状态与快捷键说明，以及内置模板的展示名称和说明。
 - 用完整句子的格式模板表达动态文案，避免拼接译文片段。两种语言的格式参数必须匹配；错误包装继续使用 `%w`，保留错误链。
 - Cobra 命令帮助使用 `MarkShort`、`MarkLong`、`MarkFlagUsage` 注册翻译键，使 `RefreshTree` 能在语言确定或切换后更新文案。参数数量校验和 flag 错误复用 i18n 中的公共处理逻辑。
 - 沿用现有语言偏好与 `auto` 解析逻辑，不另设语言环境变量或检测流程。除可刷新的命令元数据外，不在包初始化或全局变量中缓存译文。切换语言后的确认信息使用新语言。
 - 错误输出保留具体原因、项目名、路径和恢复建议；不要用错误码的通用描述覆盖具体错误信息。
 
-### Dashboard 文案
+### Desktop 文案
 
-- 复用 `apps/dashboard/src/lib/i18n.ts` 和现有 locale store，沿用现有字典结构及语言切换机制。
+- 复用 `apps/desktop/src/lib/i18n.ts` 和现有 locale store，沿用现有字典结构及语言切换机制。
 - 新增页面、组件、空状态、表单提示、通知、按钮、tooltip 和无障碍标签时，同步补齐中英文。
 - 布局要容纳不同语言的文本长度，检查换行、截断、弹窗宽度和窄屏显示。
 

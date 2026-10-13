@@ -2,7 +2,7 @@ package runcmd
 
 import (
 	"github.com/spf13/cobra"
-	"github.com/torchstellar-team/one-cli/packages/cli/internal/modules/tasks"
+	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/modules/tasks"
 )
 
 func processWorker() *cobra.Command {

@@ -48,7 +48,7 @@ Cordis concepts are translated into explicit Go constructs:
 | --- | --- |
 | Context | `kernel.Context` ownership plus an immutable execution `Scope` |
 | Component | a compiled-in backend adapter or a cohesive feature module |
-| Service | an application service or a narrow contract under `internal/ports` |
+| Service | an application service or a narrow contract under `one-core/pkg/ports` |
 | Inject / coeffect | backend requirements declared in the catalog |
 | Effect / fiber | `kernel.Lifecycle`, an owned, idempotent cleanup stack |
 
@@ -97,47 +97,33 @@ packages/kernel/
   internal/effect/        private cleanup-stack implementation
   pkg/kernel/             public Context and Lifecycle API
 
-packages/cli/internal/
-  bootstrap/
-    cli/               constructs adapters and injects all dependencies
-  core/
-    backend/          backend identity, capabilities, profile type, and form policy
-    profile/          machine profile model and persistence primitives
-    template/         template registry and selection model
-    workspace/        manifest and workspace model
-  ports/
-    secrets/          command environment loader contract
-  application/
-    configure/ execution/ workspace/
-  adapters/
-    env/ shared/ toolchain/ runtime/
-  modules/
-    creation/          Template-to-Workspace/Project materialisation
-    development/       local development process orchestration
-    environment/       Infisical variables and workspace bindings
-    tasks/             finite task plans and environment snapshots
-    miseconfig/        additive task and tool configuration
-    hooks/             staged-file checks and Git integration
-  platform/
-    errors/ helpui/ i18n/ output/ preferences/ process/ prompt/ updatecheck/
-  resources/
-    bundled/           embedded templates, registry, and Dashboard
-  transport/
-    cobra/             one directory per command family
-    http/              local Dashboard API
+packages/one-core/
+  pkg/                   shared Go packages imported by the CLI and desktop API
+    bootstrap/           constructs private adapters and exposes dependencies
+    application/         authentication, execution, manifest, workspace use cases
+    core/                backend, template, workspace models
+    modules/             creation, environment, tasks, mise, hooks, skills
+    platform/            errors, i18n, preferences, process, installation, updates
+    ports/               contracts implemented by private adapters
+  internal/
+    adapters/            vendor integrations, runtime and storage implementations
+    resources/bundled/   embedded templates, registry and skills
 
 packages/cli/
-  cmd/one/             thin executable entry point
-  pkg/                 intentionally public Go packages
-  tools/               repository verification programs
+  cmd/one/               thin executable entry point
+  internal/bootstrap/    CLI assembly
+  internal/transport/    Cobra command families
+  pkg/                   intentionally public CLI Go packages
+  tools/                 repository verification and resource generation
 
-apps/dashboard/src/
-  api/                 typed HTTP boundary and SWR keys
-  architecture/        executable frontend dependency rules
-  features/
-    profile-editor/    Catalog-driven profile editing workflow
-    project-settings/  Desktop project matrix and project inspector workflow
-  pages/               route composition and page-specific presentation
+services/desktop-api/
+  cmd/one-api/            standalone backend executable
+  internal/app/          private host handshake and lifecycle
+  internal/http/         authenticated loopback HTTP
+
+apps/desktop/
+  src/                   React UI, HTTP client, routes and feature state
+  src-tauri/             Rust host, Tauri config, icons and native capabilities
 ```
 
 Rules:
@@ -145,7 +131,7 @@ Rules:
 1. Transport packages own input parsing, prompts, and rendering. Reusable
    backend selection and execution policy belongs in application services or
    cohesive feature modules. Transports never import concrete adapters.
-2. Application packages own use cases; `internal/ports` owns the narrow
+2. Application packages own use cases; `one-core/pkg/ports` owns the narrow
    contracts implemented by adapters.
 3. Adapters contain vendor and operating-system details. They do not import
    application, modules, transport, or bootstrap. Compatibility result and

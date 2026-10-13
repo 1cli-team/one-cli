@@ -111,7 +111,7 @@ One CLI 通过 Infisical 管理项目变量与共享凭据，并在运行命令�
 推荐边界：
 
 - `one.manifest.toml` 记录可审查的 工作区身份、项目路径、工具链和 Infisical 绑定；密钥值与会话令牌不进 Manifest
-- `one login` 管理系统钥匙串中的单一浏览器会话；`one serve` 提供账号设置、共享凭据元数据和经审阅的 Manifest 草稿。
+- `one login` 管理系统钥匙串中的单一浏览器会话；One Desktop 提供账号设置、共享凭据元数据和经审阅的 Manifest 草稿。
 - `.env*`、私钥、云厂商 token 不进 Git，也不写进 agent 可复用文档
 - agent 可以读取结构化状态、执行缺失依赖安装和项目生成，但涉及发布、删除、覆盖凭据时应回到团队策略或人工确认
 

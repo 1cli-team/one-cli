@@ -232,7 +232,7 @@ export function smoke(build: Build) {
     );
     const dictionary = JSON.parse(
       readFileSync(
-        join(build.source, "packages/cli/internal/platform/i18n/locales", `${locale}.json`),
+        join(build.source, "packages/one-core/pkg/platform/i18n/locales", `${locale}.json`),
         "utf8",
       ),
     );
@@ -330,7 +330,7 @@ function buildRelease(
     `在 ${source} 中从 ${p.sourceSha} 构建 ${p.tag}。`,
   );
   run("mise", ["trust"], { cwd: source, env });
-  for (const module of ["packages/kernel", "packages/cli"]) {
+  for (const module of ["packages/kernel", "packages/one-core", "packages/cli", "services/desktop-api"]) {
     run("mise", ["exec", "--", "go", "-C", module, "mod", "download"], {
       cwd: source,
       env: { ...env, GOWORK: "off" },

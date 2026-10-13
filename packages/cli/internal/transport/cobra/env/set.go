@@ -6,12 +6,12 @@ import (
 
 	"github.com/spf13/cobra"
 
-	environmentmodule "github.com/torchstellar-team/one-cli/packages/cli/internal/modules/environment"
-	cliErrors "github.com/torchstellar-team/one-cli/packages/cli/internal/platform/errors"
-	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/i18n"
-	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/output"
-	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/prompt"
-	"github.com/torchstellar-team/one-cli/packages/cli/internal/ports/secrets"
+	environmentmodule "github.com/torchstellar-team/one-cli/packages/one-core/pkg/modules/environment"
+	cliErrors "github.com/torchstellar-team/one-cli/packages/one-core/pkg/platform/errors"
+	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/platform/i18n"
+	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/platform/output"
+	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/platform/prompt"
+	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/ports/secrets"
 )
 
 func newSetCmd(deps Dependencies) *cobra.Command {

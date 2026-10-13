@@ -5,7 +5,7 @@ description: 起一个新的 one 工作区根骨架。
 
 `one create` 只创建空工作区：不问项目、不问部署，默认安装项目级开发 skills，保留本机 AI 工具的全局配置。需要项目时使用 `one add`。
 
-生成有效工作区后，One 会立即将其登记到本机工作区列表，再准备工具、Git hooks 和 skills。随后可在任意目录运行 `one serve` 打开 Dashboard。登记失败会保留工作区，并在文本输出或结构化输出的 `warnings` 中给出具体原因；在该工作区或其子目录运行 `one serve` 会再次尝试登记。
+生成有效工作区后，One 会立即将其登记到本机工作区列表，再准备工具、Git hooks 和 skills。随后可打开 One Desktop 访问工作区。登记失败会保留工作区，并在文本输出或结构化输出的 `warnings` 中给出具体原因；在 One Desktop 中选择“打开工作区”可再次尝试登记。
 
 ## 用法
 
@@ -137,7 +137,7 @@ one dev -p api
 
 新工作区只生成一份单语言 `AGENTS.md`，跟随 One CLI 当前生效语言。使用 `one locale zh-CN` 或 `one locale en-US` 设置偏好；`auto` 跟随终端语言，无法识别时使用英文。后续切换语言或运行 `one add` 都不会重写已有文件。
 
-源码模板直接使用 Markdown，位于 `packages/cli/internal/modules/creation/templates/` 下的 `AGENTS.zh-CN.md` 和 `AGENTS.en-US.md`。修改后重新构建 CLI，即可应用到以后创建的工作区。
+源码模板直接使用 Markdown，位于 `packages/one-core/pkg/modules/creation/templates/` 下的 `AGENTS.zh-CN.md` 和 `AGENTS.en-US.md`。修改后重新构建 CLI，即可应用到以后创建的工作区。
 
 指引要求 Agent 通过 `one run` 执行测试及项目命令，将复杂脚本按项目选择的语言放在 `scripts/` 并登记为任务，统一通过 One 管理环境变量。空模板的技术栈由用户选择。Docker 镜像上传账号等发布、运维凭据放在全局变量中；缺少时提示用户到 Dashboard 的“共享凭据”页面配置，然后由任务内部通过 `one exec --global` 注入。
 

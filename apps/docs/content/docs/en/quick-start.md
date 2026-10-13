@@ -45,9 +45,7 @@ one build -p web
 
 To manage projects and environment variables in your browser, run:
 
-```bash
-one serve
-```
+Open One Desktop and choose Open workspace.
 
 Dashboard lets you add projects and manage environment variables and shared credentials.
 

@@ -111,7 +111,7 @@ One CLI manages project variables and shared credentials through Infisical and i
 Recommended boundary:
 
 - `one.manifest.toml` records reviewable workspace identity, project paths, toolchains, and the Infisical binding; secret values and session tokens never enter it.
-- `one login` manages one browser session in the system keyring. `one serve` exposes account settings, global-variable metadata, and reviewed Manifest drafts.
+- `one login` manages one browser session in the system keyring. One Desktop exposes account settings, global-variable metadata, and reviewed Manifest drafts.
 - `.env*`, private keys, and cloud tokens stay out of Git and out of reusable agent-facing docs.
 - Agents can read structured state, install missing dependencies, and scaffold projects, but publishing, deletion, and credential overwrites should go through team policy or human confirmation.
 

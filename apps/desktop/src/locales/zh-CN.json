@@ -1,0 +1,468 @@
+{
+	"sidebar": {
+		"home": "首页",
+		"settings": "设置",
+		"themeToDark": "切深色",
+		"themeToLight": "切浅色",
+		"language": "语言",
+		"languageAuto": "跟随系统",
+		"languageZh": "中文",
+		"languageEn": "English"
+	},
+	"topbar": {
+		"workspaces": "主页",
+		"settings": "设置",
+		"profile": "凭据 profile",
+		"sectionsRoot": "配置分区"
+	},
+	"manifestDraft": {
+		"saveButton": "保存更改 · {{count}}",
+		"title": "要把这些修改写入 Manifest 吗？",
+		"description": "这会修改工作区里的 one.manifest.toml。继续前请确认下面的具体差异。",
+		"currentManifest": "当前 Manifest",
+		"updatedManifest": "修改后",
+		"confirm": "保存到 Manifest",
+		"saving": "保存中…",
+		"previewing": "正在生成完整 Manifest 差异…",
+		"previewFailed": "无法生成 Manifest 差异",
+		"discard": "放弃草稿",
+		"saved": "Manifest 修改已保存",
+		"saveFailed": "无法保存 Manifest 修改",
+		"conflict": "草稿打开后 one.manifest.toml 已发生变化。请放弃草稿、检查最新配置后再修改。",
+		"changedFields": "修改字段",
+		"jumpToChange": "定位首处修改"
+	},
+	"environmentSwitcher": {
+		"label": "环境",
+		"dev": "开发",
+		"prod": "生产",
+		"staging": "预发布"
+	},
+	"workspaces": {
+		"workspaceLabel": "Workspace",
+		"loading": "正在加载 Workspace",
+		"retry": "重试",
+		"openProfiles": "打开设置",
+		"home": {
+			"title": "工作区",
+			"description": "查看本机已登记的工作区并继续管理项目。",
+			"loading": "正在加载工作区…",
+			"loadFailedTitle": "无法加载工作区",
+			"loadFailedDescription": "无法读取本机工作区注册表。",
+			"retry": "重试",
+			"projectCount": "{{count}} 个项目",
+			"projects": "项目",
+			"lastDetected": "最近识别",
+			"emptyTitle": "尚未登记工作区",
+			"emptyDescription": "运行 one create 创建工作区，或在已有工作区中运行 one serve 进行登记。",
+			"listLabel": "已登记的工作区",
+			"registrationHint": "点击“打开工作区”，选择包含 one.manifest.toml 的目录；CLI 命令也会自动登记工作区。",
+			"refresh": "刷新",
+			"search": "搜索名称、路径或 ID…",
+			"clearSearch": "清除搜索",
+			"filterLabel": "筛选工作区",
+			"all": "全部工作区",
+			"attention": "需要关注",
+			"noResults": "没有匹配的工作区",
+			"noResultsDescription": "试试其他名称或路径，或清除筛选条件。",
+			"clearFilters": "清除筛选",
+			"resultCount": "找到 {{count}} 个工作区",
+			"registrationHelp": "如何添加工作区"
+		},
+		"rail": {
+			"title": "工作区",
+			"empty": "执行 one create，或在 Workspace 内执行 one serve，即可登记到这里。",
+			"loadFailed": "无法加载 Workspace 注册表。"
+		},
+		"status": {
+			"ready": "可用",
+			"missing": "目录不存在",
+			"invalid": "Manifest 无效",
+			"identity-missing": "缺少 Workspace ID",
+			"identity-conflict": "Workspace ID 冲突"
+		},
+		"conflict": {
+			"title": "只读：另一个目录正在使用相同的 Workspace ID",
+			"description": "你仍可查看其中的 Project，但配置操作已禁用，避免复制出来的 Workspace 共享并串用 Profile 绑定。"
+		},
+		"state": {
+			"missing": {
+				"title": "Workspace 目录当前不可用",
+				"description": "目录可能已移动、被删除，或者所在磁盘尚未挂载。在新位置执行 one serve 即可刷新注册记录。"
+			},
+			"invalid": {
+				"title": "Workspace Manifest 无效",
+				"description": "修复该目录中的 one.manifest.toml，然后重新在 Workspace 内执行 one serve。"
+			},
+			"identity-missing": {
+				"title": "Workspace 缺少稳定 ID",
+				"description": "请先在 one.manifest.toml 中补齐 workspace.id，再配置 Project 级 Profile。"
+			},
+			"identity-conflict": {
+				"title": "Workspace ID 重复",
+				"description": "Workspace 仍可查看，但为了避免 Profile 绑定串用，配置保持只读。"
+			}
+		},
+		"forget": {
+			"action": "移除 {{name}}",
+			"confirm": "要移除 Workspace「{{name}}」吗？这里只会移除本机注册记录，不会删除项目文件或远端变量。",
+			"done": "已移除 {{name}}",
+			"failed": "无法移除 Workspace",
+			"pageHint": "可点击左侧该 Workspace 旁的垃圾桶，只移除它的本机注册记录。"
+		},
+		"registryError": {
+			"title": "Workspace 注册表不可用",
+			"description": "One Serve 无法读取本机 Workspace 注册表；Project 文件和凭据 Profile 均未被修改。"
+		},
+		"overviewError": {
+			"title": "无法打开 {{name}}",
+			"description": "Workspace 已登记，但当前无法加载其概览。"
+		},
+		"unknown": {
+			"title": "找不到 Workspace",
+			"description": "这条登记记录已不存在，请返回首页选择其他工作区。",
+			"back": "选择 Workspace"
+		}
+	},
+	"notFound": {
+		"title": "页面不存在",
+		"description": "当前地址没有对应的管理页面，请返回首页继续。"
+	},
+	"errorBoundary": {
+		"title": "应用程序遇到了一个错误",
+		"body": "很抱歉，应用程序遇到了一个意外错误。问题已经被本地错误边界捕获，你可以重试或返回首页。",
+		"errorId": "错误 ID：",
+		"devDetails": "开发模式错误详情",
+		"reload": "重新加载",
+		"home": "返回首页"
+	},
+	"sections": {
+		"groupLabel": {
+			"env": "环境变量"
+		},
+		"env": {
+			"infisical": {
+				"title": "Infisical",
+				"description": "Universal Auth 凭据 + Infisical site URL（env 域）"
+			}
+		}
+	},
+	"home": {
+		"title": "机器级 profile",
+		"loadFailedTitle": "加载 profile 失败",
+		"loading": "加载中…"
+	},
+	"form": {
+		"cancel": "取消",
+		"close": "关闭",
+		"discardTitle": "放弃未保存的修改？",
+		"discardDescription": "当前修改尚未保存。放弃后将关闭编辑窗口。",
+		"continueEditing": "继续编辑"
+	},
+	"http": {
+		"networkError": "网络请求失败，请检查网络连接。"
+	},
+	"projectInspector": {
+		"workspaceTitle": "项目设置",
+		"projectsTitle": "项目",
+		"groupLabel": "{{group}}，{{count}} 个项目",
+		"projectListLabel": "工作区项目",
+		"empty": "这个工作区还没有项目。",
+		"loadFailed": "无法加载项目配置",
+		"retry": "重试",
+		"manifestReadOnly": "Manifest · 只读",
+		"manifestDraft": "Manifest 草稿",
+		"unsavedChangesTitle": "放弃未保存的修改？",
+		"unsavedChanges": "当前修改尚未保存。要放弃修改并继续吗？",
+		"discardAndContinue": "放弃并继续",
+		"general": {
+			"path": "项目路径",
+			"metadata": "项目信息"
+		}
+	},
+	"secrets": {
+		"title": "Infisical 密钥",
+		"unavailableTitle": "远端密钥尚未启用",
+		"unavailableDescription": "请点击项目信息中的「绑定项目」，连接存储项目后管理远端变量。",
+		"scope": "密钥作用域",
+		"workspaceScope": "Workspace 共享",
+		"add": "新增密钥",
+		"key": "Key",
+		"value": "值",
+		"actions": "操作",
+		"empty": "当前作用域还没有直接定义的密钥。",
+		"emptyValue": "空值",
+		"retry": "重试",
+		"reveal": "显示原文",
+		"hide": "隐藏原文",
+		"copy": "复制值",
+		"edit": "修改密钥",
+		"delete": "删除密钥",
+		"createTitle": "新增 Infisical 密钥",
+		"editTitle": "修改 Infisical 密钥",
+		"editorDescription": "密钥值会直接发送到 Infisical，不会写入 Manifest。",
+		"save": "保存密钥",
+		"created": "密钥已创建",
+		"updated": "密钥已更新",
+		"deleted": "密钥已删除",
+		"saveFailed": "无法保存密钥",
+		"revealFailed": "无法读取密钥原文",
+		"deleteFailed": "无法删除密钥",
+		"deleteTitle": "删除 {{key}}？",
+		"deleteDescription": "这会从当前 Infisical 环境和 folder 中移除该值，无法在这里撤销。",
+		"deleteConfirmation": "输入 {{key}} 确认删除",
+		"notConfiguredTitle": "尚未配置环境变量存储",
+		"notConfiguredHint": "自动创建工作区存储项目，或选择已有项目。确认绑定后即可添加变量。",
+		"connectStorage": "连接 Infisical 项目",
+		"search": "搜索密钥名称",
+		"noMatches": "没有匹配的密钥",
+		"scopeHint": "此处的修改会直接保存到 Infisical。",
+		"loadError": "无法加载密钥",
+		"more": "{{key}} 的更多操作",
+		"initializing": "正在创建存储项目…",
+		"invalidKey": "变量名只能包含字母、数字和下划线，并以字母或下划线开头，例如 API_TOKEN。",
+		"storageCreated": "已创建 Infisical 项目：{{name}}",
+		"storageRenamed": "名称 {{requested}} 已被占用，已创建 Infisical 项目：{{name}}",
+		"loading": "正在加载密钥…"
+	},
+	"project": {
+		"fields": {
+			"environment": "部署环境"
+		}
+	},
+	"session": {
+		"description": "CLI 和 Dashboard 共用一个 Infisical 登录。",
+		"loading": "正在加载…",
+		"organization": "组织",
+		"logout": "退出登录",
+		"expired": "登录已过期，请重新登录。",
+		"signedOut": "未登录 Infisical",
+		"waiting": "等待浏览器完成登录…",
+		"reopen": "重新打开登录页面",
+		"cancel": "取消",
+		"login": "在浏览器中登录",
+		"custom": "使用自定义实例",
+		"site": "实例地址",
+		"language": "显示语言",
+		"unavailable": "登录状态暂不可用",
+		"settingsHint": "管理已连接的账号与界面偏好。",
+		"connected": "已连接",
+		"account": "账号",
+		"languageHint": "选择显示语言，或跟随系统设置。",
+		"theme": "外观主题",
+		"themeHint": "选择浅色或深色主题，偏好会保存在当前浏览器中。",
+		"themeLight": "浅色",
+		"themeDark": "深色"
+	},
+	"global": {
+		"title": "共享凭据",
+		"loginRequired": "登录 Infisical 后即可查看和管理共享凭据。",
+		"project": "存放项目",
+		"selectProject": "选择存放项目",
+		"environment": "浏览环境",
+		"parent": "上级目录",
+		"refresh": "刷新",
+		"folders": "目录",
+		"rootFolder": "根目录",
+		"expandFolder": "展开 {{name}}",
+		"collapseFolder": "收起 {{name}}",
+		"addFolder": "新建目录",
+		"search": "搜索变量名",
+		"add": "新增变量",
+		"key": "变量名",
+		"value": "变量值",
+		"actions": "操作",
+		"hide": "隐藏",
+		"reveal": "显示",
+		"copy": "复制",
+		"edit": "修改",
+		"delete": "删除",
+		"empty": "当前目录没有变量。",
+		"newValue": "新的变量值",
+		"saveRemote": "保存到 Infisical",
+		"discard": "放弃修改",
+		"deleteHint": "确认删除 {{project}} / {{environment}} / {{path}} 中的 {{key}}？此操作立即生效。",
+		"folderName": "目录名",
+		"copied": "已复制变量值",
+		"saved": "变量已保存",
+		"folderCreated": "文件夹已创建",
+		"noFolders": "暂无子文件夹",
+		"count_one": "{{count}} 个变量",
+		"count_other": "{{count}} 个变量",
+		"more": "{{key}} 的更多操作",
+		"noMatches": "没有匹配的变量",
+		"noMatchesHint": "尝试其他名称，或清除搜索条件。",
+		"emptyHint": "添加变量，让多个项目共享使用。",
+		"preparing": "正在准备共享凭据…",
+		"preparationFailed": "已登录，但共享凭据准备失败。"
+	},
+	"projectCreate": {
+		"title": "新建项目",
+		"description": "在当前工作区中，使用模板创建一个项目。",
+		"name": "项目名称",
+		"nameHint": "以字母或数字开头，可使用字母、数字、连字符和下划线。",
+		"nameInvalid": "请输入以字母或数字开头，且仅包含字母、数字、连字符或下划线的名称。",
+		"nameExists": "当前工作区已存在同名项目，请使用其他名称。",
+		"template": "技术栈或空项目",
+		"templatesFailed": "无法加载模板",
+		"loadingTemplates": "正在加载模板…",
+		"noTemplates": "暂无可用模板",
+		"location": "项目目录",
+		"locationHint": "相对于当前工作区。创建项目时会同步更新工作区配置。",
+		"submit": "创建项目",
+		"creating": "正在创建项目…",
+		"failed": "创建项目失败",
+		"success": "项目 {{name}} 已创建",
+		"refreshFailed": "项目已创建，请刷新页面加载最新工作区。",
+		"connectionLost": "连接已中断，请先刷新项目列表确认是否已创建，再尝试提交。",
+		"categories": {
+			"frontend": "应用",
+			"backend": "服务",
+			"library": "库"
+		},
+		"templates": {
+			"nestjs-api": {
+				"name": "NestJS API 服务",
+				"description": "NestJS + TypeScript，适合 API 服务与业务后台"
+			},
+			"go-api": {
+				"name": "Go API 服务",
+				"description": "Gin + Gorm + Viper + Zap，适合 API 服务与业务后台"
+			},
+			"nextjs-site": {
+				"name": "Next.js 静态网站",
+				"description": "Next.js + React 静态导出，适合官网、营销页与内容站点"
+			},
+			"fumadocs-docs": {
+				"name": "Fumadocs 文档站点",
+				"description": "Next.js + Fumadocs + Base UI，支持中英文文档与静态搜索"
+			},
+			"nextjs-app": {
+				"name": "Next.js 全栈应用",
+				"description": "Next.js 前端模板，适合 SEO 与首屏性能要求较高场景"
+			},
+			"react-spa": {
+				"name": "React 单页应用",
+				"description": "React + Vite 单页应用模板，适合交互型业务系统"
+			},
+			"expo-mobile": {
+				"name": "Expo 移动 App",
+				"description": "React Native + Expo App 模板，适合 iOS/Android 双端开发"
+			},
+			"ts-library": {
+				"name": "TypeScript 通用库",
+				"description": "通用库模板，适合发包场景，内置 tsdown + oxlint/oxfmt"
+			},
+			"go-lib": {
+				"name": "Go 通用库",
+				"description": "Go 库模板，遵循 golang-standards/project-layout，适合发包与被 import 场景"
+			},
+			"electron-app": {
+				"name": "Electron 桌面应用",
+				"description": "Electron + React + Vite 桌面应用，生成 renderer、main、preload 三个顶层项目，主进程使用 Awilix。"
+			},
+			"empty-app": {
+				"name": "空应用",
+				"description": "在 apps/ 下创建空项目，稍后自行配置技术栈。"
+			},
+			"empty-service": {
+				"name": "空服务",
+				"description": "在 services/ 下创建空项目，稍后自行配置技术栈。"
+			},
+			"empty-library": {
+				"name": "空共享库",
+				"description": "在 packages/ 下创建空项目，稍后自行配置技术栈。"
+			}
+		},
+		"groupSuccess": "已创建项目组 {{name}}，包含 {{count}} 个项目",
+		"groupLocationHint": "使用输入的名称生成关联项目，统一使用工作区根目录的依赖配置。",
+		"installSkills": "安装开发 skills",
+		"skillsHint": "安装 One 用法和技术栈指导。业务 skills 由用户另行手动安装。"
+	},
+	"appMenu": {
+		"label": "One CLI 导航菜单"
+	},
+	"binding": {
+		"workspaceTitle": "绑定项目",
+		"change": "更换项目",
+		"unbound": "尚未绑定 Infisical",
+		"workspaceHint": "自动创建工作区存储项目，或选择已有项目。确认绑定后即可添加变量。",
+		"method": "绑定方式",
+		"automatic": "自动创建",
+		"existing": "选择已有项目",
+		"unavailable": "当前绑定的项目在此账号和组织下不可用。请选择其他项目，或切换为自动创建。",
+		"replaceHint": "确认后将替换工作区绑定。原项目中的变量会保留，不会复制到新项目。",
+		"createdUnsaved": "项目 {{name}}（{{id}}）已创建，但绑定保存失败：{{reason}}。请重试绑定此项目，避免重复创建。",
+		"current": "当前绑定：{{name}}",
+		"target": "目标项目：{{name}}",
+		"defaultEnvironment": "默认环境：dev",
+		"workspaceStorage": "绑定信息写入 one.manifest.toml，变量值保存在 Infisical。",
+		"organizationRequired": "请选择组织并重新登录",
+		"devRequired": "工作区项目必须包含 dev 环境。",
+		"noProjects": "暂无可用项目，可切换到自动创建。",
+		"pendingDraft": "此工作区有未保存的配置，请先保存或放弃，再绑定项目。",
+		"conflict": "工作区配置已发生变化。请刷新并核对绑定目标后重试。",
+		"success": "已绑定到项目 {{name}}",
+		"binding": "正在绑定…",
+		"bindExisting": "绑定已有项目",
+		"createAndBind": "创建并绑定"
+	},
+	"desktop": {
+		"settings": "桌面设置",
+		"settingsHint": "管理桌面运行状态、终端集成与更新。",
+		"connectionInvalid": "后端连接信息无效。",
+		"notConnected": "请连接桌面后端后再继续。",
+		"sessionChanged": "后端已重启，请重新读取最新状态后保存。",
+		"openWorkspace": "打开工作区",
+		"retry": "重试",
+		"working": "处理中…",
+		"refresh": "刷新",
+		"terminal": "终端 CLI",
+		"installHint": "将内置 CLI 复制为独立的终端程序。来源未知、符号链接、开发版或更高版本的现有安装会被保留。",
+		"bundledVersion": "内置 CLI 版本",
+		"target": "安装路径",
+		"existingVersion": "现有 CLI 版本",
+		"notInstalled": "尚未安装",
+		"configuration": "共享配置",
+		"pathPending": "终端 PATH 尚待配置。安装 CLI 不会自动修改 Shell 配置。",
+		"pathDetected": "桌面环境可以找到此 CLI，请新开终端确认 PATH 和版本。",
+		"resolvedPath": "当前命中：{{path}}",
+		"install": "安装 / 更新终端 CLI",
+		"continue": "进入工作区",
+		"skipTerminal": "稍后配置终端",
+		"welcome": "欢迎使用 One Desktop",
+		"welcomeHint": "桌面后端已连接。请检查终端集成，也可以暂不安装终端命令，继续使用桌面。",
+		"updates": "桌面更新",
+		"updateHint": "桌面应用、Go API 与内置 CLI 整包更新；终端 CLI 是独立的安装。",
+		"checkUpdate": "检查更新",
+		"updateAvailable": "发现新版本 {{version}}。",
+		"upToDate": "当前已是最新版本。",
+		"updateUnconfigured": "此开发构建不启用更新，或正式发布签名尚未配置。",
+		"installUpdate": "下载、校验并安装",
+		"connection": {
+			"starting": "正在启动本地后端…",
+			"connecting": "正在验证本地 HTTP 连接…",
+			"failed": "后端启动失败。",
+			"stopped": "后端已停止。",
+			"stopping": "正在结束操作并关闭后端…",
+			"connectionFailed": "后端已运行，但界面未能连接，请重试连接。",
+			"preview": "请在 One Desktop 中打开此界面。浏览器预览没有后端会话。"
+		},
+		"installAction": {
+			"install": "可以安装内置 CLI。",
+			"upgrade": "可以更新现有终端 CLI。",
+			"keep": "可以继续使用现有版本。",
+			"newer": "已有更高版本 CLI，将予以保留。",
+			"preserve": "此安装不属于可自动管理的类型，将予以保留。"
+		},
+		"native": {
+			"backend_missing": "安装包中的后端缺失，请重新安装 One Desktop。",
+			"backend_identity": "后端版本与此桌面构建不匹配。",
+			"backend_timeout": "后端未在规定时间内就绪。",
+			"backend_handshake": "后端握手失败。",
+			"update_recovery_required": "此平台的恢复流程尚未验证，因此暂不允许安装更新，请继续使用当前版本。",
+			"update_busy": "另一项更新操作正在进行。",
+			"update_check_required": "请先检查可用更新。"
+		}
+	}
+}

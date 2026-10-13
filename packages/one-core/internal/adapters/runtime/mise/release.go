@@ -1,0 +1,15 @@
+package mise
+
+import (
+	"runtime"
+
+	"github.com/torchstellar-team/one-cli/packages/one-core/internal/adapters/runtime/mise/miserelease"
+)
+
+const managedVersion = miserelease.Version
+
+type releaseAsset = miserelease.Asset
+
+func currentAsset() (releaseAsset, error) {
+	return miserelease.ForPlatform(runtime.GOOS, runtime.GOARCH)
+}

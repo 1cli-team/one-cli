@@ -4,10 +4,10 @@ package misecmd
 import (
 	"github.com/spf13/cobra"
 
-	"github.com/torchstellar-team/one-cli/packages/cli/internal/application/execution"
-	"github.com/torchstellar-team/one-cli/packages/cli/internal/modules/miseconfig"
-	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/i18n"
-	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/output"
+	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/application/execution"
+	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/modules/miseconfig"
+	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/platform/i18n"
+	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/platform/output"
 )
 
 func Commands() []*cobra.Command {

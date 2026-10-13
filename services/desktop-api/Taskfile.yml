@@ -1,0 +1,14 @@
+version: '3'
+vars:
+  GOEXE:
+    sh: go env GOEXE
+  BUILD_VERSION: '{{.RELEASE_VERSION | default "0.0.0-dev"}}'
+tasks:
+  build:
+    cmds: ["go build -trimpath -ldflags '-s -w -X main.version={{.BUILD_VERSION}}' -o bin/one-api{{.GOEXE}} ./cmd/one-api"]
+  check:
+    cmds: ['go vet ./...']
+  fmt:
+    cmds: ['go fmt ./...']
+  tidy:
+    cmds: ['go mod tidy']

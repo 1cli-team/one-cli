@@ -217,7 +217,7 @@ insufficient matches and overlapping replacements fail before destination writes
 Go templates maintain one normal `go.mod` and a `go.sum` when needed. Bundling
 temporarily renames `go.mod` to `_go.mod` to avoid Go's nested-module embedding
 restriction; generation restores the filename. Do not edit the generated
-resources in `packages/cli/internal/resources/bundled/` manually.
+resources in `packages/one-core/internal/resources/bundled/` manually.
 
 After editing, run these commands from the repository root:
 

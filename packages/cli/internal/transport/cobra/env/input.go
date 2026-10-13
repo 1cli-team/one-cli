@@ -5,7 +5,7 @@ import (
 	"strings"
 
 	"github.com/spf13/cobra"
-	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/i18n"
+	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/platform/i18n"
 )
 
 // readSetValue handles both project variables and shared credentials. Limit the

@@ -1,0 +1,179 @@
+// Package prompt is a thin façade over charmbracelet/huh that maps
+// huh-specific outcomes (ErrUserAborted, validation errors) into the
+// CLI's central error contract.
+//
+// Callers should:
+//  1. gate any prompt behind output.IsTTY() && !flags.yes
+//  2. surface returned errors as-is (they already carry PROMPT_CANCELLED
+//     or other structured codes)
+//
+// huh runs its own bubbletea program per Run(), which means each helper
+// is a self-contained UI invocation — no global state, easy to test by
+// stubbing at the call site.
+package prompt
+
+import (
+	stderrors "errors"
+	"fmt"
+	"os"
+	"os/signal"
+
+	"charm.land/huh/v2"
+
+	cliErrors "github.com/torchstellar-team/one-cli/packages/one-core/pkg/platform/errors"
+	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/platform/i18n"
+	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/platform/output"
+)
+
+// Option mirrors huh.Option but keeps callers from importing huh directly.
+// Generic over the value type so Select returns a strongly-typed result.
+type Option[T comparable] struct {
+	Label       string
+	Description string
+	Value       T
+}
+
+// Text shows a single-line input prompt. validate may be nil; if non-nil,
+// a non-nil return is shown to the user and the prompt repeats.
+func Text(title, placeholder string, validate func(string) error) (string, error) {
+	var value string
+	field := huh.NewInput().
+		Title(title).
+		Placeholder(placeholder).
+		Value(&value)
+	if validate != nil {
+		field = field.Validate(validate)
+	}
+	if err := runField(field); err != nil {
+		return "", mapErr(err)
+	}
+	return value, nil
+}
+
+// Password shows a single-line input with masked echo. Used for secret
+// values that shouldn't appear in scrollback.
+func Password(title string, validate func(string) error) (string, error) {
+	var value string
+	field := huh.NewInput().
+		Title(title).
+		EchoMode(huh.EchoModePassword).
+		Value(&value)
+	if validate != nil {
+		field = field.Validate(validate)
+	}
+	if err := runField(field); err != nil {
+		return "", mapErr(err)
+	}
+	return value, nil
+}
+
+// Confirm shows a yes/no prompt. defaultValue seeds the cursor; affirmative
+// and negative override the localized yes/no labels (set to "" for
+// the active locale's defaults). On Ctrl-C returns PROMPT_CANCELLED.
+func Confirm(title string, defaultValue bool, affirmative, negative string) (bool, error) {
+	value := defaultValue
+	field := huh.NewConfirm().Title(title).Value(&value)
+	if affirmative == "" {
+		affirmative = i18n.T("common.yes")
+	}
+	if negative == "" {
+		negative = i18n.T("common.no")
+	}
+	if affirmative != "" {
+		field = field.Affirmative(affirmative)
+	}
+	if negative != "" {
+		field = field.Negative(negative)
+	}
+	if err := runField(field); err != nil {
+		return false, mapErr(err)
+	}
+	return value, nil
+}
+
+// Select shows a vertical menu of options. T is typically string but can
+// be any comparable — callers wrap a label string + a typed value (e.g.
+// existingDirMode constants).
+func Select[T comparable](title string, options []Option[T]) (T, error) {
+	var value T
+	huhOpts := make([]huh.Option[T], 0, len(options))
+	for _, opt := range options {
+		huhOpts = append(huhOpts, huh.NewOption(opt.Label, opt.Value))
+	}
+	field := huh.NewSelect[T]().
+		Title(title).
+		Options(huhOpts...).
+		Value(&value)
+	if err := runField(field); err != nil {
+		return value, mapErr(err)
+	}
+	return value, nil
+}
+
+// SelectWithDescriptions is like Select but renders a per-option description
+// line below each entry. Useful for template pickers where the user needs
+// to read what each option actually does.
+//
+// huh's Option doesn't carry a description natively, so we encode it into
+// the visible label as "<label> — <description>". This keeps a11y mode
+// (screen readers / accessible terminals) coherent without extra setup.
+func SelectWithDescriptions[T comparable](title string, options []Option[T]) (T, error) {
+	flat := make([]Option[T], 0, len(options))
+	for _, opt := range options {
+		label := opt.Label
+		if opt.Description != "" {
+			label = fmt.Sprintf("%s — %s", opt.Label, opt.Description)
+		}
+		flat = append(flat, Option[T]{Label: label, Value: opt.Value})
+	}
+	return Select(title, flat)
+}
+
+// runHuh restores the same cooperative Ctrl-C behavior in huh's accessible
+// mode that Bubble Tea provides in its regular terminal mode. huh switches to
+// accessible prompts for TERM=dumb, where a Ctrl-C otherwise terminates the
+// whole process before it can return ErrUserAborted to us.
+func runHuh(run func() error) error {
+	if os.Getenv("TERM") != "dumb" {
+		return run()
+	}
+
+	interrupted := make(chan os.Signal, 1)
+	signal.Notify(interrupted, os.Interrupt)
+	defer signal.Stop(interrupted)
+
+	done := make(chan error, 1)
+	go func() { done <- run() }()
+
+	select {
+	case err := <-done:
+		return err
+	case <-interrupted:
+		return huh.ErrUserAborted
+	}
+}
+
+// mapErr translates huh sentinels into our central error catalogue. Anything
+// we don't recognise becomes a generic ONE_CLI_ERROR so it still goes through
+// the JSON envelope.
+func mapErr(err error) error {
+	if err == nil {
+		return nil
+	}
+	if stderrors.Is(err, huh.ErrUserAborted) {
+		// PROMPT_CANCELLED is a cooperative, quiet exit. Scripts see exit 0
+		// and users do not get a red error after choosing to stop.
+		return cliErrors.New(cliErrors.PROMPT_CANCELLED, i18n.T("common.cancelled")).
+			WithExit0().
+			WithRemediation(output.Remediation{
+				Action: "rerun-with-yes",
+				Hint:   i18n.T("prompt.skip_hint"),
+			})
+	}
+	return cliErrors.New(cliErrors.ONE_CLI_ERROR, err.Error())
+}
+
+func runField(field huh.Field) error {
+	form := huh.NewForm(huh.NewGroup(field)).WithTheme(defaultTheme()).WithKeyMap(defaultKeyMap()).WithShowHelp(false)
+	return runHuh(form.Run)
+}

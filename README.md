@@ -93,7 +93,7 @@ one add nestjs-api --name api
 | `one add <starter>` | Add another app, service, docs site, or library |
 | `one env` | Review and manage environment variables |
 | `one login` | Sign in to Infisical with your browser |
-| `one serve` | Inspect workspaces, manage the current account and shared credentials |
+| One Desktop | Inspect workspaces, manage the current account and shared credentials |
 | `one run [task]` | Discover static mise.toml tasks and execute them through Process Compose |
 | `one exec <project> -- <command>` | Execute a command with the selected project environment |
 
@@ -103,7 +103,7 @@ Full command docs live at [1cli.dev](https://1cli.dev).
 
 ## Work With AI Assistants
 
-New workspaces include one `AGENTS.md` in the active One CLI language. The editable [English](packages/cli/internal/modules/creation/templates/AGENTS.en-US.md) and [Chinese](packages/cli/internal/modules/creation/templates/AGENTS.zh-CN.md) Markdown templates cover execution through `one run`, complex scripts in `scripts/*.mts`, and variable management through One. Publishing credentials belong in global variables configured on the Dashboard’s Shared credentials page; tasks inject them with `one exec --global`. Existing guidance remains team-owned when the language changes or projects are added.
+New workspaces include one `AGENTS.md` in the active One CLI language. The editable [English](packages/one-core/pkg/modules/creation/templates/AGENTS.en-US.md) and [Chinese](packages/one-core/pkg/modules/creation/templates/AGENTS.zh-CN.md) Markdown templates cover execution through `one run`, complex scripts in `scripts/*.mts`, and variable management through One. Publishing credentials belong in global variables configured on the Dashboard’s Shared credentials page; tasks inject them with `one exec --global`. Existing guidance remains team-owned when the language changes or projects are added.
 
 You can ask an assistant for project-level changes in natural language, for example:
 
@@ -119,7 +119,7 @@ The assistant can read `one.manifest.toml` and project README files, then use On
 
 One CLI manages variables in Infisical and injects them directly into commands. Workspace bindings live in the manifest `[env.infisical]` table; `.env` files are not loaded or exported. Run `one login` to sign in with your browser; the single session is stored in the OS keyring, with no plaintext fallback. Use `one whoami` to inspect status and `one logout` to remove the local session.
 
-Run `one serve` from any directory for account settings, workspaces, and shared credentials. `one create` registers new workspaces automatically; running `one serve` inside an existing workspace or its subdirectories registers it and opens its page. Workspace binding changes use a reviewed, revision-checked TOML draft; project settings display derived configuration. Remote variable edits take effect immediately; lists omit values and reveal/copy fetch plaintext only on demand.
+Open One Desktop for account settings, workspaces, and shared credentials. `one create` registers new workspaces automatically; use Open workspace in the desktop app to register an existing workspace. `one serve` now reports this migration instead of starting a web server. Workspace binding changes use a reviewed, revision-checked TOML draft; project settings display derived configuration. Remote variable edits take effect immediately; lists omit values and reveal/copy fetch plaintext only on demand.
 
 Login automatically creates or reuses accessible `shared-credentials` in the current organization. Old account bindings are updated silently, and remote data is retained. Retry failed preparation with `one env bind --global`. Agents discover environments and folders through `one env --global` and `one env list --global`, then execute with `one exec --global --env dev --path /folder --keys KEY -- command`. One does not print injected values. Child logs preserve their original content and formatting.
 
@@ -127,7 +127,7 @@ Login automatically creates or reuses accessible `shared-credentials` in the cur
 
 Every One CLI project has a `one.manifest.toml` file at the root. Most users do not need to edit it by hand.
 
-Think of it as the project map. It records which parts exist, where they live, and which starter created them. One CLI reads it when you add, run, build, or inspect parts of the project. `one serve` writes it only after an explicit reviewed, revision-checked Dashboard action; other repository changes stay in the normal code-review workflow.
+Think of it as the project map. It records which parts exist, where they live, and which starter created them. One CLI reads it when you add, run, build, or inspect parts of the project. One Desktop writes it only after an explicit reviewed, revision-checked action; other repository changes stay in the normal code-review workflow.
 
 ## Repository Layout
 
@@ -135,16 +135,18 @@ If you want to work on One CLI itself, the repository is organized like this:
 
 | Path | Purpose |
 |---|---|
-| `one.manifest.toml` | The four projects managed by One CLI itself |
+| `one.manifest.toml` | The six projects managed by One CLI itself |
 | `packages/cli` | The One CLI app and its public Go packages |
 | `packages/kernel` | Shared Go kernel |
 | `packages/templates` | Starters used by `one add` |
 | `mise.toml` | Task definitions and tool versions |
 | `apps/docs` | Documentation website |
-| `apps/dashboard` | Local workspace, account, and global-variable Dashboard opened by `one serve` |
+| `apps/desktop` | React UI and the Tauri host in `src-tauri/` |
+| `services/desktop-api` | Bundled `one-api` HTTP backend |
+| `packages/one-core` | Go business shared by the CLI and desktop API |
 | `assets` | Brand assets, including the logo |
 
-This repository is also a One CLI workspace: `dashboard`, `docs`, `cli`, and `kernel`. Template directories under `packages/templates` are source assets, not registered projects. `packages/cli` keeps its existing location because it also exports Go packages with that module path.
+This repository is also a One CLI workspace: `desktop`, `desktop-api`, `docs`, `cli`, `one-core`, and `kernel`. Template directories under `packages/templates` are source assets, not registered projects. `packages/cli` keeps its existing location because it also exports Go packages with that module path.
 
 Bootstrap a fresh checkout without requiring an installed `one`:
 
@@ -161,18 +163,18 @@ Then use the workspace commands:
 ```bash
 one                             # Inspect this workspace
 one run                         # List root and project tasks
-one run dev                     # Dashboard API + Vite UI for this workspace
+one run dev                     # Tauri + React + bundled Go API and CLI
 one run dev -p docs              # Documentation at http://localhost:3000
 one run build -p cli             # Prepare embedded resources and build the CLI
 one run check                   # The complete repository gate; one check is shorthand
-one serve                       # Manage this repository in the Dashboard
+one run build -p desktop         # Build a native desktop package
 ```
 
-`one run dev -p dashboard` starts the Vite UI; run `one run dev -p cli` in another terminal for its API, or use the combined `one run dev` task. Both the development API and `one serve` use this repository as their workspace. No Infisical binding is required to build, check, or start these projects.
+`one run dev -p desktop` launches Tauri, prepares both Go executables, and starts Vite. Install the Rust stable toolchain and the platform prerequisites described in [the desktop guide](apps/desktop/README.md). No Infisical binding is required to build, check, or start these projects.
 
-Root tasks remain native mise commands, so local checks and first-time installation can use `mise run build`, `mise run check`, and `mise run install`. Project tasks come from package scripts and Taskfiles. Only the root `mise.toml` is used: project tasks are namespaced as `cli:build` or `dashboard:dev` and select their directory with `dir`. CLI tasks declare their embedded-resource prerequisites there. Run `one init mise` after changing the project task catalogue to refresh the tracked native tasks. Running or listing tasks does not regenerate configuration. Dev commands are defined in mise.toml and executed by Process Compose in the terminal.
+Root tasks remain native mise commands, so local checks and first-time installation can use `mise run build`, `mise run check`, and `mise run install`. Project tasks come from package scripts and Taskfiles. Only the root `mise.toml` is used: project tasks are namespaced as `cli:build` or `desktop:dev` and select their directory with `dir`. CLI tasks declare their embedded-resource prerequisites there. Run `one init mise` after changing the project task catalogue to refresh the tracked native tasks. Running or listing tasks does not regenerate configuration. Dev commands are defined in mise.toml and executed by Process Compose in the terminal.
 
-Run `mise run check` for Go vet, formatting, Dashboard lint, and documentation checks.
+Run `mise run check` for Go vet, formatting, React lint, Rust checks, and documentation checks.
 
 Read [CONTRIBUTING.md](./CONTRIBUTING.md) before opening a pull request.
 
