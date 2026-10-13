@@ -3,7 +3,13 @@ import { mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from "nod
 import { createHash } from "node:crypto";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { notarizeMacDMG, signMacSidecar, verifyMacApp, withMacSigning } from "./desktop-macos.mts";
+import {
+  MissingMacAppTicketError,
+  notarizeMacDMG,
+  signMacSidecar,
+  verifyMacApp,
+  withMacSigning,
+} from "./desktop-macos.mts";
 import { collectInstaller, platforms } from "./desktop-release.mts";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
@@ -116,7 +122,6 @@ function build(identity?: string) {
   const args = ["exec", "tauri", command, "--config", "src-tauri/build-config.json"];
   const bundleDir = resolve(native, "target", target, "release/bundle");
   if (command === "build") {
-    if (release) rmSync(bundleDir, { recursive: true, force: true });
     args.push(
       "--target",
       target,
@@ -135,20 +140,35 @@ function build(identity?: string) {
     delete env.APPLE_CERTIFICATE; // Tauri's built-in import alias, if set by a local shell.
     env.APPLE_SIGNING_IDENTITY = identity;
   }
-  run("pnpm", args, desktop, env);
-  if (command !== "build") return;
-  if (platform.os === "darwin") {
+  for (let attempt = 0; ; attempt++) {
+    if (release && command === "build") rmSync(bundleDir, { recursive: true, force: true });
+    run("pnpm", args, desktop, env);
+    if (command !== "build") return;
+    if (platform.os !== "darwin") break;
     const app = resolve(bundleDir, "macos/One Desktop.app");
     for (const [name, digest] of Object.entries(hashes)) {
       if (hash(resolve(app, "Contents/MacOS", name)) !== digest)
         throw new Error(`Bundled binary hash changed / 包内二进制摘要变化: ${name}`);
     }
     if (release) {
-      verifyMacApp(app);
+      try {
+        verifyMacApp(app);
+      } catch (error) {
+        if (!(error instanceof MissingMacAppTicketError) || attempt >= 2) throw error;
+        // Tauri 2.12.2 ignores stapler's exit status. Rebuild both bundles so
+        // the DMG contains the app's ticket; never repair only the outer app.
+        const delay = attempt === 0 ? 5 : 15;
+        console.warn(
+          `App ticket missing; rebuilding app and DMG in ${delay}s (${attempt + 1}/2) / 应用缺少票据，${delay} 秒后重新生成应用和 DMG`,
+        );
+        Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, delay * 1000);
+        continue;
+      }
       const dmgs = readdirSync(resolve(bundleDir, "dmg")).filter((name) => name.endsWith(".dmg"));
       if (dmgs.length !== 1) throw new Error("Expected one DMG / 需要唯一的 DMG");
       notarizeMacDMG(resolve(bundleDir, "dmg", dmgs[0]));
     }
+    break;
   }
   if (release) collectInstaller(root, manifest);
 }

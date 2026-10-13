@@ -122,7 +122,10 @@ export function decidePlan(input: {
   };
 }
 
-export function parseChecksums(text: string): Map<string, string> {
+export function parseChecksums(
+  text: string,
+  expectedNames: string[] = assets.filter((name) => name !== "checksums.txt"),
+): Map<string, string> {
   const checksums = new Map<string, string>();
   for (const line of text.trim().split(/\r?\n/)) {
     const match = /^([a-f0-9]{64})\s+\*?([^/\\\s]+)$/.exec(line);
@@ -130,7 +133,11 @@ export function parseChecksums(text: string): Map<string, string> {
       fail("Invalid or duplicate checksum entry.", "校验文件含无效或重复条目。");
     checksums.set(match[2], match[1]);
   }
-  assertAssets(["checksums.txt", ...checksums.keys()]);
+  if (JSON.stringify([...checksums.keys()].sort()) !== JSON.stringify([...expectedNames].sort()))
+    fail(
+      `Unexpected checksum entries. Expected: ${expectedNames.join(", ")}.`,
+      `校验条目不完整或包含意外文件。应包含：${expectedNames.join("，")}。`,
+    );
   return checksums;
 }
 

@@ -134,9 +134,8 @@ function verifyFiles(directory: string, version: string, commit: string) {
     readFileSync(join(directory, "desktop-release.json"), "utf8"),
   );
   validateRecord(record, version, commit);
-  const sums = parseChecksums(readFileSync(join(directory, "desktop-checksums.txt"), "utf8"));
-  equalNames(
-    [...sums.keys()],
+  const sums = parseChecksums(
+    readFileSync(join(directory, "desktop-checksums.txt"), "utf8"),
     expectedNames(version).filter((name) => name !== "desktop-checksums.txt"),
   );
   for (const [name, hash] of sums) {

@@ -236,6 +236,8 @@ GitHub 自带 `GITHUB_TOKEN` 用于上传，不需要另配个人 Token。构建
    Gatekeeper 与 `.app` 票据，再单独公证并 staple 最终 DMG。
    时间戳服务失败或票据操作遇到明确的网络中断时，分别等待 5、15、30 秒有限重试；
    签名无效、公证拒绝及其他校验错误仍立即失败，重试耗尽也不发布。
+   如果 Tauri 公证成功后未附加应用票据，分别等待 5、15 秒，最多重新打包两次；
+   应用与 DMG 一起重新生成并完整校验，避免只修复外部应用而遗漏 DMG 内的票据。
 5. 收齐五个平台的安装包后才创建/复用 `desktop-vX.Y.Z` 草稿。上传后重新下载全部附件并
    比较 SHA256，通过后公开。桌面 Release 使用 `--latest=false`，CLI Latest 与六附件协议保持兼容。
 
@@ -291,6 +293,9 @@ Submit the final signed DMG for notarization too, then staple and verify it.
 Timestamp-service failures and explicit network interruptions during ticket operations
 retry after 5, 15 and 30 seconds. Invalid signatures, rejected notarization and other
 validation errors still fail immediately; exhausted retries never permit publication.
+If Tauri finishes notarization without stapling the app ticket, retry packaging at
+most twice after 5 and 15 seconds. Regenerate and validate both the app and DMG so
+the installer includes the app ticket, rather than repairing only the external app.
 Windows NSIS and Linux AppImage installers are unsigned; Linux is built on Ubuntu 22.04.
 
 After all five builds succeed, create or reuse a `desktop-vX.Y.Z` draft. Upload the

@@ -9,6 +9,12 @@ const directory = join(process.env.RUNNER_TEMP ?? tmpdir(), "one-desktop-signing
 const keychain = join(directory, "build.keychain-db");
 const searchList = join(directory, "search-list.json");
 
+export class MissingMacAppTicketError extends Error {
+  constructor() {
+    super("macOS app has no stapled ticket / macOS 应用缺少公证票据");
+  }
+}
+
 function run(bin: string, args: string[], privateOutput = false, retryNetwork = false) {
   // Never include arguments in errors: security/notarytool receive credentials.
   const delays = [5, 15, 30];
@@ -34,6 +40,14 @@ function run(bin: string, args: string[], privateOutput = false, retryNetwork = 
       Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, delay * 1000);
       continue;
     }
+    if (
+      bin === "xcrun" &&
+      args[0] === "stapler" &&
+      args[1] === "validate" &&
+      args.at(-1)?.endsWith(".app") &&
+      /does not have a ticket stapled to it/.test(`${result.stdout ?? ""}\n${result.stderr ?? ""}`)
+    )
+      throw new MissingMacAppTicketError();
     throw new Error(
       `${bin} failed / 执行失败${privateOutput ? " (credential output withheld / 隐藏凭据输出)" : ""}`,
     );
