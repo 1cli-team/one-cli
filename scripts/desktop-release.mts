@@ -46,6 +46,7 @@ type Manifest = {
 type Installer = { target: string; name: string; sha256: string; notarized: boolean };
 type ReleaseRecord = { version: string; commit: string; cliTag: string; artifacts: Installer[] };
 type Release = {
+  tag_name: string;
   draft: boolean;
   prerelease: boolean;
   body: string;
@@ -72,7 +73,18 @@ function api(path: string, fields: string[] = [], optional = false): any {
   return JSON.parse(result.stdout);
 }
 function release(tag: string): Release | undefined {
-  return api(`releases/tags/${tag}`, [], true);
+  const published = api(`releases/tags/${tag}`, [], true);
+  if (published) return published;
+  // The tag endpoint omits drafts, even when the Git tag already exists.
+  // List authenticated releases so upload verification and retries find them.
+  const matches: Release[] = [];
+  for (let page = 1; ; page++) {
+    const releases: Release[] = api(`releases?per_page=100&page=${page}`);
+    matches.push(...releases.filter((item) => item.tag_name === tag));
+    if (releases.length < 100) break;
+  }
+  if (matches.length > 1) fail("Multiple releases share the same tag", "多个 Release 使用相同 tag");
+  return matches[0];
 }
 function sourceFor(tag: string) {
   let object = api(`git/ref/tags/${tag}`, [], true)?.object;
