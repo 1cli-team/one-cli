@@ -1,8 +1,12 @@
-# One CLI 发布 / Releasing One CLI
+# One CLI 与 One Desktop 发布 / Releasing One CLI and One Desktop
+
+CLI 沿用本地 `mise run release` 流程；桌面版通过 GitHub Actions 构建和发布，配置见下方「One Desktop」。
+
+CLI releases use the local `mise run release` workflow. Desktop installers are built and published by GitHub Actions; see “One Desktop” below.
 
 ## 中文
 
-发布对象是包含 Dashboard、模板和 One 技能的 CLI。GitHub Release 位于
+发布对象是包含模板和 One 技能的 CLI；桌面界面与 Go HTTP 后端单独打包。GitHub Release 位于
 `1cli-team/one-cli`，文档网站的部署独立维护。统一入口是根目录的
 `mise run release`；流程从已删除的 `.github/workflows/cli.yml` 迁移而来。
 
@@ -61,8 +65,8 @@ mise run release -- publish patch --notes /absolute/path/release-notes.md
 
 ### 检查与产物
 
-任务使用 `GOWORK=off go mod download` 准备两个 Go module；禁用 mise 任务产物
-缓存，并强制运行 `mise run --jobs 1 --force check`。检查会重建并同步 Dashboard、
+任务使用 `GOWORK=off go mod download` 准备四个 Go module；禁用 mise 任务产物
+缓存，并强制运行 `mise run --jobs 1 --force check`。检查覆盖 React、Rust、Go，并同步
 registry、模板和技能。原 `pre-push` 与测试流水线已经删除，当前检查以静态检查、
 构建验证和发布包冒烟检查为准。检查结束后受版本控制的源码必须保持干净。
 
@@ -101,7 +105,7 @@ Windows 为 `one.exe`；每个归档包含 README 和 `third_party/mise/LICENSE`
 
 ## English
 
-One CLI releases contain the Dashboard, templates, and One skills. Releases are
+One CLI releases contain templates and One skills. The desktop UI and Go HTTP backend are packaged separately. Releases are
 published to `1cli-team/one-cli`; the documentation website is deployed separately.
 The root `mise run release` task replaces the deleted release workflow.
 
@@ -152,8 +156,8 @@ same verified files after rechecking their hashes and remote state.
 
 ### Verification and assets
 
-Download both Go modules with `GOWORK=off`, disable mise task artifact caching,
-and force `mise run --jobs 1 --force check` to regenerate and check Dashboard,
+Download all four Go modules with `GOWORK=off`, disable mise task artifact caching,
+and force `mise run --jobs 1 --force check` to check React, Rust, Go, and regenerate
 registry, templates, and skills. Tracked source must remain clean. The deleted
 pre-push/test pipeline is replaced by current static checks, builds, and artifact
 smoke checks.
@@ -182,3 +186,118 @@ is off master. Keep failed drafts and build records, retry with the same manifes
 and replace duplicate assets only in drafts. Never move/delete published tags or
 replace published assets. After publication, verify latest installation and
 upgrade from an older release in temporary directories, preserving local launchers.
+
+## One Desktop
+
+### 中文：首次配置
+
+工作流：`.github/workflows/desktop.yml`（**Release One Desktop**）。构建脚本复用
+`scripts/desktop.mts`，根目录日常构建仍为 `one build-desktop`。
+
+在 [仓库 Actions Secrets](https://github.com/1cli-team/one-cli/settings/secrets/actions)
+配置以下五项。也可以先保存到 One 共享凭据，再通过 `one exec --global --env <环境>
+--path <目录> --keys <这五个变量名> -- <同步命令>` 注入，使用 `gh secret set` 的标准输入同步；
+不要把凭据作为命令行参数、源码、发布说明或日志输出。
+
+| Secret | 内容 |
+| --- | --- |
+| `APPLE_TEAM_ID` | Apple Developer Team ID |
+| `APPLE_ID` | Apple Developer 账户邮箱 |
+| `APPLE_PASSWORD` | Apple 应用专用密码，不是账户登录密码 |
+| `APPLE_CERTIFICATE_BASE64` | **Developer ID Application** 的 `.p12` 文件 base64，必须包含对应私钥 |
+| `APPLE_CERTIFICATE_PASSWORD` | 导出该 `.p12` 时设置的密码 |
+
+签名身份从证书自动解析，并校验 Team ID，无需第六项 Secret。Apple 签名/公证的要求见
+[Tauri macOS 签名文档](https://v2.tauri.app/distribute/sign/macos/)。证书在 macOS runner
+临时目录以受限权限解码，导入临时钥匙串后立即删除 `.p12`；构建前向 Apple 验证公证凭据。
+任务结束或失败时恢复原钥匙串
+列表并删除临时钥匙串。Secret 只注入 macOS 打包步骤。
+
+GitHub 自带 `GITHUB_TOKEN` 用于上传，不需要另配个人 Token。构建 job 只有 `contents: read`；
+只有最终发布 job 获得 `contents: write`。仓库规则需允许该工作流创建 `desktop-v*` tag 和 Release。
+
+### 中文：触发与产物
+
+1. 将桌面代码和工作流合入 `master`，按上文既有 CLI 流程发布新的稳定 `vX.Y.Z`。
+   桌面流水线订阅 CLI Release 的 `published` 事件，使用该 tag 的固定源码 SHA。
+   尚未包含桌面流水线的旧 tag 会被拒绝，不能拿旧版本号构建新源码。
+2. 手动补跑：GitHub Actions → **Release One Desktop** → **Run workflow**，分支选
+   `master`，`cli_tag` 填已正式发布的 CLI tag。也可执行：
+
+   ```sh
+   gh workflow run desktop.yml --repo 1cli-team/one-cli --ref master -f cli_tag=vX.Y.Z
+   ```
+
+3. 五个平台从同一提交构建。macOS arm64 job 先执行 `mise run --jobs 1 --force check`；
+   所有平台都编译 React、Rust、Go。工具版本来自 `mise.toml`，Rust 固定为 1.94.0。
+4. macOS 先对 `one-api`、`one` 执行 Developer ID 签名，再计算 manifest 的 SHA256。
+   Tauri 通过 `bundle.macOS.files` 复制已签名 sidecar，避免二次签名改变摘要；随后签名、
+   公证并 staple `.app`。脚本核对包内 sidecar 摘要、Developer ID、Team ID、强化运行时、
+   Gatekeeper 与 `.app` 票据，再单独公证并 staple 最终 DMG。
+5. 收齐五个平台的安装包后才创建/复用 `desktop-vX.Y.Z` 草稿。上传后重新下载全部附件并
+   比较 SHA256，通过后公开。桌面 Release 使用 `--latest=false`，CLI Latest 与六附件协议保持兼容。
+
+| 安装包文件名 | 架构 | 签名/公证 |
+| --- | --- | --- |
+| `one-desktop_X.Y.Z_darwin_arm64.dmg` | macOS Apple Silicon | Developer ID + 公证 + staple |
+| `one-desktop_X.Y.Z_darwin_amd64.dmg` | macOS Intel | Developer ID + 公证 + staple |
+| `one-desktop_X.Y.Z_windows_amd64.exe` | Windows x64，NSIS | 未签名 |
+| `one-desktop_X.Y.Z_linux_amd64.AppImage` | Linux x64 | 未签名 |
+| `one-desktop_X.Y.Z_linux_arm64.AppImage` | Linux arm64 | 未签名 |
+
+Release 另含 `desktop-release.json`（源码、版本、平台和安装包摘要）与
+`desktop-checksums.txt`（五个安装包及发布记录的摘要）。Actions 原始产物保留 14 天。
+Linux 使用 Ubuntu 22.04 构建，以该环境的系统库为兼容基线。
+
+失败后重跑同一 workflow/CLI tag。任何平台或公证失败均不公开；已创建的草稿保留，同名
+草稿附件可在重试中替换。已公开版本只校验并返回已有结果，不移动 tag、不覆盖附件。
+修复代码应发布新的 CLI 版本，再构建对应桌面版本。需要只读检查时，从根目录运行
+`mise run desktop-release -- plan vX.Y.Z`；CI 的附件汇总发布入口是
+`mise run desktop-release -- publish vX.Y.Z <下载产物目录>`。
+
+Apple 的五项凭据与 Tauri updater 密钥是两套机制。本流程发布可手动安装的正式包，
+不配置 updater 密钥、不发布更新 feed，也不打开尚未完成平台恢复验收的自动安装开关。
+本地构建通过不代表 GitHub 五个平台执行或 Apple 公证已通过；以工作流结果为准。
+
+### English: configuration and operation
+
+The **Release One Desktop** workflow builds native installers for macOS arm64/x64,
+Windows x64, and Linux arm64/x64. Configure the five repository Secrets listed above:
+Apple Team ID, Apple ID email, an **app-specific password**, a base64-encoded
+**Developer ID Application p12 including its private key**, and its export password.
+The signing identity is derived and checked against the Team ID. One shared credentials
+can inject these values into a synchronization command that sends each value to
+`gh secret set` via stdin; never print values or put them in command arguments.
+
+Only macOS packaging receives Apple credentials. It imports the certificate into a
+temporary keychain, removes the decoded p12, validates notarization credentials with Apple before building, and restores the original keychain list
+and deletes the temporary keychain on completion/failure. Build jobs have read-only
+repository access; only the publisher receives contents-write access through the
+automatic GitHub token. Repository rules must allow `desktop-v*` tags and Releases.
+
+Merge the workflow and desktop source into master, then publish a stable CLI Release
+through the existing CLI release entrypoint. The published event starts desktop
+packaging from the exact CLI tag's commit. Tags predating the desktop workflow are
+rejected. To retry, dispatch `desktop.yml` from master with `cli_tag=vX.Y.Z` using
+the command above. The macOS arm64 job runs the existing full repository checks;
+each platform builds React, Rust, and Go with pinned tools and Rust 1.94.0.
+
+Sign Go sidecars before generating their manifest hashes. Tauri copies them unchanged
+using `bundle.macOS.files`, then signs, notarizes and staples the app. Verify sidecar
+hashes, Developer ID/Team ID, hardened runtime, Gatekeeper and the stapled app ticket.
+Submit the final signed DMG for notarization too, then staple and verify it.
+Windows NSIS and Linux AppImage installers are unsigned; Linux is built on Ubuntu 22.04.
+
+After all five builds succeed, create or reuse a `desktop-vX.Y.Z` draft. Upload the
+five installers plus `desktop-release.json` and `desktop-checksums.txt`, download
+every attachment again, and compare hashes before publishing. Keep `--latest=false`
+so CLI Latest and its six-file installer contract remain valid. Actions artifacts
+are retained for 14 days. Failed drafts can be resumed for the same source; published
+tags/assets are immutable. Code fixes require a new CLI version and matching desktop
+release. `mise run desktop-release -- plan vX.Y.Z` performs read-only preflight;
+`publish vX.Y.Z <artifact-directory>` is the CI aggregation entrypoint.
+
+Apple credentials are independent from updater signing keys. This workflow publishes
+manually installable releases; it does not enable in-app updates or publish an updater
+feed. Platform recovery and Windows/Linux runtime acceptance remain separate work.
+Local build results do not establish a successful CI run or Apple notarization.

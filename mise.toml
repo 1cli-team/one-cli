@@ -17,6 +17,11 @@ raw_args = true
 description = "Check release state and artifact rules / 检查发布状态与产物规则"
 run = "node scripts/release-rules.test.mts"
 
+[tasks.desktop-release]
+description = "Verify or publish desktop installers / 校验或发布桌面安装包"
+run = "node scripts/desktop-release.mts"
+raw_args = true
+
 [tasks.install-deps]
 description = "Install the root pnpm workspace dependencies"
 run = "pnpm install --frozen-lockfile"
