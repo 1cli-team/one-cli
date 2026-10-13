@@ -16,10 +16,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { ErrorNotice } from "@/components/ui/page-layout";
 import { Spinner } from "@/components/ui/spinner";
-import {
-	manifestDraftKey,
-	useManifestDraftStore,
-} from "@/features/manifest-draft/manifest-draft-store";
+import { useManifestDraftStore } from "@/features/manifest-draft/manifest-draft-store";
 import {
 	sideBySideDiffRows,
 	type UnifiedDiffLine,
@@ -31,7 +28,7 @@ export const ManifestSaveControl: React.FC<{ entryId: string }> = ({ entryId }) 
 	const { t } = useTranslation();
 	const { mutate } = useSWRConfig();
 	const toast = useToast();
-	const draft = useManifestDraftStore((state) => state.drafts[manifestDraftKey(entryId)]);
+	const draft = useManifestDraftStore((state) => state.drafts[entryId]);
 	const clearWorkspace = useManifestDraftStore((state) => state.clearWorkspace);
 	const [open, setOpen] = useState(false);
 	const [saving, setSaving] = useState(false);

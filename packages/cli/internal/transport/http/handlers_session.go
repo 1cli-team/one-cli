@@ -132,15 +132,6 @@ func registerGlobalRoutes(mux *http.ServeMux, opts MuxOpts) {
 		}
 		writeJSON(w, http.StatusAccepted, map[string]any{"sharedCredentials": state})
 	})
-	mux.HandleFunc("GET /global-env/location", func(w http.ResponseWriter, r *http.Request) {
-		setNoStore(w)
-		l, e := remote.LoadGlobalLocation()
-		if e != nil {
-			writeServiceError(w, e)
-			return
-		}
-		writeJSON(w, 200, map[string]any{"location": l})
-	})
 	mux.HandleFunc("GET /global-env/secrets", func(w http.ResponseWriter, r *http.Request) {
 		setNoStore(w)
 		l, e := remote.ListGlobal(r.Context(), r.URL.Query().Get("env"), r.URL.Query().Get("path"))

@@ -1,7 +1,4 @@
-import {
-	manifestDraftKey,
-	useManifestDraftStore,
-} from "@/features/manifest-draft/manifest-draft-store";
+import { useManifestDraftStore } from "@/features/manifest-draft/manifest-draft-store";
 import {
 	Plus,
 	Server,
@@ -59,7 +56,7 @@ interface ProjectInspectorProps {
 	environments?: string[];
 	projects: OverviewProject[];
 	environment: string;
-	workspaceEntryId?: string;
+	workspaceEntryId: string;
 	readOnly?: boolean;
 }
 
@@ -86,7 +83,7 @@ export const ProjectInspector: React.FC<ProjectInspectorProps> = ({
 	const binding = useSWR(workspaceEnvironmentKey(workspaceEntryId), () =>
 		getWorkspaceEnvironment(workspaceEntryId),
 	);
-	const canCreate = !!workspaceEntryId && !readOnly;
+	const canCreate = !readOnly;
 	const [dirty, setDirty] = useState(false);
 	const [pendingAction, setPendingAction] = useState<(() => void) | null>(null);
 	const [searchParams, setSearchParams] = useSearchParams();
@@ -234,7 +231,7 @@ export const ProjectInspector: React.FC<ProjectInspectorProps> = ({
 					<div className="min-h-0 min-w-0 flex-1 overflow-hidden">
 						{selectedProject ? (
 							<InspectorBody
-								key={workspaceEntryId ?? "current"}
+								key={workspaceEntryId}
 								project={selectedProject}
 								environment={environment}
 								workspaceEntryId={workspaceEntryId}
@@ -313,7 +310,7 @@ export const ProjectInspector: React.FC<ProjectInspectorProps> = ({
 				readOnly={readOnly}
 			/>
 
-			{createOpen && canCreate && workspaceEntryId && (
+			{createOpen && canCreate && (
 				<CreateProjectDialog
 					entryId={workspaceEntryId}
 					projectNames={projects.map((project) => project.name)}
@@ -370,7 +367,7 @@ const PROJECT_KIND_ICON: Record<OverviewProject["kind"], LucideIcon> = {
 const InspectorBody: React.FC<{
 	project: OverviewProject;
 	environment: string;
-	workspaceEntryId?: string;
+	workspaceEntryId: string;
 	readOnly?: boolean;
 	onDirtyChange(dirty: boolean): void;
 	projectSelector: React.ReactNode;
@@ -393,7 +390,7 @@ const InspectorBody: React.FC<{
 			keepPreviousData: true,
 		},
 	);
-	const draft = useManifestDraftStore((state) => state.drafts[manifestDraftKey(workspaceEntryId)]);
+	const draft = useManifestDraftStore((state) => state.drafts[workspaceEntryId]);
 	// Keep the layout mounted while SWR loads the next project's settings.
 	// Identity must follow the selection so secrets never use the previous scope.
 	const displayedProject = result.data
@@ -422,9 +419,7 @@ const InspectorBody: React.FC<{
 								) : draft ? (
 									<Badge variant="warning">{t("projectInspector.manifestDraft")}</Badge>
 								) : null}
-								{workspaceEntryId && !readOnly ? (
-									<ManifestSaveControl entryId={workspaceEntryId} />
-								) : null}
+								{!readOnly ? <ManifestSaveControl entryId={workspaceEntryId} /> : null}
 							</div>
 						)}
 						<EnvironmentForm

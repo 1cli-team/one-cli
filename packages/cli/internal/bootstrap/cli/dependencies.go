@@ -5,7 +5,6 @@ import (
 
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/adapters/env/infisical"
 	miseruntime "github.com/torchstellar-team/one-cli/packages/cli/internal/adapters/runtime/mise"
-	internaltoolchain "github.com/torchstellar-team/one-cli/packages/cli/internal/adapters/toolchain"
 	workspaceregistrylocal "github.com/torchstellar-team/one-cli/packages/cli/internal/adapters/workspaceregistry/local"
 	manifestapp "github.com/torchstellar-team/one-cli/packages/cli/internal/application/manifest"
 	workspaceapp "github.com/torchstellar-team/one-cli/packages/cli/internal/application/workspace"
@@ -33,8 +32,6 @@ type dependencies struct {
 }
 
 func composeDependencies() dependencies {
-	internaltoolchain.RegisterBundled()
-
 	backendCatalog := catalog.Builtin()
 
 	environments := mustEnvironmentService(backendCatalog)

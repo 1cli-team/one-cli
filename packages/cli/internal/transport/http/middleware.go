@@ -38,13 +38,10 @@ import (
 type MuxOpts struct {
 	Lifecycle         context.Context
 	SharedCredentials *authentication.SharedCredentialsService
-	UIDisabled        bool
 	ExpectedHosts     map[string]struct{}
 	SelfOrigin        string
-	// WorkspaceRoot is the absolute path to the workspace `one serve` was
-	// launched in, or "" when launched outside a workspace. Handlers read
-	// it through opts capture; we don't auto-detect per request because
-	// `one serve` is a long-lived process tied to its launch directory.
+	// WorkspaceRoot identifies the launch workspace in registry listings.
+	// Scoped handlers receive the root resolved from each request's entry ID.
 	WorkspaceRoot string
 	// Catalog is the backend descriptor source for this application. Nil uses
 	// the immutable built-in catalog for compatibility with existing callers.
@@ -67,8 +64,8 @@ type MuxOpts struct {
 	RegistryService *workspaceapp.RegistryService
 }
 
-// BuildMux returns the http.Handler that serves /api/* (always) plus the
-// SPA fallback (when UIDisabled is false), without binding a port.
+// BuildMux returns the http.Handler that serves /api/* and the Dashboard SPA,
+// without binding a port.
 func BuildMux(opts MuxOpts) http.Handler {
 	if opts.Lifecycle == nil {
 		opts.Lifecycle = context.Background()
@@ -116,19 +113,12 @@ func BuildMux(opts MuxOpts) http.Handler {
 	registerGlobalRoutes(api, opts)
 	registerCatalogRoutes(api, opts)
 	registerPreferencesRoutes(api, opts)
-	registerWorkspaceRoutes(api, opts)
-	registerWorkspaceMutateRoutes(api, opts)
-	registerSecretRoutes(api, opts)
 	registerWorkspacesRoutes(api, opts)
 
 	root := http.NewServeMux()
 	root.Handle("/api/", http.StripPrefix("/api", api))
 
-	if !opts.UIDisabled {
-		root.Handle("/", spaHandler())
-	} else {
-		root.Handle("/", devLandingHandler())
-	}
+	root.Handle("/", spaHandler())
 
 	return chain(root, hostCheck(opts), originCheck(opts))
 }
@@ -242,42 +232,6 @@ func spaHandler() http.Handler {
 		writeIndex(w)
 	})
 }
-
-// devLandingHandler is the --no-ui counterpart: it serves a tiny stub on GET
-// /. Used only when --no-ui is set.
-func devLandingHandler() http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != http.MethodGet && r.Method != http.MethodHead {
-			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
-			return
-		}
-		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		w.WriteHeader(http.StatusOK)
-		_, _ = w.Write([]byte(devLandingHTML))
-	})
-}
-
-const devLandingHTML = `<!doctype html>
-<html lang="zh-CN">
-<head>
-  <meta charset="utf-8" />
-  <title>one serve · API only</title>
-  <style>
-    body { font: 14px/1.5 -apple-system, system-ui, sans-serif; padding: 2em; max-width: 38em; }
-    code { background: #f3f3f3; padding: 0.1em 0.3em; border-radius: 3px; }
-    .pill { display: inline-block; padding: 0.1em 0.4em; border-radius: 3px;
-            background: #dbeafe; color: #1e3a8a; font-size: 0.85em; }
-  </style>
-</head>
-<body>
-  <h1>one serve · API only</h1>
-  <p><span class="pill">--no-ui</span> 模式：未挂载 SPA。</p>
-  <p>本地开发场景：在 <code>web/</code> 目录跑 <code>pnpm dev</code>，
-     Vite 会把 <code>/api/*</code> 反向代理到本服务。</p>
-  <pre><code>curl http://HOST:PORT/api/session</code></pre>
-</body>
-</html>
-`
 
 // writeError renders an error envelope identical to internal/platform/output's
 // shape so the UI / curl users see the same `{ schema, error: { code, ... } }`

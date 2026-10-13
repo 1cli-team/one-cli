@@ -1,10 +1,8 @@
 package serve
 
 // handlers_workspaces.go exposes the machine-local Workspace registry. The
-// singular /workspace/* routes remain pinned to the directory `one serve`
-// launched from; these plural routes first resolve an opaque registry entry
-// ID and then reuse the same transport handlers against that server-validated
-// root. A request can therefore never select an arbitrary filesystem path.
+// routes resolve an opaque registry entry ID before passing its validated root
+// to workspace handlers. A request cannot select an arbitrary filesystem path.
 
 import (
 	"errors"
@@ -43,13 +41,6 @@ func registerWorkspacesRoutes(mux *http.ServeMux, opts MuxOpts) {
 		handleResolvedWorkspace(opts, handleUpdateSecret))
 	mux.HandleFunc("DELETE /workspaces/{entryId}/secrets/{key}",
 		handleResolvedWorkspace(opts, handleDeleteSecret))
-
-	for _, pattern := range []string{
-		"PUT /workspaces/{entryId}/projects/{name}",
-		"PUT /workspaces/{entryId}/projects/{name}/environment",
-	} {
-		mux.HandleFunc(pattern, handleRepositoryReadOnly())
-	}
 }
 
 func handleListWorkspaces(opts MuxOpts) http.HandlerFunc {

@@ -40,17 +40,14 @@ import {
 } from "@/components/ui/select";
 import { Spinner } from "@/components/ui/spinner";
 import { ManifestSaveControl } from "@/features/manifest-draft/ManifestSaveControl";
-import {
-	manifestDraftKey,
-	useManifestDraftStore,
-} from "@/features/manifest-draft/manifest-draft-store";
+import { useManifestDraftStore } from "@/features/manifest-draft/manifest-draft-store";
 import { useToast } from "@/hooks/useToast";
 import type { HttpError } from "@/types/api";
 
 type Props = {
 	open: boolean;
 	onOpenChange(open: boolean): void;
-	workspaceEntryId?: string;
+	workspaceEntryId: string;
 	environment?: string;
 	readOnly?: boolean;
 };
@@ -99,7 +96,7 @@ function BindingForm({ workspaceEntryId, environment, readOnly, onOpenChange }: 
 	const active = useRef(true);
 	const [error, setError] = useState("");
 	const [conflict, setConflict] = useState(false);
-	const draft = useManifestDraftStore((s) => s.drafts[manifestDraftKey(workspaceEntryId)]);
+	const draft = useManifestDraftStore((s) => s.drafts[workspaceEntryId]);
 	const initialId = settings.data?.projectId;
 	const initialized = useRef(false);
 	useEffect(() => {
@@ -359,7 +356,7 @@ function BindingForm({ workspaceEntryId, environment, readOnly, onOpenChange }: 
 						<div className="space-y-3 rounded-md border p-3">
 							<p className="text-sm">{t("binding.pendingDraft")}</p>
 							<div className="flex flex-wrap gap-2">
-								{workspaceEntryId && <ManifestSaveControl entryId={workspaceEntryId} />}
+								<ManifestSaveControl entryId={workspaceEntryId} />
 								<Button
 									variant="outline"
 									onClick={() => useManifestDraftStore.getState().clearWorkspace(workspaceEntryId)}

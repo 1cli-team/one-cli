@@ -20,6 +20,12 @@ one serve --port 0 --open=false
 
 安全限制及 CLI 用法见[登录与本机设置](/zh/docs/login/)。
 
+## 本地 HTTP 接口
+
+工作区请求统一使用 `/api/workspaces/{entryId}/*`；`entryId` 来自 `GET /api/workspaces`。配置变更使用带 revision 校验的 Manifest 预览和保存接口。
+
+旧的 `/api/workspace/*`、直接修改项目配置的两个 PUT 接口，以及 `GET /api/global-env/location` 已移除。调用这些旧入口会返回 404 或 405；旧项目写入请求不再返回 409 兼容提示。共享凭据位置从 `GET /api/session` 的 `sharedCredentials.location` 读取；初始化尚未完成时，该字段可能不存在。
+
 ## 开发服务
 
 在终端中使用 `one dev -p <项目名> --env <环境>` 启动开发服务，并通过终端进行输入、查看输出和控制进程。

@@ -254,13 +254,6 @@ func ensureManifestProject(projectRoot, fallbackName string) error {
 	return workspace.SetManifestWorkspaceIdentity(projectRoot, id, name)
 }
 
-// createWithRetry calls Infisical's create-project, appending a 4-char hex
-// suffix to the desired name on collisions. The first attempt uses the bare
-// name so the common case (unused name) lands cleanly without decoration.
-func createWithRetry(client *Client, baseName string) (string, string, error) {
-	return createWithRetryContext(context.Background(), client, baseName)
-}
-
 func createWithRetryContext(ctx context.Context, client *Client, baseName string) (string, string, error) {
 	candidate := baseName
 	for attempt := 0; attempt < maxCreateProjectRetries; attempt++ {

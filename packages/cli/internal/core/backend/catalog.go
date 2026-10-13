@@ -2,7 +2,6 @@ package backend
 
 import (
 	"fmt"
-	"sort"
 	"strings"
 )
 
@@ -122,20 +121,6 @@ func (c *Catalog) All() []BackendSpec {
 	return out
 }
 
-// ForDomain returns descriptors in stable catalog order.
-func (c *Catalog) ForDomain(domain Domain) []BackendSpec {
-	if c == nil {
-		return nil
-	}
-	var out []BackendSpec
-	for _, spec := range c.ordered {
-		if spec.ID.Domain == domain {
-			out = append(out, cloneSpec(spec))
-		}
-	}
-	return out
-}
-
 // Lookup validates a domain and bare backend name.
 func (c *Catalog) Lookup(domain Domain, name string) (BackendSpec, bool) {
 	return c.LookupPair(BackendID{Domain: domain, Name: name}.String())
@@ -148,17 +133,4 @@ func (c *Catalog) LookupPair(pair string) (BackendSpec, bool) {
 	}
 	spec, ok := c.byPair[pair]
 	return cloneSpec(spec), ok
-}
-
-// SortedPairs is intended for diagnostics and golden assertions.
-func (c *Catalog) SortedPairs() []string {
-	if c == nil {
-		return nil
-	}
-	out := make([]string, 0, len(c.byPair))
-	for pair := range c.byPair {
-		out = append(out, pair)
-	}
-	sort.Strings(out)
-	return out
 }

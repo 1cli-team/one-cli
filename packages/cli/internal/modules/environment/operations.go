@@ -18,8 +18,6 @@ type GetInput struct {
 	Environment string
 	Project     string
 	Key         string
-	// Retained for caller compatibility. Reads never initialize storage.
-	RepositoryReadOnly bool
 }
 
 func (s *Service) Get(ctx context.Context, input GetInput) (*GetResult, error) {
@@ -56,10 +54,9 @@ func (s *Service) Get(ctx context.Context, input GetInput) (*GetResult, error) {
 }
 
 type ListInput struct {
-	Scope              execution.Scope
-	Environment        string
-	Project            string
-	RepositoryReadOnly bool
+	Scope       execution.Scope
+	Environment string
+	Project     string
 }
 
 func (s *Service) List(ctx context.Context, input ListInput) (*ListResult, error) {
@@ -212,11 +209,10 @@ func (s *Service) Set(ctx context.Context, input SetInput) (*SetResult, error) {
 }
 
 type DeleteInput struct {
-	Scope              execution.Scope
-	Environment        string
-	Project            string
-	Key                string
-	RepositoryReadOnly bool
+	Scope       execution.Scope
+	Environment string
+	Project     string
+	Key         string
 }
 
 func (s *Service) Delete(ctx context.Context, input DeleteInput) (*infisical.DeleteResult, error) {
@@ -245,20 +241,6 @@ func (s *Service) Delete(ctx context.Context, input DeleteInput) (*infisical.Del
 		Env: resolution.Scope.Environment(), Path: path, Key: input.Key,
 		Cfg: config, Creds: credentials,
 	})
-}
-
-func resolveSetTarget(activeWorkspace execution.Workspace, selector string) (*workspace.Project, string) {
-	selector = strings.TrimSpace(selector)
-	if selector != "" {
-		if project, ok := activeWorkspace.Project(selector); ok {
-			return project, project.RelativeDir
-		}
-		return nil, selector
-	}
-	if project, ok := activeWorkspace.ProjectFromWorkingDirectory(); ok {
-		return project, project.RelativeDir
-	}
-	return nil, ""
 }
 
 func contains(values []string, target string) bool {

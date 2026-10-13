@@ -17,14 +17,6 @@ type updateSecretRequest struct {
 	Value string `json:"value"`
 }
 
-func registerSecretRoutes(mux *http.ServeMux, opts MuxOpts) {
-	mux.HandleFunc("GET /workspace/secrets", handleListSecrets(opts))
-	mux.HandleFunc("POST /workspace/secrets", handleCreateSecret(opts))
-	mux.HandleFunc("GET /workspace/secrets/{key}", handleGetSecret(opts))
-	mux.HandleFunc("PUT /workspace/secrets/{key}", handleUpdateSecret(opts))
-	mux.HandleFunc("DELETE /workspace/secrets/{key}", handleDeleteSecret(opts))
-}
-
 func handleListSecrets(opts MuxOpts) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if !requireSecretWorkspace(w, opts) {
@@ -37,7 +29,6 @@ func handleListSecrets(opts MuxOpts) http.HandlerFunc {
 		result, err := opts.EnvironmentService.List(r.Context(), environmentmodule.ListInput{
 			Scope:       execution.NewScope(r.Context(), opts.WorkspaceRoot),
 			Environment: r.URL.Query().Get("env"), Project: secretProject(r),
-			RepositoryReadOnly: true,
 		})
 		if err != nil {
 			writeServiceError(w, err)
@@ -59,7 +50,7 @@ func handleGetSecret(opts MuxOpts) http.HandlerFunc {
 		result, err := opts.EnvironmentService.Get(r.Context(), environmentmodule.GetInput{
 			Scope:       execution.NewScope(r.Context(), opts.WorkspaceRoot),
 			Environment: r.URL.Query().Get("env"), Project: secretProject(r),
-			Key: r.PathValue("key"), RepositoryReadOnly: true,
+			Key: r.PathValue("key"),
 		})
 		if err != nil {
 			writeServiceError(w, err)
@@ -149,7 +140,7 @@ func handleDeleteSecret(opts MuxOpts) http.HandlerFunc {
 		result, err := opts.EnvironmentService.Delete(r.Context(), environmentmodule.DeleteInput{
 			Scope:       execution.NewScope(r.Context(), opts.WorkspaceRoot),
 			Environment: r.URL.Query().Get("env"), Project: secretProject(r),
-			Key: r.PathValue("key"), RepositoryReadOnly: true,
+			Key: r.PathValue("key"),
 		})
 		if err != nil {
 			writeServiceError(w, err)

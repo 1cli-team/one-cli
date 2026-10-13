@@ -57,17 +57,6 @@ func (w Workspace) Scope() Scope                  { return w.scope }
 func (w Workspace) Root() string                  { return w.root }
 func (w Workspace) Manifest() *workspace.Manifest { return w.manifest }
 
-// Reload refreshes the snapshot after a workflow intentionally writes the
-// manifest. Ordinary reads should keep using the existing snapshot.
-func (w Workspace) Reload() (Workspace, error) {
-	manifest, err := workspace.ReadManifest(w.root)
-	if err != nil {
-		return Workspace{}, err
-	}
-	w.manifest = manifest
-	return w, nil
-}
-
 // Projects returns every manifest project with its absolute target path.
 func (w Workspace) Projects() []workspace.Project {
 	if w.manifest == nil {

@@ -13,15 +13,11 @@ function secretSearch(environment: string, project?: string): string {
 	return search.toString();
 }
 
-export function secretsKey(entryId: string | undefined, environment: string, project?: string) {
+export function secretsKey(entryId: string, environment: string, project?: string) {
 	return `${workspaceBasePath(entryId)}/secrets?${secretSearch(environment, project)}`;
 }
 
-export async function listSecrets(
-	entryId: string | undefined,
-	environment: string,
-	project?: string,
-) {
+export async function listSecrets(entryId: string, environment: string, project?: string) {
 	try {
 		return await http.get<SecretListResponse>(secretsKey(entryId, environment, project));
 	} catch (error) {
@@ -38,7 +34,7 @@ export async function listSecrets(
 }
 
 function secretPath(
-	entryId: string | undefined,
+	entryId: string,
 	environment: string,
 	project: string | undefined,
 	key: string,
@@ -47,7 +43,7 @@ function secretPath(
 }
 
 export async function revealSecret(
-	entryId: string | undefined,
+	entryId: string,
 	environment: string,
 	project: string | undefined,
 	key: string,
@@ -56,7 +52,7 @@ export async function revealSecret(
 }
 
 export async function createSecret(
-	entryId: string | undefined,
+	entryId: string,
 	environment: string,
 	project: string | undefined,
 	key: string,
@@ -69,7 +65,7 @@ export async function createSecret(
 }
 
 export async function updateSecret(
-	entryId: string | undefined,
+	entryId: string,
 	environment: string,
 	project: string | undefined,
 	key: string,
@@ -81,7 +77,7 @@ export async function updateSecret(
 }
 
 export async function deleteSecret(
-	entryId: string | undefined,
+	entryId: string,
 	environment: string,
 	project: string | undefined,
 	key: string,

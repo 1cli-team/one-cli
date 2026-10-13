@@ -25,7 +25,6 @@ type logStore struct {
 	prefixStyles map[string]uv.Style
 	entries      []logEntry
 	tasks        map[string][]int
-	observed     map[string]bool
 	writers      []*logWriter
 	pending      map[*logWriter]logLine
 	size         int64
@@ -38,7 +37,7 @@ func newLogStore(names []string) (*logStore, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &logStore{file: f, names: names, prefixStyles: taskPrefixStyles(names), tasks: map[string][]int{}, observed: map[string]bool{}, pending: map[*logWriter]logLine{}}, nil
+	return &logStore{file: f, names: names, prefixStyles: taskPrefixStyles(names), tasks: map[string][]int{}, pending: map[*logWriter]logLine{}}, nil
 }
 func (s *logStore) close() {
 	s.mu.Lock()
@@ -66,7 +65,6 @@ func (s *logStore) add(line logLine) error {
 	s.entries = append(s.entries, logEntry{s.size, n})
 	s.size += int64(n)
 	s.tasks[line.task] = append(s.tasks[line.task], id)
-	s.observed[line.task] = true
 	return nil
 }
 func (s *logStore) count(task string) int {
@@ -102,11 +100,6 @@ func (s *logStore) read(id int) string {
 	}
 	return string(b)
 }
-func (s *logStore) hasOutput(task string) bool {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	return s.observed[task]
-}
 func (s *logStore) setPending(w *logWriter, line logLine) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -114,7 +107,6 @@ func (s *logStore) setPending(w *logWriter, line logLine) {
 		delete(s.pending, w)
 	} else {
 		s.pending[w] = line
-		s.observed[line.task] = true
 	}
 }
 func (s *logStore) unfinished(task string) []string {

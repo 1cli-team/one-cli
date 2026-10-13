@@ -26,7 +26,7 @@ export interface WorkspaceManifestDraft {
 export const WORKSPACE_DRAFT_SUBJECT = "__workspace__";
 
 interface StageWorkspaceSectionInput {
-	entryId?: string;
+	entryId: string;
 	revision: string;
 	section: "environment";
 	initial: object;
@@ -37,16 +37,8 @@ interface StageWorkspaceSectionInput {
 interface ManifestDraftState {
 	drafts: Readonly<Record<string, WorkspaceManifestDraft>>;
 	stageWorkspaceSection(input: StageWorkspaceSectionInput): void;
-	commitWorkspaceSection(
-		entryId: string | undefined,
-		section: "environment",
-		revision: string,
-	): void;
-	clearWorkspace(entryId?: string): void;
-}
-
-export function manifestDraftKey(entryId?: string): string {
-	return entryId?.trim() || "__current__";
+	commitWorkspaceSection(entryId: string, section: "environment", revision: string): void;
+	clearWorkspace(entryId: string): void;
 }
 
 function flatten(prefix: string, value: unknown, output: Record<string, DraftValue>) {
@@ -99,7 +91,7 @@ export const useManifestDraftStore = createStore<ManifestDraftState>(
 	(set) => ({
 		drafts: {},
 		stageWorkspaceSection: ({ entryId, revision, section, initial, next, labels }) => {
-			const key = manifestDraftKey(entryId);
+			const key = entryId;
 			set((state) => {
 				const existing = state.drafts[key];
 				const workspace = { ...existing?.workspace };
@@ -131,7 +123,7 @@ export const useManifestDraftStore = createStore<ManifestDraftState>(
 			});
 		},
 		commitWorkspaceSection: (entryId, section, revision) => {
-			const key = manifestDraftKey(entryId);
+			const key = entryId;
 			set((state) => {
 				const existing = state.drafts[key];
 				if (!existing) return state;
@@ -154,7 +146,7 @@ export const useManifestDraftStore = createStore<ManifestDraftState>(
 			});
 		},
 		clearWorkspace: (entryId) => {
-			const key = manifestDraftKey(entryId);
+			const key = entryId;
 			set((state) => {
 				const drafts = { ...state.drafts };
 				delete drafts[key];
