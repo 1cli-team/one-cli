@@ -213,7 +213,7 @@ func Request(ctx context.Context, s *Session, method, path string, body io.Reade
 		if ctx.Err() != nil {
 			return ctx.Err()
 		}
-		return &requestFailure{cause: cliErrors.New(cliErrors.INFISICAL_NETWORK_ERROR, i18n.T("auth.network_failed")), key: "auth.network_failed"}
+		return networkFailure(req, e)
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode == 401 {
@@ -229,6 +229,28 @@ func Request(ctx context.Context, s *Session, method, path string, body io.Reade
 		return &requestFailure{cause: cliErrors.New(cliErrors.INFISICAL_API_ERROR, i18n.T("auth.response_invalid")), key: "auth.response_invalid"}
 	}
 	return nil
+}
+
+func networkFailure(req *http.Request, err error) error {
+	// net/http wraps transport failures in url.Error. Its URL may contain query
+	// credentials, so render only the transport reason and a sanitized endpoint.
+	detail := err
+	for {
+		var requestErr *url.Error
+		if !errors.As(detail, &requestErr) {
+			break
+		}
+		detail = requestErr.Err
+	}
+	endpoint := *req.URL
+	endpoint.User, endpoint.RawQuery, endpoint.Fragment, endpoint.RawFragment = nil, "", "", ""
+	endpoint.ForceQuery = false
+	args := []any{req.Method, endpoint.String(), detail.Error()}
+	return &requestFailure{
+		cause: cliErrors.New(cliErrors.INFISICAL_NETWORK_ERROR, i18n.Tf("auth.network_failed", args...)).WithCause(err),
+		key:   "auth.network_failed",
+		args:  args,
+	}
 }
 
 func verifiedSession(ctx context.Context, site, token, email string) (*Session, error) {

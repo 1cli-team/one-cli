@@ -31,7 +31,11 @@
 		"active": true,
 		"targets": "all",
 		"externalBin": ["binaries/one-api", "binaries/one"],
-		"resources": ["bundle-manifest.json"],
+		"resources": {
+			"bundle-manifest.json": "bundle-manifest.json",
+			"infoplist/en.lproj/InfoPlist.strings": "en.lproj/InfoPlist.strings",
+			"infoplist/zh-Hans.lproj/InfoPlist.strings": "zh-Hans.lproj/InfoPlist.strings"
+		},
 		"createUpdaterArtifacts": false,
 		"macOS": {
 			"minimumSystemVersion": "13.3"

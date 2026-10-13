@@ -413,7 +413,7 @@
   "auth.store_write_failed": "无法保存登录：请启用并解锁系统凭据存储（Linux 需要 Secret Service）：%w",
   "auth.site_root_required": "Infisical 地址必须是实例根地址",
   "auth.https_required": "Infisical 地址必须使用 HTTPS（本机实例除外）",
-  "auth.network_failed": "无法连接 Infisical，请检查网络或实例地址。",
+  "auth.network_failed": "无法连接 Infisical（%s %s）：%s。请检查网络或实例地址。",
   "auth.api_failed": "Infisical 请求失败（HTTP %d）；请检查权限及资源是否存在。",
   "auth.response_invalid": "Infisical 返回了无效数据。",
   "auth.token_format_invalid": "Infisical 登录令牌格式无效",

@@ -180,7 +180,10 @@ if (release && command === "build" && platform.os === "darwin") {
 } else {
   build(
     platform.os === "darwin" && command === "build"
-      ? process.env.APPLE_SIGNING_IDENTITY
+      // Bind Info.plist and the bundle identifier even in local builds. The
+      // linker's bare executable signature cannot identify the app to macOS
+      // local network privacy. Release builds use Developer ID above.
+      ? (process.env.APPLE_SIGNING_IDENTITY ?? "-")
       : undefined,
   );
 }
