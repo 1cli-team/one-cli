@@ -7,11 +7,10 @@
 | 项目 | 路径 | 用途 |
 |---|---|---|
 | CLI | `packages/cli` | One 命令行工具，负责创建项目、执行任务、管理环境变量，不包含 HTTP 服务或前端资源。 |
-| Kernel | `packages/kernel` | 通用 Go 运行基础库，管理执行上下文和资源清理。 |
 | One Core | `packages/one-core` | CLI 与桌面 API 共用的 Go 业务和平台能力。 |
 | Desktop API | `services/desktop-api` | 桌面版独立 Go HTTP 后端，编译为 `one-api`。 |
 | Desktop | `apps/desktop` | React 管理界面与 `src-tauri` 原生宿主，内置 `one-api` 和 `one`。 |
-| Docs | `apps/docs` | One CLI 文档网站，提供安装说明、使用指南和命令参考。 |
+| Website | `apps/website` | Next.js 静态官网，保留首页、安装入口和 AI 资源链接。 |
 
 ## 默认考虑多语言
 

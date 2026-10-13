@@ -16,7 +16,7 @@ import (
 //
 // Pre-release suffixes (anything after `-`) are stripped before compare —
 // `v0.9.0-rc1` and `v0.9.0` collapse to the same triple. This matches the
-// installer's [version_compare](apps/docs/public/install.sh:108) so the CLI's
+// installer's [version_compare](apps/website/public/install.sh) so the CLI's
 // "newer available" judgment never disagrees with what install.sh would do.
 //
 // Returns false on any parse failure: garbage in → no notification, which

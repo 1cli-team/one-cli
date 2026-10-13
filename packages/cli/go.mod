@@ -19,15 +19,12 @@ require (
 	github.com/gofrs/flock v0.13.1 // indirect
 	github.com/infisical/go-sdk v0.8.0 // indirect
 	github.com/pelletier/go-toml/v2 v2.4.3 // indirect
-	github.com/torchstellar-team/one-cli/packages/kernel v0.0.0 // indirect
 	github.com/zalando/go-keyring v0.2.8 // indirect
 	golang.org/x/mod v0.41.0 // indirect
 	golang.org/x/sys v0.48.0 // indirect
 	golang.org/x/term v0.46.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
-
-replace github.com/torchstellar-team/one-cli/packages/kernel => ../kernel
 
 require (
 	cloud.google.com/go/auth v0.24.0 // indirect

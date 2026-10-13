@@ -54,7 +54,7 @@
 			"projects": "项目",
 			"lastDetected": "最近识别",
 			"emptyTitle": "尚未登记工作区",
-			"emptyDescription": "运行 one create 创建工作区，或在已有工作区中运行 one serve 进行登记。",
+			"emptyDescription": "运行 one create 创建工作区，或选择“打开工作区”登记已有目录。",
 			"listLabel": "已登记的工作区",
 			"refresh": "刷新",
 			"search": "搜索名称、路径或 ID…",
@@ -69,7 +69,7 @@
 		},
 		"rail": {
 			"title": "工作区",
-			"empty": "执行 one create，或在 Workspace 内执行 one serve，即可登记到这里。",
+			"empty": "执行 one create，或选择“打开工作区”，即可添加到这里。",
 			"loadFailed": "无法加载 Workspace 注册表。"
 		},
 		"status": {
@@ -86,11 +86,11 @@
 		"state": {
 			"missing": {
 				"title": "Workspace 目录当前不可用",
-				"description": "目录可能已移动、被删除，或者所在磁盘尚未挂载。在新位置执行 one serve 即可刷新注册记录。"
+				"description": "目录可能已移动、被删除，或者所在磁盘尚未挂载。请通过“打开工作区”选择当前目录进行登记。"
 			},
 			"invalid": {
 				"title": "Workspace Manifest 无效",
-				"description": "修复该目录中的 one.manifest.toml，然后重新在 Workspace 内执行 one serve。"
+				"description": "修复该目录中的 one.manifest.toml，然后刷新工作区列表。"
 			},
 			"identity-missing": {
 				"title": "Workspace 缺少稳定 ID",

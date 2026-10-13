@@ -67,7 +67,6 @@ require (
 	github.com/sony/gobreaker/v2 v2.4.0 // indirect
 	github.com/spf13/cobra v1.10.2 // indirect
 	github.com/spf13/pflag v1.0.10 // indirect
-	github.com/torchstellar-team/one-cli/packages/kernel v0.0.0 // indirect
 	github.com/xo/terminfo v1.2.0 // indirect
 	github.com/youmark/pkcs8 v0.0.0-20240726163527-a2c0da244d78 // indirect
 	github.com/zalando/go-keyring v0.2.8 // indirect
@@ -95,5 +94,3 @@ require (
 )
 
 replace github.com/torchstellar-team/one-cli/packages/one-core => ../../packages/one-core
-
-replace github.com/torchstellar-team/one-cli/packages/kernel => ../../packages/kernel

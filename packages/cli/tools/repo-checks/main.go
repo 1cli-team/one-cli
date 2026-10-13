@@ -15,7 +15,7 @@ import (
 
 func main() {
 	if len(os.Args) != 2 {
-		fatalf("usage: repo-checks <node-workspace|frontmatter|gofmt>")
+		fatalf("usage: repo-checks <node-workspace|gofmt>")
 	}
 	root, err := findRepoRoot()
 	if err != nil {
@@ -24,8 +24,6 @@ func main() {
 	switch os.Args[1] {
 	case "node-workspace":
 		err = checkNodeWorkspace(root)
-	case "frontmatter":
-		err = checkFrontmatter(root)
 	case "gofmt":
 		err = checkGoFormat(root)
 	default:
@@ -85,59 +83,9 @@ func checkNodeWorkspace(root string) error {
 	return fmt.Errorf("Node workspace metadata must be owned by the repository root:\n%s", displayPaths(root, problems))
 }
 
-func checkFrontmatter(root string) error {
-	docsRoot := filepath.Join(root, "apps", "docs", "content", "docs")
-	var problems []string
-	err := filepath.WalkDir(docsRoot, func(path string, entry fs.DirEntry, walkErr error) error {
-		if walkErr != nil {
-			return walkErr
-		}
-		if entry.IsDir() {
-			return nil
-		}
-		ext := strings.ToLower(filepath.Ext(path))
-		if ext != ".md" && ext != ".mdx" {
-			return nil
-		}
-		raw, err := os.ReadFile(path)
-		if err != nil {
-			return err
-		}
-		lines := strings.Split(string(raw), "\n")
-		if len(lines) > 10 {
-			lines = lines[:10]
-		}
-		header := strings.Join(lines, "\n")
-		if !hasFrontmatterField(header, "title:") {
-			problems = append(problems, relativePath(root, path)+": missing 'title:' frontmatter")
-		}
-		if !hasFrontmatterField(header, "description:") {
-			problems = append(problems, relativePath(root, path)+": missing 'description:' frontmatter")
-		}
-		return nil
-	})
-	if err != nil {
-		return err
-	}
-	if len(problems) == 0 {
-		return nil
-	}
-	sort.Strings(problems)
-	return errors.New(strings.Join(problems, "\n"))
-}
-
-func hasFrontmatterField(header, field string) bool {
-	for _, line := range strings.Split(header, "\n") {
-		if strings.HasPrefix(strings.TrimSuffix(line, "\r"), field) {
-			return true
-		}
-	}
-	return false
-}
-
 func checkGoFormat(root string) error {
 	var changed []string
-	for _, relativeRoot := range []string{"packages/kernel", "packages/cli", "packages/one-core", "services/desktop-api"} {
+	for _, relativeRoot := range []string{"packages/cli", "packages/one-core", "services/desktop-api"} {
 		base := filepath.Join(root, filepath.FromSlash(relativeRoot))
 		err := filepath.WalkDir(base, func(path string, entry fs.DirEntry, walkErr error) error {
 			if walkErr != nil {

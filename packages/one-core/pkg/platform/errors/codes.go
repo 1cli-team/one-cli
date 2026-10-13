@@ -119,12 +119,10 @@ const (
 	RUN_DOTENV_MISSING    Code = "RUN_DOTENV_MISSING"
 	RUN_USAGE_INVALID     Code = "RUN_USAGE_INVALID"
 
-	// Serve — local HTTP UI for editing profiles.
-	SERVE_PORT_BUSY            Code = "SERVE_PORT_BUSY"
-	SERVE_BIND_FORBIDDEN       Code = "SERVE_BIND_FORBIDDEN"
-	SERVE_MANIFEST_CONFLICT    Code = "SERVE_MANIFEST_CONFLICT"
-	SERVE_PAYLOAD_INVALID      Code = "SERVE_PAYLOAD_INVALID"
-	SERVE_REPOSITORY_READ_ONLY Code = "SERVE_REPOSITORY_READ_ONLY"
+	// Desktop HTTP API. Keep the existing wire codes for clients.
+	SERVE_BIND_FORBIDDEN    Code = "SERVE_BIND_FORBIDDEN"
+	SERVE_MANIFEST_CONFLICT Code = "SERVE_MANIFEST_CONFLICT"
+	SERVE_PAYLOAD_INVALID   Code = "SERVE_PAYLOAD_INVALID"
 )
 
 // Definition holds the metadata associated with a Code: a short summary
@@ -219,11 +217,9 @@ var Codes = map[Code]Definition{
 	RUN_DOTENV_MISSING:    {Summary: "Reserved error code from the retired local environment workflow."},
 	RUN_USAGE_INVALID:     {Summary: "one exec arguments do not match `one exec [project] -- <cmd> [args...]`.", Remediation: []output.Remediation{{Action: "use-run-separator", Hint: "用 -- 分隔 One CLI 参数和子进程命令", Command: "one exec [project] -- <cmd> [args...]"}}},
 
-	SERVE_PORT_BUSY:            {Summary: "one serve 无法绑定请求的端口（被占用或权限不足）。", Remediation: []output.Remediation{{Action: "use-random-port", Hint: "改用随机端口（让内核分配空闲端口）", Command: "one serve --port 0"}, {Action: "pick-different-port", Hint: "或显式换一个空闲端口", Command: "one serve --port 17900"}}},
-	SERVE_BIND_FORBIDDEN:       {Summary: "one serve 拒绝绑定到非 loopback 地址（本地接口可操作敏感凭据，仅 127.0.0.1 / localhost 才安全）。", Remediation: []output.Remediation{{Action: "use-loopback", Hint: "改用 127.0.0.1（默认）", Command: "one serve --host 127.0.0.1"}}},
-	SERVE_PAYLOAD_INVALID:      {Summary: "POST/PUT 请求体不是合法 JSON 或缺少必要字段。"},
-	SERVE_MANIFEST_CONFLICT:    {Summary: "one.manifest.toml changed after the Dashboard draft was opened; the stale draft was not written.", Remediation: []output.Remediation{{Action: "reload-manifest", Hint: "重新加载 Workspace 配置，确认磁盘上的新修改后再应用草稿"}}},
-	SERVE_REPOSITORY_READ_ONLY: {Summary: "Dashboard only writes explicitly allowlisted Project fields and env Backend switches through their revision-checked endpoints; this legacy route is not writable."},
+	SERVE_BIND_FORBIDDEN:    {Summary: "One Desktop rejected access to its local API.", Remediation: []output.Remediation{{Action: "restart-desktop", Hint: "Restart One Desktop to reconnect to its local API"}}},
+	SERVE_PAYLOAD_INVALID:   {Summary: "POST/PUT 请求体不是合法 JSON 或缺少必要字段。"},
+	SERVE_MANIFEST_CONFLICT: {Summary: "one.manifest.toml changed after the Dashboard draft was opened; the stale draft was not written.", Remediation: []output.Remediation{{Action: "reload-manifest", Hint: "重新加载 Workspace 配置，确认磁盘上的新修改后再应用草稿"}}},
 }
 
 // Definition returns the metadata for a code, or zero-value if unknown.

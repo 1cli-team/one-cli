@@ -1,0 +1,13 @@
+# One CLI
+
+AI-native workspace tooling / 面向 AI 的工作区工具。
+
+- Website: https://www.1cli.dev/
+- CLI and Desktop downloads: https://github.com/1cli-team/one-cli/releases/latest
+- Agent skill source: https://github.com/1cli-team/one-cli/tree/master/packages/agent-skills/skills
+
+Read the target workspace's AGENTS.md and one.manifest.toml first.
+Discover the installed version's interface with `one help --all`, subcommand `--help`, `one templates -o json`, and `one run --list -o json`.
+Parse structured results by schema, error.code and error.context. Never request secret values in chat.
+
+先读取目标工作区的 AGENTS.md 和 one.manifest.toml，再通过当前版本的帮助与结构化发现结果选择操作，不依赖旧教程或猜测命令。不要要求用户在聊天中提供凭据值。

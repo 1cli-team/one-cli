@@ -87,7 +87,7 @@ func NewRegistryService(
 }
 
 // Observe validates root as a One Workspace and atomically records that it
-// was seen by source (for example "create" or "serve"). Existing paths are
+// was seen by source (for example "create" or "desktop"). Existing paths are
 // idempotent. When a uniquely matching identity has disappeared from its old
 // root, the entry is moved and keeps its EntryID.
 func (s *RegistryService) Observe(

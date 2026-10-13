@@ -30,7 +30,6 @@ import (
 	localecmd "github.com/torchstellar-team/one-cli/packages/cli/internal/transport/cobra/locale"
 	misecmd "github.com/torchstellar-team/one-cli/packages/cli/internal/transport/cobra/mise"
 	runcmd "github.com/torchstellar-team/one-cli/packages/cli/internal/transport/cobra/run"
-	servecmd "github.com/torchstellar-team/one-cli/packages/cli/internal/transport/cobra/serve"
 	skillscmd "github.com/torchstellar-team/one-cli/packages/cli/internal/transport/cobra/skills"
 	templatescmd "github.com/torchstellar-team/one-cli/packages/cli/internal/transport/cobra/templates"
 	upgradecmd "github.com/torchstellar-team/one-cli/packages/cli/internal/transport/cobra/upgrade"
@@ -65,7 +64,6 @@ func newRootCommand() *cobra.Command {
 		envcmd.Commands(envcmd.Dependencies{Service: deps.Environments}),
 		execcmd.Commands(deps.Loaders, deps.Runtime),
 		runcmd.Commands(deps.Loaders, deps.Runtime),
-		servecmd.Commands(),
 		templatescmd.Commands(),
 	}
 	for _, commands := range groups {
@@ -87,7 +85,7 @@ var rootCmd = newRootCommand()
 
 // RootCmd returns the configured root cobra command for read-only
 // introspection by tools (e.g. verify-cli-references walks the command
-// tree to validate `one <subcmd>` references in documentation). The command
+// tree to validate `one <subcmd>` references in agent guidance). The command
 // graph has already been assembled explicitly by newRootCommand.
 func RootCmd() *cobra.Command { return rootCmd }
 
@@ -105,15 +103,10 @@ func RootHelp() string { return i18n.T("root.help") }
 // and final error envelope emission.
 //
 // version is the build-time value injected via -ldflags; see cmd/one/main.go.
-func Execute(version string, args []string) (resultErr error) {
+func Execute(version string, args []string) error {
 	workingDirectory, _ := os.Getwd()
 	executionScope := execution.NewScope(context.Background(), workingDirectory)
 	rootCmd.SetContext(execution.WithScope(executionScope.Context(), executionScope))
-	defer func() {
-		if closeErr := executionScope.Close(context.Background()); resultErr == nil && closeErr != nil {
-			resultErr = closeErr
-		}
-	}()
 
 	rootCmd.Version = version
 	args = expandTaskShorthand(args, isKnownSubcommand)
