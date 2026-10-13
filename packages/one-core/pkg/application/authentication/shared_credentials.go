@@ -65,7 +65,10 @@ func preparationResult(location *environment.GlobalLocation, err error) SharedCr
 }
 
 func preparationErrorMessage(err error) string {
-	if errors.Is(err, context.DeadlineExceeded) {
+	// A request timeout includes the failed endpoint and transport reason. Keep
+	// that detail; only the overall preparation deadline uses the generic hint.
+	var coded interface{ ErrorCode() string }
+	if errors.Is(err, context.DeadlineExceeded) && !errors.As(err, &coded) {
 		return i18n.T("auth.shared_timeout")
 	}
 	return err.Error()

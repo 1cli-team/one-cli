@@ -413,7 +413,7 @@
   "auth.store_write_failed": "Cannot save sign-in. Enable and unlock the system credential store (Secret Service on Linux): %w",
   "auth.site_root_required": "The Infisical address must be an instance root URL.",
   "auth.https_required": "Infisical requires HTTPS, except for local instances.",
-  "auth.network_failed": "Cannot connect to Infisical. Check your network and instance URL.",
+  "auth.network_failed": "Cannot connect to Infisical (%s %s): %s. Check your network and instance URL.",
   "auth.api_failed": "Infisical request failed (HTTP %d). Check permissions and whether the resource exists.",
   "auth.response_invalid": "Infisical returned invalid data.",
   "auth.token_format_invalid": "The Infisical login token has an invalid format.",
