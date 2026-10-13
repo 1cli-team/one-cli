@@ -6,7 +6,7 @@
   "buildCommand": "pnpm --filter website build",
   "redirects": [
     {
-      "source": "/:path*",
+      "source": "/:path(.*)",
       "has": [
         {
           "type": "host",
@@ -17,22 +17,22 @@
       "permanent": true
     },
     {
-      "source": "/:lang(zh|en)/docs/:path*",
+      "source": "/:lang(zh|en)/docs/:path(.*)?",
       "destination": "/:lang/",
       "permanent": true
     },
     {
-      "source": "/:lang(zh|en)/tutorials/:path*",
+      "source": "/:lang(zh|en)/tutorials/:path(.*)?",
       "destination": "/:lang/",
       "permanent": true
     },
     {
-      "source": "/docs/:path*",
+      "source": "/docs/:path(.*)?",
       "destination": "/zh/",
       "permanent": true
     },
     {
-      "source": "/tutorials/:path*",
+      "source": "/tutorials/:path(.*)?",
       "destination": "/zh/",
       "permanent": true
     }
