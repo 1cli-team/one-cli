@@ -1,0 +1,153 @@
+name: Release One Desktop
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      cli_tag:
+        description: "Published CLI tag / 已发布的 CLI tag (vX.Y.Z)"
+        type: string
+        required: true
+
+# One desktop release at a time, including manual retries of the same CLI tag.
+concurrency:
+  group: one-desktop-release
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    shell: bash
+
+env:
+  CI: "true"
+  GOTOOLCHAIN: local
+  MISE_TASK_CACHE: "off"
+
+jobs:
+  plan:
+    if: >-
+      github.repository == '1cli-team/one-cli' &&
+      ((github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/master') ||
+       (github.event_name == 'release' && startsWith(github.event.release.tag_name, 'v') && !github.event.release.prerelease))
+    runs-on: ubuntu-22.04
+    timeout-minutes: 15
+    outputs:
+      tag: ${{ steps.plan.outputs.tag }}
+      cli_tag: ${{ steps.plan.outputs.cli_tag }}
+      source: ${{ steps.plan.outputs.source }}
+      version: ${{ steps.plan.outputs.version }}
+      skip: ${{ steps.plan.outputs.skip }}
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          ref: master
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: jdx/mise-action@c2a87611a18de5b3828c5652fe268e992400cb5c # v4
+        with:
+          version: 2026.9.7
+          install_args: node
+      - name: Validate CLI release and freeze source / 校验 CLI 发布并固定源码
+        id: plan
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ONE_DESKTOP_CLI_TAG: ${{ inputs.cli_tag || github.event.release.tag_name }}
+        run: mise run desktop-release -- plan
+
+  build:
+    needs: plan
+    if: needs.plan.outputs.skip != 'true'
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: macos-15
+            target: aarch64-apple-darwin
+          - runner: macos-15-intel
+            target: x86_64-apple-darwin
+          - runner: windows-2022
+            target: x86_64-pc-windows-msvc
+          - runner: ubuntu-22.04
+            target: x86_64-unknown-linux-gnu
+          - runner: ubuntu-22.04-arm
+            target: aarch64-unknown-linux-gnu
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 120
+    env:
+      ONE_DESKTOP_TARGET: ${{ matrix.target }}
+      RELEASE_VERSION: ${{ needs.plan.outputs.version }}
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          ref: ${{ needs.plan.outputs.source }}
+          persist-credentials: false
+      - name: Linux prerequisites / Linux 构建依赖
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev build-essential curl wget file libssl-dev libxdo-dev libayatana-appindicator3-dev librsvg2-dev patchelf libfuse2
+      - uses: jdx/mise-action@c2a87611a18de5b3828c5652fe268e992400cb5c # v4
+        with:
+          version: 2026.9.7
+      - uses: dtolnay/rust-toolchain@686976e191b89faba57d3206551f0f330d8cb249 # stable action
+        with:
+          toolchain: 1.94.0
+          targets: ${{ matrix.target }}
+          components: rustfmt
+      - name: Repository checks / 仓库质量检查
+        if: matrix.target == 'aarch64-apple-darwin'
+        run: mise run --jobs 1 --force check
+      - name: Build and notarize macOS / 构建并公证 macOS
+        if: runner.os == 'macOS'
+        env:
+          ONE_DESKTOP_RELEASE: "1"
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
+          APPLE_CERTIFICATE_BASE64: ${{ secrets.APPLE_CERTIFICATE_BASE64 }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+        run: mise run build-desktop
+      - name: Build Windows or Linux / 构建 Windows 或 Linux
+        if: runner.os != 'macOS'
+        env:
+          ONE_DESKTOP_RELEASE: "1"
+          APPIMAGE_EXTRACT_AND_RUN: "1"
+        run: mise run build-desktop
+      - name: Clean temporary signing credentials / 清理临时签名凭据
+        if: always() && runner.os == 'macOS'
+        run: mise exec node -- node scripts/desktop-macos.mts cleanup
+      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
+        with:
+          name: ${{ matrix.target }}
+          path: desktop-dist/${{ matrix.target }}/
+          if-no-files-found: error
+          retention-days: 14
+
+  publish:
+    needs: [plan, build]
+    runs-on: ubuntu-22.04
+    timeout-minutes: 20
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          ref: ${{ needs.plan.outputs.source }}
+          persist-credentials: false
+      - uses: jdx/mise-action@c2a87611a18de5b3828c5652fe268e992400cb5c # v4
+        with:
+          version: 2026.9.7
+          install_args: node
+      - uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7
+        with:
+          path: desktop-dist/downloaded
+      - name: Verify, upload draft, download and publish / 校验、上传草稿、下载校验并公开
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ONE_DESKTOP_CLI_TAG: ${{ needs.plan.outputs.cli_tag }}
+          ONE_DESKTOP_ARTIFACTS: desktop-dist/downloaded
+        run: mise run desktop-release -- publish
