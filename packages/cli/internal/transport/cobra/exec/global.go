@@ -61,7 +61,7 @@ func runGlobal(ctx context.Context, f *runFlags, args []string) error {
 func reservedGlobalKey(key string) bool {
 	key = strings.ToUpper(key)
 	switch key {
-	case "PATH", "PATHEXT", "HOME", "USERPROFILE", "BASH_ENV", "ENV", "SHELLOPTS", "BASHOPTS", "NODE_OPTIONS", "NODE_PATH", "PYTHONPATH", "PYTHONHOME", "RUBYOPT", "PERL5OPT", "GIT_CONFIG", "GIT_CONFIG_COUNT", "GIT_SSH_COMMAND":
+	case "PATH", "PATHEXT", "HOME", "USERPROFILE", "ONE_HOME", "BASH_ENV", "ENV", "SHELLOPTS", "BASHOPTS", "NODE_OPTIONS", "NODE_PATH", "PYTHONPATH", "PYTHONHOME", "RUBYOPT", "PERL5OPT", "GIT_CONFIG", "GIT_CONFIG_COUNT", "GIT_SSH_COMMAND":
 		return true
 	}
 	return strings.HasPrefix(key, "LD_") || strings.HasPrefix(key, "DYLD_")

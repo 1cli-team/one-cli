@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/gofrs/flock"
+	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/platform/userdirs"
 
 	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/platform/i18n"
 )
@@ -240,7 +241,11 @@ func WorkspaceLock(ctx context.Context, root, purpose string) (func(), error) {
 	if resolved, err := filepath.EvalSymlinks(root); err == nil {
 		root = resolved
 	}
-	lock := flock.New(filepath.Join(os.TempDir(), fmt.Sprintf("one-%s-%x.lock", purpose, sha256.Sum256([]byte(root)))))
+	locks, err := userdirs.Locks()
+	if err != nil {
+		return nil, err
+	}
+	lock := flock.New(filepath.Join(locks, fmt.Sprintf("one-%s-%x.lock", purpose, sha256.Sum256([]byte(root)))))
 	locked, err := lock.TryLockContext(ctx, 50*time.Millisecond)
 	if err != nil {
 		return nil, err

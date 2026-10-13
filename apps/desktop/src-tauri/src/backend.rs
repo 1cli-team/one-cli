@@ -34,6 +34,8 @@ pub struct Snapshot {
     #[serde(skip_serializing_if = "String::is_empty")]
     pub token: String,
     pub error: String,
+    #[serde(skip)]
+    pub storage_root: std::path::PathBuf,
 }
 pub enum Control {
     Stop(mpsc::SyncSender<()>),
@@ -178,9 +180,18 @@ fn run_child(
         while let Ok(line) = lines.try_recv() {
             let value: Value = serde_json::from_str(&line).map_err(|_| "backend_protocol")?;
             match value["type"].as_str() {
+                Some("failed") if !ready => {
+                    return Err(value["error"]
+                        .as_str()
+                        .unwrap_or("backend_storage")
+                        .to_string());
+                }
                 Some("ready") if !ready => {
                     let port = value["port"].as_u64().filter(|p| *p > 0 && *p <= 65535);
+                    let storage_root =
+                        std::path::PathBuf::from(value["storageRoot"].as_str().unwrap_or(""));
                     if port.is_none()
+                        || !storage_root.is_absolute()
                         || value["generation"] != generation
                         || value["version"] != meta.version
                         || value["commit"] != meta.commit
@@ -197,6 +208,7 @@ fn run_child(
                         s.generation = generation.clone();
                         s.token = token.clone();
                         s.port = port.unwrap() as u16;
+                        s.storage_root = storage_root;
                     }
                     publish(app, state, "httpReady", "");
                     ready = true;

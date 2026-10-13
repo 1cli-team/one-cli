@@ -1,7 +1,7 @@
 package updatecheck
 
 // Cache I/O for the update-check result. Lives at
-// $XDG_CACHE_HOME/one/update-check.json (fallback ~/.cache/one/...).
+// $ONE_HOME/cache/update-check.json (default ~/.one/cache/...).
 //
 // All errors here are silent — this is opportunistic plumbing. If the
 // cache can't be read the worst case is "we recheck a bit more often";
@@ -37,19 +37,13 @@ type Cache struct {
 
 const cacheSchema = "one-cli/update-check/v1"
 
-// cachePath returns the canonical path to update-check.json. Honors
-// XDG_CACHE_HOME (Linux convention; tests can also point it at a tmpdir).
-// Returns "" + error only when neither XDG_CACHE_HOME nor $HOME is
-// derivable — both should be fatal upstream (we just skip the cache).
+// cachePath returns the cache shared by the CLI and its detached update worker.
 func cachePath() (string, error) {
-	if xdg := os.Getenv("XDG_CACHE_HOME"); xdg != "" {
-		return filepath.Join(xdg, "one", "update-check.json"), nil
-	}
-	home, err := userdirs.Home()
+	root, err := userdirs.Cache()
 	if err != nil {
 		return "", err
 	}
-	return filepath.Join(home, ".cache", "one", "update-check.json"), nil
+	return filepath.Join(root, "update-check.json"), nil
 }
 
 // loadCache returns the parsed cache, or nil + nil if the file doesn't

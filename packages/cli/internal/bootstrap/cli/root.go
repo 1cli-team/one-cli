@@ -14,9 +14,9 @@ package cli
 import (
 	"context"
 	"errors"
-	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/bootstrap"
 	"os"
 	"strings"
+	"sync"
 
 	"github.com/spf13/cobra"
 
@@ -34,6 +34,7 @@ import (
 	templatescmd "github.com/torchstellar-team/one-cli/packages/cli/internal/transport/cobra/templates"
 	upgradecmd "github.com/torchstellar-team/one-cli/packages/cli/internal/transport/cobra/upgrade"
 	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/application/execution"
+	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/bootstrap"
 	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/core/workspace"
 	skillsmodule "github.com/torchstellar-team/one-cli/packages/one-core/pkg/modules/skills"
 	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/modules/tasks"
@@ -78,16 +79,11 @@ func newRootCommand() *cobra.Command {
 	return root
 }
 
-// rootCmd is built by the explicit composition root above. It remains a
-// singleton only because Cobra mutates parsed flag state; backend services and
-// registries are command-tree instances, not package globals.
-var rootCmd = newRootCommand()
+// Construct stores only after storage initialization has validated ONE_HOME.
+var rootCommand = sync.OnceValue(newRootCommand)
 
-// RootCmd returns the configured root cobra command for read-only
-// introspection by tools (e.g. verify-cli-references walks the command
-// tree to validate `one <subcmd>` references in agent guidance). The command
-// graph has already been assembled explicitly by newRootCommand.
-func RootCmd() *cobra.Command { return rootCmd }
+// RootCmd returns the command tree for read-only tooling without changing user data.
+func RootCmd() *cobra.Command { return rootCommand() }
 
 // RootHelp returns the curated rootHelp text — what `one --help` emits.
 // Exposed for verify-help, which ensures the concise daily command list
@@ -95,6 +91,19 @@ func RootCmd() *cobra.Command { return rootCmd }
 // callers that need the deterministic English form should call
 // i18n.Init("en-US") first.
 func RootHelp() string { return i18n.T("root.help") }
+
+// InitializeStorage preserves the CLI error envelope even before Cobra starts.
+func InitializeStorage(args []string) error {
+	detectOutputMode(args)
+	_ = i18n.Init(i18n.Resolve("auto"))
+	_, err := bootstrap.InitializeStorage()
+	if err != nil {
+		wrapped := cliErrors.New(cliErrors.ONE_CLI_ERROR, err.Error()).WithCause(err)
+		output.EmitError(wrapped)
+		return wrapped
+	}
+	return nil
+}
 
 // Execute is the single entry point called by cmd/one/main.go. It owns the
 // output-mode detection (-o / --output / TTY), help interception,
@@ -104,6 +113,7 @@ func RootHelp() string { return i18n.T("root.help") }
 //
 // version is the build-time value injected via -ldflags; see cmd/one/main.go.
 func Execute(version string, args []string) error {
+	rootCmd := RootCmd()
 	workingDirectory, _ := os.Getwd()
 	executionScope := execution.NewScope(context.Background(), workingDirectory)
 	rootCmd.SetContext(execution.WithScope(executionScope.Context(), executionScope))
@@ -323,7 +333,7 @@ func firstPositional(args []string) (string, bool) {
 // command. We inspect the explicitly assembled rootCmd.Commands() collection
 // so this validation never maintains a second command-name list.
 func isKnownSubcommand(name string) bool {
-	for _, c := range rootCmd.Commands() {
+	for _, c := range RootCmd().Commands() {
 		if c.Name() == name {
 			return true
 		}

@@ -1,7 +1,7 @@
 package serve
 
 // handlers_preferences.go is the REST surface for the user-global
-// preference file (~/.config/one/preferences.json). Mirrors
+// preference file (~/.one/config/preferences.json). Mirrors
 // `one locale` so the dashboard and the CLI share one
 // source of truth — switch the language in the UI and `one --help`
 // picks it up on the next run, and vice versa.

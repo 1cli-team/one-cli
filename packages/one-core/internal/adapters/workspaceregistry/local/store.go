@@ -1,5 +1,5 @@
 // Package local persists the machine-local Workspace registry in an
-// XDG-aware workspaces.json file.
+// One-owned workspaces.json file.
 package local
 
 import (
@@ -39,22 +39,16 @@ type Store struct {
 	renameFile renameFile
 }
 
-// Path returns the default XDG-aware workspaces.json path.
+// Path returns the shared One workspace registry path.
 func Path() (string, error) {
-	var configRoot string
-	if xdg := strings.TrimSpace(os.Getenv("XDG_CONFIG_HOME")); xdg != "" {
-		configRoot = xdg
-	} else {
-		home, err := userdirs.Home()
-		if err != nil {
-			return "", fmt.Errorf("resolve home directory: %w", err)
-		}
-		configRoot = filepath.Join(home, ".config")
+	root, err := userdirs.Config()
+	if err != nil {
+		return "", err
 	}
-	return filepath.Join(configRoot, "one", "workspaces.json"), nil
+	return filepath.Join(root, "workspaces.json"), nil
 }
 
-// New constructs a Store at the default XDG-aware path.
+// New constructs a Store at the default One-owned path.
 func New() (*Store, error) {
 	path, err := Path()
 	if err != nil {

@@ -9,6 +9,7 @@ import (
 
 	uv "github.com/charmbracelet/ultraviolet"
 	"github.com/charmbracelet/x/ansi"
+	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/platform/userdirs"
 )
 
 // Only offsets and task membership stay in memory. Log bodies live in a private
@@ -33,7 +34,11 @@ type logStore struct {
 type logLine struct{ task, text string }
 
 func newLogStore(names []string) (*logStore, error) {
-	f, err := os.CreateTemp("", "one-task-logs-*")
+	temporary, err := userdirs.Temp()
+	if err != nil {
+		return nil, err
+	}
+	f, err := os.CreateTemp(temporary, "one-task-logs-*")
 	if err != nil {
 		return nil, err
 	}
