@@ -1,13 +1,12 @@
 // Package preferences owns the user-global preference file at
-// ~/.config/one/preferences.json (XDG-aware; honours XDG_CONFIG_HOME
-// just like internal/core/profile).
+// ~/.one/config/preferences.json (or $ONE_HOME/config/preferences.json).
 //
 // Cross-workspace display preferences live here; project bindings and
 // Infisical credentials use their existing, separate stores.
 //
 // File layout:
 //
-//	~/.config/one/preferences.json  — JSON, mode 0600
+//	~/.one/config/preferences.json  — JSON, mode 0600
 //
 // Schema:
 //
@@ -25,12 +24,12 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"github.com/gofrs/flock"
 	"io/fs"
 	"os"
 	"path/filepath"
 	"time"
 
+	"github.com/gofrs/flock"
 	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/platform/fsutil"
 	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/platform/i18n"
 	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/platform/userdirs"
@@ -75,25 +74,10 @@ func IsValidLocale(s string) bool {
 	return false
 }
 
-// configRoot returns ~/.config/one (XDG-aware). Mirrors
-// profile.configRoot — kept duplicated rather than re-exported so
-// the preferences package doesn't drag in the profile dependency
-// graph.
-func configRoot() (string, error) {
-	if xdg := os.Getenv("XDG_CONFIG_HOME"); xdg != "" {
-		return filepath.Join(xdg, "one"), nil
-	}
-	home, err := userdirs.Home()
-	if err != nil {
-		return "", err
-	}
-	return filepath.Join(home, ".config", "one"), nil
-}
-
 // Path returns the absolute path of preferences.json. Useful for
 // `one locale` to print where the value lives.
 func Path() (string, error) {
-	root, err := configRoot()
+	root, err := userdirs.Config()
 	if err != nil {
 		return "", err
 	}

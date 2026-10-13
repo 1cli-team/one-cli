@@ -221,14 +221,11 @@ export function smoke(build: Build) {
     assertBuildSettings(info, p.sourceSha, target[1], target[2]);
     if (name === `one-cli_${hostOS}_${hostArch}.tar.gz`) binary = exe;
   }
-  const config = join(verify, "config");
+  const storage = join(verify, "one-home");
   const env = {
     ...process.env,
     CI: "1",
-    XDG_CONFIG_HOME: config,
-    XDG_DATA_HOME: join(verify, "data"),
-    XDG_CACHE_HOME: join(verify, "cache"),
-    XDG_STATE_HOME: join(verify, "state"),
+    ONE_HOME: storage,
   };
   if (read(binary, ["--version"], { cwd: verify, env }) !== p.version)
     fail("Packaged CLI version is incorrect.", "发布包中的 CLI 版本不正确。");

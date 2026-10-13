@@ -461,6 +461,7 @@
 			"backend_missing": "安装包中的后端缺失，请重新安装 One Desktop。",
 			"backend_identity": "后端版本与此桌面构建不匹配。",
 			"backend_timeout": "后端未在规定时间内就绪。",
+			"backend_storage": "One 存储目录不可用。",
 			"backend_handshake": "后端握手失败。",
 			"update_recovery_required": "此平台的恢复流程尚未验证，因此暂不允许安装更新，请继续使用当前版本。",
 			"update_busy": "另一项更新操作正在进行。",

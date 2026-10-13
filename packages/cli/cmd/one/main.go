@@ -24,10 +24,17 @@ var version = "0.0.0-dev"
 var commit = "unknown"
 
 func main() {
+	if len(os.Args) == 2 && os.Args[1] == "--version" {
+		fmt.Println(version)
+		return
+	}
 	if len(os.Args) > 1 {
 		identity := desktopcontrol.Identity{Version: version, Commit: commit, Channel: updatecheck.Channel(), Protocol: desktopcontrol.Protocol, API: desktopcontrol.API}
 		switch os.Args[1] {
 		case "__install-terminal":
+			if err := cli.InitializeStorage(os.Args[1:]); err != nil {
+				os.Exit(1)
+			}
 			if len(os.Args) != 3 {
 				os.Exit(2)
 			}
@@ -50,6 +57,10 @@ func main() {
 			_ = json.NewEncoder(os.Stdout).Encode(identity)
 			return
 		}
+	}
+	// Identity/version probes don't open stores; all other public commands do.
+	if err := cli.InitializeStorage(os.Args[1:]); err != nil {
+		os.Exit(1)
 	}
 	if updatecheck.RunWorker(version, os.Args[1:]) {
 		return

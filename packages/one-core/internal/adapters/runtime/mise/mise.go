@@ -28,7 +28,7 @@ func (p Provider) Prepare(ctx context.Context, command runtimeport.Command) (run
 
 func (Provider) PrepareCLI(ctx context.Context, command runtimeport.Command) (runtimeport.Command, error) {
 	paths, pathsErr := defaultPaths()
-	i := installer{root: paths.runtimeRoot(), legacyRoot: paths.legacyRoot(), downloader: defaultDownloader(), out: os.Stderr}
+	i := installer{root: paths.runtimeRoot(), downloader: defaultDownloader(), out: os.Stderr}
 	r := binaryResolver{paths: paths, pathsErr: pathsErr, asset: currentAsset, install: i.ensure, out: os.Stderr}
 	selected, err := r.resolve(ctx, command)
 	if err != nil {

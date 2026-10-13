@@ -192,7 +192,6 @@
   "mise.download.archive_too_large": "mise 压缩包超过大小限制",
   "mise.download.checksum": "mise 压缩包 SHA256 校验失败：%s",
   "mise.install.lock_failed": "无法锁定 mise 运行时安装目录",
-  "mise.install.migrating": "[one] 正在将已验证的 mise %s 迁移到 %s。\n",
   "mise.install.downloading": "[one] 正在下载官方 mise %s（%s）到 %s。\n",
   "mise.install.verification": "mise 可执行文件验证失败：%w",
   "mise.install.not_executable": "缓存中的 mise 文件不可执行",
@@ -437,7 +436,7 @@
   "workspace.project_selector_missing": "找不到名字或路径匹配 %s 的项目。已声明: %s",
   "workspace.not_found": "在 %s 及其上级目录中找不到 One 工作区。请切换到已有工作区目录，或用 one create 新建。",
   "env.key_naming": "变量名无效；必须匹配 ^[A-Za-z_][A-Za-z0-9_]*$，例如 DATABASE_URL。应用中的 database.url 等嵌套配置需要在应用配置中映射到该环境变量。",
-  "locale.read_failed": "~/.config/one/preferences.json 读取失败：%s",
+  "locale.read_failed": "One 偏好配置读取失败：%s",
   "exec.provider_unregistered": "内部错误：env provider %s 未注册到二进制。",
   "exec.available_projects": "；可选：%s",
   "exec.project_missing": "找不到名字或路径匹配 %s 的项目%s",
@@ -751,5 +750,6 @@
   "preferences.schema_newer": "此配置来自较新的 One 版本，请升级后再修改。",
   "desktop.project_payload_invalid": "新建项目请求无效：%v",
   "desktop.workspace_required": "尚未选择工作区，请在 One Desktop 中打开工作区后重试。",
-  "error.SERVE_BIND_FORBIDDEN.summary": "One Desktop 拒绝了对本地 API 的访问。"
+  "error.SERVE_BIND_FORBIDDEN.summary": "One Desktop 拒绝了对本地 API 的访问。",
+  "storage.failed": "One 存储初始化失败：%w"
 }

@@ -13,6 +13,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/bootstrap"
 	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/platform/desktopcontrol"
 	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/platform/i18n"
 	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/platform/preferences"
@@ -20,13 +21,7 @@ import (
 )
 
 func Run(identity desktopcontrol.Identity, compose func() serve.MuxOpts) error {
-	prefs, err := preferences.Load()
-	if err != nil {
-		return err
-	}
-	if err = i18n.Init(i18n.Resolve(prefs.Locale)); err != nil {
-		return err
-	}
+	_ = i18n.Init(i18n.Resolve("auto"))
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer cancel()
 	frames := make(chan []byte)
@@ -68,8 +63,6 @@ func Run(identity desktopcontrol.Identity, compose func() serve.MuxOpts) error {
 	session := &desktopcontrol.Session{Bootstrap: boot, Identity: identity}
 	var outputMu sync.Mutex
 	send := func(v any) { outputMu.Lock(); defer outputMu.Unlock(); _ = json.NewEncoder(os.Stdout).Encode(v) }
-	opts := compose()
-	opts.Session = session
 	go func() {
 		defer cancel() // EOF is host death, never keep a detached backend alive.
 		for {
@@ -100,12 +93,27 @@ func Run(identity desktopcontrol.Identity, compose func() serve.MuxOpts) error {
 			}
 		}
 	}()
+	paths, err := bootstrap.InitializeStorage()
+	if err != nil {
+		send(map[string]string{"type": "failed", "error": err.Error()})
+		return err
+	}
+	prefs, err := preferences.Load()
+	if err != nil {
+		return err
+	}
+	if err = i18n.Init(i18n.Resolve(prefs.Locale)); err != nil {
+		return err
+	}
+	opts := compose()
+	opts.Session = session
 	return serve.Run(ctx, opts, func(port int) {
 		send(struct {
-			Type       string `json:"type"`
-			Generation string `json:"generation"`
-			Port       int    `json:"port"`
+			Type        string `json:"type"`
+			Generation  string `json:"generation"`
+			Port        int    `json:"port"`
+			StorageRoot string `json:"storageRoot"`
 			desktopcontrol.Identity
-		}{"ready", boot.Generation, port, identity})
+		}{"ready", boot.Generation, port, paths.Root, identity})
 	})
 }

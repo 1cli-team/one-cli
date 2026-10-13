@@ -104,7 +104,7 @@ pub async fn install_update(window: WebviewWindow, app: tauri::AppHandle) -> Res
     {
         return Ok(());
     }
-    let dir = app.path().app_data_dir().map_err(|e| e.to_string())?;
+    let dir = storage_directory(&app)?;
     fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
     let transaction = serde_json::json!({"from":backend::manifest().version,"to":update.version,"phase":"installing"});
     fs::write(dir.join("update-transaction.json"), transaction.to_string())
@@ -129,7 +129,7 @@ pub fn confirm_health(
     if s.status != "httpReady" || s.generation != generation {
         return Err("backend_session_changed".into());
     }
-    let dir = app.path().app_data_dir().map_err(|e| e.to_string())?;
+    let dir = s.storage_root.join("state").join("desktop");
     let path = dir.join("update-transaction.json");
     if path.exists() {
         let mut record: serde_json::Value =
@@ -141,4 +141,14 @@ pub fn confirm_health(
         }
     }
     Ok(())
+}
+
+// Go is the single authority for ONE_HOME; retain its root after quiescing the backend.
+fn storage_directory(app: &tauri::AppHandle) -> Result<std::path::PathBuf, String> {
+    let backend = app.state::<backend::Backend>();
+    let snapshot = backend.snapshot.lock().unwrap();
+    if !snapshot.storage_root.is_absolute() {
+        return Err("backend_storage".into());
+    }
+    Ok(snapshot.storage_root.join("state").join("desktop"))
 }

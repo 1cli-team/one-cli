@@ -27,7 +27,6 @@ const maxBinarySize = 512 << 20
 // PATH, shell configuration, an existing mise installation, or config trust.
 type installer struct {
 	root       string
-	legacyRoot string
 	downloader downloader
 	out        io.Writer
 }
@@ -61,22 +60,7 @@ func (i installer) ensure(ctx context.Context, a releaseAsset) (string, error) {
 	if err := verifyExecutable(target, a.BinarySHA256); err == nil {
 		return target, nil
 	}
-	if i.legacyRoot != "" {
-		legacy := filepath.Join(i.legacyRoot, managedVersion, a.Platform, a.BinaryName())
-		if verifyExecutable(legacy, a.BinarySHA256) == nil {
-			if i.out != nil {
-				fmt.Fprintf(i.out, i18n.T("mise.install.migrating"), managedVersion, dir)
-			}
-			return target, publishBinary(ctx, target, a.BinarySHA256, func(dest io.Writer) error {
-				f, err := os.Open(legacy)
-				if err != nil {
-					return err
-				}
-				defer f.Close()
-				return copyLimited(contextWriter{ctx: ctx, dest: dest}, f, maxBinarySize)
-			})
-		}
-	}
+
 	if i.out != nil {
 		fmt.Fprintf(i.out, i18n.T("mise.install.downloading"), managedVersion, a.Platform, dir)
 	}

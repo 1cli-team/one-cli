@@ -25,6 +25,7 @@ import (
 	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/platform/i18n"
 	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/platform/output"
 	platformprocess "github.com/torchstellar-team/one-cli/packages/one-core/pkg/platform/process"
+	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/platform/userdirs"
 	runtimeport "github.com/torchstellar-team/one-cli/packages/one-core/pkg/ports/runtime"
 )
 
@@ -287,11 +288,11 @@ func (s Service) prepareNode(ctx context.Context, in Input, fallback string) err
 	if err != nil {
 		return err
 	}
-	cache, err := os.UserCacheDir()
+	cache, err := userdirs.Cache()
 	if err != nil {
 		return err
 	}
-	marker := filepath.Join(cache, "one", "dependencies", fmt.Sprintf("%x", sha256.Sum256([]byte(in.Root))))
+	marker := filepath.Join(cache, "dependencies", fmt.Sprintf("%x", sha256.Sum256([]byte(in.Root))))
 	previous, _ := os.ReadFile(marker)
 	if !nativeCheck && string(previous) == before && nodeInstalled(in) {
 		return nil

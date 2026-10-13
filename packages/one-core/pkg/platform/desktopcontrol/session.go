@@ -6,7 +6,7 @@ import (
 	"sync"
 )
 
-const Protocol = 1
+const Protocol = 2
 const API = 1
 
 type Identity struct {

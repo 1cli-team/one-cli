@@ -18,6 +18,7 @@ import (
 	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/platform/i18n"
 	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/platform/output"
 	process "github.com/torchstellar-team/one-cli/packages/one-core/pkg/platform/process"
+	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/platform/userdirs"
 	runtimeport "github.com/torchstellar-team/one-cli/packages/one-core/pkg/ports/runtime"
 	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/ports/secrets"
 )
@@ -137,7 +138,11 @@ func (s Service) Execute(ctx context.Context, w execution.Workspace, p *Plan, op
 		return nil, err
 	}
 	defer broker.close()
-	directory, err := os.MkdirTemp("", "one-compose-")
+	temporary, err := userdirs.Temp()
+	if err != nil {
+		return nil, err
+	}
+	directory, err := os.MkdirTemp(temporary, "one-compose-")
 	if err != nil {
 		return nil, err
 	}

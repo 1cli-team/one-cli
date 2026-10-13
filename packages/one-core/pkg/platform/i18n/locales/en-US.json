@@ -192,7 +192,6 @@
   "mise.download.archive_too_large": "mise archive exceeds size limit",
   "mise.download.checksum": "mise archive SHA256 mismatch: %s",
   "mise.install.lock_failed": "could not lock mise runtime installation",
-  "mise.install.migrating": "[one] Migrating verified mise %s to %s.\n",
   "mise.install.downloading": "[one] Downloading official mise %s (%s) into %s.\n",
   "mise.install.verification": "mise executable verification failed: %w",
   "mise.install.not_executable": "cached mise is not executable",
@@ -751,5 +750,6 @@
   "preferences.schema_newer": "This configuration was written by a newer One version. Upgrade before modifying it.",
   "desktop.project_payload_invalid": "Invalid project creation request: %v",
   "desktop.workspace_required": "No workspace is selected. Open a workspace in One Desktop and try again.",
-  "error.SERVE_BIND_FORBIDDEN.summary": "One Desktop rejected access to its local API."
+  "error.SERVE_BIND_FORBIDDEN.summary": "One Desktop rejected access to its local API.",
+  "storage.failed": "One storage initialization failed: %w"
 }

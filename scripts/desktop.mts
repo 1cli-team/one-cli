@@ -100,7 +100,7 @@ function build(identity?: string) {
     version,
     commit,
     channel,
-    protocol: 1,
+    protocol: 2,
     api: 1,
     target,
     sha256: hashes["one-api"],

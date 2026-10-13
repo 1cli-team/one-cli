@@ -461,6 +461,7 @@
 			"backend_missing": "The packaged backend is missing. Reinstall One Desktop.",
 			"backend_identity": "The backend version does not match this desktop build.",
 			"backend_timeout": "The backend did not become ready in time.",
+			"backend_storage": "The One storage directory is unavailable.",
 			"backend_handshake": "The backend handshake failed.",
 			"update_recovery_required": "Installation is disabled until this platform has a verified recovery path. Keep using the current version.",
 			"update_busy": "Another update operation is running.",

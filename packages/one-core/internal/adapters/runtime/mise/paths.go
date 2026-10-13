@@ -6,7 +6,6 @@ import (
 	"runtime"
 	"strings"
 
-	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/platform/i18n"
 	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/platform/userdirs"
 )
 
@@ -14,45 +13,13 @@ type runtimePaths struct {
 	data, config, state, cache string
 }
 
-// Match One's existing XDG/Home conventions on every supported platform.
-// Resolve each root independently so a bad config/cache setting does not hide
-// ownership of an otherwise valid runtime path during external discovery.
+// CLI and Desktop use the same One-owned roots. External mise keeps its own environment.
 func defaultPaths() (runtimePaths, error) {
-	var paths runtimePaths
-	var firstErr error
-	for _, entry := range []struct {
-		key, fallback string
-		dest          *string
-	}{
-		{"XDG_DATA_HOME", ".local/share", &paths.data},
-		{"XDG_CONFIG_HOME", ".config", &paths.config},
-		{"XDG_STATE_HOME", ".local/state", &paths.state},
-		{"XDG_CACHE_HOME", ".cache", &paths.cache},
-	} {
-		root := os.Getenv(entry.key)
-		if root == "" {
-			home, err := userdirs.Home()
-			if err != nil {
-				if firstErr == nil {
-					firstErr = err
-				}
-				continue
-			}
-			root = filepath.Join(home, filepath.FromSlash(entry.fallback))
-		}
-		if !filepath.IsAbs(root) {
-			if firstErr == nil {
-				firstErr = i18n.Errorf("path.absolute_required", entry.key)
-			}
-			continue
-		}
-		*entry.dest = filepath.Join(root, "one")
-	}
-	return paths, firstErr
+	p, err := userdirs.Resolve()
+	return runtimePaths{data: p.Data, config: p.Config, state: p.State, cache: p.Cache}, err
 }
 
 func (p runtimePaths) runtimeRoot() string { return runtimeRoot(p.data) }
-func (p runtimePaths) legacyRoot() string  { return runtimeRoot(p.cache) }
 
 func runtimeRoot(base string) string {
 	if base == "" {
@@ -62,12 +29,8 @@ func runtimeRoot(base string) string {
 }
 
 func (p runtimePaths) owns(path string) bool {
-	for _, root := range []string{p.runtimeRoot(), p.legacyRoot()} {
-		if root != "" && (withinCleanPath(root, path) || withinPath(root, path)) {
-			return true
-		}
-	}
-	return false
+	root := p.runtimeRoot()
+	return root != "" && (withinCleanPath(root, path) || withinPath(root, path))
 }
 
 func withinPath(root, path string) bool {
