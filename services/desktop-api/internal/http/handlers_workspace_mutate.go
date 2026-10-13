@@ -104,7 +104,7 @@ func writeWorkspaceMutationErr(w http.ResponseWriter, err error) {
 
 func writeNoWorkspace(w http.ResponseWriter) {
 	writeError(w, http.StatusConflict, cliErrors.NOT_ONE_PROJECT,
-		"`one serve` was launched outside a One workspace — there is no workspace to inspect.",
+		i18n.T("desktop.workspace_required"),
 		nil)
 }
 

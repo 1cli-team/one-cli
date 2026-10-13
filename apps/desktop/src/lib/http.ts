@@ -1,4 +1,4 @@
-// http.ts wires axios to the Go server in internal/serve.
+// http.ts wires axios to the Go server in services/desktop-api.
 //
 // Differences from the source template:
 //   - No `{ success, code, message, data }` envelope unwrap. The Go server

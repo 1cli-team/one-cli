@@ -3,7 +3,6 @@ package execution
 import (
 	"context"
 
-	"github.com/torchstellar-team/one-cli/packages/kernel/pkg/kernel"
 	catalog "github.com/torchstellar-team/one-cli/packages/one-core/pkg/core/backend"
 )
 
@@ -14,10 +13,10 @@ type ScopePatch struct {
 	Backend       catalog.BackendID
 }
 
-// ExecutionScope is immutable command state. Derive returns a copy sharing
-// only the lifecycle, so child operations cannot mutate their parent's view.
+// Scope is immutable command state. Derive copies its fields while retaining
+// the caller context, including cancellation, deadlines, and values.
 type Scope struct {
-	runtime          kernel.Context
+	ctx              context.Context
 	workingDirectory string
 	workspaceRoot    string
 	project          string
@@ -26,9 +25,10 @@ type Scope struct {
 }
 
 func NewScope(ctx context.Context, workingDirectory string) Scope {
-	return Scope{
-		runtime: kernel.NewContext(ctx), workingDirectory: workingDirectory,
+	if ctx == nil {
+		ctx = context.Background()
 	}
+	return Scope{ctx: ctx, workingDirectory: workingDirectory}
 }
 
 func (s Scope) Derive(patch ScopePatch) Scope {
@@ -48,13 +48,17 @@ func (s Scope) Derive(patch ScopePatch) Scope {
 	return child
 }
 
-func (s Scope) Context() context.Context        { return s.runtime.Context() }
-func (s Scope) WorkingDirectory() string        { return s.workingDirectory }
-func (s Scope) WorkspaceRoot() string           { return s.workspaceRoot }
-func (s Scope) Project() string                 { return s.project }
-func (s Scope) Environment() string             { return s.environment }
-func (s Scope) Backend() catalog.BackendID      { return s.backend }
-func (s Scope) Close(ctx context.Context) error { return s.runtime.Close(ctx) }
+func (s Scope) Context() context.Context {
+	if s.ctx == nil {
+		return context.Background()
+	}
+	return s.ctx
+}
+func (s Scope) WorkingDirectory() string   { return s.workingDirectory }
+func (s Scope) WorkspaceRoot() string      { return s.workspaceRoot }
+func (s Scope) Project() string            { return s.project }
+func (s Scope) Environment() string        { return s.environment }
+func (s Scope) Backend() catalog.BackendID { return s.backend }
 
 type executionScopeContextKey struct{}
 

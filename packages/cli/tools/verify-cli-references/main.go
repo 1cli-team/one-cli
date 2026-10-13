@@ -1,33 +1,9 @@
-// verify-cli-references walks every prose / template doc in the repo and
-// asserts that any `one <subcommand>` reference inside a code-span or
-// fenced code block names a registered command or a documented task shorthand.
-//
-// Run via Taskfile: `task verify-cli-references`. Exits non-zero with a
-// list of file:line offenders on any drift.
-//
-// Source of truth: cobra command tree, accessed via cli.RootCmd(). RootCmd
-// returns the explicitly assembled graph, so this stays in sync automatically
-// when commands are added, removed, or renamed.
-//
-// What we scan:
-//   - Top-level: README.md, CONTRIBUTING.md
-//   - apps/docs/content/docs/**/*.{md,mdx}
-//   - packages/templates/<id>/README.md
-//
-// Where we look (intentional):
-//   - Inside `inline code spans` and ```fenced code blocks```.
-//   - NOT in plain prose. The English word "one" appears constantly
-//     ("any one of these", "one third", etc.) and false-positives there
-//     would be loud and unhelpful. Any real command reference users
-//     copy-paste is in backticks anyway.
-//
-// Escape hatch: lines between `<!-- verify-cli:ignore-start -->` and
-// `<!-- verify-cli:ignore-end -->` are skipped. Use this for migration
-// guides, "removed commands" tables, and changelogs that intentionally
-// reference now-deleted command names.
+// verify-cli-references checks command references in maintained agent and project guidance.
+// Built-in commands come from Cobra; task shorthands come from the workspace task catalog.
 package main
 
 import (
+	"context"
 	"fmt"
 	"io/fs"
 	"os"
@@ -39,6 +15,8 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/bootstrap/cli"
+	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/application/execution"
+	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/modules/tasks"
 )
 
 func main() {
@@ -50,6 +28,9 @@ func main() {
 
 func run() error {
 	valid := collectCommands(cli.RootCmd())
+	if err := collectTasks(valid); err != nil {
+		return err
+	}
 	files, err := docFiles()
 	if err != nil {
 		return err
@@ -62,16 +43,13 @@ func run() error {
 		}
 		contents[f] = b
 	}
-	// Task guides declare names with one run <task>. Their shorthand may
-	// also appear in quick starts and template READMEs elsewhere in the docs.
-	references := collectReferences(valid, contents)
 	var problems []string
 	for _, f := range files {
-		problems = append(problems, scanFile(f, contents[f], references)...)
+		problems = append(problems, scanFile(f, contents[f], valid)...)
 	}
 	if len(problems) > 0 {
 		return fmt.Errorf(
-			"found unknown `one <subcommand>` references in docs:\n  %s\n\nFix one of:\n  - Rename to a registered command (see `one --help`) or a documented task (one run <task>).\n  - If the reference is intentional (migration guide / changelog), wrap the section in:\n      <!-- verify-cli:ignore-start -->\n      ... section with deprecated command names ...\n      <!-- verify-cli:ignore-end -->",
+			"found unknown `one <subcommand>` references in guidance:\n  %s\n\nFix one of:\n  - Rename to a registered command (see `one --help`) or a configured task (one run <task>).\n  - If the reference is intentional (migration guide / changelog), wrap the section in:\n      <!-- verify-cli:ignore-start -->\n      ... section with deprecated command names ...\n      <!-- verify-cli:ignore-end -->",
 			strings.Join(problems, "\n  "),
 		)
 	}
@@ -80,7 +58,7 @@ func run() error {
 		keys = append(keys, k)
 	}
 	sort.Strings(keys)
-	fmt.Printf("verify-cli-references: ok (%d files, %d top-level commands: %s)\n",
+	fmt.Printf("verify-cli-references: ok (%d files, %d command and task names: %s)\n",
 		len(files), len(keys), strings.Join(keys, ", "))
 	return nil
 }
@@ -120,7 +98,7 @@ func repoRel(parts ...string) string {
 func docFiles() ([]string, error) {
 	var files []string
 
-	for _, top := range []string{"README.md", "CLAUDE.md", "CONTRIBUTING.md"} {
+	for _, top := range []string{"README.md", "AGENTS.md", "ARCHITECTURE.md", "CONTRIBUTING.md"} {
 		p := repoRel(top)
 		if _, err := os.Stat(p); err == nil {
 			files = append(files, p)
@@ -132,7 +110,8 @@ func docFiles() ([]string, error) {
 		extension []string
 	}
 	roots := []walkSpec{
-		{repoRel("apps", "docs", "content", "docs"), []string{".md", ".mdx"}},
+		{repoRel("packages", "agent-skills", "skills"), []string{".md"}},
+		{repoRel("packages", "one-core", "pkg", "modules", "creation", "templates"), []string{".md"}},
 	}
 	for _, w := range roots {
 		if err := filepath.WalkDir(w.root, func(path string, d fs.DirEntry, err error) error {
@@ -180,20 +159,25 @@ var (
 	codeSpanRE = regexp.MustCompile("`([^`\n]+)`")
 )
 
-// collectReferences adds documented task names without changing the command
-// catalogue. Undeclared names still fail the reference check to catch typos.
-func collectReferences(commands map[string]struct{}, documents map[string][]byte) map[string]struct{} {
-	valid := make(map[string]struct{}, len(commands))
-	for name := range commands {
-		valid[name] = struct{}{}
+// collectTasks reads static configuration without running tasks or loading secrets.
+func collectTasks(valid map[string]struct{}) error {
+	root, err := filepath.Abs(repoRel())
+	if err != nil {
+		return err
 	}
-	taskRE := regexp.MustCompile(`\bone run ([a-z][a-z0-9:-]*)`)
-	for _, content := range documents {
-		for _, match := range taskRE.FindAllSubmatch(content, -1) {
-			valid[string(match[1])] = struct{}{}
-		}
+	workspace, err := execution.ResolveWorkspaceScope(execution.NewScope(context.Background(), root))
+	if err != nil {
+		return err
 	}
-	return valid
+	catalog, _, err := tasks.Catalog(workspace)
+	if err != nil {
+		return err
+	}
+	for _, task := range catalog {
+		valid[task.Operation] = struct{}{}
+		valid[strings.TrimPrefix(task.Name, "//:")] = struct{}{}
+	}
+	return nil
 }
 
 func scanFile(path string, content []byte, valid map[string]struct{}) []string {
@@ -239,7 +223,7 @@ func scanFile(path string, content []byte, valid map[string]struct{}) []string {
 				cmd := m[1]
 				if _, ok := valid[cmd]; !ok {
 					problems = append(problems, fmt.Sprintf(
-						"%s:%d: `one %s …` — `%s` is not a registered command or documented task",
+						"%s:%d: `one %s …` — `%s` is not a registered command or configured task",
 						path, i+1, cmd, cmd,
 					))
 				}

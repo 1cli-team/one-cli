@@ -78,7 +78,7 @@ func handleCreateProject(opts MuxOpts) http.HandlerFunc {
 		var body createProjectRequest
 		r.Body = http.MaxBytesReader(w, r.Body, 16<<10)
 		if err := decodeJSON(r, &body); err != nil {
-			writeBadPayload(w, i18n.Tf("serve.project_payload_invalid", err))
+			writeBadPayload(w, i18n.Tf("desktop.project_payload_invalid", err))
 			return
 		}
 		body.Name, body.TemplateID = strings.TrimSpace(body.Name), strings.TrimSpace(body.TemplateID)

@@ -337,7 +337,6 @@ function buildRelease(
   );
   run("mise", ["trust"], { cwd: source, env });
   for (const module of [
-    "packages/kernel",
     "packages/one-core",
     "packages/cli",
     "services/desktop-api",

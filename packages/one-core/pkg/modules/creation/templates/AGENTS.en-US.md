@@ -37,7 +37,7 @@
 ## Global operation credentials
 
 - Docker registry usernames and passwords, along with other publishing or operations credentials, belong in One's global variables. Keep them separate from application runtime variables.
-- When credentials are missing, explain the required variable names, purposes, environment, and folder. Ask the user to run `one serve` and configure them on the Dashboard's “Shared credentials” page. Do not ask for credential values in chat.
+- When credentials are missing, explain the required variable names, purposes, environment, and folder. Ask the user to open One Desktop and configure them on its “Shared credentials” page. Do not ask for credential values in chat.
 - After the user configures them, inspect names with `one env list --global --env <environment> --path <folder>`. Have the task inject the required variables using `one exec --global` internally, with explicit `--env`, `--path`, and `--keys`.
 - The agent still starts execution with `one run`. For example, when `scripts/push-image.mts` exists, the root `mise.toml` can define:
 

@@ -51,9 +51,9 @@
 <link rel="icon" type="image/svg+xml" href="/brand/favicon.svg" />
 ```
 
-### Docs 站（Next.js + Fumadocs）
+### 官网（Next.js 静态导出）
 
-放进 `apps/docs/public/brand/`，然后在 `app/layout.tsx` 引用 favicon，在 `app/page.tsx` 的 hero 引 logo.svg。
+资源位于 `apps/website/public/brand/`，图标元数据在 `src/components/site-document.tsx`，首页品牌组件在 `src/components/brand-mark.tsx`。
 
 ### README badges
 

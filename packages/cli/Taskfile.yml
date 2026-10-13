@@ -41,13 +41,10 @@ tasks:
     cmds: ['go mod tidy']
   sync-bundled:
     cmds: ['go run ./tools/sync-resources bundled']
-  gen-error-codes:
-    cmds: ['go run ./tools/gen-error-codes']
-  verify-docs:
+  verify-guidance:
     cmds:
       - go run ./tools/verify-cli-references
       - go run ./tools/verify-help
-      - go run ./tools/repo-checks frontmatter
   verify-node-workspace:
     cmds: ['go run ./tools/repo-checks node-workspace']
   install-launcher:

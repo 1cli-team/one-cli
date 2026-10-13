@@ -32,7 +32,7 @@ Use `-o json` when parsing One's own structured results; branch on error
 codes and context. `one skills`, `one mise`, and `one hk` forward native
 tool output and flags, so their output does not use One's JSON envelope.
 
-Manage runtime variables through One or Dashboard; application code reads
+Manage runtime variables through One or One Desktop; application code reads
 the injected process environment. Do not introduce another .env source.
 Publishing credentials belong in Shared credentials, configured by the
 user, and are injected by a task using `one exec --global`. Never request

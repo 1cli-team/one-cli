@@ -54,7 +54,7 @@
 			"projects": "Projects",
 			"lastDetected": "Last detected",
 			"emptyTitle": "No Workspaces yet",
-			"emptyDescription": "Run one create to create a Workspace, or run one serve inside an existing Workspace to register it.",
+			"emptyDescription": "Run one create to create a workspace, or choose Open workspace to register an existing folder.",
 			"listLabel": "Registered Workspaces",
 			"refresh": "Refresh",
 			"search": "Search name, path or ID…",
@@ -69,7 +69,7 @@
 		},
 		"rail": {
 			"title": "Workspaces",
-			"empty": "Run one create, or run one serve inside a workspace, to add it here.",
+			"empty": "Run one create, or choose Open workspace, to add a workspace here.",
 			"loadFailed": "Workspace registry could not be loaded."
 		},
 		"status": {
@@ -86,11 +86,11 @@
 		"state": {
 			"missing": {
 				"title": "The Workspace path is unavailable",
-				"description": "The folder may have moved, been deleted, or be on a drive that is not mounted. Run one serve from its new location to refresh the registry."
+				"description": "The folder may have moved, been deleted, or be on a drive that is not mounted. Choose Open workspace and select its current location to register it."
 			},
 			"invalid": {
 				"title": "The Workspace manifest is invalid",
-				"description": "Repair one.manifest.toml at this path, then run one serve in the Workspace again."
+				"description": "Repair one.manifest.toml at this path, then refresh the workspace list."
 			},
 			"identity-missing": {
 				"title": "This Workspace has no stable ID",

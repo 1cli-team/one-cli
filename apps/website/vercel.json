@@ -1,0 +1,68 @@
+{
+	"$schema": "https://openapi.vercel.sh/vercel.json",
+	"framework": "nextjs",
+	"installCommand": "pnpm install --frozen-lockfile",
+	"buildCommand": "pnpm build",
+	"redirects": [
+		{
+			"source": "/:path*",
+			"has": [
+				{
+					"type": "host",
+					"value": "1cli.dev"
+				}
+			],
+			"destination": "https://www.1cli.dev/:path*",
+			"permanent": true
+		},
+		{
+			"source": "/:lang(zh|en)/docs/:path*",
+			"destination": "/:lang/",
+			"permanent": true
+		},
+		{
+			"source": "/:lang(zh|en)/tutorials/:path*",
+			"destination": "/:lang/",
+			"permanent": true
+		},
+		{
+			"source": "/docs/:path*",
+			"destination": "/zh/",
+			"permanent": true
+		},
+		{
+			"source": "/tutorials/:path*",
+			"destination": "/zh/",
+			"permanent": true
+		}
+	],
+	"headers": [
+		{
+			"source": "/install.sh",
+			"headers": [
+				{
+					"key": "Cache-Control",
+					"value": "public, max-age=300, must-revalidate"
+				},
+				{
+					"key": "Content-Type",
+					"value": "text/plain; charset=utf-8"
+				}
+			]
+		},
+		{
+			"source": "/install.ps1",
+			"headers": [
+				{
+					"key": "Cache-Control",
+					"value": "public, max-age=300, must-revalidate"
+				},
+				{
+					"key": "Content-Type",
+					"value": "text/plain; charset=utf-8"
+				}
+			]
+		}
+	],
+	"outputDirectory": "out"
+}
