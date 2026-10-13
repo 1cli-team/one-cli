@@ -59,10 +59,16 @@ func composeConfig(p *Plan, worker func(string) []string) ([]byte, error) {
 }
 
 func (s Service) prepareCompose(ctx context.Context, root string, env []string, log io.Writer) (string, error) {
-	// Reuse an installed exact version. This also keeps offline fixture runs and
-	// workspaces using a shared mise installation from downloading another copy.
+	// Reuse the exact version from PATH or mise's installation cache. A tool
+	// installed by mise need not be on the parent process's PATH.
 	if path, err := process.LookPathIn("process-compose", root, env); err == nil && checkCompose(ctx, path, env) == nil {
 		return path, nil
+	}
+	if path, err := s.installedCompose(ctx, root, env, io.Discard); err == nil {
+		return path, nil
+	}
+	if err := ctx.Err(); err != nil {
+		return "", err
 	}
 	fmt.Fprintln(log, i18n.Tf("tasks.preparing_compose", composeVersion))
 	command, err := s.Provider.PrepareCLI(ctx, runtimeport.Command{Directory: root, Env: env, Argv: []string{"install", "process-compose@" + composeVersion}})
@@ -75,10 +81,19 @@ func (s Service) prepareCompose(ctx context.Context, root string, env []string, 
 	if err := child.Run(); err != nil {
 		return "", i18n.Errorf("tasks.compose_install", err)
 	}
-	command, err = s.Provider.PrepareCLI(ctx, runtimeport.Command{Directory: root, Env: env, Argv: []string{"which", "process-compose", "--tool", "process-compose@" + composeVersion}})
+	return s.installedCompose(ctx, root, env, log)
+}
+
+func (s Service) installedCompose(ctx context.Context, root string, env []string, log io.Writer) (string, error) {
+	command, err := s.Provider.PrepareCLI(ctx, runtimeport.Command{Directory: root, Env: env, Argv: []string{"which", "process-compose", "--tool", "process-compose@" + composeVersion}})
 	if err != nil {
 		return "", err
 	}
+	command.Env = secrets.MergeIntoEnviron(command.Env, map[string]string{
+		"MISE_AUTO_UPDATE":            "false",
+		"MISE_DISABLE_UPDATE_WARNING": "true",
+		"MISE_PREFER_OFFLINE":         "true",
+	}, true)
 	probe := process.CommandContext(ctx, command.Argv[0], command.Argv[1:]...)
 	probe.Dir, probe.Env, probe.Stderr = command.Directory, command.Env, log
 	process.CancelProcessTree(probe)
