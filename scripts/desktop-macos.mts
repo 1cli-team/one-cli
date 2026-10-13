@@ -9,18 +9,35 @@ const directory = join(process.env.RUNNER_TEMP ?? tmpdir(), "one-desktop-signing
 const keychain = join(directory, "build.keychain-db");
 const searchList = join(directory, "search-list.json");
 
-function run(bin: string, args: string[], privateOutput = false) {
+function run(bin: string, args: string[], privateOutput = false, retryNetwork = false) {
   // Never include arguments in errors: security/notarytool receive credentials.
-  const result = spawnSync(bin, args, {
-    encoding: "utf8",
-    stdio: privateOutput ? "pipe" : "inherit",
-  });
-  if (result.error || result.status !== 0) {
+  const delays = [5, 15, 30];
+  for (let attempt = 0; ; attempt++) {
+    const result = spawnSync(bin, args, {
+      encoding: "utf8",
+      stdio: privateOutput || retryNetwork ? "pipe" : "inherit",
+    });
+    if (retryNetwork && !privateOutput) {
+      if (result.stdout) process.stdout.write(result.stdout);
+      if (result.stderr) process.stderr.write(result.stderr);
+    }
+    if (!result.error && result.status === 0) return result.stdout?.trim() ?? "";
+    const transient =
+      /A timestamp was expected but was not found|The network connection was lost|NSURLErrorDomain Code=-(?:1001|1003|1004|1005|1006|1009)\b/.test(
+        `${result.stdout ?? ""}\n${result.stderr ?? ""}`,
+      );
+    if (retryNetwork && transient && attempt < delays.length) {
+      const delay = delays[attempt];
+      console.warn(
+        `Apple network request failed; retrying in ${delay}s (${attempt + 1}/${delays.length}) / Apple 网络请求失败，${delay} 秒后重试`,
+      );
+      Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, delay * 1000);
+      continue;
+    }
     throw new Error(
       `${bin} failed / 执行失败${privateOutput ? " (credential output withheld / 隐藏凭据输出)" : ""}`,
     );
   }
-  return result.stdout?.trim() ?? "";
 }
 
 export function cleanupMacSigning() {
@@ -134,15 +151,20 @@ export function withMacSigning<T>(action: (identity: string) => T): T {
 }
 
 export function signMacSidecar(path: string, identity: string) {
-  run("codesign", [
-    "--force",
-    "--sign",
-    identity,
-    "--options",
-    "runtime",
-    identity === "-" ? "--timestamp=none" : "--timestamp",
-    path,
-  ]);
+  run(
+    "codesign",
+    [
+      "--force",
+      "--sign",
+      identity,
+      "--options",
+      "runtime",
+      identity === "-" ? "--timestamp=none" : "--timestamp",
+      path,
+    ],
+    false,
+    identity !== "-",
+  );
   run("codesign", ["--verify", "--strict", path]);
 }
 
@@ -162,7 +184,7 @@ export function verifyMacApp(app: string) {
       );
     }
   }
-  run("xcrun", ["stapler", "validate", app]);
+  run("xcrun", ["stapler", "validate", app], false, true);
   run("spctl", ["--assess", "--type", "execute", "--verbose", app]);
 }
 
@@ -195,8 +217,9 @@ export function notarizeMacDMG(dmg: string) {
     throw new Error(
       `DMG notarization not accepted / DMG 公证未通过: ${report.id ?? "unknown"} (${report.status ?? "unknown"})`,
     );
-  run("xcrun", ["stapler", "staple", dmg]);
-  run("xcrun", ["stapler", "validate", dmg]);
+  console.log(`DMG notarization accepted / DMG 公证通过: ${report.id}`);
+  run("xcrun", ["stapler", "staple", dmg], false, true);
+  run("xcrun", ["stapler", "validate", dmg], false, true);
   run("spctl", [
     "--assess",
     "--type",
@@ -207,7 +230,6 @@ export function notarizeMacDMG(dmg: string) {
     dmg,
   ]);
   run("hdiutil", ["verify", dmg]);
-  console.log(`DMG notarization accepted / DMG 公证通过: ${report.id}`);
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
