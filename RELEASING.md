@@ -234,6 +234,8 @@ GitHub 自带 `GITHUB_TOKEN` 用于上传，不需要另配个人 Token。构建
    Tauri 通过 `bundle.macOS.files` 复制已签名 sidecar，避免二次签名改变摘要；随后签名、
    公证并 staple `.app`。脚本核对包内 sidecar 摘要、Developer ID、Team ID、强化运行时、
    Gatekeeper 与 `.app` 票据，再单独公证并 staple 最终 DMG。
+   时间戳服务失败或票据操作遇到明确的网络中断时，分别等待 5、15、30 秒有限重试；
+   签名无效、公证拒绝及其他校验错误仍立即失败，重试耗尽也不发布。
 5. 收齐五个平台的安装包后才创建/复用 `desktop-vX.Y.Z` 草稿。上传后重新下载全部附件并
    比较 SHA256，通过后公开。桌面 Release 使用 `--latest=false`，CLI Latest 与六附件协议保持兼容。
 
@@ -286,6 +288,9 @@ Sign Go sidecars before generating their manifest hashes. Tauri copies them unch
 using `bundle.macOS.files`, then signs, notarizes and staples the app. Verify sidecar
 hashes, Developer ID/Team ID, hardened runtime, Gatekeeper and the stapled app ticket.
 Submit the final signed DMG for notarization too, then staple and verify it.
+Timestamp-service failures and explicit network interruptions during ticket operations
+retry after 5, 15 and 30 seconds. Invalid signatures, rejected notarization and other
+validation errors still fail immediately; exhausted retries never permit publication.
 Windows NSIS and Linux AppImage installers are unsigned; Linux is built on Ubuntu 22.04.
 
 After all five builds succeed, create or reuse a `desktop-vX.Y.Z` draft. Upload the
