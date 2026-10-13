@@ -58,7 +58,6 @@ const homeCopy = {
 				"One CLI 工作区模块画布，展示应用、API、文档、Packages、Manifest、Env、Build 和 CLI 接口模块",
 			install: "开始使用",
 			desktop: "下载桌面版",
-			github: "查看 GitHub",
 			copy: "复制",
 			copied: "已复制",
 			installPlatform: "选择安装平台",
@@ -379,7 +378,6 @@ const homeCopy = {
 				"One CLI workspace module canvas showing apps, API, docs, packages, manifest, env, build, and CLI interface modules",
 			install: "Start building",
 			desktop: "Download desktop",
-			github: "View on GitHub",
 			copy: "copy",
 			copied: "copied",
 			installPlatform: "Choose an install platform",
@@ -835,14 +833,6 @@ function Hero({ lang, text }: { lang: Locale; text: HomeText }) {
 							<Download aria-hidden="true" className="size-4" />
 							{text.hero.desktop}
 						</DesktopDownloadTrigger>
-						<a
-							href="https://github.com/1cli-team/one-cli"
-							target="_blank"
-							rel="noreferrer"
-							className="inline-flex h-11 items-center justify-center gap-2 rounded-md border border-white/10 px-5 text-sm font-semibold text-stone-100 transition hover:border-orange-500/60 hover:bg-white/5"
-						>
-							{text.hero.github}
-						</a>
 					</div>
 					<HomeInstallCommand
 						platformLabel={text.hero.installPlatform}

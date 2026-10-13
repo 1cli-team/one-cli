@@ -178,6 +178,36 @@ test("a unified published release requires all 13 version-matched attachments", 
   );
 });
 
+test("v0.1.23 adds both Linux DEBs without changing the historical 13-asset contract", () => {
+  assert.equal(releaseAssets("v0.1.22").length, 13);
+  for (const version of ["0.1.23", "0.1.100", "0.2.0", "1.0.0"]) {
+    const names = releaseAssets(`v${version}`);
+    assert.equal(names.length, 15);
+    for (const arch of ["amd64", "arm64"]) {
+      const deb = `one-desktop_${version}_linux_${arch}.deb`;
+      assert.ok(names.includes(deb));
+      assert.throws(
+        () =>
+          assertReleaseAssets(
+            `v${version}`,
+            names.filter((name) => name !== deb),
+          ),
+        /Unexpected/,
+      );
+    }
+    assertReleaseAssets(`v${version}`, names);
+    assertDraftAssets(`v${version}`, names, true);
+  }
+  assert.throws(
+    () =>
+      assertReleaseAssets("v0.1.22", [
+        ...releaseAssets("v0.1.22"),
+        "one-desktop_0.1.22_linux_amd64.deb",
+      ]),
+    /Unexpected/,
+  );
+});
+
 test("drafts permit partial desktop uploads but require the complete CLI before dispatch", () => {
   assertDraftAssets("v0.1.22", []);
   assertDraftAssets("v0.1.22", assets, true);

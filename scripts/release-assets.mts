@@ -1,5 +1,6 @@
 // This boundary is fixed: never infer it from a moving Latest release.
 export const unifiedReleaseSince = "v0.1.22";
+export const debianReleaseSince = "v0.1.23";
 
 export const platforms: Record<
   string,
@@ -22,14 +23,32 @@ export const platforms: Record<
   },
 };
 
-export function desktopFilename(version: string, target: string) {
+export function desktopFilename(
+  version: string,
+  target: string,
+  bundle = platforms[target].bundle,
+) {
   const p = platforms[target];
-  return `one-desktop_${version}_${p.os}_${p.arch}${p.extension}`;
+  const extension = bundle === "deb" && p.os === "linux" ? ".deb" : p.extension;
+  return `one-desktop_${version}_${p.os}_${p.arch}${extension}`;
+}
+
+export function desktopBundles(version: string, target: string) {
+  const p = platforms[target];
+  const current = version.split(".").map(BigInt);
+  const since = debianReleaseSince.slice(1).split(".").map(BigInt);
+  const difference = current.findIndex((part, index) => part !== since[index]);
+  const includeDeb = difference === -1 || current[difference] > since[difference];
+  return p.os === "linux" && includeDeb ? [p.bundle, "deb"] : [p.bundle];
+}
+
+export function desktopInstallerNames(version: string, target: string) {
+  return desktopBundles(version, target).map((bundle) => desktopFilename(version, target, bundle));
 }
 
 export function desktopAssets(version: string) {
   return [
-    ...Object.keys(platforms).map((target) => desktopFilename(version, target)),
+    ...Object.keys(platforms).flatMap((target) => desktopInstallerNames(version, target)),
     "desktop-release.json",
     "desktop-checksums.txt",
   ].sort();
