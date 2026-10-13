@@ -116,3 +116,25 @@ test("trimpath builds verify source/platform metadata without expecting linker f
     /CGO_ENABLED/,
   );
 });
+
+test("desktop checksum allowlist stays separate from the CLI release protocol", () => {
+  const desktop = [
+    "desktop-release.json",
+    "one-desktop_0.1.20_darwin_arm64.dmg",
+    "one-desktop_0.1.20_darwin_amd64.dmg",
+    "one-desktop_0.1.20_windows_amd64.exe",
+    "one-desktop_0.1.20_linux_amd64.AppImage",
+    "one-desktop_0.1.20_linux_arm64.AppImage",
+  ];
+  const lines = desktop.map((name) => `${"b".repeat(64)}  ${name}`);
+  const text = lines.join("\n");
+  assert.equal(parseChecksums(text, desktop).size, 6);
+  assert.throws(() => parseChecksums(text), /Unexpected/);
+  assert.throws(() => parseChecksums(lines.slice(1).join("\n"), desktop), /Unexpected/);
+  assert.throws(
+    () => parseChecksums(`${text}\n${"a".repeat(64)}  one-cli_darwin_arm64.tar.gz`, desktop),
+    /Unexpected/,
+  );
+  assert.throws(() => parseChecksums(`${text}\n${lines[0]}`, desktop), /duplicate/);
+  assert.throws(() => parseChecksums(`${text}\n${"a".repeat(64)}  ../one`, desktop), /Invalid/);
+});
