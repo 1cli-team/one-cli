@@ -56,7 +56,6 @@
 			"emptyTitle": "No Workspaces yet",
 			"emptyDescription": "Run one create to create a Workspace, or run one serve inside an existing Workspace to register it.",
 			"listLabel": "Registered Workspaces",
-			"registrationHint": "Use Open workspace to choose a directory containing one.manifest.toml. CLI commands also register workspaces automatically.",
 			"refresh": "Refresh",
 			"search": "Search name, path or ID…",
 			"clearSearch": "Clear search",
@@ -66,8 +65,7 @@
 			"noResults": "No matching workspaces",
 			"noResultsDescription": "Try another name or path, or clear your filters.",
 			"clearFilters": "Clear filters",
-			"resultCount": "{{count}} matching workspaces",
-			"registrationHelp": "How to add a workspace"
+			"resultCount": "{{count}} matching workspaces"
 		},
 		"rail": {
 			"title": "Workspaces",
@@ -408,6 +406,10 @@
 		"createAndBind": "Create and bind"
 	},
 	"desktop": {
+		"tray": {
+			"show": "Open One Desktop",
+			"quit": "Quit One Desktop"
+		},
 		"settings": "Desktop settings",
 		"settingsHint": "Desktop runtime, terminal integration and updates.",
 		"connectionInvalid": "The backend connection is invalid.",

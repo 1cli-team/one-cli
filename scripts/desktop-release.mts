@@ -13,28 +13,27 @@ import {
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
-import { assertAssets, fail, parseChecksums, repository, stableTag } from "./release-rules.mts";
+import {
+  assets,
+  assertDraftAssets,
+  assertReleaseAssets,
+  assertReleaseIdentity,
+  assertUnchangedAssets,
+  fail,
+  isUnifiedRelease,
+  parseChecksums,
+  repository,
+  stableTag,
+  compareTags,
+} from "./release-rules.mts";
+import type { RemoteAsset } from "./release-rules.mts";
+import {
+  desktopAssets as expectedNames,
+  desktopFilename as filename,
+  platforms,
+} from "./release-assets.mts";
+export { platforms } from "./release-assets.mts";
 
-export const platforms: Record<
-  string,
-  { os: string; arch: string; bundle: string; extension: string }
-> = {
-  "aarch64-apple-darwin": { os: "darwin", arch: "arm64", bundle: "dmg", extension: ".dmg" },
-  "x86_64-apple-darwin": { os: "darwin", arch: "amd64", bundle: "dmg", extension: ".dmg" },
-  "x86_64-pc-windows-msvc": { os: "windows", arch: "amd64", bundle: "nsis", extension: ".exe" },
-  "x86_64-unknown-linux-gnu": {
-    os: "linux",
-    arch: "amd64",
-    bundle: "appimage",
-    extension: ".AppImage",
-  },
-  "aarch64-unknown-linux-gnu": {
-    os: "linux",
-    arch: "arm64",
-    bundle: "appimage",
-    extension: ".AppImage",
-  },
-};
 type Manifest = {
   version: string;
   commit: string;
@@ -46,12 +45,12 @@ type Manifest = {
 type Installer = { target: string; name: string; sha256: string; notarized: boolean };
 type ReleaseRecord = { version: string; commit: string; cliTag: string; artifacts: Installer[] };
 type Release = {
+  id: number;
   tag_name: string;
   draft: boolean;
   prerelease: boolean;
-  body: string;
   html_url: string;
-  assets: { name: string; state: string }[];
+  assets: RemoteAsset[];
 };
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const digest = (path: string) => createHash("sha256").update(readFileSync(path)).digest("hex");
@@ -88,22 +87,46 @@ function release(tag: string): Release | undefined {
 }
 function sourceFor(tag: string) {
   let object = api(`git/ref/tags/${tag}`, [], true)?.object;
-  if (!object) return undefined;
+  if (!object) fail("Missing stable release tag", "缺少稳定发布 tag");
+  const tagObject = object.sha;
   for (let depth = 0; object.type === "tag" && depth < 5; depth++)
     object = api(`git/tags/${object.sha}`).object;
-  if (object.type !== "commit") fail("Tag must resolve to a commit", "tag 必须指向提交");
-  return object.sha as string;
+  if (object.type !== "commit" || !/^[a-f0-9]{40}$/.test(object.sha))
+    fail("Tag must resolve to a commit", "tag 必须指向提交");
+  return { commit: object.sha as string, tagObject: tagObject as string };
 }
-function filename(version: string, target: string) {
-  const p = platforms[target];
-  return `one-desktop_${version}_${p.os}_${p.arch}${p.extension}`;
+function downloadFiles(tag: string, names: string[], directory: string) {
+  mkdirSync(directory, { recursive: true });
+  run("gh", [
+    "release",
+    "download",
+    tag,
+    "--repo",
+    repository,
+    "--dir",
+    directory,
+    ...names.flatMap((name) => ["--pattern", name]),
+  ]);
 }
-function expectedNames(version: string) {
-  return [
-    ...Object.keys(platforms).map((target) => filename(version, target)),
-    "desktop-release.json",
-    "desktop-checksums.txt",
-  ].sort();
+function cliChecksum(tag: string) {
+  const directory = mkdtempSync(join(tmpdir(), "one-cli-checksum-"));
+  try {
+    downloadFiles(tag, ["checksums.txt"], directory);
+    parseChecksums(readFileSync(join(directory, "checksums.txt"), "utf8"));
+    return digest(join(directory, "checksums.txt"));
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
+  }
+}
+function verifyCLI(directory: string, checksum: string) {
+  equalNames(readdirSync(directory), assets);
+  if (digest(join(directory, "checksums.txt")) !== checksum)
+    fail("CLI checksum manifest changed after planning", "规划后 CLI 校验文件发生变化");
+  const sums = parseChecksums(readFileSync(join(directory, "checksums.txt"), "utf8"));
+  for (const [name, expected] of sums) {
+    if (digest(join(directory, name)) !== expected)
+      fail(`CLI checksum mismatch: ${name}`, `CLI 附件校验失败：${name}`);
+  }
 }
 function equalNames(actual: string[], expected: string[]) {
   if (JSON.stringify([...actual].sort()) !== JSON.stringify([...expected].sort()))
@@ -147,42 +170,77 @@ function verifyFiles(directory: string, version: string, commit: string) {
   }
   return record;
 }
-function verifyRemote(tag: string, version: string, commit: string, local?: string) {
+function verifyRemote(
+  tag: string,
+  version: string,
+  commit: string,
+  checksum: string,
+  local?: string,
+) {
   const current = release(tag);
   if (!current || current.prerelease || current.assets.some((a) => a.state !== "uploaded"))
     fail("Release missing or assets not uploaded", "Release 不存在或附件上传未完成");
-  equalNames(
+  assertReleaseAssets(
+    tag,
     current.assets.map((a) => a.name),
-    expectedNames(version),
   );
-  const directory = mkdtempSync(join(tmpdir(), "one-desktop-download-"));
+  const directory = mkdtempSync(join(tmpdir(), "one-release-download-"));
   try {
-    run("gh", ["release", "download", tag, "--repo", repository, "--dir", directory]);
-    verifyFiles(directory, version, commit);
+    const cli = join(directory, "cli");
+    const desktop = join(directory, "desktop");
+    downloadFiles(tag, assets, cli);
+    verifyCLI(cli, checksum);
+    downloadFiles(tag, expectedNames(version), desktop);
+    verifyFiles(desktop, version, commit);
     if (local) {
       for (const name of expectedNames(version)) {
-        if (digest(join(directory, name)) !== digest(join(local, name)))
+        if (digest(join(desktop, name)) !== digest(join(local, name)))
           fail(`Downloaded artifact differs: ${name}`, `下载附件与本地产物不同：${name}`);
       }
     }
   } finally {
     rmSync(directory, { recursive: true, force: true });
   }
+  return current.assets;
 }
 function cliSource(tag: string) {
-  if (!stableTag.test(tag)) fail("Specify a stable CLI tag vX.Y.Z", "请指定稳定的 CLI tag vX.Y.Z");
+  // Reject old tags before any API calls or writes. Historical releases stay unchanged.
+  if (!isUnifiedRelease(tag))
+    fail(
+      "Unified publishing requires v0.1.22 or later; historical releases are read-only",
+      "统一发布仅支持 v0.1.22 及以后版本，历史 Release 保持只读",
+    );
   const cli = release(tag);
-  if (!cli || cli.draft || cli.prerelease)
-    fail("Publish the CLI release first", "请先完成 CLI 正式发布");
-  assertAssets(cli.assets.map((a) => a.name));
-  if (cli.assets.some((a) => a.state !== "uploaded"))
+  if (!cli || cli.prerelease)
+    fail(
+      "Prepare the CLI draft with mise run release first",
+      "请先通过 mise run release 准备 CLI 草稿",
+    );
+  assertDraftAssets(
+    tag,
+    cli.assets.map((a) => a.name),
+    true,
+  );
+  if (cli.assets.some((a) => assets.includes(a.name) && a.state !== "uploaded"))
     fail("CLI assets are incomplete", "CLI 附件未上传完成");
-  const commit = sourceFor(tag);
-  if (!commit || !/^[a-f0-9]{40}$/.test(commit))
-    fail("Missing CLI source commit", "缺少 CLI 源码提交");
-  return { cli, commit, version: tag.slice(1), tag: `desktop-${tag}` };
+  if (!cli.draft)
+    assertReleaseAssets(
+      tag,
+      cli.assets.map((a) => a.name),
+    );
+  return { cli, ...sourceFor(tag), version: tag.slice(1), tag };
 }
-
+function ensureLatestTag(tag: string) {
+  const tags = run("git", ["ls-remote", "origin", "refs/tags/v*"])
+    .split("\n")
+    .map((line) => line.split(/\s+/)[1]?.replace("refs/tags/", ""))
+    .filter((name): name is string => Boolean(name && stableTag.test(name)));
+  if (tags.some((name) => compareTags(name, tag) > 0))
+    fail(
+      "A newer stable tag exists; do not publish an older draft as Latest",
+      "已存在更新的稳定 tag，禁止把旧草稿发布为 Latest",
+    );
+}
 export function collectInstaller(workspace: string, manifest: Manifest) {
   const p = platforms[manifest.target];
   if (!p || manifest.channel !== "release" || !stableTag.test(`v${manifest.version}`))
@@ -216,39 +274,29 @@ export function collectInstaller(workspace: string, manifest: Manifest) {
   console.log(`Installer ready / 安装包就绪: ${join(out, name)}`);
 }
 
-function plan(cliTag: string) {
-  const p = cliSource(cliTag);
+function plan(tag: string) {
+  const p = cliSource(tag);
   run("git", ["merge-base", "--is-ancestor", p.commit, "origin/master"]);
-  const required = [
-    "apps/desktop/src-tauri/tauri.conf.json",
-    "scripts/desktop-release.mts",
-    ".github/workflows/desktop.yml",
-  ];
-  const files = run("git", ["ls-tree", "-r", "--name-only", p.commit, "--", ...required]).split(
-    "\n",
-  );
-  if (required.some((path) => !files.includes(path)))
-    fail(
-      "This CLI tag predates desktop packaging; publish a new CLI version containing the workflow first",
-      "此 CLI tag 尚未包含桌面打包流程，请先发布包含工作流的新 CLI 版本",
-    );
-  const existingSource = sourceFor(p.tag);
-  if (existingSource && existingSource !== p.commit)
-    fail("Desktop tag points to another commit; never move it", "桌面 tag 指向其他提交，禁止移动");
-  const current = release(p.tag);
-  let skip = false;
-  if (current && !current.draft) {
-    if (existingSource !== p.commit)
-      fail("Published desktop tag is missing", "已发布桌面 tag 缺失");
-    verifyRemote(p.tag, p.version, p.commit);
-    skip = true;
-  }
+  run("git", ["cat-file", "-e", `${p.commit}:scripts/release-assets.mts`]);
+  const checksum = cliChecksum(tag);
+  if (p.cli.draft) ensureLatestTag(tag);
+  else verifyRemote(tag, p.version, p.commit, checksum);
+  const current = cliSource(tag);
+  if (
+    current.cli.id !== p.cli.id ||
+    current.cli.draft !== p.cli.draft ||
+    current.commit !== p.commit ||
+    current.tagObject !== p.tagObject
+  )
+    fail("Release state changed during planning", "规划期间发布状态发生变化");
   const values = {
-    tag: p.tag,
-    cli_tag: cliTag,
+    tag,
     version: p.version,
     source: p.commit,
-    skip: String(skip),
+    tag_object: p.tagObject,
+    release_id: String(p.cli.id),
+    cli_checksums_sha256: checksum,
+    skip: String(!p.cli.draft),
   };
   if (process.env.GITHUB_OUTPUT)
     appendFileSync(
@@ -260,13 +308,42 @@ function plan(cliTag: string) {
   console.log(JSON.stringify(values, null, 2));
 }
 
-function publish(cliTag: string, input: string) {
+function publish(tag: string, input: string) {
   if (!input) fail("Provide the downloaded artifact directory", "请提供下载的构建产物目录");
-  const p = cliSource(cliTag);
+  const p = cliSource(tag);
   if (run("git", ["rev-parse", "HEAD"]) !== p.commit)
     fail("Publisher must use the pinned source", "发布任务必须使用固定源码提交");
   const directory = resolve(input);
-  const record: ReleaseRecord = { version: p.version, commit: p.commit, cliTag, artifacts: [] };
+  const checksum = process.env.ONE_RELEASE_CLI_CHECKSUMS_SHA256 ?? "";
+  const pinned = () => {
+    const current = cliSource(tag);
+    assertReleaseIdentity(
+      { commit: current.commit, tagObject: current.tagObject, releaseID: String(current.cli.id) },
+      {
+        commit: process.env.ONE_RELEASE_SOURCE ?? "",
+        tagObject: process.env.ONE_RELEASE_TAG_OBJECT ?? "",
+        releaseID: process.env.ONE_RELEASE_ID ?? "",
+      },
+    );
+    if (!/^[a-f0-9]{64}$/.test(checksum))
+      fail("Missing frozen CLI checksum", "缺少冻结的 CLI 校验文件摘要");
+    return current;
+  };
+  pinned();
+  if (!p.cli.draft) {
+    verifyRemote(tag, p.version, p.commit, checksum);
+    console.log(`Already published / 已发布: ${p.cli.html_url}`);
+    return;
+  }
+  ensureLatestTag(tag);
+  if (cliChecksum(tag) !== checksum)
+    fail("CLI checksum manifest changed after planning", "规划后 CLI 校验文件发生变化");
+  const record: ReleaseRecord = {
+    version: p.version,
+    commit: p.commit,
+    cliTag: tag,
+    artifacts: [],
+  };
   equalNames(readdirSync(directory), Object.keys(platforms));
   for (const target of Object.keys(platforms)) {
     const path = join(directory, target);
@@ -290,71 +367,7 @@ function publish(cliTag: string, input: string) {
         .join(""),
     );
     verifyFiles(out, p.version, p.commit);
-    let current = release(p.tag);
-    const existingSource = sourceFor(p.tag);
-    if (existingSource && existingSource !== p.commit)
-      fail("Desktop tag has conflicting source", "桌面 tag 源码冲突");
-    if (current && !current.draft) {
-      if (!existingSource) fail("Published desktop tag is missing", "已发布桌面 tag 缺失");
-      verifyRemote(p.tag, p.version, p.commit);
-      console.log(`Already published / 已发布: ${current.html_url}`);
-      return;
-    }
-    if (!existingSource) {
-      const object = api("git/tags", [
-        "-f",
-        `tag=${p.tag}`,
-        "-f",
-        `message=One Desktop ${p.version}\nSource: ${p.commit}`,
-        "-f",
-        `object=${p.commit}`,
-        "-f",
-        "type=commit",
-      ]);
-      api("git/refs", ["-f", `ref=refs/tags/${p.tag}`, "-f", `sha=${object.sha}`]);
-    }
-    // Upload only the explicit attachment allowlist; notes are cleaned on failure.
-    const notes = join(out, "release-notes.md");
-    writeFileSync(
-      notes,
-      `One Desktop ${p.version}\n\n## 中文\n\n基于 [CLI ${cliTag}](${p.cli.html_url}) 的同一源码提交构建，内置同版本 one-api 与 one。macOS Intel / Apple Silicon 的应用和 DMG 已签名、公证并附加票据；Windows x64 与 Linux x64 / arm64 安装包未签名。下载后可用 desktop-checksums.txt 校验。应用内自动更新尚未启用，请下载新版安装包更新。\n\n## English\n\nBuilt from the same source as [CLI ${cliTag}](${p.cli.html_url}), bundling matching one-api and one binaries. macOS Intel / Apple Silicon apps and DMGs are signed, notarized and stapled. Windows x64 and Linux x64 / arm64 installers are unsigned. Verify downloads with desktop-checksums.txt. In-app updates are not enabled; install the newer package to update.\n\nSource: ${p.commit}\n\n---\n\n${p.cli.body ?? ""}\n`,
-    );
-    if (!current) {
-      run("gh", [
-        "release",
-        "create",
-        p.tag,
-        "--repo",
-        repository,
-        "--verify-tag",
-        "--draft",
-        "--title",
-        `One Desktop ${p.version}`,
-        "--notes-file",
-        notes,
-        "--latest=false",
-      ]);
-    } else {
-      if (
-        current.prerelease ||
-        current.assets.some((a) => !expectedNames(p.version).includes(a.name))
-      )
-        fail("Unexpected desktop draft state", "桌面草稿状态或附件异常");
-      run("gh", [
-        "release",
-        "edit",
-        p.tag,
-        "--repo",
-        repository,
-        "--title",
-        `One Desktop ${p.version}`,
-        "--notes-file",
-        notes,
-      ]);
-    }
-    rmSync(notes);
-    current = release(p.tag);
-    if (!current?.draft)
+    if (!pinned().cli.draft)
       fail("Release must remain a draft during upload", "上传时 Release 必须保持草稿");
     run("gh", [
       "release",
@@ -365,13 +378,18 @@ function publish(cliTag: string, input: string) {
       "--clobber",
       ...expectedNames(p.version).map((name) => join(out, name)),
     ]);
-    verifyRemote(p.tag, p.version, p.commit, out);
-    if (sourceFor(cliTag) !== p.commit || sourceFor(p.tag) !== p.commit || !release(p.tag)?.draft)
+    const verified = verifyRemote(tag, p.version, p.commit, checksum, out);
+    const beforePublish = pinned().cli;
+    if (!beforePublish.draft)
       fail("Release state changed during verification", "验证期间发布状态发生变化");
-    run("gh", ["release", "edit", p.tag, "--repo", repository, "--draft=false", "--latest=false"]);
-    current = release(p.tag);
-    if (!current || current.draft)
-      fail("Desktop Release is still a draft", "桌面 Release 仍为草稿");
+    assertUnchangedAssets(beforePublish.assets, verified);
+    ensureLatestTag(tag);
+    run("gh", ["release", "edit", tag, "--repo", repository, "--draft=false", "--latest"]);
+    const current = pinned().cli;
+    if (current.draft) fail("Release is still a draft", "Release 仍为草稿");
+    assertUnchangedAssets(current.assets, verified);
+    if (api("releases/latest").tag_name !== tag)
+      fail("Published release is not Latest", "已公开版本未成为 Latest");
     console.log(`Published / 发布成功: ${current.html_url}`);
   } finally {
     rmSync(out, { recursive: true, force: true });
@@ -381,7 +399,7 @@ function publish(cliTag: string, input: string) {
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   const [
     action,
-    tag = process.env.ONE_DESKTOP_CLI_TAG ?? "",
+    tag = process.env.ONE_RELEASE_TAG ?? "",
     input = process.env.ONE_DESKTOP_ARTIFACTS ?? "",
   ] = process.argv.slice(2);
   if (action === "plan") plan(tag);

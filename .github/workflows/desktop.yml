@@ -1,18 +1,16 @@
-name: Release One Desktop
+name: Release One CLI and Desktop
 
 on:
-  release:
-    types: [published]
   workflow_dispatch:
     inputs:
-      cli_tag:
-        description: "Published CLI tag / 已发布的 CLI tag (vX.Y.Z)"
+      release_tag:
+        description: "Prepared unified release tag / 已准备 CLI 草稿的统一 tag (v0.1.22+)"
         type: string
         required: true
 
-# One desktop release at a time, including manual retries of the same CLI tag.
+# One unified release at a time, including retries of the same draft.
 concurrency:
-  group: one-desktop-release
+  group: one-unified-release
   cancel-in-progress: false
 
 permissions:
@@ -31,14 +29,19 @@ jobs:
   plan:
     if: >-
       github.repository == '1cli-team/one-cli' &&
-      ((github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/master') ||
-       (github.event_name == 'release' && startsWith(github.event.release.tag_name, 'v') && !github.event.release.prerelease))
+      github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/master'
     runs-on: ubuntu-22.04
     timeout-minutes: 15
+    # GitHub only lists drafts for callers with push access. This job performs
+    # read-only preflight; build jobs retain contents: read.
+    permissions:
+      contents: write
     outputs:
       tag: ${{ steps.plan.outputs.tag }}
-      cli_tag: ${{ steps.plan.outputs.cli_tag }}
       source: ${{ steps.plan.outputs.source }}
+      tag_object: ${{ steps.plan.outputs.tag_object }}
+      release_id: ${{ steps.plan.outputs.release_id }}
+      cli_checksums_sha256: ${{ steps.plan.outputs.cli_checksums_sha256 }}
       version: ${{ steps.plan.outputs.version }}
       skip: ${{ steps.plan.outputs.skip }}
     steps:
@@ -51,11 +54,11 @@ jobs:
         with:
           version: 2026.9.7
           install_args: node
-      - name: Validate CLI release and freeze source / 校验 CLI 发布并固定源码
+      - name: Validate CLI draft and freeze release / 校验 CLI 草稿并冻结发布状态
         id: plan
         env:
           GH_TOKEN: ${{ github.token }}
-          ONE_DESKTOP_CLI_TAG: ${{ inputs.cli_tag || github.event.release.tag_name }}
+          ONE_RELEASE_TAG: ${{ inputs.release_tag }}
         run: mise run desktop-release -- plan
 
   build:
@@ -146,9 +149,13 @@ jobs:
       - uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7
         with:
           path: desktop-dist/downloaded
-      - name: Verify, upload draft, download and publish / 校验、上传草稿、下载校验并公开
+      - name: Verify all 13 assets and publish one Release / 校验全部 13 个附件并统一发布
         env:
           GH_TOKEN: ${{ github.token }}
-          ONE_DESKTOP_CLI_TAG: ${{ needs.plan.outputs.cli_tag }}
+          ONE_RELEASE_TAG: ${{ needs.plan.outputs.tag }}
+          ONE_RELEASE_SOURCE: ${{ needs.plan.outputs.source }}
+          ONE_RELEASE_TAG_OBJECT: ${{ needs.plan.outputs.tag_object }}
+          ONE_RELEASE_ID: ${{ needs.plan.outputs.release_id }}
+          ONE_RELEASE_CLI_CHECKSUMS_SHA256: ${{ needs.plan.outputs.cli_checksums_sha256 }}
           ONE_DESKTOP_ARTIFACTS: desktop-dist/downloaded
         run: mise run desktop-release -- publish

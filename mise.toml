@@ -9,16 +9,16 @@ task = "3.53.1"
 process-compose = "1.122.0"
 
 [tasks.release]
-description = "Plan, build, or publish a release / 规划、打包或发布版本"
+description = "Plan, build, or start a unified release / 规划、打包或启动统一发布"
 run = "node scripts/release.mts"
 raw_args = true
 
 [tasks."release:check"]
 description = "Check release state and artifact rules / 检查发布状态与产物规则"
-run = "node scripts/release-rules.test.mts"
+run = "node --test scripts/release-rules.test.mts scripts/desktop-release.test.mts"
 
 [tasks.desktop-release]
-description = "Verify or publish desktop installers / 校验或发布桌面安装包"
+description = "Verify or complete a unified release / 校验或完成统一发布"
 run = "node scripts/desktop-release.mts"
 raw_args = true
 

@@ -21,6 +21,8 @@ apps/desktop/
 
 Rust 从应用包启动 `services/desktop-api` 编译出的 `one-api`；后者复用 `packages/one-core/pkg`。React 通过带 Bearer 认证的随机 loopback HTTP 端口访问 Go。会话凭据通过私有管道及受限 Tauri IPC 交付，不写进 URL 或日志。桌面版不提供任务运行和日志界面；工作区任务在终端使用 `one run` 执行，包内 `one` 用于终端 CLI 安装。
 
+关闭窗口只会隐藏界面，应用与 Go 后端继续运行。通过系统托盘的“打开 One Desktop”、macOS Dock 图标或再次启动应用可恢复原窗口；托盘的“退出 One Desktop”以及 macOS 菜单退出 / `Cmd+Q` 才会执行后端停止流程。托盘菜单跟随应用的中英文语言设置。
+
 ## 开发和构建
 
 先安装仓库固定的 mise 工具，以及 Rust stable、rustfmt 和 [Tauri 平台依赖](https://v2.tauri.app/start/prerequisites/)。当前 Cargo 最低 Rust 版本为 1.90。从仓库根运行：
@@ -42,7 +44,7 @@ macOS 本地构建生成 `src-tauri/target/<target>/release/bundle/macos/One Des
 
 开发包不启用生产更新。正式构建需要稳定的 `RELEASE_VERSION`、干净源码和 `ONE_DESKTOP_RELEASE=1`。macOS 额外需要根目录 `RELEASING.md` 中列出的五项 Apple 凭据；缺少凭据会失败。更新公钥和私钥可成对配置，但它们独立于 Apple 签名，本次安装包流水线不启用应用内自动更新。自动安装仍受平台恢复验收开关约束。
 
-GitHub Actions 会在 CLI 正式 Release 发布后，从同一 tag 源码构建五个平台安装包；macOS 完成应用和 DMG 签名、公证及票据校验，Windows/Linux 不签名。所有产物上传并下载校验通过后公开 `desktop-vX.Y.Z` Release，保留 CLI Latest。支持手动补跑同一 CLI tag。配置、命令与恢复规则见根目录 `RELEASING.md`。
+从 v0.1.22 开始，CLI 与 Desktop 共用一个 `vX.Y.Z` Release。本地 `mise run release` 验证并上传 CLI 草稿附件后，显式触发 GitHub Actions 从同一 tag 源码构建五个平台桌面包；macOS 应用和 DMG 完成签名、公证及票据校验，Windows/Linux 不签名。全部 13 个附件上传并下载校验通过后，统一公开并设为 Latest。历史 Release 保持不动，不再创建新的 `desktop-v*` tag。失败可补跑同一草稿；配置、命令与恢复规则见根目录 `RELEASING.md`。
 
 更新 feed、故障恢复以及 Windows/Linux 实机验收仍需完成。本地构建结果与 GitHub Actions、Apple 公证的实际执行结果分别验证。
 
@@ -52,10 +54,12 @@ The `desktop` project combines React in `src/` with the Tauri host in `src-tauri
 
 Workspace tasks run in the terminal using `one run`. The desktop app has no task runner or log viewer; the bundled `one` is the source for terminal CLI installation.
 
+Closing the window hides it while the app and Go backend keep running. Restore the same window through Open One Desktop in the system tray, the macOS Dock icon, or launching the app again. Quit One Desktop in the tray or the macOS Quit menu / `Cmd+Q` stops the backend before exiting. Tray labels follow the app's English or Chinese language preference.
+
 Install the pinned mise tools, Rust with rustfmt, and the Tauri platform prerequisites. Run `one dev` for development, `one build-desktop` for a native package, and `one check` for repository checks. CI pins Rust 1.94.0. First-run terminal installation is optional and preserves unknown/newer installations. Use isolated installation/configuration directories during verification.
 
 On macOS, the build produces both `bundle/macos/One Desktop.app` and a `.dmg` installer in `bundle/dmg/`, under `src-tauri/target/<target>/release/`.
 
-Release builds require a stable version, clean source and `ONE_DESKTOP_RELEASE=1`; macOS also requires the five Apple credentials documented in `RELEASING.md`. Updater keys are optional as a pair and separate from Apple credentials. GitHub Actions builds all five targets from the published CLI tag, signs/notarizes/staples macOS apps and DMGs, verifies all downloaded attachments, then publishes `desktop-vX.Y.Z` without changing CLI Latest. Windows/Linux installers are unsigned. Manual retries reuse the same CLI tag.
+Release builds require a stable version, clean source and `ONE_DESKTOP_RELEASE=1`; macOS also requires the five Apple credentials documented in `RELEASING.md`. Updater keys are optional as a pair and separate from Apple credentials. Starting with v0.1.22, CLI and Desktop share one `vX.Y.Z` Release. The local `mise run release` entrypoint stages and verifies CLI draft assets, then explicitly dispatches GitHub Actions. CI builds all five desktop targets from the same tag, signs/notarizes/staples macOS apps and DMGs, and verifies all 13 downloaded attachments before publishing once as Latest. Windows/Linux installers are unsigned. Historical releases remain unchanged; no new `desktop-v*` tags are created. Retries reuse the same draft and source.
 
 This installer workflow does not enable in-app updates. The update feed, platform recovery and Windows/Linux runtime acceptance remain separate work. Local build results do not establish a successful remote pipeline or Apple notarization.
