@@ -14,12 +14,14 @@ import { dirname, join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import {
   assets,
-  assertAssets,
+  assertDraftAssets,
+  assertReleaseAssets,
   assertBuildSettings,
   compareTags,
   decidePlan,
   fail,
   goreleaserVersion,
+  isUnifiedRelease,
   parseChecksums,
   repository,
   stableTag,
@@ -161,7 +163,11 @@ function revalidate(root: string, p: Plan): Release | undefined {
       "发布提交已不在 master 历史中，请停止发布。",
     );
   }
-  if (release && !release.draft) assertAssets(release.assets.map((a) => a.name));
+  if (release && !release.draft)
+    assertReleaseAssets(
+      p.tag,
+      release.assets.map((a) => a.name),
+    );
   return release;
 }
 
@@ -330,7 +336,12 @@ function buildRelease(
     `在 ${source} 中从 ${p.sourceSha} 构建 ${p.tag}。`,
   );
   run("mise", ["trust"], { cwd: source, env });
-  for (const module of ["packages/kernel", "packages/one-core", "packages/cli", "services/desktop-api"]) {
+  for (const module of [
+    "packages/kernel",
+    "packages/one-core",
+    "packages/cli",
+    "services/desktop-api",
+  ]) {
     run("mise", ["exec", "--", "go", "-C", module, "mod", "download"], {
       cwd: source,
       env: { ...env, GOWORK: "off" },
@@ -413,6 +424,19 @@ function publish(root: string, build: Build) {
     say(`Already published: ${release.html_url}`, `已完成发布：${release.html_url}`);
     return;
   }
+  if (!isUnifiedRelease(p.tag))
+    fail(
+      "Historical releases are read-only in this publisher.",
+      "新发布流程不会修改历史 Release。",
+    );
+  if (
+    spawnSync("git", ["cat-file", "-e", `${p.sourceSha}:scripts/release-assets.mts`], { cwd: root })
+      .status !== 0
+  )
+    fail(
+      "The source predates unified publishing; merge the release changes first.",
+      "该源码尚不支持统一发布，请先合入发布改造。",
+    );
   const target = state(root).tags.find((t) => t.name === p.tag);
   if (!target) {
     // Resolve state again immediately before pushing the tag. No force push.
@@ -446,6 +470,11 @@ function publish(root: string, build: Build) {
     say(`Already published: ${release.html_url}`, `已完成发布：${release.html_url}`);
     return;
   }
+  const notes = join(dirname(build.source), "unified-notes.md");
+  writeFileSync(
+    notes,
+    `${readFileSync(build.notes, "utf8").trim()}\n\n## 安装包 / Downloads\n\nCLI 与 Desktop 来自同一版本、同一源码提交。CLI 使用 checksums.txt 校验；桌面安装包使用 desktop-checksums.txt。macOS 应用及 DMG 已签名、公证并附加票据；Windows/Linux 桌面包未签名。桌面版应用内自动更新尚未启用，请下载新版安装包更新。\n\nCLI and Desktop share this version and source commit. Verify CLI archives with checksums.txt and desktop installers with desktop-checksums.txt. macOS apps and DMGs are signed, notarized and stapled; Windows/Linux desktop installers are unsigned. Desktop in-app updates are not enabled; install the newer package to update.\n\nSource: ${p.sourceSha}\n`,
+  );
   if (!release)
     run("gh", [
       "release",
@@ -456,29 +485,78 @@ function publish(root: string, build: Build) {
       "--verify-tag",
       "--draft",
       "--title",
-      p.tag,
+      `One ${p.version}`,
       "--notes-file",
-      build.notes,
+      notes,
     ]);
-  else run("gh", ["release", "edit", p.tag, "--repo", repository, "--notes-file", build.notes]);
-  run("gh", [
-    "release",
-    "upload",
+  // Once present, CLI bytes are frozen. Retrying a publisher must not replace
+  // artifacts while a desktop workflow is building against this draft.
+  release = revalidate(root, p);
+  if (!release?.draft) fail("Expected a draft release", "需要处于草稿状态的 Release");
+  assertDraftAssets(
     p.tag,
-    "--repo",
-    repository,
-    "--clobber",
-    ...assets.map((name) => join(build.source, "dist", name)),
-  ]);
+    release.assets.map((a) => a.name),
+  );
+  for (const name of assets) {
+    release = revalidate(root, p);
+    if (!release?.draft) fail("Draft state changed during upload", "上传期间草稿状态已变化");
+    const existing = release.assets.find((a) => a.name === name);
+    if (existing) {
+      if (existing.state !== "uploaded")
+        fail(
+          `Incomplete draft asset ${name}; inspect it before retrying.`,
+          `草稿附件 ${name} 未上传完成，请检查后重试。`,
+        );
+      const downloaded = mkdtempSync(join(dirname(build.source), "existing-"));
+      run("gh", [
+        "release",
+        "download",
+        p.tag,
+        "--repo",
+        repository,
+        "--pattern",
+        name,
+        "--dir",
+        downloaded,
+      ]);
+      if (sha256(join(downloaded, name)) !== build.hashes[name])
+        fail(
+          `Draft asset changed: ${name}; use the original build record.`,
+          `草稿附件 ${name} 与本次构建不同，请使用原始构建记录。`,
+        );
+    } else {
+      run("gh", [
+        "release",
+        "upload",
+        p.tag,
+        "--repo",
+        repository,
+        join(build.source, "dist", name),
+      ]);
+    }
+  }
   release = revalidate(root, p);
   if (!release?.draft)
     fail(
       "Release must remain a draft while artifacts are verified.",
       "验证附件时 Release 必须保持草稿状态。",
     );
-  assertAssets(release.assets.map((a) => a.name));
+  assertDraftAssets(
+    p.tag,
+    release.assets.map((a) => a.name),
+    true,
+  );
   const download = mkdtempSync(join(dirname(build.source), "download-"));
-  run("gh", ["release", "download", p.tag, "--repo", repository, "--dir", download]);
+  run("gh", [
+    "release",
+    "download",
+    p.tag,
+    "--repo",
+    repository,
+    "--dir",
+    download,
+    ...assets.flatMap((name) => ["--pattern", name]),
+  ]);
   for (const name of assets) {
     if (sha256(join(download, name)) !== build.hashes[name])
       fail(
@@ -492,23 +570,20 @@ function publish(root: string, build: Build) {
       "Draft release changed during verification; restart.",
       "验证期间草稿状态已变化，请重新执行。",
     );
+  run("gh", [
+    "workflow",
+    "run",
+    "desktop.yml",
+    "--repo",
+    repository,
+    "--ref",
+    "master",
+    "-f",
+    `release_tag=${p.tag}`,
+  ]);
   say(
-    `Draft ${p.tag}: all six downloaded assets match the verified build. Publishing.`,
-    `草稿 ${p.tag}：下载验证的六个附件均与构建一致，开始公开发布。`,
-  );
-  run("gh", ["release", "edit", p.tag, "--repo", repository, "--draft=false", "--latest"]);
-  release = revalidate(root, p);
-  if (!release || release.draft)
-    fail("The release is still a draft; retry publishing.", "Release 仍为草稿，请重试发布。");
-  const latest = JSON.parse(read("gh", ["api", `repos/${repository}/releases/latest`]));
-  if (latest.tag_name !== p.tag)
-    fail(
-      "Published release is not Latest; inspect the release state.",
-      "已公开版本未成为 Latest，请检查发布状态。",
-    );
-  say(
-    `Published ${p.tag} from ${p.sourceSha}: ${release.html_url}`,
-    `已从 ${p.sourceSha} 发布 ${p.tag}：${release.html_url}`,
+    `Draft ${p.tag}: all six CLI assets verified; desktop workflow dispatched. Publication is pending: https://github.com/${repository}/actions/workflows/desktop.yml`,
+    `草稿 ${p.tag}：六个 CLI 附件已验证，已触发桌面流水线；尚未公开，全部 13 个附件验证通过后才会发布：https://github.com/${repository}/actions/workflows/desktop.yml`,
   );
 }
 

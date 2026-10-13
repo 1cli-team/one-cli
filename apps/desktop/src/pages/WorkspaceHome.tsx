@@ -4,12 +4,10 @@ import {
 	AlertTriangle,
 	ArrowUpRight,
 	CheckCircle2,
-	ChevronDown,
 	FolderGit2,
 	FolderPlus,
 	RefreshCw,
 	Search,
-	Terminal,
 	Trash2,
 	X,
 } from "lucide-react";
@@ -239,19 +237,6 @@ export const WorkspaceHome: React.FC = () => {
 					</div>
 				) : registry.data ? (
 					<>
-						<details className="group rounded-lg border border-border bg-card px-4 py-3">
-							<summary className="flex cursor-pointer list-none items-center gap-3 rounded-md text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring">
-								<Terminal className="size-4 text-primary-text" aria-hidden="true" />
-								<span className="flex-1">{t("workspaces.home.registrationHelp")}</span>
-								<ChevronDown
-									className="size-4 text-muted-foreground transition-transform group-open:rotate-180"
-									aria-hidden="true"
-								/>
-							</summary>
-							<p className="mt-3 text-sm text-muted-foreground">
-								{t("workspaces.home.registrationHint")}
-							</p>
-						</details>
 						{workspaces.length === 0 ? (
 							<Empty className="min-h-72 rounded-lg border border-dashed border-border bg-card">
 								<EmptyHeader>

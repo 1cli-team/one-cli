@@ -1,5 +1,6 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 mod backend;
+mod lifecycle;
 mod updates;
 use backend::{Backend, Control};
 use std::sync::{
@@ -47,6 +48,7 @@ fn retry_backend(window: WebviewWindow, state: tauri::State<Backend>) -> Result<
 #[tauri::command]
 fn set_native_locale(
     window: WebviewWindow,
+    app: tauri::AppHandle,
     state: tauri::State<NativeState>,
     locale: String,
 ) -> Result<(), String> {
@@ -54,6 +56,7 @@ fn set_native_locale(
     if locale != "zh-CN" && locale != "en-US" {
         return Err("invalid_locale".into());
     };
+    lifecycle::set_locale(&app, &locale)?;
     *state.locale.lock().unwrap() = locale;
     Ok(())
 }
@@ -166,11 +169,7 @@ fn request_exit(app: tauri::AppHandle) {
 fn main() {
     let app = tauri::Builder::default()
         .plugin(tauri_plugin_single_instance::init(|app, _, _| {
-            if let Some(w) = app.get_webview_window("main") {
-                let _ = w.unminimize();
-                let _ = w.show();
-                let _ = w.set_focus();
-            }
+            lifecycle::show_main_window(app);
         }))
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_opener::init())
@@ -180,6 +179,7 @@ fn main() {
         })
         .manage(updates::Updates::default())
         .setup(|app| {
+            lifecycle::init(app.handle())?;
             if let Some(key) = updates::public_key() {
                 app.handle()
                     .plugin(tauri_plugin_updater::Builder::new().pubkey(key).build())?;
@@ -205,7 +205,7 @@ fn main() {
         .on_window_event(|w, e| {
             if let tauri::WindowEvent::CloseRequested { api, .. } = e {
                 api.prevent_close();
-                request_exit(w.app_handle().clone());
+                let _ = w.hide();
             }
         })
         .invoke_handler(tauri::generate_handler![
@@ -220,12 +220,15 @@ fn main() {
         ])
         .build(tauri::generate_context!())
         .expect("One Desktop initialization failed");
-    app.run(|app, event| {
-        if let tauri::RunEvent::ExitRequested { api, .. } = event {
+    app.run(|app, event| match event {
+        #[cfg(target_os = "macos")]
+        tauri::RunEvent::Reopen { .. } => lifecycle::show_main_window(app),
+        tauri::RunEvent::ExitRequested { api, .. } => {
             if !app.state::<NativeState>().closing.load(Ordering::SeqCst) {
                 api.prevent_exit();
                 request_exit(app.clone());
             }
         }
+        _ => {}
     });
 }

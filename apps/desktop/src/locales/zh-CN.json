@@ -56,7 +56,6 @@
 			"emptyTitle": "尚未登记工作区",
 			"emptyDescription": "运行 one create 创建工作区，或在已有工作区中运行 one serve 进行登记。",
 			"listLabel": "已登记的工作区",
-			"registrationHint": "点击“打开工作区”，选择包含 one.manifest.toml 的目录；CLI 命令也会自动登记工作区。",
 			"refresh": "刷新",
 			"search": "搜索名称、路径或 ID…",
 			"clearSearch": "清除搜索",
@@ -66,8 +65,7 @@
 			"noResults": "没有匹配的工作区",
 			"noResultsDescription": "试试其他名称或路径，或清除筛选条件。",
 			"clearFilters": "清除筛选",
-			"resultCount": "找到 {{count}} 个工作区",
-			"registrationHelp": "如何添加工作区"
+			"resultCount": "找到 {{count}} 个工作区"
 		},
 		"rail": {
 			"title": "工作区",
@@ -408,6 +406,10 @@
 		"createAndBind": "创建并绑定"
 	},
 	"desktop": {
+		"tray": {
+			"show": "打开 One Desktop",
+			"quit": "退出 One Desktop"
+		},
 		"settings": "桌面设置",
 		"settingsHint": "管理桌面运行状态、终端集成与更新。",
 		"connectionInvalid": "后端连接信息无效。",

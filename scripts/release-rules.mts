@@ -1,3 +1,5 @@
+import { desktopAssets, unifiedReleaseSince } from "./release-assets.mts";
+
 export const repository = "1cli-team/one-cli";
 export const goreleaserVersion = "2.18.0";
 export const assets = [
@@ -39,6 +41,61 @@ export function assertAssets(names: string[]) {
       `发布附件不完整或包含意外文件：${names.join("，")}。应包含：${assets.join("，")}。`,
     );
   }
+}
+
+export function isUnifiedRelease(tag: string) {
+  return stableTag.test(tag) && compareTags(tag, unifiedReleaseSince) >= 0;
+}
+
+export function releaseAssets(tag: string) {
+  if (!stableTag.test(tag)) fail("Invalid stable release tag", "稳定版本 tag 无效");
+  return isUnifiedRelease(tag) ? [...assets, ...desktopAssets(tag.slice(1))] : [...assets];
+}
+
+export function assertReleaseAssets(tag: string, names: string[]) {
+  if (JSON.stringify([...names].sort()) !== JSON.stringify(releaseAssets(tag).sort()))
+    fail(`Unexpected release assets for ${tag}`, `${tag} 发布附件不完整或包含意外文件`);
+}
+
+export function assertDraftAssets(tag: string, names: string[], requireCLI = false) {
+  const expected = releaseAssets(tag);
+  if (
+    new Set(names).size !== names.length ||
+    names.some((name) => !expected.includes(name)) ||
+    (requireCLI && assets.some((name) => !names.includes(name)))
+  )
+    fail("Incomplete or unexpected draft assets", "草稿附件不完整或包含意外文件");
+}
+
+export type ReleaseIdentity = { commit: string; tagObject: string; releaseID: string };
+export function assertReleaseIdentity(actual: ReleaseIdentity, expected: ReleaseIdentity) {
+  if (
+    !/^[a-f0-9]{40}$/.test(expected.commit) ||
+    !/^[a-f0-9]{40}$/.test(expected.tagObject) ||
+    !/^[1-9][0-9]*$/.test(expected.releaseID) ||
+    actual.commit !== expected.commit ||
+    actual.tagObject !== expected.tagObject ||
+    actual.releaseID !== expected.releaseID
+  )
+    fail("Publisher inputs disagree with the frozen plan", "发布输入与冻结的计划不一致");
+}
+
+export type RemoteAsset = {
+  id: number;
+  name: string;
+  size: number;
+  digest?: string;
+  state: string;
+};
+export function assertUnchangedAssets(actual: RemoteAsset[], verified: RemoteAsset[]) {
+  const snapshot = (items: RemoteAsset[]) =>
+    JSON.stringify(
+      items
+        .map((a) => [a.id, a.name, a.size, a.digest ?? "", a.state])
+        .sort((a, b) => String(a[1]).localeCompare(String(b[1]))),
+    );
+  if (snapshot(actual) !== snapshot(verified))
+    fail("Release assets changed during verification", "验证期间发布附件发生变化");
 }
 
 export function compareTags(a: string, b: string) {
@@ -94,7 +151,10 @@ export function decidePlan(input: {
     } else if (latest.draft) {
       if (highestOnMaster) mode = "resume";
     } else {
-      assertAssets(latest.assets.map((a) => a.name));
+      assertReleaseAssets(
+        highest.name,
+        latest.assets.map((a) => a.name),
+      );
       if (highestOnMaster && highest.sha === head) mode = "idempotent";
     }
   }

@@ -3,12 +3,19 @@ import test from "node:test";
 import {
   assets,
   assertAssets,
+  assertDraftAssets,
+  assertReleaseAssets,
+  assertReleaseIdentity,
+  assertUnchangedAssets,
   assertBuildSettings,
   bumpTag,
   compareTags,
   decidePlan,
   parseChecksums,
+  releaseAssets,
+  isUnifiedRelease,
 } from "./release-rules.mts";
+import { desktopAssets } from "./release-assets.mts";
 
 const tag = { name: "v0.1.16", object: "tag-object", sha: "previous" };
 const release = {
@@ -137,4 +144,105 @@ test("desktop checksum allowlist stays separate from the CLI release protocol", 
   );
   assert.throws(() => parseChecksums(`${text}\n${lines[0]}`, desktop), /duplicate/);
   assert.throws(() => parseChecksums(`${text}\n${"a".repeat(64)}  ../one`, desktop), /Invalid/);
+});
+
+test("v0.1.22 is the fixed boundary; historical release assets remain unchanged", () => {
+  assert.equal(isUnifiedRelease("v0.1.21"), false);
+  assert.equal(isUnifiedRelease("desktop-v0.1.22"), false);
+  assert.equal(isUnifiedRelease("v0.1.22-rc.1"), false);
+  assert.equal(isUnifiedRelease("v0.1.22"), true);
+  assert.equal(isUnifiedRelease("v0.2.0"), true);
+  assert.deepEqual(releaseAssets("v0.1.21"), assets);
+  assertReleaseAssets("v0.1.21", assets);
+  assert.throws(() => assertReleaseAssets("v0.1.21", releaseAssets("v0.1.22")), /Unexpected/);
+});
+
+test("a unified published release requires all 13 version-matched attachments", () => {
+  const names = releaseAssets("v0.1.22");
+  assert.equal(names.length, 13);
+  assertReleaseAssets("v0.1.22", [...names].reverse());
+  for (const missing of names)
+    assert.throws(
+      () =>
+        assertReleaseAssets(
+          "v0.1.22",
+          names.filter((n) => n !== missing),
+        ),
+      /Unexpected/,
+    );
+  assert.throws(() => assertReleaseAssets("v0.1.22", [...names, names[0]]), /Unexpected/);
+  assert.throws(() => assertReleaseAssets("v0.1.22", [...names, "unexpected.txt"]), /Unexpected/);
+  assert.throws(
+    () => assertReleaseAssets("v0.1.22", [...assets, ...desktopAssets("0.1.23")]),
+    /Unexpected/,
+  );
+});
+
+test("drafts permit partial desktop uploads but require the complete CLI before dispatch", () => {
+  assertDraftAssets("v0.1.22", []);
+  assertDraftAssets("v0.1.22", assets, true);
+  assertDraftAssets("v0.1.22", [...assets, desktopAssets("0.1.22")[0]], true);
+  assert.throws(() => assertDraftAssets("v0.1.22", assets.slice(1), true), /Incomplete/);
+  assert.throws(() => assertDraftAssets("v0.1.22", [...assets, assets[0]]), /unexpected/);
+  assert.throws(() => assertDraftAssets("v0.1.22", [...assets, "../file"]), /unexpected/);
+  assert.throws(
+    () => assertDraftAssets("v0.1.22", [...assets, ...desktopAssets("0.1.21")]),
+    /unexpected/,
+  );
+});
+
+test("unified drafts resume the same commit and incomplete public releases cannot bump", () => {
+  const unifiedTag = { ...tag, name: "v0.1.22" };
+  const unified = {
+    ...release,
+    tag_name: unifiedTag.name,
+    assets: releaseAssets(unifiedTag.name).map((name) => ({ name, state: "uploaded" })),
+  };
+  const pending = {
+    ...input,
+    tags: [unifiedTag],
+    releases: [{ ...unified, draft: true, assets: release.assets }],
+  };
+  const p = decidePlan(pending);
+  assert.equal(p.mode, "resume");
+  assert.equal(p.tag, "v0.1.22");
+  assert.equal(p.sourceSha, "previous");
+  assert.throws(
+    () => decidePlan({ ...pending, releases: [{ ...pending.releases[0], draft: false }] }),
+    /Unexpected/,
+  );
+  assert.equal(
+    decidePlan({ ...pending, releases: [unified], head: "previous", master: "previous" }).mode,
+    "idempotent",
+  );
+  assert.equal(decidePlan({ ...pending, releases: [unified] }).tag, "v0.1.23");
+});
+
+test("publisher rejects moved tags, changed source, recreated drafts and missing plan fields", () => {
+  const identity = { commit: "a".repeat(40), tagObject: "b".repeat(40), releaseID: "123" };
+  assertReleaseIdentity(identity, { ...identity });
+  for (const field of ["commit", "tagObject", "releaseID"] as const) {
+    assert.throws(
+      () => assertReleaseIdentity({ ...identity, [field]: "changed" }, identity),
+      /frozen/,
+    );
+    assert.throws(() => assertReleaseIdentity(identity, { ...identity, [field]: "" }), /frozen/);
+  }
+});
+
+test("final publication rejects attachments changed or removed after download verification", () => {
+  const verified = releaseAssets("v0.1.22").map((name, id) => ({
+    id,
+    name,
+    size: 100,
+    digest: `sha256:${"a".repeat(64)}`,
+    state: "uploaded",
+  }));
+  assertUnchangedAssets([...verified].reverse(), verified);
+  assert.throws(() => assertUnchangedAssets(verified.slice(1), verified), /changed/);
+  for (const update of [{ id: 99 }, { size: 101 }, { digest: "other" }, { state: "starter" }])
+    assert.throws(
+      () => assertUnchangedAssets([{ ...verified[0], ...update }, ...verified.slice(1)], verified),
+      /changed/,
+    );
 });
