@@ -13,7 +13,6 @@ import (
 // receiving output, including progress lines that overwrite themselves.
 type copyFrame struct {
 	lines                      []string
-	header                     []string
 	footerSlots                int
 	cache                      rowCache
 	top, start, end            cursor
@@ -83,7 +82,7 @@ func (m model) pageRows() []pageRow {
 }
 func (m model) captureFrame() *copyFrame {
 	page := m.pageRows()
-	frame := &copyFrame{header: m.headerLines(), footerSlots: len(m.footerLines())}
+	frame := &copyFrame{footerSlots: len(m.footerLines())}
 	if len(page) > 0 {
 		first, last := page[0], page[len(page)-1]
 		for line := first.at.line; line <= last.at.line; line++ {
@@ -215,7 +214,7 @@ func (m model) mouseCursor(x, y int) cursor {
 	if len(page) == 0 {
 		return cursor{}
 	}
-	row := page[min(max(0, y-len(m.headerLines())), len(page)-1)]
+	row := page[min(max(0, y), len(page)-1)]
 	column := row.at.column + min(max(0, x-origin), width)
 	column = graphemeColumn(m.lineText(row.at.line), column, false)
 	return cursor{row.at.line, column}

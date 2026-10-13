@@ -107,7 +107,6 @@ func Run(ctx context.Context, cancel context.CancelFunc, child *exec.Cmd, graph 
 	initial.cancel = cancel
 	initial.done = done
 	initial.result = &childErr
-	initial.started = time.Now()
 	program := tea.NewProgram(initial, tea.WithInput(in), tea.WithOutput(out), tea.WithoutSignalHandler())
 	go func() {
 		err := child.Start()
@@ -175,11 +174,10 @@ type model struct {
 	done                                             <-chan struct{}
 	result                                           *error
 	err                                              error
-	started, ended                                   time.Time
 	source                                           StateSource
 	states                                           map[string]State
 	runningFocus                                     bool
-	runningOffset, treeOffset                        int
+	treeOffset                                       int
 	copy                                             *copyFrame
 	copyMenu                                         bool
 	copyNote                                         string
@@ -226,7 +224,7 @@ func (m model) layout() (left, width, height int) {
 	} else if left > 0 {
 		width = max(1, width-2)
 	}
-	return left, width, max(1, m.height-len(m.headerLines())-1-len(m.footerLines()))
+	return left, width, max(1, m.height-len(m.footerLines()))
 }
 func (m model) count() int {
 	if m.copy != nil {
@@ -434,7 +432,6 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case finishMsg:
 		m.err = msg.err
 		m.finished = true
-		m.ended = time.Now()
 		// The UI follows the scheduler's lifetime. Finite tasks must return to
 		// the shell without input, even while the user is browsing or searching.
 		return m, tea.Quit
@@ -482,8 +479,8 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			delta = 3
 		}
 		left, _, height := m.layout()
-		if left > 0 && msg.X < left && msg.Y >= len(m.headerLines()) && msg.Y < len(m.headerLines())+height {
-			m.wheelSidebar(msg.Y-len(m.headerLines()), delta)
+		if left > 0 && msg.X < left && msg.Y >= 0 && msg.Y < height {
+			m.wheelSidebar(msg.Y, delta)
 			return m, nil
 		}
 		m.scroll(delta)
@@ -495,11 +492,11 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if msg.Button != tea.MouseLeft {
 			return m, nil
 		}
-		if left > 0 && msg.X < left && msg.Y >= len(m.headerLines()) && msg.Y < len(m.headerLines())+height {
-			cmd := m.clickSidebar(msg.Y - len(m.headerLines()))
+		if left > 0 && msg.X < left && msg.Y >= 0 && msg.Y < height {
+			cmd := m.clickSidebar(msg.Y)
 			return m, cmd
 		}
-		if left != m.width && msg.X >= left && msg.Y >= len(m.headerLines()) && msg.Y < len(m.headerLines())+height {
+		if left != m.width && msg.X >= left && msg.Y >= 0 && msg.Y < height {
 			m.startSelection(msg.X, msg.Y)
 		}
 	case tea.MouseMotionMsg:
@@ -723,6 +720,20 @@ func (m model) View() tea.View {
 		}
 	}
 
+	content := append(rows, m.footerLines()...)
+	if len(content) > m.height {
+		content = content[:m.height]
+	}
+	for i, line := range content {
+		content[i] = ansi.Truncate(line, m.width, "…")
+	}
+	view := tea.NewView(strings.Join(content, "\n"))
+	view.AltScreen = true
+	view.MouseMode = tea.MouseModeCellMotion
+	return view
+}
+
+func (m model) statusNote() string {
 	r := m.reading()
 	note := i18n.T("tasks.ui.following")
 	if !r.follow {
@@ -743,20 +754,7 @@ func (m model) View() tea.View {
 	if m.copyNote != "" {
 		note = m.copyNote
 	}
-	content := m.headerLines()
-	content = append(content, rows...)
-	content = append(content, ansi.Truncate(note, m.width, "…"))
-	content = append(content, m.footerLines()...)
-	if len(content) > m.height {
-		content = content[:m.height]
-	}
-	for i, line := range content {
-		content[i] = ansi.Truncate(line, m.width, "…")
-	}
-	view := tea.NewView(strings.Join(content, "\n"))
-	view.AltScreen = true
-	view.MouseMode = tea.MouseModeCellMotion
-	return view
+	return note
 }
 
 func (m model) footerLines() []string {
@@ -778,10 +776,24 @@ func (m model) footerLines() []string {
 	if m.search {
 		footer = "/ " + m.editQuery + "  " + i18n.T("tasks.ui.search")
 	}
-	lines := strings.Split(ansi.Hardwrap(footer, max(1, m.width), false), "\n")
-	slots := max(1, min(3, m.height-3))
+	width := max(1, m.width)
+	note := ansi.Truncate(m.statusNote(), width, "…")
+	noteWidth := ansi.StringWidth(note)
+	lines := strings.Split(ansi.Hardwrap(footer, width, false), "\n")
+	if ansi.StringWidth(lines[len(lines)-1])+2+noteWidth > width {
+		lines = append(lines, "")
+	}
+	slots := max(1, min(4, m.height-1))
 	if m.copy != nil {
 		slots = min(slots, m.copy.footerSlots)
+		// Keep the captured viewport fixed while dragging or opening copy menus.
+		for len(lines) < slots {
+			lines = append(lines, "")
+		}
 	}
-	return lines[:min(len(lines), slots)]
+	lines = lines[:min(len(lines), slots)]
+	last := len(lines) - 1
+	lines[last] = ansi.Truncate(lines[last], max(0, width-noteWidth-2), "…")
+	lines[last] += strings.Repeat(" ", width-ansi.StringWidth(lines[last])-noteWidth) + note
+	return lines
 }
