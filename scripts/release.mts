@@ -24,6 +24,7 @@ import {
   isUnifiedRelease,
   parseChecksums,
   repository,
+  releaseAssets,
   stableTag,
 } from "./release-rules.mts";
 import type { Bump, Plan, Release, Tag } from "./release-rules.mts";
@@ -578,8 +579,8 @@ function publish(root: string, build: Build) {
     `release_tag=${p.tag}`,
   ]);
   say(
-    `Draft ${p.tag}: all six CLI assets verified; desktop workflow dispatched. Publication is pending: https://github.com/${repository}/actions/workflows/desktop.yml`,
-    `草稿 ${p.tag}：六个 CLI 附件已验证，已触发桌面流水线；尚未公开，全部 13 个附件验证通过后才会发布：https://github.com/${repository}/actions/workflows/desktop.yml`,
+    `Draft ${p.tag}: all six CLI assets verified; desktop workflow dispatched. Publication is pending until all ${releaseAssets(p.tag).length} release assets pass verification: https://github.com/${repository}/actions/workflows/desktop.yml`,
+    `草稿 ${p.tag}：六个 CLI 附件已验证，已触发桌面流水线；尚未公开，全部 ${releaseAssets(p.tag).length} 个附件验证通过后才会发布：https://github.com/${repository}/actions/workflows/desktop.yml`,
   );
 }
 

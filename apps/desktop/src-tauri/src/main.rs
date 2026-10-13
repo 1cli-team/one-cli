@@ -168,9 +168,15 @@ fn request_exit(app: tauri::AppHandle) {
 }
 fn main() {
     let app = tauri::Builder::default()
-        .plugin(tauri_plugin_single_instance::init(|app, _, _| {
-            lifecycle::show_main_window(app);
-        }))
+        .plugin(
+            tauri_plugin_single_instance::Builder::new()
+                // D-Bus name elements cannot start with a digit, unlike bundle IDs.
+                .dbus_id("team.onecli.desktop")
+                .callback(|app, _, _| {
+                    lifecycle::show_main_window(app);
+                })
+                .build(),
+        )
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_opener::init())
         .manage(NativeState {

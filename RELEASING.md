@@ -4,6 +4,10 @@
 
 Starting with **v0.1.22**, CLI and Desktop share one stable tag, source commit and GitHub Release. CLI releases through v0.1.21 and historical `desktop-v*` releases remain unchanged. The new publisher never creates desktop tags or backfills historical attachments.
 
+从 **v0.1.23** 开始，Linux amd64 / arm64 同时提供 AppImage 和 `.deb`，统一 Release 增至 **15 个附件**。已公开的 v0.1.22 保留原 **13 个附件**，不补传 `.deb`。
+
+Starting with **v0.1.23**, Linux amd64 / arm64 ship both AppImage and `.deb`, for **15 assets** per unified Release. The published v0.1.22 retains its original **13 assets**; never backfill DEBs.
+
 ## 中文
 
 ### 发布入口与完成条件
@@ -14,7 +18,7 @@ Starting with **v0.1.22**, CLI and Desktop share one stable tag, source commit a
 2. 推送固定源码的稳定 tag，创建同名 **草稿**，上传并下载校验六个 CLI 附件。
 3. 显式 dispatch 桌面工作流，冻结源码 SHA、tag 对象、草稿 ID 和 CLI 校验文件摘要。
 4. 五个平台桌面构建全部通过，macOS 完成应用与 DMG 的签名、公证和票据校验。
-5. 七个桌面附件上传到同一草稿；重新下载并验证全部 **13 个附件**。再次确认 tag、草稿、CLI 摘要及附件未变化后，统一公开并设为 Latest。
+5. 九个桌面附件上传到同一草稿；重新下载并验证全部 **15 个附件**。再次确认 tag、草稿、CLI 摘要及附件未变化后，统一公开并设为 Latest。
 
 本地 `publish` 成功返回表示 **CLI 草稿已准备、流水线已触发**，不是正式发布完成。以 Actions 最终发布 job 成功、Release 已公开且为 Latest 为准。桌面构建或公证失败时，CLI 也保持草稿；原 Latest 不变。
 
@@ -62,7 +66,7 @@ gh workflow run desktop.yml --repo 1cli-team/one-cli --ref master -f release_tag
 
 ### 附件协议
 
-新 Release 必须恰好包含以下 **13 个附件**，缺件、重复、其他版本文件和意外文件都会阻止公开。历史 CLI Release 仍按原六个附件识别，不要求补齐桌面文件。
+v0.1.23 及以后的 Release 必须恰好包含以下 **15 个附件**，缺件、重复、其他版本文件和意外文件都会阻止公开。v0.1.22 按原 13 个附件识别；更早的 CLI Release 按原六个附件识别，不补传历史附件。
 
 | 文件                                     | 用途                                       |
 | ---------------------------------------- | ------------------------------------------ |
@@ -77,10 +81,14 @@ gh workflow run desktop.yml --repo 1cli-team/one-cli --ref master -f release_tag
 | `one-desktop_X.Y.Z_windows_amd64.exe`    | Desktop Windows x64，NSIS                  |
 | `one-desktop_X.Y.Z_linux_amd64.AppImage` | Desktop Linux x64                          |
 | `one-desktop_X.Y.Z_linux_arm64.AppImage` | Desktop Linux arm64                        |
+| `one-desktop_X.Y.Z_linux_amd64.deb`      | Desktop Ubuntu/Debian x64                  |
+| `one-desktop_X.Y.Z_linux_arm64.deb`      | Desktop Ubuntu/Debian arm64                |
 | `desktop-release.json`                   | 桌面源码、版本、平台、公证状态和安装包摘要 |
-| `desktop-checksums.txt`                  | 五个桌面安装包及桌面发布记录的 SHA256      |
+| `desktop-checksums.txt`                  | 七个桌面安装包及桌面发布记录的 SHA256      |
 
 CLI 归档内仍包含 `one` / `one.exe`、README、`third_party/mise/LICENSE`。CLI 文件名是安装与升级协议，保持不变。Desktop 内置同版本、同源码的 `one-api` 和 `one`。
+
+Linux 构建一次生成 AppImage 与 DEB，每个架构的构建记录使用 `artifacts` 数组记录两种格式。发布器仍支持 v0.1.22 的单个 `artifact` 记录。DEB 通过系统包管理器安装 GTK/WebKitGTK 依赖，不内置 AppImage 的整套运行库；安装时使用 `sudo apt install ./one-desktop_X.Y.Z_linux_amd64.deb`（ARM64 使用对应文件）。
 
 ### Apple 签名与公证
 
@@ -126,7 +134,7 @@ Use `mise run release` from the repository root. The CLI is built in an isolated
 2. Push the fixed stable tag, create its draft, upload and download-verify the six CLI assets.
 3. Explicitly dispatch CI, freezing the source SHA, Git tag object, draft Release ID and CLI checksum manifest hash.
 4. Build all five desktop targets; sign, notarize, staple and verify both macOS apps and DMGs.
-5. Upload seven desktop assets to the same draft. Download and verify all **13 assets**, recheck frozen state and attachment identities, then publish once as Latest.
+5. Upload nine desktop assets to the same draft. Download and verify all **15 assets**, recheck frozen state and attachment identities, then publish once as Latest.
 
 A successful local `publish` means **draft staged and workflow dispatched**, not publication complete. Wait for the final CI job and a public Latest Release. Desktop failures leave CLI assets in the draft and preserve the previous Latest. The workflow does not subscribe to Release published events.
 
@@ -136,7 +144,9 @@ Use the commands above from master with HEAD matching origin/master. `plan` read
 
 Derive versions from the highest remote stable vX.Y.Z tag, defaulting to patch; minor/major reset lower fields. Ignore prereleases and package.json defaults. Resume interrupted tags at their original commit even after master advances. Do not force-push or move tags. Provide reviewed bilingual notes with `--notes`; existing draft notes are preserved on retry. Local locks and workflow concurrency serialize release attempts.
 
-The next stable version after v0.1.21 uses the unified protocol. Published historical CLI releases still require exactly the original six assets; unified releases require all 13 files in the table above. No new desktop-v* tags are created and historical releases are never backfilled.
+The next stable version after v0.1.21 uses the unified protocol. Published historical CLI releases still require exactly the original six assets; v0.1.22 requires its original 13 assets, while v0.1.23+ requires all 15 files in the table above. No new desktop-v* tags are created and historical releases are never backfilled.
+
+Linux builds generate AppImage and DEB together, with an `artifacts` array in each architecture's build record. The publisher also accepts the legacy single `artifact` record from v0.1.22. DEBs depend on system GTK/WebKitGTK packages instead of bundling the AppImage runtime libraries. Install with `sudo apt install ./one-desktop_X.Y.Z_linux_amd64.deb`, or the matching ARM64 file.
 
 Use Linux/macOS amd64/arm64 with Git, gh, mise, bash, tar and unzip. Pin tools through mise.toml, GoReleaser **2.18.0**, and CI Rust **1.94.0**. Local authentication needs content-write and workflow-dispatch access (Contents write and Actions write for fine-grained tokens). Reuse gh authentication or inject GH_TOKEN through One shared credentials; never print/save credential values.
 
@@ -150,7 +160,7 @@ Configure the five Apple Secrets in the table above: Team ID, Apple ID, app-spec
 
 Only macOS build steps receive Apple secrets. Use a temporary keychain, remove decoded p12 files after import, validate notarization credentials before building, and restore/clean keychains on success or failure. Sign sidecars before hashing; copy them using bundle.macOS.files, then sign/notarize/staple the app. Verify its sidecar hashes, identity, hardened runtime, Gatekeeper and ticket. Separately notarize/staple/verify the DMG. Timestamp/ticket network failures retry after 5/15/30 seconds; missing app tickets retry the entire app+DMG packaging up to twice after 5/15 seconds. Invalid signatures and rejected notarization fail immediately.
 
-Windows NSIS and Linux AppImage installers are unsigned. Linux uses Ubuntu 22.04 as its system-library baseline. Build jobs have contents read; preflight has contents write to see drafts but performs only reads; the publisher has contents write to upload and publish. CI creates no Git tags. Actions desktop artifacts are retained for 14 days.
+Windows NSIS and Linux AppImage/DEB installers are unsigned. Linux uses Ubuntu 22.04 as its system-library baseline. Build jobs have contents read; preflight has contents write to see drafts but performs only reads; the publisher has contents write to upload and publish. CI creates no Git tags. Actions desktop artifacts are retained for 14 days.
 
 CLI draft bytes are immutable once uploaded: retries only upload missing files and compare existing assets with the original build. Conflicting or incomplete existing files stop for inspection. Desktop drafts can reuse validated artifacts; rerun a failed publish job to reuse its run's installers. A full retry may replace only unpublished desktop assets. Tag movement, draft recreation, newer stable tags, CLI checksum changes or attachment replacement/deletion during verification stop publication.
 

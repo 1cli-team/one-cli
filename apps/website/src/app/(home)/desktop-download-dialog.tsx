@@ -183,7 +183,8 @@ export function DesktopDownloadDialog({ children, lang }: { children: ReactNode;
 															href={installer.url}
 															aria-label={text.downloadLabel
 																.replace("{system}", text[os])
-																.replace("{architecture}", installer.architecture)}
+																.replace("{architecture}", installer.architecture)
+																.replace("{format}", installer.format)}
 															className={`inline-flex shrink-0 items-center gap-2 rounded-md bg-[#ea580c] px-3 py-2 text-sm font-semibold text-white transition hover:bg-[#c2410c] ${focusStyle}`}
 														>
 															<Download aria-hidden="true" className="size-4" />

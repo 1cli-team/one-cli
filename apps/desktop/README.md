@@ -44,7 +44,7 @@ macOS 本地构建生成 `src-tauri/target/<target>/release/bundle/macos/One Des
 
 开发包不启用生产更新。正式构建需要稳定的 `RELEASE_VERSION`、干净源码和 `ONE_DESKTOP_RELEASE=1`。macOS 额外需要根目录 `RELEASING.md` 中列出的五项 Apple 凭据；缺少凭据会失败。更新公钥和私钥可成对配置，但它们独立于 Apple 签名，本次安装包流水线不启用应用内自动更新。自动安装仍受平台恢复验收开关约束。
 
-从 v0.1.22 开始，CLI 与 Desktop 共用一个 `vX.Y.Z` Release。本地 `mise run release` 验证并上传 CLI 草稿附件后，显式触发 GitHub Actions 从同一 tag 源码构建五个平台桌面包；macOS 应用和 DMG 完成签名、公证及票据校验，Windows/Linux 不签名。全部 13 个附件上传并下载校验通过后，统一公开并设为 Latest。历史 Release 保持不动，不再创建新的 `desktop-v*` tag。失败可补跑同一草稿；配置、命令与恢复规则见根目录 `RELEASING.md`。
+从 v0.1.22 开始，CLI 与 Desktop 共用一个 `vX.Y.Z` Release。本地 `mise run release` 验证并上传 CLI 草稿附件后，显式触发 GitHub Actions 从同一 tag 源码构建五个平台桌面包；macOS 应用和 DMG 完成签名、公证及票据校验，Windows/Linux 不签名。从 v0.1.23 开始，Linux x64 / ARM64 同时生成 AppImage 和 DEB，全部 15 个附件上传并下载校验通过后，统一公开并设为 Latest。Ubuntu/Debian 可使用较小的 DEB，由系统包管理器安装 GTK/WebKitGTK 依赖。已公开的 v0.1.22 保留原 13 个附件；历史 Release 保持不动，不再创建新的 `desktop-v*` tag。失败可补跑同一草稿；配置、命令与恢复规则见根目录 `RELEASING.md`。
 
 更新 feed、故障恢复以及 Windows/Linux 实机验收仍需完成。本地构建结果与 GitHub Actions、Apple 公证的实际执行结果分别验证。
 
@@ -60,6 +60,6 @@ Install the pinned mise tools, Rust with rustfmt, and the Tauri platform prerequ
 
 On macOS, the build produces both `bundle/macos/One Desktop.app` and a `.dmg` installer in `bundle/dmg/`, under `src-tauri/target/<target>/release/`.
 
-Release builds require a stable version, clean source and `ONE_DESKTOP_RELEASE=1`; macOS also requires the five Apple credentials documented in `RELEASING.md`. Updater keys are optional as a pair and separate from Apple credentials. Starting with v0.1.22, CLI and Desktop share one `vX.Y.Z` Release. The local `mise run release` entrypoint stages and verifies CLI draft assets, then explicitly dispatches GitHub Actions. CI builds all five desktop targets from the same tag, signs/notarizes/staples macOS apps and DMGs, and verifies all 13 downloaded attachments before publishing once as Latest. Windows/Linux installers are unsigned. Historical releases remain unchanged; no new `desktop-v*` tags are created. Retries reuse the same draft and source.
+Release builds require a stable version, clean source and `ONE_DESKTOP_RELEASE=1`; macOS also requires the five Apple credentials documented in `RELEASING.md`. Updater keys are optional as a pair and separate from Apple credentials. Starting with v0.1.22, CLI and Desktop share one `vX.Y.Z` Release. The local `mise run release` entrypoint stages and verifies CLI draft assets, then explicitly dispatches GitHub Actions. CI builds all five desktop targets from the same tag and signs/notarizes/staples macOS apps and DMGs. Starting with v0.1.23, Linux x64 / ARM64 generate both AppImage and DEB, and all 15 downloaded attachments are verified before publishing once as Latest. Ubuntu/Debian users can use the smaller DEB, with GTK/WebKitGTK dependencies installed by the system package manager. Windows/Linux installers are unsigned. The published v0.1.22 retains its original 13 assets; historical releases remain unchanged and no new `desktop-v*` tags are created. Retries reuse the same draft and source.
 
 This installer workflow does not enable in-app updates. The update feed, platform recovery and Windows/Linux runtime acceptance remain separate work. Local build results do not establish a successful remote pipeline or Apple notarization.

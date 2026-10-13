@@ -149,7 +149,7 @@ jobs:
       - uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7
         with:
           path: desktop-dist/downloaded
-      - name: Verify all 13 assets and publish one Release / 校验全部 13 个附件并统一发布
+      - name: Verify all release assets and publish / 校验全部附件并统一发布
         env:
           GH_TOKEN: ${{ github.token }}
           ONE_RELEASE_TAG: ${{ needs.plan.outputs.tag }}

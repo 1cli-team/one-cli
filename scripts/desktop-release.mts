@@ -30,6 +30,8 @@ import type { RemoteAsset } from "./release-rules.mts";
 import {
   desktopAssets as expectedNames,
   desktopFilename as filename,
+  desktopBundles,
+  desktopInstallerNames,
   platforms,
 } from "./release-assets.mts";
 export { platforms } from "./release-assets.mts";
@@ -136,12 +138,13 @@ function validateRecord(record: ReleaseRecord, version: string, commit: string) 
   if (record.version !== version || record.commit !== commit || record.cliTag !== `v${version}`)
     fail("Desktop source/version mismatch", "桌面源码或版本不一致");
   equalNames(
-    record.artifacts.map((a) => a.target),
-    Object.keys(platforms),
+    record.artifacts.map((a) => a.name),
+    Object.keys(platforms).flatMap((target) => desktopInstallerNames(version, target)),
   );
   for (const a of record.artifacts) {
     if (
-      a.name !== filename(version, a.target) ||
+      !platforms[a.target] ||
+      !desktopInstallerNames(version, a.target).includes(a.name) ||
       !/^[a-f0-9]{64}$/.test(a.sha256) ||
       a.notarized !== (platforms[a.target].os === "darwin")
     )
@@ -241,37 +244,46 @@ function ensureLatestTag(tag: string) {
       "已存在更新的稳定 tag，禁止把旧草稿发布为 Latest",
     );
 }
-export function collectInstaller(workspace: string, manifest: Manifest) {
+export function collectInstallers(workspace: string, manifest: Manifest) {
   const p = platforms[manifest.target];
   if (!p || manifest.channel !== "release" || !stableTag.test(`v${manifest.version}`))
     fail("Installer collection requires a release build", "安装包收集需要正式构建");
-  const directory = join(
-    workspace,
-    "apps/desktop/src-tauri/target",
-    manifest.target,
-    "release/bundle",
-    p.bundle,
-  );
-  const files = readdirSync(directory).filter((name) => name.endsWith(p.extension));
-  if (files.length !== 1) fail("Expected exactly one installer", "必须生成唯一的安装包");
+  const sources = desktopBundles(manifest.version, manifest.target).map((bundle) => {
+    const directory = join(
+      workspace,
+      "apps/desktop/src-tauri/target",
+      manifest.target,
+      "release/bundle",
+      bundle,
+    );
+    const extension = bundle === "deb" ? ".deb" : p.extension;
+    const files = readdirSync(directory).filter((name) => name.endsWith(extension));
+    if (files.length !== 1)
+      fail("Expected exactly one installer per format", "每种格式必须生成唯一的安装包");
+    return {
+      path: join(directory, files[0]),
+      name: filename(manifest.version, manifest.target, bundle),
+    };
+  });
   const out = join(workspace, "desktop-dist", manifest.target);
   rmSync(out, { recursive: true, force: true });
   mkdirSync(out, { recursive: true });
-  const name = filename(manifest.version, manifest.target);
-  copyFileSync(join(directory, files[0]), join(out, name));
-  const artifact: Installer = {
-    target: manifest.target,
-    name,
-    sha256: digest(join(out, name)),
-    notarized: p.os === "darwin",
-  };
+  const artifacts: Installer[] = sources.map(({ path, name }) => {
+    copyFileSync(path, join(out, name));
+    console.log(`Installer ready / 安装包就绪: ${join(out, name)}`);
+    return {
+      target: manifest.target,
+      name,
+      sha256: digest(join(out, name)),
+      notarized: p.os === "darwin",
+    };
+  });
   // Called only by desktop.mts after signing, notarization and bundle validation.
   writeFileSync(
     join(out, `${manifest.target}.json`),
-    JSON.stringify({ version: manifest.version, commit: manifest.commit, artifact }, null, 2) +
+    JSON.stringify({ version: manifest.version, commit: manifest.commit, artifacts }, null, 2) +
       "\n",
   );
-  console.log(`Installer ready / 安装包就绪: ${join(out, name)}`);
 }
 
 function plan(tag: string) {
@@ -347,11 +359,18 @@ function publish(tag: string, input: string) {
   equalNames(readdirSync(directory), Object.keys(platforms));
   for (const target of Object.keys(platforms)) {
     const path = join(directory, target);
-    equalNames(readdirSync(path), [filename(p.version, target), `${target}.json`]);
+    equalNames(readdirSync(path), [...desktopInstallerNames(p.version, target), `${target}.json`]);
     const item = JSON.parse(readFileSync(join(path, `${target}.json`), "utf8"));
-    if (item.version !== p.version || item.commit !== p.commit || item.artifact.target !== target)
+    // v0.1.22 build records contain one artifact; newer builds may contain several formats.
+    const artifacts: Installer[] = item.artifacts ?? [item.artifact];
+    if (
+      item.version !== p.version ||
+      item.commit !== p.commit ||
+      !Array.isArray(artifacts) ||
+      artifacts.some((artifact) => !artifact || artifact.target !== target)
+    )
       fail("Build metadata disagrees with source", "构建记录与源码不一致");
-    record.artifacts.push(item.artifact);
+    record.artifacts.push(...artifacts);
   }
   validateRecord(record, p.version, p.commit);
   const out = mkdtempSync(join(tmpdir(), "one-desktop-publish-"));

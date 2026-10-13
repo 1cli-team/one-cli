@@ -16,7 +16,8 @@ import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import nodeTest from "node:test";
 import { assets, releaseAssets } from "./release-rules.mts";
-import { desktopFilename, platforms } from "./release-assets.mts";
+import { desktopInstallerNames, platforms } from "./release-assets.mts";
+import { collectInstallers } from "./desktop-release.mts";
 
 const publisher = fileURLToPath(new URL("./desktop-release.mts", import.meta.url));
 // The local publisher and these executable git/gh stubs target Linux/macOS.
@@ -26,7 +27,7 @@ const hash = (file: string) => createHash("sha256").update(readFileSync(file)).d
 
 // Run the real publisher offline. Only its external git/gh boundary is replaced;
 // local artifact collection, checksums, identity checks and publish ordering run normally.
-function fixture() {
+function fixture(version = "0.1.23") {
   const root = mkdtempSync(join(tmpdir(), "one-unified-release-test-"));
   const bin = join(root, "bin");
   const remote = join(root, "remote");
@@ -43,10 +44,10 @@ function fixture() {
   );
   const state = {
     id: 123,
-    tag_name: "v0.1.22",
+    tag_name: `v${version}`,
     draft: true,
     prerelease: false,
-    html_url: "https://example.invalid/releases/v0.1.22",
+    html_url: `https://example.invalid/releases/v${version}`,
     commit: sha,
     tagObject: "b".repeat(40),
     assets: assets.map((name, i) => ({
@@ -61,19 +62,21 @@ function fixture() {
   for (const target of Object.keys(platforms)) {
     const dir = join(installers, target);
     mkdirSync(dir);
-    const name = desktopFilename("0.1.22", target);
-    writeFileSync(join(dir, name), `Installer ${target}`);
+    const artifacts = desktopInstallerNames(version, target).map((name) => {
+      writeFileSync(join(dir, name), `Installer ${target} ${name}`);
+      return {
+        name,
+        target,
+        sha256: hash(join(dir, name)),
+        notarized: platforms[target].os === "darwin",
+      };
+    });
     writeFileSync(
       join(dir, `${target}.json`),
       JSON.stringify({
-        version: "0.1.22",
+        version,
         commit: sha,
-        artifact: {
-          name,
-          target,
-          sha256: hash(join(dir, name)),
-          notarized: platforms[target].os === "darwin",
-        },
+        ...(version === "0.1.22" ? { artifact: artifacts[0] } : { artifacts }),
       }),
     );
   }
@@ -138,7 +141,7 @@ throw Error('unhandled external command: '+tool+' '+args.join(' '));
     ONE_RELEASE_TEST_ROOT: root,
     GITHUB_OUTPUT: "",
   };
-  const run = (action: string, extra: NodeJS.ProcessEnv = {}, tag = "v0.1.22") =>
+  const run = (action: string, extra: NodeJS.ProcessEnv = {}, tag = `v${version}`) =>
     spawnSync(process.execPath, [publisher, action, tag, installers], {
       env: { ...env, ...extra },
       encoding: "utf8",
@@ -177,7 +180,7 @@ throw Error('unhandled external command: '+tool+' '+args.join(' '));
   };
 }
 
-test("offline unified publisher stages all 13 assets once and public retries never write", () => {
+test("offline unified publisher stages all 15 assets once and public retries never write", () => {
   const f = fixture();
   try {
     const cli = Object.fromEntries(assets.map((name) => [name, hash(join(f.remote, name))]));
@@ -186,7 +189,7 @@ test("offline unified publisher stages all 13 assets once and public retries nev
     const result = f.run("publish", pinned);
     assert.equal(result.status, 0, result.stderr);
     assert.equal(f.readState().draft, false);
-    assert.deepEqual(readdirSync(f.remote).sort(), releaseAssets("v0.1.22").sort());
+    assert.deepEqual(readdirSync(f.remote).sort(), releaseAssets("v0.1.23").sort());
     assert.deepEqual(
       Object.fromEntries(assets.map((name) => [name, hash(join(f.remote, name))])),
       cli,
@@ -207,6 +210,86 @@ test("offline unified publisher stages all 13 assets once and public retries nev
     assert.deepEqual(f.mutations(), writes);
   } finally {
     f.close();
+  }
+});
+
+test("v0.1.22 legacy build records still publish and public retries never add DEBs", () => {
+  const f = fixture("0.1.22");
+  try {
+    const pinned = f.plan();
+    const result = f.run("publish", pinned);
+    assert.equal(result.status, 0, result.stderr);
+    assert.deepEqual(readdirSync(f.remote).sort(), releaseAssets("v0.1.22").sort());
+    const writes = f.mutations();
+    const retry = f.run("publish", pinned);
+    assert.equal(retry.status, 0, retry.stderr);
+    assert.deepEqual(f.mutations(), writes);
+  } finally {
+    f.close();
+  }
+});
+
+test("offline publisher refuses missing or corrupted DEBs before uploading", () => {
+  for (const change of ["missing", "corrupt"]) {
+    const f = fixture();
+    try {
+      const pinned = f.plan();
+      const deb = join(
+        f.installers,
+        "x86_64-unknown-linux-gnu",
+        "one-desktop_0.1.23_linux_amd64.deb",
+      );
+      if (change === "missing") rmSync(deb);
+      else writeFileSync(deb, "corrupted DEB");
+      const result = f.run("publish", pinned);
+      assert.notEqual(result.status, 0);
+      assert.equal(f.readState().draft, true);
+      assert.equal(f.mutations().length, 0);
+    } finally {
+      f.close();
+    }
+  }
+});
+
+test("Linux installer collection retains both formats and validates each format before replacing output", () => {
+  for (const target of ["x86_64-unknown-linux-gnu", "aarch64-unknown-linux-gnu"]) {
+    const root = mkdtempSync(join(tmpdir(), "one-installer-collection-test-"));
+    try {
+      const bundle = join(root, "apps/desktop/src-tauri/target", target, "release/bundle");
+      for (const [format, name] of [
+        ["appimage", "One Desktop.AppImage"],
+        ["deb", "one-desktop.deb"],
+      ]) {
+        mkdirSync(join(bundle, format), { recursive: true });
+        writeFileSync(join(bundle, format, name), `${target} ${format}`);
+      }
+      const manifest = {
+        version: "0.1.23",
+        commit: sha,
+        channel: "release",
+        target,
+        sha256: "",
+        cliSha256: "",
+      };
+      collectInstallers(root, manifest);
+      const out = join(root, "desktop-dist", target);
+      assert.deepEqual(
+        readdirSync(out).sort(),
+        [...desktopInstallerNames("0.1.23", target), `${target}.json`].sort(),
+      );
+      const record = JSON.parse(readFileSync(join(out, `${target}.json`), "utf8"));
+      assert.equal(record.artifacts.length, 2);
+      for (const item of record.artifacts) assert.equal(item.sha256, hash(join(out, item.name)));
+      writeFileSync(join(out, "preserve-on-failure"), "previous output");
+      rmSync(join(bundle, "deb", "one-desktop.deb"));
+      assert.throws(() => collectInstallers(root, manifest), /one installer per format/);
+      assert.equal(readFileSync(join(out, "preserve-on-failure"), "utf8"), "previous output");
+      for (const name of ["one.deb", "two.deb"])
+        writeFileSync(join(bundle, "deb", name), "ambiguous");
+      assert.throws(() => collectInstallers(root, manifest), /one installer per format/);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
   }
 });
 

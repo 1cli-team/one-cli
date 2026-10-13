@@ -10,7 +10,7 @@ import {
   verifyMacApp,
   withMacSigning,
 } from "./desktop-macos.mts";
-import { collectInstaller, platforms } from "./desktop-release.mts";
+import { collectInstallers, platforms } from "./desktop-release.mts";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const desktop = resolve(root, "apps/desktop");
@@ -126,7 +126,7 @@ function build(identity?: string) {
       "--target",
       target,
       "--bundles",
-      platform.os === "darwin" ? "app,dmg" : platform.os === "windows" ? "nsis" : "appimage",
+      platform.os === "darwin" ? "app,dmg" : platform.os === "windows" ? "nsis" : "appimage,deb",
     );
     if (release) args.push("--ci");
   }
@@ -170,7 +170,7 @@ function build(identity?: string) {
     }
     break;
   }
-  if (release) collectInstaller(root, manifest);
+  if (release) collectInstallers(root, manifest);
 }
 
 if (release && command === "build" && platform.os === "darwin") {

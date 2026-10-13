@@ -5,6 +5,8 @@ const installers = [
 	{ system: "macos", architecture: "Apple Silicon", suffix: "darwin_arm64.dmg", format: "DMG" },
 	{ system: "macos", architecture: "Intel", suffix: "darwin_amd64.dmg", format: "DMG" },
 	{ system: "windows", architecture: "x64", suffix: "windows_amd64.exe", format: "EXE" },
+	{ system: "linux", architecture: "x64", suffix: "linux_amd64.deb", format: "DEB" },
+	{ system: "linux", architecture: "ARM64", suffix: "linux_arm64.deb", format: "DEB" },
 	{ system: "linux", architecture: "x64", suffix: "linux_amd64.AppImage", format: "AppImage" },
 	{ system: "linux", architecture: "ARM64", suffix: "linux_arm64.AppImage", format: "AppImage" },
 ] as const;
