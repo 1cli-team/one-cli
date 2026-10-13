@@ -137,13 +137,16 @@ func hasFrontmatterField(header, field string) bool {
 
 func checkGoFormat(root string) error {
 	var changed []string
-	for _, relativeRoot := range []string{"packages/kernel", "packages/cli"} {
+	for _, relativeRoot := range []string{"packages/kernel", "packages/cli", "packages/one-core", "services/desktop-api"} {
 		base := filepath.Join(root, filepath.FromSlash(relativeRoot))
 		err := filepath.WalkDir(base, func(path string, entry fs.DirEntry, walkErr error) error {
 			if walkErr != nil {
 				return walkErr
 			}
 			if entry.IsDir() {
+				if strings.HasPrefix(entry.Name(), "_") {
+					return filepath.SkipDir
+				}
 				return nil
 			}
 			if filepath.Ext(path) != ".go" {

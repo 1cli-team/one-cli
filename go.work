@@ -3,4 +3,6 @@ go 1.26.0
 use (
 	./packages/cli
 	./packages/kernel
+	./packages/one-core
+	./services/desktop-api
 )

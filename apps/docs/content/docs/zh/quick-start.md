@@ -45,9 +45,7 @@ one build -p web
 
 想在浏览器里管理项目和环境变量，可以运行：
 
-```bash
-one serve
-```
+打开 One Desktop，选择“打开工作区”。
 
 Dashboard 支持添加项目、管理环境变量与共享凭据。
 

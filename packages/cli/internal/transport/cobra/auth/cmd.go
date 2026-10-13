@@ -6,10 +6,10 @@ import (
 	"github.com/pkg/browser"
 	"github.com/spf13/cobra"
 
-	authentication "github.com/torchstellar-team/one-cli/packages/cli/internal/application/authentication"
-	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/i18n"
-	session "github.com/torchstellar-team/one-cli/packages/cli/internal/platform/infisicalsession"
-	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/output"
+	authentication "github.com/torchstellar-team/one-cli/packages/one-core/pkg/application/authentication"
+	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/platform/i18n"
+	session "github.com/torchstellar-team/one-cli/packages/one-core/pkg/platform/infisicalsession"
+	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/platform/output"
 )
 
 func Commands() []*cobra.Command {

@@ -7,14 +7,14 @@ import (
 	"strings"
 
 	"github.com/spf13/cobra"
-	"github.com/torchstellar-team/one-cli/packages/cli/internal/application/execution"
-	"github.com/torchstellar-team/one-cli/packages/cli/internal/modules/tasks"
-	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/i18n"
-	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/output"
-	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/preferences"
-	process "github.com/torchstellar-team/one-cli/packages/cli/internal/platform/process"
-	runtimeport "github.com/torchstellar-team/one-cli/packages/cli/internal/ports/runtime"
-	"github.com/torchstellar-team/one-cli/packages/cli/internal/ports/secrets"
+	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/application/execution"
+	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/modules/tasks"
+	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/platform/i18n"
+	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/platform/output"
+	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/platform/preferences"
+	process "github.com/torchstellar-team/one-cli/packages/one-core/pkg/platform/process"
+	runtimeport "github.com/torchstellar-team/one-cli/packages/one-core/pkg/ports/runtime"
+	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/ports/secrets"
 )
 
 func Commands(loaders *secrets.Registry, provider runtimeport.Provider) []*cobra.Command {

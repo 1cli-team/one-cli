@@ -5,8 +5,8 @@ import (
 	"io"
 	"strings"
 
-	environmentmodule "github.com/torchstellar-team/one-cli/packages/cli/internal/modules/environment"
-	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/i18n"
+	environmentmodule "github.com/torchstellar-team/one-cli/packages/one-core/pkg/modules/environment"
+	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/platform/i18n"
 )
 
 type summaryOutput struct{ *environmentmodule.Summary }

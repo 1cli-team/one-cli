@@ -1,0 +1,354 @@
+// Package template handles the template registry and rendering
+// pipeline. registry.go parses + validates registry.json; render.go
+// performs the actual template materialisation under a target dir.
+package template
+
+import (
+	"context"
+	"encoding/json"
+	"io"
+	"net/http"
+	"os"
+	"path/filepath"
+	"strings"
+	"time"
+
+	"github.com/torchstellar-team/one-cli/packages/one-core/internal/resources/bundled"
+	cliErrors "github.com/torchstellar-team/one-cli/packages/one-core/pkg/platform/errors"
+	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/platform/i18n"
+)
+
+// Toolchain is the runtime adapter family for a template.
+type Toolchain string
+
+const (
+	ToolchainNode Toolchain = "node"
+	ToolchainGo   Toolchain = "go"
+	// Empty projects keep an explicit value because legacy manifests default an empty toolchain to Node.
+	ToolchainNone Toolchain = "none"
+)
+
+// Category groups templates in --help and `templates` output.
+type Category string
+
+const (
+	CategoryFrontend Category = "frontend"
+	CategoryBackend  Category = "backend"
+	CategoryLibrary  Category = "library"
+)
+
+// Template is one registry entry. Defaults / Compat are derived from the
+// registry wire shape `domains: { <domain>: { default, compat } }` at parse
+// time and surfaced to the rest of the codebase as flat maps keyed by
+// domain name.
+//
+//   - Defaults: per-domain backend selections auto-enabled when this
+//     template is `one add`-ed (e.g. {"container":"docker","deploy":
+//     "kustomize"} for go-api). The container backend is implicit
+//     (Dockerfile-driven); the deploy backend names which deploy target
+//     this template typically uses.
+//   - Compat: per-domain whitelist used at add time to surface
+//     non-blocking compatibility warnings. Key is the domain (e.g.
+//     "deploy"), value is the list of compatible bare backend names
+//     ("kustomize" / "s3" / ...). Missing domain key = no constraint.
+//     Empty slice = template doesn't participate in this domain at all
+//     (e.g. mobile/library for "deploy").
+type Template struct {
+	ID          string              `json:"id"`
+	Name        string              `json:"name"`
+	Description string              `json:"description"`
+	Category    Category            `json:"category"`
+	Tags        []string            `json:"tags"`
+	Repo        string              `json:"repo"`
+	Toolchain   Toolchain           `json:"toolchain"`
+	Defaults    map[string]string   `json:"-"`
+	Compat      map[string][]string `json:"-"`
+}
+
+// templateDomainSpec mirrors the registry wire shape `domains.<name>` block,
+// used at parse time. The marshaling path goes through
+// Template.MarshalJSON's per-spec map construction so an explicit empty
+// `compat: []` (set vs absent) round-trips faithfully.
+type templateDomainSpec struct {
+	Default string   `json:"default,omitempty"`
+	Compat  []string `json:"compat,omitempty"`
+}
+
+// MarshalJSON renders Template with the registry wire shape that matches
+// registry.json — top-level identity fields plus a `domains` block
+// keyed by domain name. The in-memory Defaults / Compat maps are
+// flattened back into per-domain `{ default, compat }` blocks so callers
+// reading the `one templates` JSON envelope see the exact same shape
+// they would in the source registry.
+//
+// `compat: []` round-trips faithfully: each domain map entry is built
+// individually so an explicit empty slice keeps emitting `"compat": []`
+// rather than collapsing to absent (which carries different semantics —
+// "no constraint" vs "explicitly no compatible backend").
+func (t Template) MarshalJSON() ([]byte, error) {
+	type wire struct {
+		ID          string                    `json:"id"`
+		Name        string                    `json:"name"`
+		Description string                    `json:"description"`
+		Category    Category                  `json:"category"`
+		Tags        []string                  `json:"tags"`
+		Repo        string                    `json:"repo"`
+		Toolchain   Toolchain                 `json:"toolchain"`
+		Domains     map[string]map[string]any `json:"domains,omitempty"`
+	}
+	out := wire{
+		ID:          t.ID,
+		Name:        t.Name,
+		Description: t.Description,
+		Category:    t.Category,
+		Tags:        t.Tags,
+		Repo:        t.Repo,
+		Toolchain:   t.Toolchain,
+	}
+	domainNames := map[string]struct{}{}
+	for name := range t.Defaults {
+		domainNames[name] = struct{}{}
+	}
+	for name := range t.Compat {
+		domainNames[name] = struct{}{}
+	}
+	if len(domainNames) > 0 {
+		out.Domains = map[string]map[string]any{}
+		for name := range domainNames {
+			spec := map[string]any{}
+			if def, ok := t.Defaults[name]; ok && def != "" {
+				spec["default"] = def
+			}
+			if compat, ok := t.Compat[name]; ok {
+				if compat == nil {
+					compat = []string{}
+				}
+				spec["compat"] = compat
+			}
+			out.Domains[name] = spec
+		}
+	}
+	return json.Marshal(out)
+}
+
+// RegistryVersion is the current registry.json schema version.
+const RegistryVersion = 1
+
+// Registry is the parsed registry document.
+type Registry struct {
+	Version   int        `json:"version"`
+	Templates []Template `json:"templates"`
+}
+
+// Fetch loads the registry from (in order of precedence):
+//  1. explicit url argument (HTTP/HTTPS or local path)
+//  2. embedded builtin registry.json
+//
+// HTTP requests have a 15s timeout. The optional bearer token is read
+// from auth.ResolveToken (private templates).
+func Fetch(ctx context.Context, urlOverride string) (*Registry, error) {
+	source := strings.TrimSpace(urlOverride)
+	if source == "" {
+		return parseAndValidate(bundled.RegistryBytes)
+	}
+
+	raw, err := loadRaw(ctx, source)
+	if err != nil {
+		return nil, err
+	}
+	return parseAndValidate(raw)
+}
+
+func loadRaw(ctx context.Context, source string) ([]byte, error) {
+	if isHTTPURL(source) {
+		return loadHTTP(ctx, source)
+	}
+	return loadLocal(source)
+}
+
+func isHTTPURL(s string) bool {
+	return strings.HasPrefix(s, "http://") || strings.HasPrefix(s, "https://")
+}
+
+func loadHTTP(ctx context.Context, url string) ([]byte, error) {
+	ctx, cancel := context.WithTimeout(ctx, 15*time.Second)
+	defer cancel()
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+	if err != nil {
+		return nil, cliErrors.New(cliErrors.REGISTRY_FETCH_FAILED, i18n.T("registry.fetch_failed"))
+	}
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return nil, cliErrors.New(cliErrors.REGISTRY_FETCH_FAILED, i18n.T("registry.fetch_failed"))
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		return nil, cliErrors.New(cliErrors.REGISTRY_FETCH_FAILED,
+			i18n.Tf("registry.http_failed", resp.StatusCode))
+	}
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, cliErrors.New(cliErrors.REGISTRY_FETCH_FAILED, i18n.T("registry.read_failed"))
+	}
+	return body, nil
+}
+
+func loadLocal(p string) ([]byte, error) {
+	abs := p
+	if !filepath.IsAbs(abs) {
+		cwd, err := os.Getwd()
+		if err == nil {
+			abs = filepath.Join(cwd, abs)
+		}
+	}
+	if _, err := os.Stat(abs); err != nil {
+		return nil, cliErrors.New(cliErrors.REGISTRY_NOT_FOUND,
+			i18n.Tf("registry.file_missing", abs))
+	}
+	body, err := os.ReadFile(abs)
+	if err != nil {
+		return nil, cliErrors.New(cliErrors.REGISTRY_INVALID, i18n.T("registry.invalid"))
+	}
+	return body, nil
+}
+
+func parseAndValidate(raw []byte) (*Registry, error) {
+	var doc map[string]json.RawMessage
+	if err := json.Unmarshal(raw, &doc); err != nil {
+		return nil, cliErrors.New(cliErrors.REGISTRY_INVALID, i18n.T("registry.invalid"))
+	}
+	versionRaw, ok := doc["version"]
+	if !ok {
+		return nil, cliErrors.New(cliErrors.REGISTRY_INVALID, i18n.T("registry.version_missing"))
+	}
+	var version int
+	if err := json.Unmarshal(versionRaw, &version); err != nil {
+		return nil, cliErrors.New(cliErrors.REGISTRY_INVALID, i18n.T("registry.version_missing"))
+	}
+	if version != RegistryVersion {
+		msg := i18n.Tf("registry.version_unsupported", version, RegistryVersion)
+		if version == 0 {
+			msg += i18n.T("registry.migrate")
+		}
+		return nil, cliErrors.New(cliErrors.REGISTRY_INVALID, msg)
+	}
+	templatesRaw, ok := doc["templates"]
+	if !ok {
+		return nil, cliErrors.New(cliErrors.REGISTRY_INVALID, i18n.T("registry.templates_missing"))
+	}
+	var rawTemplates []map[string]json.RawMessage
+	if err := json.Unmarshal(templatesRaw, &rawTemplates); err != nil {
+		return nil, cliErrors.New(cliErrors.REGISTRY_INVALID, i18n.T("registry.templates_missing"))
+	}
+
+	templates := make([]Template, 0, len(rawTemplates))
+	for i, item := range rawTemplates {
+		t, err := validateTemplate(item, i)
+		if err != nil {
+			return nil, err
+		}
+		templates = append(templates, t)
+	}
+	return &Registry{Version: version, Templates: templates}, nil
+}
+
+var validCategories = map[Category]struct{}{
+	CategoryFrontend: {},
+	CategoryBackend:  {},
+	CategoryLibrary:  {},
+}
+
+var validToolchains = map[Toolchain]struct{}{
+	ToolchainNode: {},
+	ToolchainGo:   {},
+	ToolchainNone: {},
+}
+
+func validateTemplate(raw map[string]json.RawMessage, index int) (Template, error) {
+	var t Template
+	if err := unmarshalString(raw, "id", &t.ID); err != nil || t.ID == "" {
+		return t, cliErrors.New(cliErrors.REGISTRY_INVALID,
+			i18n.Tf("registry.id_missing", index))
+	}
+	if err := unmarshalString(raw, "name", &t.Name); err != nil || t.Name == "" {
+		return t, cliErrors.New(cliErrors.REGISTRY_INVALID,
+			i18n.Tf("registry.name_missing", t.ID))
+	}
+	if err := unmarshalString(raw, "description", &t.Description); err != nil {
+		return t, cliErrors.New(cliErrors.REGISTRY_INVALID,
+			i18n.Tf("registry.description_missing", t.ID))
+	}
+	var category string
+	if err := unmarshalString(raw, "category", &category); err != nil {
+		return t, cliErrors.New(cliErrors.REGISTRY_INVALID,
+			i18n.Tf("registry.category_invalid", t.ID))
+	}
+	t.Category = Category(category)
+	if _, ok := validCategories[t.Category]; !ok {
+		return t, cliErrors.New(cliErrors.REGISTRY_INVALID,
+			i18n.Tf("registry.category_invalid", t.ID))
+	}
+	if tagsRaw, ok := raw["tags"]; ok {
+		if err := json.Unmarshal(tagsRaw, &t.Tags); err != nil {
+			return t, cliErrors.New(cliErrors.REGISTRY_INVALID,
+				i18n.Tf("registry.tags_invalid", t.ID))
+		}
+	} else {
+		return t, cliErrors.New(cliErrors.REGISTRY_INVALID,
+			i18n.Tf("registry.tags_invalid", t.ID))
+	}
+	if err := unmarshalString(raw, "repo", &t.Repo); err != nil || t.Repo == "" {
+		return t, cliErrors.New(cliErrors.REGISTRY_INVALID,
+			i18n.Tf("registry.repo_missing", t.ID))
+	}
+	// toolchain is required in the current schema.
+	toolchainRaw, ok := raw["toolchain"]
+	if !ok {
+		return t, cliErrors.New(cliErrors.REGISTRY_INVALID,
+			i18n.Tf("registry.toolchain_missing", t.ID))
+	}
+	var toolchain string
+	if err := json.Unmarshal(toolchainRaw, &toolchain); err != nil {
+		return t, cliErrors.New(cliErrors.REGISTRY_INVALID,
+			i18n.Tf("registry.toolchain_invalid", t.ID))
+	}
+	t.Toolchain = Toolchain(toolchain)
+	if _, ok := validToolchains[t.Toolchain]; !ok {
+		return t, cliErrors.New(cliErrors.REGISTRY_INVALID,
+			i18n.Tf("registry.toolchain_invalid", t.ID))
+	}
+	// Unified domains block: `domains: { <name>: { default, compat } }`
+	// is the on-disk shape; we flatten it to t.Defaults / t.Compat for the
+	// rest of the codebase. Missing block = no defaults / no constraints.
+	if dRaw, ok := raw["domains"]; ok {
+		var domains map[string]templateDomainSpec
+		if err := json.Unmarshal(dRaw, &domains); err != nil {
+			return t, cliErrors.New(cliErrors.REGISTRY_INVALID,
+				i18n.Tf("registry.domains_invalid", t.ID))
+		}
+		for name, spec := range domains {
+			if spec.Default != "" {
+				if t.Defaults == nil {
+					t.Defaults = map[string]string{}
+				}
+				t.Defaults[name] = spec.Default
+			}
+			if spec.Compat != nil {
+				if t.Compat == nil {
+					t.Compat = map[string][]string{}
+				}
+				t.Compat[name] = spec.Compat
+			}
+		}
+	}
+	return t, nil
+}
+
+func unmarshalString(raw map[string]json.RawMessage, key string, dst *string) error {
+	v, ok := raw[key]
+	if !ok {
+		return i18n.Errorf("registry.field_missing", key)
+	}
+	return json.Unmarshal(v, dst)
+}

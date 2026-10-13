@@ -4,9 +4,6 @@ version = 2
 id = "one-cli"
 name = "One CLI"
 
-[projects.dashboard]
-path = "apps/dashboard"
-toolchain = "node"
 
 [projects.docs]
 path = "apps/docs"
@@ -19,3 +16,15 @@ toolchain = "go"
 [projects.kernel]
 path = "packages/kernel"
 toolchain = "go"
+
+[projects.one-core]
+path = "packages/one-core"
+toolchain = "go"
+
+[projects.desktop-api]
+path = "services/desktop-api"
+toolchain = "go"
+
+[projects.desktop]
+path = "apps/desktop"
+toolchain = "node"

@@ -4,8 +4,8 @@ import (
 	"os"
 
 	"github.com/spf13/cobra"
-	skillsmodule "github.com/torchstellar-team/one-cli/packages/cli/internal/modules/skills"
-	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/i18n"
+	skillsmodule "github.com/torchstellar-team/one-cli/packages/one-core/pkg/modules/skills"
+	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/platform/i18n"
 )
 
 func Commands(run skillsmodule.RunFunc) []*cobra.Command {

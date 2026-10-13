@@ -41,8 +41,6 @@ tasks:
     cmds: ['go mod tidy']
   sync-bundled:
     cmds: ['go run ./tools/sync-resources bundled']
-  sync-web:
-    cmds: ['go run ./tools/sync-resources web']
   gen-error-codes:
     cmds: ['go run ./tools/gen-error-codes']
   verify-docs:
@@ -54,6 +52,3 @@ tasks:
     cmds: ['go run ./tools/repo-checks node-workspace']
   install-launcher:
     cmds: ['go run ./tools/install-local bin/one{{.GOEXE}}']
-  dev:
-    dir: ../..
-    cmds: ['go run ./packages/cli/cmd/one serve --port 5174 --open=false -o text']

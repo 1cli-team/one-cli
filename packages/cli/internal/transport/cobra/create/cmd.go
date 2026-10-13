@@ -6,9 +6,9 @@ package createcmd
 
 import (
 	"github.com/spf13/cobra"
-	creationmodule "github.com/torchstellar-team/one-cli/packages/cli/internal/modules/creation"
-	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/helpui"
-	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/i18n"
+	creationmodule "github.com/torchstellar-team/one-cli/packages/one-core/pkg/modules/creation"
+	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/platform/helpui"
+	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/platform/i18n"
 )
 
 type Dependencies struct {

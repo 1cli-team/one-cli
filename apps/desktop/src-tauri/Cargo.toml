@@ -1,0 +1,30 @@
+[package]
+name = "one-desktop"
+version = "0.0.0"
+description = "One Desktop"
+edition = "2021"
+rust-version = "1.90"
+license = "MIT"
+
+[build-dependencies]
+tauri-build = { version = "=2.7.2", features = [] }
+
+[dependencies]
+tauri = { version = "=2.12.3", features = [] }
+tauri-plugin-dialog = "=2.8.2"
+tauri-plugin-opener = "=2.7.1"
+tauri-plugin-single-instance = "=2.5.3"
+tauri-plugin-updater = "=2.13.3"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+uuid = { version = "1", features = ["v4"] }
+getrandom = "=0.3.4"
+
+[features]
+custom-protocol = ["tauri/custom-protocol"]
+
+# Rust 1.94 proc-macro stripping can produce dylibs rejected by macOS 27.
+# Keep compiler-loaded build dependencies unstripped (rust-lang/rust#157750).
+[profile.release.build-override]
+debug = true
+strip = "none"

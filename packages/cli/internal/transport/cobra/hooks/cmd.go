@@ -10,13 +10,13 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/torchstellar-team/one-cli/packages/cli/internal/application/execution"
-	"github.com/torchstellar-team/one-cli/packages/cli/internal/core/workspace"
-	"github.com/torchstellar-team/one-cli/packages/cli/internal/modules/hooks"
-	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/i18n"
-	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/output"
-	platformprocess "github.com/torchstellar-team/one-cli/packages/cli/internal/platform/process"
-	runtimeport "github.com/torchstellar-team/one-cli/packages/cli/internal/ports/runtime"
+	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/application/execution"
+	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/core/workspace"
+	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/modules/hooks"
+	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/platform/i18n"
+	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/platform/output"
+	platformprocess "github.com/torchstellar-team/one-cli/packages/one-core/pkg/platform/process"
+	runtimeport "github.com/torchstellar-team/one-cli/packages/one-core/pkg/ports/runtime"
 )
 
 func ConfigureCommand() *cobra.Command {

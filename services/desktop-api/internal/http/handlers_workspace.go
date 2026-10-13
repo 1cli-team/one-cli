@@ -1,0 +1,56 @@
+package serve
+
+// handlers_workspace.go exposes read-only views of a workspace resolved from
+// its registry entry by the /workspaces/{entryId} routes.
+
+import (
+	"net/http"
+
+	cliErrors "github.com/torchstellar-team/one-cli/packages/one-core/pkg/platform/errors"
+)
+
+func handleGetWorkspaceOverview(opts MuxOpts) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		ov, err := opts.WorkspaceService.Overview(opts.WorkspaceRoot, r.URL.Query().Get("env"))
+		if err != nil {
+			writeError(w, http.StatusInternalServerError, cliErrors.MANIFEST_INVALID,
+				err.Error(), map[string]any{"root": opts.WorkspaceRoot})
+			return
+		}
+		writeJSON(w, http.StatusOK, ov)
+	}
+}
+
+func handleGetWorkspaceProject(opts MuxOpts) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if opts.WorkspaceRoot == "" {
+			writeNoWorkspace(w)
+			return
+		}
+		settings, err := opts.WorkspaceService.ProjectSettings(
+			r.Context(), opts.WorkspaceRoot, r.PathValue("name"), r.URL.Query().Get("env"),
+		)
+		if err != nil {
+			writeWorkspaceMutationErr(w, err)
+			return
+		}
+		writeJSON(w, http.StatusOK, settings)
+	}
+}
+
+func handleGetWorkspaceEnvironment(opts MuxOpts) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if opts.WorkspaceRoot == "" {
+			writeNoWorkspace(w)
+			return
+		}
+		settings, err := opts.WorkspaceService.WorkspaceEnvironment(
+			r.Context(), opts.WorkspaceRoot, r.URL.Query().Get("env"),
+		)
+		if err != nil {
+			writeWorkspaceMutationErr(w, err)
+			return
+		}
+		writeJSON(w, http.StatusOK, settings)
+	}
+}

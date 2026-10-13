@@ -6,9 +6,9 @@ import (
 	"io"
 
 	"github.com/spf13/cobra"
-	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/i18n"
-	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/output"
-	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/updatecheck"
+	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/platform/i18n"
+	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/platform/output"
+	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/platform/updatecheck"
 )
 
 func Command() *cobra.Command { return command(updatecheck.Upgrade) }

@@ -11,7 +11,7 @@ description: One CLI 日常命令和高级入口。
 | `one login` / `one whoami` / `one logout` | 单账号浏览器会话 |
 | `one env --global` | 发现共享凭据位置与环境 |
 | `one exec` | 注入变量后执行命令 |
-| `one serve` | 打开 Dashboard |
+| `one serve` | 显示 One Desktop 迁移说明 |
 | `one locale` | 本机语言 |
 | `one upgrade` | 将 One CLI 更新到最新稳定版 |
 | `one init mise` / `one init hooks` | 工作区工具配置 |

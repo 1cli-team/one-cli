@@ -14,22 +14,12 @@ package cli
 import (
 	"context"
 	"errors"
+	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/bootstrap"
 	"os"
 	"strings"
 
 	"github.com/spf13/cobra"
 
-	"github.com/torchstellar-team/one-cli/packages/cli/internal/application/execution"
-	"github.com/torchstellar-team/one-cli/packages/cli/internal/core/workspace"
-	skillsmodule "github.com/torchstellar-team/one-cli/packages/cli/internal/modules/skills"
-	"github.com/torchstellar-team/one-cli/packages/cli/internal/modules/tasks"
-	cliErrors "github.com/torchstellar-team/one-cli/packages/cli/internal/platform/errors"
-	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/helpui"
-	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/i18n"
-	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/output"
-	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/preferences"
-	platformprocess "github.com/torchstellar-team/one-cli/packages/cli/internal/platform/process"
-	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/updatecheck"
 	addcmd "github.com/torchstellar-team/one-cli/packages/cli/internal/transport/cobra/add"
 	authcmd "github.com/torchstellar-team/one-cli/packages/cli/internal/transport/cobra/auth"
 	createcmd "github.com/torchstellar-team/one-cli/packages/cli/internal/transport/cobra/create"
@@ -44,30 +34,38 @@ import (
 	skillscmd "github.com/torchstellar-team/one-cli/packages/cli/internal/transport/cobra/skills"
 	templatescmd "github.com/torchstellar-team/one-cli/packages/cli/internal/transport/cobra/templates"
 	upgradecmd "github.com/torchstellar-team/one-cli/packages/cli/internal/transport/cobra/upgrade"
+	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/application/execution"
+	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/core/workspace"
+	skillsmodule "github.com/torchstellar-team/one-cli/packages/one-core/pkg/modules/skills"
+	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/modules/tasks"
+	cliErrors "github.com/torchstellar-team/one-cli/packages/one-core/pkg/platform/errors"
+	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/platform/helpui"
+	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/platform/i18n"
+	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/platform/output"
+	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/platform/preferences"
+	platformprocess "github.com/torchstellar-team/one-cli/packages/one-core/pkg/platform/process"
+	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/platform/updatecheck"
 )
 
 func newRootCommand() *cobra.Command {
-	deps := composeDependencies()
+	deps := bootstrap.Compose()
 	root := &cobra.Command{
 		Use:           "one",
 		SilenceUsage:  true,
 		SilenceErrors: true,
 	}
 	groups := [][]*cobra.Command{
-		addcmd.Commands(deps.creation),
+		addcmd.Commands(deps.Creation),
 		authcmd.Commands(),
 		{localecmd.Command(), initcmd.Command(), upgradecmd.Command()},
-		createcmd.Commands(createcmd.Dependencies{Creation: deps.creation}),
-		misecmd.RuntimeCommands(deps.runtime),
-		skillscmd.Commands((skillsmodule.Runner{Runtime: deps.runtime}).Run),
-		hookscmd.Commands(deps.runtime),
-		envcmd.Commands(envcmd.Dependencies{Service: deps.environments}),
-		execcmd.Commands(deps.loaders, deps.runtime),
-		runcmd.Commands(deps.loaders, deps.runtime),
-		servecmd.Commands(servecmd.Dependencies{
-			Catalog: deps.catalog, Workspaces: deps.workspaces, Creation: deps.creation,
-			Registry: deps.registry, Manifest: deps.manifest, Environments: deps.environments,
-		}),
+		createcmd.Commands(createcmd.Dependencies{Creation: deps.Creation}),
+		misecmd.RuntimeCommands(deps.Runtime),
+		skillscmd.Commands((skillsmodule.Runner{Runtime: deps.Runtime}).Run),
+		hookscmd.Commands(deps.Runtime),
+		envcmd.Commands(envcmd.Dependencies{Service: deps.Environments}),
+		execcmd.Commands(deps.Loaders, deps.Runtime),
+		runcmd.Commands(deps.Loaders, deps.Runtime),
+		servecmd.Commands(),
 		templatescmd.Commands(),
 	}
 	for _, commands := range groups {

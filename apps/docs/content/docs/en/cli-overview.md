@@ -11,7 +11,7 @@ description: Daily commands and advanced entry points.
 | `one login` / `one whoami` / `one logout` | Single browser session |
 | `one env --global` | Discover global variable locations and environments |
 | `one exec` | Run a command with injected variables |
-| `one serve` | Open the Dashboard |
+| `one serve` | Show the One Desktop migration message |
 | `one locale` | Local language preference |
 | `one upgrade` | Update One CLI to the latest stable release |
 | `one init mise` / `one init hooks` | Workspace tool configuration |

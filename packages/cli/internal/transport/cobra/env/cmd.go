@@ -8,11 +8,11 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/torchstellar-team/one-cli/packages/cli/internal/application/execution"
-	environmentmodule "github.com/torchstellar-team/one-cli/packages/cli/internal/modules/environment"
-	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/helpui"
-	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/i18n"
-	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/output"
+	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/application/execution"
+	environmentmodule "github.com/torchstellar-team/one-cli/packages/one-core/pkg/modules/environment"
+	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/platform/helpui"
+	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/platform/i18n"
+	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/platform/output"
 )
 
 type Dependencies struct {

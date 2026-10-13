@@ -18,7 +18,7 @@ One keeps one active Infisical account. Complete login in the browser; the sessi
 
 Both the Dashboard and `one login` prepare shared credentials after successful authentication. They reuse an accessible `shared-credentials` project in the current instance and organization, or create it if absent, with `dev` as the initial default environment. A project created by another account can be reused; an old account's local binding is updated silently. Legacy bindings to differently named projects switch to `shared-credentials`; the original projects and credentials are retained without migration or deletion.
 
-Bindings are stored locally per instance, account and organization. Signing in again preserves a valid default environment for that identity. Signing out clears the session and displayed values and cancels preparation, while retaining bindings and remote data. `one serve` also checks an existing signed-in session at startup. Permission, network or preparation failures do not undo authentication. The Dashboard shows the reason and a retry action; use `one env bind --global` for CLI recovery.
+Bindings are stored locally per instance, account and organization. Signing in again preserves a valid default environment for that identity. Signing out clears the session and displayed values and cancels preparation, while retaining bindings and remote data. One Desktop also checks an existing signed-in session at startup. Permission, network or preparation failures do not undo authentication. The Dashboard shows the reason and a retry action; use `one env bind --global` for CLI recovery.
 
 Use `--global` to access shared credentials. `one env bind --global --env ENV` changes the default environment, which must exist remotely. `--project-id` remains an advanced compatibility option; subsequent login or Dashboard startup reapplies automatic binding to `shared-credentials`:
 
@@ -37,7 +37,7 @@ The CLI never displays secret values. Inject shared credentials with `one exec -
 
 ## Dashboard
 
-Run `one serve`. Settings manages browser login, pending callbacks, cancellation, logout, and language. Shared credentials manages the storage project, browsing environment, folders, and variables. Values are fetched only on reveal or copy and cleared when the account, environment, folder, or page changes. Remote edits take effect immediately. Workspace bindings are reviewed and confirmed in the **Bind Infisical** dialog. Save or discard pending configuration first; stale configuration requires a refresh. Other Manifest changes keep the draft review and save workflow.
+Open One Desktop. Settings manages browser login, pending callbacks, cancellation, logout, and language. Shared credentials manages the storage project, browsing environment, folders, and variables. Values are fetched only on reveal or copy and cleared when the account, environment, folder, or page changes. Remote edits take effect immediately. Workspace bindings are reviewed and confirmed in the **Bind Infisical** dialog. Save or discard pending configuration first; stale configuration requires a refresh. Other Manifest changes keep the draft review and save workflow.
 
 ## Security boundaries
 

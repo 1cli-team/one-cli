@@ -6,11 +6,11 @@ import (
 	"path/filepath"
 	"strings"
 
-	remote "github.com/torchstellar-team/one-cli/packages/cli/internal/modules/environment"
-	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/i18n"
-	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/output"
-	process "github.com/torchstellar-team/one-cli/packages/cli/internal/platform/process"
-	"github.com/torchstellar-team/one-cli/packages/cli/internal/ports/secrets"
+	remote "github.com/torchstellar-team/one-cli/packages/one-core/pkg/modules/environment"
+	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/platform/i18n"
+	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/platform/output"
+	process "github.com/torchstellar-team/one-cli/packages/one-core/pkg/platform/process"
+	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/ports/secrets"
 )
 
 func runGlobal(ctx context.Context, f *runFlags, args []string) error {

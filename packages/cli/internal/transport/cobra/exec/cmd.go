@@ -14,15 +14,15 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/torchstellar-team/one-cli/packages/cli/internal/application/execution"
-	"github.com/torchstellar-team/one-cli/packages/cli/internal/core/workspace"
-	"github.com/torchstellar-team/one-cli/packages/cli/internal/modules/toolenv"
-	cliErrors "github.com/torchstellar-team/one-cli/packages/cli/internal/platform/errors"
-	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/i18n"
-	"github.com/torchstellar-team/one-cli/packages/cli/internal/platform/output"
-	platformprocess "github.com/torchstellar-team/one-cli/packages/cli/internal/platform/process"
-	runtimeport "github.com/torchstellar-team/one-cli/packages/cli/internal/ports/runtime"
-	"github.com/torchstellar-team/one-cli/packages/cli/internal/ports/secrets"
+	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/application/execution"
+	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/core/workspace"
+	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/modules/toolenv"
+	cliErrors "github.com/torchstellar-team/one-cli/packages/one-core/pkg/platform/errors"
+	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/platform/i18n"
+	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/platform/output"
+	platformprocess "github.com/torchstellar-team/one-cli/packages/one-core/pkg/platform/process"
+	runtimeport "github.com/torchstellar-team/one-cli/packages/one-core/pkg/ports/runtime"
+	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/ports/secrets"
 )
 
 func Commands(loaders *secrets.Registry, provider runtimeport.Provider) []*cobra.Command {

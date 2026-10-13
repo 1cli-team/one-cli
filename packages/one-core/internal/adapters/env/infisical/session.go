@@ -1,0 +1,11 @@
+package infisical
+
+import session "github.com/torchstellar-team/one-cli/packages/one-core/pkg/platform/infisicalsession"
+
+func sessionCredentials() (*Credentials, string, error) {
+	current, err := session.Require()
+	if err != nil {
+		return nil, "", err
+	}
+	return &Credentials{AccessToken: current.Token}, current.SiteURL, nil
+}

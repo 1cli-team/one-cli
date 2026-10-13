@@ -1,31 +1,10 @@
 ---
 title: one serve
-description: 本地工作区、登录与共享凭据 Dashboard。
+description: Dashboard 已迁移至 One Desktop。
 ---
 
-```bash
-one serve
-one serve --port 0 --open=false
-```
+`one serve` 保留为迁移提示，不再启动 HTTP 服务或打开浏览器。原 `--port`、`--host`、`--open` 等服务参数已移除。
 
-可在任意目录运行 `one serve`。在工作区根目录或其子目录启动时，One 会向上查找最近的 `one.manifest.toml`，自动登记该工作区并打开它的页面；在普通目录启动时，打开本机工作区列表。重复启动会更新已有记录。
+打开 One Desktop 管理本机工作区、登录、变量和共享凭据。`one create` 自动登记新工作区，已有工作区通过桌面版的“打开工作区”选择目录。工作区登记继续存放在 `~/.config/one/workspaces.json`，支持 `XDG_CONFIG_HOME`。
 
-`one create` 会自动登记新工作区。登记信息保存在本机 `~/.config/one/workspaces.json`，支持 `XDG_CONFIG_HOME`；之后可在任意目录启动 Dashboard 访问这些工作区。
-
-服务只允许回环地址。侧栏提供工作区、共享凭据和设置；所有页面共用当前 Infisical 账号。设置页打开浏览器登录，支持等待、重新打开、取消、退出和自定义实例。
-
-共享凭据页支持一键初始化默认位置、新建项目或选择已有 Secret Manager 项目作为存放位置，按环境与目录浏览名称和说明。列表不包含明文；查看、复制、编辑和删除均显式操作。远端修改立即生效，删除会显示完整目标范围。
-
-项目页面展示项目信息，并在其下直接展示环境配置。工作区环境选择已有 Infisical 项目，项目配置与工作区绑定通过统一 Manifest 草稿审阅和保存；远端变量不进入草稿或仓库。浏览环境不会改变默认环境。
-
-安全限制及 CLI 用法见[登录与本机设置](/zh/docs/login/)。
-
-## 本地 HTTP 接口
-
-工作区请求统一使用 `/api/workspaces/{entryId}/*`；`entryId` 来自 `GET /api/workspaces`。配置变更使用带 revision 校验的 Manifest 预览和保存接口。
-
-旧的 `/api/workspace/*`、直接修改项目配置的两个 PUT 接口，以及 `GET /api/global-env/location` 已移除。调用这些旧入口会返回 404 或 405；旧项目写入请求不再返回 409 兼容提示。共享凭据位置从 `GET /api/session` 的 `sharedCredentials.location` 读取；初始化尚未完成时，该字段可能不存在。
-
-## 开发服务
-
-在终端中使用 `one dev -p <项目名> --env <环境>` 启动开发服务，并通过终端进行输入、查看输出和控制进程。
+终端用户继续使用 `one run`、`one env`、`one login` 等命令。桌面版内置独立的 `one-api` 后端和 `one`，首次启动可选择安装终端 CLI。
