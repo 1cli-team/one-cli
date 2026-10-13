@@ -192,16 +192,22 @@ func (m *model) treeKey(key string) {
 		} else if m.selected != 0 && len(node.children) > 0 {
 			m.tree.collapsed[m.selected] = !m.tree.collapsed[m.selected]
 		}
-	case "home":
-		m.selected = 0
-	case "end":
-		rows := m.tree.visible()
-		m.selected = rows[len(rows)-1].id
 	}
 }
 
 func (m *model) navigateTask(delta int) tea.Cmd { return m.navigateSidebar(delta) }
 func (m *model) navigateTree(key string) tea.Cmd {
+	if key == "home" || key == "end" {
+		items := m.sidebarItems()
+		row := items[0]
+		if key == "end" {
+			row = items[len(items)-1]
+		}
+		m.runningFocus = row.running
+		cmd := m.selectTask(row.id)
+		m.ensureSidebarSelection()
+		return cmd
+	}
 	previous := m.selected
 	if m.runningFocus {
 		switch key {
@@ -213,8 +219,6 @@ func (m *model) navigateTree(key string) tea.Cmd {
 		case "enter":
 			m.taskFocus = false
 			return nil
-		case "home", "end":
-			m.runningFocus = false
 		default:
 			return nil
 		}

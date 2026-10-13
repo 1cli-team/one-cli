@@ -5,7 +5,6 @@ import (
 	"time"
 
 	"charm.land/lipgloss/v2"
-	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/platform/i18n"
 )
 
 // StateSource returns immutable snapshots from the invocation's worker events.
@@ -75,18 +74,6 @@ func stateSymbol(status string) string {
 		return "?"
 	}
 }
-func (m model) statusLabel() string {
-	if m.task() == "" {
-		return ""
-	}
-	state := m.state(m.task())
-	label := i18n.T("tasks.ui.state." + state.Status)
-	if state.Status == "failed" {
-		label = i18n.Tf("tasks.ui.state.exit", state.ExitCode)
-	}
-	return stateMarker(state.Status) + " " + label
-}
-
 func stateMarker(status string) string {
 	color := "8"
 	switch status {
