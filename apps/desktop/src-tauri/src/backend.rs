@@ -139,8 +139,17 @@ fn run_child(
     } else {
         "tauri://localhost"
     };
+    let mut command = Command::new(&path);
+    #[cfg(windows)]
+    {
+        use std::os::windows::process::CommandExt;
+        // The Go sidecar is a console executable. Keep it console-free while
+        // retaining the pipes used for bootstrap and graceful shutdown.
+        const CREATE_NO_WINDOW: u32 = 0x08000000;
+        command.creation_flags(CREATE_NO_WINDOW);
+    }
     let mut child = OwnedChild(
-        Command::new(&path)
+        command
             .stdin(Stdio::piped())
             .stdout(Stdio::piped())
             .stderr(Stdio::null())
