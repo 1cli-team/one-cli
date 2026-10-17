@@ -20,6 +20,16 @@ One Desktop installers and CLI archives share the same Release. Open One Desktop
 
 One Desktop 安装包与 CLI 归档位于同一 Release。工作区、账号、项目变量和共享凭据通过 One Desktop 管理。
 
+## Sign in over SSH / SSH 远程登录
+
+```sh
+one login --no-browser
+```
+
+Open the displayed URL in your own computer's browser, sign in to Infisical, and paste the browser's CLI login token into the remote terminal's hidden prompt. SSH sessions select this mode automatically, so `one login` also works. No port forwarding is needed. Use `--site-url` for a self-hosted instance. Sign-in expires after 10 minutes and requires an interactive terminal plus an unlocked system credential store (Secret Service on Linux). Check the result with `one whoami`.
+
+在自己电脑的浏览器中打开终端显示的链接，登录 Infisical 后，将浏览器中的 CLI 登录令牌粘贴到远端终端的隐藏输入框。SSH 会话自动选择此模式，直接运行 `one login` 也可以，无需端口转发。自建实例可通过 `--site-url` 指定地址。登录有效期为 10 分钟，需要交互式终端及已解锁的系统凭据存储（Linux 使用 Secret Service）。完成后通过 `one whoami` 查看登录状态。
+
 ## Agent entry points / AI 入口
 
 Use the installed CLI as the source of truth. Read the workspace's `AGENTS.md` and `one.manifest.toml` before changing projects.

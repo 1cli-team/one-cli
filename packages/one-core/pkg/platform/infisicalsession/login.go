@@ -3,6 +3,7 @@ package infisicalsession
 import (
 	"context"
 	"crypto/rand"
+	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
@@ -11,6 +12,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 	"time"
 
@@ -26,6 +28,30 @@ type Attempt struct {
 	mu     sync.Mutex
 	info   Info
 	err    error
+	submit func(loginCredentials) error
+}
+
+type loginCredentials struct {
+	Email string `json:"email"`
+	Token string `json:"JTWToken"`
+}
+
+// SubmitBrowserToken accepts the base64-encoded credentials displayed by
+// Infisical when its browser cannot reach the CLI callback (for example SSH).
+// Verification and persistence are shared with the browser callback.
+func (a *Attempt) SubmitBrowserToken(raw string) error {
+	if len(raw) > 96<<10 {
+		return i18n.Errorf("auth.login.browser_token_invalid")
+	}
+	decoded, err := base64.StdEncoding.DecodeString(strings.TrimSpace(raw))
+	if err != nil {
+		return i18n.Errorf("auth.login.browser_token_invalid")
+	}
+	var credentials loginCredentials
+	if json.Unmarshal(decoded, &credentials) != nil || credentials.Token == "" {
+		return i18n.Errorf("auth.login.browser_token_invalid")
+	}
+	return a.submit(credentials)
 }
 
 func (a *Attempt) Cancel() { a.cancel() }
@@ -98,6 +124,32 @@ func Start(ctx context.Context, site string) (*Attempt, error) {
 		return nil, err
 	}
 	results := make(chan *Session, 1)
+	var submitMu sync.Mutex
+	accepted := false
+	a.submit = func(credentials loginCredentials) error {
+		if ctx.Err() != nil {
+			return i18n.Errorf("auth.login_timeout")
+		}
+		s, err := verifiedSession(ctx, site, credentials.Token, credentials.Email)
+		if err != nil {
+			return err
+		}
+		if old.UserID != "" && (s.UserID != old.UserID || s.SiteURL != old.SiteURL) {
+			return i18n.Errorf("auth.login.account_changed")
+		}
+		submitMu.Lock()
+		defer submitMu.Unlock()
+		if accepted {
+			return i18n.Errorf("auth.login_pending")
+		}
+		select {
+		case <-ctx.Done():
+			return i18n.Errorf("auth.login_timeout")
+		case results <- s:
+			accepted = true
+			return nil
+		}
+	}
 	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Cache-Control", "no-store")
 		if r.Host != listener.Addr().String() && r.Host != fmt.Sprintf("localhost:%d", listener.Addr().(*net.TCPAddr).Port) {
@@ -127,29 +179,16 @@ func Start(ctx context.Context, site string) (*Attempt, error) {
 			http.Error(w, "JSON required", 415)
 			return
 		}
-		var payload struct {
-			Email string `json:"email"`
-			Token string `json:"JTWToken"`
-		}
+		var payload loginCredentials
 		if json.NewDecoder(http.MaxBytesReader(w, r.Body, 64<<10)).Decode(&payload) != nil {
 			http.Error(w, "Invalid callback", 400)
 			return
 		}
-		session, e := verifiedSession(ctx, site, payload.Token, payload.Email)
-		if e != nil {
+		if e := a.submit(payload); e != nil {
 			http.Error(w, "Login verification failed", 401)
 			return
 		}
-		if old.UserID != "" && (session.UserID != old.UserID || session.SiteURL != old.SiteURL) {
-			http.Error(w, "Log out before changing account", 409)
-			return
-		}
-		select {
-		case results <- session:
-			w.WriteHeader(200)
-		default:
-			http.Error(w, "Login already received", 409)
-		}
+		w.WriteHeader(200)
 	})
 	server := &http.Server{Handler: handler, ReadHeaderTimeout: 5 * time.Second, ReadTimeout: 35 * time.Second, WriteTimeout: 35 * time.Second}
 	go func() { _ = server.Serve(listener) }()
