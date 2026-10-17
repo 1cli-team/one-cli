@@ -1,7 +1,10 @@
 package authcmd
 
 import (
+	"context"
 	"fmt"
+	"os"
+	"time"
 
 	"github.com/pkg/browser"
 	"github.com/spf13/cobra"
@@ -10,18 +13,59 @@ import (
 	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/platform/i18n"
 	session "github.com/torchstellar-team/one-cli/packages/one-core/pkg/platform/infisicalsession"
 	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/platform/output"
+	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/platform/prompt"
 )
 
 func Commands() []*cobra.Command {
 	var site string
-	login := &cobra.Command{Use: "login", Short: i18n.T("auth.login.short"), Args: i18n.NoArgs, RunE: func(c *cobra.Command, _ []string) error {
-		a, e := session.Start(c.Context(), site)
+	var noBrowser bool
+	login := &cobra.Command{Use: "login", Short: i18n.T("auth.login.short"), Long: i18n.T("auth.login.tip"), Args: i18n.NoArgs, RunE: func(c *cobra.Command, _ []string) error {
+		manual := noBrowser || (!c.Flags().Changed("no-browser") && isSSH())
+		if manual && !output.CanPrompt() {
+			return i18n.Errorf("auth.login.terminal_required")
+		}
+		ctx, cancel := context.WithTimeout(c.Context(), 10*time.Minute)
+		defer cancel()
+		a, e := session.Start(ctx, site)
 		if e != nil {
 			return e
 		}
-		defer a.Cancel()
-		fmt.Fprintf(c.ErrOrStderr(), i18n.T("auth.login.browser"), a.URL)
-		_ = browser.OpenURL(a.URL)
+		defer func() {
+			a.Cancel()
+			_, _ = a.Wait()
+		}()
+		if !manual {
+			fmt.Fprintf(c.ErrOrStderr(), i18n.T("auth.login.browser"), a.URL)
+			if err := browser.OpenURL(a.URL); err != nil {
+				if !output.CanPrompt() {
+					return i18n.Errorf("auth.login.browser_failed", err)
+				}
+				manual = true
+			}
+		}
+		if manual {
+			fmt.Fprintf(c.ErrOrStderr(), i18n.T("auth.login.remote"), a.URL)
+			promptCtx, stopPrompt := context.WithCancel(ctx)
+			defer stopPrompt()
+			go func() {
+				_, _ = a.Wait()
+				stopPrompt()
+			}()
+			token, err := prompt.PasswordContext(promptCtx, i18n.T("auth.login.browser_token"), nil)
+			if _, resultErr, done := a.Result(); done {
+				// A local browser or SSH tunnel may still deliver the callback.
+				if resultErr != nil {
+					return resultErr
+				}
+			} else if err != nil {
+				if ctx.Err() != nil {
+					return i18n.Errorf("auth.login_timeout")
+				}
+				return err
+			} else if err := a.SubmitBrowserToken(token); err != nil {
+				return err
+			}
+		}
 		info, e := a.Wait()
 		if e != nil {
 			return e
@@ -38,8 +82,11 @@ func Commands() []*cobra.Command {
 		return nil
 	}}
 	i18n.MarkShort(login, "auth.login.short")
+	i18n.MarkLong(login, "auth.login.tip")
 	login.Flags().StringVar(&site, "site-url", session.DefaultSiteURL, i18n.T("auth.flag.site"))
+	login.Flags().BoolVar(&noBrowser, "no-browser", false, i18n.T("auth.flag.no_browser"))
 	i18n.MarkFlagUsage(login, "site-url", "auth.flag.site")
+	i18n.MarkFlagUsage(login, "no-browser", "auth.flag.no_browser")
 	who := &cobra.Command{Use: "whoami", Short: i18n.T("auth.whoami.short"), Args: i18n.NoArgs, RunE: func(c *cobra.Command, _ []string) error {
 		info, e := session.Status()
 		if e != nil {
@@ -58,4 +105,8 @@ func Commands() []*cobra.Command {
 	}}
 	i18n.MarkShort(logout, "auth.logout.short")
 	return []*cobra.Command{login, who, logout}
+}
+
+func isSSH() bool {
+	return os.Getenv("SSH_CONNECTION") != "" || os.Getenv("SSH_CLIENT") != "" || os.Getenv("SSH_TTY") != ""
 }

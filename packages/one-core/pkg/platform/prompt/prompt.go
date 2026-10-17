@@ -13,6 +13,7 @@
 package prompt
 
 import (
+	"context"
 	stderrors "errors"
 	"fmt"
 	"os"
@@ -53,6 +54,11 @@ func Text(title, placeholder string, validate func(string) error) (string, error
 // Password shows a single-line input with masked echo. Used for secret
 // values that shouldn't appear in scrollback.
 func Password(title string, validate func(string) error) (string, error) {
+	return PasswordContext(context.Background(), title, validate)
+}
+
+// PasswordContext is Password with cancellation, for time-limited sign-in.
+func PasswordContext(ctx context.Context, title string, validate func(string) error) (string, error) {
 	var value string
 	field := huh.NewInput().
 		Title(title).
@@ -61,7 +67,7 @@ func Password(title string, validate func(string) error) (string, error) {
 	if validate != nil {
 		field = field.Validate(validate)
 	}
-	if err := runField(field); err != nil {
+	if err := runFieldContext(ctx, field); err != nil {
 		return "", mapErr(err)
 	}
 	return value, nil
@@ -174,6 +180,10 @@ func mapErr(err error) error {
 }
 
 func runField(field huh.Field) error {
+	return runFieldContext(context.Background(), field)
+}
+
+func runFieldContext(ctx context.Context, field huh.Field) error {
 	form := huh.NewForm(huh.NewGroup(field)).WithTheme(defaultTheme()).WithKeyMap(defaultKeyMap()).WithShowHelp(false)
-	return runHuh(form.Run)
+	return runHuh(func() error { return form.RunWithContext(ctx) })
 }
