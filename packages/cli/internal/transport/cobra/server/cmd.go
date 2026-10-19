@@ -35,7 +35,6 @@ func Command(client *oneclient.Client) *cobra.Command {
 	}}
 	i18n.MarkShort(list, "server.list.short")
 	var tokenStdin bool
-	var credentialStore string
 	add := &cobra.Command{Use: "add <name> <url>", Args: i18n.ExactArgs(2), RunE: func(cmd *cobra.Command, args []string) error {
 		token := ""
 		if tokenStdin {
@@ -48,16 +47,14 @@ func Command(client *oneclient.Client) *cobra.Command {
 				return i18n.Errorf("server.credential_input_invalid")
 			}
 		}
-		if err := client.AddWithCredentialStore(cmd.Context(), args[0], args[1], token, oneclient.CredentialStore(credentialStore)); err != nil {
+		if err := client.Add(cmd.Context(), args[0], args[1], token); err != nil {
 			return err
 		}
-		output.Emit(map[string]any{"name": args[0], "url": args[1], "configured": true, "credentialStore": credentialStore})
+		output.Emit(map[string]any{"name": args[0], "url": args[1], "configured": true, "credentialStore": oneclient.CredentialFile})
 		return nil
 	}}
 	add.Flags().BoolVar(&tokenStdin, "token-stdin", false, "")
-	add.Flags().StringVar(&credentialStore, "credential-store", string(oneclient.CredentialFile), "")
 	i18n.MarkFlagUsage(add, "token-stdin", "server.flag.token_stdin")
-	i18n.MarkFlagUsage(add, "credential-store", "server.flag.credential_store")
 	i18n.MarkShort(add, "server.add.short")
 	i18n.MarkLong(add, "server.add.long")
 	use := &cobra.Command{Use: "use <name>", Args: i18n.ExactArgs(1), RunE: func(cmd *cobra.Command, args []string) error {

@@ -14,63 +14,17 @@ import (
 	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/core/workspace"
 	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/platform/fsutil"
 	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/platform/i18n"
-	"github.com/zalando/go-keyring"
 )
-
-type CredentialStore string
 
 const (
-	CredentialFile    CredentialStore = "file"
-	CredentialKeyring CredentialStore = "keyring"
-	maxCredentialFile                 = 4 << 20
+	// CredentialFile is the only supported client credential storage format.
+	CredentialFile    = "file"
+	maxCredentialFile = 4 << 20
 )
 
-type keyringBackend interface {
-	Get(service, account string) (string, error)
-	Set(service, account, secret string) error
-}
-type systemKeyring struct{}
-
-func (systemKeyring) Get(service, account string) (string, error) {
-	return keyring.Get(service, account)
-}
-func (systemKeyring) Set(service, account, secret string) error {
-	return keyring.Set(service, account, secret)
-}
-func (c *Client) systemCredentials() keyringBackend {
-	if c.keyring != nil {
-		return c.keyring
-	}
-	return systemKeyring{}
-}
-
-func validCredentialStore(store CredentialStore) bool {
-	return store == CredentialFile || store == CredentialKeyring
-}
-func profileCredentialStore(profile Profile) CredentialStore {
-	if profile.CredentialStore == "" {
-		return CredentialKeyring // Profiles written before store selection used the keyring.
-	}
-	return profile.CredentialStore
-}
-func credentialStoreForAddress(profiles Connections, address string, fallback CredentialStore) (CredentialStore, bool) {
-	for _, profile := range profiles.Servers {
-		if profile.URL == address && profileCredentialStore(profile) == CredentialFile {
-			return CredentialFile, true
-		}
-	}
-	for _, profile := range profiles.Servers {
-		if profile.URL == address {
-			return profileCredentialStore(profile), true
-		}
-	}
-	return fallback, false
-}
-
-// AddWithCredentialStore selects storage explicitly. Re-adding an existing URL
-// without a token copies its credential when changing stores. Other installations
-// may share the old keyring item, so migration leaves that item intact.
-func (c *Client) AddWithCredentialStore(ctx context.Context, name, address, token string, store CredentialStore) error {
+// Add registers a server and saves a supplied token in the private credential file.
+// An empty token leaves any existing file credential unchanged.
+func (c *Client) Add(ctx context.Context, name, address, token string) error {
 	if name == "local" || !workspace.IsValidProjectName(name) {
 		return i18n.Errorf("server.name_invalid")
 	}
@@ -78,32 +32,16 @@ func (c *Client) AddWithCredentialStore(ctx context.Context, name, address, toke
 	if err != nil {
 		return err
 	}
-	if !validCredentialStore(store) {
-		return i18n.Errorf("server.credential_store_invalid", store)
-	}
 	if len(token) > 16<<10 || strings.ContainsAny(token, "\r\n") {
 		return i18n.Errorf("server.credential_input_invalid")
 	}
 	return c.UpdateConnections(ctx, func(p *Connections) error {
-		oldStore, exists := credentialStoreForAddress(*p, address, store)
-		if token == "" && exists && oldStore != store {
-			token, err = c.readCredential(address, oldStore)
-			if err != nil {
-				return c.credentialReadError(address, err)
-			}
-		}
 		if token != "" {
-			if err := c.writeCredential(ctx, address, token, store); err != nil {
+			if err := c.writeCredential(ctx, address, token); err != nil {
 				return err
 			}
 		}
-		for alias, profile := range p.Servers {
-			if profile.URL == address {
-				profile.CredentialStore = store
-				p.Servers[alias] = profile
-			}
-		}
-		p.Servers[name] = Profile{URL: address, CredentialStore: store}
+		p.Servers[name] = Profile{URL: address, CredentialStore: CredentialFile}
 		return nil
 	})
 }
@@ -114,30 +52,17 @@ func (c *Client) credentialReadError(address string, err error) error {
 	}
 	return err
 }
-func (c *Client) serverToken(address string, store CredentialStore) (string, error) {
+func (c *Client) serverToken(address string) (string, error) {
 	if token := os.Getenv("ONE_SERVER_TOKEN"); token != "" {
 		return token, nil
 	}
-	token, err := c.readCredential(address, store)
+	token, err := c.readCredential(address)
 	if err != nil {
 		return "", c.credentialReadError(address, err)
 	}
 	return token, nil
 }
-func (c *Client) readCredential(address string, store CredentialStore) (string, error) {
-	if store == CredentialKeyring {
-		token, err := c.systemCredentials().Get("one-cli.server", address)
-		if errors.Is(err, keyring.ErrNotFound) || (err == nil && token == "") {
-			return "", os.ErrNotExist
-		}
-		if err != nil {
-			return "", i18n.Errorf("server.credential_keyring_read_failed", err)
-		}
-		return token, nil
-	}
-	if store != CredentialFile {
-		return "", i18n.Errorf("server.credential_store_invalid", store)
-	}
+func (c *Client) readCredential(address string) (string, error) {
 	path, err := c.credentialPath()
 	if err != nil {
 		return "", err
@@ -151,13 +76,7 @@ func (c *Client) readCredential(address string, store CredentialStore) (string, 
 	}
 	return "", os.ErrNotExist
 }
-func (c *Client) writeCredential(ctx context.Context, address, token string, store CredentialStore) error {
-	if store == CredentialKeyring {
-		if err := c.systemCredentials().Set("one-cli.server", address, token); err != nil {
-			return i18n.Errorf("server.credential_keyring_write_failed", err)
-		}
-		return nil
-	}
+func (c *Client) writeCredential(ctx context.Context, address, token string) error {
 	path, err := c.credentialPath()
 	if err != nil {
 		return err
@@ -268,8 +187,8 @@ func readCredentialFile(path string) (credentialFile, error) {
 	return credentials, nil
 }
 
-// Desktop defaults to the keyring for new addresses, and respects an existing
-// CLI profile's selected store so both clients can share and rotate credentials.
+// Desktop uses the same private file as CLI connections, including new addresses
+// that do not yet have a named CLI profile.
 func (c *Client) remoteToken(address, token string, save bool) (string, error) {
 	address, err := NormalizeURL(address)
 	if err != nil {
@@ -281,17 +200,9 @@ func (c *Client) remoteToken(address, token string, save bool) (string, error) {
 		}
 		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 		defer cancel()
-		return "", c.UpdateConnections(ctx, func(p *Connections) error {
-			store, _ := credentialStoreForAddress(*p, address, CredentialKeyring)
-			return c.writeCredential(ctx, address, token, store)
-		})
+		return "", c.writeCredential(ctx, address, token)
 	}
-	profiles, err := c.ReadConnections()
-	if err != nil {
-		return "", err
-	}
-	store, _ := credentialStoreForAddress(profiles, address, CredentialKeyring)
-	value, err := c.readCredential(address, store)
+	value, err := c.readCredential(address)
 	if errors.Is(err, os.ErrNotExist) {
 		return "", nil
 	}

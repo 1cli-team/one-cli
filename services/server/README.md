@@ -30,7 +30,7 @@ one-api serve
 通过 HTTPS 反向代理访问该端口。管理员令牌授权整个实例；当前不提供多用户权限隔离。加密密钥必须与数据库一起备份并在重启时保持一致。启动时自动应用数据库迁移，较新 schema 会拒绝由旧程序打开。
 
 ```sh
-# Read the administrator token from stdin; the CLI defaults to a private file.
+# Read the administrator token from stdin; the CLI saves it in a private file.
 read -rs ONE_TOKEN
 printf '%s' "$ONE_TOKEN" | one server add team https://one.example.com --token-stdin
 unset ONE_TOKEN
@@ -39,13 +39,13 @@ one server register /path/to/workspace
 one server bind team --project api
 ```
 
-CLI 默认使用 `$ONE_HOME/config/server-credentials.json` 单独保存 Server 令牌；Unix 上文件权限为 0600、目录权限为 0700，无需 Secret Service。文件以明文保存令牌，通过文件系统权限保护。普通连接配置、`one server list` 及管理导出不包含令牌。凭据文件损坏、版本过新、权限过宽或为符号链接时会报错并保留原内容；修复后重试。
+CLI 仅使用 `$ONE_HOME/config/server-credentials.json` 单独保存 Server 令牌；Unix 上文件权限为 0600、目录权限为 0700，无需 Secret Service。文件以明文保存令牌，通过文件系统权限保护。普通连接配置、`one server list` 及管理导出不包含令牌。凭据文件损坏、版本过新、权限过宽或为符号链接时会报错并保留原内容；修复后重试。
 
-需要系统钥匙串时，在 `one server add` 后添加 `--credential-store keyring`。旧连接继续使用钥匙串；执行 `one server add team https://one.example.com --credential-store file` 可将已有令牌复制到文件，其他同地址连接也会同步切换存储。旧项保留供其他安装使用；若原钥匙串不可用，通过 `--token-stdin` 重新保存即可。
+CLI 不提供 keyring 选项，也不会读取旧钥匙串。旧连接若只在钥匙串中保存过令牌，使用上面的 `--token-stdin` 命令重新保存，或在 Desktop 的连接表单中重新输入。连接配置中旧的存储方式标记不会改变文件存储行为。
 
-临时/CI 连接可注入 `ONE_SERVER_URL` 和 `ONE_SERVER_TOKEN`，环境令牌不会落盘；只指定 URL 时会读取已保存的凭据。Desktop 新地址默认保存到钥匙串，也能复用 CLI 已保存的文件连接。浏览器直接打开服务 URL，使用 HttpOnly 会话 cookie。远程 Server 无需安装 Secret Service；Infisical 凭据加密保存在服务端数据库中。
+临时/CI 连接可注入 `ONE_SERVER_URL` 和 `ONE_SERVER_TOKEN`，环境令牌不会落盘；只指定 URL 时会读取已保存的凭据。Desktop 通过原生凭据入口复用同一文件，新连接也保存在此处。浏览器直接打开服务 URL，使用 HttpOnly 会话 cookie。远程 Server 无需安装 Secret Service；Infisical 凭据加密保存在服务端数据库中。
 
-远程 Infisical 使用机器身份：通过管理界面的账号页配置，或执行：
+远程 Infisical 使用机器身份：通过管理界面的账号页配置，或执行以下命令。CLI 将机器身份提交到选中的 Server，由 Server 连接 Infisical 并加密保存到数据库。Server 当前不会从环境变量自动读取 Infisical 机器身份；下面的变量只是向 CLI 标准输入传递凭据的示例。
 
 ```sh
 # Set ONE_INFISICAL_SECRET securely before running this example.
@@ -73,8 +73,10 @@ One Server owns management data and provider integrations. A local instance uses
 
 CLI and Desktop discover the same local service per `ONE_HOME`. Closing Desktop leaves that service running. Remote deployments require a database URL, a stable base64 32-byte encryption key, an administrator token of at least 32 characters, and an HTTPS public origin behind a reverse proxy. The token grants instance-wide access; this is a single-owner service. Remote provider access uses an Infisical machine identity. Browser sessions use HttpOnly cookies.
 
-CLI connections default to `$ONE_HOME/config/server-credentials.json`, separate from connection metadata and management exports. On Unix the plaintext credential file is protected with mode 0600 in a 0700 directory, so Secret Service is optional. Invalid files, newer schemas, unsafe permissions and symbolic links fail without overwriting existing data. `--credential-store keyring` selects the system keyring. Existing profiles retain keyring behavior; re-adding the same URL with `--credential-store file` copies its saved token and switches all aliases to that store. Old credentials remain for other installations; if the original store is unavailable, resave with `--token-stdin`.
+CLI connections use only `$ONE_HOME/config/server-credentials.json`, separate from connection metadata and management exports. On Unix the plaintext credential file is protected with mode 0600 in a 0700 directory. No Secret Service is required. Invalid files, newer schemas, unsafe permissions and symbolic links fail without overwriting existing data. There is no keyring option or fallback, including for legacy profiles. If a token was previously saved only in a keyring, resave it with `--token-stdin` or Desktop's connection form. Old storage markers do not change file storage behavior.
 
-Desktop defaults to the keyring for new addresses and reuses the selected store for existing CLI connections. `ONE_SERVER_TOKEN` overrides saved credentials without persistence; an address-only `ONE_SERVER_URL` override can reuse saved credentials. Remote Server processes do not require Secret Service.
+Desktop uses the same file through its native credential bridge, including for new connections. `ONE_SERVER_TOKEN` overrides saved credentials without persistence; an address-only `ONE_SERVER_URL` override can reuse saved credentials. Remote Server processes do not require Secret Service.
+
+Configure the Infisical machine identity through the account page or `one login --client-id ... --client-secret-stdin --organization-id ...`. The CLI sends it to the selected Server, which authenticates with Infisical and encrypts the credentials in its database. The Server does not currently read an Infisical machine identity from environment variables at startup; `ONE_INFISICAL_SECRET` in the example above only supplies stdin to the CLI.
 
 Exports include management metadata but exclude credentials, browser sessions, client paths and server identity. Import is atomic and requires an empty destination workspace store. Original local JSON configuration is backed up and imported once; the old files remain available for recovery. Keep the encryption key with your database backup.

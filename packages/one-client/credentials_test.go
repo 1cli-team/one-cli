@@ -3,7 +3,6 @@ package oneclient
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -13,37 +12,7 @@ import (
 	"strings"
 	"sync"
 	"testing"
-
-	"github.com/zalando/go-keyring"
 )
-
-type testKeyring struct {
-	values map[string]string
-	err    error
-	calls  int
-}
-
-func (k *testKeyring) Get(_, address string) (string, error) {
-	k.calls++
-	if k.err != nil {
-		return "", k.err
-	}
-	if token, ok := k.values[address]; ok {
-		return token, nil
-	}
-	return "", keyring.ErrNotFound
-}
-func (k *testKeyring) Set(_, address, token string) error {
-	k.calls++
-	if k.err != nil {
-		return k.err
-	}
-	if k.values == nil {
-		k.values = map[string]string{}
-	}
-	k.values[address] = token
-	return nil
-}
 
 func privateClientRoot(t *testing.T) string {
 	t.Helper()
@@ -58,8 +27,8 @@ func TestFileCredentialsWorkWithoutKeyring(t *testing.T) {
 	t.Setenv("ONE_SERVER_URL", "")
 	t.Setenv("ONE_SERVER_TOKEN", "")
 	ctx := context.Background()
-	k := &testKeyring{err: errors.New("Secret Service unavailable")}
-	c := &Client{Root: privateClientRoot(t), keyring: k}
+	t.Setenv("DBUS_SESSION_BUS_ADDRESS", "unix:path=/nonexistent/one-test-session-bus")
+	c := &Client{Root: privateClientRoot(t)}
 	token := "synthetic-server-token"
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Header.Get("Authorization") != "Bearer "+token {
@@ -86,16 +55,13 @@ func TestFileCredentialsWorkWithoutKeyring(t *testing.T) {
 	if runtime.GOOS != "windows" && config.Mode().Perm() != 0700 {
 		t.Fatal("credential directory is not private")
 	}
-	restarted := &Client{Root: c.Root, keyring: k}
+	restarted := &Client{Root: c.Root}
 	if _, err := restarted.Info(ctx); err != nil {
 		t.Fatal(err)
 	}
 	t.Setenv("ONE_SERVER_URL", server.URL)
 	if _, err := restarted.Info(ctx); err != nil {
 		t.Fatal(err)
-	}
-	if k.calls != 0 {
-		t.Fatal("file credentials accessed the system keyring")
 	}
 	before, _ := os.ReadFile(path)
 	t.Setenv("ONE_SERVER_TOKEN", "environment-override")
@@ -123,13 +89,13 @@ func TestFileCredentialsWorkWithoutKeyring(t *testing.T) {
 func TestMissingAndInvalidCredentialsFailWithoutFallback(t *testing.T) {
 	t.Setenv("ONE_SERVER_TOKEN", "")
 	t.Setenv("ONE_SERVER_URL", "")
-	c := &Client{Root: privateClientRoot(t), keyring: &testKeyring{err: errors.New("unavailable")}}
+	c := &Client{Root: privateClientRoot(t)}
 	ctx := context.Background()
-	if err := c.AddWithCredentialStore(ctx, "bad", "https://one.example", "token", "unknown"); err == nil {
-		t.Fatal("unknown credential store accepted")
+	if err := c.Add(ctx, "bad", "https://one.example", "invalid\ntoken"); err == nil {
+		t.Fatal("multiline credential accepted")
 	}
 	if _, err := os.Stat(filepath.Join(c.Root, "config", "connections.json")); !os.IsNotExist(err) {
-		t.Fatal("invalid store changed connection metadata")
+		t.Fatal("invalid credential changed connection metadata")
 	}
 	if err := c.Add(ctx, "team", "https://one.example", ""); err != nil {
 		t.Fatal(err)
@@ -140,50 +106,83 @@ func TestMissingAndInvalidCredentialsFailWithoutFallback(t *testing.T) {
 	if _, err := c.connection(ctx, "", ""); err == nil || !strings.Contains(err.Error(), "--token-stdin") {
 		t.Fatal("missing credential did not provide recovery instructions")
 	}
-	if c.keyring.(*testKeyring).calls != 0 {
-		t.Fatal("missing file credential fell back to Secret Service")
+}
+
+func TestLegacyProfilesUseOnlyFileCredentials(t *testing.T) {
+	t.Setenv("ONE_SERVER_URL", "")
+	t.Setenv("ONE_SERVER_TOKEN", "")
+	t.Setenv("DBUS_SESSION_BUS_ADDRESS", "unix:path=/nonexistent/one-test-session-bus")
+	ctx := context.Background()
+	address := "https://one.example"
+	for _, tt := range []struct {
+		name, field string
+	}{
+		{"unmarked", ""},
+		{"keyring", `,"credentialStore":"keyring"`},
+		{"file", `,"credentialStore":"file"`},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			c := &Client{Root: privateClientRoot(t)}
+			config := filepath.Join(c.Root, "config")
+			if err := os.Mkdir(config, 0700); err != nil {
+				t.Fatal(err)
+			}
+			metadata := `{"version":1,"default":"legacy","servers":{"legacy":{"url":"https://one.example"` + tt.field + `}},"bindings":{}}`
+			if err := os.WriteFile(filepath.Join(config, "connections.json"), []byte(metadata), 0600); err != nil {
+				t.Fatal(err)
+			}
+			if _, err := c.connection(ctx, "", ""); err == nil || !strings.Contains(err.Error(), "--token-stdin") {
+				t.Fatal("legacy profile did not request a local credential")
+			}
+			if err := c.Add(ctx, "alias", address, "file-token"); err != nil {
+				t.Fatal(err)
+			}
+			// Even if old metadata is restored, it must not change the backend.
+			if err := os.WriteFile(filepath.Join(config, "connections.json"), []byte(metadata), 0600); err != nil {
+				t.Fatal(err)
+			}
+			if conn, err := c.connection(ctx, "", ""); err != nil || conn.Token != "file-token" {
+				t.Fatalf("legacy profile did not use the file credential: %v", err)
+			}
+			profiles, err := c.ReadConnections()
+			if err != nil || profiles.Servers["legacy"].CredentialStore != CredentialFile {
+				t.Fatalf("legacy storage marker not normalized: %v", err)
+			}
+		})
 	}
 }
 
-func TestCredentialStoreMigrationAndDesktopDefaults(t *testing.T) {
+func TestDesktopAndCLIShareFileCredentials(t *testing.T) {
 	t.Setenv("ONE_SERVER_URL", "")
 	t.Setenv("ONE_SERVER_TOKEN", "")
+	t.Setenv("DBUS_SESSION_BUS_ADDRESS", "unix:path=/nonexistent/one-test-session-bus")
 	ctx := context.Background()
-	address := "https://one.example"
-	k := &testKeyring{values: map[string]string{address: "legacy-token"}}
-	c := &Client{Root: privateClientRoot(t), keyring: k}
-	if err := c.UpdateConnections(ctx, func(p *Connections) error {
-		p.Default = "legacy"
-		p.Servers["legacy"] = Profile{URL: address}
-		return nil
-	}); err != nil {
+	c := &Client{Root: privateClientRoot(t)}
+	address := "https://desktop.example"
+	if value, err := c.remoteToken(address, "", false); err != nil || value != "" {
+		t.Fatalf("new connection did not start empty: %v", err)
+	}
+	if _, err := c.remoteToken(address, "desktop-token", true); err != nil {
 		t.Fatal(err)
 	}
-	if conn, err := c.connection(ctx, "", ""); err != nil || conn.Token != "legacy-token" {
-		t.Fatalf("legacy keyring profile broke: %v", err)
-	}
-	if err := c.AddWithCredentialStore(ctx, "alias", address, "", CredentialFile); err != nil {
+	checkout := t.TempDir()
+	if err := c.BindAddress(ctx, checkout, address, false); err != nil {
 		t.Fatal(err)
 	}
-	k.err = errors.New("keyring is now unavailable")
-	if conn, err := c.connection(ctx, "", ""); err != nil || conn.Token != "legacy-token" {
-		t.Fatalf("migrated credential needs keyring: %v", err)
+	if conn, err := c.connection(ctx, checkout, ""); err != nil || conn.Token != "desktop-token" {
+		t.Fatalf("CLI could not reuse the Desktop credential: %v", err)
+	}
+	if err := c.Add(ctx, "team", address, "cli-token"); err != nil {
+		t.Fatal(err)
+	}
+	if value, err := c.remoteToken(address, "", false); err != nil || value != "cli-token" {
+		t.Fatalf("Desktop did not see the CLI credential update: %v", err)
 	}
 	if _, err := c.remoteToken(address, "rotated-token", true); err != nil {
 		t.Fatal(err)
 	}
-	if conn, err := c.connection(ctx, "", ""); err != nil || conn.Token != "rotated-token" {
-		t.Fatalf("Desktop rotation left CLI credentials stale: %v", err)
-	}
-	k.err = nil
-	if _, err := c.remoteToken("https://desktop.example", "desktop-token", true); err != nil || k.values["https://desktop.example"] != "desktop-token" {
-		t.Fatalf("new Desktop connection did not default to keyring: %v", err)
-	}
-	if err := c.AddWithCredentialStore(ctx, "alias", address, "", CredentialKeyring); err != nil {
-		t.Fatal(err)
-	}
-	if k.values[address] != "rotated-token" {
-		t.Fatal("file-to-keyring migration did not copy the current token")
+	if conn, err := c.connection(ctx, checkout, ""); err != nil || conn.Token != "rotated-token" {
+		t.Fatalf("CLI did not see the Desktop credential update: %v", err)
 	}
 }
 
@@ -193,7 +192,7 @@ func TestFileCredentialSafety(t *testing.T) {
 			if runtime.GOOS == "windows" && (strings.Contains(name, "permissions") || strings.Contains(name, "symlink")) {
 				t.Skip("POSIX file permissions and symlinks")
 			}
-			c := &Client{Root: privateClientRoot(t), keyring: &testKeyring{err: errors.New("unavailable")}}
+			c := &Client{Root: privateClientRoot(t)}
 			ctx := context.Background()
 			address := "https://one.example"
 			if err := c.Add(ctx, "team", address, "original-token"); err != nil {

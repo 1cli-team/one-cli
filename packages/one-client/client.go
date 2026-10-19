@@ -50,8 +50,8 @@ type Info struct {
 	Capabilities map[string]bool `json:"capabilities"`
 }
 type Profile struct {
-	URL             string          `json:"url"`
-	CredentialStore CredentialStore `json:"credentialStore,omitempty"`
+	URL             string `json:"url"`
+	CredentialStore string `json:"credentialStore,omitempty"`
 }
 type Binding struct {
 	Server   string            `json:"server"`
@@ -65,10 +65,9 @@ type Connections struct {
 }
 
 type Client struct {
-	Root    string
-	Binary  string
-	HTTP    *http.Client
-	keyring keyringBackend
+	Root   string
+	Binary string
+	HTTP   *http.Client
 }
 
 func New() *Client {
@@ -122,10 +121,11 @@ func (c *Client) ReadConnections() (Connections, error) {
 	if p.Servers == nil {
 		p.Servers = map[string]Profile{}
 	}
-	for _, profile := range p.Servers {
-		if !validCredentialStore(profileCredentialStore(profile)) {
-			return p, i18n.Errorf("server.credential_store_invalid", profile.CredentialStore)
-		}
+	for name, profile := range p.Servers {
+		// Keep the metadata field for existing consumers, but storage is always
+		// file-based. Legacy markers never enable another credential backend.
+		profile.CredentialStore = CredentialFile
+		p.Servers[name] = profile
 	}
 	if p.Bindings == nil {
 		p.Bindings = map[string]Binding{}
@@ -165,9 +165,6 @@ func (c *Client) UpdateConnections(ctx context.Context, mutate func(*Connections
 	}
 	return fsutil.WriteAtomic(path, append(data, '\n'), 0600)
 }
-func (c *Client) Add(ctx context.Context, name, address, token string) error {
-	return c.AddWithCredentialStore(ctx, name, address, token, CredentialFile)
-}
 func (c *Client) Select(ctx context.Context, name, root, project string) error {
 	return c.UpdateConnections(ctx, func(p *Connections) error {
 		if name != "local" {
@@ -202,15 +199,7 @@ func (c *Client) connection(ctx context.Context, root, project string) (Connecti
 		if err != nil {
 			return Connection{}, err
 		}
-		if token := os.Getenv("ONE_SERVER_TOKEN"); token != "" {
-			return Connection{URL: address, Token: token}, nil
-		}
-		profiles, err := c.ReadConnections()
-		if err != nil {
-			return Connection{}, err
-		}
-		store, _ := credentialStoreForAddress(profiles, address, CredentialFile)
-		token, err := c.serverToken(address, store)
+		token, err := c.serverToken(address)
 		return Connection{URL: address, Token: token}, err
 	}
 	if root != "" && project != "" {
@@ -244,7 +233,7 @@ func (c *Client) connection(ctx context.Context, root, project string) (Connecti
 	if err != nil {
 		return Connection{}, err
 	}
-	token, err := c.serverToken(address, profileCredentialStore(profile))
+	token, err := c.serverToken(address)
 	if err != nil {
 		return Connection{}, err
 	}
@@ -506,8 +495,7 @@ func (c *Client) LocalRoot(id string) (string, error) {
 	return "", fmt.Errorf("%s: %s", i18n.T("server.local_path_missing"), id)
 }
 
-// RemoteToken is used only by the trusted native host. New Desktop connections
-// use the keyring; existing CLI connections retain their selected store.
+// RemoteToken lets the trusted native host share the CLI's private credential file.
 func RemoteToken(address, token string, save bool) (string, error) {
 	return New().remoteToken(address, token, save)
 }
@@ -533,7 +521,7 @@ func (c *Client) BindAddress(ctx context.Context, root, address string, local bo
 		if name == "" {
 			sum := sha256.Sum256([]byte(address))
 			name = fmt.Sprintf("desktop-%x", sum[:6])
-			p.Servers[name] = Profile{URL: address}
+			p.Servers[name] = Profile{URL: address, CredentialStore: CredentialFile}
 		}
 		binding := p.Bindings[root]
 		binding.Server = name
