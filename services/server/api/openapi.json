@@ -1,0 +1,2058 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "One Management API",
+    "version": "1.0.0",
+    "description": "One shared API for CLI, Desktop and Web. Local Server uses SQLite; remote Server uses PostgreSQL. Revision conflicts return 409. / CLI、Desktop、Web 共用 API。"
+  },
+  "servers": [
+    {
+      "url": "/api/v1"
+    }
+  ],
+  "security": [
+    {
+      "bearer": []
+    },
+    {
+      "browserSession": []
+    }
+  ],
+  "paths": {
+    "/auth/session": {
+      "post": {
+        "operationId": "createBrowserSession",
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AuthToken"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "HttpOnly SameSite=Strict browser session cookie"
+          },
+          "401": {
+            "description": "Invalid administrator token"
+          }
+        }
+      },
+      "delete": {
+        "operationId": "deleteAuthSession",
+        "responses": {
+          "204": {
+            "description": "Deleted"
+          },
+          "default": {
+            "description": "Structured error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/catalog": {
+      "get": {
+        "operationId": "getCatalog",
+        "responses": {
+          "200": {
+            "description": "Successful response / 成功响应",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Structured error / 结构化错误",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/desktop/session": {
+      "get": {
+        "operationId": "getDesktopSession",
+        "responses": {
+          "200": {
+            "description": "Successful response / 成功响应",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Structured error / 结构化错误",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/global-env/folders": {
+      "post": {
+        "operationId": "postGlobalEnvFolders",
+        "responses": {
+          "200": {
+            "description": "Successful response / 成功响应",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Structured error / 结构化错误",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/global-env/location": {
+      "get": {
+        "operationId": "getGlobalEnvLocation",
+        "responses": {
+          "200": {
+            "description": "Successful response / 成功响应",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Structured error / 结构化错误",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "operationId": "putGlobalEnvLocation",
+        "responses": {
+          "200": {
+            "description": "Successful response / 成功响应",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Structured error / 结构化错误",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/global-env/location/default": {
+      "post": {
+        "operationId": "postGlobalEnvLocationDefault",
+        "responses": {
+          "200": {
+            "description": "Successful response / 成功响应",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Structured error / 结构化错误",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/global-env/secrets": {
+      "get": {
+        "operationId": "getGlobalEnvSecrets",
+        "responses": {
+          "200": {
+            "description": "Successful response / 成功响应",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Structured error / 结构化错误",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/global-env/secrets/{key}": {
+      "get": {
+        "operationId": "getGlobalSecret",
+        "parameters": [
+          {
+            "name": "key",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response"
+          },
+          "default": {
+            "description": "Structured error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "operationId": "postGlobalSecret",
+        "parameters": [
+          {
+            "name": "key",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response"
+          },
+          "default": {
+            "description": "Structured error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SecretValue"
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "operationId": "putGlobalSecret",
+        "parameters": [
+          {
+            "name": "key",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response"
+          },
+          "default": {
+            "description": "Structured error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SecretValue"
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "operationId": "deleteGlobalSecret",
+        "parameters": [
+          {
+            "name": "key",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response"
+          },
+          "default": {
+            "description": "Structured error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/global-env/values": {
+      "post": {
+        "operationId": "postGlobalEnvValues",
+        "responses": {
+          "200": {
+            "description": "Successful response / 成功响应",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Structured error / 结构化错误",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/infisical/projects": {
+      "get": {
+        "operationId": "getInfisicalProjects",
+        "responses": {
+          "200": {
+            "description": "Successful response / 成功响应",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Structured error / 结构化错误",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "operationId": "postInfisicalProjects",
+        "responses": {
+          "200": {
+            "description": "Successful response / 成功响应",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Structured error / 结构化错误",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/infisical/projects/{id}": {
+      "get": {
+        "operationId": "getInfisicalProjectsId",
+        "responses": {
+          "200": {
+            "description": "Successful response / 成功响应",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Structured error / 结构化错误",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ]
+      }
+    },
+    "/preferences": {
+      "get": {
+        "operationId": "getPreferences",
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Preferences"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Structured error / 结构化错误",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "operationId": "putPreferences",
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Preferences"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Structured error / 结构化错误",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PreferencePatch"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/project-templates": {
+      "get": {
+        "operationId": "getProjectTemplates",
+        "responses": {
+          "200": {
+            "description": "Successful response / 成功响应",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Structured error / 结构化错误",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/server/export": {
+      "get": {
+        "operationId": "getServerExport",
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Export"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Structured error / 结构化错误",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/server/import": {
+      "post": {
+        "operationId": "postServerImport",
+        "responses": {
+          "200": {
+            "description": "Successful response / 成功响应",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Structured error / 结构化错误",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Export"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/server/info": {
+      "get": {
+        "operationId": "getServerInfo",
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServerInfo"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Structured error / 结构化错误",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/session": {
+      "get": {
+        "operationId": "getSession",
+        "responses": {
+          "200": {
+            "description": "Successful response / 成功响应",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Structured error / 结构化错误",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "operationId": "deleteSession",
+        "responses": {
+          "200": {
+            "description": "Successful response / 成功响应",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Structured error / 结构化错误",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/session/login": {
+      "post": {
+        "operationId": "postSessionLogin",
+        "responses": {
+          "200": {
+            "description": "Successful response / 成功响应",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Structured error / 结构化错误",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object"
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "operationId": "deleteSessionLogin",
+        "responses": {
+          "200": {
+            "description": "Successful response / 成功响应",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Structured error / 结构化错误",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/session/machine": {
+      "post": {
+        "operationId": "postSessionMachine",
+        "responses": {
+          "200": {
+            "description": "Successful response / 成功响应",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Structured error / 结构化错误",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MachineCredentials"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/workspaces": {
+      "post": {
+        "operationId": "postWorkspaces",
+        "responses": {
+          "200": {
+            "description": "Successful response / 成功响应",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Structured error / 结构化错误",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "201": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Snapshot"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Registration"
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "operationId": "getWorkspaces",
+        "responses": {
+          "200": {
+            "description": "Successful response / 成功响应",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Structured error / 结构化错误",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/workspaces/{entryId}": {
+      "delete": {
+        "operationId": "deleteWorkspacesEntryid",
+        "responses": {
+          "204": {
+            "description": "Deleted"
+          },
+          "default": {
+            "description": "Structured error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "entryId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ]
+      }
+    },
+    "/workspaces/{entryId}/environment": {
+      "get": {
+        "operationId": "getWorkspacesEntryidEnvironment",
+        "responses": {
+          "200": {
+            "description": "Successful response / 成功响应",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Structured error / 结构化错误",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "entryId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ]
+      }
+    },
+    "/workspaces/{entryId}/environment/bind": {
+      "post": {
+        "operationId": "postWorkspacesEntryidEnvironmentBind",
+        "responses": {
+          "200": {
+            "description": "Successful response / 成功响应",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Structured error / 结构化错误",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "entryId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/workspaces/{entryId}/manifest": {
+      "put": {
+        "operationId": "putWorkspacesEntryidManifest",
+        "responses": {
+          "200": {
+            "description": "Successful response / 成功响应",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Structured error / 结构化错误",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "entryId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ManagementPatch"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/workspaces/{entryId}/manifest/preview": {
+      "post": {
+        "operationId": "postWorkspacesEntryidManifestPreview",
+        "responses": {
+          "200": {
+            "description": "Successful response / 成功响应",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Structured error / 结构化错误",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "entryId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ManagementPatch"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/workspaces/{entryId}/operations/{operation}": {
+      "post": {
+        "operationId": "postWorkspacesEntryidOperationsOperation",
+        "responses": {
+          "200": {
+            "description": "Successful response / 成功响应",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Structured error / 结构化错误",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "entryId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "operation",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "summary",
+                "get",
+                "list",
+                "plan-set",
+                "set",
+                "delete",
+                "bind",
+                "snapshot"
+              ]
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ExecutionConfigurationRequest"
+              }
+            }
+          }
+        },
+        "description": "Configuration operations only. Subprocesses always execute on the client. snapshot returns fresh values keyed by registered project directory. / 仅配置操作；命令在客户端执行。"
+      }
+    },
+    "/workspaces/{entryId}/overview": {
+      "get": {
+        "operationId": "getWorkspacesEntryidOverview",
+        "responses": {
+          "200": {
+            "description": "Successful response / 成功响应",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Structured error / 结构化错误",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "entryId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ]
+      }
+    },
+    "/workspaces/{entryId}/projects/{name}": {
+      "get": {
+        "operationId": "getWorkspacesEntryidProjectsName",
+        "responses": {
+          "200": {
+            "description": "Successful response / 成功响应",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Structured error / 结构化错误",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "entryId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ]
+      }
+    },
+    "/workspaces/{entryId}/secrets": {
+      "get": {
+        "operationId": "getWorkspacesEntryidSecrets",
+        "responses": {
+          "200": {
+            "description": "Successful response / 成功响应",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Structured error / 结构化错误",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "entryId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ]
+      },
+      "post": {
+        "operationId": "postWorkspacesEntryidSecrets",
+        "responses": {
+          "200": {
+            "description": "Successful response / 成功响应",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Structured error / 结构化错误",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "entryId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/workspaces/{entryId}/secrets/{key}": {
+      "get": {
+        "operationId": "getWorkspacesEntryidSecretsKey",
+        "responses": {
+          "200": {
+            "description": "Successful response / 成功响应",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Structured error / 结构化错误",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "entryId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "key",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ]
+      },
+      "put": {
+        "operationId": "putWorkspacesEntryidSecretsKey",
+        "responses": {
+          "200": {
+            "description": "Successful response / 成功响应",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Structured error / 结构化错误",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "entryId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "key",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object"
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "operationId": "deleteWorkspacesEntryidSecretsKey",
+        "responses": {
+          "200": {
+            "description": "Successful response / 成功响应",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Structured error / 结构化错误",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "entryId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "key",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ]
+      }
+    },
+    "/workspaces/{entryId}/snapshot": {
+      "get": {
+        "operationId": "getWorkspacesEntryidSnapshot",
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Snapshot"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Structured error / 结构化错误",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "entryId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ]
+      }
+    },
+    "/session/login/token": {
+      "post": {
+        "operationId": "submitInfisicalBrowserToken",
+        "description": "Submit the browser token for an active local sign-in / 提交本地登录的浏览器令牌",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "token"
+                ],
+                "properties": {
+                  "token": {
+                    "type": "string",
+                    "maxLength": 98304,
+                    "writeOnly": true
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Browser token accepted / 已接收浏览器令牌"
+          },
+          "default": {
+            "description": "Structured error / 结构化错误",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "bearer": {
+        "type": "http",
+        "scheme": "bearer"
+      },
+      "browserSession": {
+        "type": "apiKey",
+        "in": "cookie",
+        "name": "one_session"
+      }
+    },
+    "schemas": {
+      "WorkspaceIdentity": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name"
+        ]
+      },
+      "Project": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "relativeDir": {
+            "type": "string"
+          },
+          "toolchain": {
+            "type": "string",
+            "enum": [
+              "node",
+              "go",
+              "none"
+            ]
+          }
+        },
+        "required": [
+          "name",
+          "relativeDir",
+          "toolchain"
+        ]
+      },
+      "Environment": {
+        "type": "object",
+        "properties": {
+          "siteUrl": {
+            "type": "string",
+            "format": "uri"
+          },
+          "projectId": {
+            "type": "string"
+          },
+          "environments": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "projectId",
+          "environments"
+        ]
+      },
+      "Manifest": {
+        "type": "object",
+        "properties": {
+          "version": {
+            "type": "integer",
+            "const": 2
+          },
+          "workspace": {
+            "$ref": "#/components/schemas/WorkspaceIdentity"
+          },
+          "projects": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Project"
+            }
+          },
+          "env": {
+            "$ref": "#/components/schemas/Environment"
+          },
+          "groups": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "name": {
+                  "type": "string"
+                },
+                "projects": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "required": [
+          "version",
+          "workspace",
+          "projects"
+        ]
+      },
+      "Snapshot": {
+        "type": "object",
+        "properties": {
+          "manifest": {
+            "$ref": "#/components/schemas/Manifest"
+          },
+          "revision": {
+            "type": "string"
+          },
+          "entryId": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "manifest",
+          "revision",
+          "entryId"
+        ]
+      },
+      "Registration": {
+        "type": "object",
+        "properties": {
+          "manifest": {
+            "$ref": "#/components/schemas/Manifest"
+          },
+          "sourceRevision": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "manifest",
+          "sourceRevision"
+        ]
+      },
+      "ServerInfo": {
+        "type": "object",
+        "properties": {
+          "apiVersion": {
+            "type": "integer",
+            "const": 1
+          },
+          "id": {
+            "type": "string"
+          },
+          "mode": {
+            "type": "string",
+            "enum": [
+              "local",
+              "remote"
+            ]
+          },
+          "generation": {
+            "type": "string"
+          },
+          "version": {
+            "type": "string"
+          },
+          "capabilities": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "boolean"
+            }
+          }
+        },
+        "required": [
+          "apiVersion",
+          "id",
+          "mode",
+          "generation",
+          "version",
+          "capabilities"
+        ]
+      },
+      "Error": {
+        "type": "object",
+        "properties": {
+          "schema": {
+            "const": "one-cli/error/v1"
+          },
+          "error": {
+            "type": "object",
+            "properties": {
+              "code": {
+                "type": "string"
+              },
+              "message": {
+                "type": "string"
+              },
+              "context": {
+                "type": "object"
+              },
+              "remediation": {
+                "type": "array",
+                "items": {
+                  "type": "object"
+                }
+              }
+            },
+            "required": [
+              "code",
+              "message",
+              "context",
+              "remediation"
+            ]
+          }
+        },
+        "required": [
+          "schema",
+          "error"
+        ]
+      },
+      "Preferences": {
+        "type": "object",
+        "properties": {
+          "schema": {
+            "type": "string"
+          },
+          "stored_locale": {
+            "type": "string",
+            "enum": [
+              "auto",
+              "zh-CN",
+              "en-US"
+            ]
+          },
+          "resolved": {
+            "type": "string"
+          },
+          "taskUI": {
+            "type": "string",
+            "enum": [
+              "",
+              "stream",
+              "tui"
+            ]
+          },
+          "config_path": {
+            "type": "string"
+          }
+        }
+      },
+      "PreferencePatch": {
+        "type": "object",
+        "properties": {
+          "locale": {
+            "type": "string",
+            "enum": [
+              "auto",
+              "zh-CN",
+              "en-US"
+            ]
+          },
+          "taskUI": {
+            "type": "string",
+            "enum": [
+              "",
+              "stream",
+              "tui"
+            ]
+          }
+        }
+      },
+      "Export": {
+        "type": "object",
+        "properties": {
+          "schema": {
+            "const": "one-server/export/v1"
+          },
+          "workspaces": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Manifest"
+            }
+          },
+          "preferences": {
+            "type": "object",
+            "properties": {
+              "locale": {
+                "type": "string"
+              },
+              "taskUI": {
+                "type": "string"
+              }
+            }
+          },
+          "globalBinding": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "schema",
+          "workspaces",
+          "preferences"
+        ]
+      },
+      "MachineCredentials": {
+        "type": "object",
+        "properties": {
+          "siteUrl": {
+            "type": "string"
+          },
+          "clientId": {
+            "type": "string"
+          },
+          "clientSecret": {
+            "type": "string",
+            "writeOnly": true
+          },
+          "organizationId": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "clientId",
+          "clientSecret"
+        ]
+      },
+      "ExecutionConfigurationRequest": {
+        "type": "object",
+        "properties": {
+          "environment": {
+            "type": "string"
+          },
+          "project": {
+            "type": "string"
+          },
+          "key": {
+            "type": "string"
+          },
+          "value": {
+            "type": "string",
+            "writeOnly": true
+          },
+          "overwrite": {
+            "type": "boolean"
+          },
+          "create": {
+            "type": "boolean"
+          },
+          "projectId": {
+            "type": "string"
+          },
+          "revision": {
+            "type": "string"
+          },
+          "dirs": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "ManagementPatch": {
+        "type": "object",
+        "properties": {
+          "revision": {
+            "type": "string"
+          },
+          "workspace": {
+            "type": "object",
+            "properties": {
+              "environment": {
+                "type": "object",
+                "properties": {
+                  "backend": {
+                    "const": "infisical"
+                  },
+                  "projectId": {
+                    "type": "string"
+                  },
+                  "siteUrl": {
+                    "type": "string"
+                  },
+                  "environments": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "changes": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "project": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "required": [
+          "revision"
+        ]
+      },
+      "AuthToken": {
+        "type": "object",
+        "properties": {
+          "token": {
+            "type": "string",
+            "writeOnly": true
+          }
+        },
+        "required": [
+          "token"
+        ]
+      },
+      "SecretValue": {
+        "type": "object",
+        "properties": {
+          "value": {
+            "type": "string",
+            "writeOnly": true
+          }
+        },
+        "required": [
+          "value"
+        ]
+      }
+    }
+  }
+}

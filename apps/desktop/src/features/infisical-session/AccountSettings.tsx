@@ -1,4 +1,6 @@
 import { openExternal } from "@/lib/desktop/runtime";
+import { useDesktop } from "@/lib/desktop/runtime";
+import { MachineIdentityForm } from "./MachineIdentityForm";
 import {
 	ExternalLink,
 	Languages,
@@ -36,6 +38,7 @@ import { useThemeStore, type ThemeMode } from "@/lib/stores/theme";
 
 export function AccountSettings() {
 	const { t } = useTranslation();
+	const browserLogin = useDesktop((s) => s.capabilities.browserLogin);
 	const { mode: theme, setMode: setTheme } = useThemeStore();
 	const state = useSWR(sessionKey, getSession, { refreshInterval: 2000 });
 	const { mutate } = useSessionSWRConfig();
@@ -140,6 +143,8 @@ export function AccountSettings() {
 								</Button>
 							</div>
 						</>
+					) : !state.error && !browserLogin ? (
+						<MachineIdentityForm onConnected={() => mutate(sessionKey)} />
 					) : !state.error ? (
 						<>
 							<p className="text-sm text-muted-foreground">

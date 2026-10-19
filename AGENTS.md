@@ -7,8 +7,9 @@
 | 项目 | 路径 | 用途 |
 |---|---|---|
 | CLI | `packages/cli` | One 命令行工具，负责创建项目、执行任务、管理环境变量，不包含 HTTP 服务或前端资源。 |
-| One Core | `packages/one-core` | CLI 与桌面 API 共用的 Go 业务和平台能力。 |
-| Desktop API | `services/desktop-api` | 桌面版独立 Go HTTP 后端，编译为 `one-api`。 |
+| One Core | `packages/one-core` | 本地项目创建、任务执行、工程模型与平台能力，不持久化管理数据。 |
+| One Client | `packages/one-client` | CLI 与原生宿主共用的管理 API 客户端，不直连数据库。 |
+| Server | `services/server` | 本地 SQLite / 远程 PostgreSQL 的统一管理服务，编译为 `one-api`。 |
 | Desktop | `apps/desktop` | React 管理界面与 `src-tauri` 原生宿主，内置 `one-api` 和 `one`。 |
 | Website | `apps/website` | Next.js 静态官网，保留首页、安装入口和 AI 资源链接。 |
 

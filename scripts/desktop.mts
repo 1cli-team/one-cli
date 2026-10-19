@@ -71,6 +71,7 @@ function build(identity?: string) {
     "-w",
     `-X main.version=${version}`,
     `-X main.commit=${commit}`,
+    `-X github.com/torchstellar-team/one-cli/packages/one-client.buildVersion=${release ? version : ""}`,
     `-X github.com/torchstellar-team/one-cli/packages/one-core/pkg/platform/updatecheck.buildChannel=${channel}`,
   ];
   if (release)
@@ -80,7 +81,7 @@ function build(identity?: string) {
   const hashes: Record<string, string> = {};
   const signedFiles: Record<string, string> = {};
   for (const [name, entry] of [
-    ["one-api", "./services/desktop-api/cmd/one-api"],
+    ["one-api", "./services/server/cmd/one-api"],
     ["one", "./packages/cli/cmd/one"],
   ]) {
     const path = resolve(bins, `${name}-${target}${platform.os === "windows" ? ".exe" : ""}`);

@@ -1,3 +1,4 @@
+import { native } from "@/lib/desktop/runtime";
 import { useManifestDraftStore } from "@/features/manifest-draft/manifest-draft-store";
 import {
 	Plus,
@@ -83,7 +84,7 @@ export const ProjectInspector: React.FC<ProjectInspectorProps> = ({
 	const binding = useSWR(workspaceEnvironmentKey(workspaceEntryId), () =>
 		getWorkspaceEnvironment(workspaceEntryId),
 	);
-	const canCreate = !readOnly;
+	const canCreate = native && !readOnly;
 	const [dirty, setDirty] = useState(false);
 	const [pendingAction, setPendingAction] = useState<(() => void) | null>(null);
 	const [searchParams, setSearchParams] = useSearchParams();

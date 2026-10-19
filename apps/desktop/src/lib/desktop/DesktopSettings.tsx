@@ -12,7 +12,7 @@ import {
 	DialogDescription,
 } from "@/components/ui/dialog";
 import { PageHeader } from "@/components/ui/page-layout";
-import { http } from "@/lib/http";
+import { native } from "./runtime";
 interface Installation {
 	target: string;
 	version: string;
@@ -32,12 +32,17 @@ interface Update {
 	reason?: string;
 }
 export function DesktopSettings() {
-	return <SettingsBody />;
+	const { t } = useTranslation();
+	return native ? (
+		<SettingsBody />
+	) : (
+		<PageHeader title={t("server.settingsTitle")} description={t("server.webHint")} />
+	);
 }
 function SettingsBody({ onDone }: { onDone?: () => void }) {
 	const { t } = useTranslation();
 	const state = useSWR("/desktop/installation", () =>
-		http.get<Installation>("/desktop/installation"),
+		invoke<Installation>("local_operation", { operation: "installation", payload: {} }),
 	);
 	const [busy, setBusy] = useState(false);
 	const [error, setError] = useState("");
@@ -95,11 +100,10 @@ function SettingsBody({ onDone }: { onDone?: () => void }) {
 										disabled={busy}
 										onClick={() =>
 											void action(async () => {
-												await http.post(
-													"/desktop/installation",
-													{ target: s.target, digest: s.digest },
-													{ timeout: 30000 },
-												);
+												await invoke("local_operation", {
+													operation: "installTerminal",
+													payload: { target: s.target, digest: s.digest },
+												});
 												await state.mutate();
 											})
 										}

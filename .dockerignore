@@ -1,0 +1,28 @@
+.git
+**/node_modules
+**/dist
+**/out
+**/bin
+**/target
+**/binaries
+.pnpm-store
+.cache
+.one
+.one-run-*
+go-dist
+desktop-dist
+
+# Private deployment records / 私有部署记录
+/services/server/deploy/
+
+# Local credentials and machine state / 本地凭据与机器状态
+**/.env
+**/.env.*
+!**/.env.example
+**/.secrets
+**/.seo
+**/.claude
+**/.codex
+**/.ssh
+**/.kube
+**/*.log

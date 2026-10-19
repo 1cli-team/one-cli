@@ -19,9 +19,9 @@ apps/desktop/
     bundle-manifest.json 生成的版本、源码和二进制摘要
 ```
 
-Rust 从应用包启动 `services/desktop-api` 编译出的 `one-api`；后者复用 `packages/one-core/pkg`。React 通过带 Bearer 认证的随机 loopback HTTP 端口访问 Go。会话凭据通过私有管道及受限 Tauri IPC 交付，不写进 URL 或日志。桌面版不提供任务运行和日志界面；工作区任务在终端使用 `one run` 执行，包内 `one` 用于终端 CLI 安装。
+Rust 按需连接或启动共享本地服务：从应用包启动 `services/server` 编译出的 `one-api`；后者拥有管理数据与集成。CLI 的本地操作通过受限原生桥接调用 Core。Desktop 也可连接远程 Server，与浏览器 Web 使用相同 API。React 通过带 Bearer 认证的随机 loopback HTTP 端口访问 Go。会话凭据通过私有管道及受限 Tauri IPC 交付，不写进 URL 或日志。桌面版不提供任务运行和日志界面；工作区任务在终端使用 `one run` 执行，包内 `one` 用于终端 CLI 安装。
 
-关闭窗口只会隐藏界面，应用与 Go 后端继续运行。通过系统托盘的“打开 One Desktop”、macOS Dock 图标或再次启动应用可恢复原窗口；托盘的“退出 One Desktop”以及 macOS 菜单退出 / `Cmd+Q` 才会执行后端停止流程。托盘菜单跟随应用的中英文语言设置。
+关闭窗口只会隐藏界面，应用与 Go 后端继续运行。通过系统托盘的“打开 One Desktop”、macOS Dock 图标或再次启动应用可恢复原窗口；托盘的“退出 One Desktop”以及 macOS 菜单退出 / `Cmd+Q` 只会断开本客户端，共享 Server 继续运行。托盘菜单跟随应用的中英文语言设置。
 
 ## 开发和构建
 
@@ -34,7 +34,7 @@ one build-desktop       # 构建当前平台桌面包
 one check               # Go、React、Rust、文档及发布规则检查
 ```
 
-也可使用 `one run dev -p desktop` / `one run build -p desktop`。`dev:web` 和 `build:web` 仅处理前端；浏览器中打开 Vite 地址不会获得桌面会话。原 `dashboard` 项目名和 Vite API 代理已移除。
+也可使用 `one run dev -p desktop` / `one run build -p desktop`。`dev:web` 和 `build:web` 仅处理前端；浏览器生产界面由 Server 托管并使用 cookie 登录；本地 Vite 预览不自动获得原生会话。原 `dashboard` 项目名和 Vite API 代理已移除。
 
 macOS 本地构建生成 `src-tauri/target/<target>/release/bundle/macos/One Desktop.app`，以及 `src-tauri/target/<target>/release/bundle/dmg/` 下的 `.dmg` 安装包。`scripts/desktop.mts` 负责先构建同版本、同源码的 `one-api` 与 `one`，再调用 Tauri。CLI 单独构建无需前端或 Rust。
 
@@ -50,11 +50,11 @@ macOS 本地构建生成 `src-tauri/target/<target>/release/bundle/macos/One Des
 
 ## English
 
-The `desktop` project combines React in `src/` with the Tauri host in `src-tauri/`. Rust owns native integration and the bundled backend lifecycle. React accesses authenticated loopback HTTP directly. The app bundles both `one-api` and `one`; shared Go packages live in `packages/one-core/pkg`, with private implementations under `internal`.
+The `desktop` project combines React in `src/` with the Tauri host in `src-tauri/`. Rust owns native integration and connects to an independently supervised local server. Desktop can also connect to a remote server; the same React UI is hosted there for browsers. React accesses authenticated loopback HTTP directly. The app bundles both `one-api` and `one`; shared Go packages live in `packages/one-core/pkg`, with private implementations under `internal`.
 
 Workspace tasks run in the terminal using `one run`. The desktop app has no task runner or log viewer; the bundled `one` is the source for terminal CLI installation.
 
-Closing the window hides it while the app and Go backend keep running. Restore the same window through Open One Desktop in the system tray, the macOS Dock icon, or launching the app again. Quit One Desktop in the tray or the macOS Quit menu / `Cmd+Q` stops the backend before exiting. Tray labels follow the app's English or Chinese language preference.
+Closing the window hides it while the app and Go backend keep running. Restore the same window through Open One Desktop in the system tray, the macOS Dock icon, or launching the app again. Quit One Desktop in the tray or the macOS Quit menu / `Cmd+Q` disconnects the client while the shared server keeps running. Tray labels follow the app's English or Chinese language preference.
 
 Install the pinned mise tools, Rust with rustfmt, and the Tauri platform prerequisites. Run `one dev` for development, `one build-desktop` for a native package, and `one check` for repository checks. CI pins Rust 1.94.0. First-run terminal installation is optional and preserves unknown/newer installations. Use isolated installation/configuration directories during verification.
 

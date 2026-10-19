@@ -18,8 +18,8 @@ export const SWRProvider: React.FC<React.PropsWithChildren> = ({ children }) => 
 		<SWRConfig
 			value={{
 				use: [sessionCache],
-				refreshInterval: 0,
-				revalidateOnFocus: false,
+				refreshInterval: 5000,
+				revalidateOnFocus: true,
 				revalidateOnReconnect: true,
 				shouldRetryOnError: true,
 				errorRetryCount: 3,

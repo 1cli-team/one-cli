@@ -95,6 +95,66 @@ fn open_external(window: WebviewWindow, app: tauri::AppHandle, url: String) -> R
         .open_url(url, None::<&str>)
         .map_err(|e| e.to_string())
 }
+#[tauri::command]
+async fn local_operation(
+    window: WebviewWindow,
+    operation: String,
+    payload: serde_json::Value,
+) -> Result<serde_json::Value, String> {
+    trusted(&window)?;
+    tauri::async_runtime::spawn_blocking(move || {
+        use std::io::Write;
+        use std::process::{Command, Stdio};
+        let mut command = Command::new(backend::bundled_binary("one")?);
+        match operation.as_str() {
+            "remoteToken" => {
+                command.arg("__desktop-remote-token");
+            }
+            "observe" => {
+                command.arg("__desktop-observe");
+            }
+            "createProject" => {
+                command.arg("__desktop-create-project");
+            }
+            "installation" => {
+                command.arg("__desktop-install-status");
+            }
+            "installTerminal" => {
+                command
+                    .arg("__install-terminal")
+                    .arg(payload["target"].as_str().ok_or("invalid_path")?)
+                    .arg(payload["digest"].as_str().ok_or("invalid_digest")?);
+            }
+            _ => return Err("unsupported_local_operation".into()),
+        };
+        #[cfg(windows)]
+        {
+            use std::os::windows::process::CommandExt;
+            command.creation_flags(0x08000000);
+        }
+        command
+            .stdin(Stdio::piped())
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped());
+        let mut child = command.spawn().map_err(|e| e.to_string())?;
+        if operation == "createProject" || operation == "remoteToken" || operation == "observe" {
+            if let Some(mut input) = child.stdin.take() {
+                input
+                    .write_all(payload.to_string().as_bytes())
+                    .map_err(|e| e.to_string())?;
+            }
+        }
+        drop(child.stdin.take());
+        let output = child.wait_with_output().map_err(|e| e.to_string())?;
+        if !output.status.success() {
+            return Err(String::from_utf8_lossy(&output.stderr).trim().into());
+        }
+        serde_json::from_slice(&output.stdout).map_err(|e| e.to_string())
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
+
 // Called off the main thread, so native dialogs and the window remain responsive.
 fn stop_backend(app: &tauri::AppHandle) -> Result<bool, String> {
     let backend = app.state::<Backend>();
@@ -220,6 +280,7 @@ fn main() {
             set_native_locale,
             choose_workspace,
             open_external,
+            local_operation,
             updates::check_update,
             updates::install_update,
             updates::confirm_health

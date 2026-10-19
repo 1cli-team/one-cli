@@ -6,7 +6,7 @@ import (
 
 	"github.com/spf13/cobra"
 
-	environmentmodule "github.com/torchstellar-team/one-cli/packages/one-core/pkg/modules/environment"
+	environmentmodule "github.com/torchstellar-team/one-cli/packages/one-client/environment"
 	cliErrors "github.com/torchstellar-team/one-cli/packages/one-core/pkg/platform/errors"
 	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/platform/i18n"
 	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/platform/output"

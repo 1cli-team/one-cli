@@ -4,8 +4,8 @@ import { useNavigate } from "react-router-dom";
 import { FolderOpen } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { http } from "@/lib/http";
-import { chooseWorkspace } from "./runtime";
+import { invoke } from "@tauri-apps/api/core";
+import { chooseWorkspace, native, useDesktop } from "./runtime";
 import { useSessionSWRConfig } from "./cache";
 export function OpenWorkspace() {
 	const { t } = useTranslation();
@@ -17,7 +17,14 @@ export function OpenWorkspace() {
 		try {
 			const path = await chooseWorkspace();
 			if (!path) return;
-			const entry = await http.post<{ entryId: string }>("/workspaces", { path });
+			const entry = await invoke<{ entryId: string }>("local_operation", {
+				operation: "observe",
+				payload: {
+					path,
+					serverURL: useDesktop.getState().serverURL,
+					local: useDesktop.getState().localConnection,
+				},
+			});
 			await mutate("/workspaces");
 			navigate(`/workspace/${encodeURIComponent(entry.entryId)}`);
 		} catch (e) {
@@ -26,6 +33,7 @@ export function OpenWorkspace() {
 			setBusy(false);
 		}
 	}
+	if (!native) return null;
 	return (
 		<Button disabled={busy} onClick={() => void open()}>
 			<FolderOpen />

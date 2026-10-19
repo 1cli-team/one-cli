@@ -29,12 +29,30 @@ builds:
       - -s -w
       - -X main.version={{.Version}}
       - -X main.commit={{.FullCommit}}
+      - -X github.com/torchstellar-team/one-cli/packages/one-client.buildVersion={{.Version}}
       - -X github.com/torchstellar-team/one-cli/packages/one-core/pkg/platform/updatecheck.buildChannel=release
       # Published releases restore One skills from this exact source commit.
       # Local snapshots retain their embedded, unpublished skill files.
       - -X github.com/torchstellar-team/one-cli/packages/one-core/pkg/modules/skills.bundledSourceRef={{ if not .IsSnapshot }}{{ .FullCommit }}{{ end }}
     flags:
       - -trimpath
+
+  - id: one-api
+    dir: services/server
+    main: ./cmd/one-api
+    binary: one-api
+    env: [CGO_ENABLED=0]
+    goos: [darwin, linux, windows]
+    goarch: [amd64, arm64]
+    ignore:
+      - goos: windows
+        goarch: arm64
+    ldflags:
+      - -s -w
+      - -X main.version={{.Version}}
+      - -X main.commit={{.FullCommit}}
+      - -X github.com/torchstellar-team/one-cli/packages/one-core/pkg/platform/updatecheck.buildChannel=release
+    flags: [-trimpath]
 
 archives:
   - id: default
@@ -82,7 +100,7 @@ release:
 
     Pre-built binaries for darwin/linux/windows × amd64/arm64.
     Install via the curl one-liner (see README), or download the
-    matching archive below and extract `one` onto your PATH.
+    matching archive below and keep `one` and `one-api` together on your PATH.
 
   footer: |
     Verify your download with `sha256sum -c checksums.txt`.

@@ -18,6 +18,19 @@ type Workspace struct {
 	manifest *workspace.Manifest
 }
 
+// SnapshotResolver supplies management data without giving Core a network or
+// database dependency. The command owns its resolver and request lifetime.
+type SnapshotResolver func(context.Context, string, *workspace.Manifest) (*workspace.Manifest, error)
+type snapshotResolverKey struct{}
+
+func WithSnapshotResolver(ctx context.Context, resolver SnapshotResolver) context.Context {
+	return context.WithValue(ctx, snapshotResolverKey{}, resolver)
+}
+
+func NewWorkspace(scope Scope, root string, manifest *workspace.Manifest) Workspace {
+	return Workspace{scope: scope.Derive(ScopePatch{WorkspaceRoot: root}), root: root, manifest: manifest}
+}
+
 // ResolveWorkspace resolves the execution Scope carried by ctx. Commands that
 // run outside the root harness still work by deriving a Scope from the process
 // working directory.
@@ -46,6 +59,12 @@ func ResolveWorkspaceScope(scope Scope) (Workspace, error) {
 	manifest, err := workspace.ReadManifest(root)
 	if err != nil {
 		return Workspace{}, err
+	}
+	if resolve, ok := scope.Context().Value(snapshotResolverKey{}).(SnapshotResolver); ok {
+		manifest, err = resolve(scope.Context(), root, manifest)
+		if err != nil {
+			return Workspace{}, err
+		}
 	}
 	return Workspace{
 		scope: scope.Derive(ScopePatch{WorkspaceRoot: root}),

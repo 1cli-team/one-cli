@@ -212,17 +212,24 @@ function Install-One {
         }
 
         [IO.Directory]::CreateDirectory($installDir) | Out-Null
-        $staged = Join-Path $installDir ("one.exe." + [Guid]::NewGuid().ToString("N") + ".tmp")
-        try {
-            [IO.File]::Copy($candidate, $staged, $true)
-            if (Test-Path -LiteralPath $target) {
-                [IO.File]::Replace($staged, $target, $null)
-            } else {
-                [IO.File]::Move($staged, $target)
-            }
-        } finally {
-            if (Test-Path -LiteralPath $staged) {
-                Remove-Item -LiteralPath $staged -Force
+        $helper = Join-Path $extractDir "one-api.exe"
+        if (Test-Path -LiteralPath $helper -PathType Leaf) {
+            $forceValue = if ($force) { "1" } else { "0" }
+            & $candidate __install-release $target $forceValue | Out-Null
+            if ($LASTEXITCODE -ne 0) { throw "CLI and server installation failed." }
+        } else {
+            $staged = Join-Path $installDir ("one.exe." + [Guid]::NewGuid().ToString("N") + ".tmp")
+            try {
+                [IO.File]::Copy($candidate, $staged, $true)
+                if (Test-Path -LiteralPath $target) {
+                    [IO.File]::Replace($staged, $target, $null)
+                } else {
+                    [IO.File]::Move($staged, $target)
+                }
+            } finally {
+                if (Test-Path -LiteralPath $staged) {
+                    Remove-Item -LiteralPath $staged -Force
+                }
             }
         }
     } finally {

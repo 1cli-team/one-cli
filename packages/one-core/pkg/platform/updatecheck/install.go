@@ -141,6 +141,26 @@ func (u updater) update(ctx context.Context, target, current, expected string) (
 	if err = u.probe(ctx, stagedPath, latest); err != nil {
 		return latest, "", err
 	}
+	helper, e := os.CreateTemp(filepath.Dir(target), ".one-api-next-*.exe")
+	if e != nil {
+		return latest, "", e
+	}
+	helperPath := helper.Name()
+	defer os.Remove(helperPath)
+	e = extractNamedExecutable(archivePath, u.goos, "one-api", helper)
+	if e == nil {
+		e = helper.Chmod(0755)
+	}
+	closeHelper := helper.Close()
+	if e != nil {
+		return latest, "", e
+	}
+	if closeHelper != nil {
+		return latest, "", closeHelper
+	}
+	if e = u.probe(ctx, helperPath, latest); e != nil {
+		return latest, "", e
+	}
 	if err = unchangedExecutable(target, expected); err != nil {
 		return latest, "", err
 	}
@@ -155,7 +175,7 @@ func (u updater) update(ctx context.Context, target, current, expected string) (
 	if err = unchangedExecutable(target, expected); err != nil {
 		return latest, "", err
 	}
-	if err = fsutil.ReplaceFile(stagedPath, target); err != nil {
+	if err = installation.ReplacePair(stagedPath, helperPath, target, latest); err != nil {
 		return latest, "", err
 	}
 	_ = fsutil.SyncDir(filepath.Dir(target))
@@ -219,7 +239,10 @@ func (u updater) checksum(ctx context.Context, url, archive string) (string, err
 // Only copy the root executable. Archive paths, permissions, links, and other
 // files never become filesystem paths or modify the installation directory.
 func extractExecutable(archive, goos string, dst io.Writer) error {
-	name := "one"
+	return extractNamedExecutable(archive, goos, "one", dst)
+}
+
+func extractNamedExecutable(archive, goos, name string, dst io.Writer) error {
 	found := false
 	copyEntry := func(reader io.Reader, size int64) error {
 		if found || size <= 0 || size > maxExecutableSize {

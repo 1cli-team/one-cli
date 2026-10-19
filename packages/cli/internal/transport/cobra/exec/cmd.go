@@ -238,7 +238,17 @@ func loadRunSecrets(
 	relativeDir string,
 ) (map[string]string, string, error) {
 	providerID := workspace.EnvBackend(manifest)
-	if !workspace.EnvironmentEnabled(manifest, relativeDir) {
+	enabled := workspace.EnvironmentEnabled(manifest, relativeDir)
+	scoped := loaders.Scoped()
+	if scoped != nil {
+		var err error
+		enabled, err = scoped.Enabled(ctx, projectRoot, relativeDir)
+		if err != nil {
+			return nil, "", err
+		}
+		providerID = scoped.ID()
+	}
+	if !enabled {
 		return map[string]string{}, "", nil
 	}
 

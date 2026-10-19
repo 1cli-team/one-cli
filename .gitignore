@@ -67,4 +67,16 @@ bin-go/
 /apps/desktop/src-tauri/bundle-manifest.json
 /apps/desktop/src-tauri/build-config.json
 /desktop-dist/
-/services/desktop-api/bin/
+/services/server/bin/
+
+# Private deployment records / 私有部署记录
+/services/server/deploy/
+
+# Local credentials and machine state / 本地凭据与机器状态
+/.codex/
+/.ssh/
+/.kube/
+
+# Browser assets are built from apps/desktop for standalone server packaging.
+/services/server/internal/web/assets/*
+!/services/server/internal/web/assets/placeholder.txt

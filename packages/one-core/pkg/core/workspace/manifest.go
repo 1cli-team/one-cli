@@ -2,6 +2,7 @@ package workspace
 
 import (
 	"bytes"
+	"context"
 	"crypto/sha256"
 	"errors"
 	"fmt"
@@ -116,55 +117,59 @@ func ParseManifest(raw []byte) (*Manifest, error) {
 var environmentSlugPattern = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9_-]*$`)
 
 func ValidateManifest(m *Manifest) error {
+	return ValidateManifestContext(i18n.WithLocale(context.Background(), i18n.Active()), m)
+}
+
+func ValidateManifestContext(ctx context.Context, m *Manifest) error {
 	invalid := func(detail string) error { return cliErrors.New(cliErrors.MANIFEST_INVALID, detail) }
 	if m.Version != ManifestVersion {
-		return invalid(i18n.Tf("manifest.version_unsupported", m.Version, ManifestVersion))
+		return invalid(i18n.ForContext(ctx).Tf("manifest.version_unsupported", m.Version, ManifestVersion))
 	}
 	if m.Workspace != nil && (strings.TrimSpace(m.Workspace.ID) == "" || strings.TrimSpace(m.Workspace.Name) == "") {
-		return invalid(i18n.T("manifest.identity_required"))
+		return invalid(i18n.ForContext(ctx).T("manifest.identity_required"))
 	}
 	if m.Env != nil {
 		if strings.TrimSpace(m.Env.ProjectID) == "" {
-			return invalid(i18n.T("infisical.binding_missing"))
+			return invalid(i18n.ForContext(ctx).T("infisical.binding_missing"))
 		}
 		hasDev := false
 		seen := map[string]bool{}
 		for _, env := range m.Env.Environments {
 			if !environmentSlugPattern.MatchString(env) || len(env) > 128 || seen[env] {
-				return invalid(i18n.Tf("manifest.environment_invalid", env))
+				return invalid(i18n.ForContext(ctx).Tf("manifest.environment_invalid", env))
 			}
 			seen[env] = true
 			hasDev = hasDev || env == "dev"
 		}
 		if !hasDev {
-			return invalid(i18n.T("manifest.dev_required"))
+			return invalid(i18n.ForContext(ctx).T("manifest.dev_required"))
 		}
 	}
 	names, paths := map[string]bool{}, map[string]bool{}
 	for _, p := range m.Projects {
 		path := p.RelativeDir
 		if !IsValidProjectName(p.Name) || names[p.Name] {
-			return invalid(i18n.Tf("manifest.project_invalid", p.Name))
+			return invalid(i18n.ForContext(ctx).Tf("manifest.project_invalid", p.Name))
 		}
 		names[p.Name] = true
 		if path == "" || path == "." || strings.ContainsAny(path, "\\\x00") || strings.HasPrefix(path, "/") || strings.Contains(path, ":") || filepath.ToSlash(filepath.Clean(path)) != path || path == ".." || strings.HasPrefix(path, "../") || paths[path] {
-			return invalid(i18n.Tf("manifest.path_invalid", p.Name, path))
+			return invalid(i18n.ForContext(ctx).Tf("manifest.path_invalid", p.Name, path))
 		}
 		paths[path] = true
 		if p.Toolchain != "node" && p.Toolchain != "go" && p.Toolchain != "none" {
-			return invalid(i18n.Tf("manifest.toolchain_invalid", p.Name, p.Toolchain))
+			return invalid(i18n.ForContext(ctx).Tf("manifest.toolchain_invalid", p.Name, p.Toolchain))
 		}
 	}
 	groupNames := map[string]bool{}
 	for _, group := range m.Groups {
 		if !IsValidProjectName(group.Name) || names[group.Name] || groupNames[group.Name] || len(group.Projects) == 0 {
-			return invalid(i18n.Tf("manifest.group_invalid", group.Name))
+			return invalid(i18n.ForContext(ctx).Tf("manifest.group_invalid", group.Name))
 		}
 		groupNames[group.Name] = true
 		members := map[string]bool{}
 		for _, name := range group.Projects {
 			if !names[name] || members[name] {
-				return invalid(i18n.Tf("manifest.group_member_invalid", group.Name, name))
+				return invalid(i18n.ForContext(ctx).Tf("manifest.group_member_invalid", group.Name, name))
 			}
 			members[name] = true
 		}

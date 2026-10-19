@@ -24,6 +24,25 @@ type BatchLoader interface {
 	LoadProjects(ctx context.Context, projectRoot string, relativeDirs []string, envName string) (map[string]map[string]string, error)
 }
 
+// ScopedLoader resolves whether injection is configured for the selected
+// project. Its implementation belongs to the management client, outside Core.
+type ScopedLoader interface {
+	Loader
+	Enabled(context.Context, string, string) (bool, error)
+}
+
+func (r *Registry) Scoped() ScopedLoader {
+	if r == nil {
+		return nil
+	}
+	for _, loader := range r.loaders {
+		if scoped, ok := loader.(ScopedLoader); ok {
+			return scoped
+		}
+	}
+	return nil
+}
+
 // LoadProjects prefers a provider's batch path, with a serial fallback for
 // loaders that do not promise concurrency safety.
 func LoadProjects(ctx context.Context, loader Loader, root string, dirs []string, env string) (map[string]map[string]string, error) {

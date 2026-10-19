@@ -255,8 +255,15 @@ install_binary() {
     fi
 
     mkdir -p "$ONE_INSTALL_DIR"
-    mv -f "$TMP/one" "$target"
-    chmod +x "$target"
+    if [[ -f "$TMP/one-api" ]]; then
+        chmod +x "$TMP/one" "$TMP/one-api"
+        target="$(cd "$ONE_INSTALL_DIR" && pwd)/one"
+        "$TMP/one" __install-release "$target" "$ONE_FORCE" > "$TMP/installation.json"
+    else
+        # Historical single-binary releases keep their original install path.
+        mv -f "$TMP/one" "$target"
+        chmod +x "$target"
+    fi
     green "one-cli: installed $target ($ONE_VERSION)"
 }
 

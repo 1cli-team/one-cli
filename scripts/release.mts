@@ -209,6 +209,7 @@ export function smoke(build: Build) {
     const exe = join(dir, name.includes("windows") ? "one.exe" : "one");
     if (
       !existsSync(exe) ||
+      !existsSync(join(dir, name.includes("windows") ? "one-api.exe" : "one-api")) ||
       !existsSync(join(dir, "README.md")) ||
       !existsSync(join(dir, "third_party/mise/LICENSE"))
     ) {
@@ -220,6 +221,8 @@ export function smoke(build: Build) {
     const info = read("mise", ["exec", "--", "go", "version", "-m", exe], { cwd: build.source });
     const target = /^one-cli_(darwin|linux|windows)_(amd64|arm64)\./.exec(name)!;
     assertBuildSettings(info, p.sourceSha, target[1], target[2]);
+    const helper = join(dir, name.includes("windows") ? "one-api.exe" : "one-api");
+    assertBuildSettings(read("mise", ["exec", "--", "go", "version", "-m", helper], {cwd:build.source}), p.sourceSha, target[1], target[2]);
     if (name === `one-cli_${hostOS}_${hostArch}.tar.gz`) binary = exe;
   }
   const storage = join(verify, "one-home");
@@ -336,8 +339,9 @@ function buildRelease(
   run("mise", ["trust"], { cwd: source, env });
   for (const module of [
     "packages/one-core",
+    "packages/one-client",
     "packages/cli",
-    "services/desktop-api",
+    "services/server",
   ]) {
     run("mise", ["exec", "--", "go", "-C", module, "mod", "download"], {
       cwd: source,
@@ -345,6 +349,7 @@ function buildRelease(
     });
   }
   run("mise", ["run", "--jobs", "1", "--force", "check"], { cwd: source, env });
+  run("mise", ["run", "server:web"], {cwd:source,env});
   if (git(source, "status", "--porcelain", "--untracked-files=no"))
     fail(
       "Checks changed tracked source files; stop.",

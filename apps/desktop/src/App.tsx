@@ -1,3 +1,4 @@
+import { native } from "@/lib/desktop/runtime";
 import { DesktopWelcome } from "@/lib/desktop/DesktopSettings";
 import type React from "react";
 import { useMatch } from "react-router-dom";
@@ -12,7 +13,7 @@ export const App: React.FC = () => {
 	return (
 		<div className="flex h-dvh min-w-0 overflow-hidden bg-background text-foreground">
 			<div className="flex min-w-0 flex-1 flex-col">
-				<DesktopWelcome />
+				{native ? <DesktopWelcome /> : null}
 				<TopBar />
 				<main
 					className={cn(

@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/spf13/cobra"
+	oneclient "github.com/torchstellar-team/one-cli/packages/one-client"
 	cliErrors "github.com/torchstellar-team/one-cli/packages/one-core/pkg/platform/errors"
 	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/platform/i18n"
 	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/platform/output"
@@ -48,12 +49,13 @@ func Command() *cobra.Command {
 		Long: i18n.T("locale.tip"),
 		Args: i18n.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			prefs, err := preferences.Load()
+			client := oneclient.New()
+			prefs, err := client.Preferences(cmd.Context())
 			if err != nil {
 				return cliErrors.New(cliErrors.PREFERENCES_FILE_INVALID,
 					i18n.Tf("locale.read_failed", err.Error()))
 			}
-			path, _ := preferences.Path()
+			path := prefs.ConfigPath
 
 			if len(args) == 1 {
 				newLocale := strings.TrimSpace(args[0])
@@ -61,8 +63,7 @@ func Command() *cobra.Command {
 					return cliErrors.New(cliErrors.PREFERENCES_INVALID,
 						i18n.Tf("locale.unknown", newLocale))
 				}
-				prefs.Locale = newLocale
-				if err := preferences.Save(prefs); err != nil {
+				if _, err := client.SetLocale(cmd.Context(), newLocale); err != nil {
 					return err
 				}
 				_ = i18n.Init(i18n.Resolve(newLocale))
@@ -80,8 +81,8 @@ func Command() *cobra.Command {
 
 			output.Emit(&localeResult{
 				Schema:       "one-cli/locale/v1",
-				StoredLocale: prefs.Locale,
-				Resolved:     i18n.Resolve(prefs.Locale),
+				StoredLocale: prefs.StoredLocale,
+				Resolved:     i18n.Resolve(prefs.StoredLocale),
 				Detected:     i18n.DetectFromEnv(),
 				ConfigPath:   path,
 				Updated:      false,

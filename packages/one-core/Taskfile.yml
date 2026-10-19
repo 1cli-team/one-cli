@@ -4,6 +4,8 @@ tasks:
     cmds: ['go build ./...']
   check:
     cmds: ['go vet ./...']
+  test:
+    cmds: ['go test -race ./...']
   fmt:
     cmds: ['go fmt ./...']
   tidy:

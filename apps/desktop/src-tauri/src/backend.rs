@@ -1,16 +1,11 @@
 use serde::{Deserialize, Serialize};
-use serde_json::{json, Value};
 use std::{
-    io::{BufRead, BufReader, Read, Write},
-    process::{Command, Stdio},
+    process::Command,
     sync::{mpsc, Arc, Mutex},
-    time::{Duration, Instant},
 };
 use tauri::{AppHandle, Emitter};
-use uuid::Uuid;
 
 #[derive(Clone, Deserialize, Serialize)]
-#[serde(rename_all = "camelCase")]
 pub struct Manifest {
     pub version: String,
     pub commit: String,
@@ -23,7 +18,6 @@ pub struct Manifest {
 pub fn manifest() -> Manifest {
     serde_json::from_str(include_str!("../bundle-manifest.json")).expect("build manifest")
 }
-
 #[derive(Clone, Default, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Snapshot {
@@ -36,6 +30,15 @@ pub struct Snapshot {
     pub error: String,
     #[serde(skip)]
     pub storage_root: std::path::PathBuf,
+}
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct Connection {
+    url: String,
+    token: String,
+    generation: String,
+    port: u16,
+    storage_root: std::path::PathBuf,
 }
 pub enum Control {
     Stop(mpsc::SyncSender<()>),
@@ -56,14 +59,53 @@ fn publish(app: &AppHandle, state: &Arc<Mutex<Snapshot>>, status: &str, error: &
         s.token.clear();
         s.port = 0;
     }
-    // Event payloads must never contain session credentials.
-    let _ = app.emit_to(
-        "main",
-        "backend-state",
-        json!({"sequence":s.sequence,"status":s.status,"generation":s.generation,"error":s.error}),
-    );
+    let _=app.emit_to("main","backend-state",serde_json::json!({"sequence":s.sequence,"status":s.status,"generation":s.generation,"error":s.error}));
 }
-
+pub fn bundled_binary(name: &str) -> Result<std::path::PathBuf, String> {
+    let exe = std::env::current_exe().map_err(|e| e.to_string())?;
+    let file = if cfg!(windows) {
+        format!("{name}.exe")
+    } else {
+        name.into()
+    };
+    let path = exe.parent().ok_or("backend_path")?.join(file);
+    if !path.is_file() {
+        return Err("backend_missing".into());
+    };
+    Ok(path)
+}
+fn connect(app: &AppHandle, state: &Arc<Mutex<Snapshot>>) -> Result<(), String> {
+    publish(app, state, "starting", "");
+    let mut command = Command::new(bundled_binary("one-api")?);
+    command.arg("ensure");
+    #[cfg(windows)]
+    {
+        use std::os::windows::process::CommandExt;
+        command.creation_flags(0x08000000);
+    }
+    let output = command.output().map_err(|e| e.to_string())?;
+    if !output.status.success() {
+        return Err(String::from_utf8_lossy(&output.stderr).trim().to_string());
+    }
+    let conn: Connection =
+        serde_json::from_slice(&output.stdout).map_err(|_| "backend_protocol")?;
+    if conn.url != format!("http://127.0.0.1:{}", conn.port)
+        || conn.token.len() != 64
+        || conn.generation.is_empty()
+        || !conn.storage_root.is_absolute()
+    {
+        return Err("backend_identity".into());
+    }
+    {
+        let mut s = state.lock().unwrap();
+        s.generation = conn.generation;
+        s.port = conn.port;
+        s.token = conn.token;
+        s.storage_root = conn.storage_root;
+    }
+    publish(app, state, "httpReady", "");
+    Ok(())
+}
 pub fn start(app: AppHandle) -> Backend {
     let state = Arc::new(Mutex::new(Snapshot {
         status: "starting".into(),
@@ -71,231 +113,28 @@ pub fn start(app: AppHandle) -> Backend {
     }));
     let (tx, rx) = mpsc::channel();
     let shared = state.clone();
-    std::thread::spawn(move || supervise(app, shared, rx));
+    std::thread::spawn(move || {
+        while let Ok(control) = rx.recv() {
+            match control {
+                Control::Stop(done) => {
+                    publish(&app, &shared, "stopped", "");
+                    let _ = done.send(());
+                    return;
+                }
+                Control::Quiesce(done) => {
+                    let _ = done.send(0);
+                }
+                Control::Resume => {}
+                Control::Retry => {
+                    if let Err(error) = connect(&app, &shared) {
+                        publish(&app, &shared, "failed", &error)
+                    }
+                }
+            }
+        }
+    });
     Backend {
         snapshot: state,
         control: tx,
-    }
-}
-
-fn supervise(app: AppHandle, state: Arc<Mutex<Snapshot>>, controls: mpsc::Receiver<Control>) {
-    loop {
-        publish(&app, &state, "starting", "");
-        let result = run_child(&app, &state, &controls);
-        match result {
-            Ok(true) => return,
-            Ok(false) => {
-                continue;
-            }
-            Err(error) => {
-                publish(&app, &state, "failed", &error);
-
-                // Recovery is explicit: a deliberate retry creates a new session.
-                // Never automatically replay operations after a crash.
-                loop {
-                    match controls.recv() {
-                        Ok(Control::Retry) => break,
-                        Ok(Control::Stop(done)) => {
-                            let _ = done.send(());
-                            return;
-                        }
-                        Ok(Control::Quiesce(done)) => {
-                            let _ = done.send(0);
-                        }
-                        Ok(_) => (),
-                        Err(_) => return,
-                    }
-                }
-            }
-        }
-    }
-}
-
-fn run_child(
-    app: &AppHandle,
-    state: &Arc<Mutex<Snapshot>>,
-    controls: &mpsc::Receiver<Control>,
-) -> Result<bool, String> {
-    let meta = manifest();
-    let exe = std::env::current_exe().map_err(|e| e.to_string())?;
-    let path = exe.parent().ok_or("backend_path")?.join(if cfg!(windows) {
-        "one-api.exe"
-    } else {
-        "one-api"
-    });
-    // Tauri places externalBin next to the native executable, including inside
-    // AppImage/usr/bin. Never search PATH or download a replacement here.
-    if !path.is_file() {
-        return Err("backend_missing".into());
-    }
-    let generation = Uuid::new_v4().to_string();
-    let mut random = [0u8; 32];
-    getrandom::fill(&mut random).map_err(|e| e.to_string())?;
-    let token: String = random.iter().map(|byte| format!("{byte:02x}")).collect();
-    let origin = if tauri::is_dev() {
-        "http://127.0.0.1:5173"
-    } else if cfg!(windows) {
-        "http://tauri.localhost"
-    } else {
-        "tauri://localhost"
-    };
-    let mut command = Command::new(&path);
-    #[cfg(windows)]
-    {
-        use std::os::windows::process::CommandExt;
-        // The Go sidecar is a console executable. Keep it console-free while
-        // retaining the pipes used for bootstrap and graceful shutdown.
-        const CREATE_NO_WINDOW: u32 = 0x08000000;
-        command.creation_flags(CREATE_NO_WINDOW);
-    }
-    let mut child = OwnedChild(
-        command
-            .stdin(Stdio::piped())
-            .stdout(Stdio::piped())
-            .stderr(Stdio::null())
-            .spawn()
-            .map_err(|e| e.to_string())?,
-    );
-    let mut input = child.stdin.take().ok_or("backend_stdin")?;
-    // Dedicated reader has a bounded frame and channel, even for a broken binary.
-    let output = child.stdout.take().ok_or("backend_stdout")?;
-    let (lines_tx, lines) = mpsc::sync_channel(16);
-    std::thread::spawn(move || {
-        let mut reader = BufReader::new(output);
-        loop {
-            let mut line = String::new();
-            match reader.by_ref().take(16385).read_line(&mut line) {
-                Ok(0) | Err(_) => break,
-                Ok(_) if line.len() > 16384 || !line.ends_with('\n') => break,
-                Ok(_) => {
-                    if lines_tx.send(line).is_err() {
-                        break;
-                    }
-                }
-            }
-        }
-    });
-    let init = json!({"type":"bootstrap","protocol":meta.protocol,"token":token,"generation":generation,"origin":origin});
-    if writeln!(input, "{init}").is_err() {
-        let _ = child.kill();
-        let _ = child.wait();
-        return Err("backend_handshake".into());
-    }
-    let started = Instant::now();
-    let mut ready = false;
-    let mut pending_quiesce = None;
-    let mut stop: Option<(Instant, mpsc::SyncSender<()>)> = None;
-    loop {
-        while let Ok(line) = lines.try_recv() {
-            let value: Value = serde_json::from_str(&line).map_err(|_| "backend_protocol")?;
-            match value["type"].as_str() {
-                Some("failed") if !ready => {
-                    return Err(value["error"]
-                        .as_str()
-                        .unwrap_or("backend_storage")
-                        .to_string());
-                }
-                Some("ready") if !ready => {
-                    let port = value["port"].as_u64().filter(|p| *p > 0 && *p <= 65535);
-                    let storage_root =
-                        std::path::PathBuf::from(value["storageRoot"].as_str().unwrap_or(""));
-                    if port.is_none()
-                        || !storage_root.is_absolute()
-                        || value["generation"] != generation
-                        || value["version"] != meta.version
-                        || value["commit"] != meta.commit
-                        || value["protocol"] != meta.protocol
-                        || value["api"] != meta.api
-                        || value["channel"] != meta.channel
-                    {
-                        let _ = child.kill();
-                        let _ = child.wait();
-                        return Err("backend_identity".into());
-                    }
-                    {
-                        let mut s = state.lock().unwrap();
-                        s.generation = generation.clone();
-                        s.token = token.clone();
-                        s.port = port.unwrap() as u16;
-                        s.storage_root = storage_root;
-                    }
-                    publish(app, state, "httpReady", "");
-                    ready = true;
-                }
-                Some("quiesced") => {
-                    if let Some(reply) = pending_quiesce.take() {
-                        let reply: mpsc::SyncSender<usize> = reply;
-                        let _ = reply.send(value["active"].as_u64().unwrap_or(1) as usize);
-                    }
-                }
-                _ => (),
-            }
-        }
-        if let Some(status) = child.try_wait().map_err(|e| e.to_string())? {
-            publish(app, state, "stopped", "");
-            if let Some((_, reply)) = stop.take() {
-                let _ = reply.send(());
-                return Ok(true);
-            }
-            return Err(format!("backend_exited ({status})"));
-        }
-        if !ready && started.elapsed() > Duration::from_secs(15) {
-            let _ = child.kill();
-            let _ = child.wait();
-            return Err("backend_timeout".into());
-        }
-        if stop
-            .as_ref()
-            .is_some_and(|(time, _)| time.elapsed() > Duration::from_secs(12))
-        {
-            let _ = child.kill();
-            let _ = child.wait();
-            if let Some((_, reply)) = stop.take() {
-                let _ = reply.send(());
-            }
-            return Ok(true);
-        }
-        match controls.recv_timeout(Duration::from_millis(30)) {
-            Ok(Control::Quiesce(reply)) => {
-                pending_quiesce = Some(reply);
-                let _ = writeln!(input, "{{\"type\":\"quiesce\"}}");
-            }
-            Ok(Control::Resume) => {
-                let _ = writeln!(input, "{{\"type\":\"resume\"}}");
-            }
-            Ok(Control::Stop(reply)) => {
-                publish(app, state, "stopping", "");
-                let _ = writeln!(input, "{{\"type\":\"shutdown\"}}");
-                stop = Some((Instant::now(), reply));
-            }
-            Ok(Control::Retry) => (),
-            Err(mpsc::RecvTimeoutError::Disconnected) => {
-                drop(input);
-                let _ = child.wait();
-                return Ok(true);
-            }
-            Err(mpsc::RecvTimeoutError::Timeout) => (),
-        }
-    }
-}
-
-struct OwnedChild(std::process::Child);
-impl std::ops::Deref for OwnedChild {
-    type Target = std::process::Child;
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
-}
-impl std::ops::DerefMut for OwnedChild {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.0
-    }
-}
-impl Drop for OwnedChild {
-    fn drop(&mut self) {
-        if self.0.try_wait().ok().flatten().is_none() {
-            let _ = self.0.kill();
-        }
-        let _ = self.0.wait();
     }
 }

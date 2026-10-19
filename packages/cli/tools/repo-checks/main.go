@@ -85,7 +85,7 @@ func checkNodeWorkspace(root string) error {
 
 func checkGoFormat(root string) error {
 	var changed []string
-	for _, relativeRoot := range []string{"packages/cli", "packages/one-core", "services/desktop-api"} {
+	for _, relativeRoot := range []string{"packages/cli", "packages/one-core", "packages/one-client", "services/server"} {
 		base := filepath.Join(root, filepath.FromSlash(relativeRoot))
 		err := filepath.WalkDir(base, func(path string, entry fs.DirEntry, walkErr error) error {
 			if walkErr != nil {

@@ -1,6 +1,7 @@
 package secrets
 
 import (
+	"context"
 	"strings"
 
 	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/core/workspace"
@@ -16,6 +17,14 @@ func ResolveEnvName(projectRoot, flag string, allowUnknown bool) (string, []stri
 	if err != nil {
 		return "", nil, err
 	}
+	return ResolveEnvNameFromManifest(m, flag, allowUnknown)
+}
+
+func ResolveEnvNameFromManifest(m *workspace.Manifest, flag string, allowUnknown bool) (string, []string, error) {
+	return ResolveEnvNameContext(i18n.WithLocale(context.Background(), i18n.Active()), m, flag, allowUnknown)
+}
+
+func ResolveEnvNameContext(ctx context.Context, m *workspace.Manifest, flag string, allowUnknown bool) (string, []string, error) {
 	declared := workspace.EnvironmentNames(m)
 	chosen := strings.TrimSpace(flag)
 	if chosen == "" {
@@ -33,7 +42,7 @@ func ResolveEnvName(projectRoot, flag string, allowUnknown bool) (string, []stri
 		return chosen, declared, nil
 	}
 	return "", declared, cliErrors.New(cliErrors.ENV_UNKNOWN_ENVIRONMENT,
-		i18n.Tf("env.environment_unknown",
+		i18n.ForContext(ctx).Tf("env.environment_unknown",
 			chosen, strings.Join(declared, ", "))).
 		WithContext(map[string]any{
 			"requested":    chosen,

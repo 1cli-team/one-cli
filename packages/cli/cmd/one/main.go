@@ -28,14 +28,18 @@ func main() {
 		fmt.Println(version)
 		return
 	}
+	if handled, err := cli.DesktopCommand(os.Args[1:], version); handled {
+		if err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			os.Exit(1)
+		}
+		return
+	}
 	if len(os.Args) > 1 {
 		identity := desktopcontrol.Identity{Version: version, Commit: commit, Channel: updatecheck.Channel(), Protocol: desktopcontrol.Protocol, API: desktopcontrol.API}
 		switch os.Args[1] {
-		case "__install-terminal":
-			if err := cli.InitializeStorage(os.Args[1:]); err != nil {
-				os.Exit(1)
-			}
-			if len(os.Args) != 3 {
+		case "__install-release":
+			if len(os.Args) != 4 || (os.Args[3] != "0" && os.Args[3] != "1") {
 				os.Exit(2)
 			}
 			source, err := os.Executable()
@@ -43,10 +47,26 @@ func main() {
 				fmt.Fprintln(os.Stderr, err)
 				os.Exit(1)
 			}
-			status, err := installation.Inspect(context.Background(), os.Args[2], version)
-			if err == nil {
-				status, err = installation.Install(context.Background(), source, os.Args[2], version, status.Digest)
+			status, err := installation.InstallRelease(context.Background(), source, os.Args[2], version, os.Args[3] == "1")
+			if err != nil {
+				fmt.Fprintln(os.Stderr, err)
+				os.Exit(1)
 			}
+			_ = json.NewEncoder(os.Stdout).Encode(status)
+			return
+		case "__install-terminal":
+			if err := cli.InitializeStorage(os.Args[1:]); err != nil {
+				os.Exit(1)
+			}
+			if len(os.Args) != 4 {
+				os.Exit(2)
+			}
+			source, err := os.Executable()
+			if err != nil {
+				fmt.Fprintln(os.Stderr, err)
+				os.Exit(1)
+			}
+			status, err := installation.Install(context.Background(), source, os.Args[2], version, os.Args[3])
 			if err != nil {
 				fmt.Fprintln(os.Stderr, err)
 				os.Exit(1)

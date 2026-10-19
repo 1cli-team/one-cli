@@ -20,15 +20,19 @@ One Desktop installers and CLI archives share the same Release. Open One Desktop
 
 One Desktop 安装包与 CLI 归档位于同一 Release。工作区、账号、项目变量和共享凭据通过 One Desktop 管理。
 
+CLI runs tasks locally through Core. Data and configuration go through one Server API: a shared local server with SQLite, or a remote server with PostgreSQL. Desktop connects to either; the remote server also hosts the same management interface for browsers. See [architecture](ARCHITECTURE.md) and [Server deployment](services/server/README.md).
+
+CLI 通过 Core 在本机执行任务；数据与配置统一通过 Server API 管理。本地服务使用 SQLite，远程服务使用 PostgreSQL。Desktop 可连接两者；远程服务也提供同一套 Web 管理界面。CLI 安装包同时携带 `one` 与 `one-api`。
+
 ## Sign in over SSH / SSH 远程登录
 
 ```sh
 one login --no-browser
 ```
 
-Open the displayed URL in your own computer's browser, sign in to Infisical, and paste the browser's CLI login token into the remote terminal's hidden prompt. SSH sessions select this mode automatically, so `one login` also works. No port forwarding is needed. Use `--site-url` for a self-hosted instance. Sign-in expires after 10 minutes and requires an interactive terminal plus an unlocked system credential store (Secret Service on Linux). Check the result with `one whoami`.
+Open the displayed URL in your own computer's browser, sign in to Infisical, and paste the browser's CLI login token into the remote terminal's hidden prompt. SSH sessions select this mode automatically, so `one login` also works. No port forwarding is needed. Use `--site-url` for a self-hosted instance. This browser sign-in mode uses a local One Server and expires after 10 minutes. An interactive terminal is required. Remote servers use machine identities; see the Server deployment guide. Check the result with `one whoami`.
 
-在自己电脑的浏览器中打开终端显示的链接，登录 Infisical 后，将浏览器中的 CLI 登录令牌粘贴到远端终端的隐藏输入框。SSH 会话自动选择此模式，直接运行 `one login` 也可以，无需端口转发。自建实例可通过 `--site-url` 指定地址。登录有效期为 10 分钟，需要交互式终端及已解锁的系统凭据存储（Linux 使用 Secret Service）。完成后通过 `one whoami` 查看登录状态。
+在自己电脑的浏览器中打开终端显示的链接，登录 Infisical 后，将浏览器中的 CLI 登录令牌粘贴到远端终端的隐藏输入框。SSH 会话自动选择此模式，直接运行 `one login` 也可以，无需端口转发。自建实例可通过 `--site-url` 指定地址。此浏览器登录方式使用本地 One Server，有效期为 10 分钟，需要交互式终端。远程 Server 使用机器身份，详见 Server 部署说明。完成后通过 `one whoami` 查看登录状态。
 
 ## Agent entry points / AI 入口
 
@@ -51,8 +55,9 @@ Use subcommand `--help` to discover arguments. Parse `-o json` results by schema
 | Path / 路径 | Responsibility / 职责 |
 | --- | --- |
 | `packages/cli` | Go CLI / 命令行入口 |
-| `packages/one-core` | Shared business and platform code / 共享业务与平台能力 |
-| `services/desktop-api` | Desktop HTTP API / 桌面 HTTP 后端 |
+| `packages/one-core` | Local execution and engineering models / 本地执行与工程模型 |
+| `packages/one-client` | Shared management HTTP client / 统一管理客户端 |
+| `services/server` | Local/remote management API + Web / 本地与远程管理服务及 Web |
 | `apps/desktop` | React + Tauri desktop / 桌面应用 |
 | `apps/website` | Next.js static homepage / 静态官网 |
 | `packages/templates` | Project templates, including Fumadocs / 项目模板，包含 Fumadocs |

@@ -3,23 +3,41 @@ package authcmd
 import (
 	"context"
 	"fmt"
+	"io"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/pkg/browser"
 	"github.com/spf13/cobra"
 
-	authentication "github.com/torchstellar-team/one-cli/packages/one-core/pkg/application/authentication"
+	authentication "github.com/torchstellar-team/one-cli/packages/one-client/provider"
+	session "github.com/torchstellar-team/one-cli/packages/one-client/provider"
 	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/platform/i18n"
-	session "github.com/torchstellar-team/one-cli/packages/one-core/pkg/platform/infisicalsession"
 	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/platform/output"
 	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/platform/prompt"
 )
 
 func Commands() []*cobra.Command {
-	var site string
+	var site, clientID, organization string
+	var secretStdin bool
 	var noBrowser bool
 	login := &cobra.Command{Use: "login", Short: i18n.T("auth.login.short"), Long: i18n.T("auth.login.tip"), Args: i18n.NoArgs, RunE: func(c *cobra.Command, _ []string) error {
+		if clientID != "" || secretStdin {
+			if clientID == "" || !secretStdin {
+				return i18n.Errorf("server.machine_cli_required")
+			}
+			raw, err := io.ReadAll(io.LimitReader(c.InOrStdin(), 16<<10))
+			if err != nil {
+				return err
+			}
+			info, err := session.ConnectMachine(c.Context(), site, clientID, strings.TrimSpace(string(raw)), organization)
+			if err != nil {
+				return err
+			}
+			output.Emit(info)
+			return nil
+		}
 		manual := noBrowser || (!c.Flags().Changed("no-browser") && isSSH())
 		if manual && !output.CanPrompt() {
 			return i18n.Errorf("auth.login.terminal_required")
@@ -87,8 +105,14 @@ func Commands() []*cobra.Command {
 	login.Flags().BoolVar(&noBrowser, "no-browser", false, i18n.T("auth.flag.no_browser"))
 	i18n.MarkFlagUsage(login, "site-url", "auth.flag.site")
 	i18n.MarkFlagUsage(login, "no-browser", "auth.flag.no_browser")
+	login.Flags().StringVar(&clientID, "client-id", "", "")
+	login.Flags().StringVar(&organization, "organization-id", "", "")
+	login.Flags().BoolVar(&secretStdin, "client-secret-stdin", false, "")
+	i18n.MarkFlagUsage(login, "client-id", "server.flag.client_id")
+	i18n.MarkFlagUsage(login, "organization-id", "server.flag.organization_id")
+	i18n.MarkFlagUsage(login, "client-secret-stdin", "server.flag.client_secret_stdin")
 	who := &cobra.Command{Use: "whoami", Short: i18n.T("auth.whoami.short"), Args: i18n.NoArgs, RunE: func(c *cobra.Command, _ []string) error {
-		info, e := session.Status()
+		info, e := session.Status(c.Context())
 		if e != nil {
 			return e
 		}
@@ -97,7 +121,7 @@ func Commands() []*cobra.Command {
 	}}
 	i18n.MarkShort(who, "auth.whoami.short")
 	logout := &cobra.Command{Use: "logout", Short: i18n.T("auth.logout.short"), Args: i18n.NoArgs, RunE: func(c *cobra.Command, _ []string) error {
-		if e := session.Logout(); e != nil {
+		if e := session.Logout(c.Context()); e != nil {
 			return e
 		}
 		output.Emit(map[string]any{"loggedIn": false})

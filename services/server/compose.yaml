@@ -1,0 +1,32 @@
+services:
+  server:
+    build:
+      context: ../..
+      dockerfile: services/server/Dockerfile
+    environment:
+      ONE_DATABASE_URL: postgres://one:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}@postgres:5432/one?sslmode=disable
+      ONE_SERVER_TOKEN: ${ONE_SERVER_TOKEN:?Set a random admin token of at least 32 characters}
+      ONE_SERVER_ENCRYPTION_KEY: ${ONE_SERVER_ENCRYPTION_KEY:?Set a base64 encoded 32 byte encryption key}
+      ONE_SERVER_PUBLIC_URL: ${ONE_SERVER_PUBLIC_URL:?Set the external HTTPS origin}
+    ports: ["127.0.0.1:8080:8080"]
+    volumes: ["server:/var/lib/one"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+  postgres:
+    image: postgres:17
+    environment:
+      POSTGRES_USER: one
+      POSTGRES_DB: one
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}
+    volumes: ["postgres:/var/lib/postgresql/data"]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U one -d one"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+volumes:
+  server:
+  postgres:

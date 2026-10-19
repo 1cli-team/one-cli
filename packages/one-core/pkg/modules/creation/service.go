@@ -10,7 +10,6 @@ import (
 	"strings"
 
 	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/core/workspace"
-	environmentmodule "github.com/torchstellar-team/one-cli/packages/one-core/pkg/modules/environment"
 	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/modules/hooks"
 	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/modules/miseconfig"
 	skillsmodule "github.com/torchstellar-team/one-cli/packages/one-core/pkg/modules/skills"
@@ -21,10 +20,9 @@ import (
 )
 
 type Service struct {
-	Runtime      runtimeport.Provider
-	Skills       SkillInstaller
-	environments *environmentmodule.Service
-	observer     WorkspaceObserver
+	Runtime  runtimeport.Provider
+	Skills   SkillInstaller
+	observer WorkspaceObserver
 }
 
 type SkillInstaller interface {
@@ -36,16 +34,12 @@ type SkillInstaller interface {
 type WorkspaceObserver func(context.Context, string, string) error
 
 func NewService(
-	environments *environmentmodule.Service,
 	observer WorkspaceObserver,
 ) (*Service, error) {
-	if environments == nil {
-		return nil, errors.New(i18n.T("creation.environment_required"))
-	}
 	if observer == nil {
 		return nil, errors.New(i18n.T("creation.workspace_observer_required"))
 	}
-	return &Service{environments: environments, observer: observer}, nil
+	return &Service{observer: observer}, nil
 }
 
 type WorkspaceInput struct {
@@ -201,6 +195,9 @@ func (s *Service) AddProject(
 	project, err := materializeProject(ctx, projectRoot, input)
 	if err != nil {
 		return AddProjectResult{}, err
+	}
+	if err := s.observer(ctx, projectRoot, "add"); err != nil {
+		project.Warnings = append(project.Warnings, i18n.Tf("create.registry_warning", err))
 	}
 	if s.Runtime != nil && miseconfig.Enabled(projectRoot) {
 		plan, trustErr := miseconfig.Build(projectRoot, miseconfig.Options{})

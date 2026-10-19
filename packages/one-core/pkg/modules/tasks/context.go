@@ -25,12 +25,21 @@ func (s Service) prepareEnvironment(ctx context.Context, w execution.Workspace, 
 	session := &environmentSession{env: base, snapshots: map[string]map[string]string{}, uncached: map[string]bool{}}
 	projectDirs := map[string]string{}
 	dirs := []string{}
+	scoped := s.Loaders.Scoped()
 	for _, task := range p.Tasks {
 		if task.Project == "" {
 			continue
 		}
 		project, _ := w.Project(task.Project)
-		if !workspace.EnvironmentEnabled(w.Manifest(), project.RelativeDir) {
+		enabled := workspace.EnvironmentEnabled(w.Manifest(), project.RelativeDir)
+		if scoped != nil {
+			var err error
+			enabled, err = scoped.Enabled(ctx, w.Root(), project.RelativeDir)
+			if err != nil {
+				return nil, err
+			}
+		}
+		if !enabled {
 			continue
 		}
 		projectDirs[task.Project] = project.RelativeDir
@@ -42,6 +51,9 @@ func (s Service) prepareEnvironment(ctx context.Context, w execution.Workspace, 
 		return session, nil
 	}
 	provider := workspace.EnvBackend(w.Manifest())
+	if scoped != nil {
+		provider = scoped.ID()
+	}
 	if s.Loaders == nil {
 		return nil, i18n.Errorf("exec.provider_unregistered", provider)
 	}

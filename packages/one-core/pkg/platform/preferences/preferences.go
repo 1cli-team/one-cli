@@ -1,23 +1,6 @@
-// Package preferences owns the user-global preference file at
-// ~/.one/config/preferences.json (or $ONE_HOME/config/preferences.json).
-//
-// Cross-workspace display preferences live here; project bindings and
-// Infisical credentials use their existing, separate stores.
-//
-// File layout:
-//
-//	~/.one/config/preferences.json  — JSON, mode 0600
-//
-// Schema:
-//
-//	{
-//	  "version": 1,
-//	  "locale":  "auto" | "zh-CN" | "en-US",
-//	  "taskUI": "stream" | "tui"  // optional; omitted means automatic
-//	}
-//
-// Missing file is not an error — Load returns zero values
-// (Locale="auto") so first-run callers don't need to special-case it.
+// Package preferences provides the legacy preference reader and a local startup
+// cache. Authoritative preferences are stored by Server; new callers use the
+// management client. The cache lets local commands and help start offline.
 package preferences
 
 import (
@@ -88,11 +71,38 @@ func Path() (string, error) {
 // with Locale="auto". Parse error → returned (caller decides; the
 // CLI init path falls back to auto silently).
 func Load() (*Preferences, error) {
+	paths, err := userdirs.Resolve()
+	if err != nil {
+		return nil, err
+	}
+	cache := filepath.Join(paths.State, "preferences-cache.json")
+	if _, err = os.Stat(cache); err == nil {
+		return LoadAt(cache)
+	} else if !errors.Is(err, fs.ErrNotExist) {
+		return nil, err
+	}
 	path, err := Path()
 	if err != nil {
 		return nil, err
 	}
 	return LoadAt(path)
+}
+
+// CacheAt is a non-authoritative bootstrap hint. It lets help and local tools
+// render a saved language without starting or contacting a server.
+func CacheAt(root string, p *Preferences) error {
+	if p == nil || !IsValidLocale(p.Locale) {
+		return i18n.Errorf("preferences.locale_invalid")
+	}
+	path := filepath.Join(root, "state", "preferences-cache.json")
+	if err := os.MkdirAll(filepath.Dir(path), 0700); err != nil {
+		return err
+	}
+	data, err := json.Marshal(p)
+	if err != nil {
+		return err
+	}
+	return fsutil.WriteAtomic(path, data, 0600)
 }
 
 // LoadAt is the testable variant taking an explicit path.
@@ -131,6 +141,7 @@ func LoadAt(path string) (*Preferences, error) {
 
 // Save writes preferences.json atomically (temp file + rename) at
 // mode 0600 with parent dir at mode 0700, mirroring profile.Save.
+// Deprecated: management preferences are server-owned. Retained for older embedders.
 func Save(p *Preferences) error {
 	path, err := Path()
 	if err != nil {
@@ -140,6 +151,7 @@ func Save(p *Preferences) error {
 }
 
 // SaveAt is the testable variant.
+// Deprecated: use the management API for authoritative preferences.
 func SaveAt(p *Preferences, path string) error {
 	if p == nil {
 		return errors.New(i18n.T("preferences.missing"))

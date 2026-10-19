@@ -5,7 +5,6 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
-	"encoding/json"
 	"errors"
 	"io"
 	"os"
@@ -38,14 +37,14 @@ type Status struct {
 }
 
 // IsBundled resolves symlinks and checks the sidecar name/layout, not an env flag.
-// The copied terminal executable is named one and is independent of this guard.
+// A standalone one-api sibling is normal CLI packaging, not a Desktop marker.
 func IsBundled(path string) bool {
 	real, err := filepath.EvalSymlinks(path)
 	if err != nil {
 		real = path
 	}
 	base := strings.TrimSuffix(filepath.Base(real), ".exe")
-	_, bundleErr := os.Stat(filepath.Join(filepath.Dir(real), "one-api"+filepath.Ext(real)))
+	_, bundleErr := os.Stat(filepath.Join(filepath.Dir(real), "bundle-manifest.json"))
 	return bundleErr == nil || base == "one-api" || base == "one-backend" || strings.HasPrefix(base, "one-backend-") || strings.Contains(filepath.ToSlash(real), ".app/Contents/MacOS/")
 }
 
@@ -165,6 +164,19 @@ func Inspect(ctx context.Context, target, version string) (Status, error) {
 // Install only applies the reviewed digest. A stale preview never replaces a
 // newer file. Unknown, linked and newer installations are preserved.
 func Install(ctx context.Context, source, target, version, expected string) (Status, error) {
+	return install(ctx, source, target, version, expected, false)
+}
+
+// InstallRelease is the verified archive installer's explicit force policy.
+// Desktop keeps the conservative preview/digest policy exposed by Install.
+func InstallRelease(ctx context.Context, source, target, version string, force bool) (Status, error) {
+	current, err := Inspect(ctx, target, version)
+	if err != nil {
+		return current, err
+	}
+	return install(ctx, source, target, version, current.Digest, force)
+}
+func install(ctx context.Context, source, target, version, expected string, force bool) (Status, error) {
 	if !filepath.IsAbs(target) || IsBundled(target) {
 		return Status{}, i18n.Errorf("desktop.install_target")
 	}
@@ -183,7 +195,7 @@ func Install(ctx context.Context, source, target, version, expected string) (Sta
 	if s.Digest != expected {
 		return s, i18n.Errorf("desktop.install_changed")
 	}
-	if s.Action != "install" && s.Action != "upgrade" {
+	if s.Action != "install" && s.Action != "upgrade" && !force {
 		return s, nil
 	}
 	sourceDigest, err := Digest(source)
@@ -236,6 +248,13 @@ func Install(ctx context.Context, source, target, version, expected string) (Sta
 	if strings.TrimSpace(string(data)) != version {
 		return s, i18n.Errorf("desktop.install_checksum")
 	}
+	helperOutput, err := exec.CommandContext(probeCtx, Companion(source), "--version").Output()
+	if err != nil {
+		return s, err
+	}
+	if strings.TrimSpace(string(helperOutput)) != version {
+		return s, i18n.Errorf("desktop.install_checksum")
+	}
 	// Keep a byte-for-byte recovery copy; do not move away the current executable.
 	if s.Digest != "" {
 		if err = copyFile(target, target+".previous"); err != nil {
@@ -245,14 +264,10 @@ func Install(ctx context.Context, source, target, version, expected string) (Sta
 	if err = ctx.Err(); err != nil {
 		return s, err
 	}
-	if err = fsutil.ReplaceFile(staged, target); err != nil {
+	if err = ReplacePair(staged, Companion(source), target, version); err != nil {
 		return s, err
 	}
 	_ = fsutil.SyncDir(filepath.Dir(target))
-	receipt, _ := json.Marshal(map[string]string{"version": version, "digest": sourceDigest, "target": target})
-	if err = os.WriteFile(target+".installation.json", receipt, 0o600); err != nil {
-		return s, err
-	}
 	return Inspect(ctx, target, version)
 }
 

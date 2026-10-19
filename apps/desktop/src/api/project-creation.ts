@@ -1,4 +1,6 @@
-import { workspaceBasePath } from "@/api/workspaces";
+import { invoke } from "@tauri-apps/api/core";
+import { useDesktop, native } from "@/lib/desktop/runtime";
+import i18n from "@/lib/i18n";
 import http from "@/lib/http";
 
 export interface ProjectTemplate {
@@ -28,5 +30,9 @@ export async function createProject(
 	entryId: string,
 	input: { name: string; templateId: string; skipSkills?: boolean },
 ): Promise<CreatedProject> {
-	return http.post(`${workspaceBasePath(entryId)}/projects`, input, { timeout: 360000 });
+	if (!native) throw new Error(i18n.t("server.localCreationRequired"));
+	return invoke<CreatedProject>("local_operation", {
+		operation: "createProject",
+		payload: { workspaceId: entryId, serverURL: useDesktop.getState().serverURL, ...input },
+	});
 }

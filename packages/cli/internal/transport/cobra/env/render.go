@@ -5,7 +5,7 @@ import (
 	"io"
 	"strings"
 
-	environmentmodule "github.com/torchstellar-team/one-cli/packages/one-core/pkg/modules/environment"
+	environmentmodule "github.com/torchstellar-team/one-cli/packages/one-client/environment"
 	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/platform/i18n"
 )
 

@@ -1068,11 +1068,10 @@ command surface, and workflow skills.
   fresh key cannot transiently exist in a tracked location.
 - **Workspace root `.gitignore`** now lists `.secrets/keys/` as a
   belt-and-suspenders backup to the nested gitignore.
-- **Sensitive paths sanitized**: `templates/expo-mobile/app.json`'s
-  Android package id changed from `com.caorushizi.rntemplate` to
-  `com.example.rntemplate`; the demo `setUser("caorushizi")` in
-  `templates/expo-mobile/src/app/(tabs)/index.tsx` changed to
-  `"demo-user"`.
+- **Sensitive paths sanitized**: `templates/expo-mobile/app.json` now
+  uses the example Android package id `com.example.rntemplate`; the
+  demo user in `templates/expo-mobile/src/app/(tabs)/index.tsx` now
+  uses `"demo-user"`.
 
 ### Removed
 

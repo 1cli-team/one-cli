@@ -1,4 +1,4 @@
-// http.ts wires axios to the Go server in services/desktop-api.
+// http.ts wires axios to the Go server in services/server.
 //
 // Differences from the source template:
 //   - No `{ success, code, message, data }` envelope unwrap. The Go server
@@ -67,17 +67,30 @@ class HttpClient {
 		baseURL: string;
 		token: string;
 		generation: string;
+		cookie: boolean;
 		abort: AbortController;
 	} | null = null;
 	configure(port: number, token: string, generation: string) {
-		if (!Number.isInteger(port) || port < 1 || port > 65535 || !token || !generation)
-			throw new Error(i18n.t("desktop.connectionInvalid"));
-		if (this.connection?.generation === generation) return;
+		return this.configureServer(`http://127.0.0.1:${port}`, token, generation);
+	}
+	configureServer(address: string, token = "", generation = "", cookie = false) {
+		const url = new URL(address);
+		const local = ["localhost", "127.0.0.1", "[::1]"].includes(url.hostname);
+		if (
+			(url.protocol !== "https:" && !(url.protocol === "http:" && local)) ||
+			url.username ||
+			url.password ||
+			url.search ||
+			url.hash ||
+			(url.pathname !== "/" && url.pathname !== "")
+		)
+			throw new Error(i18n.t("server.invalidURL"));
 		this.disconnect();
 		this.connection = {
-			baseURL: `http://127.0.0.1:${port}/api`,
+			baseURL: `${url.origin}/api/v1`,
 			token,
 			generation,
+			cookie,
 			abort: new AbortController(),
 		};
 	}
@@ -93,7 +106,7 @@ class HttpClient {
 			url.startsWith("//") ||
 			url.includes("\\") ||
 			new URL(c.baseURL + url).origin !== new URL(c.baseURL).origin ||
-			!new URL(c.baseURL + url).pathname.startsWith("/api/")
+			!new URL(c.baseURL + url).pathname.startsWith("/api/v1/")
 		)
 			throw new Error(i18n.t("desktop.connectionInvalid"));
 		return {
@@ -101,10 +114,11 @@ class HttpClient {
 			baseURL: c.baseURL,
 			url,
 			signal: c.abort.signal,
-			withCredentials: false,
+			withCredentials: c.cookie,
 			headers: {
 				"Content-Type": "application/json",
-				Authorization: `Bearer ${c.token}`,
+				...(c.token ? { Authorization: `Bearer ${c.token}` } : {}),
+				"Accept-Language": i18n.language,
 				"X-One-Backend-Generation": c.generation,
 				"X-One-Request-Id": crypto.randomUUID(),
 			},
@@ -116,15 +130,14 @@ class HttpClient {
 		data?: unknown,
 		config?: AxiosRequestConfig,
 	): Promise<T> {
-		const generation = this.connection?.generation;
+		const connection = this.connection;
 		try {
 			const response = await this.instance.request<T>({
 				...this.options(url, config),
 				method,
 				data,
 			});
-			if (generation !== this.connection?.generation)
-				throw new Error(i18n.t("desktop.sessionChanged"));
+			if (connection !== this.connection) throw new Error(i18n.t("desktop.sessionChanged"));
 			return response.data;
 		} catch (err) {
 			throw this.toHttpError(err);

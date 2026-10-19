@@ -12,8 +12,8 @@ toolchain = "go"
 path = "packages/one-core"
 toolchain = "go"
 
-[projects.desktop-api]
-path = "services/desktop-api"
+[projects.server]
+path = "services/server"
 toolchain = "go"
 
 [projects.desktop]
@@ -23,3 +23,7 @@ toolchain = "node"
 [projects.website]
 path = "apps/website"
 toolchain = "node"
+
+[projects.one-client]
+path = "packages/one-client"
+toolchain = "go"

@@ -13,16 +13,27 @@ interface Runtime {
 	generation: string;
 	error: string;
 	connected: boolean;
+	localConnection: boolean;
+	mode: "local" | "remote";
+	serverURL: string;
+	capabilities: Record<string, boolean>;
 }
 export const useDesktop = create<Runtime>(() => ({
 	status: "starting",
 	generation: "",
 	error: "",
 	connected: false,
+	localConnection: false,
+	mode: "local",
+	serverURL: "",
+	capabilities: {},
 }));
 export const native = isTauri();
 export async function openExternal(url: string) {
-	if (!native) throw new Error("One Desktop is required");
+	if (!native) {
+		window.open(url, "_blank", "noopener,noreferrer");
+		return;
+	}
 	await invoke("open_external", { url });
 }
 export const chooseWorkspace = () => invoke<string | null>("choose_workspace");

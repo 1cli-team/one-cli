@@ -104,6 +104,14 @@ func BuildOverview(root string, environments ...string) (Overview, error) {
 		return Overview{Schema: OverviewSchema, Present: false}, nil
 	}
 
+	return OverviewFromManifest(m, root, environment), nil
+}
+
+// OverviewFromManifest projects an already-resolved snapshot without filesystem IO.
+func OverviewFromManifest(m *Manifest, root, environment string) Overview {
+	if m == nil {
+		return Overview{Schema: OverviewSchema, Present: false}
+	}
 	ov := Overview{
 		Schema:      OverviewSchema,
 		Present:     true,
@@ -125,7 +133,7 @@ func BuildOverview(root string, environments ...string) (Overview, error) {
 	for i := range m.Projects {
 		ov.Projects = append(ov.Projects, buildProject(m, &m.Projects[i]))
 	}
-	return ov, nil
+	return ov
 }
 
 func buildWorkspaceSummary(m *Manifest) *OverviewWorkspace {

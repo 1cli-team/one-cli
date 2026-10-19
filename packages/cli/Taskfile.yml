@@ -16,9 +16,11 @@ tasks:
   build:
     desc: Build One after mise has prepared embedded resources
     cmds:
+      - go build -trimpath -ldflags '-s -w -X main.version={{.BUILD_VERSION}}' -o 'bin/one-api{{.GOEXE}}' ../../services/server/cmd/one-api
       - go build -trimpath -ldflags '-s -w -X main.version={{.BUILD_VERSION}}' -o 'bin/one{{.GOEXE}}' ./cmd/one
   build-local:
     cmds:
+      - go build -trimpath -ldflags '-s -w -X main.version={{.LOCAL_VERSION}}' -o 'bin/one-api{{.GOEXE}}' ../../services/server/cmd/one-api
       - go build -trimpath -ldflags '-s -w -X main.version={{.LOCAL_VERSION}}' -o 'bin/one{{.GOEXE}}' ./cmd/one
   build-all:
     desc: Cross compile the supported release targets
@@ -30,7 +32,10 @@ tasks:
           arch=${plat#*/}
           out=../../go-dist/one-${os}-${arch}
           [ "$os" = "windows" ] && out="${out}.exe"
-          GOOS=$os GOARCH=$arch go build -trimpath -ldflags '-s -w -X main.version={{.BUILD_VERSION}}' -o "$out" ./cmd/one
+          helper=../../go-dist/one-api-${os}-${arch}
+          [ "$os" = "windows" ] && helper="${helper}.exe"
+          CGO_ENABLED=0 GOOS=$os GOARCH=$arch go build -trimpath -ldflags '-s -w -X main.version={{.BUILD_VERSION}}' -o "$helper" ../../services/server/cmd/one-api
+          CGO_ENABLED=0 GOOS=$os GOARCH=$arch go build -trimpath -ldflags '-s -w -X main.version={{.BUILD_VERSION}}' -o "$out" ./cmd/one
   check:
     cmds:
       - go vet ./...

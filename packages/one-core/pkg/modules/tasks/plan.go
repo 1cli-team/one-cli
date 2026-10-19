@@ -117,7 +117,7 @@ func NewPlan(w execution.Workspace, opts Options) (*Plan, error) {
 }
 
 func planCatalog(w execution.Workspace, opts Options, catalog []Task, configuration *miseconfig.Plan) (*Plan, error) {
-	environment, _, err := secrets.ResolveEnvName(w.Root(), opts.Environment, false)
+	environment, _, err := secrets.ResolveEnvNameFromManifest(nil, opts.Environment, true)
 	if err != nil {
 		return nil, err
 	}

@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	remote "github.com/torchstellar-team/one-cli/packages/one-core/pkg/modules/environment"
+	remote "github.com/torchstellar-team/one-cli/packages/one-client/environment"
 	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/platform/i18n"
 	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/platform/output"
 	process "github.com/torchstellar-team/one-cli/packages/one-core/pkg/platform/process"

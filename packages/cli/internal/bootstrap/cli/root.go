@@ -30,9 +30,12 @@ import (
 	localecmd "github.com/torchstellar-team/one-cli/packages/cli/internal/transport/cobra/locale"
 	misecmd "github.com/torchstellar-team/one-cli/packages/cli/internal/transport/cobra/mise"
 	runcmd "github.com/torchstellar-team/one-cli/packages/cli/internal/transport/cobra/run"
+	servercmd "github.com/torchstellar-team/one-cli/packages/cli/internal/transport/cobra/server"
 	skillscmd "github.com/torchstellar-team/one-cli/packages/cli/internal/transport/cobra/skills"
 	templatescmd "github.com/torchstellar-team/one-cli/packages/cli/internal/transport/cobra/templates"
 	upgradecmd "github.com/torchstellar-team/one-cli/packages/cli/internal/transport/cobra/upgrade"
+	oneclient "github.com/torchstellar-team/one-cli/packages/one-client"
+	environmentclient "github.com/torchstellar-team/one-cli/packages/one-client/environment"
 	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/application/execution"
 	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/bootstrap"
 	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/core/workspace"
@@ -48,7 +51,8 @@ import (
 )
 
 func newRootCommand() *cobra.Command {
-	deps := bootstrap.Compose()
+	client := oneclient.New()
+	deps := bootstrap.Compose(client.Observe, oneclient.Loader{Client: client})
 	root := &cobra.Command{
 		Use:           "one",
 		SilenceUsage:  true,
@@ -57,12 +61,12 @@ func newRootCommand() *cobra.Command {
 	groups := [][]*cobra.Command{
 		addcmd.Commands(deps.Creation),
 		authcmd.Commands(),
-		{localecmd.Command(), initcmd.Command(), upgradecmd.Command()},
+		{localecmd.Command(), initcmd.Command(), upgradecmd.Command(), servercmd.Command(client)},
 		createcmd.Commands(createcmd.Dependencies{Creation: deps.Creation}),
 		misecmd.RuntimeCommands(deps.Runtime),
 		skillscmd.Commands((skillsmodule.Runner{Runtime: deps.Runtime}).Run),
 		hookscmd.Commands(deps.Runtime),
-		envcmd.Commands(envcmd.Dependencies{Service: deps.Environments}),
+		envcmd.Commands(envcmd.Dependencies{Service: &environmentclient.Service{Client: client}}),
 		execcmd.Commands(deps.Loaders, deps.Runtime),
 		runcmd.Commands(deps.Loaders, deps.Runtime),
 		templatescmd.Commands(),

@@ -8,8 +8,8 @@ import (
 
 	"github.com/spf13/cobra"
 
+	environmentmodule "github.com/torchstellar-team/one-cli/packages/one-client/environment"
 	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/application/execution"
-	environmentmodule "github.com/torchstellar-team/one-cli/packages/one-core/pkg/modules/environment"
 	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/platform/helpui"
 	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/platform/i18n"
 	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/platform/output"
