@@ -740,7 +740,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object"
+                  "$ref": "#/components/schemas/InfisicalSessionState"
                 }
               }
             }
@@ -779,6 +779,9 @@
                 }
               }
             }
+          },
+          "403": {
+            "description": "SERVE_CONFIG_MANAGED: identity is managed by deployment; mutation is forbidden. / 部署管理的身份不允许客户端修改。"
           }
         }
       }
@@ -806,6 +809,9 @@
                 }
               }
             }
+          },
+          "403": {
+            "description": "SERVE_CONFIG_MANAGED: identity is managed by deployment; mutation is forbidden. / 部署管理的身份不允许客户端修改。"
           }
         },
         "requestBody": {
@@ -841,6 +847,9 @@
                 }
               }
             }
+          },
+          "403": {
+            "description": "SERVE_CONFIG_MANAGED: identity is managed by deployment; mutation is forbidden. / 部署管理的身份不允许客户端修改。"
           }
         }
       }
@@ -868,6 +877,9 @@
                 }
               }
             }
+          },
+          "403": {
+            "description": "SERVE_CONFIG_MANAGED: identity is managed by deployment; mutation is forbidden. / 部署管理的身份不允许客户端修改。"
           }
         },
         "requestBody": {
@@ -1607,6 +1619,9 @@
                 }
               }
             }
+          },
+          "403": {
+            "description": "SERVE_CONFIG_MANAGED: identity is managed by deployment; mutation is forbidden. / 部署管理的身份不允许客户端修改。"
           }
         }
       }
@@ -2052,6 +2067,105 @@
         "required": [
           "value"
         ]
+      },
+      "InfisicalSessionState": {
+        "type": "object",
+        "required": [
+          "session",
+          "configuration"
+        ],
+        "properties": {
+          "session": {
+            "type": "object",
+            "properties": {
+              "loggedIn": {
+                "type": "boolean"
+              },
+              "expired": {
+                "type": "boolean"
+              },
+              "siteUrl": {
+                "type": "string"
+              },
+              "userId": {
+                "type": "string"
+              },
+              "email": {
+                "type": "string"
+              },
+              "organizationId": {
+                "type": "string"
+              },
+              "expiresAt": {
+                "type": "string",
+                "format": "date-time"
+              }
+            }
+          },
+          "configuration": {
+            "$ref": "#/components/schemas/InfisicalConfiguration"
+          },
+          "error": {
+            "type": "string"
+          },
+          "sharedCredentials": {
+            "type": [
+              "object",
+              "null"
+            ]
+          },
+          "login": {
+            "type": "object"
+          }
+        }
+      },
+      "InfisicalConfiguration": {
+        "type": "object",
+        "description": "Public configuration metadata. Deployment credentials and access tokens are never included. / 公开配置元数据，不包含密钥或令牌。",
+        "required": [
+          "mode",
+          "source",
+          "managed",
+          "method"
+        ],
+        "properties": {
+          "mode": {
+            "type": "string",
+            "enum": [
+              "local",
+              "remote"
+            ]
+          },
+          "source": {
+            "type": "string",
+            "enum": [
+              "none",
+              "database",
+              "environment",
+              "secret-file"
+            ]
+          },
+          "managed": {
+            "type": "boolean"
+          },
+          "method": {
+            "type": "string",
+            "enum": [
+              "none",
+              "browser",
+              "machine"
+            ]
+          },
+          "siteUrl": {
+            "type": "string"
+          },
+          "clientId": {
+            "type": "string"
+          },
+          "organizationId": {
+            "type": "string"
+          }
+        }
       }
     }
   }

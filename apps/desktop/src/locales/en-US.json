@@ -250,7 +250,9 @@
 		"theme": "Appearance",
 		"themeHint": "Choose a light or dark theme. Your choice is saved in this browser.",
 		"themeLight": "Light",
-		"themeDark": "Dark"
+		"themeDark": "Dark",
+		"localDescription": "CLI and Desktop share the Infisical sign-in managed by this local Server.",
+		"remoteDescription": "CLI, Desktop and Web use the Infisical machine identity managed by this Server."
 	},
 	"global": {
 		"title": "Shared credentials",
@@ -490,6 +492,18 @@
 		"organizationID": "Organization ID (optional)",
 		"connectMachine": "Connect machine identity",
 		"discardTitle": "Discard unsaved changes?",
-		"discardHint": "Switching servers clears unsaved edits. Save them before switching if you want to keep them."
+		"discardHint": "Switching servers clears unsaved edits. Save them before switching if you want to keep them.",
+		"modes": {
+			"local": "Local Server",
+			"remote": "Remote Server"
+		},
+		"configSources": {
+			"none": "Not configured",
+			"database": "Saved on Server",
+			"environment": "Environment variables",
+			"secret-file": "Secret file"
+		},
+		"deploymentManaged": "Managed by deployment",
+		"deploymentManagedHint": "This Server receives its Infisical machine identity from deployment configuration. To update or disconnect it, change the deployment configuration and restart the Server."
 	}
 }

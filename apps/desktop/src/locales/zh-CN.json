@@ -250,7 +250,9 @@
 		"theme": "外观主题",
 		"themeHint": "选择浅色或深色主题，偏好会保存在当前浏览器中。",
 		"themeLight": "浅色",
-		"themeDark": "深色"
+		"themeDark": "深色",
+		"localDescription": "CLI 与 Desktop 共用此本地 Server 管理的 Infisical 登录。",
+		"remoteDescription": "CLI、Desktop 与 Web 共用此 Server 管理的 Infisical 机器身份。"
 	},
 	"global": {
 		"title": "共享凭据",
@@ -490,6 +492,18 @@
 		"organizationID": "组织 ID（可选）",
 		"connectMachine": "连接机器身份",
 		"discardTitle": "放弃尚未保存的更改？",
-		"discardHint": "切换服务将清除尚未保存的编辑。如需保留，请先保存。"
+		"discardHint": "切换服务将清除尚未保存的编辑。如需保留，请先保存。",
+		"modes": {
+			"local": "本地 Server",
+			"remote": "远程 Server"
+		},
+		"configSources": {
+			"none": "尚未配置",
+			"database": "已保存到 Server",
+			"environment": "环境变量",
+			"secret-file": "Secret 文件"
+		},
+		"deploymentManaged": "由部署配置管理",
+		"deploymentManagedHint": "此 Server 的 Infisical 机器身份来自部署配置。如需修改或断开连接，请修改部署配置并重启 Server。"
 	}
 }

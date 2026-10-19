@@ -82,6 +82,8 @@ func defaultRem(value []output.Remediation) []output.Remediation {
 
 func statusForCode(code string) int {
 	switch code {
+	case string(cliErrors.SERVE_CONFIG_MANAGED):
+		return http.StatusForbidden
 	case string(cliErrors.ENV_KEY_NOT_FOUND):
 		return http.StatusNotFound
 	case string(cliErrors.INFISICAL_FOLDER_NOT_FOUND), string(cliErrors.INFISICAL_PROJECT_NOT_FOUND):

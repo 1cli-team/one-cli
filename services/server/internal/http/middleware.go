@@ -151,7 +151,7 @@ func registerManagementRoutes(api *http.ServeMux, opts MuxOpts) {
 		if opts.Local {
 			mode = "local"
 		}
-		writeJSON(w, 200, oneclient.Info{APIVersion: oneclient.APIVersion, Mode: mode, ID: opts.ServerID, Generation: opts.Session.Generation, Version: opts.Session.Identity.Version, Capabilities: map[string]bool{"browserLogin": opts.Local, "localExecution": false, "workspaceRegistration": true}})
+		writeJSON(w, 200, oneclient.Info{APIVersion: oneclient.APIVersion, Mode: mode, ID: opts.ServerID, Generation: opts.Session.Generation, Version: opts.Session.Identity.Version, Capabilities: map[string]bool{"browserLogin": opts.Local && !opts.Manager.Managed(), "localExecution": false, "workspaceRegistration": true}})
 	}
 	api.HandleFunc("GET /server/info", info)
 	api.HandleFunc("GET /desktop/session", func(w http.ResponseWriter, r *http.Request) {

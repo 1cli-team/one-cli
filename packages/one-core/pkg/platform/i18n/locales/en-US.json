@@ -820,5 +820,12 @@
   "server.credential_file_newer": "Server credential file %s was written by a newer client. Update One before modifying it.",
   "server.credential_file_unsafe": "Server credential file %s must be a regular file owned by the current user with mode 0600 on Unix. Restore its ownership and permissions before retrying.",
   "server.credential_directory_unsafe": "Credential directory %s must be a real directory owned by the current user, without group or other write permission on Unix. Use a private ONE_HOME directory.",
-  "server.credential_file_full": "Server credential file %s is full. Remove unused credentials from a private backup before saving more connections."
+  "server.credential_file_full": "Server credential file %s is full. Remove unused credentials from a private backup before saving more connections.",
+  "error.SERVE_CONFIG_MANAGED.summary": "Infisical configuration is managed by the server deployment.",
+  "server.infisical_managed": "Infisical is managed by the server deployment. Change its deployment configuration and restart the Server to update or disconnect it.",
+  "server.infisical_config_conflict": "Set either %s or %s, not both.",
+  "server.infisical_file_read_failed": "Cannot read the Infisical configuration file specified by %s: %w",
+  "server.infisical_config_invalid": "Invalid Infisical configuration in %s. Provide a non-empty single-line value of at most 16 KiB.",
+  "server.infisical_config_incomplete": "Infisical deployment configuration requires ONE_INFISICAL_CLIENT_ID and ONE_INFISICAL_CLIENT_SECRET, or their _FILE variants. No database identity was used.",
+  "server.infisical_start_failed": "Cannot authenticate the deployment-managed Infisical identity: %w. Check the deployment configuration and connectivity; no database identity was used."
 }

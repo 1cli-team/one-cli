@@ -820,5 +820,12 @@
   "server.credential_file_newer": "服务器凭据文件 %s 由较新版本客户端写入。请升级 One 后再修改。",
   "server.credential_file_unsafe": "服务器凭据文件 %s 必须为普通文件；在 Unix 上需由当前用户拥有且权限为 0600。请恢复所有权和权限后重试。",
   "server.credential_directory_unsafe": "凭据目录 %s 必须为真实目录；在 Unix 上需由当前用户拥有，且不允许组或其他用户写入。请使用私有 ONE_HOME 目录。",
-  "server.credential_file_full": "服务器凭据文件 %s 已达到容量上限。请在保留私有备份后移除不再使用的凭据，再保存更多连接。"
+  "server.credential_file_full": "服务器凭据文件 %s 已达到容量上限。请在保留私有备份后移除不再使用的凭据，再保存更多连接。",
+  "error.SERVE_CONFIG_MANAGED.summary": "Infisical 配置由服务器部署管理。",
+  "server.infisical_managed": "Infisical 由服务器部署管理。如需修改或断开连接，请修改部署配置并重启 Server。",
+  "server.infisical_config_conflict": "请只设置 %s 或 %s 中的一项，不要同时设置。",
+  "server.infisical_file_read_failed": "无法读取 %s 指定的 Infisical 配置文件：%w",
+  "server.infisical_config_invalid": "%s 中的 Infisical 配置无效。请提供非空、不超过 16 KiB 且不包含内部换行的值。",
+  "server.infisical_config_incomplete": "Infisical 部署配置需要 ONE_INFISICAL_CLIENT_ID 和 ONE_INFISICAL_CLIENT_SECRET，或对应的 _FILE 变量。未使用数据库中的身份。",
+  "server.infisical_start_failed": "无法认证由部署管理的 Infisical 身份：%w。请检查部署配置和网络连接；未使用数据库中的身份。"
 }

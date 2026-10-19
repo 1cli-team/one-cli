@@ -76,6 +76,9 @@ func (a *Attempt) Result() (Info, error, bool) {
 // has no echoed OAuth state; require the exact instance Origin and callback
 // Host, verify the token against that instance, and expire/close the listener.
 func Start(ctx context.Context, site string) (*Attempt, error) {
+	if err := Writable(ctx); err != nil {
+		return nil, err
+	}
 	manager, err := ManagerFrom(ctx)
 	if err != nil {
 		return nil, err

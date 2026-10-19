@@ -123,6 +123,7 @@ const (
 	SERVE_BIND_FORBIDDEN    Code = "SERVE_BIND_FORBIDDEN"
 	SERVE_MANIFEST_CONFLICT Code = "SERVE_MANIFEST_CONFLICT"
 	SERVE_PAYLOAD_INVALID   Code = "SERVE_PAYLOAD_INVALID"
+	SERVE_CONFIG_MANAGED    Code = "SERVE_CONFIG_MANAGED"
 )
 
 // Definition holds the metadata associated with a Code: a short summary
@@ -219,6 +220,7 @@ var Codes = map[Code]Definition{
 
 	SERVE_BIND_FORBIDDEN:    {Summary: "One Desktop rejected access to its local API.", Remediation: []output.Remediation{{Action: "restart-desktop", Hint: "Restart One Desktop to reconnect to its local API"}}},
 	SERVE_PAYLOAD_INVALID:   {Summary: "POST/PUT 请求体不是合法 JSON 或缺少必要字段。"},
+	SERVE_CONFIG_MANAGED:    {Summary: "Infisical configuration is managed by the server deployment."},
 	SERVE_MANIFEST_CONFLICT: {Summary: "one.manifest.toml changed after the Dashboard draft was opened; the stale draft was not written.", Remediation: []output.Remediation{{Action: "reload-manifest", Hint: "重新加载 Workspace 配置，确认磁盘上的新修改后再应用草稿"}}},
 }
 

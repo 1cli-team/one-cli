@@ -21,6 +21,9 @@ type Machine struct {
 }
 
 func ConnectMachine(ctx context.Context, machine Machine) (Info, error) {
+	if err := Writable(ctx); err != nil {
+		return Info{}, err
+	}
 	manager, err := ManagerFrom(ctx)
 	if err != nil {
 		return Info{}, err
@@ -54,13 +57,17 @@ func machineSession(ctx context.Context) (*Session, error) {
 	if s, err := Load(ctx); err == nil && !s.Expired {
 		return s, nil
 	}
-	data, err := manager.Store.Secret(ctx, "infisical-machine")
-	if err != nil {
-		return nil, err
-	}
 	var machine Machine
-	if err = json.Unmarshal(data, &machine); err != nil {
-		return nil, err
+	if manager.Managed() {
+		machine = manager.Deployment.Machine
+	} else {
+		data, err := manager.Store.Secret(ctx, "infisical-machine")
+		if err != nil {
+			return nil, err
+		}
+		if err = json.Unmarshal(data, &machine); err != nil {
+			return nil, err
+		}
 	}
 	s, err := authenticateMachine(ctx, machine)
 	if err != nil {

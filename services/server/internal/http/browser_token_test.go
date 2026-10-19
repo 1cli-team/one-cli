@@ -80,6 +80,13 @@ func TestBrowserTokenSignInThroughManagementAPI(t *testing.T) {
 	if r := call(h, "GET", "/api/v1/session", "", admin, "", ""); strings.Contains(r.Body.String(), providerToken) {
 		t.Fatal("provider token leaked in session metadata")
 	}
+	var state struct {
+		Configuration session.Configuration `json:"configuration"`
+	}
+	metadata := call(h, "GET", "/api/v1/session", "", admin, "", "")
+	if json.Unmarshal(metadata.Body.Bytes(), &state) != nil || state.Configuration.Mode != "local" || state.Configuration.Source != "database" || state.Configuration.Method != "browser" || state.Configuration.Managed {
+		t.Fatal("local browser session metadata is incorrect")
+	}
 	if err := provider.Logout(ctx); err != nil {
 		t.Fatal(err)
 	}

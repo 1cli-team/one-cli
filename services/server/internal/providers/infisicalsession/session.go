@@ -35,11 +35,14 @@ type Session struct {
 	Token string `json:"token"`
 }
 type Manager struct {
-	Store    *store.Store
-	Root     string
-	Local    bool
-	mu       sync.Mutex
-	location sync.Mutex
+	Store             *store.Store
+	Root              string
+	Local             bool
+	Deployment        *Deployment
+	mu                sync.Mutex
+	location          sync.Mutex
+	deploymentMu      sync.Mutex
+	deploymentSession *Session
 }
 type managerKey struct{}
 
@@ -61,6 +64,17 @@ func Load(ctx context.Context) (*Session, error) {
 	if err != nil {
 		return nil, err
 	}
+	if m.Managed() {
+		m.deploymentMu.Lock()
+		defer m.deploymentMu.Unlock()
+		if m.deploymentSession == nil {
+			return nil, Missing(ctx)
+		}
+		s := *m.deploymentSession
+		s.Expired = s.ExpiresAt.IsZero() || !time.Now().Before(s.ExpiresAt)
+		s.LoggedIn = !s.Expired
+		return &s, nil
+	}
 	raw, err := m.Store.Secret(ctx, "infisical-session")
 	if errors.Is(err, store.ErrNotFound) {
 		return nil, Missing(ctx)
@@ -77,6 +91,13 @@ func Load(ctx context.Context) (*Session, error) {
 	return &s, nil
 }
 func Require(ctx context.Context) (*Session, error) {
+	m, err := ManagerFrom(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if m.Managed() {
+		return machineSession(ctx)
+	}
 	s, err := Load(ctx)
 	if err != nil || s.Expired {
 		if machine, e := machineSession(ctx); e == nil {
@@ -92,6 +113,17 @@ func Require(ctx context.Context) (*Session, error) {
 	return s, nil
 }
 func Status(ctx context.Context) (Info, error) {
+	m, err := ManagerFrom(ctx)
+	if err != nil {
+		return Info{}, err
+	}
+	if m.Managed() {
+		s, err := Require(ctx)
+		if err != nil {
+			return Info{}, err
+		}
+		return s.Info, nil
+	}
 	s, err := Load(ctx)
 	var coded interface{ ErrorCode() string }
 	if errors.As(err, &coded) && coded.ErrorCode() == string(cliErrors.INFISICAL_AUTH_MISSING) {
@@ -106,6 +138,13 @@ func save(ctx context.Context, s *Session) error {
 	m, err := ManagerFrom(ctx)
 	if err != nil {
 		return err
+	}
+	if m.Managed() {
+		m.deploymentMu.Lock()
+		defer m.deploymentMu.Unlock()
+		copy := *s
+		m.deploymentSession = &copy
+		return nil
 	}
 	raw, err := json.Marshal(s)
 	if err != nil {
@@ -141,6 +180,9 @@ func WithUnchanged(ctx context.Context, expected *Session, fn func() error) erro
 	})
 }
 func Logout(ctx context.Context) error {
+	if err := Writable(ctx); err != nil {
+		return err
+	}
 	return sessionLock(ctx, func() error {
 		m, err := ManagerFrom(ctx)
 		if err != nil {

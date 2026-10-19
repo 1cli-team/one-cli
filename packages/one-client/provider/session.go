@@ -25,6 +25,7 @@ type SharedCredentialsState struct {
 }
 type State struct {
 	Session           Info                    `json:"session"`
+	Configuration     *Configuration          `json:"configuration,omitempty"`
 	SharedCredentials *SharedCredentialsState `json:"sharedCredentials"`
 	Login             *struct {
 		Status string `json:"status"`
@@ -32,10 +33,22 @@ type State struct {
 	} `json:"login"`
 	Error string `json:"error"`
 }
+type Configuration struct {
+	Mode           string `json:"mode"`
+	Source         string `json:"source"`
+	Managed        bool   `json:"managed"`
+	Method         string `json:"method"`
+	SiteURL        string `json:"siteUrl,omitempty"`
+	ClientID       string `json:"clientId,omitempty"`
+	OrganizationID string `json:"organizationId,omitempty"`
+}
 
 func Status(ctx context.Context) (Info, error) {
 	var s State
 	err := oneclient.New().DefaultRequest(ctx, "GET", "/session", nil, &s)
+	if err == nil && s.Error != "" {
+		err = i18n.Errorf("server.provider_login_failed", s.Error)
+	}
 	return s.Session, err
 }
 func Logout(ctx context.Context) error {

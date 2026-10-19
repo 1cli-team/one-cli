@@ -10,9 +10,19 @@ export interface SessionInfo {
 }
 export interface SessionState {
 	session: SessionInfo;
+	configuration?: InfisicalConfiguration;
 	sharedCredentials?: SharedCredentialsState | null;
 	login?: { status: "waiting" | "complete" | "failed"; url: string };
 	error?: string;
+}
+export interface InfisicalConfiguration {
+	mode: "local" | "remote";
+	source: "none" | "database" | "environment" | "secret-file";
+	managed: boolean;
+	method: "none" | "browser" | "machine";
+	siteUrl?: string;
+	clientId?: string;
+	organizationId?: string;
 }
 export const sessionKey = "/session";
 export const getSession = () => http.get<SessionState>(sessionKey);

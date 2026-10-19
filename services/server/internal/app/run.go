@@ -74,6 +74,10 @@ func Run(identity desktopcontrol.Identity, args []string) error {
 	if err != nil {
 		return err
 	}
+	deployment, err := readInfisicalDeployment(os.Getenv)
+	if err != nil {
+		return err
+	}
 	var instance *flock.Flock
 	if *local {
 		instance = flock.New(filepath.Join(paths.State, "server.lock"))
@@ -131,7 +135,7 @@ func Run(identity desktopcontrol.Identity, args []string) error {
 	if err != nil {
 		return i18n.Errorf("server.encryption_failed", err)
 	}
-	manager := &session.Manager{Store: db, Root: paths.Root, Local: *local}
+	manager := &session.Manager{Store: db, Root: paths.Root, Local: *local, Deployment: deployment}
 	ctx = session.WithManager(ctx, manager)
 	if *local {
 		if err = importLegacy(ctx, db, paths.Root); err != nil {
@@ -143,6 +147,11 @@ func Run(identity desktopcontrol.Identity, args []string) error {
 		}
 		if e = preferences.CacheAt(paths.Root, &preferences.Preferences{Version: 1, Locale: p.Locale, TaskUI: p.TaskUI}); e != nil {
 			return e
+		}
+	}
+	if deployment != nil {
+		if _, err = session.Require(ctx); err != nil {
+			return i18n.Errorf("server.infisical_start_failed", err)
 		}
 	}
 	if *listen == "" {

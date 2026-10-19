@@ -56,8 +56,8 @@ CLI 与 Desktop 共享每个 `ONE_HOME` 的一个本地服务。Desktop 退出�
 
 ## Compatibility and migration / 兼容与迁移
 
-API version 1 is identical locally and remotely; existing `SERVE_*` error codes and `/api` aliases remain stable. Provider browser login is a local-server capability. Remote servers use Infisical machine identities, with encrypted credential storage and token refresh. Management export/import transfers metadata into an empty destination and excludes credentials, sessions, local paths and server identity.
+API version 1 is identical locally and remotely; existing `SERVE_*` error codes and `/api` aliases remain stable. Provider browser login is a local-server capability. Remote servers use Infisical machine identities. Deployment environment variables or mounted Secret files take priority over encrypted database credentials, remain only in memory and reauthenticate when tokens expire. Invalid deployment inputs or authentication failures never fall back to database identities. Session metadata exposes Server mode and configuration source without secrets; Desktop and Web show deployment-managed identities as read-only, and mutation APIs reject changes. Without deployment inputs, database-backed configuration and local browser login remain available. Management export/import transfers metadata into an empty destination and excludes credentials, sessions, local paths and server identity.
 
-本地服务首次启动备份并导入旧 preferences、工作区登记和全局绑定，保留原文件；旧默认安装的钥匙串会话加密导入数据库。备份位于 `data/import-backups`。远程迁移使用 `one server export/import`，目标服务独立授权，执行目录映射继续留在客户端。
+本地服务首次启动备份并导入旧 preferences、工作区登记和全局绑定，保留原文件；旧默认安装的钥匙串会话加密导入数据库。备份位于 `data/import-backups`。Infisical 部署配置支持环境变量及 `_FILE` Secret 文件，优先于数据库身份且不落库；启动失败不回退旧身份，密钥轮换后需重启。Desktop / Web 统一展示 Server 模式与配置来源，部署身份在界面和 API 中均为只读；未注入配置时沿用数据库配置及本地浏览器登录。远程迁移使用 `one server export/import`，目标服务独立授权，执行目录映射继续留在客户端。
 
 See `services/server/README.md` for deployment and `AGENTS.md` / `RELEASING.md` for development and releases.

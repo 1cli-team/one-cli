@@ -1,6 +1,7 @@
 import { openExternal } from "@/lib/desktop/runtime";
 import { useDesktop } from "@/lib/desktop/runtime";
 import { MachineIdentityForm } from "./MachineIdentityForm";
+import { ConfigurationNotice } from "./ConfigurationNotice";
 import {
 	ExternalLink,
 	Languages,
@@ -39,6 +40,7 @@ import { useThemeStore, type ThemeMode } from "@/lib/stores/theme";
 export function AccountSettings() {
 	const { t } = useTranslation();
 	const browserLogin = useDesktop((s) => s.capabilities.browserLogin);
+	const serverMode = useDesktop((s) => s.mode);
 	const { mode: theme, setMode: setTheme } = useThemeStore();
 	const state = useSWR(sessionKey, getSession, { refreshInterval: 2000 });
 	const { mutate } = useSessionSWRConfig();
@@ -47,6 +49,11 @@ export function AccountSettings() {
 	const [busy, setBusy] = useState(false);
 	const [error, setError] = useState("");
 	const waiting = state.data?.login?.status === "waiting";
+	const configuration = state.data?.configuration;
+	const managed = configuration?.managed === true;
+	const local = (configuration?.mode ?? serverMode) === "local";
+	const allowBrowserLogin = local && browserLogin && !managed;
+	const machineIdentity = configuration?.method === "machine";
 	async function perform(action: () => Promise<unknown>) {
 		if (busy) return;
 		setBusy(true);
@@ -75,36 +82,43 @@ export function AccountSettings() {
 					<SectionHeading
 						icon={ShieldCheck}
 						title="Infisical"
-						description={t("session.description")}
+						description={t(local ? "session.localDescription" : "session.remoteDescription")}
 						actions={
 							state.data?.session.loggedIn ? (
 								<Badge variant="success">{t("session.connected")}</Badge>
 							) : undefined
 						}
 					/>
+					{configuration ? <ConfigurationNotice configuration={configuration} /> : null}
 					{state.isLoading && !state.data ? (
 						<div role="status" aria-label={t("session.loading")} className="space-y-3">
 							<Skeleton className="h-12" />
 							<Skeleton className="h-12 w-2/3" />
 						</div>
-					) : state.data?.session.loggedIn ? (
+					) : managed && !state.data?.session.loggedIn ? null : state.data?.session.loggedIn ? (
 						<>
-							<div className="grid gap-6 rounded-lg bg-muted/40 p-4 ud-sm:grid-cols-2">
-								<div className="space-y-1">
-									<p className="text-xs text-muted-foreground">{t("session.account")}</p>
-									<p className="break-all font-medium">{state.data.session.email || "—"}</p>
+							{!managed ? (
+								<div className="grid gap-6 rounded-lg bg-muted/40 p-4 ud-sm:grid-cols-2">
+									<div className="space-y-1">
+										<p className="text-xs text-muted-foreground">
+											{t(machineIdentity ? "server.clientID" : "session.account")}
+										</p>
+										<p className="break-all font-medium">
+											{state.data.session.email || state.data.session.userId || "—"}
+										</p>
+									</div>
+									<div className="space-y-1">
+										<p className="text-xs text-muted-foreground">{t("session.site")}</p>
+										<p className="break-all text-sm">{state.data.session.siteUrl}</p>
+									</div>
+									<div className="space-y-1 ud-sm:col-span-2">
+										<p className="text-xs text-muted-foreground">{t("session.organization")}</p>
+										<p className="break-all font-mono text-xs">
+											{state.data.session.organizationId || "—"}
+										</p>
+									</div>
 								</div>
-								<div className="space-y-1">
-									<p className="text-xs text-muted-foreground">{t("session.site")}</p>
-									<p className="break-all text-sm">{state.data.session.siteUrl}</p>
-								</div>
-								<div className="space-y-1 ud-sm:col-span-2">
-									<p className="text-xs text-muted-foreground">{t("session.organization")}</p>
-									<p className="break-all font-mono text-xs">
-										{state.data.session.organizationId || "—"}
-									</p>
-								</div>
-							</div>
+							) : null}
 							<SharedCredentialsNotice
 								key={JSON.stringify([
 									state.data.session.siteUrl,
@@ -115,35 +129,37 @@ export function AccountSettings() {
 								state={state.data.sharedCredentials}
 								account={state.data.session}
 							/>
-							<div className="flex flex-wrap items-center justify-end gap-3">
-								<Button
-									variant="ghost"
-									disabled={busy}
-									onClick={() =>
-										void perform(async () => {
-											await logout();
-											await mutate(
-												sessionKey,
-												{ session: { loggedIn: false, expired: false } },
-												{ revalidate: false },
-											);
-											await mutate(
-												(key) =>
-													(typeof key === "string" &&
-														(key.includes("secrets") || key.includes("infisical"))) ||
-													(Array.isArray(key) && key[0] === "/infisical/projects"),
-												undefined,
-												{ revalidate: false },
-											);
-										})
-									}
-								>
-									{busy ? <Spinner /> : <LogOut />}
-									{t("session.logout")}
-								</Button>
-							</div>
+							{!managed ? (
+								<div className="flex flex-wrap items-center justify-end gap-3">
+									<Button
+										variant="ghost"
+										disabled={busy}
+										onClick={() =>
+											void perform(async () => {
+												await logout();
+												await mutate(
+													sessionKey,
+													{ session: { loggedIn: false, expired: false } },
+													{ revalidate: false },
+												);
+												await mutate(
+													(key) =>
+														(typeof key === "string" &&
+															(key.includes("secrets") || key.includes("infisical"))) ||
+														(Array.isArray(key) && key[0] === "/infisical/projects"),
+													undefined,
+													{ revalidate: false },
+												);
+											})
+										}
+									>
+										{busy ? <Spinner /> : <LogOut />}
+										{t("session.logout")}
+									</Button>
+								</div>
+							) : null}
 						</>
-					) : !state.error && !browserLogin ? (
+					) : !state.error && !allowBrowserLogin ? (
 						<MachineIdentityForm onConnected={() => mutate(sessionKey)} />
 					) : !state.error ? (
 						<>
@@ -223,7 +239,7 @@ export function AccountSettings() {
 					{error || state.error || state.data?.error ? (
 						<ErrorNotice
 							action={
-								state.error ? (
+								state.error || state.data?.error ? (
 									<Button
 										variant="outline"
 										size="sm"
@@ -294,7 +310,7 @@ export function SessionStatus() {
 			{state.error
 				? t("session.unavailable")
 				: state.data?.session.loggedIn
-					? state.data.session.email
+					? state.data.session.email || state.data.session.userId || t("session.connected")
 					: t("session.signedOut")}
 		</span>
 	);

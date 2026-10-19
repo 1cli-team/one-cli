@@ -27,12 +27,20 @@ func registerSessionRoutes(mux *http.ServeMux, opts MuxOpts) {
 	})
 	mux.HandleFunc("GET /session", func(w http.ResponseWriter, r *http.Request) {
 		setNoStore(w)
-		info, e := session.Status(r.Context())
+		configuration, e := session.ConfigurationFor(r.Context())
 		if e != nil {
 			writeServiceError(w, e)
 			return
 		}
-		result := map[string]any{"session": info, "sharedCredentials": opts.SharedCredentials.State(info)}
+		info, e := session.Status(r.Context())
+		if e != nil && !configuration.Managed {
+			writeServiceError(w, e)
+			return
+		}
+		result := map[string]any{"session": info, "configuration": configuration, "sharedCredentials": opts.SharedCredentials.State(info)}
+		if e != nil {
+			result["error"] = e.Error()
+		}
 		mu.Lock()
 		defer mu.Unlock()
 		if attempt != nil {
@@ -77,6 +85,10 @@ func registerSessionRoutes(mux *http.ServeMux, opts MuxOpts) {
 	})
 	mux.HandleFunc("POST /session/login/token", func(w http.ResponseWriter, r *http.Request) {
 		setNoStore(w)
+		if err := session.Writable(r.Context()); err != nil {
+			writeServiceError(w, err)
+			return
+		}
 		var body struct {
 			Token string `json:"token"`
 		}
@@ -98,6 +110,10 @@ func registerSessionRoutes(mux *http.ServeMux, opts MuxOpts) {
 		writeJSON(w, 200, map[string]bool{"submitted": true})
 	})
 	mux.HandleFunc("DELETE /session/login", func(w http.ResponseWriter, r *http.Request) {
+		if err := session.Writable(r.Context()); err != nil {
+			writeServiceError(w, err)
+			return
+		}
 		mu.Lock()
 		defer mu.Unlock()
 		if attempt != nil {
@@ -108,6 +124,10 @@ func registerSessionRoutes(mux *http.ServeMux, opts MuxOpts) {
 		writeJSON(w, 200, map[string]bool{"cancelled": true})
 	})
 	mux.HandleFunc("DELETE /session", func(w http.ResponseWriter, r *http.Request) {
+		if err := session.Writable(r.Context()); err != nil {
+			writeServiceError(w, err)
+			return
+		}
 		mu.Lock()
 		defer mu.Unlock()
 		if attempt != nil {
