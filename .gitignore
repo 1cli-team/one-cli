@@ -76,6 +76,8 @@ bin-go/
 /.codex/
 /.ssh/
 /.kube/
+server-credentials.json
+.one-config-*
 
 # Browser assets are built from apps/desktop for standalone server packaging.
 /services/server/internal/web/assets/*

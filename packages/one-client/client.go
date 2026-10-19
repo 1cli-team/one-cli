@@ -26,7 +26,6 @@ import (
 	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/platform/output"
 	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/platform/preferences"
 	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/platform/userdirs"
-	"github.com/zalando/go-keyring"
 )
 
 const APIVersion = 1
@@ -51,7 +50,8 @@ type Info struct {
 	Capabilities map[string]bool `json:"capabilities"`
 }
 type Profile struct {
-	URL string `json:"url"`
+	URL             string          `json:"url"`
+	CredentialStore CredentialStore `json:"credentialStore,omitempty"`
 }
 type Binding struct {
 	Server   string            `json:"server"`
@@ -65,9 +65,10 @@ type Connections struct {
 }
 
 type Client struct {
-	Root   string
-	Binary string
-	HTTP   *http.Client
+	Root    string
+	Binary  string
+	HTTP    *http.Client
+	keyring keyringBackend
 }
 
 func New() *Client {
@@ -121,6 +122,11 @@ func (c *Client) ReadConnections() (Connections, error) {
 	if p.Servers == nil {
 		p.Servers = map[string]Profile{}
 	}
+	for _, profile := range p.Servers {
+		if !validCredentialStore(profileCredentialStore(profile)) {
+			return p, i18n.Errorf("server.credential_store_invalid", profile.CredentialStore)
+		}
+	}
 	if p.Bindings == nil {
 		p.Bindings = map[string]Binding{}
 	}
@@ -160,19 +166,7 @@ func (c *Client) UpdateConnections(ctx context.Context, mutate func(*Connections
 	return fsutil.WriteAtomic(path, append(data, '\n'), 0600)
 }
 func (c *Client) Add(ctx context.Context, name, address, token string) error {
-	if name == "local" || !workspace.IsValidProjectName(name) {
-		return i18n.Errorf("server.name_invalid")
-	}
-	address, err := NormalizeURL(address)
-	if err != nil {
-		return err
-	}
-	if token != "" {
-		if err = keyring.Set("one-cli.server", address, token); err != nil {
-			return i18n.Errorf("auth.store_write_failed", err)
-		}
-	}
-	return c.UpdateConnections(ctx, func(p *Connections) error { p.Servers[name] = Profile{URL: address}; return nil })
+	return c.AddWithCredentialStore(ctx, name, address, token, CredentialFile)
 }
 func (c *Client) Select(ctx context.Context, name, root, project string) error {
 	return c.UpdateConnections(ctx, func(p *Connections) error {
@@ -208,7 +202,16 @@ func (c *Client) connection(ctx context.Context, root, project string) (Connecti
 		if err != nil {
 			return Connection{}, err
 		}
-		return Connection{URL: address, Token: os.Getenv("ONE_SERVER_TOKEN")}, nil
+		if token := os.Getenv("ONE_SERVER_TOKEN"); token != "" {
+			return Connection{URL: address, Token: token}, nil
+		}
+		profiles, err := c.ReadConnections()
+		if err != nil {
+			return Connection{}, err
+		}
+		store, _ := credentialStoreForAddress(profiles, address, CredentialFile)
+		token, err := c.serverToken(address, store)
+		return Connection{URL: address, Token: token}, err
 	}
 	if root != "" && project != "" {
 		var err error
@@ -241,12 +244,9 @@ func (c *Client) connection(ctx context.Context, root, project string) (Connecti
 	if err != nil {
 		return Connection{}, err
 	}
-	token := os.Getenv("ONE_SERVER_TOKEN")
-	if token == "" {
-		token, err = keyring.Get("one-cli.server", address)
-		if err != nil {
-			return Connection{}, i18n.Errorf("auth.store_read_failed", err)
-		}
+	token, err := c.serverToken(address, profileCredentialStore(profile))
+	if err != nil {
+		return Connection{}, err
 	}
 	return Connection{URL: address, Token: token}, nil
 }
@@ -506,21 +506,10 @@ func (c *Client) LocalRoot(id string) (string, error) {
 	return "", fmt.Errorf("%s: %s", i18n.T("server.local_path_missing"), id)
 }
 
-// RemoteToken is used only by the trusted native host. Tokens are never stored
-// in connection files or browser localStorage.
+// RemoteToken is used only by the trusted native host. New Desktop connections
+// use the keyring; existing CLI connections retain their selected store.
 func RemoteToken(address, token string, save bool) (string, error) {
-	address, err := NormalizeURL(address)
-	if err != nil {
-		return "", err
-	}
-	if save {
-		return "", keyring.Set("one-cli.server", address, token)
-	}
-	value, err := keyring.Get("one-cli.server", address)
-	if errors.Is(err, keyring.ErrNotFound) {
-		return "", nil
-	}
-	return value, err
+	return New().remoteToken(address, token, save)
 }
 
 // BindAddress connects a checkout selected in Desktop to the server currently

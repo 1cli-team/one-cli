@@ -25,4 +25,6 @@ desktop-dist
 **/.codex
 **/.ssh
 **/.kube
+**/server-credentials.json
+**/.one-config-*
 **/*.log
