@@ -24,7 +24,7 @@ import (
 // ProjectID binds to an existing project; ProjectName overrides the desired
 // display name when creating one. Names are never used to find an existing ID.
 //
-// Authentication uses the single browser session stored in the system keyring.
+// Authentication uses the single browser session stored in One's local config.
 // Only project metadata is persisted in the workspace manifest.
 type InitInput struct {
 	ProjectID    string

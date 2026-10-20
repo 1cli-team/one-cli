@@ -26,9 +26,9 @@ One Desktop 安装包与 CLI 归档位于同一 Release。工作区、账号、�
 one login --no-browser
 ```
 
-Open the displayed URL in your own computer's browser, sign in to Infisical, and paste the browser's CLI login token into the remote terminal's hidden prompt. SSH sessions select this mode automatically, so `one login` also works. No port forwarding is needed. Use `--site-url` for a self-hosted instance. Sign-in expires after 10 minutes and requires an interactive terminal plus an unlocked system credential store (Secret Service on Linux). Check the result with `one whoami`.
+Open the displayed URL in your own computer's browser, sign in to Infisical, and paste the browser's CLI login token into the remote terminal's hidden prompt. SSH sessions select this mode automatically, so `one login` also works. No port forwarding is needed. Use `--site-url` for a self-hosted instance. Sign-in expires after 10 minutes and requires an interactive terminal. Credentials are stored in plaintext in `~/.one/config/session.json` (or `$ONE_HOME/config/session.json`), with file mode `0600` on Unix; no system keyring is required. Check the result with `one whoami`, and remove the local session with `one logout`. After upgrading from keyring storage, run `one login` again; existing keyring entries are neither read nor migrated.
 
-在自己电脑的浏览器中打开终端显示的链接，登录 Infisical 后，将浏览器中的 CLI 登录令牌粘贴到远端终端的隐藏输入框。SSH 会话自动选择此模式，直接运行 `one login` 也可以，无需端口转发。自建实例可通过 `--site-url` 指定地址。登录有效期为 10 分钟，需要交互式终端及已解锁的系统凭据存储（Linux 使用 Secret Service）。完成后通过 `one whoami` 查看登录状态。
+在自己电脑的浏览器中打开终端显示的链接，登录 Infisical 后，将浏览器中的 CLI 登录令牌粘贴到远端终端的隐藏输入框。SSH 会话自动选择此模式，直接运行 `one login` 也可以，无需端口转发。自建实例可通过 `--site-url` 指定地址。登录有效期为 10 分钟，需要交互式终端。凭据以明文保存在 `~/.one/config/session.json`（或 `$ONE_HOME/config/session.json`），Unix 文件权限为 `0600`，无需系统钥匙环。完成后通过 `one whoami` 查看登录状态，使用 `one logout` 删除本地会话。从钥匙环存储版本升级后需重新运行 `one login`，旧钥匙环条目不会被读取或迁移。
 
 ## Agent entry points / AI 入口
 
