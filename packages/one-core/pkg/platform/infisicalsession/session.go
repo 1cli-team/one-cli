@@ -1,5 +1,5 @@
 // Package infisicalsession owns One's single browser-authenticated user session.
-// Tokens live exclusively in the OS keyring, never in JSON output or manifests.
+// Tokens live in a private local file, never in command output or manifests.
 package infisicalsession
 
 import (
@@ -13,11 +13,9 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/gofrs/flock"
-	"github.com/zalando/go-keyring"
 
 	cliErrors "github.com/torchstellar-team/one-cli/packages/one-core/pkg/platform/errors"
 	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/platform/i18n"
@@ -25,8 +23,6 @@ import (
 )
 
 const DefaultSiteURL = "https://app.infisical.com"
-const service = "one-cli.infisical"
-const account = "session"
 
 type Info struct {
 	LoggedIn       bool      `json:"loggedIn"`
@@ -42,43 +38,19 @@ type Session struct {
 	Token string `json:"token"`
 }
 
-// Keyring functions are replaceable only inside package tests.
-var getSecret = keyring.Get
-var setSecret = keyring.Set
-var deleteSecret = keyring.Delete
-var keyringMu sync.Mutex
-
-func readSessionSecret() (string, error) {
-	keyringMu.Lock()
-	defer keyringMu.Unlock()
-	return getSecret(service, account)
-}
-
-func writeSessionSecret(raw string) error {
-	keyringMu.Lock()
-	defer keyringMu.Unlock()
-	return setSecret(service, account, raw)
-}
-
-func removeSessionSecret() error {
-	keyringMu.Lock()
-	defer keyringMu.Unlock()
-	return deleteSecret(service, account)
-}
-
 func Missing() error {
 	return cliErrors.New(cliErrors.INFISICAL_AUTH_MISSING, i18n.T("auth.login_required"))
 }
 func Load() (*Session, error) {
 	raw, err := readSessionSecret()
-	if errors.Is(err, keyring.ErrNotFound) {
+	if errors.Is(err, os.ErrNotExist) {
 		return nil, Missing()
 	}
 	if err != nil {
 		return nil, i18n.Errorf("auth.store_read_failed", err)
 	}
 	var s Session
-	if json.Unmarshal([]byte(raw), &s) != nil || s.Token == "" {
+	if json.Unmarshal(raw, &s) != nil || s.Token == "" {
 		return nil, Missing()
 	}
 	s.Expired = s.ExpiresAt.IsZero() || !time.Now().Before(s.ExpiresAt)
@@ -111,7 +83,7 @@ func save(s *Session) error {
 	if err != nil {
 		return err
 	}
-	if err = writeSessionSecret(string(raw)); err != nil {
+	if err = writeSessionSecret(raw); err != nil {
 		return i18n.Errorf("auth.store_write_failed", err)
 	}
 	return nil
@@ -158,10 +130,13 @@ func Logout() error {
 			return e
 		}
 		e = removeSessionSecret()
-		if errors.Is(e, keyring.ErrNotFound) {
+		if errors.Is(e, os.ErrNotExist) {
 			return nil
 		}
-		return e
+		if e != nil {
+			return i18n.Errorf("auth.store_delete_failed", e)
+		}
+		return nil
 	})
 }
 

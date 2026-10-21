@@ -182,7 +182,7 @@ const homeCopy = {
 					),
 					body: "通过 one login 在浏览器登录 Infisical，再用 one env 管理项目变量。新工作区可先直接运行，需要托管变量时再绑定。",
 					bullets: [
-						["浏览器登录", "登录会话保存在系统钥匙串，使用 one whoami 查看状态。"],
+						["浏览器登录", "登录会话保存在本地凭据文件，使用 one whoami 查看状态。"],
 						["项目变量", "首次保存变量时初始化工作区绑定，按环境与项目目录组织变量。"],
 						["共享凭据", "在 One Desktop 配置共享凭据，通过 one exec --global 显式注入。"],
 					],
@@ -520,7 +520,7 @@ const homeCopy = {
 					bullets: [
 						[
 							"BROWSER LOGIN",
-							"The system keyring stores your session. Check its status with one whoami.",
+							"A local credential file stores your session. Check its status with one whoami.",
 						],
 						[
 							"PROJECT VARIABLES",
