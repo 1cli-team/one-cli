@@ -69,3 +69,7 @@ Development conventions: [AGENTS.md](AGENTS.md), [CONTRIBUTING.md](CONTRIBUTING.
 ## License / 许可证
 
 [MIT](LICENSE)
+
+Native iOS starter: [SwiftUI iPhone and iPad app](packages/templates/swift-ios-app), with simulator builds, unsigned device archives and opt-in local signed export. Uses the same Swift/Task discovery as the macOS templates; App Store upload is separate.
+
+原生 iOS 模板：[SwiftUI iPhone 与 iPad 应用](packages/templates/swift-ios-app)，支持模拟器构建、未签名真机归档及可选的本机签名导出。复用 macOS 模板的 Swift/Task 发现机制，商店上传单独配置。

@@ -371,6 +371,10 @@
 				"name": "空共享库",
 				"description": "在 packages/ 下创建空项目，稍后自行配置技术栈。"
 			},
+			"swift-ios-app": {
+				"name": "Swift iOS 应用",
+				"description": "原生 SwiftUI iPhone 与 iPad 应用，支持模拟器构建、真机归档与显式签名导出"
+			},
 			"swift-macos-app": {
 				"name": "Swift macOS 应用",
 				"description": "原生 SwiftUI 窗口应用，支持应用打包、DMG、可选签名与公证"

@@ -229,6 +229,21 @@
       "toolchain": "none",
       "repo": "local:empty-library",
       "domains": {}
+    },
+    {
+      "id": "swift-ios-app",
+      "name": "Swift iOS 应用",
+      "description": "原生 SwiftUI iPhone 与 iPad 应用，支持模拟器构建、真机归档与显式签名导出",
+      "category": "frontend",
+      "tags": [
+        "swift",
+        "swiftui",
+        "ios",
+        "mobile"
+      ],
+      "toolchain": "swift",
+      "repo": "local:swift-ios-app",
+      "domains": {}
     }
   ]
 }

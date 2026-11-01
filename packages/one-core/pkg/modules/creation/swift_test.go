@@ -21,7 +21,7 @@ func TestSwiftTemplates(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, id := range []string{"swift-macos-app", "swift-menubar-app"} {
+	for _, id := range []string{"swift-macos-app", "swift-menubar-app", "swift-ios-app"} {
 		t.Run(id, func(t *testing.T) {
 			var entry *template.Template
 			for i := range registry.Templates {
@@ -109,9 +109,15 @@ func TestSwiftTemplates(t *testing.T) {
 			if strings.Contains(string(plist), "LSUIElement") != (id == "swift-menubar-app") {
 				t.Error("only the menu-bar app should hide its Dock icon")
 			}
+			if id == "swift-ios-app" {
+				checkIOSTemplateScripts(t, result.TargetPath)
+			}
 			// Opt-in native smoke test: run on a Mac with Xcode, without UI,
 			// personal signing credentials, notarization or network access.
-			if runtime.GOOS == "darwin" && os.Getenv("ONE_TEST_MACOS_TEMPLATES") == "1" {
+			if id == "swift-ios-app" && runtime.GOOS == "darwin" && os.Getenv("ONE_TEST_IOS_TEMPLATES") == "1" {
+				checkNativeIOSTemplate(t, result.TargetPath)
+			}
+			if id != "swift-ios-app" && runtime.GOOS == "darwin" && os.Getenv("ONE_TEST_MACOS_TEMPLATES") == "1" {
 				checkNativeSwiftTemplate(t, result.TargetPath)
 			}
 		})
