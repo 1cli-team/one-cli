@@ -21,11 +21,10 @@ notarize() {
   fi
 }
 
-bash scripts/build.sh release
+bash scripts/build.sh release "$SIGNING_IDENTITY"
 app="build/one-template-macos.app"
 dmg="build/one-template-macos.dmg"
-codesign --force --options runtime --timestamp --sign "$SIGNING_IDENTITY" "$app"
-codesign --verify --strict --verbose=2 "$app"
+codesign --verify --deep --strict --verbose=2 "$app"
 ditto -c -k --keepParent "$app" build/notarization.zip
 notarize build/notarization.zip build/app-notarization.json
 xcrun stapler staple "$app"

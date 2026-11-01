@@ -8,7 +8,7 @@ struct StarterApp: App {
                 Image(systemName: "macwindow")
                     .font(.system(size: 48))
                     .accessibilityHidden(true)
-                Text("welcome", bundle: .appResources)
+                Text("welcome", bundle: .main)
                     .font(.title2)
             }
             .frame(minWidth: 420, minHeight: 280)

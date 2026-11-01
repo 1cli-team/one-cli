@@ -3,7 +3,6 @@ package creation
 import (
 	"context"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"runtime"
 	"strings"
@@ -113,25 +112,7 @@ func TestSwiftTemplates(t *testing.T) {
 			// Opt-in native smoke test: run on a Mac with Xcode, without UI,
 			// personal signing credentials, notarization or network access.
 			if runtime.GOOS == "darwin" && os.Getenv("ONE_TEST_MACOS_TEMPLATES") == "1" {
-				for _, args := range [][]string{
-					{"bash", "scripts/build.sh", "release"},
-					{"xcrun", "swift", "build", "-Xswiftc", "-warnings-as-errors"},
-					{"bash", "scripts/pack.sh"},
-					{"codesign", "--verify", "--strict", "build/sample-app.app"},
-					{"hdiutil", "verify", "build/sample-app.dmg"},
-				} {
-					cmd := exec.Command(args[0], args[1:]...)
-					cmd.Dir = result.TargetPath
-					if out, err := cmd.CombinedOutput(); err != nil {
-						t.Fatalf("%v: %v\n%s", args, err, out)
-					}
-				}
-				for _, lang := range []string{"en", "zh-hans"} {
-					path := filepath.Join(result.TargetPath, "build/sample-app.app/Contents/Resources/sample-app_App.bundle", lang+".lproj/Localizable.strings")
-					if _, err := os.Stat(path); err != nil {
-						t.Errorf("missing packaged localization: %v", err)
-					}
-				}
+				checkNativeSwiftTemplate(t, result.TargetPath)
 			}
 		})
 	}

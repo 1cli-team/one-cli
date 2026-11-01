@@ -2,10 +2,9 @@ version: "3"
 
 tasks:
   dev:
-    desc: Build and open the app / 构建并打开应用
+    desc: Build and run the app / 构建并运行应用
     cmds:
-      - bash scripts/build.sh debug
-      - open build/one-template-macos.app
+      - bash scripts/dev.sh {{.CLI_ARGS}}
   build:
     desc: Build a local app bundle / 构建本地应用包
     cmds:
@@ -13,9 +12,9 @@ tasks:
   check:
     desc: Compile with warnings as errors / 编译并将警告视为错误
     cmds:
-      - xcrun swift build -Xswiftc -warnings-as-errors
+      - env SWIFT_TREAT_WARNINGS_AS_ERRORS=YES bash scripts/build.sh debug
       - plutil -lint Info.plist
-      - bash -n scripts/build.sh scripts/pack.sh scripts/release.sh
+      - bash -n scripts/build.sh scripts/dev.sh scripts/pack.sh scripts/release.sh
   pack:
     desc: Create a local DMG / 创建本地 DMG
     cmds:

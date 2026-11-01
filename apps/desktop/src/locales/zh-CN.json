@@ -370,6 +370,14 @@
 			"empty-library": {
 				"name": "空共享库",
 				"description": "在 packages/ 下创建空项目，稍后自行配置技术栈。"
+			},
+			"swift-macos-app": {
+				"name": "Swift macOS 应用",
+				"description": "原生 SwiftUI 窗口应用，支持应用打包、DMG、可选签名与公证"
+			},
+			"swift-menubar-app": {
+				"name": "Swift macOS 菜单栏工具",
+				"description": "原生 SwiftUI 菜单栏工具，支持应用打包、DMG、可选签名与公证"
 			}
 		},
 		"groupSuccess": "已创建项目组 {{name}}，包含 {{count}} 个项目",

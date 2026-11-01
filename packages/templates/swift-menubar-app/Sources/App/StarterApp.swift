@@ -5,10 +5,10 @@ import SwiftUI
 struct StarterApp: App {
     var body: some Scene {
         MenuBarExtra("one-template-macos", systemImage: "scissors") {
-            Text("welcome", bundle: .appResources)
+            Text("welcome", bundle: .main)
             Divider()
             Button(action: { NSApplication.shared.terminate(nil) }) {
-                Text("quit", bundle: .appResources)
+                Text("quit", bundle: .main)
             }
             .keyboardShortcut("q")
         }

@@ -42,9 +42,9 @@ go test ./packages/one-core/pkg/modules/creation ./packages/one-core/pkg/platfor
 ONE_TEST_MACOS_TEMPLATES=1 go test ./packages/one-core/pkg/modules/creation -run TestSwiftTemplates -count=1
 ```
 
-The native smoke test uses temporary directories and ad-hoc signatures; it does not open apps, access signing credentials, or submit notarization requests.
+The native smoke test builds both apps and runs headless probes for relocated Swift Package resources, English/Chinese localization, and dev process lifetime. It uses temporary directories and ad-hoc signatures; it does not open windows, access signing credentials, or submit notarization requests.
 
-原生冒烟测试使用临时目录和临时签名，不打开应用、不读取签名凭据、不提交公证请求。
+原生冒烟测试构建两类应用，并以无界面的探针验证迁移后的 Swift Package 资源、中英文切换和开发进程生命周期。测试使用临时目录和临时签名，不打开窗口、不读取签名凭据、不提交公证请求。
 
 Preserve the public `/install.sh` and `/install.ps1` endpoints when changing the website. Inspect their syntax and served content without executing a real installation.
 
