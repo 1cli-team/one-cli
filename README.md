@@ -48,6 +48,10 @@ Use subcommand `--help` to discover arguments. Parse `-o json` results by schema
 
 ## Repository / 仓库
 
+Native macOS starters: [SwiftUI window app](packages/templates/swift-macos-app) and [menu-bar utility](packages/templates/swift-menubar-app). Both use Xcode's Swift toolchain with Task-based app/DMG builds and opt-in Developer ID signing and notarization.
+
+原生 macOS 模板：[SwiftUI 窗口应用](packages/templates/swift-macos-app)与[菜单栏工具](packages/templates/swift-menubar-app)。均使用 Xcode 提供的 Swift 工具链，通过 Task 构建应用与 DMG，并支持可选的 Developer ID 签名与公证。
+
 | Path / 路径 | Responsibility / 职责 |
 | --- | --- |
 | `packages/cli` | Go CLI / 命令行入口 |

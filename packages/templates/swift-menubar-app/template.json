@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "text": [
+    {
+      "files": [
+        "Package.swift",
+        "Taskfile.yml",
+        "scripts/build.sh",
+        "scripts/pack.sh",
+        "scripts/release.sh",
+        "Sources/App/StarterApp.swift",
+        "Info.plist",
+        "README.md",
+        "Sources/App/AppResources.swift"
+      ],
+      "from": "one-template-macos",
+      "value": "projectNameKebabCase"
+    },
+    {
+      "files": [
+        "README.md"
+      ],
+      "from": "one-template-project",
+      "value": "projectName"
+    }
+  ]
+}

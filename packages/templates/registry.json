@@ -161,6 +161,37 @@
       "domains": {}
     },
     {
+      "id": "swift-macos-app",
+      "name": "Swift macOS 应用",
+      "description": "原生 SwiftUI 窗口应用，支持应用打包、DMG、可选签名与公证",
+      "category": "frontend",
+      "tags": [
+        "swift",
+        "swiftui",
+        "macos",
+        "desktop"
+      ],
+      "toolchain": "swift",
+      "repo": "local:swift-macos-app",
+      "domains": {}
+    },
+    {
+      "id": "swift-menubar-app",
+      "name": "Swift macOS 菜单栏工具",
+      "description": "原生 SwiftUI 菜单栏工具，支持应用打包、DMG、可选签名与公证",
+      "category": "frontend",
+      "tags": [
+        "swift",
+        "swiftui",
+        "macos",
+        "desktop",
+        "menubar"
+      ],
+      "toolchain": "swift",
+      "repo": "local:swift-menubar-app",
+      "domains": {}
+    },
+    {
       "id": "empty-app",
       "name": "空应用",
       "description": "在 apps/ 下创建空项目，稍后自行配置技术栈",

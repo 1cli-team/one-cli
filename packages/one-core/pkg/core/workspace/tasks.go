@@ -58,7 +58,7 @@ func DiscoverTasks(root string, p Project, read func(string) ([]byte, error)) ([
 				result = append(result, ProjectTask{Name: name, Argv: []string{"pnpm", "run", name}, Source: source, Inputs: []string{source}})
 			}
 		}
-	case "go":
+	case "go", "swift":
 		var walk func(string, string, map[string]bool) ([]ProjectTask, error)
 		walk = func(file, prefix string, seen map[string]bool) ([]ProjectTask, error) {
 			file = filepath.ToSlash(filepath.Clean(file))

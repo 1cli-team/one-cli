@@ -18,6 +18,8 @@ func Excluded(name string) bool {
 			"pnpm-lock.yaml", "package-lock.json", "npm-shrinkwrap.json", "yarn.lock", "bun.lock", "bun.lockb",
 			"go.work", "go.work.sum", "coverage.out", ".DS_Store":
 			return true
+		case ".build", ".swiftpm", "DerivedData", "xcuserdata":
+			return true
 		}
 	}
 	return strings.HasSuffix(name, ".tsbuildinfo")

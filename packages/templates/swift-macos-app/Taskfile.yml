@@ -1,0 +1,27 @@
+version: "3"
+
+tasks:
+  dev:
+    desc: Build and open the app / 构建并打开应用
+    cmds:
+      - bash scripts/build.sh debug
+      - open build/one-template-macos.app
+  build:
+    desc: Build a local app bundle / 构建本地应用包
+    cmds:
+      - bash scripts/build.sh release
+  check:
+    desc: Compile with warnings as errors / 编译并将警告视为错误
+    cmds:
+      - xcrun swift build -Xswiftc -warnings-as-errors
+      - plutil -lint Info.plist
+      - bash -n scripts/build.sh scripts/pack.sh scripts/release.sh
+  pack:
+    desc: Create a local DMG / 创建本地 DMG
+    cmds:
+      - bash scripts/build.sh release
+      - bash scripts/pack.sh
+  release:
+    desc: Sign and notarize a DMG without publishing / 签名并公证 DMG，不自动发布
+    cmds:
+      - bash scripts/release.sh
