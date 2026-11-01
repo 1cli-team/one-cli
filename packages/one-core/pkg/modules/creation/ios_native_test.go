@@ -21,7 +21,13 @@ func checkNativeIOSTemplate(t *testing.T, dir string) {
 		}
 		return string(out)
 	}
-	run("bash", "-n", "scripts/build.sh", "scripts/dev.sh", "scripts/pack.sh", "scripts/release.sh")
+	scripts, err := filepath.Glob(filepath.Join(dir, "scripts", "*.sh"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, script := range scripts {
+		run("bash", "-n", script)
+	}
 	run("env", "SWIFT_TREAT_WARNINGS_AS_ERRORS=YES", "bash", "scripts/build.sh", "debug")
 	simulator := filepath.Join(dir, "build/sample-app.app")
 	for _, locale := range []string{"en", "zh-Hans"} {

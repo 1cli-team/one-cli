@@ -28,9 +28,9 @@ Select and boot an iPhone or iPad in Xcode's Simulator first. Find its UDID with
 IOS_SIMULATOR_UDID=<udid> one run dev -p one-template-project
 ```
 
-The task installs/launches this app, streams its console, forwards arguments and terminates it on task stop. It does not boot, erase or shut down simulators. Use `SIMCTL_CHILD_<NAME>` to forward environment variables to the app. `open App.xcodeproj` is also supported from this project directory.
+The task installs/launches this app, streams its console and forwards arguments. Only one dev session per app and simulator is allowed, including across checkouts; stop the existing session before starting another. Dead session locks are reclaimed automatically. The console forwards stop signals to its own app instance; a forced `SIGKILL` cannot be forwarded and may leave the app running. It does not boot, erase or shut down simulators. Use `SIMCTL_CHILD_<NAME>` to forward environment variables to the app. `open App.xcodeproj` is also supported from this project directory.
 
-任务安装并启动此应用，转发参数、输出控制台日志，并在任务停止时终止应用；不会启动、抹除或关闭模拟器。应用环境变量使用 `SIMCTL_CHILD_<NAME>` 转发。也可在项目目录运行 `open App.xcodeproj`。
+任务安装并启动此应用，转发参数、输出控制台日志。同一应用在同一模拟器中只能有一个开发会话（包括不同工作区），请先停止已有会话再启动；已退出会话的锁会自动回收。控制台向本次启动的应用实例转发停止信号；强制 `SIGKILL` 无法转发，可能留下仍在运行的应用。任务不会启动、抹除或关闭模拟器。应用环境变量使用 `SIMCTL_CHILD_<NAME>` 转发。也可在项目目录运行 `open App.xcodeproj`。
 
 ## Distribution / 分发
 

@@ -12,7 +12,7 @@ tasks:
   check:
     desc: Check scripts and compile with warnings as errors / 检查脚本并将编译警告视为错误
     cmds:
-      - bash -n scripts/build.sh scripts/dev.sh scripts/pack.sh scripts/release.sh
+      - for script in scripts/*.sh; do bash -n "$script" || exit; done
       - plutil -lint Info.plist
       - env SWIFT_TREAT_WARNINGS_AS_ERRORS=YES bash scripts/build.sh debug
   pack:

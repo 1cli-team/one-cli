@@ -10,11 +10,22 @@ fi
 bash scripts/build.sh debug
 app=build/one-template-ios.app
 bundle_id=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$app/Info.plist")
+# Coordinate the same app/device across checkouts with an inherited file lock.
+# 通过继承的文件锁，跨工作区保护同一设备中的同一应用。
+umask 077
+lock_root="${TMPDIR:-/tmp}/one-ios-dev-$(id -u)"
+mkdir -p "$lock_root"
+lock_key=$(printf '%s\n%s\n' "$IOS_SIMULATOR_UDID" "$bundle_id" | shasum -a 256 | cut -d ' ' -f 1)
+lock_file="$lock_root/$lock_key.lock"
+exec 9>"$lock_file"
+if ! /usr/bin/lockf -s -t 0 9; then
+  echo "This app already has a dev session on this simulator; stop it first / 此应用在该模拟器中已有开发会话，请先停止它" >&2
+  exit 1
+fi
+# Keep the file: the OS releases its lock when the last descriptor closes.
+# 保留文件，由操作系统在最后一个文件描述符关闭时释放锁。
 xcrun simctl bootstatus "$IOS_SIMULATOR_UDID"
 xcrun simctl install "$IOS_SIMULATOR_UDID" "$app"
-cleanup() { xcrun simctl terminate "$IOS_SIMULATOR_UDID" "$bundle_id" >/dev/null 2>&1 || true; }
-trap cleanup EXIT
-trap 'exit 130' INT
-trap 'exit 143' TERM
-xcrun simctl launch --console-pty --terminate-running-process "$IOS_SIMULATOR_UDID" "$bundle_id" "$@" &
-wait "$!"
+# Forward signals to this launch; never terminate a newer instance by Bundle ID.
+# 向本次启动转发信号，不按 Bundle ID 终止可能已更新的实例。
+exec xcrun simctl launch --console-pty --terminate-running-process "$IOS_SIMULATOR_UDID" "$bundle_id" "$@"
