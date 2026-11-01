@@ -16,7 +16,7 @@ import (
 )
 
 func TestTerminateTree(t *testing.T) {
-	for _, mode := range []string{"graceful", "stubborn", "spawn-on-stop"} {
+	for _, mode := range []string{"graceful", "stubborn", "spawn-on-stop", "parent-exits-first"} {
 		t.Run(mode, func(t *testing.T) {
 			root := t.TempDir()
 			cmd := exec.Command(os.Args[0], "-test.run=^TestTerminateTreeHelper$")
@@ -48,7 +48,7 @@ func TestTerminateTree(t *testing.T) {
 				t.Fatal(err)
 			}
 			if err := cmd.Wait(); err == nil {
-				t.Fatal("stubborn parent was not killed")
+				t.Fatal("parent was not stopped")
 			}
 			if elapsed := time.Since(started); elapsed < 250*time.Millisecond || elapsed > 2*time.Second {
 				t.Fatalf("unexpected shutdown duration: %v", elapsed)
@@ -58,7 +58,7 @@ func TestTerminateTree(t *testing.T) {
 					t.Fatal("child did not receive time to clean up")
 				}
 			}
-			if mode == "spawn-on-stop" {
+			if mode == "spawn-on-stop" || mode == "parent-exits-first" {
 				data, err := os.ReadFile(filepath.Join(root, "late", "ready"))
 				if err != nil {
 					t.Fatal("parent did not spawn during shutdown:", err)
@@ -98,6 +98,9 @@ func TestTerminateTreeHelper(t *testing.T) {
 				os.Exit(1)
 			}
 			childMode = "stubborn"
+		} else if childMode == "parent-exits-first" {
+			// Model a shell wrapper that exits before its child's cleanup.
+			signal.Reset(syscall.SIGTERM)
 		} else {
 			signal.Ignore(syscall.SIGTERM)
 		}
@@ -112,14 +115,37 @@ func TestTerminateTreeHelper(t *testing.T) {
 			time.Sleep(time.Hour)
 		}
 	}
+	originalParent := os.Getppid()
 	stopped := make(chan os.Signal, 1)
-	if mode == "graceful" {
+	if mode == "graceful" || mode == "parent-exits-first" {
 		signal.Notify(stopped, syscall.SIGTERM)
 	} else {
 		signal.Ignore(syscall.SIGTERM)
 	}
 	if err := os.WriteFile(filepath.Join(root, "ready"), []byte(strconv.Itoa(os.Getpid())), 0600); err != nil {
 		os.Exit(1)
+	}
+	if mode == "parent-exits-first" {
+		<-stopped
+		deadline := time.Now().Add(time.Second)
+		for os.Getppid() == originalParent {
+			if time.Now().After(deadline) {
+				os.Exit(1)
+			}
+			time.Sleep(time.Millisecond)
+		}
+		late := filepath.Join(root, "late")
+		if err := os.Mkdir(late, 0700); err != nil {
+			os.Exit(1)
+		}
+		child := exec.Command(os.Args[0], "-test.run=^TestTerminateTreeHelper$")
+		child.Env = append(os.Environ(), "ONE_STOP_HELPER=stubborn", "ONE_STOP_ROOT="+late)
+		child.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
+		if err := child.Start(); err != nil {
+			os.Exit(1)
+		}
+		_ = child.Wait()
+		os.Exit(0)
 	}
 	if mode == "graceful" {
 		<-stopped
@@ -132,5 +158,30 @@ func TestTerminateTreeHelper(t *testing.T) {
 	}
 	for {
 		time.Sleep(time.Hour)
+	}
+}
+
+func TestRefreshTreeRetainsReparentedChildren(t *testing.T) {
+	worker := treeProcess{pid: 2, parent: 1, started: "worker"}
+	cleanup := treeProcess{pid: 3, parent: 2, started: "cleanup"}
+	tracked := refreshTree([]treeProcess{worker}, map[int]treeProcess{2: worker, 3: cleanup})
+	// The worker exits and its PID is reused by an unrelated process. Its
+	// previously discovered cleanup child is reparented and spawns another child.
+	cleanup.parent = 1
+	leaf := treeProcess{pid: 4, parent: 3, started: "leaf"}
+	tracked = refreshTree(tracked, map[int]treeProcess{
+		2: {pid: 2, parent: 1, started: "unrelated"},
+		3: cleanup, 4: leaf,
+		5: {pid: 5, parent: 2, started: "unrelated-child"},
+	})
+	if len(tracked) != 2 {
+		t.Fatalf("unexpected ownership set: %+v", tracked)
+	}
+	seen := map[int]bool{}
+	for _, p := range tracked {
+		seen[p.pid] = true
+	}
+	if !seen[3] || !seen[4] {
+		t.Fatalf("lost reparented cleanup subtree: %+v", tracked)
 	}
 }

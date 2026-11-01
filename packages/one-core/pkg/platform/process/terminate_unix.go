@@ -34,23 +34,16 @@ func TerminateTree(parent *os.Process, grace time.Duration) error {
 	descendants = append(descendants, root)
 	deadline := time.Now().Add(grace)
 	for len(descendants) > 0 && time.Now().Before(deadline) {
-		live := descendants[:0]
-		for _, p := range descendants {
-			if syscall.Kill(p.pid, 0) != syscall.ESRCH {
-				live = append(live, p)
-			}
-		}
-		descendants = live
+		// Keep discovering cleanup subprocesses from surviving descendants,
+		// even after their original wrappers have exited and they are reparented.
+		descendants = refreshTree(descendants, processTable())
 		if len(descendants) > 0 {
 			time.Sleep(20 * time.Millisecond)
 		}
 	}
 	// Recheck identities after the grace period before escalating signals.
 	after := processTable()
-	// Snapshot new children before killing their parent and losing ancestry.
-	if current, ok := after[root.pid]; ok && current.started == root.started {
-		descendants = append(descendants, descendantsOf(after, root.pid)...)
-	}
+	descendants = refreshTree(descendants, after)
 	for _, p := range descendants {
 		if current, ok := after[p.pid]; ok && current.started == p.started {
 			_ = syscall.Kill(p.pid, syscall.SIGKILL)
@@ -58,6 +51,32 @@ func TerminateTree(parent *os.Process, grace time.Duration) error {
 	}
 	_ = parent.Kill()
 	return err
+}
+
+// Newly discovered children remain tracked independently of their parents.
+// A reused PID must not be used as an anchor for discovering unrelated children.
+func refreshTree(tracked []treeProcess, table map[int]treeProcess) []treeProcess {
+	if len(table) == 0 {
+		// A failed ps invocation must not erase the last known ownership set.
+		return tracked
+	}
+	var live []treeProcess
+	seen := map[int]bool{}
+	add := func(p treeProcess) {
+		if !seen[p.pid] {
+			seen[p.pid] = true
+			live = append(live, p)
+		}
+	}
+	for _, p := range tracked {
+		if current, ok := table[p.pid]; ok && current.started == p.started {
+			for _, child := range descendantsOf(table, p.pid) {
+				add(child)
+			}
+			add(current)
+		}
+	}
+	return live
 }
 
 func descendantsOf(table map[int]treeProcess, parent int) []treeProcess {
