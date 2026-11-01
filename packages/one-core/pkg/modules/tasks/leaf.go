@@ -83,7 +83,7 @@ func RunProcessLeaf(ctx context.Context, id string, in io.Reader, out, errOut io
 		child := process.CommandContext(ctx, path, argv[1:]...)
 		child.Dir, child.Env = spec.Task.Directory, spec.Environment
 		child.Stdin, child.Stdout, child.Stderr = in, out, errOut
-		child.Cancel = func() error { return process.StopTree(child.Process) }
+		child.Cancel = func() error { return process.TerminateTree(child.Process, 2*time.Second) }
 		child.WaitDelay = 3 * time.Second
 		err = child.Start()
 		if err == nil {

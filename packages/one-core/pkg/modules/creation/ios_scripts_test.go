@@ -7,6 +7,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"strconv"
 	"strings"
 	"syscall"
 	"testing"
@@ -72,11 +73,15 @@ func checkIOSTemplateScripts(t *testing.T, rendered string) {
 	}
 	if runtime.GOOS != "darwin" {
 		return
-	} // Uses stock macOS lockf and PlistBuddy.
-	t.Run("dev-session-ownership", func(t *testing.T) { checkIOSDevSessions(t, rendered) })
+	} // Uses stock macOS Perl and PlistBuddy.
+	for _, leaf := range []bool{false, true} {
+		t.Run(fmt.Sprintf("dev-session-ownership/one-leaf=%t", leaf), func(t *testing.T) {
+			checkIOSDevSessions(t, rendered, leaf)
+		})
+	}
 }
 
-func checkIOSDevSessions(t *testing.T, rendered string) {
+func checkIOSDevSessions(t *testing.T, rendered string, leaf bool) {
 	t.Helper()
 	root := t.TempDir()
 	write := func(path, content string) {
@@ -107,7 +112,7 @@ case "$1 $2" in
  "simctl launch")
    printf '%s\n' "$@" > "$REVIEW_ROOT/args-$$"
    trap 'echo stopped-$$ >> "$REVIEW_LOG"; exit 0' TERM INT
-   touch "$REVIEW_ROOT/ready-$$"
+   echo $$ > "$REVIEW_ROOT/ready-$IOS_SIMULATOR_UDID"
    while [[ ! -e "$REVIEW_ROOT/finish-$$" ]]; do sleep 0.05; done ;;
  *) exit 2 ;;
 esac
@@ -118,10 +123,18 @@ esac
 		cmd := exec.Command("bash", "scripts/dev.sh", "argument with spaces")
 		cmd.Dir = filepath.Join(root, checkout)
 		cmd.Env = append(append([]string{}, env...), "IOS_SIMULATOR_UDID="+device)
+		if leaf {
+			return iosTaskCommand(t, cmd)
+		}
 		return cmd
 	}
+	consolePIDs := map[*exec.Cmd]int{}
 	start := func(checkout, device string) (*exec.Cmd, chan error) {
 		t.Helper()
+		ready := filepath.Join(root, "ready-"+device)
+		if err := os.Remove(ready); err != nil && !os.IsNotExist(err) {
+			t.Fatal(err)
+		}
 		cmd := command(checkout, device)
 		var output bytes.Buffer
 		cmd.Stdout = &output
@@ -134,8 +147,11 @@ esac
 		t.Cleanup(func() { _ = cmd.Process.Signal(syscall.SIGTERM) })
 		deadline := time.Now().Add(5 * time.Second)
 		for {
-			if _, err := os.Stat(filepath.Join(root, fmt.Sprintf("ready-%d", cmd.Process.Pid))); err == nil {
-				break
+			if raw, err := os.ReadFile(ready); err == nil {
+				if pid, err := strconv.Atoi(strings.TrimSpace(string(raw))); err == nil {
+					consolePIDs[cmd] = pid
+					break
+				}
 			}
 			select {
 			case err := <-done:
@@ -147,17 +163,25 @@ esac
 			}
 			time.Sleep(10 * time.Millisecond)
 		}
-		args, err := os.ReadFile(filepath.Join(root, fmt.Sprintf("args-%d", cmd.Process.Pid)))
+		if !leaf && consolePIDs[cmd] != cmd.Process.Pid {
+			t.Fatal("dev did not exec the console process")
+		}
+		args, err := os.ReadFile(filepath.Join(root, fmt.Sprintf("args-%d", consolePIDs[cmd])))
 		if err != nil || !strings.Contains(string(args), "argument with spaces\n") {
 			t.Fatalf("argument/PID forwarding: %v %s", err, args)
 		}
 		return cmd, done
 	}
-	stop := func(cmd *exec.Cmd, done chan error) {
+	stop := func(cmd *exec.Cmd, done chan error, sig syscall.Signal) {
 		t.Helper()
-		_ = cmd.Process.Signal(syscall.SIGTERM)
+		_ = cmd.Process.Signal(sig)
 		select {
-		case <-done:
+		case err := <-done:
+			if leaf {
+				if exit, ok := err.(*exec.ExitError); !ok || exit.ExitCode() != 128+int(sig) {
+					t.Fatalf("cancelled task exit: %v", err)
+				}
+			}
 		case <-time.After(5 * time.Second):
 			t.Fatal("stop did not reach console process")
 		}
@@ -173,14 +197,18 @@ esac
 	default:
 	}
 	other, otherDone := start("second", "DEVICE-B") // Different devices remain independent.
-	stop(first, firstDone)
+	stopSignal := syscall.SIGTERM
+	if leaf {
+		stopSignal = syscall.SIGINT // process-compose's normal shutdown signal.
+	}
+	stop(first, firstDone, stopSignal)
 	select {
 	case err := <-otherDone:
 		t.Fatalf("stopping A killed B: %v", err)
 	default:
 	}
 	restarted, restartedDone := start("second", "DEVICE-A") // Dead lock owner is reclaimed.
-	write(filepath.Join(root, fmt.Sprintf("finish-%d", restarted.Process.Pid)), "")
+	write(filepath.Join(root, fmt.Sprintf("finish-%d", consolePIDs[restarted])), "")
 	select {
 	case err := <-restartedDone:
 		if err != nil {
@@ -189,7 +217,7 @@ esac
 	case <-time.After(5 * time.Second):
 		t.Fatal("normal exit not propagated")
 	}
-	stop(other, otherDone)
+	stop(other, otherDone, syscall.SIGTERM)
 	raw, err := os.ReadFile(log)
 	if err != nil {
 		t.Fatal(err)
@@ -198,7 +226,7 @@ esac
 		t.Fatalf("unexpected simulator side effects: %s", raw)
 	}
 	for _, cmd := range []*exec.Cmd{first, other} {
-		if !strings.Contains(string(raw), fmt.Sprintf("stopped-%d", cmd.Process.Pid)) {
+		if !strings.Contains(string(raw), fmt.Sprintf("stopped-%d", consolePIDs[cmd])) {
 			t.Fatal("stop signal was not forwarded")
 		}
 	}

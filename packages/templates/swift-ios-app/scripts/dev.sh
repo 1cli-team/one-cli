@@ -18,10 +18,18 @@ mkdir -p "$lock_root"
 lock_key=$(printf '%s\n%s\n' "$IOS_SIMULATOR_UDID" "$bundle_id" | shasum -a 256 | cut -d ' ' -f 1)
 lock_file="$lock_root/$lock_key.lock"
 exec 9>"$lock_file"
-if ! /usr/bin/lockf -s -t 0 9; then
-  echo "This app already has a dev session on this simulator; stop it first / 此应用在该模拟器中已有开发会话，请先停止它" >&2
-  exit 1
-fi
+# macOS 14's lockf cannot lock an inherited descriptor. System Perl can.
+# macOS 14 的 lockf 不支持继承的文件描述符，使用系统 Perl 的 flock。
+lock_status=0
+/usr/bin/perl -MFcntl=:flock -MErrno=EWOULDBLOCK,EAGAIN -e '
+  open(my $lock, "<&=9") or exit 74;
+  flock($lock, LOCK_EX | LOCK_NB) or exit(($! == EWOULDBLOCK || $! == EAGAIN) ? 75 : 74);
+' || lock_status=$?
+case "$lock_status" in
+  0) ;;
+  75) echo "This app already has a dev session on this simulator; stop it first / 此应用在该模拟器中已有开发会话，请先停止它" >&2; exit 1 ;;
+  *) echo "Unable to acquire the dev session lock / 无法取得开发会话锁" >&2; exit "$lock_status" ;;
+esac
 # Keep the file: the OS releases its lock when the last descriptor closes.
 # 保留文件，由操作系统在最后一个文件描述符关闭时释放锁。
 xcrun simctl bootstatus "$IOS_SIMULATOR_UDID"
