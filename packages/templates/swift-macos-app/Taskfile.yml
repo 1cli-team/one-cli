@@ -1,0 +1,26 @@
+version: "3"
+
+tasks:
+  dev:
+    desc: Build and run the app / 构建并运行应用
+    cmds:
+      - bash scripts/dev.sh {{.CLI_ARGS}}
+  build:
+    desc: Build a local app bundle / 构建本地应用包
+    cmds:
+      - bash scripts/build.sh release
+  check:
+    desc: Compile with warnings as errors / 编译并将警告视为错误
+    cmds:
+      - env SWIFT_TREAT_WARNINGS_AS_ERRORS=YES bash scripts/build.sh debug
+      - plutil -lint Info.plist
+      - bash -n scripts/build.sh scripts/dev.sh scripts/pack.sh scripts/release.sh
+  pack:
+    desc: Create a local DMG / 创建本地 DMG
+    cmds:
+      - bash scripts/build.sh release
+      - bash scripts/pack.sh
+  release:
+    desc: Sign and notarize a DMG without publishing / 签名并公证 DMG，不自动发布
+    cmds:
+      - bash scripts/release.sh

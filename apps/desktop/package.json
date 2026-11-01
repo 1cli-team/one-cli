@@ -12,7 +12,7 @@
     "lint:fix": "oxlint --fix .",
     "format": "oxfmt --check .",
     "format:fix": "oxfmt --write .",
-    "check": "pnpm run lint && pnpm run format",
+    "check": "pnpm run lint && pnpm run format && node --test scripts/template-locales.test.mjs",
     "check:fix": "pnpm run lint:fix && pnpm run format:fix",
     "dev:web": "vite",
     "build:web": "tsc -b && vite build",

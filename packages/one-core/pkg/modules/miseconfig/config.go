@@ -233,6 +233,10 @@ func BuildWithFiles(root string, opts Options, files map[string][]byte) (*Plan, 
 		switch project.Toolchain {
 		case "node":
 			rootConfig.Tools["node"] = opts.NodeVersion
+		case "swift":
+			// Xcode supplies Swift and the macOS SDK. Do not install a separate
+			// Swift toolchain through mise or change the selected Xcode.
+			rootConfig.Tools["task"] = "3.51.1"
 		case "go":
 			raw, err := p.read(rel + "/go.mod")
 			if err != nil {
@@ -258,7 +262,7 @@ func BuildWithFiles(root string, opts Options, files map[string][]byte) (*Plan, 
 		for _, op := range operations {
 			argv := append([]string(nil), op.Argv...)
 			// Task accepts CLI arguments after --; pnpm forwards script arguments.
-			if project.Toolchain == "go" {
+			if project.Toolchain == "go" || project.Toolchain == "swift" {
 				argv = append(argv, "--")
 			}
 			task := Task{Directory: rel, Description: op.Description, Run: nativeCommand(argv, false), RawArgs: true, Interactive: op.Interactive}

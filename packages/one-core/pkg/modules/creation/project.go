@@ -273,14 +273,14 @@ func categoryDirFor(category string) (string, error) {
 }
 
 func defaultPackageManagerFor(tc string) string {
-	if tc == "go" || tc == string(template.ToolchainNone) {
+	if tc == "go" || tc == string(template.ToolchainSwift) || tc == string(template.ToolchainNone) {
 		return ""
 	}
 	return "pnpm"
 }
 
 func manifestPackageManagerFor(tc, pm string) string {
-	if tc == "go" || tc == string(template.ToolchainNone) {
+	if tc == "go" || tc == string(template.ToolchainSwift) || tc == string(template.ToolchainNone) {
 		return ""
 	}
 	return pm

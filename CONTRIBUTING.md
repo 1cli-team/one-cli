@@ -31,6 +31,21 @@ The root check covers Go, React, Rust, static website, CLI help, agent reference
 
 根检查覆盖 Go、React、Rust、静态官网、CLI 帮助、AI 指引与发布规则；同时运行受影响项目的构建。涉及偏好保存或项目创建的验证使用临时工作区和配置目录，不打印真实凭据。
 
+After synchronizing bundled resources, run the Swift template integration tests with:
+
+同步内嵌资源后，可运行 Swift 模板集成测试：
+
+```sh
+go test ./packages/one-core/pkg/modules/creation ./packages/one-core/pkg/platform/templatefiles
+# On macOS with Xcode, also build generated apps and verify their local DMGs.
+# 在已安装 Xcode 的 macOS 上，同时构建生成的应用并验证本地 DMG。
+ONE_TEST_MACOS_TEMPLATES=1 go test ./packages/one-core/pkg/modules/creation -run TestSwiftTemplates -count=1
+```
+
+The native smoke test builds both apps and runs headless probes for relocated Swift Package resources, English/Chinese localization, and dev process lifetime. It uses temporary directories and ad-hoc signatures; it does not open windows, access signing credentials, or submit notarization requests.
+
+原生冒烟测试构建两类应用，并以无界面的探针验证迁移后的 Swift Package 资源、中英文切换和开发进程生命周期。测试使用临时目录和临时签名，不打开窗口、不读取签名凭据、不提交公证请求。
+
 Preserve the public `/install.sh` and `/install.ps1` endpoints when changing the website. Inspect their syntax and served content without executing a real installation.
 
 官网改动必须保留两个安装脚本地址；检查脚本语法与实际返回内容，不通过真实安装来验证。

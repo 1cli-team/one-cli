@@ -370,6 +370,14 @@
 			"empty-library": {
 				"name": "Empty library",
 				"description": "Create an empty project under packages/ and configure a technology stack later."
+			},
+			"swift-macos-app": {
+				"name": "Swift macOS app",
+				"description": "Native SwiftUI window app with app bundles, DMG packaging and optional signing and notarization"
+			},
+			"swift-menubar-app": {
+				"name": "Swift macOS menu-bar app",
+				"description": "Native SwiftUI menu-bar utility with app bundles, DMG packaging and optional signing and notarization"
 			}
 		},
 		"groupSuccess": "Created project group {{name}} with {{count}} projects",

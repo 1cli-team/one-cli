@@ -70,7 +70,7 @@ func BuildSummary(root string) (Summary, error) {
 		canDevelop := false // Filled from the effective task catalog by the caller.
 		dependenciesInstalled := ProjectDependenciesInstalled(root, projectDir, p.Toolchain)
 		dependencyStatus := ""
-		if p.Toolchain == "go" {
+		if p.Toolchain == "go" || p.Toolchain == "swift" {
 			dependencyStatus = "unverified"
 		}
 		s.Projects = append(s.Projects, SummaryProject{
@@ -113,9 +113,9 @@ func (s *Summary) ApplyTaskCapabilities(available map[string]bool) {
 // declared by the project rather than treating any node_modules directory as
 // proof that a newly added project was included in the last install.
 func ProjectDependenciesInstalled(root, projectDir, toolchain string) bool {
-	// A static summary cannot validate the Go build graph or module cache.
-	// The development preparation service verifies those through Go itself.
-	if strings.TrimSpace(toolchain) == "go" {
+	// A static summary cannot validate Go or Swift dependency caches.
+	// Go preparation and Swift build tasks resolve their own dependencies.
+	if strings.TrimSpace(toolchain) == "go" || strings.TrimSpace(toolchain) == "swift" {
 		return false
 	}
 	if strings.TrimSpace(toolchain) != "node" {
