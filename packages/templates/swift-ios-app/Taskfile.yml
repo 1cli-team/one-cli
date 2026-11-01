@@ -1,0 +1,25 @@
+version: "3"
+
+tasks:
+  dev:
+    desc: Run on an explicitly selected booted simulator / 在指定的已启动模拟器中运行
+    cmds:
+      - bash scripts/dev.sh {{.CLI_ARGS}}
+  build:
+    desc: Build an unsigned simulator app / 构建未签名模拟器应用
+    cmds:
+      - bash scripts/build.sh release
+  check:
+    desc: Check scripts and compile with warnings as errors / 检查脚本并将编译警告视为错误
+    cmds:
+      - bash -n scripts/build.sh scripts/dev.sh scripts/pack.sh scripts/release.sh
+      - plutil -lint Info.plist
+      - env SWIFT_TREAT_WARNINGS_AS_ERRORS=YES bash scripts/build.sh debug
+  pack:
+    desc: Create an unsigned device archive / 创建未签名真机归档
+    cmds:
+      - bash scripts/pack.sh
+  release:
+    desc: Sign and export locally without uploading / 签名并在本机导出，不上传
+    cmds:
+      - bash scripts/release.sh

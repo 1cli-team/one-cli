@@ -1,0 +1,26 @@
+{
+  "schemaVersion": 1,
+  "text": [
+    {
+      "files": [
+        "scripts/build.sh",
+        "scripts/pack.sh",
+        "scripts/release.sh",
+        "Sources/App/StarterApp.swift",
+        "Info.plist",
+        "README.md",
+        "App.xcodeproj/project.pbxproj",
+        "scripts/dev.sh"
+      ],
+      "from": "one-template-ios",
+      "value": "projectNameKebabCase"
+    },
+    {
+      "files": [
+        "README.md"
+      ],
+      "from": "one-template-project",
+      "value": "projectName"
+    }
+  ]
+}

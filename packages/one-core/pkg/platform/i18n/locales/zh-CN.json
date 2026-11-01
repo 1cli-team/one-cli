@@ -764,5 +764,7 @@
   "desktop.project_payload_invalid": "新建项目请求无效：%v",
   "desktop.workspace_required": "尚未选择工作区，请在 One Desktop 中打开工作区后重试。",
   "error.SERVE_BIND_FORBIDDEN.summary": "One Desktop 拒绝了对本地 API 的访问。",
-  "storage.failed": "One 存储初始化失败：%w"
+  "storage.failed": "One 存储初始化失败：%w",
+  "template.swift-ios-app.name": "Swift iOS 应用",
+  "template.swift-ios-app.description": "原生 SwiftUI iPhone 与 iPad 应用，支持模拟器构建、真机归档与显式签名导出"
 }

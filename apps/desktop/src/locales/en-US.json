@@ -371,6 +371,10 @@
 				"name": "Empty library",
 				"description": "Create an empty project under packages/ and configure a technology stack later."
 			},
+			"swift-ios-app": {
+				"name": "Swift iOS app",
+				"description": "Native SwiftUI iPhone and iPad app with simulator builds, device archives and explicit signed export"
+			},
 			"swift-macos-app": {
 				"name": "Swift macOS app",
 				"description": "Native SwiftUI window app with app bundles, DMG packaging and optional signing and notarization"

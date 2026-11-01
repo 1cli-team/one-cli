@@ -764,5 +764,7 @@
   "desktop.project_payload_invalid": "Invalid project creation request: %v",
   "desktop.workspace_required": "No workspace is selected. Open a workspace in One Desktop and try again.",
   "error.SERVE_BIND_FORBIDDEN.summary": "One Desktop rejected access to its local API.",
-  "storage.failed": "One storage initialization failed: %w"
+  "storage.failed": "One storage initialization failed: %w",
+  "template.swift-ios-app.name": "Swift iOS app",
+  "template.swift-ios-app.description": "Native SwiftUI iPhone and iPad app with simulator builds, device archives and explicit signed export"
 }
