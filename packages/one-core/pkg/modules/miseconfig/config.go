@@ -29,8 +29,12 @@ import (
 const Filename = workspace.MiseConfigFilename
 
 type Options struct {
-	NodeVersion string
-	GoVersion   string
+	NodeVersion   string
+	GoVersion     string
+	BunVersion    string
+	DenoVersion   string
+	PythonVersion string
+	UVVersion     string
 }
 
 type Change struct {
@@ -153,6 +157,28 @@ func BuildWithFiles(root string, opts Options, files map[string][]byte) (*Plan, 
 	if opts.GoVersion != "" && !exactVersion.MatchString(opts.GoVersion) {
 		return nil, i18n.Errorf("miseconfig.go_version")
 	}
+	for _, tool := range []struct {
+		name     string
+		version  *string
+		fallback string
+	}{
+		{"bun", &opts.BunVersion, "1.4.4"},
+		{"deno", &opts.DenoVersion, "2.9.8"},
+		{"python", &opts.PythonVersion, "3.12.16"},
+		{"uv", &opts.UVVersion, "0.13.7"},
+	} {
+		if *tool.version == "" {
+			if version, ok := previous.Tools[tool.name].(string); ok && exactVersion.MatchString(version) {
+				*tool.version = version
+			}
+		}
+		if *tool.version == "" {
+			*tool.version = tool.fallback
+		}
+		if !exactVersion.MatchString(*tool.version) {
+			return nil, i18n.Errorf("miseconfig.tool_version", tool.name)
+		}
+	}
 	rootConfig := config{MinVersion: runtimeport.MinimumMiseVersion, MonorepoRoot: true, Monorepo: &monorepo{ConfigRoots: []string{}}, Tools: map[string]string{}, Tasks: map[string]Task{}}
 	hooks, err := p.readOptional(workspace.HooksConfigFilename)
 	if err != nil {
@@ -233,6 +259,13 @@ func BuildWithFiles(root string, opts Options, files map[string][]byte) (*Plan, 
 		switch project.Toolchain {
 		case "node":
 			rootConfig.Tools["node"] = opts.NodeVersion
+		case "bun":
+			rootConfig.Tools["bun"] = opts.BunVersion
+		case "deno":
+			rootConfig.Tools["deno"] = opts.DenoVersion
+		case "python":
+			rootConfig.Tools["python"] = opts.PythonVersion
+			rootConfig.Tools["uv"] = opts.UVVersion
 		case "swift":
 			// Xcode supplies Swift and the macOS SDK. Do not install a separate
 			// Swift toolchain through mise or change the selected Xcode.

@@ -68,6 +68,8 @@ func Defaults(templateID, repo string) []Selection {
 		}})
 	case "ts-library":
 		plan = append(plan, node, Selection{Source: tsSource, Names: []string{"tsdown"}})
+	case "bun-api", "bun-lib", "deno-api", "deno-lib":
+		plan = append(plan, node)
 	case "electron-app":
 		plan[0].Names = append(plan[0].Names, "one-electron", "one-web")
 		node.Names = append(node.Names, "vite")

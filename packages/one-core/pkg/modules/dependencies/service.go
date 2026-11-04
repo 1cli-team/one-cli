@@ -60,7 +60,7 @@ func (s Service) Prepare(ctx context.Context, in Input) error {
 	for _, name := range in.Projects {
 		selected[name] = true
 	}
-	var nodes, goProjects []workspace.ManifestProject
+	var nodes, goProjects, pythonProjects []workspace.ManifestProject
 	for _, p := range in.Manifest.Projects {
 		if in.Projects != nil {
 			if !selected[p.Name] {
@@ -70,14 +70,21 @@ func (s Service) Prepare(ctx context.Context, in Input) error {
 			continue
 		}
 		switch p.Toolchain {
-		case "node":
+		case "node", "bun", "deno":
 			nodes = append(nodes, p)
 		case "go":
 			goProjects = append(goProjects, p)
+		case "python":
+			pythonProjects = append(pythonProjects, p)
 		}
 	}
 	if len(nodes) > 0 {
 		if err := s.prepareNode(ctx, in, ""); err != nil {
+			return err
+		}
+	}
+	if len(pythonProjects) > 0 {
+		if err := s.preparePython(ctx, in); err != nil {
 			return err
 		}
 	}
@@ -345,7 +352,7 @@ func nodeInstalled(in Input) bool {
 		return false
 	}
 	for _, p := range in.Manifest.Projects {
-		if p.Toolchain == "node" && !workspace.ProjectDependenciesInstalled(in.Root, filepath.Join(in.Root, filepath.FromSlash(p.RelativeDir)), "node") {
+		if workspace.UsesPNPM(p.Toolchain) && !workspace.ProjectDependenciesInstalled(in.Root, filepath.Join(in.Root, filepath.FromSlash(p.RelativeDir)), p.Toolchain) {
 			return false
 		}
 	}
@@ -401,7 +408,7 @@ func nodePackageDirs(in Input) ([]string, error) {
 	seen := map[string]bool{}
 	var dirs []string
 	for _, p := range in.Manifest.Projects {
-		if p.Toolchain != "node" {
+		if !workspace.UsesPNPM(p.Toolchain) {
 			continue
 		}
 		members, err := workspace.NodeProjectPackageDirs(in.Root, p.RelativeDir, nil)

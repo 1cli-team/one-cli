@@ -38,6 +38,17 @@ and the user's architecture while keeping the One workspace placement.
 - **TypeScript libraries:** keep public exports deliberate, implementation in
   `src/`, and tests near the behavior they cover. Preserve tsdown output,
   package exports, and the project's actual test convention.
+- **Bun and Deno:** use `bun` or `deno` as the One toolchain while keeping npm
+  dependencies and scripts in the shared pnpm workspace. Deno projects use
+  `nodeModulesDir: "manual"`. Declare local package dependencies with `workspace:*`.
+- **Python:** use the `python` toolchain, a `pyproject.toml` for each member and
+  the root uv workspace. Keep importable code under `src/<module>/` and declare
+  local dependencies through `tool.uv.sources` with `workspace = true`. Tasks
+  live in `pyproject.toml` under `[tool.one.tasks.<name>]`, with `run` argument
+  arrays. `[project.scripts]` entry points are also discovered. One runs these
+  commands through `uv run --no-sync --package <name>` after synchronizing the
+  shared environment. Run `one init mise` after task or local
+  dependency changes to update the build graph.
 - **Electron:** a desktop project is a group with `<name>-renderer` under
   apps, `<name>-main` under services, and `<name>-preload` under packages.
   Consult the installed `one-electron` skill for the process boundaries.

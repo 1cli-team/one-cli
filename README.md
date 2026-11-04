@@ -46,6 +46,29 @@ Use subcommand `--help` to discover arguments. Parse `-o json` results by schema
 
 通过子命令的 `--help` 发现参数，按 schema、错误码和上下文解析 `-o json` 结果。`one skills`、`one mise`、`one hk` 保留上游输出。技能与生成的 AGENTS 指引由源码维护，不再维护独立教程站。
 
+## Bun, Deno and Python workspaces / Bun、Deno 与 Python 工作区
+
+Bun and Deno projects share the pnpm workspace with Node.js projects. Python projects share a uv workspace and its root `uv.lock` and `.venv`. Each runtime is pinned in `mise.toml`; `one run` prepares dependencies before running tasks.
+
+Bun、Deno 项目与 Node.js 项目共用 pnpm workspace。Python 项目共用 uv workspace 及根目录的 `uv.lock`、`.venv`。运行时版本固定在 `mise.toml` 中，`one run` 在运行任务前准备依赖。
+
+```sh
+one add bun-api --name bun-service --yes
+one add deno-api --name deno-service --yes
+one add python-api --name python-service --yes
+one add python-lib --name shared-utils --yes
+one run check
+one run dev -p python-service
+```
+
+Each runtime has an API service and library starter (`bun-lib`, `deno-lib`, `python-lib`). The API starters use the runtime's built-in HTTP server. Bun and Deno expose tasks through `package.json`; Python declares tasks under `[tool.one.tasks.<name>]` in `pyproject.toml`, using `run` argument arrays. One also discovers `[project.scripts]` entry points. After editing task definitions or local package dependencies, run `one init mise` to update task discovery and build ordering. Use its `--bun-version`, `--deno-version`, `--python-version` and `--uv-version` options to set exact runtime versions. `one exec` runs arbitrary commands with the selected project's environment.
+
+每种运行时都提供 API 服务与共享库模板（`bun-lib`、`deno-lib`、`python-lib`），API 模板使用运行时内置 HTTP 服务。Bun、Deno 通过 `package.json` 声明任务，Python 在 `pyproject.toml` 的 `[tool.one.tasks.<name>]` 中通过 `run` 参数数组声明任务，同时支持发现 `[project.scripts]` 命令入口。修改任务或本地包依赖后执行 `one init mise`，更新任务发现和构建顺序。可用 `--bun-version`、`--deno-version`、`--python-version`、`--uv-version` 设置精确版本。`one exec` 可在所选项目环境中执行任意命令。
+
+Use `workspace:*` for local pnpm dependencies. For Python, declare the package in `project.dependencies` and set `package-name = { workspace = true }` under `tool.uv.sources`. Python members must have compatible dependency and Python version requirements because uv resolves the workspace together. Dependency preparation synchronizes all Python members to retain dependencies used by other services. Deno starters use manual `node_modules` management for pnpm; declare npm dependencies in `package.json`.
+
+pnpm 本地依赖使用 `workspace:*`。Python 在 `project.dependencies` 声明包，并在 `tool.uv.sources` 下设置 `package-name = { workspace = true }`。uv 统一解析工作区，Python 成员的依赖和 Python 版本要求需要兼容。依赖准备会同步全部 Python 成员，保留其他服务使用的依赖。Deno 模板通过手动管理 `node_modules` 对接 pnpm，npm 依赖声明在 `package.json` 中。
+
 ## Repository / 仓库
 
 Native macOS starters: [SwiftUI window app](packages/templates/swift-macos-app) and [menu-bar utility](packages/templates/swift-menubar-app). Both use Xcode's Swift toolchain with Task-based app/DMG builds and opt-in Developer ID signing and notarization.

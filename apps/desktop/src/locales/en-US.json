@@ -382,6 +382,30 @@
 			"swift-menubar-app": {
 				"name": "Swift macOS menu-bar app",
 				"description": "Native SwiftUI menu-bar utility with app bundles, DMG packaging and optional signing and notarization"
+			},
+			"bun-api": {
+				"name": "Bun API service",
+				"description": "Bun HTTP service with dependencies managed by a pnpm workspace"
+			},
+			"bun-lib": {
+				"name": "Bun TypeScript library",
+				"description": "Bun TypeScript library with dependencies managed by a pnpm workspace"
+			},
+			"deno-api": {
+				"name": "Deno API service",
+				"description": "Deno HTTP service with npm dependencies managed by a pnpm workspace"
+			},
+			"deno-lib": {
+				"name": "Deno TypeScript library",
+				"description": "Deno TypeScript library with npm dependencies managed by a pnpm workspace"
+			},
+			"python-api": {
+				"name": "Python API service",
+				"description": "Python standard-library HTTP service with dependencies managed by a uv workspace"
+			},
+			"python-lib": {
+				"name": "Python library",
+				"description": "Python library with a uv workspace and standard Python distributions"
 			}
 		},
 		"groupSuccess": "Created project group {{name}} with {{count}} projects",

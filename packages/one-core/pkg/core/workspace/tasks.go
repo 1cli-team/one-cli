@@ -2,6 +2,7 @@ package workspace
 
 import (
 	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
 	"sort"
@@ -34,7 +35,7 @@ func DiscoverTasks(root string, p Project, read func(string) ([]byte, error)) ([
 	}
 	var result []ProjectTask
 	switch p.Toolchain {
-	case "node":
+	case "node", "bun", "deno":
 		if p.PackageManager != "" && p.PackageManager != "pnpm" {
 			return nil, i18n.Errorf("workspace.package_manager_unsupported", p.PackageManager)
 		}
@@ -57,6 +58,33 @@ func DiscoverTasks(root string, p Project, read func(string) ([]byte, error)) ([
 			if strings.TrimSpace(command) != "" {
 				result = append(result, ProjectTask{Name: name, Argv: []string{"pnpm", "run", name}, Source: source, Inputs: []string{source}})
 			}
+		}
+	case "python":
+		source := p.RelativeDir + "/pyproject.toml"
+		raw, err := read(source)
+		if err != nil {
+			return nil, err
+		}
+		project, err := ParsePythonProject(raw)
+		if err != nil {
+			return nil, fmt.Errorf("%s: %w", source, err)
+		}
+		if project.Project.Name == "" {
+			return nil, i18n.Errorf("python.name_missing", source)
+		}
+		tasks := map[string]PythonTask{}
+		for name := range project.Project.Scripts {
+			tasks[name] = PythonTask{Run: []string{name}}
+		}
+		for name, task := range project.Tool.One.Tasks {
+			tasks[name] = task
+		}
+		for name, task := range tasks {
+			if len(task.Run) == 0 || strings.TrimSpace(task.Run[0]) == "" {
+				return nil, i18n.Errorf("python.task_empty", source, name)
+			}
+			argv := append([]string{"uv", "run", "--no-sync", "--package", project.Project.Name, "--"}, task.Run...)
+			result = append(result, ProjectTask{Name: name, Description: task.Description, Argv: argv, Source: source, Inputs: []string{source}})
 		}
 	case "go", "swift":
 		var walk func(string, string, map[string]bool) ([]ProjectTask, error)
@@ -177,7 +205,7 @@ func BuildDependencies(root string, projects []Project, read func(string) ([]byt
 	packages := map[string][]taskPackage{}
 	result := map[string][]string{}
 	for _, p := range projects {
-		if p.Toolchain != "node" {
+		if !UsesPNPM(p.Toolchain) {
 			continue
 		}
 		members, err := NodeProjectPackageDirs(root, p.RelativeDir, read)
@@ -225,6 +253,13 @@ func BuildDependencies(root string, projects []Project, read func(string) ([]byt
 			result[p.Name] = append(result[p.Name], dep)
 		}
 		sort.Strings(result[p.Name])
+	}
+	pythonEdges, err := PythonBuildDependencies(root, projects, read)
+	if err != nil {
+		return nil, err
+	}
+	for name, deps := range pythonEdges {
+		result[name] = deps
 	}
 	return result, nil
 }

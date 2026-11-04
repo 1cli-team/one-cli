@@ -1,0 +1,17 @@
+{
+  "name": "one-template-bun-api",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "check": "tsc --noEmit",
+    "test": "bun --no-env-file --no-install test --pass-with-no-tests",
+    "build": "bun --no-env-file --no-install build src/main.ts --target=bun --outdir=dist",
+    "dev": "bun --no-env-file --no-install --watch src/main.ts",
+    "start": "bun --no-env-file --no-install dist/main.js"
+  },
+  "devDependencies": {
+    "@types/bun": "^1.3.0",
+    "typescript": "^5.9.3"
+  }
+}

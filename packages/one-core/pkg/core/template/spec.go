@@ -17,6 +17,7 @@ type Spec struct {
 	SchemaVersion int           `json:"schemaVersion"`
 	Go            *GoSpec       `json:"go,omitempty"`
 	Node          *NodeSpec     `json:"node,omitempty"`
+	Python        *PythonSpec   `json:"python,omitempty"`
 	Text          []TextRule    `json:"text,omitempty"`
 	Exclude       []string      `json:"exclude,omitempty"`
 	Projects      []ProjectSpec `json:"projects,omitempty"`
@@ -35,6 +36,9 @@ type GoSpec struct {
 type NodeSpec struct {
 	Scope       string   `json:"scope"`
 	SourceFiles []string `json:"sourceFiles"`
+}
+type PythonSpec struct {
+	Module string `json:"module"`
 }
 type TextRule struct {
 	Files      []string `json:"files"`
@@ -80,6 +84,11 @@ func readSpec(source fs.FS) (Spec, error) {
 			return spec, err
 		}
 	}
+	if spec.Python != nil {
+		if spec.Go != nil || spec.Node != nil || !pythonModuleRE.MatchString(spec.Python.Module) {
+			return spec, i18n.Errorf("template.spec_invalid", "python.module")
+		}
+	}
 	if err := validatePaths(spec.Exclude); err != nil {
 		return spec, err
 	}
@@ -111,7 +120,7 @@ func readSpec(source fs.FS) (Spec, error) {
 		return spec, i18n.Errorf("template.spec_invalid", "projects/go")
 	}
 	for _, rule := range spec.Text {
-		if rule.From == "" || len(rule.Files) == 0 || (rule.Value != "projectName" && rule.Value != "projectNameKebabCase") || (rule.MinMatches != nil && *rule.MinMatches < 1) {
+		if rule.From == "" || len(rule.Files) == 0 || (rule.Value != "projectName" && rule.Value != "projectNameKebabCase" && rule.Value != "projectNameSnakeCase") || (rule.MinMatches != nil && *rule.MinMatches < 1) {
 			return spec, i18n.Errorf("template.spec_invalid", "text")
 		}
 		if err := validatePaths(rule.Files); err != nil {

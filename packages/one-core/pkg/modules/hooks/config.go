@@ -58,7 +58,7 @@ func PlanFiles(p *fsutil.FilePlan, m *workspace.Manifest) error {
 			begin("steps/" + project.Name + ":format")
 			fmt.Fprintf(&b, "  [%s] {\n    dir = %s\n    glob = \"**/*.go\"\n    exclude = List(\"**/vendor/**\")\n    check = new Command { argv = List(\"mise\", \"exec\", \"--\", one, \"__hook-gofmt\", \"--\", \"{{files}}\") }\n    fix = new Command { argv = List(\"mise\", \"exec\", \"--\", \"gofmt\", \"-w\", \"--\", \"{{files}}\") }\n  }\n", pklQuote(project.Name+":format"), pklQuote(dir))
 			end("steps/" + project.Name + ":format")
-		case "node":
+		case "node", "bun", "deno":
 			raw, err := p.Read(dir + "/package.json")
 			if err != nil {
 				return err

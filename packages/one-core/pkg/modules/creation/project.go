@@ -84,7 +84,7 @@ func materializeProject(ctx context.Context, projectRoot string, in ProjectInput
 	}
 
 	packageManager := defaultPackageManagerFor(string(entry.Toolchain))
-	if entry.Toolchain == "node" {
+	if workspace.UsesPNPM(string(entry.Toolchain)) {
 		packageManager, err = nodePackageManager(files)
 		if err != nil {
 			return ProjectResult{}, err
@@ -143,7 +143,7 @@ func materializeProject(ctx context.Context, projectRoot string, in ProjectInput
 		relDir = filepath.Join(categoryDir, in.Name)
 	}
 
-	if entry.Toolchain == "node" {
+	if workspace.UsesPNPM(string(entry.Toolchain)) {
 		dirs, err := workspace.NodeProjectPackageDirs(projectRoot, relDir, files.Read)
 		if err != nil {
 			return ProjectResult{}, err
@@ -167,7 +167,7 @@ func materializeProject(ctx context.Context, projectRoot string, in ProjectInput
 	if err := planLanguages(files, manifest); err != nil {
 		return ProjectResult{}, err
 	}
-	if entry.Toolchain == "node" {
+	if workspace.UsesPNPM(string(entry.Toolchain)) {
 		if err := configureNodePackage(files, relDir, vars["projectNameKebabCase"], packageManager); err != nil {
 			return ProjectResult{}, err
 		}
@@ -273,6 +273,9 @@ func categoryDirFor(category string) (string, error) {
 }
 
 func defaultPackageManagerFor(tc string) string {
+	if tc == "python" {
+		return "uv"
+	}
 	if tc == "go" || tc == string(template.ToolchainSwift) || tc == string(template.ToolchainNone) {
 		return ""
 	}

@@ -17,7 +17,7 @@
 
 - Tests, checks, builds, dependency preparation, and project scripts must run through `one run <task>`. Select project tasks with `one run <task> -p <project>`.
 - Inspect existing tasks with `one run` and reuse them first. Do not bypass this entry point by directly running commands such as `pnpm test`, `go test`, `node`, `docker`, or `mise run`; task definitions may call these native tools internally.
-- If a required task is missing, define it in an applicable project task file (such as `package.json` or `Taskfile.yml`) or the root `mise.toml`. After changing project tasks, synchronize with `one init mise` when needed, then execute through `one run`.
+- If a required task is missing, define it in an applicable project task file (`package.json`, Python `pyproject.toml` under `[tool.one.tasks.<name>]` with a `run` argument array, or `Taskfile.yml`) or the root `mise.toml`. After changing project tasks, synchronize with `one init mise` when needed, then execute through `one run`.
 - One CLI help, task discovery, project creation, skills management, and variable management commands may be used directly without wrapping them in tasks.
 - After making changes, use `one run` for the affected checks, tests, and necessary builds. Use task names from the actual configuration.
 

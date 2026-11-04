@@ -1,0 +1,23 @@
+{
+  "schemaVersion": 1,
+  "python": {
+    "module": "one_template_python_api"
+  },
+  "text": [
+    {
+      "files": [
+        "pyproject.toml",
+        "README.md"
+      ],
+      "from": "one-template-python-api",
+      "value": "projectNameKebabCase"
+    },
+    {
+      "files": [
+        "pyproject.toml"
+      ],
+      "from": "one_template_python_api",
+      "value": "projectNameSnakeCase"
+    }
+  ]
+}
