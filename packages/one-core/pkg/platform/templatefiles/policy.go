@@ -18,11 +18,13 @@ func Excluded(name string) bool {
 			"pnpm-lock.yaml", "package-lock.json", "npm-shrinkwrap.json", "yarn.lock", "bun.lock", "bun.lockb",
 			"go.work", "go.work.sum", "coverage.out", ".DS_Store":
 			return true
+		case ".venv", "__pycache__", ".pytest_cache", ".ruff_cache", "uv.lock", "deno.lock":
+			return true
 		case ".build", ".swiftpm", "DerivedData", "xcuserdata":
 			return true
 		}
 	}
-	return strings.HasSuffix(name, ".tsbuildinfo")
+	return strings.HasSuffix(name, ".tsbuildinfo") || strings.HasSuffix(name, ".pyc") || strings.HasSuffix(name, ".pyo")
 }
 func PackPath(name string) string {
 	if path.Base(name) == "go.mod" {

@@ -17,7 +17,7 @@ import (
 	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/platform/templatefiles"
 )
 
-// Variables contains only the two supported starter substitutions.
+// Variables contains the supported project-name substitutions.
 type Variables map[string]string
 
 var (
@@ -35,7 +35,11 @@ func CommonVariables(projectName, _ string) Variables {
 			nonempty = append(nonempty, strings.ToLower(word))
 		}
 	}
-	return Variables{"projectName": projectName, "projectNameKebabCase": strings.Join(nonempty, "-")}
+	snake := strings.Join(nonempty, "_")
+	if snake != "" && snake[0] >= '0' && snake[0] <= '9' {
+		snake = "project_" + snake
+	}
+	return Variables{"projectName": projectName, "projectNameKebabCase": strings.Join(nonempty, "-"), "projectNameSnakeCase": snake}
 }
 
 const LocalTemplatePrefix = "local:"
@@ -121,6 +125,11 @@ func prepare(source fs.FS, vars Variables) (map[string][]byte, error) {
 	}
 	if spec.Node != nil {
 		if err := rewriteNodeProjects(files, *spec.Node, vars, spec.Projects); err != nil {
+			return nil, err
+		}
+	}
+	if spec.Python != nil {
+		if err := rewritePython(files, *spec.Python, vars); err != nil {
 			return nil, err
 		}
 	}

@@ -42,5 +42,18 @@ func Commands() []*cobra.Command {
 	i18n.MarkFlagUsage(cmd, "node-version", "mise.flag.node_version")
 	cmd.Flags().StringVar(&opts.GoVersion, "go-version", "", i18n.T("mise.flag.go_version"))
 	i18n.MarkFlagUsage(cmd, "go-version", "mise.flag.go_version")
+	for _, flag := range []struct {
+		name  string
+		value *string
+		key   string
+	}{
+		{"bun-version", &opts.BunVersion, "mise.flag.bun_version"},
+		{"deno-version", &opts.DenoVersion, "mise.flag.deno_version"},
+		{"python-version", &opts.PythonVersion, "mise.flag.python_version"},
+		{"uv-version", &opts.UVVersion, "mise.flag.uv_version"},
+	} {
+		cmd.Flags().StringVar(flag.value, flag.name, "", i18n.T(flag.key))
+		i18n.MarkFlagUsage(cmd, flag.name, flag.key)
+	}
 	return []*cobra.Command{cmd}
 }

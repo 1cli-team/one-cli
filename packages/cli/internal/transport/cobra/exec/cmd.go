@@ -193,6 +193,12 @@ func runRun(ctx context.Context, loaders *secrets.Registry, flags *runFlags, arg
 	// in pnpm/turbo workspaces). Subproject-local first, workspace root next,
 	// inherited PATH last — this is the same precedence npm/pnpm use.
 	childEnv = augmentPathForRun(childEnv, projectRoot, targetDir)
+	for _, project := range activeWorkspace.Manifest().Projects {
+		if project.RelativeDir == relativeDir && project.Toolchain == "python" {
+			childEnv = pythonEnvironment(childEnv, projectRoot)
+			break
+		}
+	}
 
 	commandName := args[0]
 	if !filepath.IsAbs(commandName) && strings.ContainsAny(commandName, "/\\") {
@@ -316,6 +322,35 @@ func augmentPathForRun(env []string, projectRoot, targetDir string) []string {
 		out = append(out, "PATH="+strings.Join(binPaths, sep))
 	}
 	return out
+}
+
+// Match uv's workspace environment for arbitrary commands without installing
+// dependencies or activating a shell in the exec path.
+func pythonEnvironment(env []string, root string) []string {
+	venv := filepath.Join(root, ".venv")
+	for _, entry := range env {
+		if value, ok := strings.CutPrefix(entry, "UV_PROJECT_ENVIRONMENT="); ok && value != "" {
+			venv = value
+			if !filepath.IsAbs(venv) {
+				venv = filepath.Join(root, venv)
+			}
+		}
+	}
+	bin := filepath.Join(venv, "bin")
+	if runtime.GOOS == "windows" {
+		bin = filepath.Join(venv, "Scripts")
+	}
+	if info, err := os.Stat(bin); err != nil || !info.IsDir() {
+		return env
+	}
+	vars := map[string]string{"VIRTUAL_ENV": venv}
+	for _, entry := range env {
+		key, value, ok := strings.Cut(entry, "=")
+		if ok && isPathEnvironmentKey(key) {
+			vars[key] = bin + string(os.PathListSeparator) + value
+		}
+	}
+	return secrets.MergeIntoEnviron(env, vars, true)
 }
 
 // lookPathFor resolves an unqualified executable name against the PATH

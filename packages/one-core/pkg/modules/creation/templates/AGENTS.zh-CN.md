@@ -17,7 +17,7 @@
 
 - 测试、检查、构建、依赖准备和项目脚本必须通过 `one run <任务>` 执行；项目任务使用 `one run <任务> -p <项目>`。
 - 先用 `one run` 查看已有任务，优先复用。不直接运行 `pnpm test`、`go test`、`node`、`docker` 或 `mise run` 等命令绕过任务入口；任务内部可以调用这些原生工具。
-- 缺少需要的任务时，先在适用的项目任务文件（如 `package.json`、`Taskfile.yml`）或根 `mise.toml` 中定义。修改项目任务后，按需运行 `one init mise` 同步，再通过 `one run` 执行。
+- 缺少需要的任务时，先在适用的项目任务文件（`package.json`、Python `pyproject.toml` 的 `[tool.one.tasks.<name>]` 与 `run` 参数数组、`Taskfile.yml`）或根 `mise.toml` 中定义。修改项目任务后，按需运行 `one init mise` 同步，再通过 `one run` 执行。
 - One CLI 的帮助、任务查询、项目创建、skills 管理和变量管理命令可以直接使用，无需包装成任务。
 - 修改完成后，通过 `one run` 执行受影响范围的检查、测试和必要构建；任务名以实际配置为准。
 

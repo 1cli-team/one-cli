@@ -23,7 +23,8 @@ The installed CLI is the authority; do not invent flags or commands.
 
 Use `one run` to discover tasks and `one run <task> -p <project>` for project
 checks, builds, tests, dependency preparation, and scripts. If a task is
-missing, define it in the project's package.json/Taskfile.yml or root
+missing, define it in the project's package.json, Python pyproject.toml
+(`[tool.one.tasks.<name>]` with a `run` argument array), Taskfile.yml, or root
 mise.toml, synchronize with `one init mise`, and run it through One.
 Keep shared multi-step scripts in root `scripts/`; project scripts belong
 in the project. Follow the repository's script language convention.

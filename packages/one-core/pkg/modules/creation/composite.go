@@ -91,7 +91,7 @@ func materializeComposite(ctx context.Context, root string, in ProjectInput, fil
 				return ProjectResult{}, err
 			}
 		}
-		if in.Template.Toolchain == "node" {
+		if workspace.UsesPNPM(string(in.Template.Toolchain)) {
 			packageName := template.CommonVariables(output.Name, manager)["projectNameKebabCase"]
 			if err = configureNodePackage(files, rel, packageName, manager); err != nil {
 				return ProjectResult{}, err

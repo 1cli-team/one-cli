@@ -1,0 +1,26 @@
+{
+  "name": "one-template-deno-lib",
+  "version": "0.1.0",
+  "private": false,
+  "type": "module",
+  "scripts": {
+    "check": "deno check src/index.ts",
+    "lint": "deno lint",
+    "format:check": "deno fmt --check",
+    "format:fix": "deno fmt",
+    "test": "deno test --permit-no-files",
+    "build": "tsc -p tsconfig.json"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "devDependencies": {
+    "typescript": "^5.9.3"
+  }
+}

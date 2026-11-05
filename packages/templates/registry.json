@@ -244,6 +244,84 @@
       "toolchain": "swift",
       "repo": "local:swift-ios-app",
       "domains": {}
+    },
+    {
+      "id": "bun-api",
+      "name": "Bun API 服务",
+      "description": "Bun HTTP 服务，使用 pnpm workspace 管理依赖",
+      "category": "backend",
+      "tags": [
+        "bun",
+        "api"
+      ],
+      "toolchain": "bun",
+      "repo": "local:bun-api",
+      "domains": {}
+    },
+    {
+      "id": "bun-lib",
+      "name": "Bun TypeScript 库",
+      "description": "Bun TypeScript 共享库，使用 pnpm workspace 管理依赖",
+      "category": "library",
+      "tags": [
+        "bun",
+        "library"
+      ],
+      "toolchain": "bun",
+      "repo": "local:bun-lib",
+      "domains": {}
+    },
+    {
+      "id": "deno-api",
+      "name": "Deno API 服务",
+      "description": "Deno HTTP 服务，使用 pnpm workspace 管理 npm 依赖",
+      "category": "backend",
+      "tags": [
+        "deno",
+        "api"
+      ],
+      "toolchain": "deno",
+      "repo": "local:deno-api",
+      "domains": {}
+    },
+    {
+      "id": "deno-lib",
+      "name": "Deno TypeScript 库",
+      "description": "Deno TypeScript 共享库，使用 pnpm workspace 管理 npm 依赖",
+      "category": "library",
+      "tags": [
+        "deno",
+        "library"
+      ],
+      "toolchain": "deno",
+      "repo": "local:deno-lib",
+      "domains": {}
+    },
+    {
+      "id": "python-api",
+      "name": "Python API 服务",
+      "description": "Python 标准库 HTTP 服务，使用 uv workspace 管理依赖",
+      "category": "backend",
+      "tags": [
+        "python",
+        "api"
+      ],
+      "toolchain": "python",
+      "repo": "local:python-api",
+      "domains": {}
+    },
+    {
+      "id": "python-lib",
+      "name": "Python 共享库",
+      "description": "Python 共享库，使用 uv workspace 和标准 Python 分发包",
+      "category": "library",
+      "tags": [
+        "python",
+        "library"
+      ],
+      "toolchain": "python",
+      "repo": "local:python-lib",
+      "domains": {}
     }
   ]
 }

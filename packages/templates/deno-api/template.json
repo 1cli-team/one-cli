@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 1,
+  "text": [
+    {
+      "files": [
+        "README.md"
+      ],
+      "from": "one-template-deno-api",
+      "value": "projectNameKebabCase"
+    }
+  ]
+}

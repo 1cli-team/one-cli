@@ -16,7 +16,7 @@ import (
 )
 
 func planLanguages(p *fsutil.FilePlan, m *workspace.Manifest) error {
-	var nodeDirs, goDirs []string
+	var nodeDirs, goDirs, pythonDirs []string
 	for _, project := range m.Projects {
 		rel := filepath.ToSlash(filepath.Clean(project.RelativeDir))
 		if err := fsutil.SafeWritePath(p.Root, filepath.Join(p.Root, rel, "one.config")); err != nil {
@@ -25,12 +25,14 @@ func planLanguages(p *fsutil.FilePlan, m *workspace.Manifest) error {
 		switch project.Toolchain {
 		case "go":
 			goDirs = append(goDirs, rel)
-		case "node":
+		case "node", "bun", "deno":
 			dirs, err := workspace.NodeProjectPackageDirs(p.Root, rel, p.Read)
 			if err != nil {
 				return err
 			}
 			nodeDirs = append(nodeDirs, dirs...)
+		case "python":
+			pythonDirs = append(pythonDirs, rel)
 		}
 	}
 	if len(goDirs) > 0 {
@@ -43,7 +45,12 @@ func planLanguages(p *fsutil.FilePlan, m *workspace.Manifest) error {
 		}
 	}
 	if len(nodeDirs) > 0 {
-		return planNodeWorkspace(p, m, nodeDirs)
+		if err := planNodeWorkspace(p, m, nodeDirs); err != nil {
+			return err
+		}
+	}
+	if len(pythonDirs) > 0 {
+		return planPythonWorkspace(p, pythonDirs)
 	}
 	return nil
 }
@@ -290,7 +297,7 @@ func planPNPMWorkspace(p *fsutil.FilePlan, dirs []string) error {
 func validateNodePackageNames(p *fsutil.FilePlan, m *workspace.Manifest) error {
 	names := map[string]string{}
 	for _, project := range m.Projects {
-		if project.Toolchain != "node" {
+		if !workspace.UsesPNPM(project.Toolchain) {
 			continue
 		}
 		dirs, err := workspace.NodeProjectPackageDirs(p.Root, project.RelativeDir, p.Read)

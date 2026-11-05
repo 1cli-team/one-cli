@@ -70,7 +70,7 @@ func BuildSummary(root string) (Summary, error) {
 		canDevelop := false // Filled from the effective task catalog by the caller.
 		dependenciesInstalled := ProjectDependenciesInstalled(root, projectDir, p.Toolchain)
 		dependencyStatus := ""
-		if p.Toolchain == "go" || p.Toolchain == "swift" {
+		if p.Toolchain == "go" || p.Toolchain == "swift" || p.Toolchain == "python" {
 			dependencyStatus = "unverified"
 		}
 		s.Projects = append(s.Projects, SummaryProject{
@@ -115,10 +115,10 @@ func (s *Summary) ApplyTaskCapabilities(available map[string]bool) {
 func ProjectDependenciesInstalled(root, projectDir, toolchain string) bool {
 	// A static summary cannot validate Go or Swift dependency caches.
 	// Go preparation and Swift build tasks resolve their own dependencies.
-	if strings.TrimSpace(toolchain) == "go" || strings.TrimSpace(toolchain) == "swift" {
+	if strings.TrimSpace(toolchain) == "go" || strings.TrimSpace(toolchain) == "swift" || strings.TrimSpace(toolchain) == "python" {
 		return false
 	}
-	if strings.TrimSpace(toolchain) != "node" {
+	if !UsesPNPM(strings.TrimSpace(toolchain)) {
 		return true
 	}
 	rel, err := filepath.Rel(root, projectDir)

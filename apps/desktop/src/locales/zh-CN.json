@@ -382,6 +382,30 @@
 			"swift-menubar-app": {
 				"name": "Swift macOS 菜单栏工具",
 				"description": "原生 SwiftUI 菜单栏工具，支持应用打包、DMG、可选签名与公证"
+			},
+			"bun-api": {
+				"name": "Bun API 服务",
+				"description": "Bun HTTP 服务，使用 pnpm workspace 管理依赖"
+			},
+			"bun-lib": {
+				"name": "Bun TypeScript 库",
+				"description": "Bun TypeScript 共享库，使用 pnpm workspace 管理依赖"
+			},
+			"deno-api": {
+				"name": "Deno API 服务",
+				"description": "Deno HTTP 服务，使用 pnpm workspace 管理 npm 依赖"
+			},
+			"deno-lib": {
+				"name": "Deno TypeScript 库",
+				"description": "Deno TypeScript 共享库，使用 pnpm workspace 管理 npm 依赖"
+			},
+			"python-api": {
+				"name": "Python API 服务",
+				"description": "Python 标准库 HTTP 服务，使用 uv workspace 管理依赖"
+			},
+			"python-lib": {
+				"name": "Python 共享库",
+				"description": "Python 共享库，使用 uv workspace 和标准 Python 分发包"
 			}
 		},
 		"groupSuccess": "已创建项目组 {{name}}，包含 {{count}} 个项目",
