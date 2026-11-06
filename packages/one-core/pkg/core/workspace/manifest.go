@@ -151,7 +151,7 @@ func ValidateManifest(m *Manifest) error {
 			return invalid(i18n.Tf("manifest.path_invalid", p.Name, path))
 		}
 		paths[path] = true
-		if !UsesPNPM(p.Toolchain) && p.Toolchain != "python" && p.Toolchain != "go" && p.Toolchain != "swift" && p.Toolchain != "none" {
+		if !UsesPNPM(p.Toolchain) && p.Toolchain != "python" && p.Toolchain != "flutter" && p.Toolchain != "go" && p.Toolchain != "swift" && p.Toolchain != "none" {
 			return invalid(i18n.Tf("manifest.toolchain_invalid", p.Name, p.Toolchain))
 		}
 	}

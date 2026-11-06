@@ -16,7 +16,7 @@ import (
 )
 
 func planLanguages(p *fsutil.FilePlan, m *workspace.Manifest) error {
-	var nodeDirs, goDirs, pythonDirs []string
+	var nodeDirs, goDirs, pythonDirs, flutterDirs []string
 	for _, project := range m.Projects {
 		rel := filepath.ToSlash(filepath.Clean(project.RelativeDir))
 		if err := fsutil.SafeWritePath(p.Root, filepath.Join(p.Root, rel, "one.config")); err != nil {
@@ -33,6 +33,8 @@ func planLanguages(p *fsutil.FilePlan, m *workspace.Manifest) error {
 			nodeDirs = append(nodeDirs, dirs...)
 		case "python":
 			pythonDirs = append(pythonDirs, rel)
+		case "flutter":
+			flutterDirs = append(flutterDirs, rel)
 		}
 	}
 	if len(goDirs) > 0 {
@@ -50,7 +52,12 @@ func planLanguages(p *fsutil.FilePlan, m *workspace.Manifest) error {
 		}
 	}
 	if len(pythonDirs) > 0 {
-		return planPythonWorkspace(p, pythonDirs)
+		if err := planPythonWorkspace(p, pythonDirs); err != nil {
+			return err
+		}
+	}
+	if len(flutterDirs) > 0 {
+		return planFlutterWorkspace(p, flutterDirs)
 	}
 	return nil
 }

@@ -1,0 +1,13 @@
+name: one_template_flutter_lib
+description: Shared Flutter widgets in a One workspace.
+version: 0.1.0
+publish_to: none
+environment:
+  sdk: ^3.6.0
+resolution: workspace
+dependencies:
+  flutter:
+    sdk: flutter
+dev_dependencies:
+  flutter_test:
+    sdk: flutter

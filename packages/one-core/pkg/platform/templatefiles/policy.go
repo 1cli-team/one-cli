@@ -22,6 +22,8 @@ func Excluded(name string) bool {
 			return true
 		case ".build", ".swiftpm", "DerivedData", "xcuserdata":
 			return true
+		case ".dart_tool", ".pub-cache", ".pub", "pubspec.lock", ".flutter-plugins", ".flutter-plugins-dependencies", "local.properties", "ephemeral":
+			return true
 		}
 	}
 	return strings.HasSuffix(name, ".tsbuildinfo") || strings.HasSuffix(name, ".pyc") || strings.HasSuffix(name, ".pyo")

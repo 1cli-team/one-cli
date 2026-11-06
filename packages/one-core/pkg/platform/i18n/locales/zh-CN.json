@@ -684,7 +684,7 @@
   "manifest.dev_required": "env.infisical.environments 必须包含 dev。",
   "manifest.project_invalid": "项目名称无效或重复：%s。",
   "manifest.path_invalid": "项目 %s 的相对路径无效或重复：%s。",
-  "manifest.toolchain_invalid": "项目 %s 的工具链 %s 不受支持；请使用 node、go 或 none。",
+  "manifest.toolchain_invalid": "项目 %s 的工具链 %s 不受支持；请使用 node、bun、deno、python、flutter、go、swift 或 none。",
   "manifest.unknown_fields": "未知的 Manifest 字段：%s。",
   "manifest.project_readonly": "One Desktop 中的项目元信息为只读；请编辑 one.manifest.toml 修改。",
   "tasks.unsupported": "任务 %s（%s）使用了首版 Process Compose 接入尚不支持的 %s，请调整所选任务后再运行。",
@@ -790,5 +790,16 @@
   "python.name_invalid": "Python 包名无效：%s",
   "python.source_duplicate": "Python 依赖源的标准化名称重复：%s",
   "dependencies.python_workspace": "Python 工作区",
-  "python.task_empty": "Python 项目 %s 的任务 %s 必须指定非空的 run 参数数组"
+  "python.task_empty": "Python 项目 %s 的任务 %s 必须指定非空的 run 参数数组",
+  "template.flutter-app.name": "Flutter 应用",
+  "template.flutter-app.description": "Flutter 跨平台应用，使用原生 pub workspace，包含 Web 入口与平台工程生成任务",
+  "template.flutter-lib.name": "Flutter 组件库",
+  "template.flutter-lib.description": "共享 Flutter 组件，使用原生 pub workspace 与组件测试",
+  "mise.flag.flutter_version": "精确的 Flutter SDK 版本（已包含 Dart）",
+  "flutter.name_invalid": "pub 包名 %s 无效；请使用小写字母、数字和下划线。",
+  "flutter.name_missing": "%s 中必须声明 pub 包名。",
+  "flutter.resolution_invalid": "%s 中的包必须使用 resolution: workspace。",
+  "flutter.pubspec_mapping": "pubspec.yaml 必须是 YAML 映射。",
+  "dependencies.flutter_workspace": "Flutter 工作区",
+  "dependencies.flutter_preparing": "准备 Flutter 工作区依赖：%s\n"
 }

@@ -273,6 +273,9 @@ func categoryDirFor(category string) (string, error) {
 }
 
 func defaultPackageManagerFor(tc string) string {
+	if tc == "flutter" {
+		return "pub"
+	}
 	if tc == "python" {
 		return "uv"
 	}

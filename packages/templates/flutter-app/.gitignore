@@ -1,0 +1,10 @@
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.pub-cache/
+build/
+android/local.properties
+android/key.properties
+**/ephemeral/
+**/Pods/
+**/.symlinks/

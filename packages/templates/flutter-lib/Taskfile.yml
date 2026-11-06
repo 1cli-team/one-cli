@@ -1,0 +1,14 @@
+version: '3'
+tasks:
+  check:
+    desc: Analyze Dart source / 分析 Dart 源码
+    cmds: ['flutter analyze --no-pub {{.CLI_ARGS}}']
+  test:
+    desc: Run widget tests / 运行组件测试
+    cmds: ['flutter test --no-pub {{.CLI_ARGS}}']
+  format:
+    desc: Check Dart formatting / 检查 Dart 格式
+    cmds: ['dart format --output=none --set-exit-if-changed lib test']
+  format-fix:
+    desc: Format Dart source / 格式化 Dart 源码
+    cmds: ['dart format lib test']

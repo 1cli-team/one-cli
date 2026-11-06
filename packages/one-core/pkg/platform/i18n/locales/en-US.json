@@ -684,7 +684,7 @@
   "manifest.dev_required": "env.infisical.environments must include dev.",
   "manifest.project_invalid": "Invalid or duplicate project name: %s.",
   "manifest.path_invalid": "Project %s has an invalid or duplicate relative path: %s.",
-  "manifest.toolchain_invalid": "Project %s has unsupported toolchain %s; use node, go or none.",
+  "manifest.toolchain_invalid": "Project %s has unsupported toolchain %s; use node, bun, deno, python, flutter, go, swift or none.",
   "manifest.unknown_fields": "Unknown Manifest fields: %s.",
   "manifest.project_readonly": "Project metadata is read-only in One Desktop. Edit one.manifest.toml to change it.",
   "tasks.unsupported": "Task %s (%s) uses %s, which this Process Compose integration does not support. Update the selected task before running it.",
@@ -790,5 +790,16 @@
   "python.name_invalid": "Invalid Python package name: %s",
   "python.source_duplicate": "Duplicate normalized Python dependency source: %s",
   "dependencies.python_workspace": "Python workspace",
-  "python.task_empty": "Python project %s task %s must specify a non-empty run argument array"
+  "python.task_empty": "Python project %s task %s must specify a non-empty run argument array",
+  "template.flutter-app.name": "Flutter app",
+  "template.flutter-app.description": "Cross-platform Flutter app with a native pub workspace, Web entry point and platform generation tasks",
+  "template.flutter-lib.name": "Flutter widget library",
+  "template.flutter-lib.description": "Shared Flutter widgets with a native pub workspace and widget tests",
+  "mise.flag.flutter_version": "Exact Flutter SDK version (Dart is included)",
+  "flutter.name_invalid": "Invalid pub package name %s; use lowercase letters, digits and underscores.",
+  "flutter.name_missing": "A pub package name is required in %s.",
+  "flutter.resolution_invalid": "The package in %s must use resolution: workspace.",
+  "flutter.pubspec_mapping": "pubspec.yaml must contain a YAML mapping.",
+  "dependencies.flutter_workspace": "Flutter workspace",
+  "dependencies.flutter_preparing": "Preparing Flutter workspace dependencies: %s\n"
 }

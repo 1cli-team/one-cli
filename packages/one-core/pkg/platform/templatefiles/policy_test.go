@@ -23,3 +23,20 @@ func TestSwiftBuildArtifactsExcluded(t *testing.T) {
 		}
 	}
 }
+
+func TestFlutterBuildArtifactsExcluded(t *testing.T) {
+	for _, name := range []string{
+		"flutter-app/.dart_tool/package_config.json", "flutter-app/pubspec.lock",
+		"flutter-app/.flutter-plugins-dependencies", "flutter-app/android/local.properties",
+		"flutter-app/windows/flutter/ephemeral/flutter_windows.dll",
+	} {
+		if !Excluded(name) {
+			t.Errorf("Flutter build artifact would be embedded: %s", name)
+		}
+	}
+	for _, name := range []string{"flutter-app/pubspec.yaml", "flutter-app/lib/main.dart", "flutter-app/web/index.html"} {
+		if Excluded(name) {
+			t.Errorf("Flutter source would be excluded: %s", name)
+		}
+	}
+}

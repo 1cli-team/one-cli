@@ -322,6 +322,32 @@
       "toolchain": "python",
       "repo": "local:python-lib",
       "domains": {}
+    },
+    {
+      "id": "flutter-app",
+      "name": "Flutter 应用",
+      "description": "Flutter 跨平台应用，使用原生 pub workspace，包含 Web 入口与平台工程生成任务",
+      "category": "frontend",
+      "tags": [
+        "flutter",
+        "app"
+      ],
+      "toolchain": "flutter",
+      "repo": "local:flutter-app",
+      "domains": {}
+    },
+    {
+      "id": "flutter-lib",
+      "name": "Flutter 组件库",
+      "description": "共享 Flutter 组件，使用原生 pub workspace 与组件测试",
+      "category": "library",
+      "tags": [
+        "flutter",
+        "library"
+      ],
+      "toolchain": "flutter",
+      "repo": "local:flutter-lib",
+      "domains": {}
     }
   ]
 }

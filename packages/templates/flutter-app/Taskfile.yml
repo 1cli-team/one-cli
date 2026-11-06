@@ -1,0 +1,27 @@
+version: '3'
+tasks:
+  dev:
+    desc: Run Flutter with hot reload / 运行 Flutter 并启用热重载
+    interactive: true
+    cmds: ['flutter run --no-pub {{.CLI_ARGS}}']
+  build:
+    desc: Build Flutter (web by default) / 构建 Flutter（默认 Web）
+    cmds: ['flutter build {{.CLI_ARGS | default "web"}} --no-pub']
+  check:
+    desc: Analyze Dart source / 分析 Dart 源码
+    cmds: ['flutter analyze --no-pub {{.CLI_ARGS}}']
+  test:
+    desc: Run Flutter tests / 运行 Flutter 测试
+    cmds: ['flutter test --no-pub {{.CLI_ARGS}}']
+  format:
+    desc: Check Dart formatting / 检查 Dart 格式
+    cmds: ['dart format --output=none --set-exit-if-changed lib test']
+  format-fix:
+    desc: Format Dart source / 格式化 Dart 源码
+    cmds: ['dart format lib test']
+  platforms:
+    desc: Generate native platform projects / 生成原生平台项目
+    cmds: ['flutter create --no-pub --project-name one_template_flutter_app {{.CLI_ARGS}} .']
+  doctor:
+    desc: Check Flutter toolchains / 检查 Flutter 工具链
+    cmds: ['flutter doctor {{.CLI_ARGS}}']
