@@ -86,7 +86,7 @@ func DiscoverTasks(root string, p Project, read func(string) ([]byte, error)) ([
 			argv := append([]string{"uv", "run", "--no-sync", "--package", project.Project.Name, "--"}, task.Run...)
 			result = append(result, ProjectTask{Name: name, Description: task.Description, Argv: argv, Source: source, Inputs: []string{source}})
 		}
-	case "go", "swift":
+	case "go", "swift", "flutter":
 		var walk func(string, string, map[string]bool) ([]ProjectTask, error)
 		walk = func(file, prefix string, seen map[string]bool) ([]ProjectTask, error) {
 			file = filepath.ToSlash(filepath.Clean(file))
@@ -115,8 +115,9 @@ func DiscoverTasks(root string, p Project, read func(string) ([]byte, error)) ([
 			var tasks []ProjectTask
 			for name, node := range doc.Tasks {
 				var meta struct {
-					Desc     string `yaml:"desc"`
-					Internal bool   `yaml:"internal"`
+					Desc        string `yaml:"desc"`
+					Internal    bool   `yaml:"internal"`
+					Interactive bool   `yaml:"interactive"`
 				}
 				if node.Kind == yaml.MappingNode {
 					if err = node.Decode(&meta); err != nil {
@@ -127,7 +128,7 @@ func DiscoverTasks(root string, p Project, read func(string) ([]byte, error)) ([
 					continue
 				}
 				name = prefix + name
-				tasks = append(tasks, ProjectTask{Name: name, Description: meta.Desc, Argv: []string{"task", name}, Source: file, Inputs: []string{file}})
+				tasks = append(tasks, ProjectTask{Name: name, Description: meta.Desc, Argv: []string{"task", name}, Source: file, Inputs: []string{file}, Interactive: meta.Interactive})
 			}
 			keys := make([]string, 0, len(doc.Includes))
 			for key := range doc.Includes {
@@ -259,6 +260,13 @@ func BuildDependencies(root string, projects []Project, read func(string) ([]byt
 		return nil, err
 	}
 	for name, deps := range pythonEdges {
+		result[name] = deps
+	}
+	flutterEdges, err := FlutterBuildDependencies(root, projects, read)
+	if err != nil {
+		return nil, err
+	}
+	for name, deps := range flutterEdges {
 		result[name] = deps
 	}
 	return result, nil

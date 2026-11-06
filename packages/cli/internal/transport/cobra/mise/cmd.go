@@ -51,6 +51,7 @@ func Commands() []*cobra.Command {
 		{"deno-version", &opts.DenoVersion, "mise.flag.deno_version"},
 		{"python-version", &opts.PythonVersion, "mise.flag.python_version"},
 		{"uv-version", &opts.UVVersion, "mise.flag.uv_version"},
+		{"flutter-version", &opts.FlutterVersion, "mise.flag.flutter_version"},
 	} {
 		cmd.Flags().StringVar(flag.value, flag.name, "", i18n.T(flag.key))
 		i18n.MarkFlagUsage(cmd, flag.name, flag.key)

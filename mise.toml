@@ -254,6 +254,11 @@ depends = ["//:sync-bundled"]
 dir = "packages/one-core"
 run = "task check"
 
+[tasks."one-core:test"]
+depends = ["//:sync-bundled"]
+dir = "packages/one-core"
+run = "task test"
+
 [tasks."desktop-api:check"]
 depends = ["//:sync-bundled"]
 dir = "services/desktop-api"

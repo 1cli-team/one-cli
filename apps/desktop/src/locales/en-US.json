@@ -406,6 +406,14 @@
 			"python-lib": {
 				"name": "Python library",
 				"description": "Python library with a uv workspace and standard Python distributions"
+			},
+			"flutter-app": {
+				"name": "Flutter app",
+				"description": "Cross-platform Flutter app with a native pub workspace, Web entry point and platform generation tasks"
+			},
+			"flutter-lib": {
+				"name": "Flutter widget library",
+				"description": "Shared Flutter widgets with a native pub workspace and widget tests"
 			}
 		},
 		"groupSuccess": "Created project group {{name}} with {{count}} projects",

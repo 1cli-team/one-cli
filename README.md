@@ -69,6 +69,26 @@ Use `workspace:*` for local pnpm dependencies. For Python, declare the package i
 
 pnpm 本地依赖使用 `workspace:*`。Python 在 `project.dependencies` 声明包，并在 `tool.uv.sources` 下设置 `package-name = { workspace = true }`。uv 统一解析工作区，Python 成员的依赖和 Python 版本要求需要兼容。依赖准备会同步全部 Python 成员，保留其他服务使用的依赖。Deno 模板通过手动管理 `node_modules` 对接 pnpm，npm 依赖声明在 `package.json` 中。
 
+## Flutter workspaces / Flutter 工作区
+
+Flutter apps and widget libraries use the `flutter` toolchain and native pub workspaces. One pins the Flutter SDK (including Dart), adds members to the root `pubspec.yaml`, and resolves shared dependencies before tasks. Commit the root `pubspec.lock`. Project tasks live in `Taskfile.yml`; local pub dependencies participate in One's task graph. Set a different SDK with `one init mise --flutter-version X.Y.Z`.
+
+Flutter 应用与组件库使用 `flutter` 工具链及原生 pub workspace。One 固定 Flutter SDK（包含 Dart），将成员加入根目录 `pubspec.yaml`，并在执行任务前解析共享依赖。请提交根目录 `pubspec.lock`。项目任务定义在 `Taskfile.yml`，本地 pub 依赖会进入 One 任务图。通过 `one init mise --flutter-version X.Y.Z` 可设置其他 SDK 版本。
+
+```sh
+one add flutter-app --name mobile --yes
+one add flutter-lib --name shared-ui --yes
+one dev -p mobile -- -d chrome
+one test -p mobile
+one build -p mobile
+one run platforms -p mobile -- --platforms android,ios
+one build -p mobile -- apk
+```
+
+The app starter includes a Web entry point. The explicit `platforms` task uses `flutter create` to generate native runners without overwriting existing files. Android, iOS and desktop builds require their platform SDKs; signing and deployment are separate steps. Widget libraries are consumed as source and expose check, test and format tasks.
+
+应用模板包含 Web 入口。通过 `platforms` 任务显式调用 `flutter create` 生成原生平台工程，不覆盖已有文件。Android、iOS 和桌面构建需要各自的平台 SDK，签名与发布单独执行。组件库以源码形式供应用使用，提供检查、测试和格式化任务。
+
 ## Repository / 仓库
 
 Native macOS starters: [SwiftUI window app](packages/templates/swift-macos-app) and [menu-bar utility](packages/templates/swift-menubar-app). Both use Xcode's Swift toolchain with Task-based app/DMG builds and opt-in Developer ID signing and notarization.

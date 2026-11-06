@@ -1,0 +1,15 @@
+{
+  "schemaVersion": 1,
+  "text": [
+    {
+      "files": ["pubspec.yaml", "test/widgets_test.dart"],
+      "from": "one_template_flutter_lib",
+      "value": "projectNameSnakeCase"
+    },
+    {
+      "files": ["README.md"],
+      "from": "one-template-flutter-lib",
+      "value": "projectNameKebabCase"
+    }
+  ]
+}

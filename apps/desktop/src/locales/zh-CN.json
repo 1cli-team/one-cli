@@ -406,6 +406,14 @@
 			"python-lib": {
 				"name": "Python 共享库",
 				"description": "Python 共享库，使用 uv workspace 和标准 Python 分发包"
+			},
+			"flutter-app": {
+				"name": "Flutter 应用",
+				"description": "Flutter 跨平台应用，使用原生 pub workspace，包含 Web 入口与平台工程生成任务"
+			},
+			"flutter-lib": {
+				"name": "Flutter 组件库",
+				"description": "共享 Flutter 组件，使用原生 pub workspace 与组件测试"
 			}
 		},
 		"groupSuccess": "已创建项目组 {{name}}，包含 {{count}} 个项目",

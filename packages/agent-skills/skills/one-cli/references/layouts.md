@@ -49,6 +49,13 @@ and the user's architecture while keeping the One workspace placement.
   commands through `uv run --no-sync --package <name>` after synchronizing the
   shared environment. Run `one init mise` after task or local
   dependency changes to update the build graph.
+- **Flutter:** use the `flutter` toolchain and the SDK's bundled Dart. Apps live
+  under `apps/`, shared widget packages under `packages/`. Keep dependencies in
+  `pubspec.yaml`, with `resolution: workspace` and a root pub workspace. Commit
+  the root `pubspec.lock`. Define tasks in `Taskfile.yml`; `one init mise` updates
+  the task and local dependency graph. The app starter includes a Web entry
+  point; use its explicit `platforms` task to generate native runners. Platform
+  SDK installation, signing and publishing remain explicit.
 - **Electron:** a desktop project is a group with `<name>-renderer` under
   apps, `<name>-main` under services, and `<name>-preload` under packages.
   Consult the installed `one-electron` skill for the process boundaries.

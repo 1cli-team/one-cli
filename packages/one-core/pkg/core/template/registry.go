@@ -22,11 +22,12 @@ import (
 type Toolchain string
 
 const (
-	ToolchainNode   Toolchain = "node"
-	ToolchainBun    Toolchain = "bun"
-	ToolchainDeno   Toolchain = "deno"
-	ToolchainPython Toolchain = "python"
-	ToolchainGo     Toolchain = "go"
+	ToolchainNode    Toolchain = "node"
+	ToolchainBun     Toolchain = "bun"
+	ToolchainDeno    Toolchain = "deno"
+	ToolchainPython  Toolchain = "python"
+	ToolchainFlutter Toolchain = "flutter"
+	ToolchainGo      Toolchain = "go"
 	// Swift uses the macOS Xcode toolchain; One discovers tasks from Taskfile.
 	ToolchainSwift Toolchain = "swift"
 	// Empty projects keep an explicit value because legacy manifests default an empty toolchain to Node.
@@ -265,13 +266,14 @@ var validCategories = map[Category]struct{}{
 }
 
 var validToolchains = map[Toolchain]struct{}{
-	ToolchainNode:   {},
-	ToolchainBun:    {},
-	ToolchainDeno:   {},
-	ToolchainPython: {},
-	ToolchainGo:     {},
-	ToolchainSwift:  {},
-	ToolchainNone:   {},
+	ToolchainNode:    {},
+	ToolchainBun:     {},
+	ToolchainDeno:    {},
+	ToolchainPython:  {},
+	ToolchainFlutter: {},
+	ToolchainGo:      {},
+	ToolchainSwift:   {},
+	ToolchainNone:    {},
 }
 
 func validateTemplate(raw map[string]json.RawMessage, index int) (Template, error) {

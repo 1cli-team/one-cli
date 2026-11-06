@@ -60,7 +60,7 @@ func (s Service) Prepare(ctx context.Context, in Input) error {
 	for _, name := range in.Projects {
 		selected[name] = true
 	}
-	var nodes, goProjects, pythonProjects []workspace.ManifestProject
+	var nodes, goProjects, pythonProjects, flutterProjects []workspace.ManifestProject
 	for _, p := range in.Manifest.Projects {
 		if in.Projects != nil {
 			if !selected[p.Name] {
@@ -76,6 +76,8 @@ func (s Service) Prepare(ctx context.Context, in Input) error {
 			goProjects = append(goProjects, p)
 		case "python":
 			pythonProjects = append(pythonProjects, p)
+		case "flutter":
+			flutterProjects = append(flutterProjects, p)
 		}
 	}
 	if len(nodes) > 0 {
@@ -85,6 +87,11 @@ func (s Service) Prepare(ctx context.Context, in Input) error {
 	}
 	if len(pythonProjects) > 0 {
 		if err := s.preparePython(ctx, in); err != nil {
+			return err
+		}
+	}
+	if len(flutterProjects) > 0 {
+		if err := s.prepareFlutter(ctx, in); err != nil {
 			return err
 		}
 	}

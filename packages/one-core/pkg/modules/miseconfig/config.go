@@ -29,12 +29,13 @@ import (
 const Filename = workspace.MiseConfigFilename
 
 type Options struct {
-	NodeVersion   string
-	GoVersion     string
-	BunVersion    string
-	DenoVersion   string
-	PythonVersion string
-	UVVersion     string
+	NodeVersion    string
+	GoVersion      string
+	BunVersion     string
+	DenoVersion    string
+	PythonVersion  string
+	UVVersion      string
+	FlutterVersion string
 }
 
 type Change struct {
@@ -166,6 +167,7 @@ func BuildWithFiles(root string, opts Options, files map[string][]byte) (*Plan, 
 		{"deno", &opts.DenoVersion, "2.9.8"},
 		{"python", &opts.PythonVersion, "3.12.16"},
 		{"uv", &opts.UVVersion, "0.13.7"},
+		{"flutter", &opts.FlutterVersion, "3.47.9"},
 	} {
 		if *tool.version == "" {
 			if version, ok := previous.Tools[tool.name].(string); ok && exactVersion.MatchString(version) {
@@ -266,6 +268,9 @@ func BuildWithFiles(root string, opts Options, files map[string][]byte) (*Plan, 
 		case "python":
 			rootConfig.Tools["python"] = opts.PythonVersion
 			rootConfig.Tools["uv"] = opts.UVVersion
+		case "flutter":
+			rootConfig.Tools["flutter"] = opts.FlutterVersion
+			rootConfig.Tools["task"] = "3.51.1"
 		case "swift":
 			// Xcode supplies Swift and the macOS SDK. Do not install a separate
 			// Swift toolchain through mise or change the selected Xcode.
@@ -295,7 +300,7 @@ func BuildWithFiles(root string, opts Options, files map[string][]byte) (*Plan, 
 		for _, op := range operations {
 			argv := append([]string(nil), op.Argv...)
 			// Task accepts CLI arguments after --; pnpm forwards script arguments.
-			if project.Toolchain == "go" || project.Toolchain == "swift" {
+			if project.Toolchain == "go" || project.Toolchain == "swift" || project.Toolchain == "flutter" {
 				argv = append(argv, "--")
 			}
 			task := Task{Directory: rel, Description: op.Description, Run: nativeCommand(argv, false), RawArgs: true, Interactive: op.Interactive}
