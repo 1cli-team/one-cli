@@ -3,7 +3,7 @@ tasks:
   build:
     cmds: ['go build ./...']
   check:
-    cmds: ['go vet ./...']
+    cmds: ['go vet ./...', 'go test ./...']
   test:
     cmds: ['go test ./...']
   fmt:

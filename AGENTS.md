@@ -12,6 +12,15 @@
 | Desktop | `apps/desktop` | React 管理界面与 `src-tauri` 原生宿主，内置 `one-api` 和 `one`。 |
 | Website | `apps/website` | Next.js 静态官网，保留首页、安装入口和 AI 资源链接。 |
 
+## 仓库脚本
+
+- 简单的顺序命令优先写在已有 mise/Task 任务中；需要独立 Shell 脚本时按运行平台选用，不强制改写成 TypeScript。
+- 根 `scripts/` 中需要条件判断、数据处理和复用的命令编排使用 `.mts` 与 `scripts/lib/shell.mts` 的轻量命令执行器，只依赖 Node 内置 API。入口只负责参数和流程调用，桌面构建放在 `scripts/desktop/`，发布放在 `scripts/release/`。公共文件、Git/GitHub 和输出工具按职责放在 `scripts/lib/`，业务规则留在对应模块。
+- 将长流程拆成有明确名称的阶段函数，不用布尔开关混合不同命令策略。不维护独立的脚本测试代码，保留发布流程自身的产物校验。
+- 命令执行器使用 Bash；Windows 本地开发需安装 Git Bash，并确保 `bash` 在 PATH 中。脚本本身没有 npm 依赖；前端所需的锁定依赖由 mise 任务安装。
+- 命令参数通过模板插值传入，数组直接插值，不拼接完整命令字符串。保留原始 stdout/stderr 和退出状态；凭据相关命令必须隐藏参数及输出，错误信息也不得泄露凭据。
+- 使用根 `mise.toml` 固定的 Node 直接运行 `.mts`，无需编译或独立 `tsconfig`。修改后按仓库流程运行 `mise run check`。目录约定见 [scripts/README.md](scripts/README.md)。
+
 ## 默认考虑多语言
 
 新增或修改用户可见功能时，默认同时支持 `zh-CN` 和 `en-US`，在同一次变更中补齐两种语言。不要等用户反馈中英文混用后再补翻译。

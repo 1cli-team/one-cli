@@ -2,10 +2,15 @@
 export const unifiedReleaseSince = "v0.1.22";
 export const debianReleaseSince = "v0.1.23";
 
-export const platforms: Record<
-  string,
-  { os: string; arch: string; bundle: string; extension: string }
-> = {
+type Platform = {
+  os: "darwin" | "windows" | "linux";
+  arch: "arm64" | "amd64";
+  bundle: "dmg" | "nsis" | "appimage";
+  extension: ".dmg" | ".exe" | ".AppImage";
+};
+type Bundle = Platform["bundle"] | "deb";
+
+export const platforms: Record<string, Platform> = {
   "aarch64-apple-darwin": { os: "darwin", arch: "arm64", bundle: "dmg", extension: ".dmg" },
   "x86_64-apple-darwin": { os: "darwin", arch: "amd64", bundle: "dmg", extension: ".dmg" },
   "x86_64-pc-windows-msvc": { os: "windows", arch: "amd64", bundle: "nsis", extension: ".exe" },
@@ -26,14 +31,14 @@ export const platforms: Record<
 export function desktopFilename(
   version: string,
   target: string,
-  bundle = platforms[target].bundle,
+  bundle: Bundle = platforms[target].bundle,
 ) {
   const p = platforms[target];
   const extension = bundle === "deb" && p.os === "linux" ? ".deb" : p.extension;
   return `one-desktop_${version}_${p.os}_${p.arch}${extension}`;
 }
 
-export function desktopBundles(version: string, target: string) {
+export function desktopBundles(version: string, target: string): Bundle[] {
   const p = platforms[target];
   const current = version.split(".").map(BigInt);
   const since = debianReleaseSince.slice(1).split(".").map(BigInt);

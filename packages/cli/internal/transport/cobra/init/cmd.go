@@ -5,13 +5,16 @@ import (
 
 	hooks "github.com/torchstellar-team/one-cli/packages/cli/internal/transport/cobra/hooks"
 	mise "github.com/torchstellar-team/one-cli/packages/cli/internal/transport/cobra/mise"
+	skillscmd "github.com/torchstellar-team/one-cli/packages/cli/internal/transport/cobra/skills"
+	skillsmodule "github.com/torchstellar-team/one-cli/packages/one-core/pkg/modules/skills"
 	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/platform/i18n"
 )
 
-func Command() *cobra.Command {
+func Command(skills skillsmodule.Installer) *cobra.Command {
 	c := &cobra.Command{Use: "init", Short: i18n.T("init.short")}
 	i18n.MarkShort(c, "init.short")
 	c.AddCommand(mise.Commands()...)
 	c.AddCommand(hooks.ConfigureCommand())
+	c.AddCommand(skillscmd.ConfigureCommand(skills))
 	return c
 }

@@ -1,4 +1,6 @@
 import { desktopAssets, unifiedReleaseSince } from "./release-assets.mts";
+import { fail } from "./lib/output.mts";
+export { fail } from "./lib/output.mts";
 
 export const repository = "1cli-team/one-cli";
 export const goreleaserVersion = "2.18.0";
@@ -29,10 +31,6 @@ export type Plan = {
   baseTag: string;
   baseTagObject: string;
 };
-
-export function fail(en: string, zh: string): never {
-  throw new Error(`${en}\n${zh}`);
-}
 
 export function assertAssets(names: string[]) {
   if (JSON.stringify([...names].sort()) !== JSON.stringify([...assets].sort())) {

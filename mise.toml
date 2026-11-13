@@ -13,10 +13,6 @@ description = "Plan, build, or start a unified release / 规划、打包或启�
 run = "node scripts/release.mts"
 raw_args = true
 
-[tasks."release:check"]
-description = "Check release state and artifact rules / 检查发布状态与产物规则"
-run = "node --test scripts/release-rules.test.mts scripts/desktop-release.test.mts"
-
 [tasks.desktop-release]
 description = "Verify or complete a unified release / 校验或完成统一发布"
 run = "node scripts/desktop-release.mts"
@@ -85,7 +81,7 @@ run = "pnpm run check"
 
 [tasks."check:static"]
 description = "Check agent guidance, website, Go, React, and Tauri"
-depends = ["verify-node-workspace", "verify-guidance", "check:go", "check:desktop-ui", "check:website", "release:check", "check:desktop"]
+depends = ["verify-node-workspace", "verify-guidance", "check:go", "check:desktop-ui", "check:website", "check:desktop"]
 
 [tasks.check]
 description = "Run static checks on the current platform"

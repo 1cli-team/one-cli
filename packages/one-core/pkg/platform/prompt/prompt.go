@@ -135,6 +135,53 @@ func SelectWithDescriptions[T comparable](title string, options []Option[T]) (T,
 	return Select(title, flat)
 }
 
+// MultiSelectContext allows an empty selection and seeds only the supplied
+// defaults. It exposes localized navigation, filtering and toggle help.
+func MultiSelectContext[T comparable](ctx context.Context, title, description string, options []Option[T], selected []T) ([]T, error) {
+	return MultiSelectValidatedContext(ctx, title, description, options, selected, nil)
+}
+
+func MultiSelectValidatedContext[T comparable](ctx context.Context, title, description string, options []Option[T], selected []T, validate func([]T) error) ([]T, error) {
+	value := append([]T(nil), selected...)
+	choices := make([]huh.Option[T], 0, len(options))
+	for _, option := range options {
+		label := option.Label
+		if option.Description != "" {
+			label += " — " + option.Description
+		}
+		choices = append(choices, huh.NewOption(label, option.Value))
+	}
+	field := huh.NewMultiSelect[T]().Title(title).Description(description).
+		Value(&value).Options(choices...).Filterable(true).Height(12)
+	if validate != nil {
+		field.Validate(validate)
+	}
+	form := huh.NewForm(huh.NewGroup(field)).WithTheme(defaultTheme()).WithKeyMap(defaultKeyMap()).WithShowHelp(true).WithOutput(os.Stderr)
+	if err := runHuh(func() error { return form.RunWithContext(ctx) }); err != nil {
+		return nil, mapErr(err)
+	}
+	return value, nil
+}
+
+// SelectContext supports an initial choice and multiline review text.
+func SelectContext[T comparable](ctx context.Context, title, description string, options []Option[T], selected T) (T, error) {
+	value := selected
+	choices := make([]huh.Option[T], 0, len(options))
+	for _, option := range options {
+		label := option.Label
+		if option.Description != "" {
+			label += " — " + option.Description
+		}
+		choices = append(choices, huh.NewOption(label, option.Value))
+	}
+	field := huh.NewSelect[T]().Title(title).Description(description).Options(choices...).Value(&value)
+	form := huh.NewForm(huh.NewGroup(field)).WithTheme(defaultTheme()).WithKeyMap(defaultKeyMap()).WithShowHelp(true).WithOutput(os.Stderr)
+	if err := runHuh(func() error { return form.RunWithContext(ctx) }); err != nil {
+		return value, mapErr(err)
+	}
+	return value, nil
+}
+
 // runHuh restores the same cooperative Ctrl-C behavior in huh's accessible
 // mode that Bubble Tea provides in its regular terminal mode. huh switches to
 // accessible prompts for TERM=dumb, where a Ctrl-C otherwise terminates the

@@ -54,6 +54,7 @@ Then use `one run push-image`. The folder and variable names must match the user
 - Choose relevant skills from their names and descriptions. Read the selected `SKILL.md` when the task needs it, then open references or scripts only as needed; do not read every installed skill in advance.
 - Install project-scoped skills from the workspace root into `.agents/skills`; do not use `--global` to install them in the user's global directory.
 - `one skills` forwards arguments to `npx skills`; its output and help belong to that tool. Business skills live in independent GitHub repositories and are installed only when the user requests them. Installing a skill does not authorize implementing a business feature.
+- Official One skills are initially bundled and registered with their GitHub source. Use `one init skills --dry-run` and `one init skills` to initialize or register unchanged older local copies without replacing existing files. Later updates use `one skills update --project` and follow repository master independently of CLI releases. Upstream updates may replace edits; keep durable team rules in this file or a separate skill.
 - Use `-o json` when parsing One's own structured results. Handle errors using `error.code` and `error.context`, not translated messages. `one skills`, `one mise`, and `one hk` preserve upstream output and flags without One's JSON envelope; treat child-process output as logs.
 - Report what changed, which checks actually ran and their results, and which checks remain unrun.
 

@@ -24,7 +24,7 @@ Starting with **v0.1.23**, Linux amd64 / arm64 ship both AppImage and `.deb`, fo
 
 ### 工具与凭据
 
-- 本地入口支持 Linux/macOS amd64/arm64，需要 Git、GitHub CLI (`gh`)、mise、bash、tar、unzip；Go、Node、pnpm、Task、Process Compose 来自根 `mise.toml`。
+- 本地入口支持 Linux/macOS amd64/arm64，需要 Git、GitHub CLI (`gh`)、mise、bash、tar、unzip；Go、Node、pnpm、Task、Process Compose 来自根 `mise.toml`。脚本只依赖 Node 内置 API；检查和前端构建任务通过 `pnpm install --frozen-lockfile` 安装锁定的开发依赖。
 - GoReleaser 固定 **2.18.0**，配置为 `.goreleaser.yaml`。Tauri CI 使用 Rust **1.94.0**。
 - 使用现有 `gh auth login` 会话，或通过 `one exec --global --env <环境> --path <目录> --keys GH_TOKEN -- ...` 注入共享凭据。令牌需要仓库内容写权限及 Actions 工作流触发权限；细粒度令牌需要 Contents write、Actions write。不要输出令牌或写入文件。
 - CLI 安装脚本、升级器继续按 `one-cli_*` 和 `checksums.txt` 下载。桌面附件使用独立名称和 `desktop-checksums.txt`；两种校验文件不混用。
@@ -35,7 +35,7 @@ Starting with **v0.1.23**, Linux amd64 / arm64 ship both AppImage and `.deb`, fo
 
 ```sh
 mise run release -- plan patch
-mise run release:check
+mise run check
 mise run release -- build patch --notes /absolute/path/release-notes.md
 # 使用上一命令输出的 release.json，准备草稿并触发流水线：
 mise run release -- publish --from /absolute/path/release.json
@@ -62,7 +62,7 @@ gh workflow run desktop.yml --repo 1cli-team/one-cli --ref master -f release_tag
 - 本地 `.cache/releases/release.lock` 防止同时运行；残留锁只有确认所记录 PID 已退出后才能删除。Actions 使用统一发布 concurrency group 串行运行，失败重试不取消正在进行的构建。
 - 三个 Go module 使用 `GOWORK=off go mod download` 准备依赖；禁用 mise 任务缓存并执行 `mise run --jobs 1 --force check`。覆盖 React、Rust、Go、官网、AI 指引与发布规则。生成资源后受版本控制的源码必须仍干净。
 - GoReleaser 执行 `release --skip=publish --clean`，保留 `CGO_ENABLED=0`、`-trimpath`、`-s -w`，注入版本、release channel 和精确技能来源 SHA，保留 Go module path。
-- 自动验证五个归档的 SHA256、Go 构建信息、源码与平台；验证本机 CLI 版本、中英文帮助、语言切换、模板列表、真实 upgrade worker 的正式通道，以及模拟 npx 记录中的技能来源提交。冒烟在仓库外临时目录和临时 XDG 配置中执行，不替换开发者的 `one`。
+- 自动验证五个归档的 SHA256、Go 构建信息、源码与平台；验证本机 CLI 版本、中英文帮助、语言切换、模板列表、真实 upgrade worker 的正式通道，以及真实内置技能内容和标准 GitHub 来源登记。构建继续注入精确技能来源 SHA；模板和官方技能随 CLI 发布，`one init skills` 负责初始化和旧本地来源登记，后续由 `one skills update --project` 跟随仓库更新。冒烟在仓库外临时目录和临时 XDG 配置中执行，不替换开发者的 `one`。
 
 ### 附件协议
 
@@ -148,9 +148,9 @@ The next stable version after v0.1.21 uses the unified protocol. Published histo
 
 Linux builds generate AppImage and DEB together, with an `artifacts` array in each architecture's build record. The publisher also accepts the legacy single `artifact` record from v0.1.22. DEBs depend on system GTK/WebKitGTK packages instead of bundling the AppImage runtime libraries. Install with `sudo apt install ./one-desktop_X.Y.Z_linux_amd64.deb`, or the matching ARM64 file.
 
-Use Linux/macOS amd64/arm64 with Git, gh, mise, bash, tar and unzip. Pin tools through mise.toml, GoReleaser **2.18.0**, and CI Rust **1.94.0**. Local authentication needs content-write and workflow-dispatch access (Contents write and Actions write for fine-grained tokens). Reuse gh authentication or inject GH_TOKEN through One shared credentials; never print/save credential values.
+Use Linux/macOS amd64/arm64 with Git, gh, mise, bash, tar and unzip. Pin tools through mise.toml, GoReleaser **2.18.0**, and CI Rust **1.94.0**. Scripts use only built-in Node APIs; checks and frontend builds install locked development dependencies with `pnpm install --frozen-lockfile`. Local authentication needs content-write and workflow-dispatch access (Contents write and Actions write for fine-grained tokens). Reuse gh authentication or inject GH_TOKEN through One shared credentials; never print/save credential values.
 
-Download all three Go modules with GOWORK=off and run `mise run --jobs 1 --force check` with task caching disabled. Check React, Rust, Go, website, agent guidance and release rules; tracked source must remain clean. GoReleaser uses `release --skip=publish --clean`, CGO_ENABLED=0, -trimpath, -s -w, and injects version, release channel and exact skill-source SHA. Verify archive hashes and Go source/platform metadata, host version, bilingual help, locale switching, templates, the real upgrade worker's release channel and simulated npx skill-source arguments. Smoke checks use temporary directories and XDG configuration.
+Download all three Go modules with GOWORK=off and run `mise run --jobs 1 --force check` with task caching disabled. Check React, Rust, Go, website, agent guidance and release rules; tracked source must remain clean. GoReleaser uses `release --skip=publish --clean`, CGO_ENABLED=0, -trimpath, -s -w, and injects version, release channel and exact skill-source SHA for provenance. Verify archive hashes and Go source/platform metadata, host version, bilingual help, locale switching, templates, the real upgrade worker's release channel and real embedded skill content with standard GitHub source registration. Templates and official skills ship with the CLI; `one init skills` initializes or registers legacy local copies, then `one skills update --project` follows repository updates. Smoke checks use temporary directories and XDG configuration.
 
 ### CI, signing and recovery
 

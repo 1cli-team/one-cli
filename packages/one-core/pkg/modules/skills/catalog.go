@@ -4,12 +4,12 @@ package skills
 
 import "strings"
 
-const CLIVersion = "1.7.0"
+const CLIVersion = "1.8.1"
 
 const oneSource = "1cli-team/one-cli"
 
-// Release builds inject their full Git commit through ldflags. Development and
-// snapshot builds leave this empty so unpublished changes use local copies.
+// Release builds record the source commit of their embedded skills. The files
+// themselves always come from this binary, including in development builds.
 var bundledSourceRef = ""
 
 // Selection uses the skill's frontmatter name, not its source directory name.
@@ -86,11 +86,4 @@ func sourceRepo(source string) string {
 		return parts[0] + "/" + parts[1]
 	}
 	return repo
-}
-
-func bundledSource() string {
-	if bundledSourceRef == "" {
-		return "./.agents/skills"
-	}
-	return oneSource + "/packages/agent-skills#" + bundledSourceRef
 }
