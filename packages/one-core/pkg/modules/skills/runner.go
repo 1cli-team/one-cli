@@ -6,6 +6,8 @@ import (
 	"encoding/json"
 	"io"
 	"os"
+	"path/filepath"
+	"strconv"
 	"time"
 
 	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/platform/i18n"
@@ -22,11 +24,19 @@ func (r Runner) Run(ctx context.Context, directory string, args []string, in io.
 	return r.run(ctx, directory, "npx", argv, in, out, errOut, in != nil)
 }
 
-// Match skills@1.7.0/src/local-lock.ts exactly. Node's localeCompare ordering
-// differs from Go's lexical sorting. Hash captured bytes rather than rereading
-// live files, so the baseline check and the eventual transaction agree.
+// Match Skills CLI's v1 legacy hash and v2 portable hash. Keep the original
+// lock version when registering skills so unrelated hashes stay valid.
+// Hash captured bytes so the baseline check and eventual transaction agree.
 const hashScript = `
 const { createHash } = require('node:crypto');
+const version = Number(process.argv[1]);
+const included = path => {
+  const parts = path.split('/');
+  const directories = parts.slice(0, -1);
+  if (version === 1) return !directories.some(part => part === '.git' || part === 'node_modules');
+  return !parts.includes('metadata.json') &&
+    !directories.some(part => ['.git', '__pycache__', '__pypackages__'].includes(part));
+};
 let input = '';
 process.stdin.setEncoding('utf8');
 process.stdin.on('data', chunk => input += chunk);
@@ -34,9 +44,18 @@ process.stdin.on('end', () => {
   const result = {};
   for (const [name, files] of Object.entries(JSON.parse(input))) {
     const hash = createHash('sha256');
-    for (const path of Object.keys(files).sort((a, b) => a.localeCompare(b))) {
+    const paths = Object.keys(files).filter(included);
+    paths.sort(version === 1
+      ? (a, b) => a.localeCompare(b)
+      : (a, b) => Buffer.compare(Buffer.from(a), Buffer.from(b)));
+    for (const path of paths) {
+      let content = Buffer.from(files[path], 'base64');
+      if (version === 2 && !content.includes(0)) {
+        content = Buffer.from(content.toString('latin1').replaceAll('\r\n', '\n'), 'latin1');
+      }
       hash.update(path);
-      hash.update(Buffer.from(files[path], 'base64'));
+      if (version === 2) hash.update('\0' + content.length + '\0');
+      hash.update(content);
     }
     result[name] = hash.digest('hex');
   }
@@ -44,14 +63,17 @@ process.stdin.on('end', () => {
 });
 `
 
-func (r Runner) Hash(ctx context.Context, directory string, files map[string]Files) (map[string]string, error) {
+func (r Runner) Hash(ctx context.Context, directory string, files map[string]Files, version int) (map[string]string, error) {
+	if version != 1 && version != currentLockVersion {
+		return nil, i18n.Errorf("skills.lock_unsupported", filepath.Join(directory, "skills-lock.json"))
+	}
 	raw, err := json.Marshal(files)
 	if err != nil {
 		return nil, err
 	}
 	var out bytes.Buffer
 	diagnostics := &diagnosticLog{}
-	if err := r.run(ctx, directory, "node", []string{"-e", hashScript}, bytes.NewReader(raw), &out, diagnostics, false); err != nil {
+	if err := r.run(ctx, directory, "node", []string{"-e", hashScript, strconv.Itoa(version)}, bytes.NewReader(raw), &out, diagnostics, false); err != nil {
 		return nil, i18n.Errorf("skills.command_failed", platformprocess.ExitCode(err), err, diagnostics.text())
 	}
 	var hashes map[string]string

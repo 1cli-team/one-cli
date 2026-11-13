@@ -10,7 +10,7 @@ import (
 	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/platform/i18n"
 )
 
-func Command(skills skillsmodule.Initializer) *cobra.Command {
+func Command(skills skillsmodule.Installer) *cobra.Command {
 	c := &cobra.Command{Use: "init", Short: i18n.T("init.short")}
 	i18n.MarkShort(c, "init.short")
 	c.AddCommand(mise.Commands()...)

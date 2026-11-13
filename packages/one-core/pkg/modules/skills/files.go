@@ -43,8 +43,8 @@ func snapshotSkill(root, name string) (Files, error) {
 			return err
 		}
 		if entry.IsDir() {
-			// Upstream excludes these directories from its hash. Never replace
-			// a skill with content that cannot be checked against the baseline.
+			// Legacy hashes exclude these directories. Keep registration
+			// conservative for copies containing dependencies or Git data.
 			if entry.Name() == ".git" || entry.Name() == "node_modules" {
 				return i18n.Errorf("skills.untracked_path", path)
 			}

@@ -58,7 +58,7 @@ func newRootCommand() *cobra.Command {
 	groups := [][]*cobra.Command{
 		addcmd.Commands(deps.Creation),
 		authcmd.Commands(),
-		{localecmd.Command(), initcmd.Command(skillsmodule.Initializer{Hash: skillsRunner.Hash}), upgradecmd.Command()},
+		{localecmd.Command(), initcmd.Command(skillsmodule.Installer{Run: skillsRunner.Run, Hash: skillsRunner.Hash, Inspect: skillsRunner.Inspect, InstallGroup: skillsRunner.InstallGroup}), upgradecmd.Command()},
 		createcmd.Commands(createcmd.Dependencies{Creation: deps.Creation}),
 		misecmd.RuntimeCommands(deps.Runtime),
 		skillscmd.Commands(skillsRunner.Run),

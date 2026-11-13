@@ -17,7 +17,8 @@ import (
 	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/platform/i18n"
 )
 
-type HashFunc func(context.Context, string, map[string]Files) (map[string]string, error)
+// HashFunc hashes captured files using the supplied project lock version.
+type HashFunc func(context.Context, string, map[string]Files, int) (map[string]string, error)
 
 // Initializer installs embedded files or registers an unchanged existing copy.
 // It seeds the standard project lock; all later updates belong to Skills CLI.
@@ -90,10 +91,11 @@ func (s Initializer) initLocked(ctx context.Context, root string, names []string
 	if err != nil {
 		return nil, err
 	}
-	entries, err := decodeLock(lockRaw, lockPath)
+	lock, err := decodeLock(lockRaw, lockPath)
 	if err != nil {
 		return nil, err
 	}
+	entries := lock.Skills
 	known, err := fs.ReadDir(bundled.SkillsFS, bundled.SkillsRoot)
 	if err != nil {
 		return nil, err
@@ -182,7 +184,7 @@ func (s Initializer) initLocked(ctx context.Context, root string, names []string
 	if s.Hash == nil {
 		return nil, i18n.Errorf("skills.hash_unavailable")
 	}
-	hashes, err := s.Hash(ctx, root, files)
+	hashes, err := s.Hash(ctx, root, files, lock.Version)
 	if err != nil {
 		return nil, err
 	}
@@ -264,7 +266,7 @@ func (s Initializer) initLocked(ctx context.Context, root string, names []string
 	return result, nil
 }
 
-// Seed only the fields understood by skills@1.7.0. Hash the installed bytes,
+// Seed only the fields understood by Skills CLI. Hash the installed bytes,
 // not remote HEAD: a bundled version may legitimately lag behind master.
 func registration(original []byte, name, hash string, entry lockEntry) (json.RawMessage, error) {
 	fields := map[string]json.RawMessage{}
@@ -307,7 +309,7 @@ func registration(original []byte, name, hash string, entry lockEntry) (json.Raw
 
 // Keep unrelated skills and unknown fields in the standard upstream lock.
 func mergeLock(original []byte, replacements map[string]json.RawMessage) ([]byte, error) {
-	document := map[string]json.RawMessage{"version": json.RawMessage("1")}
+	document := map[string]json.RawMessage{"version": json.RawMessage(fmt.Sprint(currentLockVersion))}
 	entries := map[string]json.RawMessage{}
 	if original != nil {
 		if err := json.Unmarshal(original, &document); err != nil {

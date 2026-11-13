@@ -2,11 +2,11 @@
 
 One's official skills use the standard [Agent Skills](https://agentskills.io/specification)
 format. Sources live in `skills/`; workspace copies live in `.agents/skills/`.
-`one skills` forwards to `npx skills@1.7.0`. Both use the same `skills-lock.json`
+`one skills` forwards to `npx skills@1.8.1`. Both use the same `skills-lock.json`
 and manage the same installed files.
 
 One 官方技能使用标准 Agent Skills 格式。源码在 `skills/`，工作区副本在
-`.agents/skills/`。`one skills` 透传给 `npx skills@1.7.0`，双方使用同一份
+`.agents/skills/`。`one skills` 透传给 `npx skills@1.8.1`，双方使用同一份
 `skills-lock.json` 和同一套已安装文件。
 
 ## First installation / 首次安装
@@ -20,6 +20,14 @@ Skills lock file. Later updates are handled entirely by the upstream tool.
 模板和官方技能随 CLI 发布。创建工作区时安装 `one-cli`，添加项目时安装对应
 技术栈技能。官方文件直接取自当前 CLI，无需下载仓库。One 将文件的实际摘要、
 GitHub 来源、技能路径和 `master` 分支登记到标准锁文件，后续更新完全交给上游。
+
+New workspaces use the upstream version 2 lock format. Initializing an existing
+workspace preserves its lock version and uses the corresponding content hash,
+without rewriting unrelated entries. Upstream commands handle migration from
+version 1 when needed.
+
+新工作区使用上游第 2 版锁文件格式。初始化已有工作区时，保留原锁文件版本，
+使用对应的内容摘要算法，不改写其他技能记录。需要迁移第 1 版锁文件时，由上游命令处理。
 
 The bundled names are `one-cli`, `one-go`, `one-web`, `one-nestjs`, `one-expo`,
 `one-electron` and `one-fumadocs`. Third-party and business skills are not embedded.
@@ -62,13 +70,85 @@ repaired without changing their selected ref. The preview reports each action.
 GitHub 来源均保留。缺少技能路径的旧 GitHub 记录可以在内容未修改时补齐路径，
 保留原有分支或固定版本。预览会说明各项操作。
 
+## Install missing stack skills / 补装技术栈技能
+
+Older workspaces can scan all registered projects and choose missing skills:
+
+旧工作区可以扫描所有已登记的子项目，选择并补齐缺失技能：
+
+```sh
+one init skills --install-recommend
+# Preview without downloads or changes / 只预览，不下载、不修改文件
+one init skills --install-recommend --dry-run -o json
+# Install the default recommendations without a prompt / 无交互安装默认推荐项
+one init skills --install-recommend --yes
+```
+
+The chooser lists skill names, preselects missing recommendations, and keeps
+existing skills separate. Use Space to toggle, Ctrl+A to select or clear all,
+and `/` to search. After selecting skills, choose target agents, project/global
+scope and symlink/copy mode once. Review the selected skills by source, then
+start installation or return to change your choices. Changing scope refreshes
+the installed-skill list before confirmation.
+
+选择界面只列技能名，默认勾选推荐且缺失的项，已安装项单独列出。用空格勾选或
+取消、Ctrl+A 全选或清空、`/` 搜索。选择技能后，统一选择目标 Agent、当前项目
+或全局范围、软链接或复制方式。最后按来源查看安装清单，确认开始，或返回修改。
+切换安装范围时，会刷新该范围内的已安装技能，并再次确认技能选择。
+
+For scripts, `--yes` skips selection, settings, confirmation and retry prompts.
+It defaults to the current project, detected agents (or `universal` when none
+are detected), and symlinks. Override with `--agent codex,claude-code`,
+`--global`, and `--copy`. These flags require `--install-recommend`.
+Empty selection installs nothing. `--skill` cannot be combined with this mode.
+
+脚本使用 `--yes` 跳过选择、设置、确认和重试询问。默认安装到当前项目，使用检测到
+的 Agent（未检测到时使用 `universal`）和软链接；可用 `--agent codex,claude-code`、
+`--global`、`--copy` 覆盖。这些参数需要配合 `--install-recommend`。全部取消则不
+安装任何技能；`--skill` 不能与该模式同时使用。
+
+Manifests do not record original template IDs. Recommendations use each
+project's current dependencies, including declared package members, with the
+same skill mappings used by template creation. Root tooling is not treated as
+a subproject's framework. Unknown/empty stacks get common guidance; uncertain
+or unreadable projects can still be handled by manual selection. Python,
+Flutter and Swift currently get the common skills because the catalog has no
+dedicated stack skills for them.
+
+Manifest 没有记录最初的模板 ID。推荐会根据每个子项目的实际依赖（含其声明的
+包成员）识别技术栈，并复用创建模板时的技能清单，不会把根目录的工具依赖当作
+子项目框架。未知或空项目只推荐通用指引，无法识别或读取的项目可手动选择。
+当前清单没有 Python、Flutter 和 Swift 专属技能，因此这些项目推荐通用项。
+
+One provides the shared prompts and progress display. The pinned upstream
+Skills API performs each source installation and owns files and lock entries;
+`one skills` remains a native CLI passthrough. Sources install sequentially,
+and a failure does not stop other sources. The result lists failures with their
+reasons and offers to retry only failed skill/agent targets. Successful targets
+are kept. A remaining failure returns a nonzero exit status.
+
+One 负责统一询问和进度展示，固定版本的上游 Skills API 负责逐来源安装、文件和锁记录；
+`one skills` 命令仍原样透传到上游 CLI。来源顺序安装，某个来源失败后继续其他来源。
+结果列出具体失败原因，并可只重试失败的技能和 Agent 组合，保留已成功的目标。
+最终仍有失败项时返回非零退出码。
+
+`-o json` returns a structured `one-cli/install-skills/v1` result; progress is
+written to stderr. `--dry-run -o json` keeps the recommendation preview and
+never downloads or installs. A global preview reads workspace recommendations;
+global installed skills are checked during the installation flow.
+Regular `one init skills` continues to initialize official skills from the bundle.
+
+`-o json` 返回 `one-cli/install-skills/v1` 结构化结果，进度写入 stderr；
+`--dry-run -o json` 仍只预览推荐项，不下载、不安装。全局预览只读取工作区推荐，
+安装流程中再检查全局已有技能。普通 `one init skills` 继续使用内置文件初始化官方技能。
+
 ## Updates / 后续更新
 
 ```sh
 one skills list
 one skills update --project
 # Equivalent / 等价：
-npx skills@1.7.0 update --project
+npx skills@1.8.1 update --project
 # Update just one skill / 只更新一个：
 one skills update one-cli --project
 ```
@@ -131,7 +211,7 @@ After initialization, the one-cli lock entry must contain `sourceType: github`,
 `one-cli/SKILL.md`, and a 64-character `computedHash`. A second initialization
 reports `managed` without changing files. With network access, run
 `"$ONE_TEST_BINARY" skills update one-cli --project` or
-`npx skills@1.7.0 update one-cli --project` and confirm it is not skipped as a
+`npx skills@1.8.1 update one-cli --project` and confirm it is not skipped as a
 local source. Update commands fetch the repository's published master content,
 which may differ from uncommitted changes in this checkout.
 

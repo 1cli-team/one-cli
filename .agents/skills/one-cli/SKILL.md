@@ -84,6 +84,19 @@ specific official skills with `one init skills --skill one-go`. Modified or
 unknown copies are skipped. Existing remote sources and pinned refs are retained.
 CLI upgrades alone do not change a workspace's skills.
 
+For older workspaces missing stack skills, preview with
+`one init skills --install-recommend --dry-run -o json`. This scans each
+project's own dependencies and lists the curated skill catalog. When the user
+requests the recommended installation, use
+`one init skills --install-recommend --yes` for non-interactive execution.
+The picker shows skill names and keeps existing skills separate. Choose target
+agents, project/global scope and symlink/copy mode once, then review the whole
+installation. The upstream Skills API manages installation and lock entries.
+Failed skill/agent targets can be retried without reinstalling successful ones.
+Use `--agent codex,claude-code`, `--global` and `--copy` to set non-interactive
+options; `--yes` skips every prompt. `-o json` returns the structured batch result,
+while progress goes to stderr. `one skills` itself remains a native CLI passthrough.
+
 Upstream updates may replace local edits. Keep durable team rules in `AGENTS.md`
 or a separate skill. Global installation and updates require an explicit
 `--global`. Installing from GitHub does not require a GitHub Release.

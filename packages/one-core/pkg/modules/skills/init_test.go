@@ -7,6 +7,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -17,7 +18,7 @@ import (
 
 // Lifecycle tests use a deterministic hash stub; runner_test separately checks
 // the production hasher against the upstream algorithm and locale ordering.
-func testHashes(_ context.Context, _ string, all map[string]Files) (map[string]string, error) {
+func testHashes(_ context.Context, _ string, all map[string]Files, _ int) (map[string]string, error) {
 	result := map[string]string{}
 	for name, files := range all {
 		paths := make([]string, 0, len(files))
@@ -50,7 +51,7 @@ func putFiles(t *testing.T, root, name string, files Files) {
 
 func writeTestLock(t *testing.T, root, name string, files Files, source, kind, ref string) []byte {
 	t.Helper()
-	hashes, _ := testHashes(context.Background(), root, map[string]Files{name: files})
+	hashes, _ := testHashes(context.Background(), root, map[string]Files{name: files}, 1)
 	lock := map[string]any{
 		"version": 1, "extension": "preserve me",
 		"skills": map[string]any{
@@ -95,10 +96,54 @@ func TestInitInstallsMissingAndRegistersGitHubSource(t *testing.T) {
 		t.Fatalf("not ready for upstream update: %+v", entry)
 	}
 	before, _ := os.ReadFile(filepath.Join(root, "skills-lock.json"))
+	var document struct {
+		Version int `json:"version"`
+	}
+	if err := json.Unmarshal(before, &document); err != nil || document.Version != 2 {
+		t.Fatalf("new lock version = %d, want 2: %v", document.Version, err)
+	}
 	again, err := initializer.Init(context.Background(), root, nil, false)
 	after, _ := os.ReadFile(filepath.Join(root, "skills-lock.json"))
 	if err != nil || again.Skills[0].Status != "managed" || len(again.Changes) != 0 || !bytes.Equal(before, after) {
 		t.Fatalf("repeat init changed registration: %+v, %v", again, err)
+	}
+}
+
+func TestInitPreservesExistingLockFormat(t *testing.T) {
+	for _, version := range []int{1, 2} {
+		t.Run(fmt.Sprint(version), func(t *testing.T) {
+			t.Setenv("ONE_HOME", t.TempDir())
+			root := t.TempDir()
+			original := fmt.Sprintf(`{"version":%d,"extension":true,"skills":{"third-party":{"source":"owner/repo","sourceType":"github","computedHash":"keep","installMode":"copy"}}}`, version)
+			lockPath := filepath.Join(root, "skills-lock.json")
+			if err := os.WriteFile(lockPath, []byte(original), 0o644); err != nil {
+				t.Fatal(err)
+			}
+			hash := func(ctx context.Context, dir string, files map[string]Files, gotVersion int) (map[string]string, error) {
+				if gotVersion != version {
+					t.Fatalf("hash version = %d, want %d", gotVersion, version)
+				}
+				return testHashes(ctx, dir, files, gotVersion)
+			}
+			result, err := (Initializer{Hash: hash}).Init(context.Background(), root, []string{"one-cli"}, false)
+			if err != nil || result.Skills[0].Status != "installed" {
+				t.Fatalf("init = %+v, %v", result, err)
+			}
+			raw, err := os.ReadFile(lockPath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			var before, after map[string]any
+			if err := json.Unmarshal([]byte(original), &before); err != nil {
+				t.Fatal(err)
+			}
+			if err := json.Unmarshal(raw, &after); err != nil {
+				t.Fatal(err)
+			}
+			if after["version"] != before["version"] || after["extension"] != before["extension"] || !reflect.DeepEqual(before["skills"].(map[string]any)["third-party"], after["skills"].(map[string]any)["third-party"]) {
+				t.Fatalf("changed existing lock data: %s", raw)
+			}
+		})
 	}
 }
 
@@ -235,7 +280,7 @@ func TestInitFailureAndConcurrentEditLeaveFilesUnchanged(t *testing.T) {
 			old := Files{"SKILL.md": []byte("old")}
 			putFiles(t, root, "one-cli", old)
 			lock := writeTestLock(t, root, "one-cli", old, "./.agents/skills", "local", "")
-			hash := func(ctx context.Context, dir string, files map[string]Files) (map[string]string, error) {
+			hash := func(ctx context.Context, dir string, files map[string]Files, version int) (map[string]string, error) {
 				if mode == "hash failure" {
 					return nil, errors.New("hash failure")
 				}
@@ -244,7 +289,7 @@ func TestInitFailureAndConcurrentEditLeaveFilesUnchanged(t *testing.T) {
 					path = "added.md"
 				}
 				putFiles(t, root, "one-cli", Files{path: []byte("concurrent edit")})
-				return testHashes(ctx, dir, files)
+				return testHashes(ctx, dir, files, version)
 			}
 			if _, err := (Initializer{Hash: hash}).Init(context.Background(), root, nil, false); err == nil {
 				t.Fatal("expected failure")

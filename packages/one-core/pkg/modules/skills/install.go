@@ -24,11 +24,13 @@ type RunFunc func(context.Context, string, []string, io.Reader, io.Writer, io.Wr
 // Installer adds missing skills only. Official skills seed the standard upstream
 // lock with their GitHub source; third-party installs use Skills CLI unchanged.
 type Installer struct {
-	Run      RunFunc
-	Hash     HashFunc
-	Log      io.Writer
-	Progress func(context.Context, string)
-	Timeout  time.Duration
+	Run          RunFunc
+	Hash         HashFunc
+	Log          io.Writer
+	Progress     func(context.Context, string)
+	Timeout      time.Duration
+	Inspect      InspectFunc
+	InstallGroup InstallGroupFunc
 }
 
 func (s Installer) Install(ctx context.Context, root string, selections []Selection) []string {
@@ -166,6 +168,13 @@ type lockEntry struct {
 	ComputedHash string `json:"computedHash"`
 }
 
+const currentLockVersion = 2
+
+type projectLock struct {
+	Version int                  `json:"version"`
+	Skills  map[string]lockEntry `json:"skills"`
+}
+
 func readLock(root string) (map[string]lockEntry, error) {
 	path := filepath.Join(root, "skills-lock.json")
 	raw, err := os.ReadFile(path)
@@ -175,24 +184,25 @@ func readLock(root string) (map[string]lockEntry, error) {
 	if err != nil {
 		return nil, err
 	}
-	return decodeLock(raw, path)
+	lock, err := decodeLock(raw, path)
+	if err != nil {
+		return nil, err
+	}
+	return lock.Skills, nil
 }
 
-func decodeLock(raw []byte, path string) (map[string]lockEntry, error) {
+func decodeLock(raw []byte, path string) (*projectLock, error) {
 	if raw == nil {
-		return map[string]lockEntry{}, nil
+		return &projectLock{Version: currentLockVersion, Skills: map[string]lockEntry{}}, nil
 	}
-	var lock struct {
-		Version int                  `json:"version"`
-		Skills  map[string]lockEntry `json:"skills"`
-	}
+	var lock projectLock
 	if err := json.Unmarshal(raw, &lock); err != nil {
 		return nil, i18n.Errorf("skills.lock_invalid", path, err)
 	}
-	if lock.Version != 1 || lock.Skills == nil {
+	if (lock.Version != 1 && lock.Version != currentLockVersion) || lock.Skills == nil {
 		return nil, i18n.Errorf("skills.lock_unsupported", path)
 	}
-	return lock.Skills, nil
+	return &lock, nil
 }
 
 func sameSource(entry lockEntry, source string) bool {

@@ -86,7 +86,7 @@ func mustCreationService(
 	}
 	service.Runtime = miseruntime.Provider{}
 	skillsRunner := skillsmodule.Runner{Runtime: service.Runtime}
-	service.Skills = skillsmodule.Installer{Run: skillsRunner.Run, Hash: skillsRunner.Hash, Progress: prompt.ReportProgress}
+	service.Skills = skillsmodule.Installer{Run: skillsRunner.Run, Hash: skillsRunner.Hash, Inspect: skillsRunner.Inspect, InstallGroup: skillsRunner.InstallGroup, Progress: prompt.ReportProgress}
 	return service
 }
 

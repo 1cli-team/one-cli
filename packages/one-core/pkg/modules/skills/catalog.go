@@ -4,7 +4,7 @@ package skills
 
 import "strings"
 
-const CLIVersion = "1.7.0"
+const CLIVersion = "1.8.1"
 
 const oneSource = "1cli-team/one-cli"
 
