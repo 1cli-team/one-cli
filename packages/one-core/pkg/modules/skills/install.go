@@ -1,7 +1,6 @@
 package skills
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -15,7 +14,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/torchstellar-team/one-cli/packages/one-core/internal/resources/bundled"
 	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/platform/fsutil"
 	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/platform/i18n"
 	platformprocess "github.com/torchstellar-team/one-cli/packages/one-core/pkg/platform/process"
@@ -23,10 +21,11 @@ import (
 
 type RunFunc func(context.Context, string, []string, io.Reader, io.Writer, io.Writer) error
 
-// Installer adds missing skills only. Upstream owns skills-lock.json; One does
-// not implement a second skills registry or rewrite user-managed installations.
+// Installer adds missing skills only. Official skills seed the standard upstream
+// lock with their GitHub source; third-party installs use Skills CLI unchanged.
 type Installer struct {
 	Run      RunFunc
+	Hash     HashFunc
 	Log      io.Writer
 	Progress func(context.Context, string)
 	Timeout  time.Duration
@@ -72,8 +71,8 @@ func (s Installer) Install(ctx context.Context, root string, selections []Select
 				continue
 			}
 			retryRegistration := false
-			if exists && !locked && selection.Source == "" && bundledSourceRef == "" {
-				// A failed development registration can leave the copied files
+			if exists && !locked && selection.Source == "" {
+				// A failed registration can leave the copied files
 				// without provenance. Retry only unchanged bundled copies so
 				// unregistered team instructions remain untouched.
 				retryRegistration, err = matchesBundledSkill(root, name)
@@ -101,13 +100,22 @@ func (s Installer) Install(ctx context.Context, root string, selections []Select
 		}
 		source := selection.Source
 		if source == "" {
-			source = bundledSource()
-			if bundledSourceRef == "" {
-				if err := writeBundled(ctx, root, missing); err != nil {
-					warnings = append(warnings, i18n.Tf("skills.install_warning", strings.Join(missing, ", "), err, "one skills --help"))
-					continue
+			recovery := "one init skills --skill " + strings.Join(missing, ",")
+			result, err := (Initializer{Hash: s.Hash}).initLocked(ctx, root, missing, false)
+			if err != nil {
+				warnings = append(warnings, i18n.Tf("skills.install_warning", strings.Join(missing, ", "), err, recovery))
+			} else {
+				for _, skill := range result.Skills {
+					if skill.Status == "skipped" {
+						skillRecovery := recovery
+						if skill.Reason == "missing" {
+							skillRecovery = "one skills list"
+						}
+						warnings = append(warnings, i18n.Tf("skills.install_warning", skill.Name, skill.Message, skillRecovery))
+					}
 				}
 			}
+			continue
 		}
 		args := []string{"add", source, "--skill"}
 		args = append(args, missing...)
@@ -151,8 +159,11 @@ func (s Installer) Install(ctx context.Context, root string, selections []Select
 }
 
 type lockEntry struct {
-	Source     string `json:"source"`
-	SourceType string `json:"sourceType"`
+	Source       string `json:"source"`
+	SourceType   string `json:"sourceType"`
+	Ref          string `json:"ref,omitempty"`
+	SkillPath    string `json:"skillPath,omitempty"`
+	ComputedHash string `json:"computedHash"`
 }
 
 func readLock(root string) (map[string]lockEntry, error) {
@@ -163,6 +174,13 @@ func readLock(root string) (map[string]lockEntry, error) {
 	}
 	if err != nil {
 		return nil, err
+	}
+	return decodeLock(raw, path)
+}
+
+func decodeLock(raw []byte, path string) (map[string]lockEntry, error) {
+	if raw == nil {
+		return map[string]lockEntry{}, nil
 	}
 	var lock struct {
 		Version int                  `json:"version"`
@@ -183,7 +201,7 @@ func sameSource(entry lockEntry, source string) bool {
 			return entry.Source == oneSource
 		}
 		// Preserve old local-source locks and team edits when adding projects.
-		// Migration to a release source is an explicit upstream skills operation.
+		// Updating an existing copy requires an explicit command.
 		return entry.SourceType == "local" && (strings.HasPrefix(filepath.ToSlash(entry.Source), "./.one/skill-sources/") || entry.Source == "./packages/agent-skills" || entry.Source == "./.agents/skills")
 	}
 	return entry.SourceType == "github" && entry.Source == sourceRepo(source)
@@ -203,73 +221,15 @@ func installed(root, name string) (bool, error) {
 }
 
 func matchesBundledSkill(root, name string) (bool, error) {
-	skill, err := fs.Sub(bundled.SkillsFS, bundled.SkillsRoot+"/"+name)
+	original, err := bundledFiles(name)
 	if err != nil {
 		return false, err
 	}
-	matches := true
-	err = fs.WalkDir(skill, ".", func(relative string, entry fs.DirEntry, err error) error {
-		if err != nil || entry.IsDir() {
-			return err
-		}
-		original, err := fs.ReadFile(skill, relative)
-		if err != nil {
-			return err
-		}
-		current, err := os.ReadFile(filepath.Join(root, ".agents", "skills", name, filepath.FromSlash(relative)))
-		if errors.Is(err, fs.ErrNotExist) {
-			matches = false
-			return fs.SkipAll
-		}
-		if err != nil {
-			return err
-		}
-		if !bytes.Equal(current, original) {
-			matches = false
-			return fs.SkipAll
-		}
-		return nil
-	})
-	return matches, err
-}
-
-// Development builds write only selected skills into their final project paths.
-// Upstream registers these files as local sources without copying onto themselves.
-// Releases install from their published commit instead. Neither needs a second
-// source tree under .one or .agents/skill-sources.
-func writeBundled(ctx context.Context, root string, names []string) error {
-	assets, err := fs.Sub(bundled.SkillsFS, bundled.SkillsRoot)
-	if err != nil {
-		return err
+	current, err := snapshotSkill(root, name)
+	if errors.Is(err, fs.ErrNotExist) {
+		return false, nil
 	}
-	plan := fsutil.NewFilePlan(root)
-	for _, name := range names {
-		skill, err := fs.Sub(assets, name)
-		if err != nil {
-			return err
-		}
-		if err := fs.WalkDir(skill, ".", func(relative string, entry fs.DirEntry, err error) error {
-			if err != nil || entry.IsDir() {
-				return err
-			}
-			raw, err := fs.ReadFile(skill, relative)
-			if err != nil {
-				return err
-			}
-			path := ".agents/skills/" + name + "/" + relative
-			before, err := plan.Read(path)
-			if err != nil {
-				return err
-			}
-			if before != nil && !bytes.Equal(before, raw) {
-				return i18n.Errorf("skills.source_modified", path)
-			}
-			return plan.Set(path, raw, 0o644)
-		}); err != nil {
-			return err
-		}
-	}
-	return plan.Apply(ctx)
+	return sameFiles(current, original), err
 }
 
 func recoveryCommand(source string, names []string) string {

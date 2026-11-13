@@ -49,6 +49,7 @@ import (
 
 func newRootCommand() *cobra.Command {
 	deps := bootstrap.Compose()
+	skillsRunner := skillsmodule.Runner{Runtime: deps.Runtime}
 	root := &cobra.Command{
 		Use:           "one",
 		SilenceUsage:  true,
@@ -57,10 +58,10 @@ func newRootCommand() *cobra.Command {
 	groups := [][]*cobra.Command{
 		addcmd.Commands(deps.Creation),
 		authcmd.Commands(),
-		{localecmd.Command(), initcmd.Command(), upgradecmd.Command()},
+		{localecmd.Command(), initcmd.Command(skillsmodule.Initializer{Hash: skillsRunner.Hash}), upgradecmd.Command()},
 		createcmd.Commands(createcmd.Dependencies{Creation: deps.Creation}),
 		misecmd.RuntimeCommands(deps.Runtime),
-		skillscmd.Commands((skillsmodule.Runner{Runtime: deps.Runtime}).Run),
+		skillscmd.Commands(skillsRunner.Run),
 		hookscmd.Commands(deps.Runtime),
 		envcmd.Commands(envcmd.Dependencies{Service: deps.Environments}),
 		execcmd.Commands(deps.Loaders, deps.Runtime),
@@ -378,12 +379,13 @@ func detectOutputMode(args []string) {
 // caller's responsibility — unknown values silently fall through to
 // ModeAuto, matching kubectl's leniency.
 func scanOutputValue(args []string) string {
+	first, _ := firstPositional(args)
 	for i := 0; i < len(args); i++ {
 		a := args[i]
 		if a == "--" {
 			break
 		}
-		if a == "skills" {
+		if a == "skills" && first == "skills" {
 			break // All following flags belong to the upstream Skills CLI.
 		}
 		switch {

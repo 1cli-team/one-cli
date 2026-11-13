@@ -46,6 +46,10 @@ Use subcommand `--help` to discover arguments. Parse `-o json` results by schema
 
 通过子命令的 `--help` 发现参数，按 schema、错误码和上下文解析 `-o json` 结果。`one skills`、`one mise`、`one hk` 保留上游输出。技能与生成的 AGENTS 指引由源码维护，不再维护独立教程站。
 
+Templates and official One skills ship with the CLI. New workspaces copy embedded skills and register their GitHub source in the standard Skills lock file. Initialize or migrate older local copies with `one init skills --dry-run` and `one init skills`, then update with `one skills update --project` or `npx skills update --project`. Initialization preserves existing files; upstream updates follow repository master independently of CLI releases. See [skill installation and testing](packages/agent-skills/README.md).
+
+模板和 One 官方技能随 CLI 发布。新工作区从内置文件安装技能，并在标准锁文件中登记 GitHub 来源。旧本地副本用 `one init skills --dry-run` 预览、`one init skills` 登记，后续统一用 `one skills update --project` 或 `npx skills update --project` 更新。初始化保留已有文件；上游更新跟随仓库 master，独立于 CLI 发版。详见[技能安装与测试](packages/agent-skills/README.md)。
+
 ## Bun, Deno and Python workspaces / Bun、Deno 与 Python 工作区
 
 Bun and Deno projects share the pnpm workspace with Node.js projects. Python projects share a uv workspace and its root `uv.lock` and `.venv`. Each runtime is pinned in `mise.toml`; `one run` prepares dependencies before running tasks.

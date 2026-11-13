@@ -261,20 +261,39 @@ export function smoke(build: Build) {
     );
   }
   // Record the external skills command instead of installing third-party skills.
-  // This checks the source SHA actually injected into the host executable.
+  // Official files and their GitHub lock entries come from this binary, without
+  // a remote install. Only third-party contents use an offline npx fixture.
   const bin = join(verify, "bin");
   mkdirSync(bin);
   const calls = join(verify, "skills-calls.jsonl");
   writeFileSync(
     join(bin, "npx"),
     `#!/usr/bin/env node
-import { appendFileSync, mkdirSync, writeFileSync } from "node:fs";
+import { appendFileSync, existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
+import { createHash } from "node:crypto";
+import { join, relative } from "node:path";
 const args = process.argv.slice(2);
 appendFileSync(${JSON.stringify(calls)}, JSON.stringify(args) + "\\n");
+const lock = existsSync("skills-lock.json") ? JSON.parse(readFileSync("skills-lock.json", "utf8")) : { version: 1, skills: {} };
+const [source, ref] = args[args.indexOf("add") + 1].split("#");
+function files(directory, base = directory) {
+  return readdirSync(directory, { withFileTypes: true }).flatMap(entry => {
+    const path = join(directory, entry.name);
+    return entry.isDirectory() ? files(path, base) : [{ path: relative(base, path), raw: readFileSync(path) }];
+  });
+}
 for (const name of args.slice(args.indexOf("--skill") + 1, args.indexOf("--agent"))) {
   mkdirSync(".agents/skills/" + name, { recursive: true });
-  writeFileSync(".agents/skills/" + name + "/SKILL.md", "---\\nname: " + name + "\\ndescription: Release smoke fixture\\n---\\n");
+  const path = ".agents/skills/" + name + "/SKILL.md";
+  if (!existsSync(path)) writeFileSync(path, "---\\nname: " + name + "\\ndescription: Release smoke fixture\\n---\\n");
+  const hash = createHash("sha256");
+  for (const file of files(".agents/skills/" + name).sort((a, b) => a.path.localeCompare(b.path))) {
+    hash.update(file.path);
+    hash.update(file.raw);
+  }
+  lock.skills[name] = { source, sourceType: source.startsWith(".") ? "local" : "github", ...(ref ? { ref } : {}), computedHash: hash.digest("hex") };
 }
+writeFileSync("skills-lock.json", JSON.stringify(lock, null, 2) + "\\n");
 `,
     { mode: 0o755 },
   );
@@ -282,16 +301,29 @@ for (const name of args.slice(args.indexOf("--skill") + 1, args.indexOf("--agent
     cwd: verify,
     env: { ...env, PATH: `${bin}:${process.env.PATH ?? ""}` },
   });
-  const source = `1cli-team/one-cli/packages/agent-skills#${p.sourceSha}`;
   const commands = readFileSync(calls, "utf8")
     .trim()
     .split("\n")
     .map((line) => JSON.parse(line));
-  if (!commands.some((args) => args.includes(source)))
+  if (commands.some((args) => args.some((arg: string) => arg.startsWith("1cli-team/one-cli"))))
     fail(
-      "The packaged CLI did not use its exact skill-source commit.",
-      "发布包中的 CLI 未使用精确的技能来源提交。",
+      "The packaged CLI fetched its official skills instead of using embedded files.",
+      "发布包中的 CLI 下载了官方技能，未使用内置文件。",
     );
+  const installed = readFileSync(join(verify, "workspace/.agents/skills/one-cli/SKILL.md"), "utf8");
+  const expected = readFileSync(join(build.source, "packages/agent-skills/skills/one-cli/SKILL.md"), "utf8");
+  if (installed !== expected)
+    fail("The packaged skill differs from the release source.", "发布包中的技能与发布源码不一致。");
+  const lock = JSON.parse(readFileSync(join(verify, "workspace/skills-lock.json"), "utf8"));
+  const entry = lock.skills["one-cli"];
+  if (entry?.source !== "1cli-team/one-cli" || entry.sourceType !== "github" || entry.ref !== "master" || entry.skillPath !== "packages/agent-skills/skills/one-cli/SKILL.md" || !/^[a-f0-9]{64}$/.test(entry.computedHash))
+    fail("The bundled skill is missing its upstream update source.", "内置技能缺少上游更新来源登记。");
+  const skillPreview = JSON.parse(read(binary, ["init", "skills", "--dry-run", "-o", "json"], {
+    cwd: join(verify, "workspace"),
+    env: { ...env, PATH: `${bin}:${process.env.PATH ?? ""}` },
+  }));
+  if (skillPreview.sourceRef !== p.sourceSha || skillPreview.skills.find((skill: { name: string; status: string }) => skill.name === "one-cli")?.status !== "managed" || skillPreview.changes.length !== 0)
+    fail("Bundled skill provenance or initialization preview is incorrect.", "内置技能来源或初始化预览不正确。");
   say(
     "All five archives, build metadata, versions, and bilingual CLI smoke checks passed.",
     "五个平台的归档、构建信息、版本及中英文 CLI 冒烟检查均通过。",

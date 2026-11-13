@@ -54,6 +54,7 @@ run = "one exec --global --env dev --path /docker --keys REGISTRY_USER,REGISTRY_
 - 根据 skill 的名称与描述选择相关指导，任务需要时再阅读对应 `SKILL.md`，引用资料和脚本也按需读取，不预先阅读全部已安装 skills。
 - 在工作区根目录安装项目级 skills，保存到 `.agents/skills`，不使用 `--global` 安装到用户全局目录。
 - `one skills` 将参数透传给 `npx skills`，其输出和帮助遵循上游工具。业务 skills 在独立 GitHub 仓库维护，仅在用户主动要求时安装。安装 skill 不代表授权实现业务功能。
+- One 官方技能首次使用内置文件安装，并登记 GitHub 来源。使用 `one init skills --dry-run` 预览、`one init skills` 初始化或登记未修改的旧本地副本，不替换已有文件。后续统一用 `one skills update --project` 更新，跟随仓库 master，独立于 CLI 发版。上游更新可能覆盖修改，长期团队规则放在本文件或独立技能中。
 - 需要解析 One 自身的结构化结果时使用 `-o json`，根据 `error.code` 和 `error.context` 处理错误，不解析翻译后的消息。`one skills`、`one mise` 和 `one hk` 保留上游输出与参数，不使用 One 的 JSON 包装；子进程输出按日志处理。
 - 完成后说明改动内容、实际执行的验证及结果，并明确哪些验证尚未执行。
 
