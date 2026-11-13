@@ -30,5 +30,5 @@
 
 - 更新 `RELEASING.md`、Desktop README 和任务说明的中英文内容，说明触发、恢复、历史分界、13 附件和 CLI 下载协议兼容性。
 - 扩展已有发布规则测试，覆盖历史兼容、新版缺件、错版本文件、重复 / 意外附件、草稿恢复与公开版本幂等。
-- 运行 `one mise run release:check`、仓库要求的串行 `check`，校验 workflow 与相关脚本。
+- 运行仓库要求的串行 `mise run --jobs 1 check`，校验 workflow 与相关脚本。
 - 本次不提交、不推送、不创建 tag、不修改远端 Release、不触发真实流水线。
