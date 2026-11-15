@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -23,11 +24,18 @@ type downloader struct {
 }
 
 func defaultDownloader() downloader {
+	transport := http.DefaultTransport.(*http.Transport).Clone()
+	transport.DialContext = (&net.Dialer{Timeout: 15 * time.Second, KeepAlive: 30 * time.Second}).DialContext
+	transport.TLSHandshakeTimeout = 15 * time.Second
+	transport.ResponseHeaderTimeout = 30 * time.Second
 	return downloader{
 		baseURL: miserelease.BaseURL,
 		backoff: time.Second,
 		client: &http.Client{
-			Timeout: 2 * time.Minute,
+			// fetch has a ten-minute total budget. Do not repeatedly restart a
+			// healthy but slow archive transfer after two minutes.
+			Timeout:   10 * time.Minute,
+			Transport: transport,
 			CheckRedirect: func(req *http.Request, via []*http.Request) error {
 				if req.URL.Scheme != "https" {
 					return i18n.Errorf("mise.download.https_required")

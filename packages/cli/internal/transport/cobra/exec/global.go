@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	remote "github.com/torchstellar-team/one-cli/packages/one-core/pkg/modules/environment"
+	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/modules/mirror"
 	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/platform/i18n"
 	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/platform/output"
 	process "github.com/torchstellar-team/one-cli/packages/one-core/pkg/platform/process"
@@ -29,7 +30,11 @@ func runGlobal(ctx context.Context, f *runFlags, args []string) error {
 		return e
 	}
 	// Do not prepend repository executables or resolve a command using injected PATH.
-	env := globalCommandEnv(os.Environ())
+	mirrors, e := mirror.Resolve(cwd, os.Environ())
+	if e != nil {
+		return e
+	}
+	env := globalCommandEnv(mirrors.Env)
 	binary, e := lookPathFor(args[0], env)
 	if e != nil {
 		return i18n.Errorf("exec.global_command_missing", args[0])

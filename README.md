@@ -20,6 +20,49 @@ One Desktop installers and CLI archives share the same Release. Open One Desktop
 
 One Desktop 安装包与 CLI 归档位于同一 Release。工作区、账号、项目变量和共享凭据通过 One Desktop 管理。
 
+## Download mirrors / 下载镜像
+
+```sh
+one mirror                           # Pick a group and preset / 选择分组及预设
+one mirror env use public            # Public runtime/package mirrors / 公共环境与依赖镜像
+one mirror env use huawei             # Huawei runtime/package mirrors / 华为云环境与依赖镜像
+one mirror tools use gh-proxy         # Accelerate tool downloads / 工具下载加速
+one mirror status                    # Show both groups and overrides / 查看两组配置及覆盖项
+one mirror env test                   # Check runtimes and packages / 检测环境与依赖
+one mirror tools test                # Check mise and Process Compose / 检测工具下载
+one mirror tools reset               # Reset tools only / 仅重置工具下载
+one mirror env reset                 # Reset runtimes/packages only / 仅重置环境与依赖
+```
+
+`env` and `tools` are independent: selecting a runtime mirror does not change the source used to install mise. Both groups are saved in `~/.one/config/mirrors.json` (or `$ONE_HOME/config/mirrors.json`) and apply to subsequent One commands across workspaces. Selection and reset work offline before mise is installed. Plain `one mirror` first selects a group in an interactive terminal and shows both groups in non-interactive sessions. Each group supports `list`, `use`, `status`, `test`, `reset`, and `--dry-run` for changes. Use `-o json` for structured results (`one-cli/mirror/v2`).
+
+Switching or resetting a group prints a short confirmation; `status` shows source details grouped by runtime or tool. JSON output retains the full configuration details.
+
+`env` 与 `tools` 独立保存：选择环境镜像不会改变 mise 的安装来源。两组配置保存在 `~/.one/config/mirrors.json`（或 `$ONE_HOME/config/mirrors.json`），后续跨工作区的 One 命令共用。未安装 mise 时也能离线选择和重置。交互执行 `one mirror` 先选择分组，非交互执行则显示两组状态。各组支持 `list`、`use`、`status`、`test`、`reset`，修改可用 `--dry-run` 预览。`-o json` 提供结构化结果（`one-cli/mirror/v2`）。
+
+切换或重置后仅显示简短确认；`status` 按运行环境或工具分组展示来源详情。JSON 输出保留完整配置详情。
+
+| Group / 分组 | Target / 用途 | `public` | `huawei` |
+|---|---|---|---|
+| `env` | Node.js | npmmirror | Huawei Cloud / 华为云 |
+| `env` | npm / pnpm packages / 依赖包 | npmmirror | Huawei Cloud / 华为云 |
+| `env` | Go SDK | Aliyun / 阿里云 | Aliyun / 阿里云 |
+| `env` | Go modules / 模块 | Goproxy.cn | Huawei Cloud / 华为云 |
+| `env` | Python packages / 依赖包 | TUNA / 清华 | Huawei Cloud / 华为云 |
+| `env` | Dart / Flutter | CFUG | CFUG |
+
+The `tools` group offers `gh-proxy` for mise bootstrap and Process Compose public release files, release metadata, and its aqua registry entry. Downloads keep their existing checksums and signatures. Acceleration is limited to these public tool URLs; unrelated GitHub requests are not rewritten. Explicit URL replacement rules or detected GitHub credential configuration preserve Process Compose's existing source. No credentials are passed by One's mise bootstrap downloader. `tools reset` restores default official sources, while migrated configurations preserve their previous mise CDN until reset or explicitly changed. These are download proxies, not a guarantee of servers located inside any region.
+
+`tools` 分组提供 `gh-proxy`，加速 mise 首次安装，以及 Process Compose 的公开发布文件、版本信息和 aqua 安装元数据。下载保留原有校验和签名验证。加速仅限这些公开工具地址，不改写无关 GitHub 请求。已有自定义 URL 改写规则或检测到 GitHub 凭据配置时，Process Compose 保留原来源。One 的 mise 首次下载不携带凭据。`tools reset` 恢复默认官方源；迁移配置中的 mise CDN 会保留，直到主动重置或切换。这类服务是下载中转，不保证服务器位于特定地区。
+
+Explicit environment variables, mise settings, package-manager registries and private scoped npm registries take precedence over presets; `status` identifies preserved configuration. Tool arguments and later task/secret injection keep their usual precedence. Direct shell commands keep their existing settings. Environment presets use npm to install pnpm unless a backend, plugin, or lockfile already selects one. Go archives use the selected mirror, while `.sha256` files stay on `dl.google.com`. Python/uv binaries, Bun/Deno binaries and other tools retain their native sources. Node source builds and uncommon platforms may need custom mirrors. Checks cover representative versions, not every version/platform, and never install tools or automatically switch providers.
+
+显式环境变量、mise 设置、包管理器 registry 和 npm 私有 scope 源优先于预设，`status` 标明保留配置的来源。工具参数、后续任务和密钥注入遵循原有优先级，直接执行的终端命令沿用已有设置。环境预设通过 npm 安装 pnpm，但会保留已指定的后端、插件或锁文件。Go 安装包使用所选镜像，`.sha256` 仍来自 `dl.google.com`。Python/uv 安装包、Bun/Deno 安装包及其他工具沿用原生源；Node 源码构建和特殊平台可能需要自定义镜像。检测使用代表性版本，不保证所有版本与平台，不安装工具或自动切换服务商。
+
+For compatibility, `one mirror use public|huawei` selects only `env`; ungrouped `list`, `status`, `test` and `reset` apply to both groups. `test public|huawei` previews the named environment preset. Legacy preferences are read without rewriting the file: runtime/package sources move to `env`, and the previous mise source remains in `tools`, with no automatic proxy activation. The next change saves version 2 preferences atomically. Resetting both groups can also recover a damaged preferences file.
+
+兼容旧命令：`one mirror use public|huawei` 仅修改 `env`；未指定分组的 `list`、`status`、`test`、`reset` 作用于两组。`test public|huawei` 检测指定环境预设。读取旧配置不会立即改写文件：环境与依赖源迁入 `env`，旧 mise 来源保留到 `tools`，不自动启用加速。下次修改时原子保存为第 2 版配置。重置两组也可恢复损坏的偏好文件。
+
 ## Sign in over SSH / SSH 远程登录
 
 ```sh

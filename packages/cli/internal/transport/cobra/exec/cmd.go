@@ -16,6 +16,7 @@ import (
 
 	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/application/execution"
 	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/core/workspace"
+	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/modules/mirror"
 	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/modules/toolenv"
 	cliErrors "github.com/torchstellar-team/one-cli/packages/one-core/pkg/platform/errors"
 	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/platform/i18n"
@@ -166,7 +167,11 @@ func runRun(ctx context.Context, loaders *secrets.Registry, flags *runFlags, arg
 		output.Emit(map[string]any{"schema": "one-cli/run-plan/v1", "runtime": flags.runtime, "directory": targetDir, "argv": args, "environment": flags.envName, "dry_run": true})
 		return nil
 	}
-	childEnv := os.Environ()
+	mirrors, err := mirror.Resolve(targetDir, os.Environ())
+	if err != nil {
+		return err
+	}
+	childEnv := mirrors.Env
 	if flags.runtime == runtimeport.Mise {
 		if flags.provider == nil {
 			return i18n.Errorf("exec.mise_missing")

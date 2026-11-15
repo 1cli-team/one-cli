@@ -16,7 +16,7 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-const composeVersion = "1.122.0"
+const composeVersion = runtimeport.ManagedComposeVersion
 
 type composeProject struct {
 	Version          string                    `yaml:"version"`
@@ -147,7 +147,7 @@ func (s Service) toolEnvironment(ctx context.Context, task Task, base []string, 
 			merged[key] = *value
 		}
 	}
-	return removeEnv(secrets.MergeIntoEnviron(base, merged, true), unset), nil
+	return removeEnv(secrets.MergeIntoEnviron(command.Env, merged, true), unset), nil
 }
 func removeEnv(env []string, keys []string) []string {
 	values := map[string]string{}

@@ -20,6 +20,7 @@ import (
 	"syscall"
 
 	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/core/workspace"
+	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/modules/mirror"
 	cliErrors "github.com/torchstellar-team/one-cli/packages/one-core/pkg/platform/errors"
 	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/platform/fsutil"
 	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/platform/i18n"
@@ -107,12 +108,16 @@ func (s Service) Prepare(ctx context.Context, in Input) error {
 }
 
 func (s Service) run(ctx context.Context, in Input, dir string, args []string, env []string, out, errOut io.Writer) error {
+	mirrors, err := mirror.Resolve(dir, env)
+	if err != nil {
+		return err
+	}
+	env = mirrors.Env
 	command := runtimeport.Command{Directory: dir, Argv: args, Env: env}
 	if in.Runtime == runtimeport.Mise {
 		if s.Provider == nil {
 			return i18n.Errorf("dependencies.mise_required")
 		}
-		var err error
 		command, err = s.Provider.Prepare(ctx, command)
 		if err != nil {
 			return err

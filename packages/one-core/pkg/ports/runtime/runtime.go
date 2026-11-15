@@ -9,9 +9,11 @@ import (
 )
 
 const (
-	Builtin            = "builtin"
-	Mise               = "mise"
-	MinimumMiseVersion = "2026.9.7"
+	Builtin               = "builtin"
+	Mise                  = "mise"
+	MinimumMiseVersion    = "2026.9.7"
+	ManagedMiseVersion    = "2026.9.7"
+	ManagedComposeVersion = "1.122.0"
 )
 
 type Command struct {
