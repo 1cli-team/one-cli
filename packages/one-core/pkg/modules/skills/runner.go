@@ -10,6 +10,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/modules/mirror"
 	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/platform/i18n"
 	platformprocess "github.com/torchstellar-team/one-cli/packages/one-core/pkg/platform/process"
 	runtimeport "github.com/torchstellar-team/one-cli/packages/one-core/pkg/ports/runtime"
@@ -84,7 +85,11 @@ func (r Runner) Hash(ctx context.Context, directory string, files map[string]Fil
 }
 
 func (r Runner) run(ctx context.Context, directory, binary string, args []string, in io.Reader, out, errOut io.Writer, interactive bool) error {
-	env := os.Environ()
+	mirrors, err := mirror.Resolve(directory, os.Environ())
+	if err != nil {
+		return err
+	}
+	env := mirrors.Env
 	argv := append([]string{binary}, args...)
 	prepared := runtimeport.Command{Directory: directory, Argv: argv, Env: env}
 	if path, err := platformprocess.LookPathIn(binary, directory, env); err == nil {

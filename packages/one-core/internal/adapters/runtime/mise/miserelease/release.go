@@ -2,12 +2,13 @@ package miserelease
 
 import (
 	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/platform/i18n"
+	runtimeport "github.com/torchstellar-team/one-cli/packages/one-core/pkg/ports/runtime"
 )
 
 // Pin the release and both the archive and extracted binary digests. These
 // values come from the official v2026.9.7 SHASUMS256.txt; no runtime "latest"
 // resolution or unverified installer script is involved.
-const Version = "2026.9.7"
+const Version = runtimeport.ManagedMiseVersion
 const BaseURL = "https://github.com/jdx/mise/releases/download/v" + Version
 
 type Asset struct {

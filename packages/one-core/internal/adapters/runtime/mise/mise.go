@@ -13,6 +13,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/modules/mirror"
 	cliErrors "github.com/torchstellar-team/one-cli/packages/one-core/pkg/platform/errors"
 	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/platform/i18n"
 	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/platform/output"
@@ -27,8 +28,15 @@ func (p Provider) Prepare(ctx context.Context, command runtimeport.Command) (run
 }
 
 func (Provider) PrepareCLI(ctx context.Context, command runtimeport.Command) (runtimeport.Command, error) {
+	mirrors, err := mirror.Resolve(command.Directory, command.Env)
+	if err != nil {
+		return command, err
+	}
+	command.Env = mirrors.Env
 	paths, pathsErr := defaultPaths()
-	i := installer{root: paths.runtimeRoot(), downloader: defaultDownloader(), out: os.Stderr}
+	download := defaultDownloader()
+	download.baseURL = strings.TrimRight(mirrors.MiseSource, "/") + "/v" + managedVersion
+	i := installer{root: paths.runtimeRoot(), downloader: download, out: os.Stderr}
 	r := binaryResolver{paths: paths, pathsErr: pathsErr, asset: currentAsset, install: i.ensure, out: os.Stderr}
 	selected, err := r.resolve(ctx, command)
 	if err != nil {

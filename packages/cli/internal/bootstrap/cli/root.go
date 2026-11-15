@@ -28,6 +28,7 @@ import (
 	hookscmd "github.com/torchstellar-team/one-cli/packages/cli/internal/transport/cobra/hooks"
 	initcmd "github.com/torchstellar-team/one-cli/packages/cli/internal/transport/cobra/init"
 	localecmd "github.com/torchstellar-team/one-cli/packages/cli/internal/transport/cobra/locale"
+	mirrorcmd "github.com/torchstellar-team/one-cli/packages/cli/internal/transport/cobra/mirror"
 	misecmd "github.com/torchstellar-team/one-cli/packages/cli/internal/transport/cobra/mise"
 	runcmd "github.com/torchstellar-team/one-cli/packages/cli/internal/transport/cobra/run"
 	skillscmd "github.com/torchstellar-team/one-cli/packages/cli/internal/transport/cobra/skills"
@@ -58,7 +59,7 @@ func newRootCommand() *cobra.Command {
 	groups := [][]*cobra.Command{
 		addcmd.Commands(deps.Creation),
 		authcmd.Commands(),
-		{localecmd.Command(), initcmd.Command(skillsmodule.Installer{Run: skillsRunner.Run, Hash: skillsRunner.Hash, Inspect: skillsRunner.Inspect, InstallGroup: skillsRunner.InstallGroup}), upgradecmd.Command()},
+		{localecmd.Command(), mirrorcmd.Command(), initcmd.Command(skillsmodule.Installer{Run: skillsRunner.Run, Hash: skillsRunner.Hash, Inspect: skillsRunner.Inspect, InstallGroup: skillsRunner.InstallGroup}), upgradecmd.Command()},
 		createcmd.Commands(createcmd.Dependencies{Creation: deps.Creation}),
 		misecmd.RuntimeCommands(deps.Runtime),
 		skillscmd.Commands(skillsRunner.Run),
@@ -231,7 +232,7 @@ func Execute(version string, args []string) error {
 
 // Execution leaves and previews must not start another background network check.
 func shouldCheckUpdates(args []string) bool {
-	if first, _ := firstPositional(args); strings.HasPrefix(first, "__") || first == "mise" || first == "hk" || first == "skills" || first == "upgrade" {
+	if first, _ := firstPositional(args); strings.HasPrefix(first, "__") || first == "mise" || first == "hk" || first == "skills" || first == "upgrade" || first == "mirror" {
 		return false
 	}
 	for _, arg := range args {
