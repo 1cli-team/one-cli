@@ -21,12 +21,6 @@ func buildContributions(deps Dependencies) []*cobra.Command {
 	return []*cobra.Command{newCreateCmd(deps)}
 }
 
-// workspaceDefaultEnables records the supported environment source for creation output.
-var workspaceDefaultEnables = []string{
-	"env/infisical",
-	"dev/process",
-}
-
 // canonicalDomainOrder is the canonical iteration order for emitting
 // the list of enabled backends in the create envelope. Mirrors the
 // legacy ordering.

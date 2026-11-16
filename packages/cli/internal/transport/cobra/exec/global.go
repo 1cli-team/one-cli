@@ -6,7 +6,6 @@ import (
 	"path/filepath"
 	"strings"
 
-	remote "github.com/torchstellar-team/one-cli/packages/one-core/pkg/modules/environment"
 	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/modules/mirror"
 	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/platform/i18n"
 	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/platform/output"
@@ -21,7 +20,7 @@ func runGlobal(ctx context.Context, f *runFlags, args []string) error {
 	if f.envName == "" || f.globalPath == "" {
 		return i18n.Errorf("global.scope_required")
 	}
-	folder, e := remote.ValidateGlobalPath(f.globalPath)
+	folder, e := f.globalLoader.ValidatePath(f.globalPath)
 	if e != nil {
 		return e
 	}
@@ -47,7 +46,7 @@ func runGlobal(ctx context.Context, f *runFlags, args []string) error {
 		output.Emit(map[string]any{"scope": "global", "environment": f.envName, "path": folder, "keys": f.globalKeys, "directory": cwd, "executable": binary, "argv": args})
 		return nil
 	}
-	vars, e := remote.GlobalValues(ctx, f.envName, folder, f.globalKeys)
+	vars, e := f.globalLoader.Values(ctx, f.envName, folder, f.globalKeys)
 	if e != nil {
 		return e
 	}

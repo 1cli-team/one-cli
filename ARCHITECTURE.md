@@ -22,10 +22,28 @@ This file records source boundaries for maintainers and agents. Discover command
 
 - `one-core/pkg/bootstrap` composes private adapters and exposes dependencies to transports. Transports parse input and render results; reusable workflows belong to application services or feature modules.
 - `one-core/pkg/application` owns use cases and execution state. `execution.Scope` holds a standard `context.Context`; `Derive` copies scope fields while retaining cancellation, deadlines and values. Resource owners manage their own cleanup.
-- `one-core/pkg/core` owns domain models; `pkg/ports` defines integration contracts; `internal/adapters` implements them. The active environment backend is Infisical.
+- `one-core/pkg/core` owns domain models; `pkg/ports` defines integration contracts; `internal/adapters` implements runtime and storage adapters. Built-in vendor integrations live under `pkg/plugins`; the default composition installs Infisical.
 - `pkg/platform` provides shared technical capabilities. `internal/resources/bundled` embeds generated templates, registry and skills; regenerate through `one mise run sync-bundled`.
 
-入口通过 bootstrap 组装依赖。可复用业务放在 application / modules，接口契约放在 ports，具体集成放在 internal/adapters。执行上下文使用标准库 context；资源由实际创建者负责清理。
+入口通过 bootstrap 组装依赖。可复用业务放在 application / modules，接口契约放在 ports，运行时与存储适配器放在 internal/adapters，厂商集成放在 pkg/plugins。执行上下文使用标准库 context；资源由实际创建者负责清理。
+
+## CLI lifecycle and plugins / CLI 生命周期与插件
+
+The process handles version/identity probes first, initializes One storage, and handles private update workers before constructing the application. `cli.NewApplication` composes shared capabilities and registers plugin commands without opening credentials or making remote requests. Each invocation then resolves output mode and locale, refreshes command translations, and handles help and workspace summaries locally.
+
+进程先处理版本与身份探测，再初始化 One 存储、处理私有更新进程。`cli.NewApplication` 装配共享能力、注册插件命令，构造期间不读取凭据、不发远端请求。每次执行先解析输出格式和语言、刷新命令翻译，再处理帮助和工作区摘要。
+
+For command execution, `packages/cli/internal/lifecycle` runs `Start` for all plugins, then `BeforeCommand`, the command, `AfterCommand`, and cleanup. Start/before run in registration order; after/cleanup unwind in reverse order, including command errors, partial startup failure, and cancellation. Cleanup receives a bounded context independent of invocation cancellation. Help and local summaries do not start plugin resources. The caller owns signal handling and the final error/exit-code envelope.
+
+命令执行顺序为 `Start → BeforeCommand → 命令 → AfterCommand → 清理`。启动与执行前钩子按注册顺序运行，执行后钩子与清理逆序运行；部分启动失败、命令错误和取消均会收尾。清理使用独立且有超时的上下文。帮助和本地摘要不启动插件资源，信号与最终错误、退出码由 CLI 统一处理。
+
+`one-core/pkg/plugins.Plugin` contributes backend descriptors, `environment.Backend`, secret loaders, and optional shared-credential loading. `cli.Plugin` adds command registration and optional lifecycle hooks. Registries belong to one application; no `init()` registration or mutable global plugin registry is used. Duplicate plugin identities, backend registrations, global loaders, and command names/aliases fail during composition. `NewApplication()` constructs the CLI without vendor plugins; the `builtin.go` composition installs Infisical explicitly.
+
+`one-core/pkg/plugins.Plugin` 提供后端描述、`environment.Backend`、变量加载器及可选的共享凭据加载器；`cli.Plugin` 增加命令注册和可选生命周期钩子。注册表属于单个应用，不使用 `init()` 自动注册或全局可变插件表。重复注册在装配时失败。`NewApplication()` 可构造不含厂商插件的 CLI，默认 `builtin.go` 显式安装 Infisical。
+
+Infisical owns its remote client, session storage, workspace binding, shared credentials, and CLI `login`/`logout`/`whoami`/`env` commands. Shared code is in `one-core/pkg/plugins/infisical`, private vendor code in its `internal/remote`, and Cobra adapters in `cli/internal/plugins/infisical`. The generic environment service dispatches through an injected backend; task and arbitrary-command execution use injected loaders. Existing `[env.infisical]` manifest fields, session files, protocol values, and CLI commands remain compatible. This is a compiled-in extension boundary, not dynamic Go `.so` loading or a separately installed executable.
+
+Infisical 插件拥有远端客户端、会话存储、工作区绑定、共享凭据和账号/环境命令。通用环境服务通过注入的后端派发操作，任务和任意命令通过注入的加载器取变量。现有 `[env.infisical]`、会话文件、协议值和 CLI 命令保持兼容。插件随程序编译，不采用 Go `.so` 动态加载或独立安装的可执行文件。
 
 ## Desktop boundary / 桌面边界
 

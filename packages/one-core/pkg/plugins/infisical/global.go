@@ -1,10 +1,10 @@
-package environment
+package infisical
 
 import (
 	"context"
 
-	remote "github.com/torchstellar-team/one-cli/packages/one-core/internal/adapters/env/infisical"
-	session "github.com/torchstellar-team/one-cli/packages/one-core/pkg/platform/infisicalsession"
+	remote "github.com/torchstellar-team/one-cli/packages/one-core/pkg/plugins/infisical/internal/remote"
+	session "github.com/torchstellar-team/one-cli/packages/one-core/pkg/plugins/infisical/session"
 )
 
 // Global variables are independent of workspace resolution. Both transports

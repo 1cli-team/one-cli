@@ -1,29 +1,14 @@
 package infisical
 
 import (
-	"regexp"
 	"strings"
 
 	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/core/workspace"
-	cliErrors "github.com/torchstellar-team/one-cli/packages/one-core/pkg/platform/errors"
-	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/platform/i18n"
 	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/ports/secrets"
 )
 
-// envNameRE constrains environment names: must start with a letter or
-// digit, and contain only letters / digits / hyphens / underscores.
-var envNameRE = regexp.MustCompile(`^[a-zA-Z0-9][a-zA-Z0-9\-_]*$`)
-
-// SanitizeEnvName trims whitespace, validates the pattern, and returns the
-// canonical env name. Returns ENV_INVALID_ENV_NAME on bad input.
-func SanitizeEnvName(s string) (string, error) {
-	v := strings.TrimSpace(s)
-	if !envNameRE.MatchString(v) {
-		return "", cliErrors.New(cliErrors.ENV_INVALID_ENV_NAME,
-			i18n.Tf("env.environment_format", s))
-	}
-	return v, nil
-}
+// SanitizeEnvName uses the shared environment-name contract.
+func SanitizeEnvName(s string) (string, error) { return secrets.ValidateEnvName(s) }
 
 // AssertValidKey validates a secret key against the POSIX env-var pattern.
 // Delegates to internal/secrets — the validation is a cross-backend concern

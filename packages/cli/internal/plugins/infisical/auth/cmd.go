@@ -9,11 +9,11 @@ import (
 	"github.com/pkg/browser"
 	"github.com/spf13/cobra"
 
-	authentication "github.com/torchstellar-team/one-cli/packages/one-core/pkg/application/authentication"
 	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/platform/i18n"
-	session "github.com/torchstellar-team/one-cli/packages/one-core/pkg/platform/infisicalsession"
 	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/platform/output"
 	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/platform/prompt"
+	authentication "github.com/torchstellar-team/one-cli/packages/one-core/pkg/plugins/infisical/authentication"
+	session "github.com/torchstellar-team/one-cli/packages/one-core/pkg/plugins/infisical/session"
 )
 
 func Commands() []*cobra.Command {

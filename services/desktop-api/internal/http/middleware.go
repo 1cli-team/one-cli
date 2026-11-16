@@ -6,7 +6,6 @@ import (
 	"errors"
 	"net/http"
 
-	authentication "github.com/torchstellar-team/one-cli/packages/one-core/pkg/application/authentication"
 	manifestapp "github.com/torchstellar-team/one-cli/packages/one-core/pkg/application/manifest"
 	workspaceapp "github.com/torchstellar-team/one-cli/packages/one-core/pkg/application/workspace"
 	catalog "github.com/torchstellar-team/one-cli/packages/one-core/pkg/core/backend"
@@ -16,6 +15,9 @@ import (
 	cliErrors "github.com/torchstellar-team/one-cli/packages/one-core/pkg/platform/errors"
 	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/platform/i18n"
 	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/platform/output"
+	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/plugins"
+	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/plugins/infisical"
+	authentication "github.com/torchstellar-team/one-cli/packages/one-core/pkg/plugins/infisical/authentication"
 )
 
 // MuxOpts is the static configuration for one running server. Tests
@@ -59,7 +61,11 @@ func BuildMux(opts MuxOpts) http.Handler {
 		opts.SharedCredentials = authentication.NewSharedCredentialsService()
 	}
 	if opts.Catalog == nil {
-		opts.Catalog = catalog.Builtin()
+		registry, err := plugins.New(infisical.New())
+		if err != nil {
+			panic(err)
+		}
+		opts.Catalog = registry.Catalog
 	}
 	if opts.WorkspaceService == nil {
 		opts.WorkspaceService = workspaceapp.NewService()
@@ -72,7 +78,7 @@ func BuildMux(opts MuxOpts) http.Handler {
 		opts.ManifestService = service
 	}
 	if opts.EnvironmentService == nil {
-		service, err := environmentmodule.NewService(opts.Catalog)
+		service, err := environmentmodule.NewService(opts.Catalog, infisical.New())
 		if err != nil {
 			panic(err)
 		}
@@ -86,7 +92,7 @@ func BuildMux(opts MuxOpts) http.Handler {
 			_, err := opts.RegistryService.Observe(ctx, root, source)
 			return err
 		}
-		service, err := creationmodule.NewService(opts.EnvironmentService, observe)
+		service, err := creationmodule.NewService(opts.Catalog, observe)
 		if err != nil {
 			panic(err)
 		}

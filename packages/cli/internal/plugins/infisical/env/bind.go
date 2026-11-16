@@ -7,11 +7,12 @@ import (
 	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/platform/i18n"
 	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/platform/output"
 	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/platform/prompt"
+	remote "github.com/torchstellar-team/one-cli/packages/one-core/pkg/plugins/infisical"
 )
 
 func runWorkspaceBind(cmd *cobra.Command, deps Dependencies, projectID string, create bool) error {
 	if projectID == "" && !create && output.CanPrompt() {
-		projects, err := environmentmodule.Projects(cmd.Context())
+		projects, err := remote.Projects(cmd.Context())
 		if err != nil {
 			return err
 		}

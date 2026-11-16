@@ -3,7 +3,6 @@ package bootstrap
 import (
 	"context"
 
-	"github.com/torchstellar-team/one-cli/packages/one-core/internal/adapters/env/infisical"
 	miseruntime "github.com/torchstellar-team/one-cli/packages/one-core/internal/adapters/runtime/mise"
 	workspaceregistrylocal "github.com/torchstellar-team/one-cli/packages/one-core/internal/adapters/workspaceregistry/local"
 	manifestapp "github.com/torchstellar-team/one-cli/packages/one-core/pkg/application/manifest"
@@ -13,6 +12,7 @@ import (
 	environmentmodule "github.com/torchstellar-team/one-cli/packages/one-core/pkg/modules/environment"
 	skillsmodule "github.com/torchstellar-team/one-cli/packages/one-core/pkg/modules/skills"
 	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/platform/prompt"
+	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/plugins"
 	runtimeport "github.com/torchstellar-team/one-cli/packages/one-core/pkg/ports/runtime"
 	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/ports/secrets"
 )
@@ -27,17 +27,21 @@ type Dependencies struct {
 	Environments *environmentmodule.Service
 	Manifest     *manifestapp.Service
 	Loaders      *secrets.Registry
+	Global       secrets.GlobalLoader
 	Workspaces   *workspaceapp.Service
 	Registry     *workspaceapp.RegistryService
 }
 
-func Compose() Dependencies {
-	backendCatalog := catalog.Builtin()
-
-	environments := mustEnvironmentService(backendCatalog)
+// ComposePlugins builds an isolated application from explicitly installed plugins.
+func ComposePlugins(installed ...plugins.Plugin) (Dependencies, error) {
+	pluginRegistry, err := plugins.New(installed...)
+	if err != nil {
+		return Dependencies{}, err
+	}
+	backendCatalog, environments := pluginRegistry.Catalog, pluginRegistry.Environments
 	manifest := mustManifestService(backendCatalog)
 	registry := mustWorkspaceRegistryService()
-	creation := mustCreationService(environments, registry)
+	creation := mustCreationService(backendCatalog, registry)
 
 	return Dependencies{
 		Runtime: miseruntime.Provider{},
@@ -46,10 +50,11 @@ func Compose() Dependencies {
 		Creation:     creation,
 		Environments: environments,
 		Manifest:     manifest,
-		Loaders:      secrets.MustRegistry(infisical.Loader()),
+		Loaders:      pluginRegistry.Loaders,
+		Global:       pluginRegistry.Global,
 		Workspaces:   workspaceapp.NewService(),
 		Registry:     registry,
-	}
+	}, nil
 }
 
 func mustManifestService(backendCatalog *catalog.Catalog) *manifestapp.Service {
@@ -73,29 +78,19 @@ func mustWorkspaceRegistryService() *workspaceapp.RegistryService {
 }
 
 func mustCreationService(
-	environments *environmentmodule.Service,
+	backendCatalog *catalog.Catalog,
 	registry *workspaceapp.RegistryService,
 ) *creationmodule.Service {
 	observe := creationmodule.WorkspaceObserver(func(ctx context.Context, root, source string) error {
 		_, err := registry.Observe(ctx, root, source)
 		return err
 	})
-	service, err := creationmodule.NewService(environments, observe)
+	service, err := creationmodule.NewService(backendCatalog, observe)
 	if err != nil {
 		panic(err)
 	}
 	service.Runtime = miseruntime.Provider{}
 	skillsRunner := skillsmodule.Runner{Runtime: service.Runtime}
 	service.Skills = skillsmodule.Installer{Run: skillsRunner.Run, Hash: skillsRunner.Hash, Inspect: skillsRunner.Inspect, InstallGroup: skillsRunner.InstallGroup, Progress: prompt.ReportProgress}
-	return service
-}
-
-func mustEnvironmentService(
-	backendCatalog *catalog.Catalog,
-) *environmentmodule.Service {
-	service, err := environmentmodule.NewService(backendCatalog)
-	if err != nil {
-		panic(err)
-	}
 	return service
 }

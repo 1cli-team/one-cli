@@ -9,8 +9,8 @@ import (
 	"path/filepath"
 	"strings"
 
+	catalog "github.com/torchstellar-team/one-cli/packages/one-core/pkg/core/backend"
 	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/core/workspace"
-	environmentmodule "github.com/torchstellar-team/one-cli/packages/one-core/pkg/modules/environment"
 	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/modules/hooks"
 	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/modules/miseconfig"
 	skillsmodule "github.com/torchstellar-team/one-cli/packages/one-core/pkg/modules/skills"
@@ -21,10 +21,10 @@ import (
 )
 
 type Service struct {
-	Runtime      runtimeport.Provider
-	Skills       SkillInstaller
-	environments *environmentmodule.Service
-	observer     WorkspaceObserver
+	catalog  *catalog.Catalog
+	Runtime  runtimeport.Provider
+	Skills   SkillInstaller
+	observer WorkspaceObserver
 }
 
 type SkillInstaller interface {
@@ -36,16 +36,23 @@ type SkillInstaller interface {
 type WorkspaceObserver func(context.Context, string, string) error
 
 func NewService(
-	environments *environmentmodule.Service,
+	backendCatalog *catalog.Catalog,
 	observer WorkspaceObserver,
 ) (*Service, error) {
-	if environments == nil {
-		return nil, errors.New(i18n.T("creation.environment_required"))
-	}
 	if observer == nil {
 		return nil, errors.New(i18n.T("creation.workspace_observer_required"))
 	}
-	return &Service{environments: environments, observer: observer}, nil
+	return &Service{catalog: backendCatalog, observer: observer}, nil
+}
+
+// EnvironmentBackend returns the first installed backend that supports workspace scaffolding.
+func (s *Service) EnvironmentBackend() string {
+	for _, backend := range s.catalog.All() {
+		if backend.ID.Domain == catalog.DomainEnv && backend.Has(catalog.CapabilityScaffold) {
+			return backend.ID.Name
+		}
+	}
+	return ""
 }
 
 type WorkspaceInput struct {
@@ -114,9 +121,9 @@ func (s *Service) CreateWorkspace(ctx context.Context, input WorkspaceInput) (Wo
 		)
 	}
 	if result.EnvBackend == "" {
-		result.EnvBackend = workspace.EnvBackendInfisical
+		result.EnvBackend = s.EnvironmentBackend()
 	}
-	if result.EnvBackend != workspace.EnvBackendInfisical {
+	if _, ok := s.catalog.Lookup(catalog.DomainEnv, result.EnvBackend); result.EnvBackend != "" && !ok {
 		return result, cliErrors.New(
 			cliErrors.BACKEND_ID_UNKNOWN,
 			i18n.Tf("env.provider_invalid", result.EnvBackend),

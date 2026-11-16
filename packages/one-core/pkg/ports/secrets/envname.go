@@ -1,6 +1,7 @@
 package secrets
 
 import (
+	"regexp"
 	"strings"
 
 	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/core/workspace"
@@ -39,4 +40,14 @@ func ResolveEnvName(projectRoot, flag string, allowUnknown bool) (string, []stri
 			"requested":    chosen,
 			"environments": declared,
 		})
+}
+
+var envNamePattern = regexp.MustCompile(`^[a-zA-Z0-9][a-zA-Z0-9\-_]*$`)
+
+func ValidateEnvName(value string) (string, error) {
+	value = strings.TrimSpace(value)
+	if !envNamePattern.MatchString(value) {
+		return "", cliErrors.New(cliErrors.ENV_INVALID_ENV_NAME, i18n.Tf("env.environment_format", value))
+	}
+	return value, nil
 }

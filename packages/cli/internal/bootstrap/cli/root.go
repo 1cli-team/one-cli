@@ -1,29 +1,16 @@
-// Package cli is the CLI harness: it owns the root cobra command, the
-// Execute entry point, output-mode detection (-o / --output / TTY),
-// help interception, pre-cobra unknown-command handling, and the final
-// error envelope. Subcommand implementations live in sibling packages
-// under internal/transport/cobra/ and are wired by newRootCommand below.
-//
-// Layering rule: this package may call into internal/core/workspace,
-// internal/core/template, etc. for harness-level needs, but those packages
-// must NOT import this one back. CLI concerns (args parsing, TTY
-// rendering, JSON emission, output mode) live here; everything below
-// is pure.
+// Package cli assembles the command tree and runs the CLI lifecycle.
+// Vendor integrations are supplied explicitly by the built-in composition.
 package cli
 
 import (
-	"context"
-	"errors"
-	"os"
 	"strings"
-	"sync"
 
 	"github.com/spf13/cobra"
+	"github.com/torchstellar-team/one-cli/packages/cli/internal/lifecycle"
+	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/plugins"
 
 	addcmd "github.com/torchstellar-team/one-cli/packages/cli/internal/transport/cobra/add"
-	authcmd "github.com/torchstellar-team/one-cli/packages/cli/internal/transport/cobra/auth"
 	createcmd "github.com/torchstellar-team/one-cli/packages/cli/internal/transport/cobra/create"
-	envcmd "github.com/torchstellar-team/one-cli/packages/cli/internal/transport/cobra/env"
 	execcmd "github.com/torchstellar-team/one-cli/packages/cli/internal/transport/cobra/exec"
 	hookscmd "github.com/torchstellar-team/one-cli/packages/cli/internal/transport/cobra/hooks"
 	initcmd "github.com/torchstellar-team/one-cli/packages/cli/internal/transport/cobra/init"
@@ -34,22 +21,42 @@ import (
 	skillscmd "github.com/torchstellar-team/one-cli/packages/cli/internal/transport/cobra/skills"
 	templatescmd "github.com/torchstellar-team/one-cli/packages/cli/internal/transport/cobra/templates"
 	upgradecmd "github.com/torchstellar-team/one-cli/packages/cli/internal/transport/cobra/upgrade"
-	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/application/execution"
 	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/bootstrap"
-	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/core/workspace"
 	skillsmodule "github.com/torchstellar-team/one-cli/packages/one-core/pkg/modules/skills"
-	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/modules/tasks"
-	cliErrors "github.com/torchstellar-team/one-cli/packages/one-core/pkg/platform/errors"
 	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/platform/helpui"
 	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/platform/i18n"
 	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/platform/output"
-	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/platform/preferences"
-	platformprocess "github.com/torchstellar-team/one-cli/packages/one-core/pkg/platform/process"
-	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/platform/updatecheck"
 )
 
-func newRootCommand() *cobra.Command {
-	deps := bootstrap.Compose()
+// Plugin contributes both shared capabilities and command lifecycle hooks.
+type Plugin interface {
+	plugins.Plugin
+	lifecycle.Plugin
+}
+
+type Application struct {
+	root      *cobra.Command
+	lifecycle *lifecycle.Lifecycle
+	rootHelp  func() string
+}
+
+// NewApplication constructs a command tree without opening credentials or
+// making network requests. An empty plugin list is a valid core-only CLI.
+// Application owns a single invocation; construct a fresh instance for each run.
+func NewApplication(installed ...Plugin) (*Application, error) {
+	shared := make([]plugins.Plugin, len(installed))
+	hooks := make([]lifecycle.Plugin, len(installed))
+	for i, plugin := range installed {
+		shared[i], hooks[i] = plugin, plugin
+	}
+	deps, err := bootstrap.ComposePlugins(shared...)
+	if err != nil {
+		return nil, err
+	}
+	phases, err := lifecycle.New(hooks...)
+	if err != nil {
+		return nil, err
+	}
 	skillsRunner := skillsmodule.Runner{Runtime: deps.Runtime}
 	root := &cobra.Command{
 		Use:           "one",
@@ -58,14 +65,12 @@ func newRootCommand() *cobra.Command {
 	}
 	groups := [][]*cobra.Command{
 		addcmd.Commands(deps.Creation),
-		authcmd.Commands(),
 		{localecmd.Command(), mirrorcmd.Command(), initcmd.Command(skillsmodule.Installer{Run: skillsRunner.Run, Hash: skillsRunner.Hash, Inspect: skillsRunner.Inspect, InstallGroup: skillsRunner.InstallGroup}), upgradecmd.Command()},
 		createcmd.Commands(createcmd.Dependencies{Creation: deps.Creation}),
 		misecmd.RuntimeCommands(deps.Runtime),
 		skillscmd.Commands(skillsRunner.Run),
 		hookscmd.Commands(deps.Runtime),
-		envcmd.Commands(envcmd.Dependencies{Service: deps.Environments}),
-		execcmd.Commands(deps.Loaders, deps.Runtime),
+		execcmd.Commands(deps.Loaders, deps.Runtime, deps.Global),
 		runcmd.Commands(deps.Loaders, deps.Runtime),
 		templatescmd.Commands(),
 	}
@@ -78,14 +83,11 @@ func newRootCommand() *cobra.Command {
 	root.SetFlagErrorFunc(i18n.FlagError)
 	root.PersistentFlags().StringP("output", "o", "", i18n.T("common.flag.output"))
 	i18n.MarkFlagUsage(root, "output", "common.flag.output")
-	return root
+	if err := phases.Register(lifecycle.Host{Root: root, Dependencies: deps}); err != nil {
+		return nil, err
+	}
+	return &Application{root: root, lifecycle: phases}, nil
 }
-
-// Construct stores only after storage initialization has validated ONE_HOME.
-var rootCommand = sync.OnceValue(newRootCommand)
-
-// RootCmd returns the command tree for read-only tooling without changing user data.
-func RootCmd() *cobra.Command { return rootCommand() }
 
 // RootHelp returns the curated rootHelp text — what `one --help` emits.
 // Exposed for verify-help, which ensures the concise daily command list
@@ -93,142 +95,6 @@ func RootCmd() *cobra.Command { return rootCommand() }
 // callers that need the deterministic English form should call
 // i18n.Init("en-US") first.
 func RootHelp() string { return i18n.T("root.help") }
-
-// InitializeStorage preserves the CLI error envelope even before Cobra starts.
-func InitializeStorage(args []string) error {
-	detectOutputMode(args)
-	_ = i18n.Init(i18n.Resolve("auto"))
-	_, err := bootstrap.InitializeStorage()
-	if err != nil {
-		wrapped := cliErrors.New(cliErrors.ONE_CLI_ERROR, err.Error()).WithCause(err)
-		output.EmitError(wrapped)
-		return wrapped
-	}
-	return nil
-}
-
-// Execute is the single entry point called by cmd/one/main.go. It owns the
-// output-mode detection (-o / --output / TTY), help interception,
-// pre-validation of the first positional (so unknown commands emit our
-// structured UNKNOWN_COMMAND envelope rather than cobra's generic error),
-// and final error envelope emission.
-//
-// version is the build-time value injected via -ldflags; see cmd/one/main.go.
-func Execute(version string, args []string) error {
-	rootCmd := RootCmd()
-	workingDirectory, _ := os.Getwd()
-	executionScope := execution.NewScope(context.Background(), workingDirectory)
-	rootCmd.SetContext(execution.WithScope(executionScope.Context(), executionScope))
-
-	rootCmd.Version = version
-	args = expandTaskShorthand(args, isKnownSubcommand)
-	rootCmd.SetArgs(args)
-
-	// Output mode detection runs before cobra so subcommands can already
-	// query output.IsJSON() during args validation.
-	detectOutputMode(args)
-
-	// Resolve the active locale (stored preference > env vars > default)
-	// and re-apply every annotated cmd.Short under the new locale.
-	// Failure to read preferences.json or to parse a locale bundle is
-	// non-fatal — we boot in DefaultLocale (en-US) and continue. The
-	// CLI's job is to run user commands, not to refuse to start over a
-	// preference file.
-	prefs, _ := preferences.Load()
-	stored := preferences.LocaleAuto
-	if prefs != nil {
-		stored = prefs.Locale
-	}
-	_ = i18n.Init(i18n.Resolve(stored))
-	i18n.RefreshTree(rootCmd)
-
-	// Official releases may start an independent update worker. The command
-	// never waits for a download; cached completion/failure notices are printed
-	// on exit. Development builds, CI, and structured output skip this path.
-	if shouldCheckUpdates(args) {
-		updatecheck.MaybeRefreshAsync(version)
-		defer updatecheck.Notify(version)
-	}
-
-	if shouldRenderAllHelp(args) {
-		helpui.RenderAll(rootCmd, os.Stdout)
-		return nil
-	}
-	if isBareInvocation(args) {
-		root, err := workspace.ResolveProjectRoot("")
-		if err != nil {
-			return err
-		}
-		if workspace.HasManifest(root) {
-			summary, err := workspace.BuildSummary(root)
-			if err != nil {
-				var cliErr *output.Error
-				if errors.As(err, &cliErr) {
-					output.EmitError(cliErr)
-					return cliErr
-				}
-				return err
-			}
-			available := map[string]bool{}
-			if w, e := execution.ResolveWorkspaceScope(execution.NewScope(context.Background(), root)); e == nil {
-				if catalog, _, e := tasks.Catalog(w); e == nil {
-					for _, task := range catalog {
-						if task.Operation == "dev" {
-							available[task.Project] = true
-						}
-					}
-				}
-			}
-			summary.ApplyTaskCapabilities(available)
-			output.Emit(&summary)
-			return nil
-		}
-		// Flags such as `-o text` do not change the bare-command behavior:
-		// outside a workspace the concise everyday help is still the useful
-		// answer.
-		os.Stdout.WriteString(i18n.T("root.help"))
-		return nil
-	}
-
-	// Bypass cobra entirely for root help — emit the curated root help
-	// text in the active locale. Subcommand help (`one env --help`)
-	// still goes through cobra so each subcommand gets its own
-	// auto-generated help with flag list + examples.
-	if shouldRenderRootHelp(args) {
-		os.Stdout.WriteString(i18n.T("root.help"))
-		return nil
-	}
-
-	// Pre-validate: if the first non-flag token is something that doesn't
-	// match a registered subcommand, emit UNKNOWN_COMMAND with remediation
-	// rather than cobra's generic "unknown command" error.
-	if first, ok := firstPositional(args); ok && !isKnownSubcommand(first) {
-		err := cliErrors.New(
-			cliErrors.UNKNOWN_COMMAND,
-			i18n.Tf("command.unknown", first),
-		).WithContext(map[string]any{"command": "one " + first})
-		output.EmitError(err)
-		return err
-	}
-
-	if err := rootCmd.Execute(); err != nil {
-		var exit *platformprocess.ExitStatus
-		if errors.As(err, &exit) {
-			return err
-		}
-		// Wrap unknown errors into the structured envelope so JSON consumers
-		// always see one-cli/error/v1.
-		var cliErr *output.Error
-		if errors.As(err, &cliErr) {
-			output.EmitError(cliErr)
-			return cliErr
-		}
-		wrapped := cliErrors.New(cliErrors.ONE_CLI_ERROR, err.Error())
-		output.EmitError(wrapped)
-		return wrapped
-	}
-	return nil
-}
 
 // Execution leaves and previews must not start another background network check.
 func shouldCheckUpdates(args []string) bool {
@@ -261,6 +127,10 @@ var helpFlags = map[string]struct{}{
 // Returns false for help on a subcommand (`one env --help`,
 // `one help create`) so cobra's per-subcommand help template runs.
 func shouldRenderRootHelp(args []string) bool {
+	return shouldRenderHelp(args, isKnownSubcommand)
+}
+
+func shouldRenderHelp(args []string, known func(string) bool) bool {
 	if len(args) == 0 {
 		return true
 	}
@@ -270,7 +140,7 @@ func shouldRenderRootHelp(args []string) bool {
 	}
 	// `one help <known-subcommand>` should fall through to cobra so the
 	// subcommand's own help is rendered.
-	if len(args) > 1 && isKnownSubcommand(args[1]) {
+	if len(args) > 1 && known(args[1]) {
 		return false
 	}
 	return true
@@ -334,8 +204,10 @@ func firstPositional(args []string) (string, bool) {
 // isKnownSubcommand reports whether name is registered on the root cobra
 // command. We inspect the explicitly assembled rootCmd.Commands() collection
 // so this validation never maintains a second command-name list.
-func isKnownSubcommand(name string) bool {
-	for _, c := range RootCmd().Commands() {
+func isKnownSubcommand(name string) bool { return knownSubcommand(RootCmd(), name) }
+
+func knownSubcommand(root *cobra.Command, name string) bool {
+	for _, c := range root.Commands() {
 		if c.Name() == name {
 			return true
 		}
