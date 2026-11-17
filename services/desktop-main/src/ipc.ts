@@ -1,3 +1,5 @@
+import { isAbsolute } from "node:path";
+import { stat } from "node:fs/promises";
 import { ipcMain, dialog, shell } from "electron";
 import type { MainWindow } from "./window.ts";
 import type { Backend } from "./backend.ts";
@@ -38,6 +40,18 @@ export function createDesktopIPC({
         properties: ["openDirectory"],
       });
       return result.canceled ? null : (result.filePaths[0] ?? null);
+    });
+    handle("desktop:open-directory", 1, async (path) => {
+      if (
+        typeof path !== "string" ||
+        path.length > 16384 ||
+        path.includes("\0") ||
+        !isAbsolute(path)
+      )
+        throw new Error("invalid_path");
+      if (!(await stat(path)).isDirectory()) throw new Error("invalid_path");
+      const error = await shell.openPath(path);
+      if (error) throw new Error(error);
     });
     handle("desktop:open-external", 1, (value) => {
       if (typeof value !== "string" || value.length > 16384) throw new Error("invalid_url");

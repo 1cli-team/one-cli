@@ -3,6 +3,7 @@ import {
 	ArrowLeft,
 	ChevronRight,
 	House,
+	GitBranch,
 	KeyRound,
 	MonitorCog,
 	Package,
@@ -40,6 +41,7 @@ const STATUS_DOT_CLASS: Record<WorkspaceRegistryStatus, string> = {
 	invalid: "bg-error-foreground",
 	"identity-missing": "bg-warning-foreground",
 	"identity-conflict": "bg-warning-foreground",
+	uninitialized: "bg-warning-foreground",
 };
 const PROJECT_GROUPS = [
 	{ kind: "app", directory: "apps", icon: AppWindow },
@@ -243,7 +245,7 @@ function SettingsSidebar({ homeTo }: { homeTo: string }) {
 }
 
 function WorkspaceSidebar({
-	entryId,
+	entryId: logicalEntryId,
 	homeTo,
 	active,
 }: {
@@ -254,7 +256,13 @@ function WorkspaceSidebar({
 	const { t } = useTranslation();
 	const { projectName } = useParams();
 	const navigate = useNavigate();
-	const { workspace, overview, environment, available } = useWorkspace(entryId);
+	const {
+		workspace,
+		overview,
+		environment,
+		available,
+		contextEntryId: entryId,
+	} = useWorkspace(logicalEntryId);
 	const projects = overview.data?.projects ?? [];
 	const [createOpen, setCreateOpen] = useState(false);
 	const [bindingOpen, setBindingOpen] = useState(false);
@@ -300,6 +308,12 @@ function WorkspaceSidebar({
 						{t("workspaces.retry")}
 					</Button>
 				)}
+				<Button variant="navigation" size="navigation-compact" asChild>
+					<EnvironmentNavLink to={`${workspacePath(entryId)}/git/worktrees`}>
+						<GitBranch />
+						<span>{t("git.title")}</span>
+					</EnvironmentNavLink>
+				</Button>
 				{PROJECT_GROUPS.map(({ kind, directory, icon: Icon }) => {
 					const group = projects.filter((project) => project.kind === kind);
 					if (!group.length) return null;

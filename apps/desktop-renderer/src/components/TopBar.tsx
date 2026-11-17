@@ -15,6 +15,7 @@ import { EnvironmentLink } from "@/features/environment-context/EnvironmentLink"
 import { EnvironmentSelector } from "@/features/environment-context/EnvironmentSelector";
 import { useWorkspace } from "@/features/workspace-navigation/useWorkspace";
 import { useThemeStore } from "@/lib/stores/theme";
+import { WorktreeSelector } from "@/features/workspace-navigation/WorktreeSelector";
 import { workspacePath } from "@/router/paths";
 export { ManifestSaveControl } from "@/features/manifest-draft/ManifestSaveControl";
 
@@ -24,7 +25,16 @@ export function TopBar({ homeTo, onOpenNavigation }: { homeTo: string; onOpenNav
 	const { pathname } = useLocation();
 	const match = useMatch("/workspaces/:entryId/*");
 	const settingsMatch = useMatch("/settings/*");
-	const projectMatch = useMatch("/workspaces/:entryId/projects/:projectName");
+	const baseWorktreesMatch = useMatch("/workspaces/:entryId/git/worktrees");
+	const checkoutWorktreesMatch = useMatch(
+		"/workspaces/:entryId/worktrees/:worktreeId/git/worktrees",
+	);
+	const worktreesMatch = baseWorktreesMatch || checkoutWorktreesMatch;
+	const baseProjectMatch = useMatch("/workspaces/:entryId/projects/:projectName");
+	const checkoutProjectMatch = useMatch(
+		"/workspaces/:entryId/worktrees/:worktreeId/projects/:projectName",
+	);
+	const projectMatch = baseProjectMatch || checkoutProjectMatch;
 	const { workspace, overview, available } = useWorkspace(match?.params.entryId);
 	const themeLabel = t(mode === "light" ? "sidebar.themeToDark" : "sidebar.themeToLight");
 	const titles: Record<string, string> = {
@@ -57,9 +67,11 @@ export function TopBar({ homeTo, onOpenNavigation }: { homeTo: string; onOpenNav
 								</BreadcrumbItem>
 								<BreadcrumbSeparator />
 								<BreadcrumbItem>
-									{projectMatch ? (
+									{projectMatch || worktreesMatch ? (
 										<BreadcrumbLink asChild>
-											<EnvironmentLink to={workspacePath(match.params.entryId!)}>
+											<EnvironmentLink
+												to={workspacePath(workspace?.entryId || match.params.entryId!)}
+											>
 												{workspace?.name ?? t("workspaces.workspaceLabel")}
 											</EnvironmentLink>
 										</BreadcrumbLink>
@@ -69,11 +81,13 @@ export function TopBar({ homeTo, onOpenNavigation }: { homeTo: string; onOpenNav
 										</BreadcrumbPage>
 									)}
 								</BreadcrumbItem>
-								{projectMatch && (
+								{(projectMatch || worktreesMatch) && (
 									<>
 										<BreadcrumbSeparator />
 										<BreadcrumbItem>
-											<BreadcrumbPage>{projectMatch.params.projectName}</BreadcrumbPage>
+											<BreadcrumbPage>
+												{worktreesMatch ? t("git.title") : projectMatch?.params.projectName}
+											</BreadcrumbPage>
 										</BreadcrumbItem>
 									</>
 								)}
@@ -102,6 +116,7 @@ export function TopBar({ homeTo, onOpenNavigation }: { homeTo: string; onOpenNav
 				{match && available && (
 					<EnvironmentSelector environments={overview.data?.workspace?.environments} />
 				)}
+				{match?.params.entryId && <WorktreeSelector entryId={match.params.entryId} />}
 				<LanguageSwitcher />
 				<Button
 					variant="ghost"

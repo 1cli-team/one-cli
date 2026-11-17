@@ -81,7 +81,8 @@
 			"missing": "Path missing",
 			"invalid": "Invalid manifest",
 			"identity-missing": "Workspace ID missing",
-			"identity-conflict": "Workspace ID conflict"
+			"identity-conflict": "Workspace ID conflict",
+			"uninitialized": "Needs initialization"
 		},
 		"conflict": {
 			"title": "Read-only: this Workspace ID is used by another path",
@@ -103,6 +104,10 @@
 			"identity-conflict": {
 				"title": "This Workspace ID is duplicated",
 				"description": "The Workspace remains available for inspection, but configuration is read-only."
+			},
+			"uninitialized": {
+				"title": "Initialize One workspace",
+				"description": "This directory is linked to the workspace. Initialize it to manage its projects and configuration."
 			}
 		},
 		"forget": {
@@ -124,7 +129,10 @@
 			"title": "Workspace not found",
 			"description": "This registry entry no longer exists. Return home to choose another workspace.",
 			"back": "Choose a Workspace"
-		}
+		},
+		"initialize": "Initialize workspace",
+		"initializeName": "Workspace name",
+		"initializeDescription": "Create one.manifest.toml in {{path}} with the workspace name and identity."
 	},
 	"notFound": {
 		"title": "Page not found",
@@ -546,5 +554,66 @@
 		"projectMissing": "Project not found",
 		"projectMissingDescription": "This project may have been renamed or removed. Select another project from the sidebar.",
 		"backToWorkspace": "Back to workspace"
+	},
+	"git": {
+		"title": "Worktrees",
+		"refresh": "Refresh",
+		"create": "Create worktree",
+		"main": "Main worktree",
+		"current": "Current workspace",
+		"bare": "Bare repository",
+		"detached": "Detached HEAD",
+		"dirty": "Local changes",
+		"clean": "Clean",
+		"missing": "Missing directory",
+		"prunable": "Stale registration",
+		"locked": "Locked",
+		"openWorkspace": "Open workspace",
+		"openDirectory": "Open folder",
+		"openDirectoryFor": "Open folder {{path}}",
+		"remove": "Remove",
+		"removeTitle": "Remove worktree",
+		"removeDescription": "This removes the worktree directory and preserves its branch.",
+		"removeDirty": "This directory has local changes. Commit, stash, or resolve them before removing it.",
+		"created": "Created worktree {{path}}.",
+		"removed": "Removed worktree {{path}}.",
+		"createDescription": "Choose a branch or commit and a new working directory.",
+		"mode": "Checkout mode",
+		"newBranch": "Create new branch",
+		"existingBranch": "Use existing branch",
+		"branch": "Branch name",
+		"startPoint": "Starting branch or commit",
+		"path": "Destination directory",
+		"destination": "Will create at {{path}}",
+		"cancel": "Cancel",
+		"working": "Working…",
+		"empty": "This repository has no worktrees",
+		"failed": "The operation failed. Refresh and try again.",
+		"invalidPath": "Choose a valid absolute directory path.",
+		"repositories": "Git repositories",
+		"repositoryWorktrees": "{{name}} · Worktrees",
+		"linkRepository": "Add workspace",
+		"repositoriesEmpty": "No Git repositories linked",
+		"repositoriesEmptyDescription": "Choose a local repository, or clone a remote URL to manage its worktrees.",
+		"openRepository": "Open repository",
+		"locateRepository": "Relocate workspace",
+		"forgetRepository": "Unlink",
+		"forgetRepositoryDescription": "Remove the association for {{name}} from One.",
+		"repositoryLastOpened": "Last opened · {{date}}",
+		"locateRepositoryDescription": "Choose the current directory of this workspace.",
+		"linkRepositoryDescription": "Open a local Git repository or clone a remote repository as a One workspace.",
+		"repositorySource": "Repository source",
+		"localRepository": "Existing local repository",
+		"cloneRepository": "Clone remote repository",
+		"repositoryURL": "Remote repository URL",
+		"cloneAuthentication": "Authenticate with system Git credentials or your SSH agent.",
+		"repositoryDirectory": "Repository directory",
+		"cloneDestination": "Local destination",
+		"browse": "Browse",
+		"cloning": "Cloning repository. It will be linked when complete…",
+		"saveRepository": "Open workspace",
+		"cloneAssociationWarning": "Repository cloned to {{path}}, but linking failed. Link the local repository to retry. {{error}}",
+		"pushURL": "Push URL · {{url}}",
+		"selectWorktree": "Select worktree"
 	}
 }

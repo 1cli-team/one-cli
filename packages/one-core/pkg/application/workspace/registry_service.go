@@ -20,6 +20,7 @@ const WorkspaceRegistrySchema = "one-cli/workspaces/v1"
 
 const (
 	WorkspaceStatusReady            = "ready"
+	WorkspaceStatusUninitialized    = "uninitialized"
 	WorkspaceStatusMissing          = "missing"
 	WorkspaceStatusInvalid          = "invalid"
 	WorkspaceStatusIdentityMissing  = "identity-missing"
@@ -51,13 +52,26 @@ type WorkspaceRegistryResponse struct {
 // ProjectCount reflect the current manifest when it can be read; LastSeenAt
 // remains the durable observation timestamp.
 type RegisteredWorkspace struct {
-	EntryID      string    `json:"entryId"`
-	ID           string    `json:"id,omitempty"`
-	Name         string    `json:"name"`
-	Root         string    `json:"root"`
-	Status       string    `json:"status"`
-	ProjectCount int       `json:"projectCount"`
-	LastSeenAt   time.Time `json:"lastSeenAt"`
+	EntryID      string                        `json:"entryId"`
+	ID           string                        `json:"id,omitempty"`
+	Name         string                        `json:"name"`
+	Root         string                        `json:"root"`
+	Status       string                        `json:"status"`
+	ProjectCount int                           `json:"projectCount"`
+	LastSeenAt   time.Time                     `json:"lastSeenAt"`
+	GitCommonDir string                        `json:"gitCommonDir,omitempty"`
+	WorktreeID   string                        `json:"worktreeId,omitempty"`
+	Worktrees    []RegisteredWorktree          `json:"worktrees,omitempty"`
+	Aliases      []workspacecore.RegistryAlias `json:"aliases,omitempty"`
+}
+
+type RegisteredWorktree struct {
+	ID           string `json:"id"`
+	Root         string `json:"root"`
+	Branch       string `json:"branch"`
+	Main         bool   `json:"main"`
+	Status       string `json:"status"`
+	ProjectCount int    `json:"projectCount"`
 }
 
 // ResolvedWorkspace is the trusted server-side result of resolving an opaque
@@ -71,19 +85,34 @@ type ResolvedWorkspace struct {
 // RegistryService owns the machine-local Workspace observation, listing and
 // trusted-resolution use cases.
 type RegistryService struct {
-	repository registryport.Repository
+	repository       registryport.Repository
+	worktreeIdentity func(string) (string, error)
+	git              registryport.GitInspector
+	legacyGit        func() ([]registryport.LegacyRepository, error)
+}
+
+// RegistryOptions supplies optional repository identity discovery.
+type RegistryOptions struct {
+	WorktreeIdentity func(string) (string, error)
+	Git              registryport.GitInspector
+	LegacyGit        func() ([]registryport.LegacyRepository, error)
 }
 
 // NewRegistryService constructs the Workspace registry use-case boundary.
 func NewRegistryService(
 	repository registryport.Repository,
+	options ...RegistryOptions,
 ) (*RegistryService, error) {
 	if repository == nil {
 		return nil, errors.New("workspace registry: repository is required")
 	}
-	return &RegistryService{
-		repository: repository,
-	}, nil
+	service := &RegistryService{repository: repository}
+	if len(options) > 0 {
+		service.worktreeIdentity = options[0].WorktreeIdentity
+		service.git = options[0].Git
+		service.legacyGit = options[0].LegacyGit
+	}
+	return service, nil
 }
 
 // Observe validates root as a One Workspace and atomically records that it
@@ -99,8 +128,16 @@ func (s *RegistryService) Observe(
 	if err != nil {
 		return RegisteredWorkspace{}, fmt.Errorf("%w: %v", ErrRegistryEntryUnavailable, err)
 	}
+	if _, err := s.load(ctx); err != nil {
+		return RegisteredWorkspace{}, err
+	}
 	inspection := inspectWorkspaceRoot(canonicalRoot)
-	if inspection.status == WorkspaceStatusMissing || inspection.status == WorkspaceStatusInvalid {
+	gitRoot := false
+	if s.git != nil {
+		_, err := s.git(ctx, canonicalRoot)
+		gitRoot = err == nil
+	}
+	if inspection.status == WorkspaceStatusMissing || (inspection.status == WorkspaceStatusInvalid && !gitRoot) || (inspection.status == WorkspaceStatusUninitialized && !gitRoot) {
 		return RegisteredWorkspace{}, fmt.Errorf(
 			"%w: workspace %q has status %s",
 			ErrRegistryEntryUnavailable,
@@ -119,6 +156,19 @@ func (s *RegistryService) Observe(
 	err = s.repository.Update(ctx, func(registry *workspacecore.Registry) error {
 		registry.Version = workspacecore.RegistrySchemaVersion
 
+		for index := range registry.Workspaces {
+			for _, tree := range registry.Workspaces[index].Worktrees {
+				if rootsReferToSamePath(tree.Root, canonicalRoot) {
+					registry.Workspaces[index].LastSeenAt = now
+					if registry.Workspaces[index].WorkspaceID == "" && workspaceID != "" {
+						registry.Workspaces[index].WorkspaceID = workspaceID
+					}
+					registry.Workspaces[index].LastSeenBy = source
+					observedEntryID = registry.Workspaces[index].EntryID
+					return nil
+				}
+			}
+		}
 		for index := range registry.Workspaces {
 			if rootsReferToSamePath(registry.Workspaces[index].Root, canonicalRoot) {
 				updateObservedEntry(&registry.Workspaces[index], canonicalRoot, workspaceID, name, source, now)
@@ -165,17 +215,23 @@ func (s *RegistryService) Observe(
 		return RegisteredWorkspace{}, err
 	}
 
-	registry, err := s.repository.Load(ctx)
+	registry, err := s.load(ctx)
 	if err != nil {
 		return RegisteredWorkspace{}, err
 	}
-	response, _ := inspectRegistry(registry, canonicalRoot)
-	for _, registered := range response.Workspaces {
-		if registered.EntryID == observedEntryID {
-			return registered, nil
+	entry, checkout, ok := findRegistryEntry(registry, observedEntryID)
+	if !ok {
+		return RegisteredWorkspace{}, ErrRegistryEntryNotFound
+	}
+	longest := 0
+	for _, tree := range entry.Worktrees {
+		relative, err := filepath.Rel(tree.Root, canonicalRoot)
+		if err == nil && filepath.IsLocal(relative) && len(tree.Root) > longest {
+			checkout = tree.ID
+			longest = len(tree.Root)
 		}
 	}
-	return RegisteredWorkspace{}, fmt.Errorf("%w: %s", ErrRegistryEntryNotFound, observedEntryID)
+	return s.location(ctx, entry.EntryID+"~"+checkout)
 }
 
 // List returns every registered Workspace with a live status computed from
@@ -186,7 +242,7 @@ func (s *RegistryService) List(
 	ctx context.Context,
 	currentRoot string,
 ) (WorkspaceRegistryResponse, error) {
-	registry, err := s.repository.Load(ctx)
+	registry, err := s.load(ctx)
 	if err != nil {
 		return WorkspaceRegistryResponse{}, err
 	}
@@ -209,13 +265,13 @@ func (s *RegistryService) List(
 			return WorkspaceRegistryResponse{}, err
 		}
 	}
-	response, _ := inspectRegistry(registry, canonicalCurrent)
+	response, _ := s.inspectRegistry(ctx, registry, canonicalCurrent)
 	return response, nil
 }
 
 func registryHasDefinitelyMissingRoot(registry workspacecore.Registry) bool {
 	for _, entry := range registry.Workspaces {
-		if registryRootDefinitelyMissing(entry.Root) {
+		if entry.GitCommonDir == "" && registryRootDefinitelyMissing(entry.Root) {
 			return true
 		}
 	}
@@ -225,7 +281,7 @@ func registryHasDefinitelyMissingRoot(registry workspacecore.Registry) bool {
 func pruneDefinitelyMissingRoots(registry *workspacecore.Registry) bool {
 	retained := make([]workspacecore.RegistryEntry, 0, len(registry.Workspaces))
 	for _, entry := range registry.Workspaces {
-		if registryRootDefinitelyMissing(entry.Root) {
+		if entry.GitCommonDir == "" && registryRootDefinitelyMissing(entry.Root) {
 			continue
 		}
 		retained = append(retained, entry)
@@ -240,6 +296,10 @@ func pruneDefinitelyMissingRoots(registry *workspacecore.Registry) bool {
 func cloneWorkspaceRegistry(registry workspacecore.Registry) workspacecore.Registry {
 	cloned := registry
 	cloned.Workspaces = append([]workspacecore.RegistryEntry(nil), registry.Workspaces...)
+	for index := range cloned.Workspaces {
+		cloned.Workspaces[index].Worktrees = append([]workspacecore.RegistryWorktree(nil), registry.Workspaces[index].Worktrees...)
+		cloned.Workspaces[index].Aliases = append([]workspacecore.RegistryAlias(nil), registry.Workspaces[index].Aliases...)
+	}
 	if cloned.Workspaces == nil {
 		cloned.Workspaces = []workspacecore.RegistryEntry{}
 	}
@@ -295,52 +355,36 @@ func (s *RegistryService) resolve(
 	entryID string,
 	allowIdentityConflict bool,
 ) (ResolvedWorkspace, error) {
-	entryID = strings.TrimSpace(entryID)
-	registry, err := s.repository.Load(ctx)
+
+	location, err := s.location(ctx, entryID)
 	if err != nil {
 		return ResolvedWorkspace{}, err
 	}
-	response, manifests := inspectRegistry(registry, "")
-	for _, registered := range response.Workspaces {
-		if registered.EntryID != entryID {
-			continue
-		}
-		switch registered.Status {
-		case WorkspaceStatusIdentityConflict:
-			if !allowIdentityConflict {
-				return ResolvedWorkspace{}, fmt.Errorf(
-					"%w: registry entry %q",
-					ErrRegistryEntryIdentityConflict,
-					entryID,
-				)
-			}
-			fallthrough
-		case WorkspaceStatusReady:
-			manifest := manifests[entryID]
-			if manifest == nil {
-				return ResolvedWorkspace{}, fmt.Errorf(
-					"%w: registry entry %q has no manifest",
-					ErrRegistryEntryUnavailable,
-					entryID,
-				)
-			}
-			return ResolvedWorkspace{RegisteredWorkspace: registered, Manifest: manifest}, nil
-		default:
-			return ResolvedWorkspace{}, fmt.Errorf(
-				"%w: registry entry %q has status %s",
-				ErrRegistryEntryUnavailable,
-				entryID,
-				registered.Status,
-			)
-		}
+	if location.Status == WorkspaceStatusIdentityConflict && !allowIdentityConflict {
+		return ResolvedWorkspace{}, fmt.Errorf("%w: workspace %q at %s", ErrRegistryEntryIdentityConflict, entryID, location.Root)
 	}
-	return ResolvedWorkspace{}, fmt.Errorf("%w: %s", ErrRegistryEntryNotFound, entryID)
+	if location.Status != WorkspaceStatusReady && !(allowIdentityConflict && location.Status == WorkspaceStatusIdentityConflict) {
+		return ResolvedWorkspace{}, fmt.Errorf("%w: workspace %q at %s has status %s", ErrRegistryEntryUnavailable, entryID, location.Root, location.Status)
+	}
+	manifest, err := workspacecore.ReadManifest(location.Root)
+	if err != nil {
+		return ResolvedWorkspace{}, err
+	}
+	return ResolvedWorkspace{RegisteredWorkspace: location, Manifest: manifest}, nil
 }
 
 // Forget removes only the local registration. It never deletes or mutates the
 // Workspace directory.
 func (s *RegistryService) Forget(ctx context.Context, entryID string) error {
-	entryID = strings.TrimSpace(entryID)
+	registry, err := s.load(ctx)
+	if err != nil {
+		return err
+	}
+	entry, _, ok := findRegistryEntry(registry, entryID)
+	if !ok {
+		return ErrRegistryEntryNotFound
+	}
+	entryID = entry.EntryID
 	return s.repository.Update(ctx, func(registry *workspacecore.Registry) error {
 		for index := range registry.Workspaces {
 			if registry.Workspaces[index].EntryID != entryID {
@@ -419,6 +463,9 @@ func inspectWorkspaceRoot(root string) rootInspection {
 		return rootInspection{status: WorkspaceStatusInvalid}
 	}
 	if _, err := os.Stat(workspacecore.ManifestPath(root)); err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			return rootInspection{status: WorkspaceStatusUninitialized}
+		}
 		return rootInspection{status: WorkspaceStatusInvalid}
 	}
 	manifest, err := workspacecore.ReadManifest(root)
@@ -439,7 +486,8 @@ func inspectWorkspaceRoot(root string) rootInspection {
 	return inspection
 }
 
-func inspectRegistry(
+func (s *RegistryService) inspectRegistry(
+	ctx context.Context,
 	registry workspacecore.Registry,
 	currentRoot string,
 ) (WorkspaceRegistryResponse, map[string]*workspacecore.Manifest) {
@@ -460,6 +508,8 @@ func inspectRegistry(
 			Status:       inspection.status,
 			LastSeenAt:   entry.LastSeenAt,
 			ProjectCount: 0,
+			GitCommonDir: entry.GitCommonDir,
+			Aliases:      entry.Aliases,
 		}
 		if registered.Name == "" {
 			registered.Name = fallbackWorkspaceName(entry.Root)
@@ -480,6 +530,52 @@ func inspectRegistry(
 				registered.Status = WorkspaceStatusIdentityConflict
 			}
 		}
+		branches := make(map[string]registryport.GitWorktree)
+		if s.git != nil && entry.GitCommonDir != "" {
+			info, err := s.git(ctx, entry.GitCommonDir)
+			if err == nil {
+				for _, tree := range info.Worktrees {
+					branches[tree.ID] = tree
+				}
+			}
+		}
+		for index, tree := range entry.Worktrees {
+			state := inspectWorkspaceRoot(tree.Root)
+			if state.id != "" && entry.WorkspaceID != "" && state.id != entry.WorkspaceID {
+				state.status = WorkspaceStatusIdentityConflict
+			}
+			gitTree := branches[tree.ID]
+			count := 0
+			if state.manifest != nil {
+				count = len(state.manifest.Projects)
+			}
+			registered.Worktrees = append(registered.Worktrees, RegisteredWorktree{ID: tree.ID, Root: tree.Root, Branch: gitTree.Branch, Main: index == 0, Status: state.status, ProjectCount: count})
+		}
+		if len(registered.Worktrees) > 0 {
+			selected := registered.Worktrees[0]
+			if selected.Status == WorkspaceStatusMissing {
+				for _, tree := range registered.Worktrees {
+					if tree.Status == WorkspaceStatusReady {
+						selected = tree
+						break
+					}
+				}
+			}
+			registered.WorktreeID = selected.ID
+			registered.Root = selected.Root
+			registered.Status = selected.Status
+			registered.ProjectCount = selected.ProjectCount
+			if selected.Root != entry.Root {
+				manifests[entry.EntryID] = inspectWorkspaceRoot(selected.Root).manifest
+			}
+		}
+		if currentRoot != "" {
+			for _, tree := range entry.Worktrees {
+				if rootsReferToSamePath(tree.Root, currentRoot) {
+					response.CurrentEntryID = entry.EntryID
+				}
+			}
+		}
 		if currentRoot != "" && rootsReferToSamePath(entry.Root, currentRoot) {
 			if response.CurrentEntryID == "" {
 				response.CurrentEntryID = entry.EntryID
@@ -490,6 +586,9 @@ func inspectRegistry(
 
 	for _, indexes := range identityIndexes {
 		if len(indexes) < 2 {
+			continue
+		}
+		if s.sharedWorktreeIdentity(response.Workspaces, indexes) {
 			continue
 		}
 		for _, index := range indexes {
@@ -560,4 +659,109 @@ func fallbackWorkspaceName(root string) string {
 		return root
 	}
 	return name
+}
+
+// Only Git-verified worktrees at the same manifest location can share identity.
+func (s *RegistryService) sharedWorktreeIdentity(entries []RegisteredWorkspace, indexes []int) bool {
+	if s.worktreeIdentity == nil {
+		return false
+	}
+	identity := ""
+	for _, index := range indexes {
+		entry := entries[index]
+		if entry.Status != WorkspaceStatusReady {
+			return false
+		}
+		current, err := s.worktreeIdentity(entry.Root)
+		if err != nil || current == "" || (identity != "" && current != identity) {
+			return false
+		}
+		identity = current
+	}
+	return true
+}
+
+func (s *RegistryService) location(ctx context.Context, requested string) (RegisteredWorkspace, error) {
+	registry, err := s.load(ctx)
+	if err != nil {
+		return RegisteredWorkspace{}, err
+	}
+	entry, checkout, ok := findRegistryEntry(registry, requested)
+	if !ok {
+		return RegisteredWorkspace{}, ErrRegistryEntryNotFound
+	}
+	response, _ := s.inspectRegistry(ctx, registry, "")
+	for _, item := range response.Workspaces {
+		if item.EntryID != entry.EntryID {
+			continue
+		}
+		if checkout == "" {
+			return item, nil
+		}
+		for _, tree := range item.Worktrees {
+			if tree.ID != checkout {
+				continue
+			}
+			item.Root, item.ProjectCount, item.WorktreeID = tree.Root, tree.ProjectCount, tree.ID
+			if item.Status != WorkspaceStatusIdentityConflict {
+				item.Status = tree.Status
+			}
+			return item, nil
+		}
+		return RegisteredWorkspace{}, ErrRegistryEntryUnavailable
+	}
+	return RegisteredWorkspace{}, ErrRegistryEntryNotFound
+}
+
+func (s *RegistryService) Initialize(ctx context.Context, id, name string) (RegisteredWorkspace, error) {
+	location, err := s.location(ctx, id)
+	if err != nil {
+		return RegisteredWorkspace{}, err
+	}
+	if location.Status != WorkspaceStatusUninitialized {
+		return location, nil
+	}
+	if s.git != nil {
+		info, err := s.git(ctx, location.Root)
+		if err == nil {
+			for _, tree := range info.Worktrees {
+				if tree.Bare && rootsReferToSamePath(tree.Root, location.Root) {
+					return RegisteredWorkspace{}, ErrRegistryEntryUnavailable
+				}
+			}
+		}
+	}
+	workspaceID := location.ID
+	if workspaceID == "" {
+		workspaceID, err = generateRegistryEntryID()
+		if err != nil {
+			return RegisteredWorkspace{}, err
+		}
+	}
+	name = strings.TrimSpace(name)
+	if name == "" {
+		name = location.Name
+	}
+	manifest := &workspacecore.Manifest{Version: workspacecore.ManifestVersion, Workspace: &workspacecore.ManifestWorkspace{ID: workspaceID, Name: name}, Projects: []workspacecore.ManifestProject{}}
+	data, err := workspacecore.MarshalManifest(manifest)
+	if err != nil {
+		return RegisteredWorkspace{}, err
+	}
+	path := workspacecore.ManifestPath(location.Root)
+	file, err := os.OpenFile(path, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0644)
+	if errors.Is(err, os.ErrExist) {
+		return s.Observe(ctx, location.Root, "initialize")
+	}
+	if err != nil {
+		return RegisteredWorkspace{}, err
+	}
+	if _, err := file.Write(data); err != nil {
+		file.Close()
+		os.Remove(path)
+		return RegisteredWorkspace{}, err
+	}
+	if err := file.Close(); err != nil {
+		return RegisteredWorkspace{}, err
+	}
+	return s.Observe(ctx, location.Root, "initialize")
 }

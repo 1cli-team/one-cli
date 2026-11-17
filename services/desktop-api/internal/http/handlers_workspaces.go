@@ -15,6 +15,36 @@ import (
 func registerWorkspacesRoutes(mux *http.ServeMux, opts MuxOpts) {
 	mux.HandleFunc("GET /workspaces", handleListWorkspaces(opts))
 	mux.HandleFunc("DELETE /workspaces/{entryId}", handleForgetWorkspace(opts))
+	mux.HandleFunc("PUT /workspaces/{entryId}/location", func(w http.ResponseWriter, r *http.Request) {
+		var input struct {
+			Path string `json:"path"`
+		}
+		if err := decodeJSON(r, &input); err != nil {
+			writeError(w, http.StatusBadRequest, cliErrors.ONE_CLI_ERROR, err.Error(), nil)
+			return
+		}
+		result, err := opts.RegistryService.Relocate(r.Context(), r.PathValue("entryId"), input.Path)
+		if err != nil {
+			writeWorkspaceRegistryErr(w, r.PathValue("entryId"), err)
+			return
+		}
+		writeJSON(w, http.StatusOK, result)
+	})
+	mux.HandleFunc("POST /workspaces/{entryId}/initialize", func(w http.ResponseWriter, r *http.Request) {
+		var input struct {
+			Name string `json:"name"`
+		}
+		if err := decodeJSON(r, &input); err != nil {
+			writeError(w, http.StatusBadRequest, cliErrors.ONE_CLI_ERROR, err.Error(), nil)
+			return
+		}
+		result, err := opts.RegistryService.Initialize(r.Context(), r.PathValue("entryId"), input.Name)
+		if err != nil {
+			writeWorkspaceRegistryErr(w, r.PathValue("entryId"), err)
+			return
+		}
+		writeJSON(w, http.StatusOK, result)
+	})
 
 	mux.HandleFunc("GET /workspaces/{entryId}/overview",
 		handleResolvedWorkspaceRead(opts, handleGetWorkspaceOverview))

@@ -81,7 +81,8 @@
 			"missing": "目录不存在",
 			"invalid": "Manifest 无效",
 			"identity-missing": "缺少 Workspace ID",
-			"identity-conflict": "Workspace ID 冲突"
+			"identity-conflict": "Workspace ID 冲突",
+			"uninitialized": "待初始化"
 		},
 		"conflict": {
 			"title": "只读：另一个目录正在使用相同的 Workspace ID",
@@ -103,6 +104,10 @@
 			"identity-conflict": {
 				"title": "Workspace ID 重复",
 				"description": "Workspace 仍可查看，但为了避免 Profile 绑定串用，配置保持只读。"
+			},
+			"uninitialized": {
+				"title": "初始化 One 工作区",
+				"description": "这个目录已关联到工作区。初始化后即可管理其中的项目和配置。"
 			}
 		},
 		"forget": {
@@ -124,7 +129,10 @@
 			"title": "找不到 Workspace",
 			"description": "这条登记记录已不存在，请返回首页选择其他工作区。",
 			"back": "选择 Workspace"
-		}
+		},
+		"initialize": "初始化工作区",
+		"initializeName": "工作区名称",
+		"initializeDescription": "将在 {{path}} 中创建 one.manifest.toml，登记工作区名称和标识。"
 	},
 	"notFound": {
 		"title": "页面不存在",
@@ -546,5 +554,66 @@
 		"projectMissing": "项目不存在",
 		"projectMissingDescription": "此项目可能已被重命名或移除，请从侧边栏选择其他项目。",
 		"backToWorkspace": "返回工作区"
+	},
+	"git": {
+		"title": "Worktrees",
+		"refresh": "刷新",
+		"create": "创建工作树",
+		"main": "主工作树",
+		"current": "当前工作区",
+		"bare": "裸仓库",
+		"detached": "独立提交",
+		"dirty": "有本地修改",
+		"clean": "干净",
+		"missing": "目录缺失",
+		"prunable": "关联记录已失效",
+		"locked": "已锁定",
+		"openWorkspace": "打开工作区",
+		"openDirectory": "打开目录",
+		"openDirectoryFor": "打开目录 {{path}}",
+		"remove": "移除",
+		"removeTitle": "移除工作树",
+		"removeDescription": "此操作会删除工作树目录，保留对应分支。",
+		"removeDirty": "此目录有本地修改，请先提交、暂存或自行处理后再移除。",
+		"created": "已创建工作树 {{path}}。",
+		"removed": "已移除工作树 {{path}}。",
+		"createDescription": "选择分支或提交，并指定新的工作目录。",
+		"mode": "创建方式",
+		"newBranch": "创建新分支",
+		"existingBranch": "使用已有分支",
+		"branch": "分支名称",
+		"startPoint": "起始分支或提交",
+		"path": "目标目录",
+		"destination": "将创建到 {{path}}",
+		"cancel": "取消",
+		"working": "处理中…",
+		"empty": "此仓库没有工作树",
+		"failed": "操作失败，请刷新后重试。",
+		"invalidPath": "请选择有效的绝对目录路径。",
+		"repositories": "Git 仓库",
+		"repositoryWorktrees": "{{name}} · Worktrees",
+		"linkRepository": "添加工作区",
+		"repositoriesEmpty": "还没有关联 Git 仓库",
+		"repositoriesEmptyDescription": "选择本地仓库，或输入远程地址克隆后管理它的工作树。",
+		"openRepository": "打开仓库",
+		"locateRepository": "重新定位工作区",
+		"forgetRepository": "解除关联",
+		"forgetRepositoryDescription": "将从 One 中移除仓库 {{name}} 的关联记录。",
+		"repositoryLastOpened": "最近打开 · {{date}}",
+		"locateRepositoryDescription": "选择工作区当前所在的目录。",
+		"linkRepositoryDescription": "打开本地 Git 仓库，或克隆远程仓库为 One 工作区。",
+		"repositorySource": "仓库来源",
+		"localRepository": "已有本地仓库",
+		"cloneRepository": "克隆远程仓库",
+		"repositoryURL": "远程仓库地址",
+		"cloneAuthentication": "使用系统 Git 凭据或 SSH agent 认证。",
+		"repositoryDirectory": "仓库目录",
+		"cloneDestination": "本地目标目录",
+		"browse": "浏览",
+		"cloning": "正在克隆仓库，完成后会自动关联…",
+		"saveRepository": "打开工作区",
+		"cloneAssociationWarning": "仓库已克隆到 {{path}}，关联失败。请通过本地仓库入口重试关联。{{error}}",
+		"pushURL": "推送地址 · {{url}}",
+		"selectWorktree": "切换分支工作目录"
 	}
 }

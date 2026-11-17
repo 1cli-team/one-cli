@@ -10,6 +10,7 @@ export function App() {
 	const { pathname, search } = useLocation();
 	const entryId = useMatch("/workspaces/:entryId/*")?.params.entryId;
 	const workspaceMode = Boolean(entryId);
+	const detailMode = workspaceMode;
 	const credentialsMode = Boolean(useMatch("/settings/credentials"));
 	const [mobileOpen, setMobileOpen] = useState(false);
 	const homeTo = useRef("/");
@@ -39,14 +40,14 @@ export function App() {
 					onScroll={(event) => scrollPositions.current.set(pathname, event.currentTarget.scrollTop)}
 					className={cn(
 						"min-h-0 min-w-0 flex-1",
-						workspaceMode ? "overflow-hidden" : "overflow-y-auto p-4 ud-md:p-6",
+						detailMode ? "overflow-hidden" : "overflow-y-auto p-4 ud-md:p-6",
 					)}
 				>
 					<div
 						className={cn(
 							"w-full",
-							(workspaceMode || credentialsMode) && "h-full min-h-0",
-							!workspaceMode && "mx-auto max-w-[1600px]",
+							(detailMode || credentialsMode) && "h-full min-h-0",
+							!detailMode && "mx-auto max-w-[1600px]",
 						)}
 					>
 						<Outlet />

@@ -2,7 +2,7 @@ import { DesktopSettings } from "@/lib/desktop/DesktopSettings";
 import { AlertTriangle, ArrowLeft, FolderX, RefreshCw } from "lucide-react";
 import type React from "react";
 import { useTranslation } from "react-i18next";
-import { Navigate, type RouteObject, useLocation, useParams } from "react-router-dom";
+import { Navigate, type RouteObject, useLocation, useParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { PageHeader, StatePanel } from "@/components/ui/page-layout";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -15,6 +15,10 @@ import { legacyWorkspaceLocation, projectPath, workspacePath } from "./paths";
 import { AccountSettings } from "@/features/infisical-session/AccountSettings";
 import { GlobalVariables } from "@/features/global-variables/GlobalVariables";
 
+import { InitializeWorkspace } from "@/features/workspace-navigation/InitializeWorkspace";
+import { AddWorkspaceDialog } from "@/features/workspace-navigation/AddWorkspaceDialog";
+import { useState } from "react";
+import { Worktrees } from "@/features/git/Worktrees";
 import { WorkspaceHome } from "@/pages/WorkspaceHome";
 import type { WorkspaceRegistryEntry } from "@/types/api";
 
@@ -56,7 +60,7 @@ const LegacyGlobalRedirect: React.FC<{ to: string }> = ({ to }) => {
 const WorkspaceRoute: React.FC = () => {
 	const { entryId = "", projectName } = useParams();
 	const { search } = useLocation();
-	const { registry, workspace, overview } = useWorkspace(entryId);
+	const { registry, workspace, overview, contextEntryId } = useWorkspace(entryId);
 
 	if (registry.isLoading && !registry.data)
 		return (
@@ -98,11 +102,11 @@ const WorkspaceRoute: React.FC = () => {
 	const projects = overview.data.projects ?? [];
 	if (!projectName && projects.length) {
 		const requested = new URLSearchParams(search).get("project");
-		const location = legacyWorkspaceLocation(entryId, search);
+		const location = legacyWorkspaceLocation(contextEntryId, search);
 		return (
 			<Navigate
 				replace
-				to={{ ...location, pathname: projectPath(entryId, requested || projects[0].name) }}
+				to={{ ...location, pathname: projectPath(contextEntryId, requested || projects[0].name) }}
 			/>
 		);
 	}
@@ -110,14 +114,14 @@ const WorkspaceRoute: React.FC = () => {
 	if (projectName && !project)
 		return (
 			<WorkspaceStateLayout>
-				<UnknownProject entryId={entryId} />
+				<UnknownProject entryId={contextEntryId} />
 			</WorkspaceStateLayout>
 		);
 
 	return (
 		<Overview
 			project={project}
-			workspaceEntryId={entryId}
+			workspaceEntryId={contextEntryId}
 			readOnly={workspace.status === "identity-conflict"}
 		/>
 	);
@@ -179,6 +183,8 @@ const WorkspaceRegistryError: React.FC<{ onRetry(): void }> = ({ onRetry }) => {
 
 const WorkspaceStatusPage: React.FC<{ workspace: WorkspaceRegistryEntry }> = ({ workspace }) => {
 	const { t } = useTranslation();
+	const [relocating, setRelocating] = useState(false);
+	const navigate = useNavigate();
 	return (
 		<div className="flex flex-col gap-6">
 			<PageHeader title={workspace.name} />
@@ -189,6 +195,29 @@ const WorkspaceStatusPage: React.FC<{ workspace: WorkspaceRegistryEntry }> = ({ 
 				description={t(`workspaces.state.${workspace.status}.description`)}
 			>
 				<p className="w-full text-xs text-muted-foreground">{t("workspaces.forget.pageHint")}</p>
+				{workspace.status === "uninitialized" && <InitializeWorkspace workspace={workspace} />}
+				{workspace.gitCommonDir && (
+					<Button variant="outline" asChild>
+						<EnvironmentLink to={`${workspacePath(workspace.entryId)}/git/worktrees`}>
+							{t("git.title")}
+						</EnvironmentLink>
+					</Button>
+				)}
+				{workspace.status === "missing" && (
+					<Button variant="outline" onClick={() => setRelocating(true)}>
+						{t("git.locateRepository")}
+					</Button>
+				)}
+				{relocating && (
+					<AddWorkspaceDialog
+						workspace={workspace}
+						onClose={() => setRelocating(false)}
+						onSaved={(entry) => {
+							setRelocating(false);
+							navigate(workspacePath(entry.entryId, entry.worktreeId));
+						}}
+					/>
+				)}
 				<Button asChild variant="outline">
 					<EnvironmentLink to="/">
 						<ArrowLeft />
@@ -245,6 +274,8 @@ export const routes: RouteObject[] = [
 		),
 		children: [
 			{ index: true, element: <WorkspaceHome /> },
+			{ path: "git/repositories", element: <Navigate replace to="/" /> },
+			{ path: "git/repositories/:repositoryId", element: <LegacyRepositoryRedirect /> },
 			{ path: "credentials", element: <LegacyGlobalRedirect to="/settings/credentials" /> },
 			{
 				path: "settings",
@@ -261,6 +292,10 @@ export const routes: RouteObject[] = [
 				children: [
 					{ index: true, element: <WorkspaceRoute /> },
 					{ path: "projects/:projectName", element: <WorkspaceRoute /> },
+					{ path: "git/worktrees", element: <Worktrees /> },
+					{ path: "worktrees/:worktreeId", element: <WorkspaceRoute /> },
+					{ path: "worktrees/:worktreeId/projects/:projectName", element: <WorkspaceRoute /> },
+					{ path: "worktrees/:worktreeId/git/worktrees", element: <Worktrees /> },
 				],
 			},
 			{ path: "workspace/:entryId", element: <LegacyWorkspaceRedirect /> },
@@ -272,3 +307,11 @@ export const routes: RouteObject[] = [
 		],
 	},
 ];
+
+function LegacyRepositoryRedirect() {
+	const { repositoryId = "" } = useParams();
+	const { registry, workspace, contextEntryId } = useWorkspace(repositoryId);
+	if (registry.isLoading) return <WorkspaceLoading />;
+	if (!workspace) return <UnknownWorkspace />;
+	return <Navigate replace to={`${workspacePath(contextEntryId)}/git/worktrees`} />;
+}

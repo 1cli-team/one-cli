@@ -10,6 +10,7 @@ import (
 	catalog "github.com/torchstellar-team/one-cli/packages/one-core/pkg/core/backend"
 	creationmodule "github.com/torchstellar-team/one-cli/packages/one-core/pkg/modules/creation"
 	environmentmodule "github.com/torchstellar-team/one-cli/packages/one-core/pkg/modules/environment"
+	gitmodule "github.com/torchstellar-team/one-cli/packages/one-core/pkg/modules/git"
 	skillsmodule "github.com/torchstellar-team/one-cli/packages/one-core/pkg/modules/skills"
 	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/platform/prompt"
 	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/plugins"
@@ -21,6 +22,7 @@ import (
 // application services, cohesive feature modules, or narrow real ports;
 // vertical modules may compose their built-in adapters internally.
 type Dependencies struct {
+	Git          *gitmodule.Service
 	Runtime      runtimeport.Provider
 	Catalog      *catalog.Catalog
 	Creation     *creationmodule.Service
@@ -40,10 +42,21 @@ func ComposePlugins(installed ...plugins.Plugin) (Dependencies, error) {
 	}
 	backendCatalog, environments := pluginRegistry.Catalog, pluginRegistry.Environments
 	manifest := mustManifestService(backendCatalog)
-	registry := mustWorkspaceRegistryService()
+	var registryOptions workspaceapp.RegistryOptions
+	if pluginRegistry.Git != nil {
+		registryOptions.WorktreeIdentity = pluginRegistry.Git.WorkspaceIdentity
+		registryOptions.Git = pluginRegistry.Git.InspectWorkspaceRepository
+		registryOptions.LegacyGit = gitmodule.LegacyRepositories
+	}
+	registry := mustWorkspaceRegistryService(registryOptions)
+	var gitService *gitmodule.Service
+	if pluginRegistry.Git != nil {
+		gitService = gitmodule.NewService(pluginRegistry.Git, registry)
+	}
 	creation := mustCreationService(backendCatalog, registry)
 
 	return Dependencies{
+		Git:     gitService,
 		Runtime: miseruntime.Provider{},
 		Catalog: backendCatalog,
 
@@ -65,12 +78,12 @@ func mustManifestService(backendCatalog *catalog.Catalog) *manifestapp.Service {
 	return service
 }
 
-func mustWorkspaceRegistryService() *workspaceapp.RegistryService {
+func mustWorkspaceRegistryService(options workspaceapp.RegistryOptions) *workspaceapp.RegistryService {
 	repository, err := workspaceregistrylocal.New()
 	if err != nil {
 		panic(err)
 	}
-	service, err := workspaceapp.NewRegistryService(repository)
+	service, err := workspaceapp.NewRegistryService(repository, options)
 	if err != nil {
 		panic(err)
 	}

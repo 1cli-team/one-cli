@@ -1,36 +1,33 @@
-import { workspacePath } from "@/router/paths";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import { FolderOpen } from "lucide-react";
-import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { http } from "@/lib/http";
-import { chooseWorkspace } from "./runtime";
+import { AddWorkspaceDialog } from "@/features/workspace-navigation/AddWorkspaceDialog";
+import { workspacePath } from "@/router/paths";
 import { useSessionSWRConfig } from "./cache";
+
 export function OpenWorkspace() {
 	const { t } = useTranslation();
-	const [busy, setBusy] = useState(false);
+	const [open, setOpen] = useState(false);
 	const navigate = useNavigate();
 	const { mutate } = useSessionSWRConfig();
-	async function open() {
-		setBusy(true);
-		try {
-			const path = await chooseWorkspace();
-			if (!path) return;
-			const entry = await http.post<{ entryId: string }>("/workspaces", { path });
-			await mutate("/workspaces");
-			navigate(workspacePath(entry.entryId));
-		} catch (e) {
-			toast.error((e as Error).message || String(e));
-		} finally {
-			setBusy(false);
-		}
-	}
 	return (
-		<Button disabled={busy} onClick={() => void open()}>
-			<FolderOpen />
-			{t("desktop.openWorkspace")}
-		</Button>
+		<>
+			<Button onClick={() => setOpen(true)}>
+				<FolderOpen />
+				{t("desktop.openWorkspace")}
+			</Button>
+			{open && (
+				<AddWorkspaceDialog
+					onClose={() => setOpen(false)}
+					onSaved={(workspace) => {
+						setOpen(false);
+						void mutate("/workspaces");
+						navigate(workspacePath(workspace.entryId, workspace.worktreeId));
+					}}
+				/>
+			)}
+		</>
 	);
 }
