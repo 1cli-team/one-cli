@@ -1,5 +1,6 @@
 import {
 	AppWindow,
+	ClipboardList,
 	ArrowLeft,
 	ChevronRight,
 	House,
@@ -195,6 +196,12 @@ function SettingsSidebar({ homeTo }: { homeTo: string }) {
 						<span>{t("global.title")}</span>
 					</EnvironmentNavLink>
 				</Button>
+				<Button variant="navigation" size="navigation-compact" className="min-h-9" asChild>
+					<EnvironmentNavLink to="/settings/linear" end>
+						<ClipboardList />
+						<span>{t("linear.settings")}</span>
+					</EnvironmentNavLink>
+				</Button>
 			</nav>
 		</>
 	);
@@ -268,6 +275,18 @@ function WorkspaceSidebar({
 				aria-label={t("projectInspector.projectListLabel")}
 			>
 				{available && !overview.data && !overview.error && <Skeleton className="h-24" />}
+				<Button variant="navigation" size="navigation-compact" asChild>
+					<EnvironmentNavLink
+						to={
+							new URLSearchParams(search).get("group")
+								? `/projects/${encodeURIComponent(new URLSearchParams(search).get("group")!)}/issues`
+								: `/workspaces/${encodeURIComponent(logicalEntryId)}/issues`
+						}
+					>
+						<ClipboardList />
+						<span>{t("linear.issues")}</span>
+					</EnvironmentNavLink>
+				</Button>
 				{overview.error && (
 					<Button variant="outline" onClick={() => void overview.mutate()}>
 						{t("workspaces.retry")}

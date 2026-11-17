@@ -14,6 +14,8 @@ import { useWorkspace } from "@/features/workspace-navigation/useWorkspace";
 import { legacyWorkspaceLocation, projectPath, workspacePath } from "./paths";
 import { AccountSettings } from "@/features/infisical-session/AccountSettings";
 import { GlobalVariables } from "@/features/global-variables/GlobalVariables";
+import { LinearSettings } from "@/features/linear/LinearSettings";
+import { IssuesPage } from "@/features/linear/IssuesPage";
 
 import { InitializeWorkspace } from "@/features/workspace-navigation/InitializeWorkspace";
 import { AddWorkspaceDialog } from "@/features/workspace-navigation/AddWorkspaceDialog";
@@ -278,6 +280,7 @@ export const routes: RouteObject[] = [
 		children: [
 			{ index: true, element: <WorkspaceGroupsPage /> },
 			{ path: "projects/:groupId", element: <WorkspaceGroupsPage /> },
+			{ path: "projects/:groupId/issues", element: <IssuesPage /> },
 			{ path: "workspaces", element: <WorkspaceHome /> },
 			{ path: "git/repositories", element: <Navigate replace to="/" /> },
 			{ path: "git/repositories/:repositoryId", element: <LegacyRepositoryRedirect /> },
@@ -289,6 +292,7 @@ export const routes: RouteObject[] = [
 					{ path: "general", element: <AccountSettings /> },
 					{ path: "desktop", element: <DesktopSettings /> },
 					{ path: "credentials", element: <GlobalVariables /> },
+					{ path: "linear", element: <LinearSettings /> },
 					{ path: ":domain/:backend", element: <LegacySettingsRedirect /> },
 				],
 			},
@@ -298,6 +302,7 @@ export const routes: RouteObject[] = [
 					{ index: true, element: <WorkspaceRoute /> },
 					{ path: "projects/:projectName", element: <WorkspaceRoute /> },
 					{ path: "git/worktrees", element: <Worktrees /> },
+					{ path: "issues", element: <IssuesPage /> },
 					{ path: "worktrees/:worktreeId", element: <WorkspaceRoute /> },
 					{ path: "worktrees/:worktreeId/projects/:projectName", element: <WorkspaceRoute /> },
 					{ path: "worktrees/:worktreeId/git/worktrees", element: <Worktrees /> },

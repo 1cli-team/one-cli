@@ -136,16 +136,15 @@ export function AccountSettings() {
 									{t("session.waiting")}
 								</p>
 								<div className="flex flex-wrap gap-2">
-									<Button asChild>
-										<button
-											onClick={() =>
-												state.data?.login?.url && void openExternal(state.data.login.url)
-											}
-										>
-											<ExternalLink />
-											{t("session.reopen")}
-										</button>
+									<Button
+										onClick={() =>
+											state.data?.login?.url && void openExternal(state.data.login.url)
+										}
+									>
+										<ExternalLink />
+										{t("session.reopen")}
 									</Button>
+
 									<Button
 										variant="outline"
 										disabled={busy}

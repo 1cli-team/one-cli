@@ -25,7 +25,7 @@ export function TopBar({ homeTo, onOpenNavigation }: { homeTo: string; onOpenNav
 	const { t } = useTranslation();
 	const { mode, toggle } = useThemeStore();
 	const { pathname, search } = useLocation();
-	const groupMatch = useMatch("/projects/:groupId");
+	const groupMatch = useMatch("/projects/:groupId/*");
 	const groupId = groupMatch?.params.groupId || new URLSearchParams(search).get("group");
 	const groups = useSWR(groupId ? workspaceGroupsKey : null, getWorkspaceGroups, {
 		revalidateOnFocus: true,
@@ -46,6 +46,7 @@ export function TopBar({ homeTo, onOpenNavigation }: { homeTo: string; onOpenNav
 	const { workspace, overview, available } = useWorkspace(match?.params.entryId);
 	const themeLabel = t(mode === "light" ? "sidebar.themeToDark" : "sidebar.themeToLight");
 	const titles: Record<string, string> = {
+		"/settings/linear": t("linear.settings"),
 		"/": t("groups.title"),
 		"/workspaces": t("groups.allWorkspaces"),
 		"/settings/credentials": t("global.title"),

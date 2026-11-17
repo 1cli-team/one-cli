@@ -7,11 +7,12 @@ import (
 	"github.com/spf13/cobra"
 	gitplugin "github.com/torchstellar-team/one-cli/packages/cli/internal/plugins/git"
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/plugins/infisical"
+	"github.com/torchstellar-team/one-cli/packages/cli/internal/plugins/linear"
 	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/platform/i18n"
 )
 
 func defaultApplication() (*Application, error) {
-	app, err := NewApplication(infisical.New(), gitplugin.New())
+	app, err := NewApplication(infisical.New(), gitplugin.New(), linear.New())
 	if err == nil {
 		app.rootHelp = func() string { return i18n.T("root.help") }
 	}

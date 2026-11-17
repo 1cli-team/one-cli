@@ -1,5 +1,5 @@
 import { FolderOpen, GitBranch, Plus, RefreshCw, Trash2 } from "lucide-react";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import useSWR from "swr";
@@ -28,6 +28,13 @@ import {
 	DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import {
+	Combobox,
+	ComboboxContent,
+	ComboboxInput,
+	ComboboxItem,
+	ComboboxList,
+} from "@/components/ui/combobox";
 import { Label } from "@/components/ui/label";
 import { ErrorNotice, PageHeader, StatePanel } from "@/components/ui/page-layout";
 import {
@@ -333,6 +340,7 @@ function CreateWorktree({
 	const [mode, setMode] = useState("new");
 	const [branch, setBranch] = useState("");
 	const [startPoint, setStartPoint] = useState("HEAD");
+	const contentRef = useRef<HTMLDivElement>(null);
 	const [path, setPath] = useState("");
 	const name = (branch || "worktree").replace(/[<>:"/\\|?*]/g, "-");
 	const destination = path || `${repository.defaultParent}/${name}`;
@@ -343,7 +351,7 @@ function CreateWorktree({
 				if (!open && !busy) onClose();
 			}}
 		>
-			<DialogContent showCloseButton={!busy}>
+			<DialogContent ref={contentRef} showCloseButton={!busy}>
 				<DialogHeader>
 					<DialogTitle>{t("git.create")}</DialogTitle>
 					<DialogDescription>{t("git.createDescription")}</DialogDescription>
@@ -384,19 +392,45 @@ function CreateWorktree({
 					{mode !== "detached" && (
 						<div className="space-y-2">
 							<Label htmlFor="worktree-branch">{t("git.branch")}</Label>
-							<Input
-								id="worktree-branch"
-								required
-								value={branch}
-								disabled={busy}
-								list={mode === "existing" ? "worktree-branches" : undefined}
-								onChange={(event) => setBranch(event.target.value)}
-							/>
-							<datalist id="worktree-branches">
-								{repository.branches.map((name) => (
-									<option key={name} value={name} />
-								))}
-							</datalist>
+							{mode === "existing" ? (
+								<Combobox
+									items={repository.branches}
+									value={repository.branches.includes(branch) ? branch : null}
+									inputValue={branch}
+									onInputValueChange={(value, details) => {
+										if (details.reason === "input-change" || details.reason === "input-clear")
+											setBranch(value);
+									}}
+									onValueChange={(value) => {
+										if (value !== null) setBranch(value);
+									}}
+									disabled={busy}
+								>
+									<ComboboxInput
+										id="worktree-branch"
+										aria-label={t("git.branch")}
+										required
+										disabled={busy}
+									/>
+									<ComboboxContent container={contentRef.current}>
+										<ComboboxList>
+											{(name) => (
+												<ComboboxItem key={name} value={name}>
+													{name}
+												</ComboboxItem>
+											)}
+										</ComboboxList>
+									</ComboboxContent>
+								</Combobox>
+							) : (
+								<Input
+									id="worktree-branch"
+									required
+									value={branch}
+									disabled={busy}
+									onChange={(event) => setBranch(event.target.value)}
+								/>
+							)}
 						</div>
 					)}
 					{mode !== "existing" && (

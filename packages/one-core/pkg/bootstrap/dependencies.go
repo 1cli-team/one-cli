@@ -11,6 +11,7 @@ import (
 	creationmodule "github.com/torchstellar-team/one-cli/packages/one-core/pkg/modules/creation"
 	environmentmodule "github.com/torchstellar-team/one-cli/packages/one-core/pkg/modules/environment"
 	gitmodule "github.com/torchstellar-team/one-cli/packages/one-core/pkg/modules/git"
+	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/modules/issuetracking"
 	skillsmodule "github.com/torchstellar-team/one-cli/packages/one-core/pkg/modules/skills"
 	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/modules/workspacegroups"
 	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/platform/prompt"
@@ -23,17 +24,18 @@ import (
 // application services, cohesive feature modules, or narrow real ports;
 // vertical modules may compose their built-in adapters internally.
 type Dependencies struct {
-	Git          *gitmodule.Service
-	Runtime      runtimeport.Provider
-	Catalog      *catalog.Catalog
-	Creation     *creationmodule.Service
-	Environments *environmentmodule.Service
-	Manifest     *manifestapp.Service
-	Loaders      *secrets.Registry
-	Global       secrets.GlobalLoader
-	Workspaces   *workspaceapp.Service
-	Registry     *workspaceapp.RegistryService
-	Groups       *workspacegroups.Service
+	IssueTracking *issuetracking.Service
+	Git           *gitmodule.Service
+	Runtime       runtimeport.Provider
+	Catalog       *catalog.Catalog
+	Creation      *creationmodule.Service
+	Environments  *environmentmodule.Service
+	Manifest      *manifestapp.Service
+	Loaders       *secrets.Registry
+	Global        secrets.GlobalLoader
+	Workspaces    *workspaceapp.Service
+	Registry      *workspaceapp.RegistryService
+	Groups        *workspacegroups.Service
 }
 
 // ComposePlugins builds an isolated application from explicitly installed plugins.
@@ -56,11 +58,17 @@ func ComposePlugins(installed ...plugins.Plugin) (Dependencies, error) {
 		gitService = gitmodule.NewService(pluginRegistry.Git, registry)
 	}
 	creation := mustCreationService(backendCatalog, registry)
+	groups := workspacegroups.NewService(registry)
+	var issues *issuetracking.Service
+	if pluginRegistry.IssueTracking != nil {
+		issues = issuetracking.New(pluginRegistry.IssueTracking, groups)
+	}
 
 	return Dependencies{
-		Git:     gitService,
-		Runtime: miseruntime.Provider{},
-		Catalog: backendCatalog,
+		Git:           gitService,
+		IssueTracking: issues,
+		Runtime:       miseruntime.Provider{},
+		Catalog:       backendCatalog,
 
 		Creation:     creation,
 		Environments: environments,
@@ -69,7 +77,7 @@ func ComposePlugins(installed ...plugins.Plugin) (Dependencies, error) {
 		Global:       pluginRegistry.Global,
 		Workspaces:   workspaceapp.NewService(),
 		Registry:     registry,
-		Groups:       workspacegroups.NewService(registry),
+		Groups:       groups,
 	}, nil
 }
 

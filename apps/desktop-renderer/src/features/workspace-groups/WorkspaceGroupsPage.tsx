@@ -32,6 +32,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import { ErrorNotice, PageHeader, StatePanel } from "@/components/ui/page-layout";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EnvironmentLink } from "@/features/environment-context/EnvironmentLink";
@@ -208,6 +209,11 @@ function GroupDetail({
 				description={t("groups.memberCount", { count: group.workspaceIds.length })}
 				actions={
 					<>
+						<Button variant="outline" asChild>
+							<EnvironmentLink to={`${groupPath(group.id)}/issues`}>
+								{t("linear.issues")}
+							</EnvironmentLink>
+						</Button>
 						<Button variant="ghost" disabled={busy} onClick={() => openDialog("rename")}>
 							<Pencil />
 							{t("groups.rename")}
@@ -349,18 +355,19 @@ function GroupDetail({
 					{dialog === "members" && (
 						<div className="max-h-80 space-y-2 overflow-y-auto">
 							{candidates.map((workspace) => (
-								<label
+								<Label
 									key={workspace.entryId}
-									className="flex cursor-pointer items-center gap-3 rounded-md border border-border p-3"
+									htmlFor={`group-member-${group.id}-${workspace.entryId}`}
+									className="flex cursor-pointer items-center gap-3 rounded-md border border-border p-3 font-normal"
 								>
-									<input
-										type="checkbox"
-										className="size-4 shrink-0 accent-primary"
+									<Checkbox
+										id={`group-member-${group.id}-${workspace.entryId}`}
+										className="shrink-0"
 										disabled={busy}
 										checked={selected.includes(workspace.entryId)}
-										onChange={(event) =>
+										onCheckedChange={(checked) =>
 											setSelected((ids) =>
-												event.target.checked
+												checked === true
 													? [...ids, workspace.entryId]
 													: ids.filter((id) => id !== workspace.entryId),
 											)
@@ -375,7 +382,7 @@ function GroupDetail({
 											{workspace.root}
 										</span>
 									</span>
-								</label>
+								</Label>
 							))}
 							{!candidates.length && (
 								<p className="text-sm text-muted-foreground">{t("groups.noCandidates")}</p>
