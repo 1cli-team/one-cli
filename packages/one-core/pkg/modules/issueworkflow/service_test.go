@@ -202,6 +202,38 @@ func TestVerificationFailureStopsPublication(t *testing.T) {
 	}
 }
 
+func TestDispatchAndFilterByIssueReference(t *testing.T) {
+	store, err := OpenStore(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = store.Close() })
+	service, _, _, _, _ := fixture(store)
+	dispatch := api.WorkRequest{Operation: api.WorkDispatch, ProjectID: projectID, IssueID: "ONE-2"}
+	verifyWorkRequest(t, service, dispatch, http.StatusConflict)
+	dispatch.IssueID = "one-1"
+	verifyWorkRequest(t, service, dispatch, http.StatusAccepted)
+	dispatch.IssueID = issueID
+	verifyWorkRequest(t, service, dispatch, http.StatusOK)
+	for _, reference := range []string{"ONE-1", issueID, "ONE-2"} {
+		var page api.JobPage
+		raw := verifyWorkRequest(t, service, api.WorkRequest{Operation: api.WorkMonitorJobs, IssueID: reference}, http.StatusOK)
+		if err := json.Unmarshal(raw, &page); err != nil {
+			t.Fatal(err)
+		}
+		if reference == "ONE-2" {
+			if len(page.Items) != 0 {
+				t.Fatalf("unmatched issue returned %d jobs", len(page.Items))
+			}
+			continue
+		}
+		if page.Issue != reference || len(page.Items) != 1 ||
+			page.Items[0].ProjectID != projectID || page.Items[0].Stage != string(queued) {
+			t.Fatalf("filtered job list: %+v", page)
+		}
+	}
+}
+
 func TestPreviouslyStartedTurnIsReadBackBeforeVerification(t *testing.T) {
 	store, err := OpenStore(t.TempDir())
 	if err != nil {

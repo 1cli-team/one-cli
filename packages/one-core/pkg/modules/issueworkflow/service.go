@@ -112,12 +112,23 @@ func (s *Service) dispatch(ctx context.Context, projectID, issueID string) (api.
 		return "", http.StatusNotFound, fmt.Errorf("project is not configured")
 	}
 	// The server resolves the issue using its own project-scoped credentials.
-	issue, err := s.linear.Issue(ctx, project.binding(projectID, ""), issueID)
+	reference := issueID
+	if !uuidPattern.MatchString(reference) {
+		reference = strings.ToUpper(reference)
+	}
+	issue, err := s.linear.Issue(ctx, project.binding(projectID, ""), reference)
 	if err != nil {
 		return "", http.StatusBadGateway, err
 	}
+	if !uuidPattern.MatchString(issue.ID) ||
+		(issue.ID != issueID && !strings.EqualFold(issue.Identifier, issueID)) {
+		return "", http.StatusConflict, fmt.Errorf("Linear returned an issue that does not match the requested reference")
+	}
+	if j, ok := s.store.get(projectID, issue.ID); ok {
+		return j.status(), http.StatusOK, nil
+	}
 	flow, ok := project.Teams[issue.Team.ID]
-	if !ok || issue.ID != issueID || issue.State.Type == "completed" || issue.State.Type == "canceled" {
+	if !ok || issue.State.Type == "completed" || issue.State.Type == "canceled" {
 		return "", http.StatusConflict, fmt.Errorf("issue or team is ineligible for dispatch")
 	}
 	team, err := s.linear.Team(ctx, project.ConnectionID, issue.Team.ID)

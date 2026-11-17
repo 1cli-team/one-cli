@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/table";
 import { EnvironmentLink } from "@/features/environment-context/EnvironmentLink";
 import { ConnectionBadge } from "./ConnectionBadge";
+import { GatewayAgentConnect } from "./GatewayAgentConnect";
 import { GatewayProjectDialog } from "./GatewayProjectDialog";
 import { GatewayTaskList } from "./GatewayTaskList";
 import {
@@ -48,6 +49,7 @@ export function GatewayMonitor() {
 				title={t("gateway.monitor")}
 				actions={
 					<>
+						<GatewayAgentConnect />
 						<Button variant="outline" size="sm" asChild>
 							<EnvironmentLink to="/settings/gateway">
 								<Settings2 />

@@ -1,6 +1,7 @@
 package issueworkflow
 
 import (
+	"slices"
 	"strings"
 
 	api "github.com/torchstellar-team/one-cli/packages/one-core/pkg/modules/gateway"
@@ -8,8 +9,13 @@ import (
 
 const monitorPageSize = 20
 
-func (s *Service) monitorJobs(page int) api.JobPage {
+func (s *Service) monitorJobs(page int, issue string) api.JobPage {
 	jobs := s.store.list()
+	if issue != "" {
+		jobs = slices.DeleteFunc(jobs, func(job Job) bool {
+			return !strings.EqualFold(job.Issue.Identifier, issue) && !strings.EqualFold(job.Issue.ID, issue)
+		})
+	}
 	pageCount := max(1, (len(jobs)+monitorPageSize-1)/monitorPageSize)
 	page = min(max(page, 1), pageCount)
 	end := len(jobs) - (page-1)*monitorPageSize
@@ -18,12 +24,12 @@ func (s *Service) monitorJobs(page int) api.JobPage {
 	for i := end - 1; i >= start; i-- {
 		items = append(items, jobs[i].monitorSummary())
 	}
-	return api.JobPage{Items: items, Page: page, PageCount: pageCount}
+	return api.JobPage{Items: items, Page: page, PageCount: pageCount, Issue: issue}
 }
 
 func (j Job) monitorSummary() api.JobSummary {
 	summary := api.JobSummary{
-		ID: j.ID, Identifier: j.Issue.Identifier, Title: j.Issue.Title,
+		ID: j.ID, ProjectID: j.ProjectID, Identifier: j.Issue.Identifier, Title: j.Issue.Title,
 		Description: monitorText(j.Issue.Description), URL: j.Issue.URL,
 		Stage: string(j.Stage), CreatedAt: j.Created, LastError: monitorText(j.LastError),
 	}

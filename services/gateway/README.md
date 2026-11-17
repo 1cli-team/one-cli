@@ -8,6 +8,20 @@ verified Linear writeback.
 One Gateway 转发 Desktop 的派发请求和任务状态，并为执行机器上的 One CLI
 连接本机 Codex App Server。One CLI 负责 worktree、PR、合并跟踪和 Linear 回写。
 
+## 本机开发 / Local development
+
+From the One CLI checkout, run `one dev:gateway` to build both binaries and
+start Gateway in the foreground. It reads
+`$ONE_HOME/config/gateway-server.json` for the workflow and the saved
+local HTTP address and token from `$ONE_HOME/config/gateway.json`. The default
+`ONE_HOME` is `~/.one`. In an interactive terminal, Gateway displays the API
+token once after it starts listening. Press Ctrl+C to stop.
+
+在 One CLI 仓库运行 `one dev:gateway`，即可构建 One CLI 和 Gateway，并在前台启动。
+流程配置读取 `$ONE_HOME/config/gateway-server.json`，监听地址和令牌复用
+`$ONE_HOME/config/gateway.json` 中保存的本机 HTTP 连接。默认 `ONE_HOME` 为
+`~/.one`。在交互终端启动时，监听成功后会显示一次 API 令牌。按 Ctrl+C 停止。
+
 ## 常驻机器 / Gateway host
 
 - Use a dedicated macOS or Linux account for trusted repositories. Install
@@ -103,6 +117,36 @@ HTTPS 反向代理。
 
 ```sh
 services/gateway/bin/one-gateway -one /path/to/one -config /srv/one/issue-workflow.json
+```
+
+## One CLI
+
+Save the Gateway connection from a terminal with the commands below. The token
+prompt hides input. For automation, redirect a private token file into
+`one gateway configure <address>`. One CLI and One Desktop share the saved
+connection for the same user and `ONE_HOME`.
+
+在终端运行以下命令即可配置并验证 Gateway 连接。令牌输入时会隐藏。
+自动化时可将私有令牌文件重定向到 `one gateway configure <地址>` 的标准输入。
+同一用户和 `ONE_HOME` 下，One CLI 和 One Desktop 共用这份连接。
+
+```sh
+one gateway configure http://127.0.0.1:39128
+one gateway status -o json
+```
+
+For a project already mapped on Gateway, dispatch an issue and look up its
+stage, error details and PR links by its Linear identifier. If Gateway has
+multiple mapped projects, pass its Linear project ID with `--project`. Find the
+available IDs with `one gateway status -o json`.
+
+Gateway 配置好项目映射后，可以用 Linear 需求编号派发，并查看当前阶段、错误和 PR 链接。
+有多个项目映射时，在派发命令中用 `--project` 指定目标 Linear 项目 ID。
+可运行 `one gateway status -o json` 查看项目 ID。
+
+```sh
+one gateway dispatch MG-3
+one gateway jobs --issue MG-3
 ```
 
 ## One Desktop

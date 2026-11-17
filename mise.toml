@@ -139,6 +139,11 @@ description = "Run One Desktop with its bundled Go API and CLI"
 depends = ["install-deps"]
 run = "node scripts/desktop.mts dev"
 
+[tasks."dev:gateway"]
+description = "Build and run the local One Gateway / 构建并启动本机 One Gateway"
+interactive = true
+run = "exec node scripts/gateway.mts"
+
 [monorepo]
 config_roots = ["."]
 lockfile = false

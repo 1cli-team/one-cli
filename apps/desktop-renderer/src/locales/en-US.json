@@ -678,6 +678,14 @@
 		"processing": "Processing",
 		"settings": "Gateway connection",
 		"monitor": "Gateway monitor",
+		"agent": {
+			"connect": "Connect with Agent",
+			"description": "Paste the prompt below into an agent on this machine. It uses the latest One CLI and the locally saved Gateway connection.",
+			"prompt": "Use One CLI to check the Gateway configured on this machine.\n\n{{status}}\n{{jobs}}\n\nOnce you confirm Gateway is online, summarize recent tasks and include any available PR links.",
+			"copy": "Copy for Agent",
+			"copied": "Agent connection instructions copied.",
+			"copyError": "Could not copy. Select the instructions above to copy them manually."
+		},
 		"connection": "Connection",
 		"address": "Address",
 		"addressHint": "Use HTTPS for a remote Gateway or HTTP for a local Gateway.",

@@ -12,8 +12,10 @@ import (
 	"os"
 	"os/exec"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
+	"unicode"
 
 	api "github.com/torchstellar-team/one-cli/packages/one-core/pkg/modules/gateway"
 	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/platform/i18n"
@@ -43,6 +45,7 @@ func run() error {
 	addr := flag.String("listen", "127.0.0.1:39128", i18n.T("gateway.flag_listen"))
 	cert := flag.String("tls-cert", "", i18n.T("gateway.flag_tls_cert"))
 	key := flag.String("tls-key", "", i18n.T("gateway.flag_tls_key"))
+	showToken := flag.Bool("show-token", false, i18n.T("gateway.flag_show_token"))
 	flag.Parse()
 	if *configPath == "" || flag.NArg() != 0 {
 		return i18n.Errorf("gateway.config_required")
@@ -55,7 +58,8 @@ func run() error {
 	if err != nil {
 		return err
 	}
-	if (*cert == "") != (*key == "") || (*cert == "" && !net.ParseIP(host).IsLoopback()) {
+	loopback := net.ParseIP(host).IsLoopback()
+	if (*cert == "") != (*key == "") || (*cert == "" && !loopback) {
 		return i18n.Errorf("gateway.tls_required")
 	}
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
@@ -94,6 +98,9 @@ func run() error {
 	errs := make(chan error, 1)
 	go func() {
 		slog.Info(i18n.T("gateway.listening"), "address", ln.Addr())
+		if *showToken && loopback {
+			showTerminalToken(token)
+		}
 		if *cert != "" {
 			errs <- server.ServeTLS(ln, *cert, *key)
 		} else {
@@ -113,4 +120,16 @@ func run() error {
 		defer cancel()
 		return server.Shutdown(closing)
 	}
+}
+
+func showTerminalToken(token string) {
+	if strings.ContainsFunc(token, unicode.IsControl) {
+		return
+	}
+	terminal, err := os.OpenFile("/dev/tty", os.O_WRONLY, 0)
+	if err != nil {
+		return
+	}
+	defer terminal.Close()
+	fmt.Fprintln(terminal, i18n.Tf("gateway.terminal_token", token))
 }

@@ -12,6 +12,7 @@ import (
 	addcmd "github.com/torchstellar-team/one-cli/packages/cli/internal/transport/cobra/add"
 	createcmd "github.com/torchstellar-team/one-cli/packages/cli/internal/transport/cobra/create"
 	execcmd "github.com/torchstellar-team/one-cli/packages/cli/internal/transport/cobra/exec"
+	gatewaycmd "github.com/torchstellar-team/one-cli/packages/cli/internal/transport/cobra/gateway"
 	groupcmd "github.com/torchstellar-team/one-cli/packages/cli/internal/transport/cobra/group"
 	hookscmd "github.com/torchstellar-team/one-cli/packages/cli/internal/transport/cobra/hooks"
 	initcmd "github.com/torchstellar-team/one-cli/packages/cli/internal/transport/cobra/init"
@@ -74,7 +75,7 @@ func NewApplication(installed ...Plugin) (*Application, error) {
 		execcmd.Commands(deps.Loaders, deps.Runtime, deps.Global),
 		runcmd.Commands(deps.Loaders, deps.Runtime),
 		templatescmd.Commands(),
-		{groupcmd.Command(deps.Groups)},
+		{groupcmd.Command(deps.Groups), gatewaycmd.Command()},
 	}
 	for _, commands := range groups {
 		root.AddCommand(commands...)

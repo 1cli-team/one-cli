@@ -35,7 +35,7 @@ func TestGatewaySettingsAuthenticateAndKeepSavedTokenPrivate(t *testing.T) {
 	registerGatewaySettingsRoutes(mux)
 	call := func(method, path, url, auth string, wantCode int) gatewayStatus {
 		t.Helper()
-		payload, err := json.Marshal(gatewayConnection{URL: url, Token: auth})
+		payload, err := json.Marshal(gateway.Connection{URL: url, Token: auth})
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -77,7 +77,7 @@ func TestGatewaySettingsAuthenticateAndKeepSavedTokenPrivate(t *testing.T) {
 	if got.State != "connected" || !got.HasToken || got.Snapshot == nil || got.Snapshot.Jobs.Queued != 3 {
 		t.Fatalf("save result: %+v", got)
 	}
-	path, err := gatewayConnectionPath()
+	path, err := gateway.ConnectionPath()
 	if err != nil {
 		t.Fatal(err)
 	}

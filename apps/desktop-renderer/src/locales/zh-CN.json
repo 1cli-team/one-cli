@@ -678,6 +678,14 @@
 		"processing": "处理中",
 		"settings": "Gateway 连接",
 		"monitor": "Gateway 监控",
+		"agent": {
+			"connect": "用 Agent 连接",
+			"description": "将下面的提示粘贴给本机的 Agent。它会用最新版 One CLI 读取保存在本机的 Gateway 连接。",
+			"prompt": "请用 One CLI 查看本机已配置的 Gateway。\n\n{{status}}\n{{jobs}}\n\n确认 Gateway 在线后，汇报最近任务的状态，并附上已有的 PR 链接。",
+			"copy": "复制给 Agent",
+			"copied": "已复制 Agent 连接说明。",
+			"copyError": "无法复制。可以选中上面的说明手动复制。"
+		},
 		"connection": "连接状态",
 		"address": "地址",
 		"addressHint": "远程 Gateway 使用 HTTPS，本机 Gateway 可以使用 HTTP。",

@@ -32,13 +32,16 @@ func (s *Service) Handle(ctx context.Context, req api.WorkRequest) api.WorkReply
 	case api.WorkStatus:
 		return reply(http.StatusOK, s.snapshot())
 	case api.WorkMonitorJobs:
-		return reply(http.StatusOK, s.monitorJobs(req.Page))
+		if req.IssueID != "" && !api.ValidIssueReference(req.IssueID) {
+			return problem(http.StatusBadRequest, "invalid_issue_reference", nil)
+		}
+		return reply(http.StatusOK, s.monitorJobs(req.Page, req.IssueID))
 	case api.WorkList:
 		if uuidPattern.MatchString(req.ProjectID) {
 			return reply(http.StatusOK, s.list(req.ProjectID))
 		}
 	case api.WorkDispatch:
-		if uuidPattern.MatchString(req.ProjectID) && uuidPattern.MatchString(req.IssueID) {
+		if uuidPattern.MatchString(req.ProjectID) && api.ValidIssueReference(req.IssueID) {
 			status, code, err := s.dispatch(ctx, req.ProjectID, req.IssueID)
 			if err != nil {
 				return problem(code, "workflow_dispatch", err)
@@ -134,6 +137,9 @@ func (j Job) result() RunResult {
 
 // RunIssue executes or resumes one mapped issue in a local CLI invocation.
 func (s *Service) RunIssue(ctx context.Context, project, issue string, onReview func(PullRequest)) (RunResult, error) {
+	if !uuidPattern.MatchString(issue) {
+		return RunResult{}, i18n.Errorf("linear.cli.workflow_dispatch", http.StatusBadRequest)
+	}
 	reply := s.Handle(ctx, api.WorkRequest{Operation: api.WorkDispatch, ProjectID: project, IssueID: issue})
 	if reply.Status != http.StatusOK && reply.Status != http.StatusAccepted {
 		return RunResult{}, i18n.Errorf("linear.cli.workflow_dispatch", reply.Status)

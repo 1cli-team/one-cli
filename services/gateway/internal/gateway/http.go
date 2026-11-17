@@ -22,6 +22,7 @@ func Handler(token string, forward func(context.Context, api.WorkRequest) (api.W
 				IssueID: r.PathValue("issue"), RepositoryID: r.PathValue("repository"),
 			}
 			if op == api.WorkMonitorJobs {
+				input.IssueID = r.URL.Query().Get("issue")
 				if page := r.URL.Query().Get("page"); page != "" {
 					var err error
 					input.Page, err = strconv.Atoi(page)
