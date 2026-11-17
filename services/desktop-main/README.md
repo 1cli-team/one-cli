@@ -10,4 +10,8 @@ The macOS tray uses transparent monochrome `trayTemplate.png` and `trayTemplate@
 
 应用菜单由 Electron 自动生成默认菜单。托盘菜单和退出确认使用 One 的语言设置，默认菜单的退出操作通过现有 `before-quit` 流程停止后端。
 
+窗口使用隐藏标题栏和系统窗口按钮。macOS 红绿灯、Windows/Linux 窗口按钮融入 56px 应用顶栏，React 使用 Window Controls Overlay 的安全区域避让按钮，并仅将顶栏空白设为拖动区域。界面主题经受限 IPC 同步到原生控件。
+
+The hidden title bar keeps native window controls in the 56px application header. The renderer reserves Window Controls Overlay safe areas and makes header space draggable while leaving interactive controls clickable. A validated IPC call synchronizes the UI theme with native controls.
+
 Electron automatically supplies the default application menu. One localizes the tray menu and quit confirmation, and default menu quit actions pass through the existing `before-quit` backend shutdown flow.

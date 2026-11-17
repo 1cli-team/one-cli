@@ -1,6 +1,7 @@
 import type {} from "@one-desktop/preload";
 
 async function mount() {
+	document.documentElement.toggleAttribute("data-desktop", Boolean(window.desktop));
 	if (window.desktop && localStorage.getItem("one_desktop_migration_v1") !== "1") {
 		try {
 			const preferences = await window.desktop.getLegacyPreferences();

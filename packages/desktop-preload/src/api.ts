@@ -26,6 +26,7 @@ export interface DesktopAPI {
   openDirectory(path: string): Promise<void>;
   openExternal(url: string): Promise<void>;
   setNativeLocale(locale: string): Promise<void>;
+  setNativeTheme(theme: "light" | "dark"): Promise<void>;
   checkUpdate(): Promise<UpdateInfo>;
   installUpdate(): Promise<void>;
 }

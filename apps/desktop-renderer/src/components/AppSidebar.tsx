@@ -120,13 +120,13 @@ function GlobalSidebar() {
 	const { mode } = useThemeStore();
 	return (
 		<>
-			<div className="flex min-h-14 shrink-0 items-center gap-2.5 border-b border-border px-4">
+			<div className="window-titlebar window-sidebar-titlebar window-sidebar-brand flex min-h-14 shrink-0 items-center gap-2.5 border-b border-border px-4">
 				<img
 					src={mode === "dark" ? "/brand/icon-inverted.svg" : "/brand/icon.svg"}
 					alt=""
-					className="size-6"
+					className="size-6 shrink-0"
 				/>
-				<span className="text-base font-medium">One Desktop</span>
+				<span className="truncate text-base font-medium">One Desktop</span>
 			</div>
 			<nav className="flex shrink-0 flex-col gap-1 p-3" aria-label={t("navigation.global")}>
 				<Button variant="navigation" size="navigation-compact" className="min-h-9" asChild>
@@ -157,8 +157,8 @@ function SettingsSidebar({ homeTo }: { homeTo: string }) {
 	const { t } = useTranslation();
 	return (
 		<>
-			<div className="flex min-h-14 shrink-0 items-center border-b border-border px-3">
-				<Button variant="ghost" className="w-full justify-start" asChild>
+			<div className="window-titlebar window-sidebar-titlebar flex min-h-14 shrink-0 items-center border-b border-border px-3">
+				<Button variant="ghost" className="w-full min-w-0 justify-start [&>span]:truncate" asChild>
 					<EnvironmentLink to={homeTo}>
 						<ArrowLeft />
 						<span>
@@ -243,8 +243,8 @@ function WorkspaceSidebar({
 	}
 	return (
 		<>
-			<div className="flex min-h-14 shrink-0 items-center border-b border-border px-3">
-				<Button variant="ghost" className="w-full justify-start" asChild>
+			<div className="window-titlebar window-sidebar-titlebar flex min-h-14 shrink-0 items-center border-b border-border px-3">
+				<Button variant="ghost" className="w-full min-w-0 justify-start [&>span]:truncate" asChild>
 					<EnvironmentLink to={homeTo}>
 						<ArrowLeft />
 						<span>

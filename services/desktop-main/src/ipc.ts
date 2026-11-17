@@ -35,6 +35,10 @@ export function createDesktopIPC({
       if (typeof locale !== "string") throw new Error("invalid_locale");
       lifecycle.setLocale(locale);
     });
+    handle("desktop:theme", 1, (theme) => {
+      if (theme !== "light" && theme !== "dark") throw new Error("invalid_theme");
+      mainWindow.setTheme(theme);
+    });
     handle("desktop:choose-workspace", 0, async () => {
       const result = await dialog.showOpenDialog(mainWindow.window!, {
         properties: ["openDirectory"],
