@@ -1,10 +1,10 @@
-import { readdirSync, rmSync } from "node:fs";
+import { cpSync, mkdirSync, readFileSync, readdirSync, rmSync } from "node:fs";
 import { resolve } from "node:path";
+import { createRequire } from "node:module";
 import { sha256File, writeJson } from "../lib/files.mts";
-import { retry } from "../lib/retry.mts";
 import { shell } from "../lib/shell.mts";
 import { fail } from "../lib/output.mts";
-import { MissingMacAppTicketError, notarizeMacDMG, verifyMacApp } from "./macos/signing.mts";
+import { notarizeMacApp, notarizeMacDMG, verifyMacApp } from "./macos/signing.mts";
 import type { DesktopConfig } from "./config.mts";
 import type { Sidecars } from "./sidecars.mts";
 
@@ -19,86 +19,143 @@ export function writeBundleConfig(config: DesktopConfig, sidecars: Sidecars, ide
     sha256: sidecars.hashes["one-api"],
     cliSha256: sidecars.hashes.one,
   };
-  writeJson(resolve(config.native, "bundle-manifest.json"), manifest);
-  const bundle: Record<string, unknown> = {
-    createUpdaterArtifacts: config.release && config.updater,
+  writeJson(resolve(config.native, "resources/bundle-manifest.json"), manifest);
+  const require = createRequire(resolve(config.native, "package.json"));
+  const buildConfig = {
+    electronDist:
+      config.platform.os ===
+        ({ darwin: "darwin", linux: "linux", win32: "windows" } as Record<string, string>)[
+          process.platform
+        ] && config.platform.arch === (process.arch === "x64" ? "amd64" : process.arch)
+        ? resolve(require.resolve("electron/package.json"), "../dist")
+        : undefined,
+    appId: "team.1cli.desktop",
+    productName: "One Desktop",
+    executableName: "one-desktop",
+    artifactName: `one-desktop_${config.version}_${config.platform.os}_${config.platform.arch}.\${ext}`,
+    extraMetadata: { version: config.version },
+    directories: { output: config.bundleDirectory, buildResources: "assets" },
+    files: ["build/**/*", "assets/**/*", "package.json"],
+    extraResources: [{ from: "resources", to: "." }],
+    asar: true,
+    npmRebuild: false,
+    publish: null,
+    mac: {
+      category: "public.app-category.developer-tools",
+      minimumSystemVersion: "13.3",
+      icon: "assets/icon.icns",
+      identity: identity?.replace(/^Developer ID Application: /, "") ?? null,
+      hardenedRuntime: Boolean(identity),
+      notarize: false,
+      signIgnore: ["Contents/Resources/bin/"],
+      extraFiles: [{ from: "assets/infoplist", to: "Resources" }],
+    },
+    dmg: { sign: Boolean(identity) },
+    win: { icon: "assets/icon.ico", signAndEditExecutable: true },
+    nsis: {
+      guid: "One Desktop",
+      include: "assets/installer.nsh",
+      oneClick: false,
+      perMachine: false,
+      allowElevation: false,
+      allowToChangeInstallationDirectory: true,
+      createDesktopShortcut: true,
+      createStartMenuShortcut: true,
+      deleteAppDataOnUninstall: false,
+    },
+    linux: {
+      executableName: "one-desktop",
+      icon: "assets/icon.png",
+      category: "Development",
+      syncDesktopName: true,
+      maintainer: "One CLI <support@1cli.dev>",
+      desktop: { entry: { StartupWMClass: "one_desktop" } },
+    },
   };
-  if (identity) {
-    // Tauri must retain the signatures used for the manifest's hashes.
-    bundle.externalBin = [];
-    bundle.macOS = {
-      files: sidecars.signedFiles,
-      signingIdentity: identity,
-      hardenedRuntime: true,
-    };
-  }
-  const buildConfig: Record<string, unknown> = { version: config.version, bundle };
-  if (config.release && config.updater)
-    buildConfig.plugins = { updater: { pubkey: config.env.ONE_DESKTOP_UPDATER_PUBLIC_KEY } };
   writeJson(resolve(config.native, "build-config.json"), buildConfig);
   return manifest;
 }
 
-function tauriArguments(config: DesktopConfig) {
-  const args = ["exec", "tauri", config.command, "--config", "src-tauri/build-config.json"];
-  if (config.command === "build") {
-    const bundles = { darwin: "app,dmg", windows: "nsis", linux: "appimage,deb" };
-    args.push("--target", config.target, "--bundles", bundles[config.platform.os]);
-    if (config.release) args.push("--ci");
-  }
-  args.push(...config.extraArgs);
-  if (config.release && config.command === "build") args.push("--", "--locked");
-  return args;
+function buildProcesses(config: DesktopConfig) {
+  const run = shell({ cwd: config.root, stdio: "inherit", env: config.env });
+  run`pnpm --filter @one-desktop/preload build`;
+  run`pnpm --filter @one-desktop/renderer build`;
+  run`pnpm --filter @one-desktop/main build`;
+  cpSync(resolve(config.desktop, "dist"), resolve(config.native, "build/renderer"), {
+    recursive: true,
+  });
+  mkdirSync(resolve(config.native, "build/preload"), { recursive: true });
+  cpSync(
+    resolve(config.root, "packages/desktop-preload/dist/index.cjs"),
+    resolve(config.native, "build/preload/index.cjs"),
+  );
 }
 
-function bundleEnvironment(config: DesktopConfig, identity?: string) {
-  const env = { ...config.env };
-  if (identity) {
-    delete env.APPLE_CERTIFICATE_BASE64;
-    delete env.APPLE_CERTIFICATE_PASSWORD;
-    delete env.APPLE_CERTIFICATE;
-    env.APPLE_SIGNING_IDENTITY = identity;
-  }
-  return env;
-}
-
-function verifyMacBundle(config: DesktopConfig, sidecars: Sidecars) {
-  const app = resolve(config.bundleDirectory, "macos/One Desktop.app");
+function verifyBundle(config: DesktopConfig, sidecars: Sidecars, app: string) {
+  const resources = resolve(
+    app,
+    config.platform.os === "darwin" ? "Contents/Resources" : "resources",
+  );
+  const manifest = JSON.parse(readFileSync(resolve(resources, "bundle-manifest.json"), "utf8"));
+  if (
+    manifest.version !== config.version ||
+    manifest.commit !== config.commit ||
+    manifest.target !== config.target
+  )
+    fail("Packaged manifest differs from the build", "包内清单与构建不一致");
   for (const [name, digest] of Object.entries(sidecars.hashes)) {
-    if (sha256File(resolve(app, "Contents/MacOS", name)) !== digest)
+    const file = resolve(resources, "bin", name + (config.platform.os === "windows" ? ".exe" : ""));
+    if (sha256File(file) !== digest)
       fail(`Bundled binary hash changed: ${name}`, `包内二进制摘要变化：${name}`);
   }
-  if (!config.release) return;
-  verifyMacApp(app);
-  const dmgs = readdirSync(resolve(config.bundleDirectory, "dmg")).filter((name) =>
-    name.endsWith(".dmg"),
-  );
-  if (dmgs.length !== 1) fail("Expected one DMG", "需要唯一的 DMG");
-  notarizeMacDMG(resolve(config.bundleDirectory, "dmg", dmgs[0]));
 }
 
-export function buildBundle(config: DesktopConfig, sidecars: Sidecars, identity?: string) {
-  const run = shell({
-    cwd: config.desktop,
-    env: bundleEnvironment(config, identity),
-    stdio: "inherit",
-  });
-  const args = tauriArguments(config);
-  retry(
-    () => {
-      if (config.release && config.command === "build")
-        rmSync(config.bundleDirectory, { recursive: true, force: true });
-      run`pnpm ${args}`;
-      if (config.command === "build" && config.platform.os === "darwin")
-        verifyMacBundle(config, sidecars);
-    },
-    {
-      delays: [5000, 15000],
-      shouldRetry: (error) => error instanceof MissingMacAppTicketError,
-      onRetry: (_error, delay, attempt) =>
-        console.warn(
-          `App ticket missing; rebuilding app and DMG in ${delay / 1000}s (${attempt}/2) / 应用缺少票据，${delay / 1000} 秒后重新生成应用和 DMG`,
-        ),
-    },
-  );
+export async function buildBundle(config: DesktopConfig, sidecars: Sidecars) {
+  buildProcesses(config);
+  if (config.command === "dev") return;
+  rmSync(config.bundleDirectory, { recursive: true, force: true });
+  // Signing credentials remain in the controlled keychain/notary helpers.
+  const env = { ...config.env, CSC_IDENTITY_AUTO_DISCOVERY: "false" };
+  for (const key of [
+    "APPLE_CERTIFICATE_BASE64",
+    "APPLE_CERTIFICATE_PASSWORD",
+    "APPLE_ID",
+    "APPLE_PASSWORD",
+    "APPLE_APP_SPECIFIC_PASSWORD",
+    "CSC_LINK",
+    "CSC_KEY_PASSWORD",
+  ])
+    delete env[key];
+  const run = shell({ cwd: config.native, env, stdio: "inherit" });
+  const platform = { darwin: "--mac", windows: "--win", linux: "--linux" }[config.platform.os];
+  const arch = config.platform.arch === "amd64" ? "--x64" : "--arm64";
+  run`pnpm exec electron-builder --config build-config.json ${platform} ${arch} --dir --publish never`;
+  const unpacked =
+    config.platform.os === "darwin"
+      ? resolve(
+          config.bundleDirectory,
+          config.platform.arch === "arm64" ? "mac-arm64/One Desktop.app" : "mac/One Desktop.app",
+        )
+      : resolve(
+          config.bundleDirectory,
+          config.platform.os === "windows"
+            ? "win-unpacked"
+            : config.platform.arch === "arm64"
+              ? "linux-arm64-unpacked"
+              : "linux-unpacked",
+        );
+  verifyBundle(config, sidecars, unpacked);
+  if (config.platform.os === "darwin" && config.release) {
+    notarizeMacApp(unpacked);
+    verifyMacApp(unpacked);
+  }
+  const formats = { darwin: ["dmg"], windows: ["nsis"], linux: ["AppImage", "deb"] }[
+    config.platform.os
+  ];
+  run`pnpm exec electron-builder --config build-config.json --prepackaged ${unpacked} ${platform} ${formats} ${arch} --publish never`;
+  if (config.platform.os === "darwin" && config.release) {
+    const dmgs = readdirSync(config.bundleDirectory).filter((name) => name.endsWith(".dmg"));
+    if (dmgs.length !== 1) fail("Expected one DMG", "需要唯一的 DMG");
+    notarizeMacDMG(resolve(config.bundleDirectory, dmgs[0]));
+  }
 }

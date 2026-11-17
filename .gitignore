@@ -22,7 +22,7 @@ go-dist/
 .seo/
 
 # Templates and skills embedded by Go; generated with mise run sync-bundled.
-# React assets are built separately inside apps/desktop/dist for Tauri.
+# React assets are built separately inside apps/desktop-renderer/dist for Electron.
 packages/one-core/internal/resources/bundled/registry.json
 packages/one-core/internal/resources/bundled/_templates/
 packages/one-core/internal/resources/bundled/_skills/
@@ -60,11 +60,13 @@ bin-go/
 /.one/
 /.cache
 
-# Native desktop generated files
-/apps/desktop/src-tauri/target/
-/apps/desktop/src-tauri/gen/
-/apps/desktop/src-tauri/binaries/
-/apps/desktop/src-tauri/bundle-manifest.json
-/apps/desktop/src-tauri/build-config.json
+# Desktop release artifacts
 /desktop-dist/
 /services/desktop-api/bin/
+
+# Electron generated resources and bundles
+/services/desktop-main/build/
+/services/desktop-main/resources/
+/services/desktop-main/dist/
+/services/desktop-main/build-config.json
+/packages/desktop-preload/dist/

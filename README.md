@@ -147,7 +147,9 @@ Native macOS starters: [SwiftUI window app](packages/templates/swift-macos-app) 
 | `packages/cli` | Go CLI / 命令行入口 |
 | `packages/one-core` | Shared business and platform code / 共享业务与平台能力 |
 | `services/desktop-api` | Desktop HTTP API / 桌面 HTTP 后端 |
-| `apps/desktop` | React + Tauri desktop / 桌面应用 |
+| `apps/desktop-renderer` | React desktop interface / 桌面界面 |
+| `services/desktop-main` | Electron native host / 原生宿主 |
+| `packages/desktop-preload` | Typed native bridge / 类型化原生桥接 |
 | `apps/website` | Next.js static homepage / 静态官网 |
 | `packages/templates` | Project templates, including Fumadocs / 项目模板，包含 Fumadocs |
 | `packages/agent-skills` | Maintained agent skills / AI 技能源码 |

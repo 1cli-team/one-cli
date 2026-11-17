@@ -16,10 +16,21 @@ toolchain = "go"
 path = "services/desktop-api"
 toolchain = "go"
 
-[projects.desktop]
-path = "apps/desktop"
+[projects.desktop-renderer]
+path = "apps/desktop-renderer"
 toolchain = "node"
 
 [projects.website]
 path = "apps/website"
 toolchain = "node"
+
+[projects.desktop-main]
+path = "services/desktop-main"
+toolchain = "node"
+
+[projects.desktop-preload]
+path = "packages/desktop-preload"
+toolchain = "node"
+
+[groups.desktop]
+projects = ["desktop-renderer", "desktop-main", "desktop-preload"]

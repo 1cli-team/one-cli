@@ -7,7 +7,7 @@ tasks:
   build:
     cmds: ["go build -trimpath -ldflags '-s -w -X main.version={{.BUILD_VERSION}}' -o bin/one-api{{.GOEXE}} ./cmd/one-api"]
   check:
-    cmds: ['go vet ./...']
+    cmds: ['go vet ./...', 'go test ./...']
   fmt:
     cmds: ['go fmt ./...']
   tidy:

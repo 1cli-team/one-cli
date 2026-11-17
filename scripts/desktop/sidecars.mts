@@ -11,7 +11,7 @@ const binaries = [
 ] as const;
 
 export function buildSidecars(config: DesktopConfig, identity?: string) {
-  const directory = resolve(config.native, "binaries");
+  const directory = resolve(config.native, "resources/bin");
   mkdirSync(directory, { recursive: true });
   const run = shell({ cwd: config.root, env: config.env, stdio: "inherit" });
   run`go run ./packages/cli/tools/sync-resources bundled`;
@@ -38,18 +38,16 @@ export function buildSidecars(config: DesktopConfig, identity?: string) {
     },
   });
   const hashes: Record<string, string> = {};
-  const signedFiles: Record<string, string> = {};
   for (const [name, entry] of binaries) {
     const extension = config.platform.os === "windows" ? ".exe" : "";
-    const path = resolve(directory, `${name}-${config.target}${extension}`);
+    const path = resolve(directory, `${name}${extension}`);
     compile`go build -trimpath -ldflags ${flags.join(" ")} -o ${path} ${entry}`;
     if (identity) {
       signMacSidecar(path, identity);
-      signedFiles[`MacOS/${name}`] = path;
     }
     hashes[name] = sha256File(path);
   }
-  return { hashes, signedFiles };
+  return { hashes };
 }
 
 export type Sidecars = ReturnType<typeof buildSidecars>;

@@ -86,7 +86,7 @@ function prepareKeychain() {
   return identity;
 }
 
-export function withMacSigning<T>(action: (identity: string) => T): T {
+export async function withMacSigning<T>(action: (identity: string) => Promise<T>): Promise<T> {
   for (const name of [
     "APPLE_TEAM_ID",
     "APPLE_ID",
@@ -100,7 +100,7 @@ export function withMacSigning<T>(action: (identity: string) => T): T {
     fail("Signing directory already exists; clean it first", "签名目录已存在，请先清理");
   mkdirSync(directory, { mode: 0o700 });
   try {
-    return action(prepareKeychain());
+    return await action(prepareKeychain());
   } finally {
     cleanupMacSigning();
   }

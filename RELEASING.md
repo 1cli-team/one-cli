@@ -25,7 +25,7 @@ Starting with **v0.1.23**, Linux amd64 / arm64 ship both AppImage and `.deb`, fo
 ### 工具与凭据
 
 - 本地入口支持 Linux/macOS amd64/arm64，需要 Git、GitHub CLI (`gh`)、mise、bash、tar、unzip；Go、Node、pnpm、Task、Process Compose 来自根 `mise.toml`。脚本只依赖 Node 内置 API；检查和前端构建任务通过 `pnpm install --frozen-lockfile` 安装锁定的开发依赖。
-- GoReleaser 固定 **2.18.0**，配置为 `.goreleaser.yaml`。Tauri CI 使用 Rust **1.94.0**。
+- GoReleaser 固定 **2.18.0**，配置为 `.goreleaser.yaml`。Electron 与 electron-builder 使用 workspace lockfile 固定版本。
 - 使用现有 `gh auth login` 会话，或通过 `one exec --global --env <环境> --path <目录> --keys GH_TOKEN -- ...` 注入共享凭据。令牌需要仓库内容写权限及 Actions 工作流触发权限；细粒度令牌需要 Contents write、Actions write。不要输出令牌或写入文件。
 - CLI 安装脚本、升级器继续按 `one-cli_*` 和 `checksums.txt` 下载。桌面附件使用独立名称和 `desktop-checksums.txt`；两种校验文件不混用。
 
@@ -60,7 +60,7 @@ gh workflow run desktop.yml --repo 1cli-team/one-cli --ref master -f release_tag
 - 所有检查、构建、上传前校验源码和远端状态；并发变更、tag 对象变化、意外附件或更高稳定 tag 会阻止发布。禁止 force push。
 - 发布说明用 `--notes` 提供，按上次正式发布以来的实际变更审阅中英文内容；不要直接复制整个历史 Unreleased。新草稿追加 CLI / Desktop 下载与签名说明；重试保留已有说明。
 - 本地 `.cache/releases/release.lock` 防止同时运行；残留锁只有确认所记录 PID 已退出后才能删除。Actions 使用统一发布 concurrency group 串行运行，失败重试不取消正在进行的构建。
-- 三个 Go module 使用 `GOWORK=off go mod download` 准备依赖；禁用 mise 任务缓存并执行 `mise run --jobs 1 --force check`。覆盖 React、Rust、Go、官网、AI 指引与发布规则。生成资源后受版本控制的源码必须仍干净。
+- 三个 Go module 使用 `GOWORK=off go mod download` 准备依赖；禁用 mise 任务缓存并执行 `mise run --jobs 1 --force check`。覆盖 React、Electron、Go、官网、AI 指引与发布规则。生成资源后受版本控制的源码必须仍干净。
 - GoReleaser 执行 `release --skip=publish --clean`，保留 `CGO_ENABLED=0`、`-trimpath`、`-s -w`，注入版本、release channel 和精确技能来源 SHA，保留 Go module path。
 - 自动验证五个归档的 SHA256、Go 构建信息、源码与平台；验证本机 CLI 版本、中英文帮助、语言切换、模板列表、真实 upgrade worker 的正式通道，以及真实内置技能内容和标准 GitHub 来源登记。构建继续注入精确技能来源 SHA；模板和官方技能随 CLI 发布，`one init skills` 负责初始化和旧本地来源登记，后续由 `one skills update --project` 跟随仓库更新。冒烟在仓库外临时目录和临时 XDG 配置中执行，不替换开发者的 `one`。
 
@@ -88,7 +88,7 @@ v0.1.23 及以后的 Release 必须恰好包含以下 **15 个附件**，缺件�
 
 CLI 归档内仍包含 `one` / `one.exe`、README、`third_party/mise/LICENSE`。CLI 文件名是安装与升级协议，保持不变。Desktop 内置同版本、同源码的 `one-api` 和 `one`。
 
-Linux 构建一次生成 AppImage 与 DEB，每个架构的构建记录使用 `artifacts` 数组记录两种格式。发布器仍支持 v0.1.22 的单个 `artifact` 记录。DEB 通过系统包管理器安装 GTK/WebKitGTK 依赖，不内置 AppImage 的整套运行库；安装时使用 `sudo apt install ./one-desktop_X.Y.Z_linux_amd64.deb`（ARM64 使用对应文件）。
+Linux 构建一次生成 AppImage 与 DEB，每个架构的构建记录使用 `artifacts` 数组记录两种格式。发布器仍支持 v0.1.22 的单个 `artifact` 记录。DEB 内置 Electron Chromium，通过系统包管理器安装 GTK/NSS 等系统运行库；安装时使用 `sudo apt install ./one-desktop_X.Y.Z_linux_amd64.deb`（ARM64 使用对应文件）。
 
 ### Apple 签名与公证
 
@@ -102,13 +102,13 @@ Linux 构建一次生成 AppImage 与 DEB，每个架构的构建记录使用 `a
 | `APPLE_CERTIFICATE_BASE64`   | 含私钥的 Developer ID Application `.p12` 的 base64 |
 | `APPLE_CERTIFICATE_PASSWORD` | `.p12` 导出密码                                    |
 
-可先保存到 One 共享凭据，通过 `one exec --global` 精确注入这五项，并经 `gh secret set` 标准输入同步；不要把值放在命令参数、源码、发布说明或日志中。签名身份从证书解析并匹配 Team ID，无需第六项 Secret。要求见 [Tauri macOS 签名文档](https://v2.tauri.app/distribute/sign/macos/)。
+可先保存到 One 共享凭据，通过 `one exec --global` 精确注入这五项，并经 `gh secret set` 标准输入同步；不要把值放在命令参数、源码、发布说明或日志中。签名身份从证书解析并匹配 Team ID，无需第六项 Secret。要求见 [Electron macOS 签名文档](https://www.electronjs.org/docs/latest/tutorial/code-signing)。
 
 只有 macOS 构建步骤获得 Apple 凭据。证书以受限权限解码，导入临时钥匙串后删除 `.p12`；构建前验证公证凭据，成功或失败均恢复原钥匙串列表并清理临时钥匙串。
 
-Go sidecar 先签名，再生成摘要；Tauri 通过 `bundle.macOS.files` 复制签名文件，避免重复签名改变摘要。应用完成签名、公证和 staple 后，验证 sidecar 摘要、Developer ID、Team ID、强化运行时、Gatekeeper 和票据；最终 DMG 也独立公证、staple 并验证。
+Go sidecar 先签名，再生成摘要；electron-builder 通过 `extraResources` 复制到 `Contents/Resources/bin`，签名阶段排除这两个已签名文件，避免重复签名改变摘要。应用完成签名、公证和 staple 后，验证 sidecar 摘要、Developer ID、Team ID、强化运行时、Gatekeeper 和票据；最终 DMG 也独立公证、staple 并验证。
 
-时间戳服务与票据网络错误按 5、15、30 秒有限重试；签名无效、公证拒绝等错误立即失败。Tauri 公证成功但应用缺少票据时，按 5、15 秒最多重新打包两次，应用和 DMG 一起重新生成并校验，不能只修复外部应用。重试耗尽不发布。
+时间戳服务与票据网络错误按 5、15、30 秒有限重试；签名无效、公证拒绝等错误立即失败。先公证并 staple 解包应用，再从该应用生成 DMG，最后独立公证 DMG。任何阶段缺少有效票据即停止，不发布。
 
 Windows/Linux 不签名。Linux 以 Ubuntu 22.04 系统库为兼容基线。Actions 原始桌面产物保留 14 天。构建 job 使用 contents read；plan 为读取草稿获得 contents write，但只做读取；最终发布 job 使用 contents write 上传附件和公开。CI 不创建 tag，稳定 tag 由本地入口推送。
 
@@ -120,7 +120,7 @@ Windows/Linux 不签名。Linux 以 Ubuntu 22.04 系统库为兼容基线。Acti
 - workflow plan 冻结源码 SHA、tag 对象、Release ID 和 CLI checksums.txt 的 SHA256。发布前后检查附件 ID、名称、大小、摘要和上传状态，防止下载校验期间附件被替换或删除。
 - 已公开新版本只校验并返回，不重新设置历史版本为 Latest，不覆盖附件。新入口不写 v0.1.21 及更早版本，也不写历史 `desktop-v*` 发布。公开版本缺件或异常时停止。
 - 修改源码需要新版本；不能移动已有 tag 来修复构建。发布后在临时安装目录验证 Latest 安装和旧版 `one upgrade`，不要覆盖开发者的启动器。
-- Apple 凭据与 Tauri updater 密钥独立。当前流程只发布手动安装包，不启用应用内自动更新、不生成 updater feed。Windows/Linux 实机运行和自动更新恢复验收另行完成。
+- Apple 凭据仅用于签名与公证。当前流程只发布手动安装包，不启用应用内自动更新、不生成 updater feed。Windows/Linux 实机运行和自动更新恢复验收另行完成。
 
 本地检查通过不代表五个平台 Actions 或 Apple 公证成功；实际发布状态以远端执行结果为准。
 
@@ -146,11 +146,11 @@ Derive versions from the highest remote stable vX.Y.Z tag, defaulting to patch; 
 
 The next stable version after v0.1.21 uses the unified protocol. Published historical CLI releases still require exactly the original six assets; v0.1.22 requires its original 13 assets, while v0.1.23+ requires all 15 files in the table above. No new desktop-v* tags are created and historical releases are never backfilled.
 
-Linux builds generate AppImage and DEB together, with an `artifacts` array in each architecture's build record. The publisher also accepts the legacy single `artifact` record from v0.1.22. DEBs depend on system GTK/WebKitGTK packages instead of bundling the AppImage runtime libraries. Install with `sudo apt install ./one-desktop_X.Y.Z_linux_amd64.deb`, or the matching ARM64 file.
+Linux builds generate AppImage and DEB together, with an `artifacts` array in each architecture's build record. The publisher also accepts the legacy single `artifact` record from v0.1.22. DEBs bundle Electron Chromium and depend on GTK/NSS system runtime libraries. Install with `sudo apt install ./one-desktop_X.Y.Z_linux_amd64.deb`, or the matching ARM64 file.
 
-Use Linux/macOS amd64/arm64 with Git, gh, mise, bash, tar and unzip. Pin tools through mise.toml, GoReleaser **2.18.0**, and CI Rust **1.94.0**. Scripts use only built-in Node APIs; checks and frontend builds install locked development dependencies with `pnpm install --frozen-lockfile`. Local authentication needs content-write and workflow-dispatch access (Contents write and Actions write for fine-grained tokens). Reuse gh authentication or inject GH_TOKEN through One shared credentials; never print/save credential values.
+Use Linux/macOS amd64/arm64 with Git, gh, mise, bash, tar and unzip. Pin tools through mise.toml, GoReleaser **2.18.0**, and Electron/electron-builder through the workspace lockfile. Scripts use only built-in Node APIs; checks and frontend builds install locked development dependencies with `pnpm install --frozen-lockfile`. Local authentication needs content-write and workflow-dispatch access (Contents write and Actions write for fine-grained tokens). Reuse gh authentication or inject GH_TOKEN through One shared credentials; never print/save credential values.
 
-Download all three Go modules with GOWORK=off and run `mise run --jobs 1 --force check` with task caching disabled. Check React, Rust, Go, website, agent guidance and release rules; tracked source must remain clean. GoReleaser uses `release --skip=publish --clean`, CGO_ENABLED=0, -trimpath, -s -w, and injects version, release channel and exact skill-source SHA for provenance. Verify archive hashes and Go source/platform metadata, host version, bilingual help, locale switching, templates, the real upgrade worker's release channel and real embedded skill content with standard GitHub source registration. Templates and official skills ship with the CLI; `one init skills` initializes or registers legacy local copies, then `one skills update --project` follows repository updates. Smoke checks use temporary directories and XDG configuration.
+Download all three Go modules with GOWORK=off and run `mise run --jobs 1 --force check` with task caching disabled. Check React, Electron, Go, website, agent guidance and release rules; tracked source must remain clean. GoReleaser uses `release --skip=publish --clean`, CGO_ENABLED=0, -trimpath, -s -w, and injects version, release channel and exact skill-source SHA for provenance. Verify archive hashes and Go source/platform metadata, host version, bilingual help, locale switching, templates, the real upgrade worker's release channel and real embedded skill content with standard GitHub source registration. Templates and official skills ship with the CLI; `one init skills` initializes or registers legacy local copies, then `one skills update --project` follows repository updates. Smoke checks use temporary directories and XDG configuration.
 
 ### CI, signing and recovery
 
@@ -158,7 +158,7 @@ After staging CLI assets, the local entrypoint dispatches desktop.yml on master 
 
 Configure the five Apple Secrets in the table above: Team ID, Apple ID, app-specific password, Developer ID Application p12 including its private key (base64), and p12 export password. Derive signing identity from the certificate and validate its Team ID. Shared credentials may be synchronized using gh secret set stdin; never put values in arguments or logs.
 
-Only macOS build steps receive Apple secrets. Use a temporary keychain, remove decoded p12 files after import, validate notarization credentials before building, and restore/clean keychains on success or failure. Sign sidecars before hashing; copy them using bundle.macOS.files, then sign/notarize/staple the app. Verify its sidecar hashes, identity, hardened runtime, Gatekeeper and ticket. Separately notarize/staple/verify the DMG. Timestamp/ticket network failures retry after 5/15/30 seconds; missing app tickets retry the entire app+DMG packaging up to twice after 5/15 seconds. Invalid signatures and rejected notarization fail immediately.
+Only macOS build steps receive Apple secrets. Use a temporary keychain, remove decoded p12 files after import, validate notarization credentials before building, and restore/clean keychains on success or failure. Sign sidecars before hashing; copy them using extraResources into Contents/Resources/bin and exclude them from re-signing. Sign/notarize/staple the app before building the DMG. Verify its sidecar hashes, identity, hardened runtime, Gatekeeper and ticket. Separately notarize/staple/verify the DMG. Timestamp/ticket network failures retry after 5/15/30 seconds; missing app tickets stop packaging before the DMG is built. Invalid signatures and rejected notarization fail immediately.
 
 Windows NSIS and Linux AppImage/DEB installers are unsigned. Linux uses Ubuntu 22.04 as its system-library baseline. Build jobs have contents read; preflight has contents write to see drafts but performs only reads; the publisher has contents write to upload and publish. CI creates no Git tags. Actions desktop artifacts are retained for 14 days.
 

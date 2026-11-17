@@ -9,6 +9,7 @@ Shared build and release automation lives here. Entrypoints parse arguments and 
 ```text
 scripts/
 ├── desktop.mts, desktop-macos.mts   # Desktop entrypoints / 桌面入口
+├── desktop-electron-install.mts     # Pinned Electron runtime / 固定 Electron 运行时
 ├── release.mts, desktop-release.mts # Release entrypoints / 发布入口
 ├── desktop/                        # Configuration, sidecars, bundles / 配置与构建
 │   └── macos/                      # Keychain, signing, notarization / 签名与公证
@@ -49,7 +50,7 @@ import { $, shell } from "./lib/shell.mts";
 
 const commit = $`git rev-parse HEAD`.stdout.trim();
 const args = ["--locked", "--release"];
-const run = shell({ cwd: "apps/desktop/src-tauri", stdio: "inherit" });
+const run = shell({ cwd: "services/desktop-main", stdio: "inherit" });
 run`cargo build ${args}`;
 
 const result = shell({ nothrow: true })`git diff --quiet`;

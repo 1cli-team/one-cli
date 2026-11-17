@@ -1,5 +1,5 @@
 // Package bundled embeds templates, the template registry and agent skills.
-// Generate with mise run sync-bundled; desktop assets belong to Tauri.
+// Generate with mise run sync-bundled; desktop assets belong to Electron.
 package bundled
 
 import (

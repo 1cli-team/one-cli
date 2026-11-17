@@ -1,7 +1,6 @@
 import { resolve } from "node:path";
 import { platforms } from "../release-assets.mts";
 import { git, repositoryRoot } from "../lib/repository.mts";
-import { shell } from "../lib/shell.mts";
 import { fail } from "../lib/output.mts";
 
 export type DesktopConfig = ReturnType<typeof readDesktopConfig>;
@@ -11,8 +10,14 @@ export function readDesktopConfig(args = process.argv.slice(2), env = process.en
   if (command !== "prepare" && command !== "build" && command !== "dev")
     fail(`Unknown desktop operation: ${command}`, `未知桌面操作：${command}`);
 
-  const read = shell({ cwd: repositoryRoot, env });
-  const target = env.ONE_DESKTOP_TARGET ?? read`rustc --print host-tuple`.stdout.trim();
+  const hostTargets: Record<string, string> = {
+    "darwin-arm64": "aarch64-apple-darwin",
+    "darwin-x64": "x86_64-apple-darwin",
+    "win32-x64": "x86_64-pc-windows-msvc",
+    "linux-x64": "x86_64-unknown-linux-gnu",
+    "linux-arm64": "aarch64-unknown-linux-gnu",
+  };
+  const target = env.ONE_DESKTOP_TARGET ?? hostTargets[`${process.platform}-${process.arch}`];
   const platform = platforms[target];
   if (!platform) fail(`Unsupported desktop target: ${target}`, `不支持的桌面目标：${target}`);
 
@@ -27,32 +32,22 @@ export function readDesktopConfig(args = process.argv.slice(2), env = process.en
       "Release builds require a stable version and clean committed source",
       "正式构建需要稳定版本和干净提交",
     );
-  if (release && args.length > 1)
-    fail("Release build options are fixed", "正式构建不接受额外打包参数");
+  if (args.length > 1) fail("Desktop build options are fixed", "桌面构建不接受额外打包参数");
 
-  const updater = Boolean(env.ONE_DESKTOP_UPDATER_PUBLIC_KEY && env.TAURI_SIGNING_PRIVATE_KEY);
-  if (
-    release &&
-    Boolean(env.ONE_DESKTOP_UPDATER_PUBLIC_KEY) !== Boolean(env.TAURI_SIGNING_PRIVATE_KEY)
-  )
-    fail("Configure both updater keys or neither", "更新公钥和私钥必须成对配置");
-
-  const desktop = resolve(repositoryRoot, "apps/desktop");
-  const native = resolve(desktop, "src-tauri");
+  const desktop = resolve(repositoryRoot, "apps/desktop-renderer");
+  const native = resolve(repositoryRoot, "services/desktop-main");
   return {
     command,
     target,
     platform,
     release,
     version,
-    updater,
     commit: git(repositoryRoot, "rev-parse", "HEAD"),
     channel: release ? "release" : "development",
     root: repositoryRoot,
     desktop,
     native,
-    bundleDirectory: resolve(native, "target", target, "release/bundle"),
-    extraArgs: args.slice(1),
+    bundleDirectory: resolve(native, "dist", target),
     env: { ...env },
   };
 }

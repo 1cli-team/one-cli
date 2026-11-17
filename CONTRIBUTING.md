@@ -27,9 +27,9 @@ After changing project task definitions, run `one init mise` and review the gene
 
 项目任务变更后执行 `one init mise` 并审阅生成配置。内嵌模板和技能通过 `one mise run sync-bundled` 更新，应修改源目录而不是生成副本。One 官网不再使用 Fumadocs，但该项目模板仍保留。
 
-The root check covers Go, React, Rust, static website, CLI help, agent references and release rules. Also run the affected project build. Use temporary workspace/config directories for checks that write preferences or create projects. Never print real credentials.
+The root check covers Go, React, Electron, static website, CLI help, agent references and release rules. Also run the affected project build. Use temporary workspace/config directories for checks that write preferences or create projects. Never print real credentials.
 
-根检查覆盖 Go、React、Rust、静态官网、CLI 帮助、AI 指引与发布规则；同时运行受影响项目的构建。涉及偏好保存或项目创建的验证使用临时工作区和配置目录，不打印真实凭据。
+根检查覆盖 Go、React、Electron、静态官网、CLI 帮助、AI 指引与发布规则；同时运行受影响项目的构建。涉及偏好保存或项目创建的验证使用临时工作区和配置目录，不打印真实凭据。
 
 After synchronizing bundled resources, run the Swift template integration tests with:
 

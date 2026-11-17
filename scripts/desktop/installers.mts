@@ -11,13 +11,7 @@ export function collectInstallers(workspace: string, manifest: Manifest) {
   if (!p || manifest.channel !== "release" || !stableTag.test(`v${manifest.version}`))
     fail("Installer collection requires a release build", "安装包收集需要正式构建");
   const sources = desktopBundles(manifest.version, manifest.target).map((bundle) => {
-    const directory = join(
-      workspace,
-      "apps/desktop/src-tauri/target",
-      manifest.target,
-      "release/bundle",
-      bundle,
-    );
+    const directory = join(workspace, "services/desktop-main/dist", manifest.target);
     const extension = bundle === "deb" ? ".deb" : p.extension;
     const files = readdirSync(directory).filter((name) => name.endsWith(extension));
     if (files.length !== 1)

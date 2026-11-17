@@ -9,7 +9,9 @@ This file records source boundaries for maintainers and agents. Discover command
 | `packages/cli` | `one` executable, Cobra commands, terminal input/output / CLI 入口、命令和终端交互 |
 | `packages/one-core` | Shared use cases, domain models, integrations and embedded templates/skills / 共享业务、集成、内置模板与技能 |
 | `services/desktop-api` | `one-api` executable, authenticated loopback HTTP API / 桌面 HTTP 后端 |
-| `apps/desktop` | React UI and Tauri host; bundles `one-api` and `one` / 桌面界面、原生能力及后端进程管理 |
+| `apps/desktop-renderer` | React interface / 桌面界面 |
+| `services/desktop-main` | Electron host; bundles `one-api` and `one` / 原生能力及后端进程管理 |
+| `packages/desktop-preload` | Typed contextBridge API / 类型化原生桥接 |
 | `apps/website` | Next.js static homepage; exports to `out/` / Next.js 静态官网 |
 | `packages/templates` | Project template sources, including `nextjs-site` and `fumadocs-docs` / 项目模板源 |
 | `packages/agent-skills` | Agent guidance embedded in CLI builds / CLI 构建时内置的 AI 指引 |
@@ -47,9 +49,9 @@ Infisical 插件拥有远端客户端、会话存储、工作区绑定、共享�
 
 ## Desktop boundary / 桌面边界
 
-React calls the Go HTTP API directly. Rust owns native capabilities, backend startup, authentication handshake and child-process lifetime. The API is separate from the CLI command tree. Desktop initialization, bundling and updates are coordinated by `scripts/desktop.mts` and `apps/desktop/src-tauri`.
+React calls the Go HTTP API directly. Electron owns native capabilities, backend startup, authentication handshake and child-process lifetime. The API is separate from the CLI command tree. Desktop initialization, bundling and updates are coordinated by `scripts/desktop.mts` and `services/desktop-main`.
 
-React 直接访问 Go HTTP；Rust 负责原生能力、后端启动、认证握手和子进程生命周期。`one create` 与 Desktop 的“打开工作区”维护本机工作区登记，敏感值按需从凭据存储读取。
+React 直接访问 Go HTTP；Electron 主进程负责原生能力、后端启动、认证握手和子进程生命周期。`one create` 与 Desktop 的“打开工作区”维护本机工作区登记，敏感值按需从凭据存储读取。
 
 The `SERVE_*` codes still used by the Desktop API are stable wire values. They do not imply a built-in CLI command. Generic task shorthands remain available for user-defined tasks.
 

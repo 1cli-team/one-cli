@@ -19,7 +19,7 @@ func NewStyles() Styles {
 	if ColorDisabled() {
 		return s
 	}
-	// Keep this aligned with --color-primary-500 in apps/desktop/src/styles/tokens.css.
+	// Keep this aligned with --color-primary-500 in apps/desktop-renderer/src/styles/tokens.css.
 	s.Accent = lipgloss.NewStyle().Foreground(lipgloss.Color("#ea580c"))
 	s.Muted = lipgloss.NewStyle().Foreground(lipgloss.Color("8"))
 	s.Success = lipgloss.NewStyle().Foreground(lipgloss.Color("2"))
