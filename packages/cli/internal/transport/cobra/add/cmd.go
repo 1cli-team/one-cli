@@ -25,6 +25,7 @@ import (
 	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/platform/i18n"
 	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/platform/output"
 	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/platform/prompt"
+	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/platform/terminalui"
 )
 
 func Commands(service *creationmodule.Service) []*cobra.Command { return buildContributions(service) }
@@ -144,11 +145,7 @@ func runAdd(cmd *cobra.Command, service *creationmodule.Service, positional stri
 	}); err != nil {
 		return err
 	}
-	prompt.Step(i18n.Tf("add.generated", name))
 	project := result.Project
-	for _, w := range project.Warnings {
-		prompt.Step("⚠ " + w)
-	}
 
 	output.Emit(&addResult{
 		Schema:         "one-cli/add/v1",
@@ -200,29 +197,45 @@ func (r *addResult) RenderTTY(w io.Writer) {
 	if r == nil {
 		return
 	}
+	ui := terminalui.New(w)
+	ui.Header("one add")
 	if len(r.Projects) > 0 {
-		fmt.Fprintf(w, i18n.T("add.group_success")+"\n", r.SubprojectName)
-		fmt.Fprintln(w, i18n.T("add.group_projects"))
+		ui.Success(i18n.Tf("add.group_success", r.SubprojectName))
+		ui.Section(i18n.T("add.group_projects"))
+		fields := make([]terminalui.Field, 0, len(r.Projects))
 		for _, project := range r.Projects {
-			fmt.Fprintf(w, i18n.T("add.group_member")+"\n", project.Name, project.TargetPath)
+			fields = append(fields, terminalui.Field{Label: project.Name, Value: project.TargetPath})
 		}
-		fmt.Fprintln(w, i18n.T("add.group_next_steps"))
-		fmt.Fprintf(w, "  one run %s:dev\n", r.SubprojectName)
-		return
+		ui.Fields(fields...)
+	} else {
+		ui.Success(i18n.Tf("add.success", r.SubprojectName))
+		ui.Blank()
+		fields := []terminalui.Field{
+			{Label: i18n.T("add.location"), Value: r.TargetPath},
+			{Label: i18n.T("add.stack"), Value: fmt.Sprintf("%s (%s)", r.TemplateID, r.Toolchain)},
+		}
+		if r.PackageManager != "" {
+			fields = append(fields, terminalui.Field{Label: i18n.T("add.package_manager"), Value: r.PackageManager})
+		}
+		ui.Fields(fields...)
 	}
-	fmt.Fprintf(w, i18n.T("add.success")+"\n", r.SubprojectName)
-	fmt.Fprintf(w, i18n.T("add.location")+"\n", r.TargetPath)
-	fmt.Fprintf(w, i18n.T("add.stack")+"\n", r.TemplateID, r.Toolchain)
-	if r.PackageManager != "" {
-		fmt.Fprintf(w, i18n.T("add.package_manager")+"\n", r.PackageManager)
+	if len(r.Warnings) > 0 {
+		ui.Blank()
 	}
-	fmt.Fprintln(w)
-	fmt.Fprintln(w, i18n.T("common.next_steps"))
-	if r.Toolchain == string(template.ToolchainNone) {
-		fmt.Fprintln(w, i18n.T("add.empty_next_steps"))
-		return
+	for _, warning := range r.Warnings {
+		ui.Warning(warning)
 	}
-	fmt.Fprintf(w, "  one dev -p %s\n", r.SubprojectName)
+	ui.Section(i18n.T("common.next_steps"))
+	switch {
+	case len(r.Projects) > 0:
+		ui.Text(i18n.T("add.group_next_steps"))
+		ui.Command(fmt.Sprintf("one run %s:dev", r.SubprojectName))
+	case r.Toolchain == string(template.ToolchainNone):
+		ui.Text(strings.TrimSpace(i18n.T("add.empty_next_steps")))
+	default:
+		ui.Command(fmt.Sprintf("one dev -p %s", r.SubprojectName))
+	}
+	ui.Blank()
 }
 
 type projectKind string

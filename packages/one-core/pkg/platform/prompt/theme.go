@@ -3,99 +3,64 @@ package prompt
 import (
 	"charm.land/huh/v2"
 	"charm.land/lipgloss/v2"
+	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/platform/terminalui"
 )
 
-// defaultTheme is a clack-ish minimalist theme: thin cyan accents, gray
-// descriptions, ◇/◆ glyphs for the prompt cursor, no thick left border.
-// Huh supplies the terminal background for accents. Body text keeps the
-// terminal foreground because some terminals cannot report their background.
-//
-// Centralised here so every prompt helper (Text / Select / Confirm / …)
-// applies it consistently. Callers don't need to know about huh.Theme.
+// defaultTheme keeps every prompt aligned with One's result and progress output.
+// Body text and status colors follow the terminal; accents use One's brand color.
 func defaultTheme() huh.Theme {
 	return huh.ThemeFunc(themeStyles)
 }
 
 func themeStyles(isDark bool) *huh.Styles {
 	t := huh.ThemeBase(isDark)
-	lightDark := lipgloss.LightDark(isDark)
+	s := terminalui.NewStyles()
 
-	var (
-		// Soft cyan for active selection / cursor — clack uses cyan as its
-		// signature accent. LightDark lets terminals with light bg pick
-		// the deeper shade.
-		accent = lightDark(lipgloss.Color("#0E7490"), lipgloss.Color("#22D3EE"))
-		// Muted gray for descriptions / placeholders / blurred state.
-		muted = lightDark(lipgloss.Color("#6B7280"), lipgloss.Color("#9CA3AF"))
-		// Subtle green for confirmed selections.
-		success = lightDark(lipgloss.Color("#16A34A"), lipgloss.Color("#4ADE80"))
-		// Muted red for errors — not blood-red, easier on the eyes.
-		danger = lightDark(lipgloss.Color("#DC2626"), lipgloss.Color("#F87171"))
-		// Buttons paint their own background, so keep a matching foreground.
-		buttonText = lightDark(lipgloss.Color("#111827"), lipgloss.Color("#E5E7EB"))
-	)
-
-	// Replace the thick left border (huh default) with a thin one in the
-	// accent colour. Reads more like clack's vertical connector.
 	t.Focused.Base = lipgloss.NewStyle().
+		MarginLeft(2).
 		PaddingLeft(1).
 		BorderStyle(lipgloss.NormalBorder()).
-		BorderLeft(true).
-		BorderForeground(accent)
+		BorderLeft(true)
+	if !terminalui.ColorDisabled() {
+		t.Focused.Base = t.Focused.Base.BorderForeground(s.Accent.GetForeground())
+	}
 	t.Focused.Card = t.Focused.Base
+	t.Focused.Title = s.Title
+	t.Focused.NoteTitle = s.Title.MarginBottom(1)
+	t.Focused.Directory = s.Accent
+	t.Focused.Description = s.Muted
 
-	t.Focused.Title = t.Focused.Title.Foreground(accent).Bold(true)
-	t.Focused.NoteTitle = t.Focused.NoteTitle.Foreground(accent).Bold(true).MarginBottom(1)
-	t.Focused.Directory = t.Focused.Directory.Foreground(accent)
-	t.Focused.Description = t.Focused.Description.Foreground(muted)
-
-	// ◇ outlined diamond for the cursor — clack's hallmark glyph.
-	t.Focused.SelectSelector = lipgloss.NewStyle().
-		Foreground(accent).
-		SetString("◇ ")
-	t.Focused.MultiSelectSelector = lipgloss.NewStyle().
-		Foreground(accent).
-		SetString("◇ ")
-	// ◆ filled diamond for picked entries in a multi-select.
-	t.Focused.SelectedPrefix = lipgloss.NewStyle().
-		Foreground(success).
-		SetString("◆ ")
-	t.Focused.UnselectedPrefix = lipgloss.NewStyle().
-		Foreground(muted).
-		SetString("◇ ")
-	t.Focused.SelectedOption = t.Focused.SelectedOption.Foreground(success)
-	// Keep unselected labels readable even when background detection falls
-	// back to the wrong light/dark mode. The terminal owns their foreground.
+	t.Focused.SelectSelector = s.Accent.SetString("● ")
+	t.Focused.MultiSelectSelector = s.Accent.SetString("› ")
+	t.Focused.SelectedPrefix = s.Success.SetString("◆ ")
+	t.Focused.UnselectedPrefix = s.Muted.SetString("◇ ")
+	t.Focused.SelectedOption = s.Accent.Bold(true)
 	t.Focused.UnselectedOption = t.Focused.UnselectedOption.UnsetForeground()
 	t.Focused.Option = t.Focused.Option.UnsetForeground()
+	t.Focused.NextIndicator = s.Accent.MarginLeft(1).SetString("→")
+	t.Focused.PrevIndicator = s.Accent.MarginRight(1).SetString("←")
+	t.Focused.ErrorIndicator = s.Error.SetString(" ✗")
+	t.Focused.ErrorMessage = s.Error.SetString(" ✗")
+	t.Focused.TextInput.Prompt = s.Accent
+	t.Focused.TextInput.Cursor = s.Accent
+	t.Focused.TextInput.Placeholder = s.Muted
 
-	t.Focused.NextIndicator = lipgloss.NewStyle().Foreground(accent).MarginLeft(1).SetString("→")
-	t.Focused.PrevIndicator = lipgloss.NewStyle().Foreground(accent).MarginRight(1).SetString("←")
-
-	t.Focused.ErrorIndicator = lipgloss.NewStyle().Foreground(danger).SetString(" ✗")
-	t.Focused.ErrorMessage = lipgloss.NewStyle().Foreground(danger).SetString(" ✗")
-
-	t.Focused.TextInput.Prompt = t.Focused.TextInput.Prompt.Foreground(accent)
-	t.Focused.TextInput.Cursor = t.Focused.TextInput.Cursor.Foreground(accent)
-	t.Focused.TextInput.Placeholder = t.Focused.TextInput.Placeholder.Foreground(muted)
-
-	t.Focused.FocusedButton = t.Focused.FocusedButton.
-		Foreground(lipgloss.Color("#FFFFFF")).
-		Background(accent)
-	t.Focused.BlurredButton = t.Focused.BlurredButton.
-		Foreground(buttonText).
-		Background(lightDark(lipgloss.Color("#E5E7EB"), lipgloss.Color("#1F2937")))
+	// An underline and weight communicate focus without solid button fills.
+	t.Focused.FocusedButton = s.Accent.Bold(true).Padding(0, 1).MarginRight(1).Underline(true)
+	t.Focused.BlurredButton = lipgloss.NewStyle().Padding(0, 1).MarginRight(1)
 	t.Focused.Next = t.Focused.FocusedButton
+	t.Help.ShortKey, t.Help.FullKey = s.Accent, s.Accent
+	t.Help.ShortDesc, t.Help.FullDesc = s.Muted, s.Muted
+	t.Help.ShortSeparator, t.Help.FullSeparator, t.Help.Ellipsis = s.Muted, s.Muted, s.Muted
 
-	// Blurred state: hide the border so non-active groups read as quiet.
 	t.Blurred = t.Focused
 	t.Blurred.Base = t.Blurred.Base.BorderStyle(lipgloss.HiddenBorder())
 	t.Blurred.Card = t.Blurred.Base
+	t.Blurred.MultiSelectSelector = lipgloss.NewStyle().SetString("  ")
 	t.Blurred.NextIndicator = lipgloss.NewStyle()
 	t.Blurred.PrevIndicator = lipgloss.NewStyle()
-
+	t.Group.Base = lipgloss.NewStyle().PaddingLeft(2)
 	t.Group.Title = t.Focused.Title
 	t.Group.Description = t.Focused.Description
-
 	return t
 }
