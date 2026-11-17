@@ -2,6 +2,7 @@ import { app, dialog, Menu, Tray, nativeImage } from "electron";
 import { join } from "node:path";
 import type { MainWindow } from "./window.ts";
 import type { Backend } from "./backend.ts";
+import { startGatewayNotifications } from "./gateway-notifications.ts";
 import english from "../../../apps/desktop-renderer/src/locales/en-US.json" with { type: "json" };
 import chinese from "../../../apps/desktop-renderer/src/locales/zh-CN.json" with { type: "json" };
 
@@ -94,6 +95,17 @@ export function createLifecycle({
     tray.setToolTip("One Desktop");
     tray.on("double-click", () => mainWindow.show());
     setLocale(app.getLocale().startsWith("zh") ? "zh-CN" : "en-US");
+    const stopGatewayNotifications = startGatewayNotifications({
+      backend,
+      title: () => messages().gatewayQuestionNotification,
+      openExecution: (id) => {
+        mainWindow.show();
+        const window = mainWindow.window;
+        if (window && !window.isDestroyed())
+          window.webContents.send("desktop:gateway-execution", id);
+      },
+    });
+    app.once("will-quit", stopGatewayNotifications);
     app.on("activate", () => mainWindow.show());
     app.on("second-instance", () => mainWindow.show());
     app.on("before-quit", (event) => {

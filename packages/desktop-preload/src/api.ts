@@ -20,6 +20,7 @@ export interface DesktopAPI {
   >;
   getBackendConnection(): Promise<Connection>;
   onBackendState(callback: () => void): () => void;
+  onGatewayExecution(callback: (id: string) => void): () => void;
   retryBackend(): Promise<void>;
   confirmHealth(generation: string): Promise<void>;
   chooseWorkspace(): Promise<string | null>;

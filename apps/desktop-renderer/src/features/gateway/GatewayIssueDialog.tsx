@@ -29,12 +29,14 @@ import {
 import { openExternal } from "@/lib/desktop/runtime";
 import Toast from "@/lib/toast";
 import { CodexOptionsFields } from "./CodexOptionsFields";
-import { GatewayIssuePicker } from "./GatewayIssuePicker";
+import { supportsLinear, type ExecutionWorker } from "./executions";
+import { GatewayIssuePicker, type IssueSelection } from "./GatewayIssuePicker";
 import {
 	getProjectBindings,
 	projectBindingsKey,
 	type CodexOptions,
 	type ProjectBinding,
+	type ProjectSummary,
 } from "./api";
 
 export type GatewayIssueAction = "new" | "dispatch";
@@ -46,37 +48,56 @@ function bindingId(project: ProjectBinding) {
 
 export function GatewayIssueDialog({
 	action,
-	mappedProjectIds,
+	mappedProjects,
+	machines,
 	onClose,
 	onDispatched,
 }: {
 	action: GatewayIssueAction;
-	mappedProjectIds?: string[];
+	mappedProjects?: ProjectSummary[];
+	machines?: ExecutionWorker[];
 	onClose(): void;
-	onDispatched(): void;
+	onDispatched(id?: string): void;
 }) {
 	const { t } = useTranslation();
 	const { mutate } = useSWRConfig();
-	const bindings = useSWR(mappedProjectIds?.length ? projectBindingsKey : null, getProjectBindings);
+	const bindings = useSWR(mappedProjects?.length ? projectBindingsKey : null, getProjectBindings);
 	const titleId = useId();
 	const createFormId = useId();
 	const [project, setProject] = useState("");
 	const [title, setTitle] = useState("");
 	const [description, setDescription] = useState("");
 	const [team, setTeam] = useState("");
-	const [issueId, setIssueId] = useState("");
-	const [options, setOptions] = useState<CodexOptions>({});
+	const [issue, setIssue] = useState<IssueSelection>();
+	const [workerId, setWorkerId] = useState("");
+	const [targetOptions, setTargetOptions] = useState<{
+		workerId?: string;
+		options: CodexOptions;
+	}>();
 	const [created, setCreated] = useState<Issue>();
 	const [pendingCreate, setPendingCreate] = useState("");
 	const [busy, setBusy] = useState<"creating" | "dispatching">();
 	const [error, setError] = useState("");
 	const isNew = action === "new";
 	const projects =
-		bindings.data?.filter(({ binding }) => mappedProjectIds?.includes(binding.project.id)) ?? [];
-	const selected =
-		projects.find((entry) => bindingId(entry) === project) ??
-		(projects.length === 1 && !project ? projects[0] : undefined);
+		bindings.data?.filter(({ binding }) =>
+			mappedProjects?.some((entry) => entry.projectId === binding.project.id),
+		) ?? [];
+	const selected = isNew
+		? (projects.find((entry) => bindingId(entry) === project) ??
+			(projects.length === 1 && !project ? projects[0] : undefined))
+		: projects.find(({ binding }) => binding.project.id === issue?.projectId);
 	const binding = selected?.binding;
+	const mapped = mappedProjects?.find((entry) => entry.projectId === binding?.project.id);
+	const compatible = mapped
+		? (machines ?? []).filter((worker) => supportsLinear(worker, mapped))
+		: [];
+	const worker =
+		compatible.find(({ id }) => id === workerId) ??
+		(!workerId && compatible.length === 1 ? compatible[0] : undefined);
+	const canSend = machines === undefined || !!worker;
+	const options =
+		targetOptions && targetOptions.workerId === worker?.id ? targetOptions.options : {};
 	const teams = binding?.project.teams ?? [];
 	const teamId =
 		team ||
@@ -86,9 +107,9 @@ export function GatewayIssueDialog({
 	const draftLocked = Boolean(busy || pendingCreate || created);
 
 	async function submit(send: boolean) {
-		if (!selected || !binding || busy) return;
+		if (!selected || !binding || busy || (send && !canSend)) return;
 		const { scope } = binding;
-		let id = isNew ? created?.id : issueId;
+		let id = isNew ? created?.id : issue?.id;
 		if (!id && (!isNew || !canCreate)) return;
 		setError("");
 		try {
@@ -125,7 +146,7 @@ export function GatewayIssueDialog({
 			if (send) {
 				const dispatchedId = id;
 				setBusy("dispatching");
-				const { status } = await dispatchToGateway(scope, dispatchedId, options);
+				const { status, jobId } = await dispatchToGateway(scope, dispatchedId, options, worker?.id);
 				void mutate<GatewayJobs>(
 					gatewayJobsKey(scope),
 					(current) => ({
@@ -134,7 +155,7 @@ export function GatewayIssueDialog({
 					}),
 					{ revalidate: false },
 				);
-				onDispatched();
+				onDispatched(jobId);
 				if (status === "failed") Toast.error(t("gateway.issueActions.alreadyFailed"));
 				else Toast.success(t("gateway.issueActions.dispatched"));
 				onClose();
@@ -170,19 +191,17 @@ export function GatewayIssueDialog({
 							{t("linear.loading")}
 						</p>
 					)}
-					{!mappedProjectIds?.length && (
+					{!mappedProjects?.length && (
 						<p className="text-sm text-muted-foreground">
-							{t(
-								mappedProjectIds ? "gateway.issueActions.noMappedProjects" : "gateway.offlineHint",
-							)}
+							{t(mappedProjects ? "gateway.issueActions.noMappedProjects" : "gateway.offlineHint")}
 						</p>
 					)}
-					{Boolean(mappedProjectIds?.length) && bindings.data && !projects.length && (
+					{Boolean(mappedProjects?.length) && bindings.data && !projects.length && (
 						<p className="text-sm text-muted-foreground">
 							{t("gateway.issueActions.noMappedBindings")}
 						</p>
 					)}
-					{projects.length > 0 && (
+					{isNew && projects.length > 0 && (
 						<Choice
 							label={t("gateway.linearProject")}
 							value={selected ? bindingId(selected) : ""}
@@ -200,7 +219,8 @@ export function GatewayIssueDialog({
 							onChange={(id) => {
 								setProject(id);
 								setTeam("");
-								setIssueId("");
+								setWorkerId("");
+								setTargetOptions(undefined);
 								setError("");
 							}}
 						/>
@@ -263,23 +283,51 @@ export function GatewayIssueDialog({
 							</Button>
 						</div>
 					)}
-					{!isNew && selected && (
+					{!isNew && projects.length > 0 && (
 						<GatewayIssuePicker
-							key={bindingId(selected)}
-							scope={selected.binding.scope}
-							value={issueId}
-							onChange={setIssueId}
+							projects={projects}
+							value={issue?.id ?? ""}
+							onChange={(nextIssue) => {
+								setIssue(nextIssue);
+								setWorkerId("");
+								setTargetOptions(undefined);
+								setError("");
+							}}
 							disabled={Boolean(busy)}
 						/>
 					)}
-					{binding && !pendingCreate && (
+					{binding && !pendingCreate && machines !== undefined && (
 						<div className="grid gap-2 border-t border-border pt-4">
-							<CodexOptionsFields
-								options={options}
-								onChange={setOptions}
-								disabled={Boolean(busy)}
+							<Choice
+								label={t("gateway.execution.worker")}
+								value={worker?.id ?? ""}
+								options={compatible.map(({ id, name }) => ({ id, name }))}
+								placeholder={t("gateway.execution.chooseWorker")}
+								disabled={Boolean(busy) || compatible.length === 0}
+								onChange={(id) => {
+									setWorkerId(id);
+									setTargetOptions(undefined);
+								}}
 							/>
+							{compatible.length === 0 && (
+								<p className="text-sm text-muted-foreground">
+									{t("gateway.execution.noIssueWorkers")}
+								</p>
+							)}
+							{worker && (!worker.online || worker.busy) && (
+								<p className="text-sm text-muted-foreground">
+									{t("gateway.execution.waiting", { name: worker.name })}
+								</p>
+							)}
 						</div>
+					)}
+					{binding && !pendingCreate && canSend && (
+						<CodexOptionsFields
+							worker={worker}
+							options={options}
+							onChange={(options) => setTargetOptions({ workerId: worker?.id, options })}
+							disabled={Boolean(busy)}
+						/>
 					)}
 					{pendingCreate && (
 						<p role="status" className="text-sm">
@@ -311,7 +359,7 @@ export function GatewayIssueDialog({
 					{binding && !pendingCreate && (
 						<Button
 							type="button"
-							disabled={Boolean(busy) || !(isNew ? created || canCreate : issueId)}
+							disabled={Boolean(busy) || !canSend || !(isNew ? created || canCreate : issue)}
 							onClick={() => void submit(true)}
 						>
 							{t(
@@ -319,7 +367,7 @@ export function GatewayIssueDialog({
 									? "gateway.codex.sending"
 									: isNew && !created
 										? "gateway.issueActions.createAndDispatch"
-										: "gateway.dispatch",
+										: "gateway.issueActions.dispatch",
 							)}
 						</Button>
 					)}

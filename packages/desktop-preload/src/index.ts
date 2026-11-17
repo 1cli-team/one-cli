@@ -9,6 +9,11 @@ const api: DesktopAPI = {
     ipcRenderer.on("desktop:state", listener);
     return () => ipcRenderer.removeListener("desktop:state", listener);
   },
+  onGatewayExecution(callback) {
+    const listener = (_event: Electron.IpcRendererEvent, id: string) => callback(id);
+    ipcRenderer.on("desktop:gateway-execution", listener);
+    return () => ipcRenderer.removeListener("desktop:gateway-execution", listener);
+  },
   retryBackend: () => ipcRenderer.invoke("desktop:retry"),
   confirmHealth: (generation) => ipcRenderer.invoke("desktop:health", generation),
   chooseWorkspace: () => ipcRenderer.invoke("desktop:choose-workspace"),

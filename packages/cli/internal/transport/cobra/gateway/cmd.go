@@ -65,6 +65,7 @@ func Command() *cobra.Command {
 		}),
 		jobs,
 	)
+	root.AddCommand(executionCommands()...)
 	return root
 }
 

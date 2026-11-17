@@ -13,8 +13,12 @@ type WorkOperation string
 
 const (
 	WorkStatus              WorkOperation = "status"
+	WorkResolveIssue        WorkOperation = "resolve_issue"
+	WorkAnswerIssue         WorkOperation = "answer_issue"
+	WorkContinueIssue       WorkOperation = "continue_issue"
 	WorkMonitorJobs         WorkOperation = "monitor_jobs"
 	WorkCodexModels         WorkOperation = "codex_models"
+	WorkCodexJobResult      WorkOperation = "codex_job_result"
 	WorkList                WorkOperation = "list"
 	WorkDispatch            WorkOperation = "dispatch"
 	WorkDispatchWithOptions WorkOperation = "dispatch_with_options"
@@ -27,13 +31,20 @@ const (
 const WorkMethod = "OneWorkflow.Call"
 
 type WorkRequest struct {
-	Operation    WorkOperation
-	Page         int
-	ProjectID    string
-	IssueID      string
-	RepositoryID string
-	Mapping      ProjectInput
-	Codex        CodexOptions
+	Operation     WorkOperation
+	WorkerID      string
+	Source        string
+	Page          int
+	JobID         string
+	ProjectID     string
+	IssueID       string
+	RepositoryID  string
+	Mapping       ProjectInput
+	Codex         CodexOptions
+	AskUser       bool
+	TrackProgress bool
+	Answer        ExecutionAnswer
+	ProgressID    string
 }
 
 type WorkReply struct {

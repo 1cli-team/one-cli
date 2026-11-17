@@ -28,6 +28,27 @@ func registerGatewayRoutes(mux *http.ServeMux, opts MuxOpts, connect func() (*ga
 		}
 		writeJSON(w, http.StatusOK, catalog)
 	})
+	mux.HandleFunc("GET /gateway/jobs/{job}/codex-result", func(w http.ResponseWriter, r *http.Request) {
+		setNoStore(w)
+		client, err := connect()
+		if err != nil || client == nil {
+			writeError(w, http.StatusServiceUnavailable, cliErrors.ONE_CLI_ERROR, i18n.T("gateway.unavailable"), nil)
+			return
+		}
+		ctx, cancel := context.WithTimeout(r.Context(), 15*time.Second)
+		defer cancel()
+		result, err := client.JobCodexResult(ctx, r.PathValue("job"))
+		if err != nil {
+			var response *gateway.ResponseError
+			status := http.StatusBadGateway
+			if errors.As(err, &response) {
+				status = response.Code
+			}
+			writeError(w, status, cliErrors.ONE_CLI_ERROR, i18n.T("gateway.codex_result_unavailable"), nil)
+			return
+		}
+		writeJSON(w, http.StatusOK, result)
+	})
 	mux.HandleFunc("GET /gateway/jobs", func(w http.ResponseWriter, r *http.Request) {
 		setNoStore(w)
 		page := 1
@@ -87,6 +108,7 @@ func registerGatewayRoutes(mux *http.ServeMux, opts MuxOpts, connect func() (*ga
 			if dispatch {
 				issue := r.PathValue("id")
 				var options gateway.CodexOptions
+				var workerID string
 				if issue == "" {
 					var input gateway.DispatchInput
 					r.Body = http.MaxBytesReader(w, r.Body, 4<<10)
@@ -94,9 +116,15 @@ func registerGatewayRoutes(mux *http.ServeMux, opts MuxOpts, connect func() (*ga
 						writeError(w, http.StatusBadRequest, cliErrors.ONE_CLI_ERROR, i18n.T("gateway.codex_options_invalid"), nil)
 						return
 					}
-					issue, options = input.Issue, input.CodexOptions
+					issue, options, workerID = input.Issue, input.CodexOptions, input.WorkerID
 				}
-				status, err := client.DispatchWithOptions(r.Context(), binding.Project.ID, issue, options)
+				var result gateway.DispatchResult
+				if workerID == "" {
+					result.Status, err = client.DispatchWithOptions(r.Context(), binding.Project.ID, issue, options)
+				} else {
+					result, err = client.DispatchToWorker(r.Context(), binding.Project.ID, issue, options, workerID, "desktop")
+				}
+				var response *gateway.ResponseError
 				switch {
 				case errors.Is(err, gateway.ErrInvalidCodexOptions):
 					writeError(w, http.StatusBadRequest, cliErrors.ONE_CLI_ERROR, i18n.T("gateway.codex_options_invalid"), nil)
@@ -104,10 +132,12 @@ func registerGatewayRoutes(mux *http.ServeMux, opts MuxOpts, connect func() (*ga
 					writeError(w, http.StatusConflict, cliErrors.ONE_CLI_ERROR, i18n.T("gateway.codex_options_conflict"), nil)
 				case errors.Is(err, gateway.ErrCodexOptionsUnsupported):
 					writeError(w, http.StatusBadGateway, cliErrors.ONE_CLI_ERROR, i18n.T("gateway.codex_options_unsupported"), nil)
+				case errors.As(err, &response) && response.Reason != "":
+					writeError(w, response.Code, cliErrors.ONE_CLI_ERROR, gatewayExecutionError(response.Reason), map[string]any{"reason": response.Reason})
 				case err != nil:
 					writeError(w, http.StatusBadGateway, cliErrors.ONE_CLI_ERROR, i18n.Tf("gateway.dispatch_failed", err), nil)
 				default:
-					writeJSON(w, http.StatusAccepted, map[string]gateway.Status{"status": status})
+					writeJSON(w, http.StatusAccepted, result)
 				}
 			} else {
 				jobs, err := client.List(r.Context(), binding.Project.ID)

@@ -169,12 +169,17 @@ export interface GatewayJobs {
 }
 
 export const gatewayJobsKey = (scope: Scope) => scoped(scope, "gateway/jobs");
-export function dispatchToGateway(scope: Scope, id: string, options: CodexOptions) {
-	const configured = !!(options.model || options.effort);
+export function dispatchToGateway(
+	scope: Scope,
+	id: string,
+	options: CodexOptions,
+	workerId?: string,
+) {
+	const configured = Boolean(workerId || options.model || options.effort);
 	const path = configured ? "gateway/jobs" : `gateway/jobs/${encodeURIComponent(id)}`;
-	return http.post<{ status: GatewayStatus }>(
+	return http.post<{ status: GatewayStatus; jobId?: string }>(
 		scoped(scope, path),
-		configured ? { issue: id, ...options } : undefined,
+		configured ? { issue: id, ...options, workerId } : undefined,
 		{ timeout: 60000 },
 	);
 }

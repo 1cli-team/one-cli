@@ -475,6 +475,7 @@
 		},
 		"settings": "桌面设置",
 		"settingsHint": "管理桌面运行状态、终端集成与更新。",
+		"gatewayQuestionNotification": "Gateway 任务正在等待你的回答",
 		"connectionInvalid": "后端连接信息无效。",
 		"notConnected": "请连接桌面后端后再继续。",
 		"sessionChanged": "后端已重启，请重新读取最新状态后保存。",
@@ -674,6 +675,64 @@
 		"verifyAndSave": "验证并保存"
 	},
 	"gateway": {
+		"execution": {
+			"workers": "执行机器",
+			"worker": "机器",
+			"addWorker": "添加执行机",
+			"inviteDescription": "在执行机上运行以下命令，并在 {{time}} 前输入配对码。",
+			"inviteCode": "配对码",
+			"status": "状态",
+			"noWorkers": "尚未登记执行机器。",
+			"jobs": "执行任务",
+			"all": "全部",
+			"sourceLabel": "来源",
+			"source": {
+				"desktop": "Desktop",
+				"cli": "One CLI"
+			},
+			"state": {
+				"queued": "排队中",
+				"running": "执行中",
+				"waiting_for_answer": "等待回答",
+				"waiting_to_continue": "待继续",
+				"outcome_unknown": "结果待确认",
+				"succeeded": "已成功",
+				"failed": "失败"
+			},
+			"workerState": {
+				"offline": "离线",
+				"busy": "执行中",
+				"available": "已连接"
+			},
+			"reason": {
+				"worker_offline": "正在等待所选机器重新连接。",
+				"worker_disconnected": "机器在执行中断开连接，结果待确认。"
+			},
+			"loadError": "无法读取 Gateway 执行数据。",
+			"noJobs": "没有符合筛选条件的执行任务。",
+			"details": "执行详情",
+			"questions": {
+				"title": "Codex 提问",
+				"answer": "回答",
+				"send": "发送回答",
+				"sending": "正在发送…",
+				"received": "回答已保存，等待执行机继续。"
+			},
+			"progress": {
+				"title": "上轮进度",
+				"continue": "继续任务",
+				"sending": "正在请求继续…",
+				"requested": "已排队，等待原执行机继续。"
+			},
+			"exitCode": "退出码 {{code}}",
+			"logs": "执行日志",
+			"noLogs": "尚未收到日志。",
+			"truncated": "日志已达到大小上限。",
+			"noIssueWorkers": "没有配置相同 Linear 项目和仓库映射的执行机。",
+			"chooseWorker": "选择机器",
+			"task": "任务",
+			"waiting": "任务将等待 {{name}}。"
+		},
 		"dispatch": "交给 Codex",
 		"codex": {
 			"model": "Codex 模型",
@@ -681,21 +740,21 @@
 			"default": "Codex 默认",
 			"defaultValue": "Codex 默认 · {{value}}",
 			"modelsLoading": "正在从执行机器读取模型列表…",
-			"modelsUnavailable": "无法从执行机器读取模型列表。仍可使用 Codex 默认配置派发。",
+			"modelsUnavailable": "暂时无法获取执行机器的模型列表，仍可使用 Codex 默认配置派发。",
 			"sending": "正在派发…"
 		},
 		"issueActions": {
 			"new": "新建需求",
 			"dispatch": "派发需求",
-			"newDescription": "在已配置 Gateway 映射的 Linear 项目中新建需求，也可以创建后直接交给 Codex。",
-			"dispatchDescription": "选择 Linear 项目和需求，再选择本次任务的 Codex 配置。",
+			"newDescription": "在已配置 Gateway 映射的 Linear 项目中新建需求，也可以创建后直接派发。",
+			"dispatchDescription": "选择需求和执行机，Gateway 会使用需求所属项目的仓库。",
 			"selectProject": "选择 Linear 项目",
 			"selectIssue": "选择需求",
 			"noIssues": "本页没有可派发的需求。",
 			"noMappedProjects": "请先在 Gateway 配置项目映射。",
 			"noMappedBindings": "请先在 One Desktop 的任务页面绑定一个已配置 Gateway 映射的 Linear 项目。",
 			"createOnly": "仅创建",
-			"createAndDispatch": "创建并交给 Codex",
+			"createAndDispatch": "创建并派发",
 			"created": "已在 Linear 创建 {{issue}}。",
 			"dispatched": "已交给 Codex，可以在任务明细中查看进度。",
 			"alreadyFailed": "该需求已有失败的任务，请查看任务明细。"
@@ -739,6 +798,8 @@
 			"empty": "还没有派发任务。",
 			"error": "暂时无法读取任务列表。请刷新重试。",
 			"updateRequired": "请更新 One Desktop、Gateway 和执行机器上的 One CLI，以查看任务详情。",
+			"codexResult": "Codex 执行结果",
+			"codexResultUnavailable": "未能读取 Codex 的最终回复。",
 			"lastError": "最近错误",
 			"openLinear": "在 Linear 中打开",
 			"linkError": "无法打开链接。",
@@ -754,6 +815,8 @@
 			"stages": {
 				"queued": "排队",
 				"running": "Codex 处理中",
+				"waiting_for_answer": "等待回答",
+				"waiting_to_continue": "待继续",
 				"verifying": "正在检查",
 				"publishing": "正在发布",
 				"opening": "正在创建 PR",

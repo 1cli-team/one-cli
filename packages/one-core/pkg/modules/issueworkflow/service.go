@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"maps"
 	"net/http"
 	"slices"
 	"strings"
@@ -27,7 +28,7 @@ type Linear interface {
 
 type Runner interface {
 	Implement(context.Context, *Job, string, func(Job) error) error
-	Recover(context.Context, Job) error
+	Recover(context.Context, *Job, func(Job) error) error
 	Verify(context.Context, Job, string) error
 }
 
@@ -103,26 +104,14 @@ func (s *Service) list(project string) api.Jobs {
 	return result
 }
 
-func (s *Service) dispatch(ctx context.Context, projectID, issueID string, options api.CodexOptions) (api.Status, int, error) {
+func (s *Service) dispatch(ctx context.Context, req api.WorkRequest) (api.Status, int, error) {
+	projectID, issueID, options := req.ProjectID, req.IssueID, req.Codex
 	if j, ok := s.store.get(projectID, issueID); ok {
 		return existingDispatch(j, options)
 	}
-	project, ok := s.project(projectID)
-	if !ok {
-		return "", http.StatusNotFound, fmt.Errorf("project is not configured")
-	}
-	// The server resolves the issue using its own project-scoped credentials.
-	reference := issueID
-	if !uuidPattern.MatchString(reference) {
-		reference = strings.ToUpper(reference)
-	}
-	issue, err := s.linear.Issue(ctx, project.binding(projectID, ""), reference)
+	project, issue, code, err := s.resolveIssue(ctx, projectID, issueID)
 	if err != nil {
-		return "", http.StatusBadGateway, err
-	}
-	if !uuidPattern.MatchString(issue.ID) ||
-		(issue.ID != issueID && !strings.EqualFold(issue.Identifier, issueID)) {
-		return "", http.StatusConflict, fmt.Errorf("Linear returned an issue that does not match the requested reference")
+		return "", code, err
 	}
 	if j, ok := s.store.get(projectID, issue.ID); ok {
 		return existingDispatch(j, options)
@@ -138,18 +127,99 @@ func (s *Service) dispatch(ctx context.Context, projectID, issueID string, optio
 	if !matchesTeamFlow(flow, team) {
 		return "", http.StatusConflict, fmt.Errorf("configured Linear states do not match the team")
 	}
-	job, err := s.store.enqueue(Job{ProjectID: projectID, Project: project, Issue: issue, Codex: options})
+	job, err := s.store.enqueue(Job{
+		ProjectID: projectID, Project: project, Issue: issue, Codex: options,
+		AskUser: req.AskUser, TrackProgress: req.TrackProgress,
+	})
 	if err != nil {
 		return "", http.StatusInternalServerError, err
 	}
 	if job.Codex != options {
 		return existingDispatch(job, options)
 	}
+	s.notifyRun()
+	return job.status(), http.StatusAccepted, nil
+}
+
+func (s *Service) notifyRun() {
 	select {
 	case s.wake <- struct{}{}:
 	default:
 	}
-	return job.status(), http.StatusAccepted, nil
+}
+
+func (s *Service) resolveIssue(ctx context.Context, projectID, issueID string) (Project, tracking.Issue, int, error) {
+	project, ok := s.project(projectID)
+	if !ok {
+		return Project{}, tracking.Issue{}, http.StatusNotFound, fmt.Errorf("project is not configured")
+	}
+	// The server resolves the issue using its own project-scoped credentials.
+	reference := issueID
+	if !uuidPattern.MatchString(reference) {
+		reference = strings.ToUpper(reference)
+	}
+	issue, err := s.linear.Issue(ctx, project.binding(projectID, ""), reference)
+	if err != nil {
+		var problem *tracking.Error
+		if errors.As(err, &problem) && (problem.Code == "scope" || problem.Code == "not_found") {
+			return Project{}, tracking.Issue{}, http.StatusNotFound, err
+		}
+		return Project{}, tracking.Issue{}, http.StatusBadGateway, err
+	}
+	if !uuidPattern.MatchString(issue.ID) ||
+		(!strings.EqualFold(issue.ID, issueID) && !strings.EqualFold(issue.Identifier, issueID)) {
+		return Project{}, tracking.Issue{}, http.StatusConflict, fmt.Errorf("Linear returned an issue that does not match the requested reference")
+	}
+	return project, issue, http.StatusOK, nil
+}
+
+func (s *Service) resolvedIssue(ctx context.Context, projectID, issueID string) (api.ResolvedIssue, int, error) {
+	project, issue, code, err := s.resolveIssue(ctx, projectID, issueID)
+	if err != nil {
+		return api.ResolvedIssue{}, code, err
+	}
+	_, mapped := project.Teams[issue.Team.ID]
+	resolved := api.ResolvedIssue{
+		Dispatchable: mapped && issue.State.Type != "completed" && issue.State.Type != "canceled",
+		ID:           issue.ID, Identifier: issue.Identifier, Title: issue.Title, URL: issue.URL,
+		Project: api.LinearProject{ID: projectID},
+	}
+	for _, repo := range project.repositorySettings() {
+		resolved.Project.Repositories = append(resolved.Project.Repositories, api.RepositorySummary{
+			Repository: repo.project().ref(), Base: repo.Base,
+		})
+	}
+	if existing, ok := s.store.get(projectID, issue.ID); ok {
+		resolved.LocalStatus = existing.status()
+	}
+	return resolved, http.StatusOK, nil
+}
+
+func (s *Service) findResolvedIssue(ctx context.Context, issueID string) (api.ResolvedIssue, int, error) {
+	s.configMu.RLock()
+	projectIDs := slices.Sorted(maps.Keys(s.projects))
+	s.configMu.RUnlock()
+	var resolved api.ResolvedIssue
+	for _, projectID := range projectIDs {
+		candidate, code, err := s.resolvedIssue(ctx, projectID, issueID)
+		if code == http.StatusNotFound {
+			continue
+		}
+		if err != nil {
+			return api.ResolvedIssue{}, code, err
+		}
+		if resolved.ID != "" {
+			return api.ResolvedIssue{}, http.StatusConflict, fmt.Errorf("issue reference matches more than one configured Linear project")
+		}
+		resolved = candidate
+		if api.ValidIssueID(issueID) {
+			break
+		}
+	}
+	if resolved.ID == "" {
+		return resolved, http.StatusNotFound, fmt.Errorf("issue was not found in the configured Linear projects")
+	}
+	return resolved, http.StatusOK, nil
 }
 
 func existingDispatch(job Job, options api.CodexOptions) (api.Status, int, error) {
@@ -170,6 +240,10 @@ func (s *Service) Run(ctx context.Context) {
 			switch job.Stage {
 			case queued, running, verifying:
 				s.execute(ctx, job)
+			case waitingForAnswer, waitingToContinue:
+				if job.readyToResume() {
+					s.execute(ctx, job)
+				}
 			}
 		}
 		select {
@@ -263,33 +337,51 @@ func (s *Service) run(ctx context.Context, job *Job) error {
 			return err
 		}
 		commonDir = dir
+	} else if job.readyToResume() {
+		if err := s.addGroupReadRoots(ctx, job); err != nil {
+			return err
+		}
 	}
 	switch job.Stage {
-	case queued:
+	case queued, waitingForAnswer, waitingToContinue:
 		if err := s.runner.Implement(ctx, job, commonDir, s.store.save); err != nil {
 			return err
 		}
 	case running:
-		if err := s.runner.Recover(ctx, *job); err != nil {
+		if err := s.runner.Recover(ctx, job, s.store.save); err != nil {
 			return err
 		}
+	}
+	if job.Stage == waitingForAnswer || job.Stage == waitingToContinue {
+		return nil
 	}
 	if group {
 		if err := s.saveStage(job, verifying); err != nil {
 			return err
 		}
 		if err := s.verifyGroup(ctx, job); err != nil {
-			return err
+			return s.checkFailed(ctx, job, err)
 		}
 	} else if len(job.Project.Check) != 0 {
 		if err := s.saveStage(job, verifying); err != nil {
 			return err
 		}
 		if err := s.runner.Verify(ctx, *job, commonDir); err != nil {
-			return err
+			return s.checkFailed(ctx, job, err)
 		}
 	}
 	return s.saveStage(job, publishing)
+}
+
+func (s *Service) checkFailed(ctx context.Context, job *Job, err error) error {
+	if !job.TrackProgress || job.ThreadID == "" || ctx.Err() == context.Canceled {
+		return err
+	}
+	summary := i18n.Tf("gateway.workflow_progress_check_failed", err)
+	if job.CodexResponse != "" {
+		summary += "\n\n" + job.CodexResponse
+	}
+	return saveExecutionProgress(job, summary, s.store.save)
 }
 
 func (s *Service) deliver(ctx context.Context, job *Job) error {

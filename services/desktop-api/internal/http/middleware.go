@@ -114,6 +114,7 @@ func BuildMux(opts MuxOpts) http.Handler {
 	registerGroupRoutes(api, opts)
 	registerIssueTrackingRoutes(api, opts)
 	registerGatewayRoutes(api, opts, desktopGateway)
+	registerGatewayExecutionRoutes(api, desktopGateway)
 	registerGatewaySettingsRoutes(api)
 	registerCodeHostRoutes(api)
 	registerGatewayProjectRoutes(api, opts)

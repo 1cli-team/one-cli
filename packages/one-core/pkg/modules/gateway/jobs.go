@@ -11,6 +11,10 @@ import (
 	gitmodule "github.com/torchstellar-team/one-cli/packages/one-core/pkg/modules/git"
 )
 
+var identifierUUID = regexp.MustCompile(`(?i)^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$`)
+
+func ValidIssueID(id string) bool { return identifierUUID.MatchString(id) }
+
 var issueReferencePattern = regexp.MustCompile(`(?i)^(?:[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}|[a-z0-9][a-z0-9_-]{0,63}-[0-9]{1,16})$`)
 
 func ValidIssueReference(issue string) bool {
@@ -25,18 +29,21 @@ type JobPage struct {
 }
 
 type JobSummary struct {
-	ID           string          `json:"id"`
-	ProjectID    string          `json:"projectId"`
-	Identifier   string          `json:"identifier"`
-	Title        string          `json:"title"`
-	ProjectName  string          `json:"projectName,omitempty"`
-	Description  string          `json:"description,omitempty"`
-	URL          string          `json:"url,omitempty"`
-	Stage        string          `json:"stage"`
-	CreatedAt    time.Time       `json:"createdAt"`
-	LastError    string          `json:"lastError,omitempty"`
-	Codex        CodexOptions    `json:"codex,omitzero"`
-	Repositories []JobRepository `json:"repositories"`
+	CanReadCodexResult bool               `json:"canReadCodexResult,omitempty"`
+	ID                 string             `json:"id"`
+	ProjectID          string             `json:"projectId"`
+	Identifier         string             `json:"identifier"`
+	Title              string             `json:"title"`
+	ProjectName        string             `json:"projectName,omitempty"`
+	Description        string             `json:"description,omitempty"`
+	URL                string             `json:"url,omitempty"`
+	Stage              string             `json:"stage"`
+	CreatedAt          time.Time          `json:"createdAt"`
+	LastError          string             `json:"lastError,omitempty"`
+	Codex              CodexOptions       `json:"codex,omitzero"`
+	Repositories       []JobRepository    `json:"repositories"`
+	Question           *ExecutionQuestion `json:"question,omitempty"`
+	Progress           *ExecutionProgress `json:"progress,omitempty"`
 }
 
 type JobRepository struct {
@@ -52,6 +59,19 @@ type JobPullRequest struct {
 	URL    string `json:"url"`
 	State  string `json:"state"`
 	Merged bool   `json:"merged"`
+}
+
+type CodexJobResult struct {
+	Response string `json:"response,omitempty"`
+}
+
+func (c *Client) JobCodexResult(ctx context.Context, id string) (CodexJobResult, error) {
+	var result CodexJobResult
+	if !identifierUUID.MatchString(id) {
+		return result, &ResponseError{Code: http.StatusBadRequest, Reason: "invalid_job_id"}
+	}
+	err := c.do(ctx, http.MethodGet, &result, "jobs", id, "codex-result")
+	return result, err
 }
 
 func (c *Client) MonitorJobs(ctx context.Context, page int) (JobPage, error) {

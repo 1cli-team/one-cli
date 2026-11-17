@@ -27,8 +27,8 @@ export interface CodexModelCatalog {
 	defaultEffort?: string;
 }
 
-export function useCodexModels() {
-	return useSWR("/gateway/codex/models", (path) =>
+export function useCodexModels(enabled: boolean) {
+	return useSWR(enabled ? "/gateway/codex/models" : null, (path) =>
 		http.get<CodexModelCatalog>(path, { timeout: 40000 }),
 	);
 }
@@ -55,6 +55,8 @@ export interface ProjectSummary extends RepositoryIdentity {
 }
 
 export interface GatewaySnapshot {
+	executions?: boolean;
+	workerUrl?: string;
 	startedAt: string;
 	projects: number;
 	mappings?: ProjectSummary[] | null;
@@ -85,6 +87,7 @@ export interface JobRepository {
 }
 
 export interface GatewayJob {
+	canReadCodexResult?: boolean;
 	id: string;
 	identifier: string;
 	title: string;
@@ -111,6 +114,16 @@ export function useGatewayJobs(connection: GatewayStatus | undefined, page: numb
 			: null,
 		([path, page]) => http.get<GatewayJobPage>(`${path}?page=${page}`),
 		{ refreshInterval: 5000, shouldRetryOnError: (error) => error.status !== 404 },
+	);
+}
+
+export function useGatewayJobCodexResult(connection: string | undefined, id: string | undefined) {
+	return useSWR<{ response?: string }, HttpError>(
+		connection && id
+			? ([`/gateway/jobs/${encodeURIComponent(id)}/codex-result`, connection] as const)
+			: null,
+		([path]) => http.get<{ response?: string }>(path, { timeout: 18000 }),
+		{ revalidateOnFocus: false, shouldRetryOnError: false },
 	);
 }
 

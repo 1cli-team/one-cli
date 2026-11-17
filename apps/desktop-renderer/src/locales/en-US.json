@@ -473,6 +473,7 @@
 			"show": "Open One Desktop",
 			"quit": "Quit One Desktop"
 		},
+		"gatewayQuestionNotification": "A Gateway task is waiting for your answer",
 		"settings": "Desktop settings",
 		"settingsHint": "Desktop runtime, terminal integration and updates.",
 		"connectionInvalid": "The backend connection is invalid.",
@@ -674,6 +675,64 @@
 		"verifyAndSave": "Verify and save"
 	},
 	"gateway": {
+		"execution": {
+			"workers": "Execution machines",
+			"worker": "Machine",
+			"addWorker": "Add execution machine",
+			"inviteDescription": "Run these commands on the execution machine. Enter the pairing code before {{time}}.",
+			"inviteCode": "Pairing code",
+			"status": "Status",
+			"noWorkers": "No execution machines are registered.",
+			"jobs": "Execution tasks",
+			"all": "All",
+			"sourceLabel": "Source",
+			"source": {
+				"desktop": "Desktop",
+				"cli": "One CLI"
+			},
+			"state": {
+				"queued": "Queued",
+				"running": "Running",
+				"waiting_for_answer": "Waiting for answer",
+				"waiting_to_continue": "Awaiting continuation",
+				"outcome_unknown": "Outcome unknown",
+				"succeeded": "Succeeded",
+				"failed": "Failed"
+			},
+			"workerState": {
+				"offline": "Offline",
+				"busy": "Running task",
+				"available": "Connected"
+			},
+			"reason": {
+				"worker_offline": "Waiting for the selected machine to reconnect.",
+				"worker_disconnected": "The machine disconnected during execution. Its outcome is pending."
+			},
+			"loadError": "Could not load Gateway execution data.",
+			"noJobs": "No execution tasks match these filters.",
+			"details": "Execution details",
+			"questions": {
+				"title": "Codex questions",
+				"answer": "Answer",
+				"send": "Send answer",
+				"sending": "Sending…",
+				"received": "Answer saved. Waiting for the execution machine to resume."
+			},
+			"progress": {
+				"title": "Previous turn progress",
+				"continue": "Continue task",
+				"sending": "Requesting continuation…",
+				"requested": "Queued to resume on the original machine."
+			},
+			"exitCode": "Exit code {{code}}",
+			"logs": "Execution logs",
+			"noLogs": "No logs have arrived yet.",
+			"truncated": "The logs reached the size limit.",
+			"noIssueWorkers": "No machine has a matching Linear project and repository mapping.",
+			"chooseWorker": "Choose a machine",
+			"task": "Task",
+			"waiting": "This task will wait for {{name}}."
+		},
 		"dispatch": "Send to Codex",
 		"codex": {
 			"model": "Codex model",
@@ -681,14 +740,14 @@
 			"default": "Codex default",
 			"defaultValue": "Codex default · {{value}}",
 			"modelsLoading": "Loading models from the execution machine…",
-			"modelsUnavailable": "Could not load models from the execution machine. You can still send using Codex defaults.",
+			"modelsUnavailable": "The machine's model list is unavailable. You can still dispatch using its Codex defaults.",
 			"sending": "Sending…"
 		},
 		"issueActions": {
 			"new": "New issue",
 			"dispatch": "Dispatch issue",
-			"newDescription": "Create a Linear issue in a project mapped in Gateway. You can send it to Codex immediately.",
-			"dispatchDescription": "Select a Linear project and issue, then choose the Codex settings for this task.",
+			"newDescription": "Create a Linear issue in a project mapped in Gateway. You can dispatch it immediately.",
+			"dispatchDescription": "Choose a Linear issue and an execution machine. Gateway uses the repositories mapped to the issue’s project.",
 			"selectProject": "Select a Linear project",
 			"selectIssue": "Select an issue",
 			"noIssues": "This page has no issues available to dispatch.",
@@ -739,6 +798,8 @@
 			"empty": "No tasks have been dispatched yet.",
 			"error": "Could not load tasks. Refresh to try again.",
 			"updateRequired": "Update One Desktop, Gateway, and One CLI on the execution machine to view task details.",
+			"codexResult": "Codex result",
+			"codexResultUnavailable": "The final Codex reply could not be retrieved.",
 			"lastError": "Latest error",
 			"openLinear": "Open in Linear",
 			"linkError": "Could not open the link.",
@@ -754,6 +815,8 @@
 			"stages": {
 				"queued": "Queued",
 				"running": "Codex working",
+				"waiting_for_answer": "Waiting for answer",
+				"waiting_to_continue": "Awaiting continuation",
 				"verifying": "Running checks",
 				"publishing": "Publishing",
 				"opening": "Opening PR",

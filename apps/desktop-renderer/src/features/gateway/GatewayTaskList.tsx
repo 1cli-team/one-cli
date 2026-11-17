@@ -1,21 +1,18 @@
-import { lazy, Suspense, useState } from "react";
+import { useState } from "react";
 import { ChevronDown, ExternalLink } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ErrorNotice } from "@/components/ui/page-layout";
 import { Skeleton } from "@/components/ui/skeleton";
-import { openExternal } from "@/lib/desktop/runtime";
-import i18n from "@/lib/i18n";
-import Toast from "@/lib/toast";
 import type { HttpError } from "@/types/api";
-import type { GatewayJob, GatewayJobPage, JobRepository } from "./api";
-
-const MarkdownPreview = lazy(() =>
-	import("@/features/linear/IssueMarkdownEditor").then(({ IssueMarkdownPreview }) => ({
-		default: IssueMarkdownPreview,
-	})),
-);
+import {
+	useGatewayJobCodexResult,
+	type GatewayJob,
+	type GatewayJobPage,
+	type JobRepository,
+} from "./api";
+import { CodexResultMessage, GatewayMarkdown, openGatewayLink } from "./GatewayMarkdown";
 
 const stageColors = {
 	queued: "muted",
@@ -28,11 +25,13 @@ export function GatewayTaskList({
 	data,
 	error,
 	isLoading,
+	connection,
 	onPageChange,
 }: {
 	data?: GatewayJobPage;
 	error?: HttpError;
 	isLoading: boolean;
+	connection?: string;
 	onPageChange(page: number): void;
 }) {
 	const { t } = useTranslation();
@@ -52,7 +51,7 @@ export function GatewayTaskList({
 					{data.items.length > 0 ? (
 						<ul className="divide-y divide-border overflow-hidden rounded-md border border-border bg-card">
 							{data.items.map((job) => (
-								<GatewayTaskRow key={job.id} job={job} />
+								<GatewayTaskRow key={job.id} job={job} connection={connection} />
 							))}
 						</ul>
 					) : (
@@ -92,9 +91,11 @@ export function GatewayTaskList({
 	);
 }
 
-function GatewayTaskRow({ job }: { job: GatewayJob }) {
+function GatewayTaskRow({ job, connection }: { job: GatewayJob; connection?: string }) {
 	const { t, i18n } = useTranslation();
 	const [expanded, setExpanded] = useState(false);
+	const showResult = expanded && !!job.canReadCodexResult;
+	const result = useGatewayJobCodexResult(connection, showResult ? job.id : undefined);
 	const created = new Date(job.createdAt).toLocaleString(i18n.resolvedLanguage);
 	const variant = stageColors[job.stage as keyof typeof stageColors] ?? "secondary";
 	return (
@@ -138,12 +139,9 @@ function GatewayTaskRow({ job }: { job: GatewayJob }) {
 							</div>
 						</dl>
 					)}
-					{expanded && job.description && (
-						<Suspense
-							fallback={<p className="whitespace-pre-wrap wrap-anywhere">{job.description}</p>}
-						>
-							<MarkdownPreview value={job.description} onOpenLink={openTaskLink} />
-						</Suspense>
+					{expanded && job.description && <GatewayMarkdown value={job.description} />}
+					{showResult && (
+						<CodexResultMessage isLoading={result.isLoading} value={result.data?.response} />
 					)}
 					{job.repositories.length > 0 && (
 						<ul className="divide-y divide-border rounded-md border border-border">
@@ -202,14 +200,10 @@ function TaskLink({ url, children }: { url: string; children: string }) {
 			variant="link"
 			size="xs"
 			className="h-auto px-0 has-[>svg]:px-0"
-			onClick={() => openTaskLink(url)}
+			onClick={() => openGatewayLink(url)}
 		>
 			{children}
 			<ExternalLink aria-hidden="true" />
 		</Button>
 	);
-}
-
-function openTaskLink(url: string) {
-	void openExternal(url).catch(() => Toast.error(i18n.t("gateway.taskList.linkError")));
 }

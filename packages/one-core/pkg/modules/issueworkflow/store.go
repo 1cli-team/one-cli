@@ -4,7 +4,9 @@ import (
 	"cmp"
 	"crypto/rand"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"net/http"
 	"os"
 	"path/filepath"
 	"slices"
@@ -21,37 +23,44 @@ import (
 type stage string
 
 const (
-	queued     stage = "queued"
-	running    stage = "running"
-	verifying  stage = "verifying"
-	publishing stage = "publishing"
-	opening    stage = "opening"
-	toReview   stage = "to_review"
-	review     stage = "review"
-	toDone     stage = "to_done"
-	done       stage = "done"
-	failed     stage = "failed"
+	queued            stage = "queued"
+	running           stage = "running"
+	waitingForAnswer  stage = api.ExecutionWaitingForAnswer
+	waitingToContinue stage = api.ExecutionWaitingToContinue
+	verifying         stage = "verifying"
+	publishing        stage = "publishing"
+	opening           stage = "opening"
+	toReview          stage = "to_review"
+	review            stage = "review"
+	toDone            stage = "to_done"
+	done              stage = "done"
+	failed            stage = "failed"
 )
 
 type Job struct {
-	ID             string           `json:"id"`
-	ProjectID      string           `json:"projectId"`
-	Issue          tracking.Issue   `json:"issue"`
-	Project        Project          `json:"project"`
-	Codex          api.CodexOptions `json:"codex,omitzero"`
-	Stage          stage            `json:"stage"`
-	Created        time.Time        `json:"created"`
-	Worktree       string           `json:"worktree,omitempty"`
-	CheckDir       string           `json:"checkDir,omitempty"`
-	BaseSHA        string           `json:"baseSha,omitempty"`
-	Branch         string           `json:"branch,omitempty"`
-	ThreadID       string           `json:"threadId,omitempty"`
-	TurnID         string           `json:"turnId,omitempty"`
-	HeadSHA        string           `json:"headSha,omitempty"`
-	OpenSince      time.Time        `json:"openSince,omitzero"`
-	PR             PullRequest      `json:"pr"`
-	LastError      string           `json:"lastError,omitempty"`
-	RepositoryRuns []RepositoryRun  `json:"repositoryRuns,omitempty"`
+	ID             string                 `json:"id"`
+	ProjectID      string                 `json:"projectId"`
+	Issue          tracking.Issue         `json:"issue"`
+	Project        Project                `json:"project"`
+	Codex          api.CodexOptions       `json:"codex,omitzero"`
+	AskUser        bool                   `json:"askUser,omitempty"`
+	TrackProgress  bool                   `json:"trackProgress,omitempty"`
+	Question       *api.ExecutionQuestion `json:"question,omitempty"`
+	Progress       *api.ExecutionProgress `json:"progress,omitempty"`
+	Stage          stage                  `json:"stage"`
+	Created        time.Time              `json:"created"`
+	Worktree       string                 `json:"worktree,omitempty"`
+	CheckDir       string                 `json:"checkDir,omitempty"`
+	BaseSHA        string                 `json:"baseSha,omitempty"`
+	Branch         string                 `json:"branch,omitempty"`
+	ThreadID       string                 `json:"threadId,omitempty"`
+	TurnID         string                 `json:"turnId,omitempty"`
+	CodexResponse  string                 `json:"codexResponse,omitempty"`
+	HeadSHA        string                 `json:"headSha,omitempty"`
+	OpenSince      time.Time              `json:"openSince,omitzero"`
+	PR             PullRequest            `json:"pr"`
+	LastError      string                 `json:"lastError,omitempty"`
+	RepositoryRuns []RepositoryRun        `json:"repositoryRuns,omitempty"`
 	readRoots      []string
 }
 
@@ -69,8 +78,21 @@ type RepositoryRun struct {
 
 func (j Job) clone() Job {
 	j.RepositoryRuns = slices.Clone(j.RepositoryRuns)
+	if j.Question != nil {
+		question := *j.Question
+		j.Question = &question
+	}
+	if j.Progress != nil {
+		progress := *j.Progress
+		j.Progress = &progress
+	}
 	j.readRoots = nil
 	return j
+}
+
+func (j Job) readyToResume() bool {
+	return (j.Stage == waitingForAnswer && j.Question != nil && j.Question.Answer != "") ||
+		(j.Stage == waitingToContinue && j.Progress != nil && j.Progress.ContinueRequested)
 }
 
 func (j Job) status() api.Status {
@@ -156,6 +178,17 @@ func (s *Store) get(project, issue string) (Job, bool) {
 	return job.clone(), ok
 }
 
+func (s *Store) findID(id string) (Job, bool) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	for _, job := range s.jobs {
+		if job.ID == id {
+			return job.clone(), true
+		}
+	}
+	return Job{}, false
+}
+
 func (s *Store) enqueue(job Job) (Job, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -176,6 +209,54 @@ func (s *Store) save(job Job) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	return s.saveLocked(job)
+}
+
+func (s *Store) answer(projectID, issueID string, input api.ExecutionAnswer) (int, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	job, ok := s.jobs[jobKey(projectID, issueID)]
+	if !ok {
+		return http.StatusNotFound, errors.New("workflow job not found")
+	}
+	if job.Question == nil || job.Question.ID != input.QuestionID {
+		return http.StatusConflict, errors.New("question does not match the workflow job")
+	}
+	question := *job.Question
+	if question.Answer == input.Answer {
+		return http.StatusOK, nil
+	}
+	if job.Stage != waitingForAnswer || question.Answer != "" {
+		return http.StatusConflict, errors.New("question is no longer waiting for an answer")
+	}
+	question.Answer = input.Answer
+	job.Question = &question
+	if err := s.saveLocked(job); err != nil {
+		return http.StatusInternalServerError, err
+	}
+	return http.StatusOK, nil
+}
+
+func (s *Store) requestContinue(projectID, issueID, progressID string) (int, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	job, ok := s.jobs[jobKey(projectID, issueID)]
+	if !ok {
+		return http.StatusNotFound, errors.New("workflow job not found")
+	}
+	if job.Progress == nil || job.Progress.ID != progressID ||
+		(job.Stage != waitingToContinue && !job.Progress.ContinueRequested) {
+		return http.StatusConflict, errors.New("progress does not match a paused turn")
+	}
+	if job.Progress.ContinueRequested {
+		return http.StatusOK, nil
+	}
+	progress := *job.Progress
+	progress.ContinueRequested = true
+	job.Progress = &progress
+	if err := s.saveLocked(job); err != nil {
+		return http.StatusInternalServerError, err
+	}
+	return http.StatusOK, nil
 }
 
 func (s *Store) saveLocked(job Job) error {
@@ -211,7 +292,7 @@ func (s *Store) counts() api.QueueCounts {
 		switch job.Stage {
 		case queued:
 			counts.Queued++
-		case running, verifying, publishing, opening, toReview, toDone:
+		case running, waitingForAnswer, waitingToContinue, verifying, publishing, opening, toReview, toDone:
 			counts.Active++
 		case review:
 			counts.Review++

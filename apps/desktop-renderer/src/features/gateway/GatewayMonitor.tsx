@@ -1,5 +1,6 @@
 import { useState } from "react";
-import useSWR from "swr";
+import { useSearchParams } from "react-router-dom";
+import useSWR, { useSWRConfig } from "swr";
 import { Activity, Plus, RefreshCw, Send, Settings2, SlidersHorizontal } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
@@ -16,6 +17,8 @@ import {
 } from "@/components/ui/table";
 import { EnvironmentLink } from "@/features/environment-context/EnvironmentLink";
 import { ConnectionBadge } from "./ConnectionBadge";
+import { GatewayExecutions } from "./GatewayExecutions";
+import { useWorkers } from "./executions";
 import { GatewayIssueDialog, type GatewayIssueAction } from "./GatewayIssueDialog";
 import { GatewayProjectDialog } from "./GatewayProjectDialog";
 import { GatewayTaskList } from "./GatewayTaskList";
@@ -34,15 +37,30 @@ const displayedCounts = ["queued", "active", "review", "completed", "failed"] as
 export function GatewayMonitor() {
 	const { t, i18n } = useTranslation();
 	const status = useGatewayStatus();
+	const { mutate } = useSWRConfig();
 	const [configure, setConfigure] = useState(false);
 	const [configured, setConfigured] = useState(false);
 	const [page, setPage] = useState(1);
 	const [issueAction, setIssueAction] = useState<GatewayIssueAction>();
+	const [search, setSearch] = useSearchParams();
+	const selectedExecution = search.get("execution") ?? undefined;
 	const connection = status.error ? undefined : status.data;
 	const snapshot = connection?.snapshot;
-	const mappedProjectIds = snapshot
-		? (snapshot.mappings ?? []).map(({ projectId }) => projectId)
-		: undefined;
+	const mappedProjects = snapshot ? (snapshot.mappings ?? []) : undefined;
+	const workers = useWorkers(snapshot?.executions ? connection?.url : undefined);
+	const machines = workers.data ?? [];
+	const openExecution = (id?: string) => {
+		setSearch(
+			(current) => {
+				const next = new URLSearchParams(current);
+				if (id) next.set("execution", id);
+				else next.delete("execution");
+				return next;
+			},
+			{ replace: true },
+		);
+		if (id && connection) void mutate(["/gateway/executions", connection.url]);
+	};
 	const jobs = useGatewayJobs(connection, page);
 	const locale = i18n.resolvedLanguage;
 	const formatTime = (value: string) => new Date(value).toLocaleString(locale);
@@ -134,6 +152,16 @@ export function GatewayMonitor() {
 					)}
 				/>
 			) : null}
+			{connection && snapshot?.executions && (
+				<GatewayExecutions
+					key={connection.url}
+					connection={connection.url}
+					canInvite={!!snapshot.workerUrl}
+					selected={selectedExecution}
+					onSelect={openExecution}
+				/>
+			)}
+
 			<section className="space-y-3" aria-labelledby="gateway-queue-heading">
 				<div className="flex flex-wrap items-center justify-between gap-3">
 					<h2 id="gateway-queue-heading" className="text-base font-medium">
@@ -146,7 +174,7 @@ export function GatewayMonitor() {
 								{t("gateway.issueActions.new")}
 							</Button>
 							<Button size="sm" onClick={() => setIssueAction("dispatch")}>
-								<Send />
+								<Send data-icon="inline-start" />
 								{t("gateway.issueActions.dispatch")}
 							</Button>
 						</div>
@@ -156,6 +184,7 @@ export function GatewayMonitor() {
 			</section>
 			{snapshot && (
 				<GatewayTaskList
+					connection={connection?.url}
 					data={jobs.data}
 					error={jobs.error}
 					isLoading={jobs.isLoading}
@@ -165,15 +194,18 @@ export function GatewayMonitor() {
 			{issueAction && (
 				<GatewayIssueDialog
 					action={issueAction}
-					mappedProjectIds={mappedProjectIds}
+					mappedProjects={mappedProjects}
+					machines={snapshot?.executions ? machines : undefined}
 					onClose={() => setIssueAction(undefined)}
-					onDispatched={() => {
+					onDispatched={(id) => {
+						if (id) openExecution(id);
 						if (page === 1) void jobs.mutate();
 						setPage(1);
 						void status.mutate();
 					}}
 				/>
 			)}
+
 			{configure && (
 				<GatewayProjectDialog
 					onClose={() => setConfigure(false)}

@@ -43,6 +43,19 @@ func (s *Service) Handle(ctx context.Context, req api.WorkRequest) api.WorkReply
 			return reply(http.StatusOK, catalog)
 		}
 		return problem(http.StatusNotFound, "codex_models_unavailable", nil)
+	case api.WorkCodexJobResult:
+		if !uuidPattern.MatchString(req.JobID) {
+			return problem(http.StatusBadRequest, "invalid_job_id", nil)
+		}
+		job, ok := s.store.findID(req.JobID)
+		if !ok {
+			return problem(http.StatusNotFound, "job_not_found", nil)
+		}
+		result, err := s.codexJobResult(ctx, job)
+		if err != nil {
+			return problem(http.StatusBadGateway, "codex_job_result_unavailable", err)
+		}
+		return reply(http.StatusOK, result)
 	case api.WorkMonitorJobs:
 		if req.IssueID != "" && !api.ValidIssueReference(req.IssueID) {
 			return problem(http.StatusBadRequest, "invalid_issue_reference", nil)
@@ -52,12 +65,33 @@ func (s *Service) Handle(ctx context.Context, req api.WorkRequest) api.WorkReply
 		if uuidPattern.MatchString(req.ProjectID) {
 			return reply(http.StatusOK, s.list(req.ProjectID))
 		}
+	case api.WorkResolveIssue:
+		if req.ProjectID == "" && api.ValidIssueReference(req.IssueID) {
+			resolved, code, err := s.findResolvedIssue(ctx, req.IssueID)
+			switch code {
+			case http.StatusOK:
+				return reply(code, resolved)
+			case http.StatusNotFound:
+				return problem(code, "issue_unmapped", err)
+			case http.StatusConflict:
+				return problem(code, "issue_reference_ambiguous", err)
+			default:
+				return problem(code, "workflow_dispatch", err)
+			}
+		}
+		if uuidPattern.MatchString(req.ProjectID) && api.ValidIssueReference(req.IssueID) {
+			resolved, code, err := s.resolvedIssue(ctx, req.ProjectID, req.IssueID)
+			if err != nil {
+				return problem(code, "workflow_dispatch", err)
+			}
+			return reply(http.StatusOK, resolved)
+		}
 	case api.WorkDispatch, api.WorkDispatchWithOptions:
 		if uuidPattern.MatchString(req.ProjectID) && api.ValidIssueReference(req.IssueID) {
 			if !req.Codex.Valid() {
 				return problem(http.StatusBadRequest, "invalid_codex_options", nil)
 			}
-			status, code, err := s.dispatch(ctx, req.ProjectID, req.IssueID, req.Codex)
+			status, code, err := s.dispatch(ctx, req)
 			if errors.Is(err, api.ErrCodexOptionsConflict) {
 				return problem(code, "codex_options_conflict", nil)
 			}
@@ -66,6 +100,26 @@ func (s *Service) Handle(ctx context.Context, req api.WorkRequest) api.WorkReply
 			}
 			return reply(code, map[string]api.Status{"status": status})
 		}
+	case api.WorkAnswerIssue:
+		if !uuidPattern.MatchString(req.ProjectID) || !uuidPattern.MatchString(req.IssueID) || !req.Answer.Valid() {
+			return problem(http.StatusBadRequest, "invalid_execution_answer", nil)
+		}
+		code, err := s.store.answer(req.ProjectID, req.IssueID, req.Answer)
+		if err != nil {
+			return problem(code, "execution_question_conflict", err)
+		}
+		s.notifyRun()
+		return reply(code, struct{}{})
+	case api.WorkContinueIssue:
+		if !uuidPattern.MatchString(req.ProjectID) || !uuidPattern.MatchString(req.IssueID) || !api.ValidProgressID(req.ProgressID) {
+			return problem(http.StatusBadRequest, "invalid_execution_continue", nil)
+		}
+		code, err := s.store.requestContinue(req.ProjectID, req.IssueID, req.ProgressID)
+		if err != nil {
+			return problem(code, "execution_continue_conflict", err)
+		}
+		s.notifyRun()
+		return reply(code, struct{}{})
 	case api.WorkRepositories:
 		if s.manager != nil {
 			repos, err := s.repositories(ctx)
@@ -188,6 +242,18 @@ func (s *Service) RunIssue(ctx context.Context, project, issue string, onReview 
 		case queued, running, verifying:
 			s.execute(ctx, job)
 			continue
+		case waitingForAnswer:
+			if job.readyToResume() {
+				s.execute(ctx, job)
+				continue
+			}
+			return RunResult{}, i18n.Errorf("gateway.cli.workflow_waiting_for_answer")
+		case waitingToContinue:
+			if job.readyToResume() {
+				s.execute(ctx, job)
+				continue
+			}
+			return RunResult{}, i18n.Errorf("gateway.cli.workflow_waiting_to_continue")
 		default:
 			previous := job.Stage
 			if err := s.deliver(ctx, &job); err != nil && ctx.Err() == nil {

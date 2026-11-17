@@ -12,16 +12,15 @@ This repository is a One workspace. Discover tasks from configuration rather tha
 
 ```sh
 one run --list -o json
-one install
 one dev
 one dev -p website
 one build -p website
 one mise run --jobs 1 --force check
 ```
 
-`one install` builds and installs the local CLI launcher; `one dev` runs Desktop. The website exports static files to `apps/website/out` and can be previewed with `one run preview -p website`. Node dependencies and the pnpm lockfile belong to the repository root.
+`one dev` runs the `install` task to build and install the local CLI launcher, then starts Desktop and the configured local Gateway. The website exports static files to `apps/website/out` and can be previewed with `one run preview -p website`. Node dependencies and the pnpm lockfile belong to the repository root.
 
-`one install` 构建并安装本地 CLI，`one dev` 启动桌面版。官网产物在 `apps/website/out`，通过 `one run preview -p website` 预览。Node 依赖与 pnpm 锁文件由仓库根统一管理。
+`one dev` 先执行 `install` 任务构建并安装本地 CLI，再启动桌面版和已配置的本机 Gateway。官网产物在 `apps/website/out`，通过 `one run preview -p website` 预览。Node 依赖与 pnpm 锁文件由仓库根统一管理。
 
 After changing project task definitions, run `one init mise` and review the generated configuration. `one mise run sync-bundled` regenerates embedded templates and skills; edit their source under `packages/templates` and `packages/agent-skills`, not generated copies. Keep the Fumadocs template available even though the One website no longer uses it.
 

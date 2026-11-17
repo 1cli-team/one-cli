@@ -15,34 +15,72 @@ import {
 	type IssuePage,
 	type Scope,
 } from "@/features/linear/api";
+import type { ProjectBinding } from "./api";
+
+type Cursors = Record<string, string>;
+type IssueQuery = { projectId: string; issuesPath: string; jobsPath: string };
+
+export type IssueSelection = { id: string; projectId: string };
+
+async function loadIssuePages([, queries]: readonly [string, IssueQuery[]]) {
+	const results = await Promise.allSettled(
+		queries.map(async ({ projectId, issuesPath, jobsPath }) => {
+			const [page, jobs] = await Promise.all([
+				fetchJSON<IssuePage>(issuesPath),
+				fetchJSON<GatewayJobs>(jobsPath).catch(() => undefined),
+			]);
+			const issues = page.nodes.filter(
+				({ id, state }) =>
+					state.type !== "completed" && state.type !== "canceled" && !jobs?.issues[id],
+			);
+			return { projectId, issues, pageInfo: page.pageInfo };
+		}),
+	);
+	const next: Cursors = {};
+	const issues = results.flatMap((result) => {
+		if (result.status === "rejected") return [];
+		const { projectId, issues, pageInfo } = result.value;
+		if (pageInfo.hasNextPage && pageInfo.endCursor) next[projectId] = pageInfo.endCursor;
+		return issues.map((issue) => ({ ...issue, projectId }));
+	});
+	return { issues, next, errors: results.filter((result) => result.status === "rejected") };
+}
 
 export function GatewayIssuePicker({
-	scope,
+	projects,
 	value,
 	onChange,
 	disabled,
 }: {
-	scope: Scope;
+	projects: ProjectBinding[];
 	value: string;
-	onChange(id: string): void;
+	onChange(issue?: IssueSelection): void;
 	disabled: boolean;
 }) {
 	const { t } = useTranslation();
 	const searchId = useId();
 	const [search, setSearch] = useState("");
 	const [query, setQuery] = useState("");
-	const [cursors, setCursors] = useState([""]);
-	const page = useSWR<IssuePage>(
-		scoped(scope, "issues", { q: query, after: cursors.at(-1) ?? "" }),
-		fetchJSON,
+	const [pages, setPages] = useState<(Cursors | undefined)[]>([undefined]);
+	const cursors = pages.at(-1);
+	const scopes = new Map<string, Scope>(
+		projects.map(({ binding }) => [binding.project.id, binding.scope]),
 	);
-	const jobs = useSWR<GatewayJobs>(gatewayJobsKey(scope), fetchJSON);
-	const issues =
-		page.data?.nodes.filter(
-			({ id, state }) =>
-				state.type !== "completed" && state.type !== "canceled" && !jobs.data?.issues[id],
-		) ?? [];
-	const nextPage = page.data?.pageInfo;
+	const queries = Array.from(scopes).flatMap(([projectId, scope]) =>
+		cursors && !cursors[projectId]
+			? []
+			: [
+					{
+						projectId,
+						issuesPath: scoped(scope, "issues", { q: query, after: cursors?.[projectId] ?? "" }),
+						jobsPath: gatewayJobsKey(scope),
+					},
+				],
+	);
+	const page = useSWR(["gateway-issue-picker", queries] as const, loadIssuePages);
+	const issues = page.data?.issues ?? [];
+	const nextPage = page.data?.next;
+	const hasNextPage = nextPage && Object.keys(nextPage).length > 0;
 
 	return (
 		<div className="grid gap-3">
@@ -50,9 +88,11 @@ export function GatewayIssuePicker({
 				className="grid gap-2"
 				onSubmit={(event) => {
 					event.preventDefault();
-					onChange("");
-					setCursors([""]);
-					setQuery(search.trim());
+					onChange();
+					setPages([undefined]);
+					const nextQuery = search.trim();
+					if (pages.length === 1 && query === nextQuery) void page.mutate();
+					setQuery(nextQuery);
 				}}
 			>
 				<Label htmlFor={searchId}>{t("linear.search")}</Label>
@@ -72,28 +112,37 @@ export function GatewayIssuePicker({
 			<Choice
 				label={t("linear.issue")}
 				value={value}
-				onChange={onChange}
-				options={issues.map(({ id, identifier, title }) => ({
+				onChange={(id) => {
+					const issue = issues.find((item) => item.id === id);
+					onChange(issue && { id: issue.id, projectId: issue.projectId });
+				}}
+				options={issues.map(({ id, identifier, title, project }) => ({
 					id,
-					name: `${identifier} · ${title}`,
+					name:
+						projects.length === 1
+							? `${identifier} · ${title}`
+							: `${identifier} · ${title} · ${project.name}`,
 				}))}
 				placeholder={t(page.isLoading ? "linear.loading" : "gateway.issueActions.selectIssue")}
 				disabled={disabled || !issues.length}
 			/>
 			{page.error && <ErrorNotice>{errorText(page.error)}</ErrorNotice>}
+			{page.data?.errors.map(({ reason }, index) => (
+				<ErrorNotice key={index}>{errorText(reason)}</ErrorNotice>
+			))}
 			{page.data && !issues.length && (
 				<p className="text-sm text-muted-foreground">{t("gateway.issueActions.noIssues")}</p>
 			)}
-			{(cursors.length > 1 || nextPage?.hasNextPage) && (
+			{(pages.length > 1 || hasNextPage) && (
 				<div className="flex flex-wrap justify-end gap-2">
 					<Button
 						type="button"
 						size="sm"
 						variant="outline"
-						disabled={disabled || cursors.length < 2}
+						disabled={disabled || pages.length < 2}
 						onClick={() => {
-							onChange("");
-							setCursors((current) => current.slice(0, -1));
+							onChange();
+							setPages((current) => current.slice(0, -1));
 						}}
 					>
 						{t("linear.previous")}
@@ -102,11 +151,11 @@ export function GatewayIssuePicker({
 						type="button"
 						size="sm"
 						variant="outline"
-						disabled={disabled || !nextPage?.hasNextPage || !nextPage.endCursor}
+						disabled={disabled || !hasNextPage}
 						onClick={() => {
-							if (!nextPage?.endCursor) return;
-							onChange("");
-							setCursors((current) => [...current, nextPage.endCursor]);
+							if (!nextPage) return;
+							onChange();
+							setPages((current) => [...current, nextPage]);
 						}}
 					>
 						{t("linear.next")}
