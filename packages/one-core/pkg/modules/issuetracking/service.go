@@ -2,6 +2,7 @@ package issuetracking
 
 import (
 	"context"
+	"slices"
 	"strings"
 
 	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/modules/workspacegroups"
@@ -61,39 +62,42 @@ func (s *Service) Bind(ctx context.Context, input Binding) (Binding, error) {
 	if err != nil {
 		return Binding{}, err
 	}
-	status, err := s.Backend.Status(ctx)
+	connection, err := s.connection(ctx, input.ConnectionID)
 	if err != nil {
 		return Binding{}, err
-	}
-	var connection *Connection
-	for _, candidate := range status.Connections {
-		if candidate.ID == input.ConnectionID {
-			copy := candidate
-			connection = &copy
-			break
-		}
-	}
-	if connection == nil {
-		return Binding{}, Fail("connection")
 	}
 	project, err := s.Backend.Project(ctx, connection.ID, input.Project.ID)
 	if err != nil {
 		return Binding{}, err
 	}
-	found := false
-	for _, team := range project.Teams {
-		if team.ID == input.TeamID {
-			found = true
-		}
+	binding, err := newBinding(scope, connection, project, input.TeamID)
+	if err != nil {
+		return Binding{}, err
 	}
-	if !found {
-		return Binding{}, Fail("team")
-	}
-	binding := Binding{Scope: scope, ConnectionID: connection.ID, OrganizationID: connection.OrganizationID, Project: project, TeamID: input.TeamID}
 	if err := s.store.put(ctx, scope, &binding); err != nil {
 		return Binding{}, err
 	}
 	return binding, nil
+}
+
+func (s *Service) connection(ctx context.Context, id string) (Connection, error) {
+	status, err := s.Backend.Status(ctx)
+	if err != nil {
+		return Connection{}, err
+	}
+	for _, candidate := range status.Connections {
+		if candidate.ID == id {
+			return candidate, nil
+		}
+	}
+	return Connection{}, Fail("connection")
+}
+
+func newBinding(scope Scope, connection Connection, project Project, teamID string) (Binding, error) {
+	if !slices.ContainsFunc(project.Teams, func(team Named) bool { return team.ID == teamID }) {
+		return Binding{}, Fail("team")
+	}
+	return Binding{Scope: scope, ConnectionID: connection.ID, OrganizationID: connection.OrganizationID, Project: project, TeamID: teamID}, nil
 }
 
 func (s *Service) Unbind(ctx context.Context, scope Scope) error {

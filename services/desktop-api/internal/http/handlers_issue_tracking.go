@@ -41,6 +41,9 @@ func registerIssueTrackingRoutes(mux *http.ServeMux, opts MuxOpts) {
 		return service.Backend.Status(r.Context())
 	})
 	register("POST /linear/authorize", func(r *http.Request) (any, error) { return service.Backend.Authorize(opts.Lifecycle) })
+	register("POST /linear/authorize/project-creation", func(r *http.Request) (any, error) {
+		return service.Backend.AuthorizeProjectCreation(opts.Lifecycle)
+	})
 	register("DELETE /linear/authorize", func(r *http.Request) (any, error) {
 		service.Backend.CancelAuthorization()
 		return service.Backend.Status(r.Context())
@@ -56,6 +59,16 @@ func registerIssueTrackingRoutes(mux *http.ServeMux, opts MuxOpts) {
 	})
 	register("GET /issue-tracking/projects/{id}", func(r *http.Request) (any, error) {
 		return service.Backend.Project(r.Context(), r.URL.Query().Get("connection"), r.PathValue("id"))
+	})
+	register("POST /issue-tracking/projects", func(r *http.Request) (any, error) {
+		var input tracking.ProjectInput
+		if err := decodeJSON(r, &input); err != nil {
+			return nil, tracking.Fail("project_input")
+		}
+		return service.CreateAndBind(r.Context(), scope(r), input)
+	})
+	register("GET /issue-tracking/teams", func(r *http.Request) (any, error) {
+		return service.Backend.Teams(r.Context(), r.URL.Query().Get("connection"))
 	})
 	register("GET /issue-tracking/teams/{id}", func(r *http.Request) (any, error) {
 		return service.Backend.Team(r.Context(), r.URL.Query().Get("connection"), r.PathValue("id"))
@@ -168,17 +181,17 @@ func writeIssueError(w http.ResponseWriter, err error) {
 			context["operationId"] = problem.OperationID
 		}
 		switch problem.Code {
-		case "input", "config", "team", "operation", "oauth_state":
+		case "input", "config", "team", "operation", "oauth_state", "project_input":
 			status = http.StatusBadRequest
 		case "scope", "not_found":
 			status = http.StatusNotFound
 		case "connection", "reconnect":
 			status = http.StatusUnauthorized
-		case "forbidden":
+		case "forbidden", "project_write_scope":
 			status = http.StatusForbidden
 		case "rate_limit":
 			status = http.StatusTooManyRequests
-		case "binding", "busy", "conflict", "outcome_unknown", "callback_busy":
+		case "binding", "busy", "conflict", "outcome_unknown", "callback_busy", "project_bound", "project_create_pending", "project_create_unknown":
 			status = http.StatusConflict
 		case "unavailable":
 			status = http.StatusServiceUnavailable

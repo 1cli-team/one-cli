@@ -27,11 +27,12 @@ type OAuthConfig struct {
 }
 
 type Connection struct {
-	ID               string `json:"id"`
-	UserID           string `json:"userId"`
-	Name             string `json:"name"`
-	OrganizationID   string `json:"organizationId"`
-	OrganizationName string `json:"organizationName"`
+	ID                string `json:"id"`
+	UserID            string `json:"userId"`
+	Name              string `json:"name"`
+	OrganizationID    string `json:"organizationId"`
+	OrganizationName  string `json:"organizationName"`
+	CanCreateProjects bool   `json:"canCreateProjects"`
 }
 
 type Authorization struct {
@@ -89,6 +90,12 @@ type PageInfo struct {
 type Projects struct {
 	Nodes    []Project `json:"nodes"`
 	PageInfo PageInfo  `json:"pageInfo"`
+}
+
+type ProjectInput struct {
+	ConnectionID string `json:"connectionId"`
+	Name         string `json:"name"`
+	TeamID       string `json:"teamId"`
 }
 
 type Comment struct {
@@ -155,10 +162,13 @@ type Backend interface {
 	Status(context.Context) (ConnectionState, error)
 	Configure(context.Context, OAuthConfig) error
 	Authorize(context.Context) (Authorization, error)
+	AuthorizeProjectCreation(context.Context) (Authorization, error)
 	CancelAuthorization()
 	Disconnect(context.Context, string) error
 	Projects(context.Context, string, string) (Projects, error)
 	Project(context.Context, string, string) (Project, error)
+	CreateProject(context.Context, string, ProjectInput) (Project, error)
+	Teams(context.Context, string) ([]Named, error)
 	Team(context.Context, string, string) (Team, error)
 	Issues(context.Context, Binding, IssueFilter) (Issues, error)
 	Issue(context.Context, Binding, string) (Issue, error)

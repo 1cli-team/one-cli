@@ -25,6 +25,7 @@ type authAttempt struct {
 	state    string
 	verifier string
 	consumed bool
+	scopes   string
 }
 
 func validateConfig(cfg tracking.OAuthConfig) error {
@@ -48,6 +49,14 @@ func randomSecret() (string, error) {
 }
 
 func (p *Plugin) Authorize(parent context.Context) (tracking.Authorization, error) {
+	return p.authorize(parent, "read,issues:create,comments:create")
+}
+
+func (p *Plugin) AuthorizeProjectCreation(parent context.Context) (tracking.Authorization, error) {
+	return p.authorize(parent, "read,write")
+}
+
+func (p *Plugin) authorize(parent context.Context, scopes string) (tracking.Authorization, error) {
 	var cfg tracking.OAuthConfig
 	if err := p.transaction(parent, func(doc *document) (bool, error) { cfg = doc.Config; return false, nil }); err != nil {
 		return tracking.Authorization{}, err
@@ -58,6 +67,9 @@ func (p *Plugin) Authorize(parent context.Context) (tracking.Authorization, erro
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	if p.auth != nil && p.auth.public.Status == "pending" {
+		if p.auth.scopes != scopes {
+			return tracking.Authorization{}, tracking.Fail("busy")
+		}
 		return p.auth.public, nil
 	}
 	u, _ := url.Parse(cfg.RedirectURI)
@@ -78,9 +90,9 @@ func (p *Plugin) Authorize(parent context.Context) (tracking.Authorization, erro
 	ctx, cancel := context.WithTimeout(parent, 10*time.Minute)
 	challenge := sha256.Sum256([]byte(verifier))
 	authorize, _ := url.Parse(p.authorizeURL)
-	query := url.Values{"client_id": {cfg.ClientID}, "redirect_uri": {cfg.RedirectURI}, "response_type": {"code"}, "scope": {"read,issues:create,comments:create"}, "actor": {"user"}, "state": {state}, "code_challenge": {base64.RawURLEncoding.EncodeToString(challenge[:])}, "code_challenge_method": {"S256"}, "prompt": {"consent"}}
+	query := url.Values{"client_id": {cfg.ClientID}, "redirect_uri": {cfg.RedirectURI}, "response_type": {"code"}, "scope": {scopes}, "actor": {"user"}, "state": {state}, "code_challenge": {base64.RawURLEncoding.EncodeToString(challenge[:])}, "code_challenge_method": {"S256"}, "prompt": {"consent"}}
 	authorize.RawQuery = query.Encode()
-	attempt := &authAttempt{public: tracking.Authorization{ID: state, URL: authorize.String(), Status: "pending"}, cancel: cancel, state: state, verifier: verifier}
+	attempt := &authAttempt{public: tracking.Authorization{ID: state, URL: authorize.String(), Status: "pending"}, cancel: cancel, state: state, verifier: verifier, scopes: scopes}
 	p.auth = attempt
 	server := &http.Server{ReadHeaderTimeout: 5 * time.Second, BaseContext: func(net.Listener) context.Context { return ctx }}
 	server.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -169,7 +181,15 @@ func (p *Plugin) finishAuthorization(ctx context.Context, attempt *authAttempt, 
 		if doc.Config != cfg {
 			return false, tracking.Fail("config")
 		}
-		doc.Connections[id] = credential{Connection: tracking.Connection{ID: id, UserID: data.Viewer.ID, Name: data.Viewer.Name, OrganizationID: data.Viewer.Organization.ID, OrganizationName: data.Viewer.Organization.Name}, AccessToken: tokens.AccessToken, RefreshToken: tokens.RefreshToken, ExpiresAt: time.Now().Add(time.Duration(tokens.ExpiresIn) * time.Second), ClientID: cfg.ClientID}
+		doc.Connections[id] = credential{
+			Connection: tracking.Connection{
+				ID: id, UserID: data.Viewer.ID, Name: data.Viewer.Name,
+				OrganizationID: data.Viewer.Organization.ID, OrganizationName: data.Viewer.Organization.Name,
+				CanCreateProjects: tokens.canWrite(),
+			},
+			AccessToken: tokens.AccessToken, RefreshToken: tokens.RefreshToken,
+			ExpiresAt: time.Now().Add(time.Duration(tokens.ExpiresIn) * time.Second), ClientID: cfg.ClientID,
+		}
 		return true, nil
 	})
 }

@@ -60,6 +60,37 @@ func pageReply(nodes any) map[string]any {
 func testBinding() tracking.Binding {
 	return tracking.Binding{Scope: tracking.Scope{Kind: "group", ID: "local"}, ConnectionID: "connection", OrganizationID: "org", Project: tracking.Project{Named: tracking.Named{ID: "project"}}, TeamID: "team"}
 }
+
+func TestProjectCreationUsesSelectedTeam(t *testing.T) {
+	team := tracking.Named{ID: "engineering", Name: "Engineering"}
+	const projectID = "719fc370-6a28-4eb4-b9be-5b433e19f09b"
+	p := testPlugin(t, func(w http.ResponseWriter, r *http.Request) {
+		query, variables := decodeRequest(t, r)
+		switch {
+		case strings.Contains(query, "query OneLinearTeams"):
+			reply(w, map[string]any{"teams": pageReply([]tracking.Named{team})})
+		case strings.Contains(query, "mutation OneLinearCreateProject"):
+			input, _ := variables["input"].(map[string]any)
+			ids, _ := input["teamIds"].([]any)
+			if input["id"] != projectID || input["name"] != "One project" || len(ids) != 1 || ids[0] != team.ID {
+				t.Errorf("unexpected project input: %v", input)
+			}
+			reply(w, map[string]any{"projectCreate": map[string]any{"success": true, "project": map[string]any{
+				"id": projectID, "name": "One project", "teams": pageReply([]tracking.Named{team}),
+			}}})
+		default:
+			t.Errorf("unexpected query: %s", query)
+		}
+	})
+	teams, err := p.Teams(context.Background(), "connection")
+	if err != nil || len(teams) != 1 || teams[0] != team {
+		t.Fatalf("teams = %+v, %v", teams, err)
+	}
+	project, err := p.CreateProject(context.Background(), projectID, tracking.ProjectInput{ConnectionID: "connection", Name: "One project", TeamID: team.ID})
+	if err != nil || project.ID != projectID || len(project.Teams) != 1 || project.Teams[0] != team {
+		t.Fatalf("project = %+v, %v", project, err)
+	}
+}
 func issueReply(id string) map[string]any {
 	return map[string]any{"id": id, "identifier": "ONE-1", "title": "Test", "updatedAt": "2026-11-18T00:00:00Z", "team": tracking.Named{ID: "team"}, "project": tracking.Named{ID: "project"}, "state": tracking.State{Named: tracking.Named{ID: "state"}}, "labels": pageReply([]any{}), "comments": pageReply([]any{})}
 }
@@ -243,7 +274,7 @@ func TestOAuthPKCEStateAndCancellation(t *testing.T) {
 			if r.Form.Get("client_secret") != "" || r.Form.Get("code") != "code" {
 				t.Error("unexpected token exchange")
 			}
-			_ = json.NewEncoder(w).Encode(tokenResult{AccessToken: "oauth-access", RefreshToken: "oauth-refresh", ExpiresIn: 3600})
+			_ = json.NewEncoder(w).Encode(tokenResult{AccessToken: "oauth-access", RefreshToken: "oauth-refresh", ExpiresIn: 3600, Scope: json.RawMessage(`"read write"`)})
 			return
 		}
 		reply(w, map[string]any{"viewer": map[string]any{"id": "user", "name": "User", "organization": tracking.Named{ID: "workspace", Name: "Workspace"}}})
@@ -260,12 +291,17 @@ func TestOAuthPKCEStateAndCancellation(t *testing.T) {
 	}
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	auth, err := p.Authorize(ctx)
+	auth, err := p.AuthorizeProjectCreation(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}
 	parsed, _ := url.Parse(auth.URL)
 	values := parsed.Query()
+	if values.Get("scope") != "read,write" {
+		t.Fatal("project creation did not request write scope")
+	}
+	_, err = p.Authorize(ctx)
+	assertCode(t, err, "busy")
 	response, err := http.Get(redirect + "?code=code&state=wrong")
 	if err != nil {
 		t.Fatal(err)
@@ -290,6 +326,11 @@ func TestOAuthPKCEStateAndCancellation(t *testing.T) {
 	}
 	if state.Authorization.Status != "connected" || len(state.Connections) != 2 {
 		t.Fatalf("authorization=%+v", state)
+	}
+	for _, account := range state.Connections {
+		if account.CanCreateProjects != (account.ID == "workspace:user") {
+			t.Fatalf("incorrect write authorization for %s", account.ID)
+		}
 	}
 	p.CancelAuthorization()
 	if err := validateConfig(tracking.OAuthConfig{ClientID: "client", RedirectURI: "https://example.com/callback"}); err == nil {

@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import useSWR from "swr";
-import { ArrowLeft, ClipboardList, GitBranchPlus, Plus, RefreshCw } from "lucide-react";
+import { ArrowLeft, ClipboardList, FolderPlus, Plus, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ErrorNotice, PageHeader } from "@/components/ui/page-layout";
@@ -11,7 +11,8 @@ import { useWorkspaceGroups } from "@/features/workspace-groups/useWorkspaceGrou
 import { BindingForm } from "./BindingForm";
 import { Choice } from "./Choice";
 import { IssueDialog } from "./IssueDialog";
-import { CreateIssueBranchDialog } from "./CreateIssueBranchDialog";
+import { CreateIssueWorktreeDialog } from "./CreateIssueWorktreeDialog";
+import { workflowStateLabel } from "./display-labels";
 import {
 	errorText,
 	fetchJSON,
@@ -48,9 +49,15 @@ function ProjectIssues({ scope }: { scope: Scope }) {
 	const currentBinding = savedBinding
 		? { ...savedBinding, project: project.data || savedBinding.project }
 		: null;
-	const name = projects.data?.projects.find(
-		(p) => p.id === scope.id && p.kind === scope.kind,
-	)?.name;
+	const entryId = scope.id.split("~")[0];
+	const name =
+		scope.kind === "group"
+			? projects.data?.groups.find((group) => group.id === scope.id)?.name
+			: projects.data?.workspaces.find(
+					(workspace) =>
+						workspace.entryId === entryId ||
+						workspace.aliases?.some((alias) => alias.entryId === entryId),
+				)?.name;
 	return (
 		<div className="mx-auto flex h-full w-full max-w-[1440px] flex-col gap-5 overflow-y-auto p-1">
 			<div>
@@ -82,7 +89,11 @@ function ProjectIssues({ scope }: { scope: Scope }) {
 			{project.error && <ErrorNotice>{errorText(project.error)}</ErrorNotice>}
 			{!binding.data && !binding.error && <p role="status">{t("linear.loading")}</p>}
 			{binding.data && !binding.data.binding && (
-				<BindingForm scope={scope} onSaved={() => void binding.mutate()} />
+				<BindingForm
+					scope={scope}
+					projectName={name || ""}
+					onSaved={(saved) => void binding.mutate({ binding: saved }, { revalidate: false })}
+				/>
 			)}
 			{currentBinding && (
 				<IssueList
@@ -113,7 +124,7 @@ function IssueList({
 	const [filter, setFilter] = useState({ q: "", team: "", state: "", assignee: "", priority: "" });
 	const [cursors, setCursors] = useState<string[]>([""]);
 	const [selected, setSelected] = useState<string | null>(null);
-	const [branchIssue, setBranchIssue] = useState<Issue | null>(null);
+	const [worktreeIssue, setWorktreeIssue] = useState<Issue | null>(null);
 	const [error, setError] = useState("");
 	const [busy, setBusy] = useState(false);
 	const [refreshing, setRefreshing] = useState(false);
@@ -251,7 +262,10 @@ function IssueList({
 					label={t("linear.state")}
 					value={filter.state}
 					onChange={(v) => change("state", v)}
-					options={team.data?.states || []}
+					options={
+						team.data?.states.map(({ id, name }) => ({ id, name: workflowStateLabel(name, t) })) ||
+						[]
+					}
 					disabled={!filter.team || !team.data}
 					placeholder={t("linear.allStates")}
 				/>
@@ -313,7 +327,7 @@ function IssueList({
 								<span className="min-w-0 flex-1">
 									<span className="block truncate text-sm font-medium">{issue.title}</span>
 									<span className="text-xs text-muted-foreground">
-										{issue.state.name} · {issue.team.name}
+										{workflowStateLabel(issue.state.name, t)} · {issue.team.name}
 									</span>
 								</span>
 								<span className="hidden text-xs text-muted-foreground ud-md:block">
@@ -328,11 +342,11 @@ function IssueList({
 								variant="ghost"
 								size="icon"
 								className="mr-3 shrink-0"
-								title={t("linear.createBranch")}
-								aria-label={t("linear.createBranchFor", { identifier: issue.identifier })}
-								onClick={() => setBranchIssue(issue)}
+								title={t("git.create")}
+								aria-label={t("linear.createWorktreeFor", { identifier: issue.identifier })}
+								onClick={() => setWorktreeIssue(issue)}
 							>
-								<GitBranchPlus />
+								<FolderPlus />
 							</Button>
 						</div>
 					))}
@@ -358,11 +372,11 @@ function IssueList({
 					</Button>
 				)}
 			</div>
-			{branchIssue && (
-				<CreateIssueBranchDialog
+			{worktreeIssue && (
+				<CreateIssueWorktreeDialog
 					scope={scope}
-					issue={branchIssue}
-					onClose={() => setBranchIssue(null)}
+					issue={worktreeIssue}
+					onClose={() => setWorktreeIssue(null)}
 				/>
 			)}
 			{selected && (

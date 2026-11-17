@@ -582,6 +582,7 @@
 		"newBranch": "创建新分支",
 		"existingBranch": "使用已有分支",
 		"branch": "分支名称",
+		"branchExists": "此分支已存在。请选择「使用已有分支」，或输入其他名称。",
 		"startPoint": "起始分支或提交",
 		"path": "目标目录",
 		"destination": "将创建到 {{path}}",
@@ -650,6 +651,14 @@
 		"openProject": "打开项目"
 	},
 	"linear": {
+		"createProject": "新建 Linear 项目",
+		"createAndBind": "创建并绑定",
+		"createProjectDescription": "在 {{workspace}} 中创建项目，并绑定到当前 One 项目。新建任务时将默认使用所选团队。",
+		"createProjectAccessHint": "创建项目需要 Linear 写入权限。请在 Linear 连接设置中选择「授权创建项目」，并授权同一个账号。",
+		"authorizeProjectCreation": "授权创建项目",
+		"projectName": "项目名称",
+		"chooseTeam": "选择团队",
+		"noTeams": "当前 Linear 账号没有可用的团队。",
 		"settings": "Linear 连接",
 		"oauthSetup": "先创建 Linear OAuth 应用，再填写公开的 Client ID。授权使用 PKCE，令牌保存在本机。",
 		"registerApp": "创建 OAuth 应用",
@@ -723,16 +732,36 @@
 		"pendingOperation": "待确认的写入",
 		"projectTeamsHint": "此处显示所选 Linear 项目关联的团队。新建团队后，请先在 Linear 项目详情中关联，再点击刷新。",
 		"chooseTeam": "选择团队",
-		"createBranch": "创建分支",
-		"createBranchFor": "为 {{identifier}} 创建分支",
-		"branchRepository": "目标仓库",
-		"branchChooseRepository": "选择仓库",
-		"branchNoRepository": "此项目暂无可用的 Git 仓库。",
-		"branchStartHint": "选择本地分支，或输入提交及远程引用。HEAD 表示当前提交。",
-		"branchCheckout": "创建后切换到新分支",
-		"branchCreated": "分支已创建",
-		"branchCreatedAndSwitched": "已创建并切换到新分支",
-		"branchDone": "完成",
-		"branchExists": "此分支已存在，请使用其他名称。"
+		"createWorktreeFor": "为 {{identifier}} 创建工作树",
+		"issueLabels": {
+			"feature": "功能",
+			"bug": "缺陷",
+			"improvement": "改进"
+		},
+		"workflowStates": {
+			"backlog": "待排期",
+			"todo": "待办",
+			"inProgress": "进行中",
+			"done": "已完成",
+			"canceled": "已取消",
+			"duplicate": "重复",
+			"inReview": "审核中"
+		},
+		"markdownEditor": {
+			"emptyTask": "空任务",
+			"formatting": "{{label}}格式",
+			"source": "Markdown 源码",
+			"bold": "粗体",
+			"italic": "斜体",
+			"heading": "标题",
+			"bulletList": "无序列表",
+			"orderedList": "有序列表",
+			"taskList": "任务清单",
+			"codeBlock": "代码块",
+			"sourceRequired": "请在 Markdown 源码中编辑，以保留原有格式。"
+		},
+		"worktreeRepository": "目标仓库",
+		"worktreeChooseRepository": "选择仓库",
+		"worktreeNoRepository": "此项目暂无可用的 Git 仓库。"
 	}
 }

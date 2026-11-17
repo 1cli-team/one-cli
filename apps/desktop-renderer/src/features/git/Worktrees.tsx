@@ -14,7 +14,6 @@ import {
 	removeWorktree,
 	worktreesKey,
 	type AddWorktreeInput,
-	type GitRepository,
 	type Worktree,
 } from "@/api/git";
 import { workspacesKey } from "@/api/workspaces";
@@ -27,28 +26,13 @@ import {
 	DialogHeader,
 	DialogTitle,
 } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import {
-	Combobox,
-	ComboboxContent,
-	ComboboxInput,
-	ComboboxItem,
-	ComboboxList,
-} from "@/components/ui/combobox";
-import { Label } from "@/components/ui/label";
 import { ErrorNotice, PageHeader, StatePanel } from "@/components/ui/page-layout";
-import {
-	Select,
-	SelectContent,
-	SelectItem,
-	SelectTrigger,
-	SelectValue,
-} from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useWorkspace } from "@/features/workspace-navigation/useWorkspace";
 import { InitializeWorkspace } from "@/features/workspace-navigation/InitializeWorkspace";
 import { workspacePath } from "@/router/paths";
 import type { HttpError } from "@/types/api";
+import { WorktreeForm } from "./WorktreeForm";
 
 export function Worktrees() {
 	const { entryId = "" } = useParams();
@@ -62,6 +46,7 @@ export function Worktrees() {
 		shouldRetryOnError: false,
 	});
 	const [creating, setCreating] = useState(false);
+	const createContent = useRef<HTMLDivElement>(null);
 	const [removing, setRemoving] = useState<Worktree | null>(null);
 	const [busy, setBusy] = useState(false);
 	const [error, setError] = useState("");
@@ -281,13 +266,27 @@ export function Worktrees() {
 				)}
 			</div>
 			{creating && repository.data && (
-				<CreateWorktree
-					repository={repository.data}
-					busy={busy}
-					error={error}
-					onClose={() => setCreating(false)}
-					onCreate={create}
-				/>
+				<Dialog
+					open
+					onOpenChange={(open) => {
+						if (!open && !busy) setCreating(false);
+					}}
+				>
+					<DialogContent ref={createContent} showCloseButton={!busy}>
+						<DialogHeader>
+							<DialogTitle>{t("git.create")}</DialogTitle>
+							<DialogDescription>{t("git.createDescription")}</DialogDescription>
+						</DialogHeader>
+						<WorktreeForm
+							repository={repository.data}
+							container={createContent}
+							busy={busy}
+							error={error}
+							onClose={() => setCreating(false)}
+							onCreate={create}
+						/>
+					</DialogContent>
+				</Dialog>
 			)}
 			<Dialog
 				open={Boolean(removing)}
@@ -320,154 +319,5 @@ export function Worktrees() {
 				</DialogContent>
 			</Dialog>
 		</div>
-	);
-}
-
-function CreateWorktree({
-	repository,
-	busy,
-	error,
-	onClose,
-	onCreate,
-}: {
-	repository: GitRepository;
-	busy: boolean;
-	error: string;
-	onClose(): void;
-	onCreate(input: AddWorktreeInput): Promise<void>;
-}) {
-	const { t } = useTranslation();
-	const [mode, setMode] = useState("new");
-	const [branch, setBranch] = useState("");
-	const [startPoint, setStartPoint] = useState("HEAD");
-	const contentRef = useRef<HTMLDivElement>(null);
-	const [path, setPath] = useState("");
-	const name = (branch || "worktree").replace(/[<>:"/\\|?*]/g, "-");
-	const destination = path || `${repository.defaultParent}/${name}`;
-	return (
-		<Dialog
-			open
-			onOpenChange={(open) => {
-				if (!open && !busy) onClose();
-			}}
-		>
-			<DialogContent ref={contentRef} showCloseButton={!busy}>
-				<DialogHeader>
-					<DialogTitle>{t("git.create")}</DialogTitle>
-					<DialogDescription>{t("git.createDescription")}</DialogDescription>
-				</DialogHeader>
-				<form
-					className="space-y-4"
-					onSubmit={(event) => {
-						event.preventDefault();
-						void onCreate({
-							path: destination,
-							branch: mode === "detached" ? "" : branch,
-							startPoint,
-							newBranch: mode === "new",
-							detached: mode === "detached",
-						});
-					}}
-				>
-					<div className="space-y-2">
-						<Label htmlFor="worktree-mode">{t("git.mode")}</Label>
-						<Select
-							value={mode}
-							onValueChange={(value) => {
-								setMode(value);
-								setBranch("");
-							}}
-							disabled={busy}
-						>
-							<SelectTrigger id="worktree-mode">
-								<SelectValue />
-							</SelectTrigger>
-							<SelectContent>
-								<SelectItem value="new">{t("git.newBranch")}</SelectItem>
-								<SelectItem value="existing">{t("git.existingBranch")}</SelectItem>
-								<SelectItem value="detached">{t("git.detached")}</SelectItem>
-							</SelectContent>
-						</Select>
-					</div>
-					{mode !== "detached" && (
-						<div className="space-y-2">
-							<Label htmlFor="worktree-branch">{t("git.branch")}</Label>
-							{mode === "existing" ? (
-								<Combobox
-									items={repository.branches}
-									value={repository.branches.includes(branch) ? branch : null}
-									inputValue={branch}
-									onInputValueChange={(value, details) => {
-										if (details.reason === "input-change" || details.reason === "input-clear")
-											setBranch(value);
-									}}
-									onValueChange={(value) => {
-										if (value !== null) setBranch(value);
-									}}
-									disabled={busy}
-								>
-									<ComboboxInput
-										id="worktree-branch"
-										aria-label={t("git.branch")}
-										required
-										disabled={busy}
-									/>
-									<ComboboxContent container={contentRef.current}>
-										<ComboboxList>
-											{(name) => (
-												<ComboboxItem key={name} value={name}>
-													{name}
-												</ComboboxItem>
-											)}
-										</ComboboxList>
-									</ComboboxContent>
-								</Combobox>
-							) : (
-								<Input
-									id="worktree-branch"
-									required
-									value={branch}
-									disabled={busy}
-									onChange={(event) => setBranch(event.target.value)}
-								/>
-							)}
-						</div>
-					)}
-					{mode !== "existing" && (
-						<div className="space-y-2">
-							<Label htmlFor="worktree-start">{t("git.startPoint")}</Label>
-							<Input
-								id="worktree-start"
-								value={startPoint}
-								disabled={busy}
-								onChange={(event) => setStartPoint(event.target.value)}
-							/>
-						</div>
-					)}
-					<div className="space-y-2">
-						<Label htmlFor="worktree-path">{t("git.path")}</Label>
-						<Input
-							id="worktree-path"
-							value={path}
-							placeholder={destination}
-							disabled={busy}
-							onChange={(event) => setPath(event.target.value)}
-						/>
-						<p className="break-all text-xs text-muted-foreground">
-							{t("git.destination", { path: destination })}
-						</p>
-					</div>
-					{error && <ErrorNotice>{error}</ErrorNotice>}
-					<DialogFooter>
-						<Button type="button" variant="outline" disabled={busy} onClick={onClose}>
-							{t("git.cancel")}
-						</Button>
-						<Button type="submit" disabled={busy}>
-							{busy ? t("git.working") : t("git.create")}
-						</Button>
-					</DialogFooter>
-				</form>
-			</DialogContent>
-		</Dialog>
 	);
 }
