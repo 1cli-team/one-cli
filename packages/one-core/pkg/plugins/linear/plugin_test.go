@@ -411,3 +411,36 @@ func assertCode(t *testing.T, err error, code string) {
 		t.Fatalf("error=%v, want %s", err, code)
 	}
 }
+
+func TestTransitionIssueWritesOnlyStateAndReadsItBack(t *testing.T) {
+	var reads, writes atomic.Int32
+	p := testPlugin(t, func(w http.ResponseWriter, r *http.Request) {
+		query, variables := decodeRequest(t, r)
+		if strings.Contains(query, "mutation OneLinearTransitionIssue") {
+			input := variables["input"].(map[string]any)
+			if len(input) != 1 || input["stateId"] != "review" || variables["id"] != "issue" {
+				t.Errorf("unexpected transition: %v", variables)
+			}
+			writes.Add(1)
+			reply(w, map[string]any{"issueUpdate": map[string]any{"success": true}})
+			return
+		}
+		reads.Add(1)
+		state := "state"
+		if writes.Load() == 1 {
+			state = "review"
+		}
+		issue := issueReply("issue")
+		issue["state"] = tracking.State{Named: tracking.Named{ID: state}}
+		reply(w, map[string]any{"issue": issue})
+	})
+	if err := p.TransitionIssue(t.Context(), testBinding(), "issue", "state", "review"); err != nil {
+		t.Fatal(err)
+	}
+	if reads.Load() != 2 || writes.Load() != 1 {
+		t.Fatalf("transition did not verify its outcome: reads=%d writes=%d", reads.Load(), writes.Load())
+	}
+	if err := p.TransitionIssue(t.Context(), testBinding(), "issue", "state", "review"); err != nil || writes.Load() != 1 {
+		t.Fatalf("retry did not recognize the state: %v, writes=%d", err, writes.Load())
+	}
+}

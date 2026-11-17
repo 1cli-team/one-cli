@@ -9,6 +9,7 @@ This file records source boundaries for maintainers and agents. Discover command
 | `packages/cli` | `one` executable, Cobra commands, terminal input/output / CLI 入口、命令和终端交互 |
 | `packages/one-core` | Shared use cases, domain models, integrations and embedded templates/skills / 共享业务、集成、内置模板与技能 |
 | `services/desktop-api` | `one-api` executable, authenticated loopback HTTP API / 桌面 HTTP 后端 |
+| `services/gateway` | Standalone `one-gateway` transport for task dispatch and Codex App Server / 任务派发与 Codex App Server 通信服务 |
 | `apps/desktop-renderer` | React interface / 桌面界面 |
 | `services/desktop-main` | Electron host; bundles `one-api` and `one` / 原生能力及后端进程管理 |
 | `packages/desktop-preload` | Typed contextBridge API / 类型化原生桥接 |
@@ -16,9 +17,9 @@ This file records source boundaries for maintainers and agents. Discover command
 | `packages/templates` | Project template sources, including `nextjs-site` and `fumadocs-docs` / 项目模板源 |
 | `packages/agent-skills` | Agent guidance embedded in CLI builds / CLI 构建时内置的 AI 指引 |
 
-`go.work` contains three modules: CLI, One Core and Desktop API. Go projects inside templates remain independent fixtures.
+`go.work` contains four modules: CLI, One Core, Desktop API and Gateway. Go projects inside templates remain independent fixtures.
 
-`go.work` 仅登记 CLI、One Core、Desktop API 三个模块；模板中的 Go 项目独立管理。
+`go.work` 仅登记 CLI、One Core、Desktop API、Gateway 四个模块；模板中的 Go 项目独立管理。
 
 ## Go boundaries / Go 分层
 
@@ -60,6 +61,19 @@ React 直接访问 Go HTTP；Electron 主进程负责原生能力、后端启动
 The `SERVE_*` codes still used by the Desktop API are stable wire values. They do not imply a built-in CLI command. Generic task shorthands remain available for user-defined tasks.
 
 Desktop API 仍使用的 `SERVE_*` 是稳定协议值；用户自定义任务继续支持通用简称。
+
+## Gateway boundary / Gateway 边界
+
+One CLI owns code host configuration, PR operations, worktrees, issue workflow
+state and Linear writeback. Desktop API uses One Core directly for local code
+host settings. For remote execution, Desktop sends the bound project and Issue
+ID through Gateway, which forwards requests and status to the execution
+machine's One CLI and opens its Codex App Server connection.
+
+One CLI 管理代码库配置、PR、worktree、需求流程状态和 Linear 回写。桌面 API
+直接通过 One Core 管理本机代码库。远程执行时，Desktop 经 Gateway 向执行机器
+的 One CLI 转发已绑定的项目与 Issue，并通过 Gateway 建立 Codex App Server
+连接。部署说明见 [Gateway README](services/gateway/README.md)。
 
 ## Source of truth / 事实来源
 

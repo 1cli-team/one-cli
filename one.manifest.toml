@@ -16,6 +16,10 @@ toolchain = "go"
 path = "services/desktop-api"
 toolchain = "go"
 
+[projects.gateway]
+path = "services/gateway"
+toolchain = "go"
+
 [projects.desktop-renderer]
 path = "apps/desktop-renderer"
 toolchain = "node"

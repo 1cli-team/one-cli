@@ -127,3 +127,32 @@ func (s *Service) Require(ctx context.Context, scope Scope) (Binding, error) {
 	}
 	return Binding{}, Fail("connection")
 }
+
+// ProjectBinding pairs an existing Linear binding with its One project name.
+type ProjectBinding struct {
+	Name    string  `json:"name"`
+	Binding Binding `json:"binding"`
+}
+
+func (s *Service) ListBindings(ctx context.Context) ([]ProjectBinding, error) {
+	listing, err := s.groups.List(ctx)
+	if err != nil {
+		return nil, err
+	}
+	results := []ProjectBinding{}
+	err = s.store.access(ctx, func(doc *bindingDocument) (bool, error) {
+		add := func(kind, id, name string) {
+			if binding, ok := doc.Bindings[(Scope{Kind: kind, ID: id}).Key()]; ok {
+				results = append(results, ProjectBinding{Name: name, Binding: binding})
+			}
+		}
+		for _, group := range listing.Groups {
+			add("group", group.ID, group.Name)
+		}
+		for _, workspace := range listing.Workspaces {
+			add("workspace", workspace.EntryID, workspace.Name)
+		}
+		return false, nil
+	})
+	return results, err
+}

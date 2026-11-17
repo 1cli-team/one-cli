@@ -113,6 +113,10 @@ func BuildMux(opts MuxOpts) http.Handler {
 	registerWorkspacesRoutes(api, opts)
 	registerGroupRoutes(api, opts)
 	registerIssueTrackingRoutes(api, opts)
+	registerGatewayRoutes(api, opts, desktopGateway)
+	registerGatewaySettingsRoutes(api)
+	registerCodeHostRoutes(api)
+	registerGatewayProjectRoutes(api, opts)
 	registerGitRoutes(api, opts)
 	registerDesktopRoutes(api, opts)
 

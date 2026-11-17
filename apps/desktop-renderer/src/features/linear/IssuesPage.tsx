@@ -16,11 +16,13 @@ import { workflowStateLabel } from "./display-labels";
 import {
 	errorText,
 	fetchJSON,
+	gatewayJobsKey,
 	projectKey,
 	teamKey,
 	scoped,
 	unbind,
 	type Binding,
+	type GatewayJobs,
 	type Issue,
 	type IssuePage,
 	type Operation,
@@ -129,6 +131,9 @@ function IssueList({
 	const [busy, setBusy] = useState(false);
 	const [refreshing, setRefreshing] = useState(false);
 	const operations = useSWR<Operation[]>(scoped(scope, "operations"), fetchJSON);
+	const jobs = useSWR<GatewayJobs>(gatewayJobsKey(scope), fetchJSON, {
+		refreshInterval: (data) => (data?.enabled ? 5000 : 0),
+	});
 	const team = useSWR<Team>(
 		filter.team ? teamKey(binding.connectionId, filter.team) : null,
 		fetchJSON,
@@ -142,7 +147,13 @@ function IssueList({
 		setRefreshing(true);
 		setError("");
 		try {
-			await Promise.all([onRefreshProject(), list.mutate(), team.mutate(), operations.mutate()]);
+			await Promise.all([
+				onRefreshProject(),
+				list.mutate(),
+				team.mutate(),
+				operations.mutate(),
+				jobs.mutate(),
+			]);
 		} catch (error) {
 			setError(errorText(error));
 		} finally {
@@ -328,6 +339,9 @@ function IssueList({
 									<span className="block truncate text-sm font-medium">{issue.title}</span>
 									<span className="text-xs text-muted-foreground">
 										{workflowStateLabel(issue.state.name, t)} · {issue.team.name}
+										{jobs.data?.issues[issue.id] === "processing" && (
+											<span> · {t("gateway.processing")}</span>
+										)}
 									</span>
 								</span>
 								<span className="hidden text-xs text-muted-foreground ud-md:block">

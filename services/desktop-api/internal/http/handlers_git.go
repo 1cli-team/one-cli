@@ -64,6 +64,7 @@ func registerGitRoutes(mux *http.ServeMux, opts MuxOpts) {
 		writeJSON(w, http.StatusCreated, result)
 	})
 
+	mux.HandleFunc("PUT /workspaces/{entryId}/git/origin", handleGitWorkspace(opts, handleSetOrigin))
 	mux.HandleFunc("POST /workspaces/{entryId}/git/branches", handleGitWorkspace(opts, handleCreateBranch))
 	mux.HandleFunc("POST /git/repositories/{repositoryId}/branches", handleGitRepository(opts, handleCreateBranch))
 	mux.HandleFunc("GET /workspaces/{entryId}/git/worktrees", handleGitWorkspace(opts, handleListWorktrees))
@@ -130,6 +131,23 @@ func handleListWorktrees(opts MuxOpts) http.HandlerFunc {
 			return
 		}
 		writeJSON(w, http.StatusOK, result)
+	}
+}
+
+func handleSetOrigin(opts MuxOpts) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		setNoStore(w)
+		var input gitmodule.SetOriginInput
+		if err := decodeJSON(r, &input); err != nil {
+			writeError(w, http.StatusBadRequest, cliErrors.ONE_CLI_ERROR, i18n.T("git.origin_input_invalid"), nil)
+			return
+		}
+		origin, err := opts.GitService.SetOrigin(r.Context(), opts.WorkspaceRoot, input)
+		if err != nil {
+			writeServiceError(w, err)
+			return
+		}
+		writeJSON(w, http.StatusOK, origin)
 	}
 }
 

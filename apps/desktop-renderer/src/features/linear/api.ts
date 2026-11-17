@@ -1,3 +1,4 @@
+import type { CodexOptions } from "@/features/gateway/api";
 import http from "@/lib/http";
 import type { HttpError } from "@/types/api";
 
@@ -158,4 +159,22 @@ export function errorCode(error: unknown) {
 }
 export function errorText(error: unknown) {
 	return (error as HttpError)?.message || String(error);
+}
+
+export type GatewayStatus = "processing" | "submitted" | "failed";
+
+export interface GatewayJobs {
+	enabled: boolean;
+	issues: Record<string, GatewayStatus>;
+}
+
+export const gatewayJobsKey = (scope: Scope) => scoped(scope, "gateway/jobs");
+export function dispatchToGateway(scope: Scope, id: string, options: CodexOptions) {
+	const configured = !!(options.model || options.effort);
+	const path = configured ? "gateway/jobs" : `gateway/jobs/${encodeURIComponent(id)}`;
+	return http.post<{ status: GatewayStatus }>(
+		scoped(scope, path),
+		configured ? { issue: id, ...options } : undefined,
+		{ timeout: 60000 },
+	);
 }

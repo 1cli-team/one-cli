@@ -57,6 +57,8 @@ type AddInput struct {
 type Backend interface {
 	Inspect(context.Context, string) (*Repository, error)
 	CreateBranch(context.Context, string, CreateBranchInput) (*BranchResult, error)
+	Origin(context.Context, string) (Remote, error)
+	SetOrigin(context.Context, string, SetOriginInput) (*Remote, error)
 	Add(context.Context, string, AddInput) (*Worktree, error)
 	Remove(context.Context, string, string) error
 	WorkspaceIdentity(string) (string, error)

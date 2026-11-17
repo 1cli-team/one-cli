@@ -20,14 +20,7 @@ func registerGroupRoutes(mux *http.ServeMux, opts MuxOpts) {
 			}
 			result, err := handler(r)
 			if err != nil {
-				code := http.StatusInternalServerError
-				switch {
-				case errors.Is(err, workspacegroups.ErrNotFound):
-					code = http.StatusNotFound
-				case errors.Is(err, workspacegroups.ErrInvalid):
-					code = http.StatusBadRequest
-				}
-				writeError(w, code, cliErrors.ONE_CLI_ERROR, err.Error(), nil)
+				writeGroupError(w, err)
 				return
 			}
 			if status == http.StatusNoContent {
@@ -85,6 +78,17 @@ func registerGroupRoutes(mux *http.ServeMux, opts MuxOpts) {
 		}
 		return opts.GroupService.Move(r.Context(), r.PathValue("id"), r.PathValue("workspaceId"), input.Before)
 	})
+}
+
+func writeGroupError(w http.ResponseWriter, err error) {
+	code := http.StatusInternalServerError
+	switch {
+	case errors.Is(err, workspacegroups.ErrNotFound):
+		code = http.StatusNotFound
+	case errors.Is(err, workspacegroups.ErrInvalid):
+		code = http.StatusBadRequest
+	}
+	writeError(w, code, cliErrors.ONE_CLI_ERROR, err.Error(), nil)
 }
 
 func decodeGroupInput(r *http.Request, value any) error {

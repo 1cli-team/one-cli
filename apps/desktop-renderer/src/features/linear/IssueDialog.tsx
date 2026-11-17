@@ -1,11 +1,10 @@
-import { lazy, Suspense, useEffect, useState, type ComponentProps } from "react";
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import useSWR from "swr";
 import { ExternalLink, FolderPlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Skeleton } from "@/components/ui/skeleton";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
 	Dialog,
@@ -18,6 +17,7 @@ import { ErrorNotice } from "@/components/ui/page-layout";
 import { openExternal } from "@/lib/desktop/runtime";
 import { Choice } from "./Choice";
 import { CreateIssueWorktreeDialog } from "./CreateIssueWorktreeDialog";
+import { IssueMarkdownField } from "./IssueMarkdownField";
 import { issueLabelName, workflowStateLabel } from "./display-labels";
 import {
 	createComment,
@@ -25,11 +25,13 @@ import {
 	errorCode,
 	errorText,
 	fetchJSON,
+	gatewayJobsKey,
 	scoped,
 	teamKey,
 	updateIssue,
 	type Binding,
 	type Comment,
+	type GatewayJobs,
 	type Issue,
 	type IssueInput,
 	type Operation,
@@ -37,24 +39,6 @@ import {
 	type Scope,
 	type Team,
 } from "./api";
-
-const IssueMarkdownEditor = lazy(() => import("./IssueMarkdownEditor"));
-
-function MarkdownField(props: ComponentProps<typeof IssueMarkdownEditor>) {
-	const { t } = useTranslation();
-	return (
-		<Suspense
-			fallback={
-				<div role="status" className="space-y-2" aria-label={t("linear.loading")}>
-					<Label>{props.label}</Label>
-					<Skeleton className={props.compact ? "h-28 w-full" : "h-40 w-full"} />
-				</div>
-			}
-		>
-			<IssueMarkdownEditor {...props} />
-		</Suspense>
-	);
-}
 
 export function IssueDialog({
 	scope,
@@ -76,6 +60,8 @@ export function IssueDialog({
 		fetchJSON,
 		{ revalidateOnFocus: false },
 	);
+	const jobs = useSWR<GatewayJobs>(!isNew ? gatewayJobsKey(scope) : null, fetchJSON);
+	const gatewayStatus = jobs.data?.issues[issueId];
 	const [input, setInput] = useState<IssueInput>({
 		title: "",
 		description: "",
@@ -201,16 +187,22 @@ export function IssueDialog({
 					<DialogDescription>{binding.project.name}</DialogDescription>
 				</DialogHeader>
 				{!isNew && detail.data && (
-					<Button
-						type="button"
-						variant="outline"
-						className="justify-self-start"
-						disabled={busy || !!pending}
-						onClick={() => setCreatingWorktree(true)}
-					>
-						<FolderPlus />
-						{t("git.create")}
-					</Button>
+					<div className="flex flex-wrap items-center gap-2">
+						<Button
+							type="button"
+							variant="outline"
+							disabled={busy || !!pending}
+							onClick={() => setCreatingWorktree(true)}
+						>
+							<FolderPlus />
+							{t("git.create")}
+						</Button>
+						{gatewayStatus === "processing" && (
+							<span role="status" className="text-sm text-muted-foreground">
+								{t("gateway.processing")}
+							</span>
+						)}
+					</div>
 				)}
 				{creatingWorktree && detail.data && (
 					<CreateIssueWorktreeDialog
@@ -259,7 +251,7 @@ export function IssueDialog({
 										autoFocus={isNew}
 									/>
 								</div>
-								<MarkdownField
+								<IssueMarkdownField
 									label={t("linear.description")}
 									value={input.description}
 									onChange={(value) => field("description", value)}
@@ -417,7 +409,7 @@ export function IssueDialog({
 										void addComment();
 									}}
 								>
-									<MarkdownField
+									<IssueMarkdownField
 										label={t("linear.addComment")}
 										value={comment}
 										onChange={setComment}

@@ -84,3 +84,15 @@ export function cloneRepository(url: string, path: string) {
 		{ timeout: 960000 },
 	);
 }
+
+export function setGitOrigin(scope: GitScope, url: string, expected?: GitRemote) {
+	return http.put<GitRemote>(
+		`${scopePath(scope)}/origin`,
+		{
+			url,
+			expectedFetchUrl: expected?.fetchUrl ?? "",
+			expectedPushUrl: expected?.pushUrl ?? "",
+		},
+		{ timeout: 30000 },
+	);
+}

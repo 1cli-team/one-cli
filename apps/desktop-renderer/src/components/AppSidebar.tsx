@@ -1,4 +1,5 @@
 import {
+	Activity,
 	AppWindow,
 	ClipboardList,
 	ArrowLeft,
@@ -10,6 +11,7 @@ import {
 	Package,
 	Plus,
 	Server,
+	Network,
 	Settings2,
 	SlidersHorizontal,
 } from "lucide-react";
@@ -135,6 +137,12 @@ function GlobalSidebar() {
 						<span>{t("sidebar.home")}</span>
 					</EnvironmentNavLink>
 				</Button>
+				<Button variant="navigation" size="navigation-compact" className="min-h-9" asChild>
+					<EnvironmentNavLink to="/gateway" end>
+						<Activity strokeWidth={1.5} />
+						<span>{t("gateway.monitor")}</span>
+					</EnvironmentNavLink>
+				</Button>
 			</nav>
 			<Separator />
 			<WorkspaceGroupsSidebar />
@@ -200,6 +208,18 @@ function SettingsSidebar({ homeTo }: { homeTo: string }) {
 					<EnvironmentNavLink to="/settings/linear" end>
 						<ClipboardList />
 						<span>{t("linear.settings")}</span>
+					</EnvironmentNavLink>
+				</Button>
+				<Button variant="navigation" size="navigation-compact" className="min-h-9" asChild>
+					<EnvironmentNavLink to="/settings/code-hosts" end>
+						<GitBranch />
+						<span>{t("codeHosts.settings")}</span>
+					</EnvironmentNavLink>
+				</Button>
+				<Button variant="navigation" size="navigation-compact" className="min-h-9" asChild>
+					<EnvironmentNavLink to="/settings/gateway" end>
+						<Network />
+						<span>{t("gateway.settings")}</span>
 					</EnvironmentNavLink>
 				</Button>
 			</nav>
