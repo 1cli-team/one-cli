@@ -1,0 +1,37 @@
+{
+  "name": "@one-desktop/main",
+  "version": "0.1.0",
+  "private": true,
+  "description": "One Desktop Electron host",
+  "homepage": "https://github.com/1cli-team/one-cli",
+  "license": "MIT",
+  "author": "One CLI",
+  "type": "module",
+  "main": "build/main/index.js",
+  "scripts": {
+    "dev": "node ../../scripts/desktop.mts dev",
+    "build": "tsdown",
+    "pack": "node ../../scripts/desktop.mts build",
+    "typecheck": "tsc --noEmit",
+    "check": "pnpm run typecheck && oxlint . && oxfmt --check . && node --test src/*.test.ts",
+    "format:fix": "oxfmt --write .",
+    "sandbox:profile": "node scripts/sandbox-profile.mjs",
+    "test:desktop": "node --test tests/desktop.test.mjs",
+    "install:electron": "node ../../scripts/desktop-electron-install.mts"
+  },
+  "dependencies": {
+    "@one-desktop/preload": "workspace:*",
+    "awilix": "13.0.5"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.3",
+    "electron": "44.11.3",
+    "electron-builder": "26.18.0",
+    "oxfmt": "^0.70.0",
+    "oxlint": "^1.85.0",
+    "playwright-core": "1.58.2",
+    "tsdown": "0.23.0",
+    "typescript": "^7.0.2"
+  },
+  "desktopName": "one_desktop"
+}

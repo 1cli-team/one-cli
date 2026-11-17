@@ -8,7 +8,6 @@ import (
 	"encoding/json"
 	"os"
 	"os/signal"
-	"runtime"
 	"sync"
 	"syscall"
 	"time"
@@ -53,13 +52,10 @@ func Run(identity desktopcontrol.Identity, compose func() serve.MuxOpts) error {
 	if err != nil || len(token) != 32 || len(boot.Generation) < 16 || len(boot.Generation) > 64 || boot.Protocol != desktopcontrol.Protocol || boot.Type != "bootstrap" {
 		return i18n.Errorf("desktop.handshake_failed")
 	}
-	origin := "tauri://localhost"
-	if runtime.GOOS == "windows" {
-		origin = "http://tauri.localhost"
-	}
-	if boot.Origin != origin && !(identity.Channel != "release" && boot.Origin == "http://127.0.0.1:5173") {
+	if !allowedOrigin(boot.Origin, identity.Channel) {
 		return i18n.Errorf("desktop.origin_rejected")
 	}
+
 	session := &desktopcontrol.Session{Bootstrap: boot, Identity: identity}
 	var outputMu sync.Mutex
 	send := func(v any) { outputMu.Lock(); defer outputMu.Unlock(); _ = json.NewEncoder(os.Stdout).Encode(v) }
@@ -116,4 +112,10 @@ func Run(identity desktopcontrol.Identity, compose func() serve.MuxOpts) error {
 			desktopcontrol.Identity
 		}{"ready", boot.Generation, port, paths.Root, identity})
 	})
+}
+
+// Production pages use a standard, secure Electron scheme. Development alone
+// permits the fixed Vite origin; arbitrary local pages and null are rejected.
+func allowedOrigin(origin, channel string) bool {
+	return origin == "one-desktop://app" || (channel != "release" && origin == "http://127.0.0.1:5173")
 }

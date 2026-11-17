@@ -34,7 +34,11 @@ function verifySignature(path: string) {
 }
 
 export function verifyMacApp(app: string) {
-  for (const path of [join(app, "Contents/MacOS/one"), join(app, "Contents/MacOS/one-api"), app])
+  for (const path of [
+    join(app, "Contents/Resources/bin/one"),
+    join(app, "Contents/Resources/bin/one-api"),
+    app,
+  ])
     verifySignature(path);
   try {
     appleCommand`xcrun stapler validate ${app}`;
@@ -66,4 +70,19 @@ export function notarizeMacDMG(dmg: string) {
   appleCommand`xcrun stapler validate ${dmg}`;
   run`spctl --assess --type open --context context:primary-signature --verbose ${dmg}`;
   run`hdiutil verify ${dmg}`;
+}
+
+export function notarizeMacApp(app: string) {
+  const archive = `${app}.notarize.zip`;
+  run`ditto -c -k --keepParent ${app} ${archive}`;
+  try {
+    const report = JSON.parse(
+      secret`xcrun notarytool submit ${archive} ${notaryCredentials()} --wait --timeout 45m --output-format json`,
+    );
+    if (report.status !== "Accepted") fail("App notarization rejected", "应用公证未通过");
+    appleCommand`xcrun stapler staple ${app}`;
+    verifyMacApp(app);
+  } finally {
+    run`rm -f ${archive}`;
+  }
 }

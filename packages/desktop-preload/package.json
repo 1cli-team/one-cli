@@ -1,0 +1,29 @@
+{
+  "name": "@one-desktop/preload",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "types": "./src/api.ts",
+  "exports": {
+    ".": {
+      "types": "./src/api.ts",
+      "default": "./dist/index.cjs"
+    }
+  },
+  "scripts": {
+    "build": "tsdown",
+    "dev": "tsdown --watch",
+    "typecheck": "tsc --noEmit",
+    "check": "pnpm run typecheck && oxlint . && oxfmt --check .",
+    "format:fix": "oxfmt --write ."
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.3",
+    "electron": "44.11.3",
+    "oxfmt": "^0.70.0",
+    "oxlint": "^1.85.0",
+    "tsdown": "0.23.0",
+    "typescript": "^7.0.2"
+  }
+}

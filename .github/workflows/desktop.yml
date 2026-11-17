@@ -70,7 +70,7 @@ jobs:
         include:
           - runner: macos-15
             target: aarch64-apple-darwin
-          # Tauri supports building both macOS targets on Apple Silicon.
+          # Electron packages both macOS architectures on Apple Silicon.
           - runner: macos-15
             target: x86_64-apple-darwin
           - runner: windows-2022
@@ -93,15 +93,10 @@ jobs:
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update
-          sudo apt-get install -y libwebkit2gtk-4.1-dev build-essential curl wget file libssl-dev libxdo-dev libayatana-appindicator3-dev librsvg2-dev patchelf libfuse2
+          sudo apt-get install -y build-essential curl wget file libgtk-3-0 libnss3 libasound2 libxss1 libgbm1 libdrm2 libxkbcommon0 libayatana-appindicator3-1 librsvg2-bin libfuse2 xvfb
       - uses: jdx/mise-action@c2a87611a18de5b3828c5652fe268e992400cb5c # v4
         with:
           version: 2026.9.7
-      - uses: dtolnay/rust-toolchain@686976e191b89faba57d3206551f0f330d8cb249 # stable action
-        with:
-          toolchain: 1.94.0
-          targets: ${{ matrix.target }}
-          components: rustfmt
       - name: Repository checks / 仓库质量检查
         if: matrix.target == 'aarch64-apple-darwin'
         run: mise run --jobs 1 --force check
@@ -121,6 +116,20 @@ jobs:
           ONE_DESKTOP_RELEASE: "1"
           APPIMAGE_EXTRACT_AND_RUN: "1"
         run: mise run build-desktop
+      - name: Packaged desktop regression / 安装包桌面回归
+        if: matrix.target != 'x86_64-apple-darwin'
+        run: |
+          case "${{ matrix.target }}" in
+            aarch64-apple-darwin) export ONE_DESKTOP_TEST_EXECUTABLE="$PWD/services/desktop-main/dist/${{ matrix.target }}/mac-arm64/One Desktop.app/Contents/MacOS/One Desktop" ;;
+            x86_64-pc-windows-msvc) export ONE_DESKTOP_TEST_EXECUTABLE="$PWD/services/desktop-main/dist/${{ matrix.target }}/win-unpacked/One Desktop.exe" ;;
+            x86_64-unknown-linux-gnu) export ONE_DESKTOP_TEST_EXECUTABLE="$PWD/services/desktop-main/dist/${{ matrix.target }}/linux-unpacked/one-desktop" ;;
+            aarch64-unknown-linux-gnu) export ONE_DESKTOP_TEST_EXECUTABLE="$PWD/services/desktop-main/dist/${{ matrix.target }}/linux-arm64-unpacked/one-desktop" ;;
+          esac
+          if [ "${{ runner.os }}" = "Linux" ]; then
+            xvfb-run -a mise exec -- pnpm --filter @one-desktop/main test:desktop
+          else
+            mise exec -- pnpm --filter @one-desktop/main test:desktop
+          fi
       - name: Clean temporary signing credentials / 清理临时签名凭据
         if: always() && runner.os == 'macOS'
         run: mise exec node -- node scripts/desktop-macos.mts cleanup

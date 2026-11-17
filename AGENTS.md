@@ -9,7 +9,9 @@
 | CLI | `packages/cli` | One 命令行工具，负责创建项目、执行任务、管理环境变量，不包含 HTTP 服务或前端资源。 |
 | One Core | `packages/one-core` | CLI 与桌面 API 共用的 Go 业务和平台能力。 |
 | Desktop API | `services/desktop-api` | 桌面版独立 Go HTTP 后端，编译为 `one-api`。 |
-| Desktop | `apps/desktop` | React 管理界面与 `src-tauri` 原生宿主，内置 `one-api` 和 `one`。 |
+| Desktop Renderer | `apps/desktop-renderer` | React 管理界面。 |
+| Desktop Main | `services/desktop-main` | Electron 宿主，内置 `one-api` 和 `one`。 |
+| Desktop Preload | `packages/desktop-preload` | 类型化原生桥接与共享协议。 |
 | Website | `apps/website` | Next.js 静态官网，保留首页、安装入口和 AI 资源链接。 |
 
 ## 仓库脚本
@@ -36,7 +38,7 @@
 
 ### Desktop 文案
 
-- 复用 `apps/desktop/src/lib/i18n.ts` 和现有 locale store，沿用现有字典结构及语言切换机制。
+- 复用 `apps/desktop-renderer/src/lib/i18n.ts` 和现有 locale store，沿用现有字典结构及语言切换机制。
 - 新增页面、组件、空状态、表单提示、通知、按钮、tooltip 和无障碍标签时，同步补齐中英文。
 - 布局要容纳不同语言的文本长度，检查换行、截断、弹窗宽度和窄屏显示。
 

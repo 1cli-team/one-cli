@@ -20,12 +20,12 @@ raw_args = true
 
 [tasks.install-deps]
 description = "Install the root pnpm workspace dependencies"
-run = "pnpm install --frozen-lockfile"
+run = ["pnpm install --frozen-lockfile", "node scripts/desktop-electron-install.mts"]
 
 [tasks.build-web]
 description = "Build the desktop React interface"
 depends = ["install-deps"]
-dir = "apps/desktop"
+dir = "apps/desktop-renderer"
 run = "pnpm run build:web"
 sources = ["src/**/*", "index.html", "package.json", "vite.config.ts", "tsconfig*.json", "../../package.json", "../../pnpm-lock.yaml", "../../pnpm-workspace.yaml"]
 outputs = ["dist"]
@@ -71,7 +71,7 @@ depends = ["cli:check", "one-core:check", "desktop-api:check"]
 
 [tasks."check:desktop-ui"]
 depends = ["install-deps"]
-dir = "apps/desktop"
+dir = "apps/desktop-renderer"
 run = "pnpm run check"
 
 [tasks."check:website"]
@@ -80,7 +80,7 @@ dir = "apps/website"
 run = "pnpm run check"
 
 [tasks."check:static"]
-description = "Check agent guidance, website, Go, React, and Tauri"
+description = "Check agent guidance, website, Go, React, and Electron"
 depends = ["verify-node-workspace", "verify-guidance", "check:go", "check:desktop-ui", "check:website", "check:desktop"]
 
 [tasks.check]
@@ -185,60 +185,13 @@ dir = 'packages/cli'
 raw_args = true
 run = 'task verify-node-workspace --'
 
-[tasks.'desktop:build']
-depends = ["//:install-deps"]
-dir = 'apps/desktop'
-raw_args = true
-run = 'pnpm run build'
-
-[tasks.'desktop:check']
-dir = 'apps/desktop'
-raw_args = true
-run = 'pnpm run check'
-
-[tasks.'desktop:check:fix']
-dir = 'apps/desktop'
-raw_args = true
-run = 'pnpm run check:fix'
-
-[tasks.'desktop:dev']
-depends = ["//:install-deps"]
-dir = 'apps/desktop'
-raw_args = true
-run = 'pnpm run dev'
-
-[tasks.'desktop:format']
-dir = 'apps/desktop'
-raw_args = true
-run = 'pnpm run format'
-
-[tasks.'desktop:format:fix']
-dir = 'apps/desktop'
-raw_args = true
-run = 'pnpm run format:fix'
-
-[tasks.'desktop:lint']
-dir = 'apps/desktop'
-raw_args = true
-run = 'pnpm run lint'
-
-[tasks.'desktop:lint:fix']
-dir = 'apps/desktop'
-raw_args = true
-run = 'pnpm run lint:fix'
-
-[tasks.'desktop:preview']
-dir = 'apps/desktop'
-raw_args = true
-run = 'pnpm run preview'
-
 [tasks."desktop:prepare"]
 depends = ["sync-bundled"]
 run = "node scripts/desktop.mts prepare"
 
 [tasks."check:desktop"]
-depends = ["desktop:prepare"]
-run = ["cargo fmt --manifest-path apps/desktop/src-tauri/Cargo.toml --check", "cargo check --locked --manifest-path apps/desktop/src-tauri/Cargo.toml"]
+depends = ["install-deps"]
+run = ["pnpm --filter @one-desktop/preload check", "pnpm --filter @one-desktop/main check", "pnpm --filter @one-desktop/renderer typecheck"]
 
 [tasks."build-desktop"]
 depends = ["install-deps"]
@@ -281,35 +234,6 @@ dir = 'services/desktop-api'
 raw_args = true
 
 run = 'task tidy --'
-
-[tasks.'desktop:build:web']
-dir = 'apps/desktop'
-
-raw_args = true
-
-run = 'pnpm run build:web'
-
-[tasks.'desktop:check:native']
-depends = ["//:desktop:prepare", "//:install-deps"]
-dir = 'apps/desktop'
-
-raw_args = true
-
-run = 'pnpm run check:native'
-
-[tasks.'desktop:dev:web']
-dir = 'apps/desktop'
-
-raw_args = true
-
-run = 'pnpm run dev:web'
-
-[tasks.'desktop:prepare:backend']
-dir = 'apps/desktop'
-
-raw_args = true
-
-run = 'pnpm run prepare:backend'
 
 [tasks.'one-core:build']
 depends = ["//:sync-bundled"]
@@ -412,4 +336,263 @@ raw_args = true
 
 run = 'pnpm run typecheck'
 
-# one:managed-v1 {"[\"monorepo\",\"config_roots\"]":"4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945","[\"monorepo\",\"lockfile\"]":"fcbcf165908dd18a9e49f7ff27810176db8e9f63b4352213741664245224f8aa","[\"monorepo_root\"]":"b5bea41b6c623f7c09f1bf24dcae58ebab3c0cdd90ad966bc43a45b44867e12b","[\"tasks\",\"cli:build\",\"description\"]":"cde82f02859fcc6f4226e9e2b4b98fcd1bb53d68fd66378d6b12ed9587dd9041","[\"tasks\",\"cli:build\",\"dir\"]":"55cd6e0d108d1cf9ac365b98236d1b9efc9c78f896368d129c37e53831404746","[\"tasks\",\"cli:build\",\"raw_args\"]":"b5bea41b6c623f7c09f1bf24dcae58ebab3c0cdd90ad966bc43a45b44867e12b","[\"tasks\",\"cli:build\",\"run\"]":"18131ed52d0a32e786dbd35201898a7653480b88b83411cc7fee0a5ec85e59aa","[\"tasks\",\"cli:build-all\",\"description\"]":"5a2810b1f882281debfbcb8fc7ad8840986e6b7c9d2332a5a77f3ad104387f51","[\"tasks\",\"cli:build-all\",\"dir\"]":"55cd6e0d108d1cf9ac365b98236d1b9efc9c78f896368d129c37e53831404746","[\"tasks\",\"cli:build-all\",\"raw_args\"]":"b5bea41b6c623f7c09f1bf24dcae58ebab3c0cdd90ad966bc43a45b44867e12b","[\"tasks\",\"cli:build-all\",\"run\"]":"d78e59e35ec8d8decf668fcc2a4455247d6ac4426dd5c3df64cb78b977b6e931","[\"tasks\",\"cli:build-local\",\"dir\"]":"55cd6e0d108d1cf9ac365b98236d1b9efc9c78f896368d129c37e53831404746","[\"tasks\",\"cli:build-local\",\"raw_args\"]":"b5bea41b6c623f7c09f1bf24dcae58ebab3c0cdd90ad966bc43a45b44867e12b","[\"tasks\",\"cli:build-local\",\"run\"]":"21684c8d2565f745dbc3dac57038308643e7db2fc726f55bf64418a97e19b110","[\"tasks\",\"cli:check\",\"dir\"]":"55cd6e0d108d1cf9ac365b98236d1b9efc9c78f896368d129c37e53831404746","[\"tasks\",\"cli:check\",\"raw_args\"]":"b5bea41b6c623f7c09f1bf24dcae58ebab3c0cdd90ad966bc43a45b44867e12b","[\"tasks\",\"cli:check\",\"run\"]":"6e132a2fffbaf1847c695d5c05c675359fc1784f03648cc7b379edd34cf597e1","[\"tasks\",\"cli:fmt\",\"dir\"]":"55cd6e0d108d1cf9ac365b98236d1b9efc9c78f896368d129c37e53831404746","[\"tasks\",\"cli:fmt\",\"raw_args\"]":"b5bea41b6c623f7c09f1bf24dcae58ebab3c0cdd90ad966bc43a45b44867e12b","[\"tasks\",\"cli:fmt\",\"run\"]":"acb9678093d9f4348d30353b881c2a4e431b9f3899d9b9576c2929340d692caf","[\"tasks\",\"cli:install-launcher\",\"dir\"]":"55cd6e0d108d1cf9ac365b98236d1b9efc9c78f896368d129c37e53831404746","[\"tasks\",\"cli:install-launcher\",\"raw_args\"]":"b5bea41b6c623f7c09f1bf24dcae58ebab3c0cdd90ad966bc43a45b44867e12b","[\"tasks\",\"cli:install-launcher\",\"run\"]":"ce26f4853dc6ef2fb03fa221a9d5c48c2c3f981ceb3d9c37026a34edc0dad898","[\"tasks\",\"cli:sync-bundled\",\"dir\"]":"55cd6e0d108d1cf9ac365b98236d1b9efc9c78f896368d129c37e53831404746","[\"tasks\",\"cli:sync-bundled\",\"raw_args\"]":"b5bea41b6c623f7c09f1bf24dcae58ebab3c0cdd90ad966bc43a45b44867e12b","[\"tasks\",\"cli:sync-bundled\",\"run\"]":"7ececd4bafb910101d2a3cb6df7b0636d11934aea810f0a079a8af2412633227","[\"tasks\",\"cli:tidy\",\"dir\"]":"55cd6e0d108d1cf9ac365b98236d1b9efc9c78f896368d129c37e53831404746","[\"tasks\",\"cli:tidy\",\"raw_args\"]":"b5bea41b6c623f7c09f1bf24dcae58ebab3c0cdd90ad966bc43a45b44867e12b","[\"tasks\",\"cli:tidy\",\"run\"]":"6c28cbe6d68ef31afaaec32610c105a7bc0241ea3f201723cb3e878d1e938a58","[\"tasks\",\"cli:verify-guidance\",\"dir\"]":"55cd6e0d108d1cf9ac365b98236d1b9efc9c78f896368d129c37e53831404746","[\"tasks\",\"cli:verify-guidance\",\"raw_args\"]":"b5bea41b6c623f7c09f1bf24dcae58ebab3c0cdd90ad966bc43a45b44867e12b","[\"tasks\",\"cli:verify-guidance\",\"run\"]":"bdbdd84b3d8b18676879a1688084806c65cacd363e82d77ff1bf9f6e5b08760d","[\"tasks\",\"cli:verify-node-workspace\",\"dir\"]":"55cd6e0d108d1cf9ac365b98236d1b9efc9c78f896368d129c37e53831404746","[\"tasks\",\"cli:verify-node-workspace\",\"raw_args\"]":"b5bea41b6c623f7c09f1bf24dcae58ebab3c0cdd90ad966bc43a45b44867e12b","[\"tasks\",\"cli:verify-node-workspace\",\"run\"]":"f8e687c8818a33f3dbc562a049f85c7cb13c57906729c267d2d6ef7f0961421c","[\"tasks\",\"desktop-api:build\",\"dir\"]":"6f3d9df5d110f708371fda1e7c903edf5a1bbedfa72899025c2e49b80dc533dd","[\"tasks\",\"desktop-api:build\",\"raw_args\"]":"b5bea41b6c623f7c09f1bf24dcae58ebab3c0cdd90ad966bc43a45b44867e12b","[\"tasks\",\"desktop-api:build\",\"run\"]":"18131ed52d0a32e786dbd35201898a7653480b88b83411cc7fee0a5ec85e59aa","[\"tasks\",\"desktop-api:fmt\",\"dir\"]":"6f3d9df5d110f708371fda1e7c903edf5a1bbedfa72899025c2e49b80dc533dd","[\"tasks\",\"desktop-api:fmt\",\"raw_args\"]":"b5bea41b6c623f7c09f1bf24dcae58ebab3c0cdd90ad966bc43a45b44867e12b","[\"tasks\",\"desktop-api:fmt\",\"run\"]":"acb9678093d9f4348d30353b881c2a4e431b9f3899d9b9576c2929340d692caf","[\"tasks\",\"desktop-api:tidy\",\"dir\"]":"6f3d9df5d110f708371fda1e7c903edf5a1bbedfa72899025c2e49b80dc533dd","[\"tasks\",\"desktop-api:tidy\",\"raw_args\"]":"b5bea41b6c623f7c09f1bf24dcae58ebab3c0cdd90ad966bc43a45b44867e12b","[\"tasks\",\"desktop-api:tidy\",\"run\"]":"6c28cbe6d68ef31afaaec32610c105a7bc0241ea3f201723cb3e878d1e938a58","[\"tasks\",\"desktop:build\",\"dir\"]":"e9e767de8a5d84605761e96e138718554ac34df99768a8246a1a72951806d780","[\"tasks\",\"desktop:build\",\"raw_args\"]":"b5bea41b6c623f7c09f1bf24dcae58ebab3c0cdd90ad966bc43a45b44867e12b","[\"tasks\",\"desktop:build\",\"run\"]":"44a8f3ee49af693fc75b0602e60d514f939e9a7c03807f8009a8da4bf72c55b7","[\"tasks\",\"desktop:build:web\",\"dir\"]":"e9e767de8a5d84605761e96e138718554ac34df99768a8246a1a72951806d780","[\"tasks\",\"desktop:build:web\",\"raw_args\"]":"b5bea41b6c623f7c09f1bf24dcae58ebab3c0cdd90ad966bc43a45b44867e12b","[\"tasks\",\"desktop:build:web\",\"run\"]":"bb3d31d91adccdbd61c0e867577afb813f23ecd014e72b9a4f4c4d6d7050d764","[\"tasks\",\"desktop:check\",\"dir\"]":"e9e767de8a5d84605761e96e138718554ac34df99768a8246a1a72951806d780","[\"tasks\",\"desktop:check\",\"raw_args\"]":"b5bea41b6c623f7c09f1bf24dcae58ebab3c0cdd90ad966bc43a45b44867e12b","[\"tasks\",\"desktop:check\",\"run\"]":"480d44525792cdcfb13bc036ea04c0d69860cadc1ac61cd7d82acf9fbe75e087","[\"tasks\",\"desktop:check:fix\",\"dir\"]":"e9e767de8a5d84605761e96e138718554ac34df99768a8246a1a72951806d780","[\"tasks\",\"desktop:check:fix\",\"raw_args\"]":"b5bea41b6c623f7c09f1bf24dcae58ebab3c0cdd90ad966bc43a45b44867e12b","[\"tasks\",\"desktop:check:fix\",\"run\"]":"07a7e4c2a92d3ff17ac4cb0a027d0b90c9c2df42643de06ffff66fc1dfc6e175","[\"tasks\",\"desktop:check:native\",\"dir\"]":"e9e767de8a5d84605761e96e138718554ac34df99768a8246a1a72951806d780","[\"tasks\",\"desktop:check:native\",\"raw_args\"]":"b5bea41b6c623f7c09f1bf24dcae58ebab3c0cdd90ad966bc43a45b44867e12b","[\"tasks\",\"desktop:check:native\",\"run\"]":"635082b9a1901b0ce1f2d8eaad58e990f5b4bcb349d200638f6f2e8158192f42","[\"tasks\",\"desktop:dev\",\"dir\"]":"e9e767de8a5d84605761e96e138718554ac34df99768a8246a1a72951806d780","[\"tasks\",\"desktop:dev\",\"raw_args\"]":"b5bea41b6c623f7c09f1bf24dcae58ebab3c0cdd90ad966bc43a45b44867e12b","[\"tasks\",\"desktop:dev\",\"run\"]":"09fae686663623cc05ddba7b868aded9993ec812b0fe57a9a8df97bd4869b906","[\"tasks\",\"desktop:dev:web\",\"dir\"]":"e9e767de8a5d84605761e96e138718554ac34df99768a8246a1a72951806d780","[\"tasks\",\"desktop:dev:web\",\"raw_args\"]":"b5bea41b6c623f7c09f1bf24dcae58ebab3c0cdd90ad966bc43a45b44867e12b","[\"tasks\",\"desktop:dev:web\",\"run\"]":"b7a022b5d75e4e56664010d8da1cac8528f938862ca5e6fa5ce9d1ca92d4e8df","[\"tasks\",\"desktop:format\",\"dir\"]":"e9e767de8a5d84605761e96e138718554ac34df99768a8246a1a72951806d780","[\"tasks\",\"desktop:format\",\"raw_args\"]":"b5bea41b6c623f7c09f1bf24dcae58ebab3c0cdd90ad966bc43a45b44867e12b","[\"tasks\",\"desktop:format\",\"run\"]":"8e903c4de3b9fae6a2b8155376ba843743893738f807f09779dfbd685d1b2b65","[\"tasks\",\"desktop:format:fix\",\"dir\"]":"e9e767de8a5d84605761e96e138718554ac34df99768a8246a1a72951806d780","[\"tasks\",\"desktop:format:fix\",\"raw_args\"]":"b5bea41b6c623f7c09f1bf24dcae58ebab3c0cdd90ad966bc43a45b44867e12b","[\"tasks\",\"desktop:format:fix\",\"run\"]":"701c6c4e415cf6ac62e176a0f2b6fd3e5457ce7f11abce9e900902dadef129c5","[\"tasks\",\"desktop:lint\",\"dir\"]":"e9e767de8a5d84605761e96e138718554ac34df99768a8246a1a72951806d780","[\"tasks\",\"desktop:lint\",\"raw_args\"]":"b5bea41b6c623f7c09f1bf24dcae58ebab3c0cdd90ad966bc43a45b44867e12b","[\"tasks\",\"desktop:lint\",\"run\"]":"300487aff7ad5c9e32e3f0861154e2cb85d33e46a8c1cb8ea91a4258a1eca83b","[\"tasks\",\"desktop:lint:fix\",\"dir\"]":"e9e767de8a5d84605761e96e138718554ac34df99768a8246a1a72951806d780","[\"tasks\",\"desktop:lint:fix\",\"raw_args\"]":"b5bea41b6c623f7c09f1bf24dcae58ebab3c0cdd90ad966bc43a45b44867e12b","[\"tasks\",\"desktop:lint:fix\",\"run\"]":"0e8e5238b5894c168eda63e82ca2cc3e78650f03cab84fc6a8099932efb2fe79","[\"tasks\",\"desktop:prepare:backend\",\"dir\"]":"e9e767de8a5d84605761e96e138718554ac34df99768a8246a1a72951806d780","[\"tasks\",\"desktop:prepare:backend\",\"raw_args\"]":"b5bea41b6c623f7c09f1bf24dcae58ebab3c0cdd90ad966bc43a45b44867e12b","[\"tasks\",\"desktop:prepare:backend\",\"run\"]":"4d076ec335b0bc32e2dd91448e24bcca297d4627e0c236a3f093702e460730c7","[\"tasks\",\"desktop:preview\",\"dir\"]":"e9e767de8a5d84605761e96e138718554ac34df99768a8246a1a72951806d780","[\"tasks\",\"desktop:preview\",\"raw_args\"]":"b5bea41b6c623f7c09f1bf24dcae58ebab3c0cdd90ad966bc43a45b44867e12b","[\"tasks\",\"desktop:preview\",\"run\"]":"f08ab7c03f384e09bfb088007fc8f6f88256397166afdee8fae035f81fe85caf","[\"tasks\",\"one-core:build\",\"dir\"]":"2d72bae743190153de8f3a521646d9a6d530fa39a77a19d1ee15ed8d50b34b77","[\"tasks\",\"one-core:build\",\"raw_args\"]":"b5bea41b6c623f7c09f1bf24dcae58ebab3c0cdd90ad966bc43a45b44867e12b","[\"tasks\",\"one-core:build\",\"run\"]":"18131ed52d0a32e786dbd35201898a7653480b88b83411cc7fee0a5ec85e59aa","[\"tasks\",\"one-core:fmt\",\"dir\"]":"2d72bae743190153de8f3a521646d9a6d530fa39a77a19d1ee15ed8d50b34b77","[\"tasks\",\"one-core:fmt\",\"raw_args\"]":"b5bea41b6c623f7c09f1bf24dcae58ebab3c0cdd90ad966bc43a45b44867e12b","[\"tasks\",\"one-core:fmt\",\"run\"]":"acb9678093d9f4348d30353b881c2a4e431b9f3899d9b9576c2929340d692caf","[\"tasks\",\"one-core:tidy\",\"dir\"]":"2d72bae743190153de8f3a521646d9a6d530fa39a77a19d1ee15ed8d50b34b77","[\"tasks\",\"one-core:tidy\",\"raw_args\"]":"b5bea41b6c623f7c09f1bf24dcae58ebab3c0cdd90ad966bc43a45b44867e12b","[\"tasks\",\"one-core:tidy\",\"run\"]":"6c28cbe6d68ef31afaaec32610c105a7bc0241ea3f201723cb3e878d1e938a58","[\"tasks\",\"website:build\",\"dir\"]":"f2c1d43b39a7df95c506432e4c828231d9b7563515dd423c9aee3c85c6c08cf0","[\"tasks\",\"website:build\",\"raw_args\"]":"b5bea41b6c623f7c09f1bf24dcae58ebab3c0cdd90ad966bc43a45b44867e12b","[\"tasks\",\"website:build\",\"run\"]":"44a8f3ee49af693fc75b0602e60d514f939e9a7c03807f8009a8da4bf72c55b7","[\"tasks\",\"website:check\",\"dir\"]":"f2c1d43b39a7df95c506432e4c828231d9b7563515dd423c9aee3c85c6c08cf0","[\"tasks\",\"website:check\",\"raw_args\"]":"b5bea41b6c623f7c09f1bf24dcae58ebab3c0cdd90ad966bc43a45b44867e12b","[\"tasks\",\"website:check\",\"run\"]":"480d44525792cdcfb13bc036ea04c0d69860cadc1ac61cd7d82acf9fbe75e087","[\"tasks\",\"website:check:fix\",\"dir\"]":"f2c1d43b39a7df95c506432e4c828231d9b7563515dd423c9aee3c85c6c08cf0","[\"tasks\",\"website:check:fix\",\"raw_args\"]":"b5bea41b6c623f7c09f1bf24dcae58ebab3c0cdd90ad966bc43a45b44867e12b","[\"tasks\",\"website:check:fix\",\"run\"]":"07a7e4c2a92d3ff17ac4cb0a027d0b90c9c2df42643de06ffff66fc1dfc6e175","[\"tasks\",\"website:dev\",\"dir\"]":"f2c1d43b39a7df95c506432e4c828231d9b7563515dd423c9aee3c85c6c08cf0","[\"tasks\",\"website:dev\",\"raw_args\"]":"b5bea41b6c623f7c09f1bf24dcae58ebab3c0cdd90ad966bc43a45b44867e12b","[\"tasks\",\"website:dev\",\"run\"]":"09fae686663623cc05ddba7b868aded9993ec812b0fe57a9a8df97bd4869b906","[\"tasks\",\"website:format\",\"dir\"]":"f2c1d43b39a7df95c506432e4c828231d9b7563515dd423c9aee3c85c6c08cf0","[\"tasks\",\"website:format\",\"raw_args\"]":"b5bea41b6c623f7c09f1bf24dcae58ebab3c0cdd90ad966bc43a45b44867e12b","[\"tasks\",\"website:format\",\"run\"]":"8e903c4de3b9fae6a2b8155376ba843743893738f807f09779dfbd685d1b2b65","[\"tasks\",\"website:format:fix\",\"dir\"]":"f2c1d43b39a7df95c506432e4c828231d9b7563515dd423c9aee3c85c6c08cf0","[\"tasks\",\"website:format:fix\",\"raw_args\"]":"b5bea41b6c623f7c09f1bf24dcae58ebab3c0cdd90ad966bc43a45b44867e12b","[\"tasks\",\"website:format:fix\",\"run\"]":"701c6c4e415cf6ac62e176a0f2b6fd3e5457ce7f11abce9e900902dadef129c5","[\"tasks\",\"website:lint\",\"dir\"]":"f2c1d43b39a7df95c506432e4c828231d9b7563515dd423c9aee3c85c6c08cf0","[\"tasks\",\"website:lint\",\"raw_args\"]":"b5bea41b6c623f7c09f1bf24dcae58ebab3c0cdd90ad966bc43a45b44867e12b","[\"tasks\",\"website:lint\",\"run\"]":"300487aff7ad5c9e32e3f0861154e2cb85d33e46a8c1cb8ea91a4258a1eca83b","[\"tasks\",\"website:lint:fix\",\"dir\"]":"f2c1d43b39a7df95c506432e4c828231d9b7563515dd423c9aee3c85c6c08cf0","[\"tasks\",\"website:lint:fix\",\"raw_args\"]":"b5bea41b6c623f7c09f1bf24dcae58ebab3c0cdd90ad966bc43a45b44867e12b","[\"tasks\",\"website:lint:fix\",\"run\"]":"0e8e5238b5894c168eda63e82ca2cc3e78650f03cab84fc6a8099932efb2fe79","[\"tasks\",\"website:preview\",\"dir\"]":"f2c1d43b39a7df95c506432e4c828231d9b7563515dd423c9aee3c85c6c08cf0","[\"tasks\",\"website:preview\",\"raw_args\"]":"b5bea41b6c623f7c09f1bf24dcae58ebab3c0cdd90ad966bc43a45b44867e12b","[\"tasks\",\"website:preview\",\"run\"]":"f08ab7c03f384e09bfb088007fc8f6f88256397166afdee8fae035f81fe85caf","[\"tasks\",\"website:start\",\"dir\"]":"f2c1d43b39a7df95c506432e4c828231d9b7563515dd423c9aee3c85c6c08cf0","[\"tasks\",\"website:start\",\"raw_args\"]":"b5bea41b6c623f7c09f1bf24dcae58ebab3c0cdd90ad966bc43a45b44867e12b","[\"tasks\",\"website:start\",\"run\"]":"ea9a60458c4d37a2ad05f5bb1dc6bf9f3cea19f5576f9acdc7a2376b535fc823","[\"tasks\",\"website:typecheck\",\"dir\"]":"f2c1d43b39a7df95c506432e4c828231d9b7563515dd423c9aee3c85c6c08cf0","[\"tasks\",\"website:typecheck\",\"raw_args\"]":"b5bea41b6c623f7c09f1bf24dcae58ebab3c0cdd90ad966bc43a45b44867e12b","[\"tasks\",\"website:typecheck\",\"run\"]":"42c8b8badb1a25120a0f12d4d5600f3256340d5d2080097f74fbef361548ceb7"}
+
+
+[tasks.'desktop-main:build']
+depends = ['//:desktop-preload:build']
+
+dir = 'services/desktop-main'
+
+raw_args = true
+
+run = 'pnpm run build'
+
+[tasks.'desktop-main:check']
+depends = ['//:desktop-preload:build']
+
+dir = 'services/desktop-main'
+
+raw_args = true
+
+run = 'pnpm run check'
+
+[tasks.'desktop-main:dev']
+depends = ['//:desktop-preload:build']
+
+dir = 'services/desktop-main'
+
+raw_args = true
+
+run = 'pnpm run dev'
+
+[tasks.'desktop-main:format:fix']
+dir = 'services/desktop-main'
+
+raw_args = true
+
+run = 'pnpm run format:fix'
+
+[tasks.'desktop-main:pack']
+depends = ['//:desktop-renderer:build', '//:desktop-main:build', '//:desktop-preload:build']
+
+dir = 'services/desktop-main'
+
+raw_args = true
+
+run = 'pnpm run pack'
+
+[tasks.'desktop-main:sandbox:profile']
+dir = 'services/desktop-main'
+
+raw_args = true
+
+run = 'pnpm run sandbox:profile'
+
+[tasks.'desktop-main:test:desktop']
+dir = 'services/desktop-main'
+
+raw_args = true
+
+run = 'pnpm run test:desktop'
+
+[tasks.'desktop-main:typecheck']
+depends = ['//:desktop-preload:build']
+
+dir = 'services/desktop-main'
+
+raw_args = true
+
+run = 'pnpm run typecheck'
+
+[tasks.'desktop-preload:build']
+dir = 'packages/desktop-preload'
+
+raw_args = true
+
+run = 'pnpm run build'
+
+[tasks.'desktop-preload:check']
+dir = 'packages/desktop-preload'
+
+raw_args = true
+
+run = 'pnpm run check'
+
+[tasks.'desktop-preload:dev']
+dir = 'packages/desktop-preload'
+
+raw_args = true
+
+run = 'pnpm run dev'
+
+[tasks.'desktop-preload:format:fix']
+dir = 'packages/desktop-preload'
+
+raw_args = true
+
+run = 'pnpm run format:fix'
+
+[tasks.'desktop-preload:typecheck']
+dir = 'packages/desktop-preload'
+
+raw_args = true
+
+run = 'pnpm run typecheck'
+
+[tasks.'desktop-renderer:build']
+depends = ['//:desktop-preload:build']
+
+dir = 'apps/desktop-renderer'
+
+raw_args = true
+
+run = 'pnpm run build'
+
+[tasks.'desktop-renderer:build:web']
+dir = 'apps/desktop-renderer'
+
+raw_args = true
+
+run = 'pnpm run build:web'
+
+[tasks.'desktop-renderer:check']
+depends = ['//:desktop-preload:build']
+
+dir = 'apps/desktop-renderer'
+
+raw_args = true
+
+run = 'pnpm run check'
+
+[tasks.'desktop-renderer:check:fix']
+dir = 'apps/desktop-renderer'
+
+raw_args = true
+
+run = 'pnpm run check:fix'
+
+[tasks.'desktop-renderer:dev']
+depends = ['//:desktop-preload:build']
+
+dir = 'apps/desktop-renderer'
+
+raw_args = true
+
+run = 'pnpm run dev'
+
+[tasks.'desktop-renderer:dev:web']
+dir = 'apps/desktop-renderer'
+
+raw_args = true
+
+run = 'pnpm run dev:web'
+
+[tasks.'desktop-renderer:format']
+dir = 'apps/desktop-renderer'
+
+raw_args = true
+
+run = 'pnpm run format'
+
+[tasks.'desktop-renderer:format:fix']
+dir = 'apps/desktop-renderer'
+
+raw_args = true
+
+run = 'pnpm run format:fix'
+
+[tasks.'desktop-renderer:lint']
+dir = 'apps/desktop-renderer'
+
+raw_args = true
+
+run = 'pnpm run lint'
+
+[tasks.'desktop-renderer:lint:fix']
+dir = 'apps/desktop-renderer'
+
+raw_args = true
+
+run = 'pnpm run lint:fix'
+
+[tasks.'desktop-renderer:preview']
+dir = 'apps/desktop-renderer'
+
+raw_args = true
+
+run = 'pnpm run preview'
+
+[tasks.'desktop-renderer:typecheck']
+depends = ['//:desktop-preload:build']
+
+dir = 'apps/desktop-renderer'
+
+raw_args = true
+
+run = 'pnpm run typecheck'
+
+[tasks.'desktop:build']
+depends = ["//:install-deps"]
+run = "node scripts/desktop.mts build"
+raw_args = true
+
+[tasks.'desktop:build:web']
+depends = ['//:desktop-renderer:build:web']
+
+[tasks.'desktop:check']
+depends = ['//:desktop-renderer:check', '//:desktop-main:check', '//:desktop-preload:check']
+
+[tasks.'desktop:check:fix']
+depends = ['//:desktop-renderer:check:fix']
+
+[tasks.'desktop:dev']
+depends = ["//:install-deps"]
+run = "node scripts/desktop.mts dev"
+raw_args = true
+
+[tasks.'desktop:dev:web']
+depends = ['//:desktop-renderer:dev:web']
+
+[tasks.'desktop:format']
+depends = ['//:desktop-renderer:format']
+
+[tasks.'desktop:format:fix']
+depends = ['//:desktop-renderer:format:fix', '//:desktop-main:format:fix', '//:desktop-preload:format:fix']
+
+[tasks.'desktop:lint']
+depends = ['//:desktop-renderer:lint']
+
+[tasks.'desktop:lint:fix']
+depends = ['//:desktop-renderer:lint:fix']
+
+[tasks.'desktop:pack']
+depends = ['//:desktop-main:pack']
+
+[tasks.'desktop:preview']
+depends = ['//:desktop-renderer:preview']
+
+[tasks.'desktop:sandbox:profile']
+depends = ['//:desktop-main:sandbox:profile']
+
+[tasks.'desktop:test:desktop']
+depends = ['//:desktop-main:test:desktop']
+
+[tasks.'desktop:typecheck']
+depends = ['//:desktop-renderer:typecheck', '//:desktop-main:typecheck', '//:desktop-preload:typecheck']
+
+[tasks.test]
+depends = ['//:one-core:test']
+
+
+
+[tasks.'desktop-main:install:electron']
+dir = 'services/desktop-main'
+
+raw_args = true
+
+run = 'pnpm run install:electron'
+
+[tasks.'desktop:install:electron']
+depends = ['//:desktop-main:install:electron']
+
+# one:managed-v1 {"[\"monorepo\",\"config_roots\"]":"4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945","[\"monorepo\",\"lockfile\"]":"fcbcf165908dd18a9e49f7ff27810176db8e9f63b4352213741664245224f8aa","[\"monorepo_root\"]":"b5bea41b6c623f7c09f1bf24dcae58ebab3c0cdd90ad966bc43a45b44867e12b","[\"tasks\",\"cli:build\",\"description\"]":"cde82f02859fcc6f4226e9e2b4b98fcd1bb53d68fd66378d6b12ed9587dd9041","[\"tasks\",\"cli:build\",\"dir\"]":"55cd6e0d108d1cf9ac365b98236d1b9efc9c78f896368d129c37e53831404746","[\"tasks\",\"cli:build\",\"raw_args\"]":"b5bea41b6c623f7c09f1bf24dcae58ebab3c0cdd90ad966bc43a45b44867e12b","[\"tasks\",\"cli:build\",\"run\"]":"18131ed52d0a32e786dbd35201898a7653480b88b83411cc7fee0a5ec85e59aa","[\"tasks\",\"cli:build-all\",\"description\"]":"5a2810b1f882281debfbcb8fc7ad8840986e6b7c9d2332a5a77f3ad104387f51","[\"tasks\",\"cli:build-all\",\"dir\"]":"55cd6e0d108d1cf9ac365b98236d1b9efc9c78f896368d129c37e53831404746","[\"tasks\",\"cli:build-all\",\"raw_args\"]":"b5bea41b6c623f7c09f1bf24dcae58ebab3c0cdd90ad966bc43a45b44867e12b","[\"tasks\",\"cli:build-all\",\"run\"]":"d78e59e35ec8d8decf668fcc2a4455247d6ac4426dd5c3df64cb78b977b6e931","[\"tasks\",\"cli:build-local\",\"dir\"]":"55cd6e0d108d1cf9ac365b98236d1b9efc9c78f896368d129c37e53831404746","[\"tasks\",\"cli:build-local\",\"raw_args\"]":"b5bea41b6c623f7c09f1bf24dcae58ebab3c0cdd90ad966bc43a45b44867e12b","[\"tasks\",\"cli:build-local\",\"run\"]":"21684c8d2565f745dbc3dac57038308643e7db2fc726f55bf64418a97e19b110","[\"tasks\",\"cli:check\",\"dir\"]":"55cd6e0d108d1cf9ac365b98236d1b9efc9c78f896368d129c37e53831404746","[\"tasks\",\"cli:check\",\"raw_args\"]":"b5bea41b6c623f7c09f1bf24dcae58ebab3c0cdd90ad966bc43a45b44867e12b","[\"tasks\",\"cli:check\",\"run\"]":"6e132a2fffbaf1847c695d5c05c675359fc1784f03648cc7b379edd34cf597e1","[\"tasks\",\"cli:fmt\",\"dir\"]":"55cd6e0d108d1cf9ac365b98236d1b9efc9c78f896368d129c37e53831404746","[\"tasks\",\"cli:fmt\",\"raw_args\"]":"b5bea41b6c623f7c09f1bf24dcae58ebab3c0cdd90ad966bc43a45b44867e12b","[\"tasks\",\"cli:fmt\",\"run\"]":"acb9678093d9f4348d30353b881c2a4e431b9f3899d9b9576c2929340d692caf","[\"tasks\",\"cli:install-launcher\",\"dir\"]":"55cd6e0d108d1cf9ac365b98236d1b9efc9c78f896368d129c37e53831404746","[\"tasks\",\"cli:install-launcher\",\"raw_args\"]":"b5bea41b6c623f7c09f1bf24dcae58ebab3c0cdd90ad966bc43a45b44867e12b","[\"tasks\",\"cli:install-launcher\",\"run\"]":"ce26f4853dc6ef2fb03fa221a9d5c48c2c3f981ceb3d9c37026a34edc0dad898","[\"tasks\",\"cli:sync-bundled\",\"dir\"]":"55cd6e0d108d1cf9ac365b98236d1b9efc9c78f896368d129c37e53831404746","[\"tasks\",\"cli:sync-bundled\",\"raw_args\"]":"b5bea41b6c623f7c09f1bf24dcae58ebab3c0cdd90ad966bc43a45b44867e12b","[\"tasks\",\"cli:sync-bundled\",\"run\"]":"7ececd4bafb910101d2a3cb6df7b0636d11934aea810f0a079a8af2412633227","[\"tasks\",\"cli:tidy\",\"dir\"]":"55cd6e0d108d1cf9ac365b98236d1b9efc9c78f896368d129c37e53831404746","[\"tasks\",\"cli:tidy\",\"raw_args\"]":"b5bea41b6c623f7c09f1bf24dcae58ebab3c0cdd90ad966bc43a45b44867e12b","[\"tasks\",\"cli:tidy\",\"run\"]":"6c28cbe6d68ef31afaaec32610c105a7bc0241ea3f201723cb3e878d1e938a58","[\"tasks\",\"cli:verify-guidance\",\"dir\"]":"55cd6e0d108d1cf9ac365b98236d1b9efc9c78f896368d129c37e53831404746","[\"tasks\",\"cli:verify-guidance\",\"raw_args\"]":"b5bea41b6c623f7c09f1bf24dcae58ebab3c0cdd90ad966bc43a45b44867e12b","[\"tasks\",\"cli:verify-guidance\",\"run\"]":"bdbdd84b3d8b18676879a1688084806c65cacd363e82d77ff1bf9f6e5b08760d","[\"tasks\",\"cli:verify-node-workspace\",\"dir\"]":"55cd6e0d108d1cf9ac365b98236d1b9efc9c78f896368d129c37e53831404746","[\"tasks\",\"cli:verify-node-workspace\",\"raw_args\"]":"b5bea41b6c623f7c09f1bf24dcae58ebab3c0cdd90ad966bc43a45b44867e12b","[\"tasks\",\"cli:verify-node-workspace\",\"run\"]":"f8e687c8818a33f3dbc562a049f85c7cb13c57906729c267d2d6ef7f0961421c","[\"tasks\",\"desktop-api:build\",\"dir\"]":"6f3d9df5d110f708371fda1e7c903edf5a1bbedfa72899025c2e49b80dc533dd","[\"tasks\",\"desktop-api:build\",\"raw_args\"]":"b5bea41b6c623f7c09f1bf24dcae58ebab3c0cdd90ad966bc43a45b44867e12b","[\"tasks\",\"desktop-api:build\",\"run\"]":"18131ed52d0a32e786dbd35201898a7653480b88b83411cc7fee0a5ec85e59aa","[\"tasks\",\"desktop-api:fmt\",\"dir\"]":"6f3d9df5d110f708371fda1e7c903edf5a1bbedfa72899025c2e49b80dc533dd","[\"tasks\",\"desktop-api:fmt\",\"raw_args\"]":"b5bea41b6c623f7c09f1bf24dcae58ebab3c0cdd90ad966bc43a45b44867e12b","[\"tasks\",\"desktop-api:fmt\",\"run\"]":"acb9678093d9f4348d30353b881c2a4e431b9f3899d9b9576c2929340d692caf","[\"tasks\",\"desktop-api:tidy\",\"dir\"]":"6f3d9df5d110f708371fda1e7c903edf5a1bbedfa72899025c2e49b80dc533dd","[\"tasks\",\"desktop-api:tidy\",\"raw_args\"]":"b5bea41b6c623f7c09f1bf24dcae58ebab3c0cdd90ad966bc43a45b44867e12b","[\"tasks\",\"desktop-api:tidy\",\"run\"]":"6c28cbe6d68ef31afaaec32610c105a7bc0241ea3f201723cb3e878d1e938a58","[\"tasks\",\"desktop-main:build\",\"depends\"]":"cfe0fe7c2ae2a98b800ef3f2b1a91e3299708ab7b4480ef1a80b4b0f3ab681d7","[\"tasks\",\"desktop-main:build\",\"dir\"]":"57e1ccda986d06d78c629f0f12217bb1e0000d02ae934dbf4a154e5e0e265427","[\"tasks\",\"desktop-main:build\",\"raw_args\"]":"b5bea41b6c623f7c09f1bf24dcae58ebab3c0cdd90ad966bc43a45b44867e12b","[\"tasks\",\"desktop-main:build\",\"run\"]":"44a8f3ee49af693fc75b0602e60d514f939e9a7c03807f8009a8da4bf72c55b7","[\"tasks\",\"desktop-main:check\",\"depends\"]":"cfe0fe7c2ae2a98b800ef3f2b1a91e3299708ab7b4480ef1a80b4b0f3ab681d7","[\"tasks\",\"desktop-main:check\",\"dir\"]":"57e1ccda986d06d78c629f0f12217bb1e0000d02ae934dbf4a154e5e0e265427","[\"tasks\",\"desktop-main:check\",\"raw_args\"]":"b5bea41b6c623f7c09f1bf24dcae58ebab3c0cdd90ad966bc43a45b44867e12b","[\"tasks\",\"desktop-main:check\",\"run\"]":"480d44525792cdcfb13bc036ea04c0d69860cadc1ac61cd7d82acf9fbe75e087","[\"tasks\",\"desktop-main:dev\",\"depends\"]":"cfe0fe7c2ae2a98b800ef3f2b1a91e3299708ab7b4480ef1a80b4b0f3ab681d7","[\"tasks\",\"desktop-main:dev\",\"dir\"]":"57e1ccda986d06d78c629f0f12217bb1e0000d02ae934dbf4a154e5e0e265427","[\"tasks\",\"desktop-main:dev\",\"raw_args\"]":"b5bea41b6c623f7c09f1bf24dcae58ebab3c0cdd90ad966bc43a45b44867e12b","[\"tasks\",\"desktop-main:dev\",\"run\"]":"09fae686663623cc05ddba7b868aded9993ec812b0fe57a9a8df97bd4869b906","[\"tasks\",\"desktop-main:format:fix\",\"dir\"]":"57e1ccda986d06d78c629f0f12217bb1e0000d02ae934dbf4a154e5e0e265427","[\"tasks\",\"desktop-main:format:fix\",\"raw_args\"]":"b5bea41b6c623f7c09f1bf24dcae58ebab3c0cdd90ad966bc43a45b44867e12b","[\"tasks\",\"desktop-main:format:fix\",\"run\"]":"701c6c4e415cf6ac62e176a0f2b6fd3e5457ce7f11abce9e900902dadef129c5","[\"tasks\",\"desktop-main:install:electron\",\"dir\"]":"57e1ccda986d06d78c629f0f12217bb1e0000d02ae934dbf4a154e5e0e265427","[\"tasks\",\"desktop-main:install:electron\",\"raw_args\"]":"b5bea41b6c623f7c09f1bf24dcae58ebab3c0cdd90ad966bc43a45b44867e12b","[\"tasks\",\"desktop-main:install:electron\",\"run\"]":"d4051313ddd3e7f2745f09c46b49eeba6dfe0414b46a4bcb5e2eaca18bb1556f","[\"tasks\",\"desktop-main:pack\",\"depends\"]":"b244478efac1ee8dd6ed4c5057a8a6c60a677d67dd92691e03db277cd87a9041","[\"tasks\",\"desktop-main:pack\",\"dir\"]":"57e1ccda986d06d78c629f0f12217bb1e0000d02ae934dbf4a154e5e0e265427","[\"tasks\",\"desktop-main:pack\",\"raw_args\"]":"b5bea41b6c623f7c09f1bf24dcae58ebab3c0cdd90ad966bc43a45b44867e12b","[\"tasks\",\"desktop-main:pack\",\"run\"]":"ff5e09eba8dd3a69adde41d74208c7f4fe176d459c9ffb74c48dfcf3b5d15d19","[\"tasks\",\"desktop-main:sandbox:profile\",\"dir\"]":"57e1ccda986d06d78c629f0f12217bb1e0000d02ae934dbf4a154e5e0e265427","[\"tasks\",\"desktop-main:sandbox:profile\",\"raw_args\"]":"b5bea41b6c623f7c09f1bf24dcae58ebab3c0cdd90ad966bc43a45b44867e12b","[\"tasks\",\"desktop-main:sandbox:profile\",\"run\"]":"4bf24eeb2ca7390040567cfed5b0fe6d931988b61e79ce0d2c3ad2695c8f2b8b","[\"tasks\",\"desktop-main:test:desktop\",\"dir\"]":"57e1ccda986d06d78c629f0f12217bb1e0000d02ae934dbf4a154e5e0e265427","[\"tasks\",\"desktop-main:test:desktop\",\"raw_args\"]":"b5bea41b6c623f7c09f1bf24dcae58ebab3c0cdd90ad966bc43a45b44867e12b","[\"tasks\",\"desktop-main:test:desktop\",\"run\"]":"94de12daf85aad5d24f2ce71396b59bc14525dad6a9159629add927c2b5d70e9","[\"tasks\",\"desktop-main:typecheck\",\"depends\"]":"cfe0fe7c2ae2a98b800ef3f2b1a91e3299708ab7b4480ef1a80b4b0f3ab681d7","[\"tasks\",\"desktop-main:typecheck\",\"dir\"]":"57e1ccda986d06d78c629f0f12217bb1e0000d02ae934dbf4a154e5e0e265427","[\"tasks\",\"desktop-main:typecheck\",\"raw_args\"]":"b5bea41b6c623f7c09f1bf24dcae58ebab3c0cdd90ad966bc43a45b44867e12b","[\"tasks\",\"desktop-main:typecheck\",\"run\"]":"42c8b8badb1a25120a0f12d4d5600f3256340d5d2080097f74fbef361548ceb7","[\"tasks\",\"desktop-preload:build\",\"dir\"]":"0488bda8d100c487a9683670c616f0c4694cc46a419ddf078aae8f9db0b60f14","[\"tasks\",\"desktop-preload:build\",\"raw_args\"]":"b5bea41b6c623f7c09f1bf24dcae58ebab3c0cdd90ad966bc43a45b44867e12b","[\"tasks\",\"desktop-preload:build\",\"run\"]":"44a8f3ee49af693fc75b0602e60d514f939e9a7c03807f8009a8da4bf72c55b7","[\"tasks\",\"desktop-preload:check\",\"dir\"]":"0488bda8d100c487a9683670c616f0c4694cc46a419ddf078aae8f9db0b60f14","[\"tasks\",\"desktop-preload:check\",\"raw_args\"]":"b5bea41b6c623f7c09f1bf24dcae58ebab3c0cdd90ad966bc43a45b44867e12b","[\"tasks\",\"desktop-preload:check\",\"run\"]":"480d44525792cdcfb13bc036ea04c0d69860cadc1ac61cd7d82acf9fbe75e087","[\"tasks\",\"desktop-preload:dev\",\"dir\"]":"0488bda8d100c487a9683670c616f0c4694cc46a419ddf078aae8f9db0b60f14","[\"tasks\",\"desktop-preload:dev\",\"raw_args\"]":"b5bea41b6c623f7c09f1bf24dcae58ebab3c0cdd90ad966bc43a45b44867e12b","[\"tasks\",\"desktop-preload:dev\",\"run\"]":"09fae686663623cc05ddba7b868aded9993ec812b0fe57a9a8df97bd4869b906","[\"tasks\",\"desktop-preload:format:fix\",\"dir\"]":"0488bda8d100c487a9683670c616f0c4694cc46a419ddf078aae8f9db0b60f14","[\"tasks\",\"desktop-preload:format:fix\",\"raw_args\"]":"b5bea41b6c623f7c09f1bf24dcae58ebab3c0cdd90ad966bc43a45b44867e12b","[\"tasks\",\"desktop-preload:format:fix\",\"run\"]":"701c6c4e415cf6ac62e176a0f2b6fd3e5457ce7f11abce9e900902dadef129c5","[\"tasks\",\"desktop-preload:typecheck\",\"dir\"]":"0488bda8d100c487a9683670c616f0c4694cc46a419ddf078aae8f9db0b60f14","[\"tasks\",\"desktop-preload:typecheck\",\"raw_args\"]":"b5bea41b6c623f7c09f1bf24dcae58ebab3c0cdd90ad966bc43a45b44867e12b","[\"tasks\",\"desktop-preload:typecheck\",\"run\"]":"42c8b8badb1a25120a0f12d4d5600f3256340d5d2080097f74fbef361548ceb7","[\"tasks\",\"desktop-renderer:build\",\"depends\"]":"cfe0fe7c2ae2a98b800ef3f2b1a91e3299708ab7b4480ef1a80b4b0f3ab681d7","[\"tasks\",\"desktop-renderer:build\",\"dir\"]":"2047de0b9a0452ce297d4ded1e8efed2a6fbdd914a8f231fa3f5b7f71f7f16a8","[\"tasks\",\"desktop-renderer:build\",\"raw_args\"]":"b5bea41b6c623f7c09f1bf24dcae58ebab3c0cdd90ad966bc43a45b44867e12b","[\"tasks\",\"desktop-renderer:build\",\"run\"]":"44a8f3ee49af693fc75b0602e60d514f939e9a7c03807f8009a8da4bf72c55b7","[\"tasks\",\"desktop-renderer:build:web\",\"dir\"]":"2047de0b9a0452ce297d4ded1e8efed2a6fbdd914a8f231fa3f5b7f71f7f16a8","[\"tasks\",\"desktop-renderer:build:web\",\"raw_args\"]":"b5bea41b6c623f7c09f1bf24dcae58ebab3c0cdd90ad966bc43a45b44867e12b","[\"tasks\",\"desktop-renderer:build:web\",\"run\"]":"bb3d31d91adccdbd61c0e867577afb813f23ecd014e72b9a4f4c4d6d7050d764","[\"tasks\",\"desktop-renderer:check\",\"depends\"]":"cfe0fe7c2ae2a98b800ef3f2b1a91e3299708ab7b4480ef1a80b4b0f3ab681d7","[\"tasks\",\"desktop-renderer:check\",\"dir\"]":"2047de0b9a0452ce297d4ded1e8efed2a6fbdd914a8f231fa3f5b7f71f7f16a8","[\"tasks\",\"desktop-renderer:check\",\"raw_args\"]":"b5bea41b6c623f7c09f1bf24dcae58ebab3c0cdd90ad966bc43a45b44867e12b","[\"tasks\",\"desktop-renderer:check\",\"run\"]":"480d44525792cdcfb13bc036ea04c0d69860cadc1ac61cd7d82acf9fbe75e087","[\"tasks\",\"desktop-renderer:check:fix\",\"dir\"]":"2047de0b9a0452ce297d4ded1e8efed2a6fbdd914a8f231fa3f5b7f71f7f16a8","[\"tasks\",\"desktop-renderer:check:fix\",\"raw_args\"]":"b5bea41b6c623f7c09f1bf24dcae58ebab3c0cdd90ad966bc43a45b44867e12b","[\"tasks\",\"desktop-renderer:check:fix\",\"run\"]":"07a7e4c2a92d3ff17ac4cb0a027d0b90c9c2df42643de06ffff66fc1dfc6e175","[\"tasks\",\"desktop-renderer:dev\",\"depends\"]":"cfe0fe7c2ae2a98b800ef3f2b1a91e3299708ab7b4480ef1a80b4b0f3ab681d7","[\"tasks\",\"desktop-renderer:dev\",\"dir\"]":"2047de0b9a0452ce297d4ded1e8efed2a6fbdd914a8f231fa3f5b7f71f7f16a8","[\"tasks\",\"desktop-renderer:dev\",\"raw_args\"]":"b5bea41b6c623f7c09f1bf24dcae58ebab3c0cdd90ad966bc43a45b44867e12b","[\"tasks\",\"desktop-renderer:dev\",\"run\"]":"09fae686663623cc05ddba7b868aded9993ec812b0fe57a9a8df97bd4869b906","[\"tasks\",\"desktop-renderer:dev:web\",\"dir\"]":"2047de0b9a0452ce297d4ded1e8efed2a6fbdd914a8f231fa3f5b7f71f7f16a8","[\"tasks\",\"desktop-renderer:dev:web\",\"raw_args\"]":"b5bea41b6c623f7c09f1bf24dcae58ebab3c0cdd90ad966bc43a45b44867e12b","[\"tasks\",\"desktop-renderer:dev:web\",\"run\"]":"b7a022b5d75e4e56664010d8da1cac8528f938862ca5e6fa5ce9d1ca92d4e8df","[\"tasks\",\"desktop-renderer:format\",\"dir\"]":"2047de0b9a0452ce297d4ded1e8efed2a6fbdd914a8f231fa3f5b7f71f7f16a8","[\"tasks\",\"desktop-renderer:format\",\"raw_args\"]":"b5bea41b6c623f7c09f1bf24dcae58ebab3c0cdd90ad966bc43a45b44867e12b","[\"tasks\",\"desktop-renderer:format\",\"run\"]":"8e903c4de3b9fae6a2b8155376ba843743893738f807f09779dfbd685d1b2b65","[\"tasks\",\"desktop-renderer:format:fix\",\"dir\"]":"2047de0b9a0452ce297d4ded1e8efed2a6fbdd914a8f231fa3f5b7f71f7f16a8","[\"tasks\",\"desktop-renderer:format:fix\",\"raw_args\"]":"b5bea41b6c623f7c09f1bf24dcae58ebab3c0cdd90ad966bc43a45b44867e12b","[\"tasks\",\"desktop-renderer:format:fix\",\"run\"]":"701c6c4e415cf6ac62e176a0f2b6fd3e5457ce7f11abce9e900902dadef129c5","[\"tasks\",\"desktop-renderer:lint\",\"dir\"]":"2047de0b9a0452ce297d4ded1e8efed2a6fbdd914a8f231fa3f5b7f71f7f16a8","[\"tasks\",\"desktop-renderer:lint\",\"raw_args\"]":"b5bea41b6c623f7c09f1bf24dcae58ebab3c0cdd90ad966bc43a45b44867e12b","[\"tasks\",\"desktop-renderer:lint\",\"run\"]":"300487aff7ad5c9e32e3f0861154e2cb85d33e46a8c1cb8ea91a4258a1eca83b","[\"tasks\",\"desktop-renderer:lint:fix\",\"dir\"]":"2047de0b9a0452ce297d4ded1e8efed2a6fbdd914a8f231fa3f5b7f71f7f16a8","[\"tasks\",\"desktop-renderer:lint:fix\",\"raw_args\"]":"b5bea41b6c623f7c09f1bf24dcae58ebab3c0cdd90ad966bc43a45b44867e12b","[\"tasks\",\"desktop-renderer:lint:fix\",\"run\"]":"0e8e5238b5894c168eda63e82ca2cc3e78650f03cab84fc6a8099932efb2fe79","[\"tasks\",\"desktop-renderer:preview\",\"dir\"]":"2047de0b9a0452ce297d4ded1e8efed2a6fbdd914a8f231fa3f5b7f71f7f16a8","[\"tasks\",\"desktop-renderer:preview\",\"raw_args\"]":"b5bea41b6c623f7c09f1bf24dcae58ebab3c0cdd90ad966bc43a45b44867e12b","[\"tasks\",\"desktop-renderer:preview\",\"run\"]":"f08ab7c03f384e09bfb088007fc8f6f88256397166afdee8fae035f81fe85caf","[\"tasks\",\"desktop-renderer:typecheck\",\"depends\"]":"cfe0fe7c2ae2a98b800ef3f2b1a91e3299708ab7b4480ef1a80b4b0f3ab681d7","[\"tasks\",\"desktop-renderer:typecheck\",\"dir\"]":"2047de0b9a0452ce297d4ded1e8efed2a6fbdd914a8f231fa3f5b7f71f7f16a8","[\"tasks\",\"desktop-renderer:typecheck\",\"raw_args\"]":"b5bea41b6c623f7c09f1bf24dcae58ebab3c0cdd90ad966bc43a45b44867e12b","[\"tasks\",\"desktop-renderer:typecheck\",\"run\"]":"42c8b8badb1a25120a0f12d4d5600f3256340d5d2080097f74fbef361548ceb7","[\"tasks\",\"desktop:build\",\"depends\"]":"b244478efac1ee8dd6ed4c5057a8a6c60a677d67dd92691e03db277cd87a9041","[\"tasks\",\"desktop:build:web\",\"depends\"]":"559c857e001d793cf5dea5d077e47dd9c35ba7bb63b13c3d62b537122b08009c","[\"tasks\",\"desktop:check\",\"depends\"]":"177ee1da3d6a2ee3d6427f7ec9afc43286a486788e9a5aea02d3e8f094176dfa","[\"tasks\",\"desktop:check:fix\",\"depends\"]":"40ba3eb4c06d543079961be997f9c558e59d72ab1d7501ac24f237bafce56724","[\"tasks\",\"desktop:dev\",\"depends\"]":"c480f29cd96277116b2425ae7127610ac899fa5164974457c7b83fe89eb5bfd0","[\"tasks\",\"desktop:dev:web\",\"depends\"]":"0d5bde916cfff83f3ef509cdf2a68d5010a5a9bf0f725df5b5dc55f88d9b8d59","[\"tasks\",\"desktop:format\",\"depends\"]":"49d650bfcd07a1c6c73db2c5f9369cde153a02e9dc8e38d31216bd9f5433ad5f","[\"tasks\",\"desktop:format:fix\",\"depends\"]":"68644f34eaeb97c260f493e3a9e9bea2ebf1de7c0f59f967db63fa2699e93e66","[\"tasks\",\"desktop:install:electron\",\"depends\"]":"3890f9fc10582e28edb6f77f9b562d0cdac4f13ff03e4b6994264b4bb6a069b2","[\"tasks\",\"desktop:lint\",\"depends\"]":"2ffabe10af9025d94902acd8071c1201a25e0bf736c4a58d9928ee775d93164e","[\"tasks\",\"desktop:lint:fix\",\"depends\"]":"54b66543286d8e31ce5cf327019fa91c499f538befc40374c4d6f02543ebefb7","[\"tasks\",\"desktop:pack\",\"depends\"]":"1244c59592f98ef77280f5a297c3900ac20494be193add5373c46daee3d0f3b9","[\"tasks\",\"desktop:preview\",\"depends\"]":"ba41c5ac28cf8de1c061d14a0cacc78e6de8d6aec0381fc45057585051e1d1b0","[\"tasks\",\"desktop:sandbox:profile\",\"depends\"]":"fa2fe748f09cfbfcc1428e52c4cdb58ffa3abf55f4d51c085d0f8e6f8f9ee005","[\"tasks\",\"desktop:test:desktop\",\"depends\"]":"2ce4184af0a183c743214a133d1b9e4b65d6ac58cd5d31f2fb58a4eaa23ea75c","[\"tasks\",\"desktop:typecheck\",\"depends\"]":"ae864e51b5386fa553b04949dd431d1ffb332b0d369c93e60f748dfb12011bae","[\"tasks\",\"one-core:build\",\"dir\"]":"2d72bae743190153de8f3a521646d9a6d530fa39a77a19d1ee15ed8d50b34b77","[\"tasks\",\"one-core:build\",\"raw_args\"]":"b5bea41b6c623f7c09f1bf24dcae58ebab3c0cdd90ad966bc43a45b44867e12b","[\"tasks\",\"one-core:build\",\"run\"]":"18131ed52d0a32e786dbd35201898a7653480b88b83411cc7fee0a5ec85e59aa","[\"tasks\",\"one-core:fmt\",\"dir\"]":"2d72bae743190153de8f3a521646d9a6d530fa39a77a19d1ee15ed8d50b34b77","[\"tasks\",\"one-core:fmt\",\"raw_args\"]":"b5bea41b6c623f7c09f1bf24dcae58ebab3c0cdd90ad966bc43a45b44867e12b","[\"tasks\",\"one-core:fmt\",\"run\"]":"acb9678093d9f4348d30353b881c2a4e431b9f3899d9b9576c2929340d692caf","[\"tasks\",\"one-core:tidy\",\"dir\"]":"2d72bae743190153de8f3a521646d9a6d530fa39a77a19d1ee15ed8d50b34b77","[\"tasks\",\"one-core:tidy\",\"raw_args\"]":"b5bea41b6c623f7c09f1bf24dcae58ebab3c0cdd90ad966bc43a45b44867e12b","[\"tasks\",\"one-core:tidy\",\"run\"]":"6c28cbe6d68ef31afaaec32610c105a7bc0241ea3f201723cb3e878d1e938a58","[\"tasks\",\"test\",\"depends\"]":"72869885d0f9ab62237c6339d1833f3fcdec2e0fc987b0a9e9788f526d2f457a","[\"tasks\",\"website:build\",\"dir\"]":"f2c1d43b39a7df95c506432e4c828231d9b7563515dd423c9aee3c85c6c08cf0","[\"tasks\",\"website:build\",\"raw_args\"]":"b5bea41b6c623f7c09f1bf24dcae58ebab3c0cdd90ad966bc43a45b44867e12b","[\"tasks\",\"website:build\",\"run\"]":"44a8f3ee49af693fc75b0602e60d514f939e9a7c03807f8009a8da4bf72c55b7","[\"tasks\",\"website:check\",\"dir\"]":"f2c1d43b39a7df95c506432e4c828231d9b7563515dd423c9aee3c85c6c08cf0","[\"tasks\",\"website:check\",\"raw_args\"]":"b5bea41b6c623f7c09f1bf24dcae58ebab3c0cdd90ad966bc43a45b44867e12b","[\"tasks\",\"website:check\",\"run\"]":"480d44525792cdcfb13bc036ea04c0d69860cadc1ac61cd7d82acf9fbe75e087","[\"tasks\",\"website:check:fix\",\"dir\"]":"f2c1d43b39a7df95c506432e4c828231d9b7563515dd423c9aee3c85c6c08cf0","[\"tasks\",\"website:check:fix\",\"raw_args\"]":"b5bea41b6c623f7c09f1bf24dcae58ebab3c0cdd90ad966bc43a45b44867e12b","[\"tasks\",\"website:check:fix\",\"run\"]":"07a7e4c2a92d3ff17ac4cb0a027d0b90c9c2df42643de06ffff66fc1dfc6e175","[\"tasks\",\"website:dev\",\"dir\"]":"f2c1d43b39a7df95c506432e4c828231d9b7563515dd423c9aee3c85c6c08cf0","[\"tasks\",\"website:dev\",\"raw_args\"]":"b5bea41b6c623f7c09f1bf24dcae58ebab3c0cdd90ad966bc43a45b44867e12b","[\"tasks\",\"website:dev\",\"run\"]":"09fae686663623cc05ddba7b868aded9993ec812b0fe57a9a8df97bd4869b906","[\"tasks\",\"website:format\",\"dir\"]":"f2c1d43b39a7df95c506432e4c828231d9b7563515dd423c9aee3c85c6c08cf0","[\"tasks\",\"website:format\",\"raw_args\"]":"b5bea41b6c623f7c09f1bf24dcae58ebab3c0cdd90ad966bc43a45b44867e12b","[\"tasks\",\"website:format\",\"run\"]":"8e903c4de3b9fae6a2b8155376ba843743893738f807f09779dfbd685d1b2b65","[\"tasks\",\"website:format:fix\",\"dir\"]":"f2c1d43b39a7df95c506432e4c828231d9b7563515dd423c9aee3c85c6c08cf0","[\"tasks\",\"website:format:fix\",\"raw_args\"]":"b5bea41b6c623f7c09f1bf24dcae58ebab3c0cdd90ad966bc43a45b44867e12b","[\"tasks\",\"website:format:fix\",\"run\"]":"701c6c4e415cf6ac62e176a0f2b6fd3e5457ce7f11abce9e900902dadef129c5","[\"tasks\",\"website:lint\",\"dir\"]":"f2c1d43b39a7df95c506432e4c828231d9b7563515dd423c9aee3c85c6c08cf0","[\"tasks\",\"website:lint\",\"raw_args\"]":"b5bea41b6c623f7c09f1bf24dcae58ebab3c0cdd90ad966bc43a45b44867e12b","[\"tasks\",\"website:lint\",\"run\"]":"300487aff7ad5c9e32e3f0861154e2cb85d33e46a8c1cb8ea91a4258a1eca83b","[\"tasks\",\"website:lint:fix\",\"dir\"]":"f2c1d43b39a7df95c506432e4c828231d9b7563515dd423c9aee3c85c6c08cf0","[\"tasks\",\"website:lint:fix\",\"raw_args\"]":"b5bea41b6c623f7c09f1bf24dcae58ebab3c0cdd90ad966bc43a45b44867e12b","[\"tasks\",\"website:lint:fix\",\"run\"]":"0e8e5238b5894c168eda63e82ca2cc3e78650f03cab84fc6a8099932efb2fe79","[\"tasks\",\"website:preview\",\"dir\"]":"f2c1d43b39a7df95c506432e4c828231d9b7563515dd423c9aee3c85c6c08cf0","[\"tasks\",\"website:preview\",\"raw_args\"]":"b5bea41b6c623f7c09f1bf24dcae58ebab3c0cdd90ad966bc43a45b44867e12b","[\"tasks\",\"website:preview\",\"run\"]":"f08ab7c03f384e09bfb088007fc8f6f88256397166afdee8fae035f81fe85caf","[\"tasks\",\"website:start\",\"dir\"]":"f2c1d43b39a7df95c506432e4c828231d9b7563515dd423c9aee3c85c6c08cf0","[\"tasks\",\"website:start\",\"raw_args\"]":"b5bea41b6c623f7c09f1bf24dcae58ebab3c0cdd90ad966bc43a45b44867e12b","[\"tasks\",\"website:start\",\"run\"]":"ea9a60458c4d37a2ad05f5bb1dc6bf9f3cea19f5576f9acdc7a2376b535fc823","[\"tasks\",\"website:typecheck\",\"dir\"]":"f2c1d43b39a7df95c506432e4c828231d9b7563515dd423c9aee3c85c6c08cf0","[\"tasks\",\"website:typecheck\",\"raw_args\"]":"b5bea41b6c623f7c09f1bf24dcae58ebab3c0cdd90ad966bc43a45b44867e12b","[\"tasks\",\"website:typecheck\",\"run\"]":"42c8b8badb1a25120a0f12d4d5600f3256340d5d2080097f74fbef361548ceb7"}
