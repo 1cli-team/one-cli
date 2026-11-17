@@ -39,6 +39,19 @@ export interface AddWorktreeInput {
 	detached: boolean;
 }
 
+export interface CreateBranchInput {
+	branch: string;
+	startPoint: string;
+	checkout: boolean;
+}
+
+export interface BranchResult {
+	branch: string;
+	head: string;
+	checkedOut: boolean;
+	warning?: string;
+}
+
 export interface WorktreeChange {
 	worktree: Worktree;
 	workspace?: WorkspaceRegistryEntry;
@@ -63,6 +76,10 @@ export function worktreesKey(scope: GitScope) {
 
 export function getWorktrees(scope: GitScope) {
 	return http.get<GitRepository>(worktreesKey(scope), { timeout: 150000 });
+}
+
+export function createBranch(scope: GitScope, input: CreateBranchInput) {
+	return http.post<BranchResult>(`${scopePath(scope)}/branches`, input, { timeout: 150000 });
 }
 
 export function addWorktree(scope: GitScope, input: AddWorktreeInput) {

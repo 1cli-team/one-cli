@@ -722,6 +722,17 @@
 		},
 		"pendingOperation": "Unconfirmed write",
 		"projectTeamsHint": "Teams shown here belong to the selected Linear project. After creating a team, add it in the Linear project details and refresh.",
-		"chooseTeam": "Choose a team"
+		"chooseTeam": "Choose a team",
+		"createBranch": "Create branch",
+		"createBranchFor": "Create branch for {{identifier}}",
+		"branchRepository": "Repository",
+		"branchChooseRepository": "Choose a repository",
+		"branchNoRepository": "This project has no available Git repositories.",
+		"branchStartHint": "Choose a local branch or enter a commit or remote ref. HEAD uses the current commit.",
+		"branchCheckout": "Switch to the new branch after creating it",
+		"branchCreated": "Branch created",
+		"branchCreatedAndSwitched": "Branch created and checked out",
+		"branchDone": "Done",
+		"branchExists": "This branch already exists. Choose another name."
 	}
 }

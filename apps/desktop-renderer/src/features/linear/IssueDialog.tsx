@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import useSWR from "swr";
-import { ExternalLink } from "lucide-react";
+import { ExternalLink, GitBranchPlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -17,6 +17,7 @@ import {
 import { ErrorNotice } from "@/components/ui/page-layout";
 import { openExternal } from "@/lib/desktop/runtime";
 import { Choice } from "./Choice";
+import { CreateIssueBranchDialog } from "./CreateIssueBranchDialog";
 import {
 	createComment,
 	createIssue,
@@ -67,6 +68,7 @@ export function IssueDialog({
 		operationId: crypto.randomUUID(),
 	});
 	const [loaded, setLoaded] = useState(isNew);
+	const [creatingBranch, setCreatingBranch] = useState(false);
 	const [busy, setBusy] = useState(false);
 	const [error, setError] = useState("");
 	const [pending, setPending] = useState<{ id: string; kind: "issue" | "comment" } | null>(null);
@@ -174,6 +176,25 @@ export function IssueDialog({
 					</DialogTitle>
 					<DialogDescription>{binding.project.name}</DialogDescription>
 				</DialogHeader>
+				{!isNew && detail.data && (
+					<Button
+						type="button"
+						variant="outline"
+						className="justify-self-start"
+						disabled={busy || !!pending}
+						onClick={() => setCreatingBranch(true)}
+					>
+						<GitBranchPlus />
+						{t("linear.createBranch")}
+					</Button>
+				)}
+				{creatingBranch && detail.data && (
+					<CreateIssueBranchDialog
+						scope={scope}
+						issue={detail.data}
+						onClose={() => setCreatingBranch(false)}
+					/>
+				)}
 				{(error || detail.error || team.error) && (
 					<ErrorNotice>{error || errorText(detail.error || team.error)}</ErrorNotice>
 				)}

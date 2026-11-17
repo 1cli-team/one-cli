@@ -958,6 +958,8 @@
   "git.flag.detach": "在指定提交创建 detached HEAD 工作树",
   "git.command_failed": "Git 操作失败，目录 %s。%s（%w）",
   "git.busy": "另一个 One 进程正在修改此仓库，请稍后重试。",
+  "git.branch_invalid": "请输入有效的 Git 分支名称。",
+  "git.branch_exists": "分支 %s 已存在，请使用其他名称。",
   "git.invalid_add": "请填写目标目录，并选择已有分支、新建分支或独立提交中的一种方式。",
   "git.path_in_use": "工作树目录已被占用：%s。请选择其他目录。",
   "git.readback_failed": "Git 操作后无法验证工作树 %s，请刷新列表检查实际状态。",

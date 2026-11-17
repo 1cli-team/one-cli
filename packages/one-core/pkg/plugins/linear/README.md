@@ -45,3 +45,7 @@ Issue JSON uses `title`, `description`, `teamId`, `stateId`, `assigneeId`, `prio
 Run `one run linear:check` for the plugin, binding, CLI input, and HTTP regression tests with Go's race detector. The tests use isolated local servers and temporary stores. A real OAuth application and account are required to accept the live authorization and mutation flow. UI acceptance should cover connecting, binding, creating an Issue, changing its status and assignee, posting a comment, and reconnecting after revocation.
 
 API behavior follows [Linear's OAuth documentation](https://linear.app/developers/oauth-2-0-authentication) and [GraphQL documentation](https://linear.app/developers/graphql). UUID creation fields were checked against the official `@linear/sdk` 102.0.0 type definitions.
+
+任务列表与详情提供「创建分支」入口。项目组可选择成员 Git 仓库，单工作区使用当前仓库；默认分支名包含任务编号和标题。用户可指定起始引用，并选择创建后切换。操作通过既有 Git 服务执行并回显本地结果。
+
+The Issue list and detail panel can create a local branch through the Git service. Project groups offer their member repositories, and workspace scopes use their current repository. The suggested name contains the issue identifier and title. Users choose the starting ref and can opt into switching to the new branch.

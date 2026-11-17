@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import useSWR from "swr";
-import { ArrowLeft, ClipboardList, Plus, RefreshCw } from "lucide-react";
+import { ArrowLeft, ClipboardList, GitBranchPlus, Plus, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ErrorNotice, PageHeader } from "@/components/ui/page-layout";
@@ -11,6 +11,7 @@ import { useWorkspaceGroups } from "@/features/workspace-groups/useWorkspaceGrou
 import { BindingForm } from "./BindingForm";
 import { Choice } from "./Choice";
 import { IssueDialog } from "./IssueDialog";
+import { CreateIssueBranchDialog } from "./CreateIssueBranchDialog";
 import {
 	errorText,
 	fetchJSON,
@@ -19,6 +20,7 @@ import {
 	scoped,
 	unbind,
 	type Binding,
+	type Issue,
 	type IssuePage,
 	type Operation,
 	type Project,
@@ -111,6 +113,7 @@ function IssueList({
 	const [filter, setFilter] = useState({ q: "", team: "", state: "", assignee: "", priority: "" });
 	const [cursors, setCursors] = useState<string[]>([""]);
 	const [selected, setSelected] = useState<string | null>(null);
+	const [branchIssue, setBranchIssue] = useState<Issue | null>(null);
 	const [error, setError] = useState("");
 	const [busy, setBusy] = useState(false);
 	const [refreshing, setRefreshing] = useState(false);
@@ -294,29 +297,44 @@ function IssueList({
 						</div>
 					)}
 					{list.data.nodes.map((issue) => (
-						<Button
-							variant="ghost"
+						<div
 							key={issue.id}
-							type="button"
-							className="h-auto w-full justify-start gap-3 whitespace-normal rounded-none border-b border-border px-4 py-3 text-left font-normal last:border-0 hover:bg-muted/50"
-							onClick={() => setSelected(issue.id)}
+							className="flex items-center border-b border-border last:border-0 hover:bg-muted/50"
 						>
-							<span className="w-20 shrink-0 font-mono text-xs text-muted-foreground">
-								{issue.identifier}
-							</span>
-							<span className="min-w-0 flex-1">
-								<span className="block truncate text-sm font-medium">{issue.title}</span>
-								<span className="text-xs text-muted-foreground">
-									{issue.state.name} · {issue.team.name}
+							<Button
+								variant="ghost"
+								type="button"
+								className="h-auto min-w-0 flex-1 justify-start gap-3 whitespace-normal rounded-none px-4 py-3 text-left font-normal hover:bg-transparent"
+								onClick={() => setSelected(issue.id)}
+							>
+								<span className="w-20 shrink-0 font-mono text-xs text-muted-foreground">
+									{issue.identifier}
 								</span>
-							</span>
-							<span className="hidden text-xs text-muted-foreground ud-md:block">
-								{t(`linear.priorities.${issue.priority}`)}
-							</span>
-							<span className="hidden w-24 truncate text-right text-xs text-muted-foreground ud-md:block">
-								{issue.assignee?.name || t("linear.unassigned")}
-							</span>
-						</Button>
+								<span className="min-w-0 flex-1">
+									<span className="block truncate text-sm font-medium">{issue.title}</span>
+									<span className="text-xs text-muted-foreground">
+										{issue.state.name} · {issue.team.name}
+									</span>
+								</span>
+								<span className="hidden text-xs text-muted-foreground ud-md:block">
+									{t(`linear.priorities.${issue.priority}`)}
+								</span>
+								<span className="hidden w-24 truncate text-right text-xs text-muted-foreground ud-md:block">
+									{issue.assignee?.name || t("linear.unassigned")}
+								</span>
+							</Button>
+							<Button
+								type="button"
+								variant="ghost"
+								size="icon"
+								className="mr-3 shrink-0"
+								title={t("linear.createBranch")}
+								aria-label={t("linear.createBranchFor", { identifier: issue.identifier })}
+								onClick={() => setBranchIssue(issue)}
+							>
+								<GitBranchPlus />
+							</Button>
+						</div>
 					))}
 				</div>
 			)}
@@ -340,6 +358,13 @@ function IssueList({
 					</Button>
 				)}
 			</div>
+			{branchIssue && (
+				<CreateIssueBranchDialog
+					scope={scope}
+					issue={branchIssue}
+					onClose={() => setBranchIssue(null)}
+				/>
+			)}
 			{selected && (
 				<IssueDialog
 					key={selected}

@@ -722,6 +722,17 @@
 		},
 		"pendingOperation": "待确认的写入",
 		"projectTeamsHint": "此处显示所选 Linear 项目关联的团队。新建团队后，请先在 Linear 项目详情中关联，再点击刷新。",
-		"chooseTeam": "选择团队"
+		"chooseTeam": "选择团队",
+		"createBranch": "创建分支",
+		"createBranchFor": "为 {{identifier}} 创建分支",
+		"branchRepository": "目标仓库",
+		"branchChooseRepository": "选择仓库",
+		"branchNoRepository": "此项目暂无可用的 Git 仓库。",
+		"branchStartHint": "选择本地分支，或输入提交及远程引用。HEAD 表示当前提交。",
+		"branchCheckout": "创建后切换到新分支",
+		"branchCreated": "分支已创建",
+		"branchCreatedAndSwitched": "已创建并切换到新分支",
+		"branchDone": "完成",
+		"branchExists": "此分支已存在，请使用其他名称。"
 	}
 }

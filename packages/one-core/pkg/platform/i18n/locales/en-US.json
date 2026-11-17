@@ -958,6 +958,8 @@
   "git.flag.detach": "Create a detached HEAD worktree at the selected commit",
   "git.command_failed": "Git operation failed in %s. %s (%w)",
   "git.busy": "Another One process is modifying this repository. Try again shortly.",
+  "git.branch_invalid": "Enter a valid Git branch name.",
+  "git.branch_exists": "Branch %s already exists. Choose another name.",
   "git.invalid_add": "Specify a destination and choose an existing branch, a new branch, or a detached checkout.",
   "git.path_in_use": "Worktree path is already in use: %s. Choose another directory.",
   "git.readback_failed": "Could not verify worktree %s after the Git operation. Refresh the list to inspect its current state.",

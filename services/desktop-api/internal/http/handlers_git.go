@@ -64,6 +64,8 @@ func registerGitRoutes(mux *http.ServeMux, opts MuxOpts) {
 		writeJSON(w, http.StatusCreated, result)
 	})
 
+	mux.HandleFunc("POST /workspaces/{entryId}/git/branches", handleGitWorkspace(opts, handleCreateBranch))
+	mux.HandleFunc("POST /git/repositories/{repositoryId}/branches", handleGitRepository(opts, handleCreateBranch))
 	mux.HandleFunc("GET /workspaces/{entryId}/git/worktrees", handleGitWorkspace(opts, handleListWorktrees))
 	mux.HandleFunc("POST /workspaces/{entryId}/git/worktrees", handleGitWorkspace(opts, handleAddWorktree))
 	mux.HandleFunc("POST /workspaces/{entryId}/git/worktrees/{worktreeId}/open", handleGitWorkspace(opts, handleOpenWorktree))
@@ -128,6 +130,25 @@ func handleListWorktrees(opts MuxOpts) http.HandlerFunc {
 			return
 		}
 		writeJSON(w, http.StatusOK, result)
+	}
+}
+
+func handleCreateBranch(opts MuxOpts) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if !requireGit(w, opts) {
+			return
+		}
+		var input gitmodule.CreateBranchInput
+		if err := decodeJSON(r, &input); err != nil {
+			writeError(w, http.StatusBadRequest, cliErrors.ONE_CLI_ERROR, err.Error(), nil)
+			return
+		}
+		result, err := opts.GitService.CreateBranch(r.Context(), opts.WorkspaceRoot, input)
+		if err != nil {
+			writeServiceError(w, err)
+			return
+		}
+		writeJSON(w, http.StatusCreated, result)
 	}
 }
 
