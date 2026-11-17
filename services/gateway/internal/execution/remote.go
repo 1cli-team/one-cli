@@ -155,6 +155,20 @@ func WorkerAPI(s *Store) http.Handler {
 		}
 		workerResponse(w, s.complete(id, input))
 	})
+	handle("workflows", func(w http.ResponseWriter, r *http.Request, id string) {
+		var workflows []api.JobSummary
+		if !readBody(w, r, 4<<20, &workflows) || len(workflows) > 20 {
+			problem(w, http.StatusBadRequest, "invalid_worker_report")
+			return
+		}
+		for _, workflow := range workflows {
+			if !api.ValidIssueID(workflow.ProjectID) || !api.ValidIssueID(workflow.IssueID) || workflow.RevisionCommentID != "" {
+				problem(w, http.StatusBadRequest, "invalid_worker_report")
+				return
+			}
+		}
+		workerResponse(w, s.syncWorkflows(id, workflows))
+	})
 	handle("logs", func(w http.ResponseWriter, r *http.Request, id string) {
 		var input report
 		if !readBody(w, r, 400<<10, &input) || len(input.Logs) > api.MaxExecutionLogs {

@@ -213,6 +213,7 @@ func RunRemote(ctx context.Context, one, workflowConfig string) error {
 	ctx, cancel := context.WithCancel(ctx)
 	var background sync.WaitGroup
 	background.Go(func() { supervisor.Run(ctx, one, workflowConfig) })
+	background.Go(func() { client.syncTaskSnapshots(ctx, supervisor.Call) })
 	defer func() {
 		cancel()
 		background.Wait()

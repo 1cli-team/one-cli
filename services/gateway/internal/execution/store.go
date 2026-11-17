@@ -37,12 +37,13 @@ var (
 
 type assignment struct {
 	api.Execution
-	Attempt       string `json:"attemptId,omitempty"`
-	Session       string `json:"session,omitempty"`
-	CanAsk        bool   `json:"canAsk,omitempty"`
-	CanRequeue    bool   `json:"canRequeue,omitempty"`
-	LogsTruncated bool   `json:"logsTruncated,omitempty"`
-	PreviousLogs  []byte `json:"previousLogs,omitempty"`
+	Workflow      *api.JobSummary `json:"workflow,omitempty"`
+	Attempt       string          `json:"attemptId,omitempty"`
+	Session       string          `json:"session,omitempty"`
+	CanAsk        bool            `json:"canAsk,omitempty"`
+	CanRequeue    bool            `json:"canRequeue,omitempty"`
+	LogsTruncated bool            `json:"logsTruncated,omitempty"`
+	PreviousLogs  []byte          `json:"previousLogs,omitempty"`
 }
 
 type registeredWorker struct {
@@ -190,6 +191,8 @@ func online(worker registeredWorker) bool {
 
 func (s *Store) view(job assignment) api.Execution {
 	result := job.Execution
+	result.CanRevise = job.canRevise()
+	result.Subtasks = slices.Clone(result.Subtasks)
 	result.Questions = slices.Clone(result.Questions)
 	if result.Progress != nil {
 		progress := *result.Progress
@@ -227,6 +230,7 @@ func (s *Store) list() []api.Execution {
 		item := s.view(job)
 		item.Input.Prompt, item.Result = "", nil
 		item.Questions = nil
+		item.Subtasks = nil
 		if item.State != api.ExecutionWaitingToContinue {
 			item.Progress = nil
 		}
@@ -259,7 +263,7 @@ func (s *Store) workersList() []api.ExecutionWorker {
 
 func slicesContainsRunning(jobs map[string]assignment, workerID, session string) bool {
 	for _, job := range jobs {
-		if job.WorkerID == workerID && job.Session == session && activeAssignment(job.State) {
+		if job.WorkerID == workerID && job.Session == session && job.reservesWorker() {
 			return true
 		}
 	}
@@ -268,6 +272,14 @@ func slicesContainsRunning(jobs map[string]assignment, workerID, session string)
 
 func activeAssignment(state string) bool {
 	return state == api.ExecutionRunning || state == api.ExecutionWaitingForAnswer
+}
+
+func (job assignment) reservesWorker() bool {
+	return activeAssignment(job.State) && !(job.State == api.ExecutionWaitingForAnswer && job.releasesOnQuestion())
+}
+
+func (job assignment) releasesOnQuestion() bool {
+	return job.Input.Linear != nil && (len(job.Input.Linear.SubtaskOrder) > 0 || job.Input.Linear.Revision != nil)
 }
 
 func (s *Store) heartbeat(workerID, session string, inventory api.ExecutionWorker) error {
@@ -309,7 +321,7 @@ func (s *Store) claim(workerID, session string) (*assignment, error) {
 		if job.WorkerID != workerID {
 			continue
 		}
-		if activeAssignment(job.State) {
+		if job.reservesWorker() {
 			job.CanAsk = job.Input.Kind == api.LinearWorkflow
 			job.CanRequeue = job.Input.Kind == api.LinearWorkflow
 			if job.Session == session {
@@ -344,7 +356,8 @@ func (s *Store) claim(workerID, session string) (*assignment, error) {
 }
 
 func (s *Store) claimReply(job assignment) (*assignment, error) {
-	if job.Progress != nil {
+	job.Workflow = nil
+	if job.Progress != nil || job.releasesOnQuestion() && len(job.Questions) > 0 {
 		logs, err := s.readLogs(job.ID)
 		if err != nil {
 			return nil, err
@@ -386,6 +399,9 @@ func (s *Store) complete(workerID string, done report) error {
 		job.State = api.ExecutionFailed
 	}
 	job.Result, job.UpdatedAt = &done.Result, time.Now().UTC()
+	if done.Result.Subtasks != nil {
+		job.Subtasks = nil
+	}
 	return s.save(job)
 }
 

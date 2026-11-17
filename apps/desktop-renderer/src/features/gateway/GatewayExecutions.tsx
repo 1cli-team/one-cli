@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
+import useSWR from "swr";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -18,20 +19,20 @@ import {
 	TableHeader,
 	TableRow,
 } from "@/components/ui/table";
-import { Choice } from "@/features/linear/Choice";
+import { LinearComments } from "@/features/linear/LinearComments";
 import type { HttpError } from "@/types/api";
 import { CodexResultMessage } from "./GatewayMarkdown";
 import { GatewayProgress } from "./GatewayProgress";
 import { GatewayQuestions } from "./GatewayQuestions";
+import { GatewaySubtasks } from "./GatewaySubtasks";
 import { openExternal } from "@/lib/desktop/runtime";
 import Toast from "@/lib/toast";
+import { getProjectBindings, projectBindingsKey } from "./api";
 import {
 	executionLogText,
-	executionStates,
 	inviteWorker,
 	repositoryKey,
 	useExecution,
-	useExecutions,
 	useWorkers,
 	type ExecutionState,
 	type ExecutionWorker,
@@ -51,20 +52,10 @@ export function GatewayExecutions({
 }) {
 	const { t, i18n } = useTranslation();
 	const workers = useWorkers(connection);
-	const executions = useExecutions(connection);
-	const [workerFilter, setWorkerFilter] = useState("");
-	const [stateFilter, setStateFilter] = useState("");
-	const [sourceFilter, setSourceFilter] = useState("");
 	const [invite, setInvite] = useState<WorkerInvite>();
 	const [inviting, setInviting] = useState(false);
 	const [inviteError, setInviteError] = useState("");
 	const machines = workers.data ?? [];
-	const jobs = (executions.data ?? []).filter(
-		(job) =>
-			(!workerFilter || job.workerId === workerFilter) &&
-			(!stateFilter || job.state === stateFilter) &&
-			(!sourceFilter || job.source === sourceFilter),
-	);
 
 	async function pair() {
 		setInviting(true);
@@ -131,102 +122,14 @@ export function GatewayExecutions({
 				)}
 			</section>
 
-			<section className="flex flex-col gap-3" aria-labelledby="gateway-executions-heading">
-				<h2 id="gateway-executions-heading" className="text-base font-semibold">
-					{t("gateway.execution.jobs")}
-				</h2>
-				<div className="grid gap-3 sm:grid-cols-3">
-					<Choice
-						label={t("gateway.execution.worker")}
-						value={workerFilter}
-						options={machines.map(({ id, name }) => ({ id, name }))}
-						placeholder={t("gateway.execution.all")}
-						onChange={setWorkerFilter}
-					/>
-					<Choice
-						label={t("gateway.execution.status")}
-						value={stateFilter}
-						options={executionStates.map((id) => ({
-							id,
-							name: t(`gateway.execution.state.${id}`),
-						}))}
-						placeholder={t("gateway.execution.all")}
-						onChange={setStateFilter}
-					/>
-					<Choice
-						label={t("gateway.execution.sourceLabel")}
-						value={sourceFilter}
-						options={["desktop", "cli"].map((id) => ({
-							id,
-							name: t(`gateway.execution.source.${id}`),
-						}))}
-						placeholder={t("gateway.execution.all")}
-						onChange={setSourceFilter}
-					/>
-				</div>
-				{executions.error && (
-					<p role="alert" className="text-sm text-destructive">
-						{t("gateway.execution.loadError")}
-					</p>
-				)}
-				{executions.isLoading ? (
-					<Skeleton className="h-12 w-full" />
-				) : (
-					<div className="rounded-lg border">
-						<Table>
-							<TableHeader>
-								<TableRow>
-									<TableHead>{t("gateway.execution.task")}</TableHead>
-									<TableHead>{t("gateway.execution.worker")}</TableHead>
-									<TableHead>{t("gateway.execution.sourceLabel")}</TableHead>
-									<TableHead>{t("gateway.execution.status")}</TableHead>
-								</TableRow>
-							</TableHeader>
-							<TableBody>
-								{jobs.map((job) => (
-									<TableRow key={job.id}>
-										<TableCell>
-											<Button
-												variant="link"
-												size="sm"
-												className="h-auto p-0"
-												onClick={() => onSelect(job.id)}
-											>
-												{job.input.kind === "linear-workflow"
-													? job.input.linear.identifier + " " + job.input.linear.title
-													: job.input.task || t("gateway.dispatch")}
-											</Button>
-											{job.input.kind !== "linear-workflow" && (
-												<span className="block text-xs text-muted-foreground">
-													{repositoryKey(job.input.repository)}
-												</span>
-											)}
-										</TableCell>
-										<TableCell>
-											{machines.find((worker) => worker.id === job.workerId)?.name || job.workerId}
-										</TableCell>
-										<TableCell>{t(`gateway.execution.source.${job.source}`)}</TableCell>
-										<TableCell>
-											<ExecutionBadge state={job.state} />
-										</TableCell>
-									</TableRow>
-								))}
-								{jobs.length === 0 && (
-									<TableRow>
-										<TableCell colSpan={4}>{t("gateway.execution.noJobs")}</TableCell>
-									</TableRow>
-								)}
-							</TableBody>
-						</Table>
-					</div>
-				)}
-			</section>
 			{selected && (
 				<ExecutionDetails
+					key={selected}
 					connection={connection}
 					id={selected}
 					workers={machines}
 					onClose={() => onSelect()}
+					onRevised={onSelect}
 				/>
 			)}
 			{invite && (
@@ -273,16 +176,23 @@ function ExecutionDetails({
 	id,
 	workers,
 	onClose,
+	onRevised,
 }: {
 	connection: string;
 	id: string;
 	workers: ExecutionWorker[];
 	onClose(): void;
+	onRevised(id: string): void;
 }) {
 	const { t } = useTranslation();
 	const { job, logs } = useExecution(connection, id);
 	const result = job.data?.result;
 	const issue = job.data?.input.kind === "linear-workflow" ? job.data.input.linear : undefined;
+	const commentIssueId = result?.revisionIssueId ?? issue?.issueId;
+	const bindings = useSWR(issue ? projectBindingsKey : null, getProjectBindings);
+	const binding = bindings.data?.find(
+		({ binding }) => binding.project.id === issue?.project.id,
+	)?.binding;
 	const machine = workers.find(({ id }) => id === job.data?.workerId);
 	const output = logs.data?.data ? executionLogText(logs.data.data) : "";
 	return (
@@ -307,6 +217,9 @@ function ExecutionDetails({
 					<div className="flex flex-col gap-3">
 						<div className="flex flex-wrap items-center gap-2">
 							<ExecutionBadge state={job.data.state} />
+							{issue?.revision && (
+								<Badge variant="secondary">{t("gateway.execution.revision")}</Badge>
+							)}
 							<span className="text-sm font-medium">{machine?.name ?? job.data.workerId}</span>
 							<span className="text-sm text-muted-foreground">
 								{job.data.input.kind === "linear-workflow"
@@ -384,6 +297,7 @@ function ExecutionDetails({
 						{result?.commitSha && <code className="break-all text-sm">{result.commitSha}</code>}
 						{result?.ref && <code className="break-all text-sm">{result.ref}</code>}
 						{result?.response && <CodexResultMessage value={result.response} />}
+						<GatewaySubtasks subtasks={job.data.subtasks ?? result?.subtasks} />
 						{result?.pullRequests?.map(({ number, url }) => (
 							<Button
 								key={url}
@@ -396,6 +310,16 @@ function ExecutionDetails({
 								{t("gateway.taskList.pr", { number })}
 							</Button>
 						))}
+						{commentIssueId && binding && (
+							<LinearComments
+								key={commentIssueId}
+								scope={binding.scope}
+								issueId={commentIssueId}
+								revisionJobId={job.data.canRevise ? id : undefined}
+								selectedCommentId={issue?.revision?.commentId}
+								onRevised={onRevised}
+							/>
+						)}
 					</div>
 				)}
 				<div className="flex flex-col gap-2">

@@ -2,6 +2,7 @@ import useSWR from "swr";
 import http from "@/lib/http";
 import { scopeQuery, type Binding, type Scope } from "@/features/linear/api";
 import type { HttpError } from "@/types/api";
+import type { ExecutionProgress, ExecutionQuestion, ExecutionState } from "./executions";
 
 export type ConnectionState =
 	| "unconfigured"
@@ -86,33 +87,70 @@ export interface JobRepository {
 	pr?: { number: number; url: string; state: string; merged: boolean };
 }
 
-export interface GatewayJob {
-	canReadCodexResult?: boolean;
+export interface GatewayTask {
 	id: string;
-	identifier: string;
-	title: string;
+	identifier?: string;
+	title?: string;
 	projectName?: string;
 	description?: string;
 	url?: string;
 	stage: string;
-	createdAt: string;
+	updatedAt: string;
+	workerName?: string;
 	lastError?: string;
+	localResultJobId?: string;
 	codex?: CodexOptions;
-	repositories: JobRepository[];
+	repository?: { host: string; slug: string };
+	repositories?: JobRepository[];
+	pullRequests?: NonNullable<JobRepository["pr"]>[];
+	subtasks?: GatewaySubtask[];
+	runs?: GatewayTaskRun[];
 }
 
-export interface GatewayJobPage {
-	items: GatewayJob[];
+export interface GatewayTaskRun {
+	id: string;
+	workerId: string;
+	workerName: string;
+	source: "cli" | "desktop";
+	state: ExecutionState;
+	revision?: boolean;
+	createdAt: string;
+	question?: ExecutionQuestion;
+	progress?: ExecutionProgress;
+}
+
+export interface GatewaySubtask {
+	identifier: string;
+	title: string;
+	stage: string;
+	commitSha?: string;
+	response?: string;
+}
+
+export interface GatewayTaskPage {
+	items: GatewayTask[];
 	page: number;
 	pageCount: number;
+	partial?: boolean;
 }
 
-export function useGatewayJobs(connection: GatewayStatus | undefined, page: number) {
-	return useSWR<GatewayJobPage, HttpError>(
+export interface GatewayTaskFilters {
+	worker: string;
+	stage: string;
+	source: string;
+}
+
+export function useGatewayTasks(
+	connection: GatewayStatus | undefined,
+	page: number,
+	filters: GatewayTaskFilters,
+) {
+	const query = new URLSearchParams({ page: String(page), ...filters }).toString();
+	return useSWR<GatewayTaskPage, HttpError>(
 		connection?.snapshot
-			? (["/gateway/jobs", page, connection.url, connection.snapshot.startedAt] as const)
+			? (["/gateway/tasks", query, connection.url, connection.snapshot.startedAt] as const)
 			: null,
-		([path, page]) => http.get<GatewayJobPage>(`${path}?page=${page}`),
+		([path, query]) => http.get<GatewayTaskPage>(`${path}?${query}`),
 		{ refreshInterval: 5000, shouldRetryOnError: (error) => error.status !== 404 },
 	);
 }

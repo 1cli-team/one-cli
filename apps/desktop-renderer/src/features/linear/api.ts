@@ -75,6 +75,7 @@ export interface Issue {
 	priority: number;
 	team: Named;
 	project: Named;
+	parent?: Pick<Issue, "id" | "identifier" | "title">;
 	state: State;
 	assignee: Named | null;
 	labels: Named[];
@@ -82,6 +83,7 @@ export interface Issue {
 	commentsPageInfo: PageInfo;
 }
 export interface IssueInput {
+	parentId?: string;
 	title: string;
 	description: string;
 	teamId: string;

@@ -41,7 +41,7 @@ func storeProblem(w http.ResponseWriter, err error) {
 	case errors.Is(err, errNotFound), errors.Is(err, errWorker):
 		problem(w, http.StatusNotFound, err.Error())
 	case errors.Is(err, errConflict), errors.Is(err, errRepository), errors.Is(err, errKind), errors.Is(err, errModel),
-		errors.Is(err, errQuestionConflict), errors.Is(err, errContinueConflict):
+		errors.Is(err, errQuestionConflict), errors.Is(err, errContinueConflict), errors.Is(err, errRevisionPR), errors.Is(err, errRevisionBusy):
 		problem(w, http.StatusConflict, err.Error())
 	default:
 		problem(w, http.StatusInternalServerError, "execution_storage")
@@ -74,7 +74,8 @@ func Control(token string, s *Store, fallback http.Handler, workerURL string) ht
 	})
 	handle("POST /v1/executions", func(w http.ResponseWriter, r *http.Request) {
 		var input api.ExecutionSubmission
-		if !readBody(w, r, 64<<10, &input) || !input.Valid() || input.Input.Kind == api.LinearWorkflow || strings.HasPrefix(input.RequestID, "linear/") {
+		if !readBody(w, r, 64<<10, &input) || !input.Valid() || input.Input.Kind == api.LinearWorkflow ||
+			strings.HasPrefix(input.RequestID, "linear/") || strings.HasPrefix(input.RequestID, "revision/") {
 			problem(w, http.StatusBadRequest, "invalid_execution")
 			return
 		}
@@ -121,6 +122,20 @@ func Control(token string, s *Store, fallback http.Handler, workerURL string) ht
 			return
 		}
 		respond(w, http.StatusOK, progress)
+	})
+	handle("POST /v1/executions/{id}/revise", func(w http.ResponseWriter, r *http.Request) {
+		id := r.PathValue("id")
+		var input api.RevisionInput
+		if !api.ValidExecutionID(id) || !readBody(w, r, 1024, &input) || !input.Valid() {
+			problem(w, http.StatusBadRequest, "invalid_revision")
+			return
+		}
+		job, err := s.revise(id, input)
+		if err != nil {
+			storeProblem(w, err)
+			return
+		}
+		respond(w, http.StatusAccepted, job)
 	})
 	handle("GET /v1/executions/{id}/logs", func(w http.ResponseWriter, r *http.Request) {
 		offset := 0

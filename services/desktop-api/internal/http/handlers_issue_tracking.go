@@ -94,7 +94,7 @@ func registerIssueTrackingRoutes(mux *http.ServeMux, opts MuxOpts) {
 			return nil, err
 		}
 		q := r.URL.Query()
-		filter := tracking.IssueFilter{After: q.Get("after"), Query: q.Get("q"), StateID: q.Get("state"), TeamID: q.Get("team"), AssigneeID: q.Get("assignee")}
+		filter := tracking.IssueFilter{ParentID: q.Get("parent"), After: q.Get("after"), Query: q.Get("q"), StateID: q.Get("state"), TeamID: q.Get("team"), AssigneeID: q.Get("assignee")}
 		if q.Has("priority") {
 			priority, err := strconv.Atoi(q.Get("priority"))
 			if err != nil {

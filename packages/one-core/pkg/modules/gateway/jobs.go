@@ -29,9 +29,14 @@ type JobPage struct {
 }
 
 type JobSummary struct {
+	RevisionCommentID  string             `json:"revisionCommentId,omitempty"`
+	RevisionIssueID    string             `json:"revisionIssueId,omitempty"`
+	CommitSHA          string             `json:"commitSha,omitempty"`
+	Subtasks           []SubtaskResult    `json:"subtasks,omitempty"`
 	CanReadCodexResult bool               `json:"canReadCodexResult,omitempty"`
 	ID                 string             `json:"id"`
 	ProjectID          string             `json:"projectId"`
+	IssueID            string             `json:"issueId"`
 	Identifier         string             `json:"identifier"`
 	Title              string             `json:"title"`
 	ProjectName        string             `json:"projectName,omitempty"`
@@ -39,11 +44,20 @@ type JobSummary struct {
 	URL                string             `json:"url,omitempty"`
 	Stage              string             `json:"stage"`
 	CreatedAt          time.Time          `json:"createdAt"`
+	UpdatedAt          time.Time          `json:"updatedAt,omitzero"`
 	LastError          string             `json:"lastError,omitempty"`
 	Codex              CodexOptions       `json:"codex,omitzero"`
 	Repositories       []JobRepository    `json:"repositories"`
 	Question           *ExecutionQuestion `json:"question,omitempty"`
 	Progress           *ExecutionProgress `json:"progress,omitempty"`
+}
+
+type SubtaskResult struct {
+	Identifier string `json:"identifier"`
+	Title      string `json:"title"`
+	Stage      string `json:"stage"`
+	CommitSHA  string `json:"commitSha,omitempty"`
+	Response   string `json:"response,omitempty"`
 }
 
 type JobRepository struct {

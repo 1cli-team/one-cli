@@ -105,24 +105,33 @@ type Comment struct {
 	User      *Named `json:"user"`
 }
 
+type IssueReference struct {
+	ID         string `json:"id"`
+	Identifier string `json:"identifier"`
+	Title      string `json:"title"`
+}
+
 type Issue struct {
-	ID               string    `json:"id"`
-	Identifier       string    `json:"identifier"`
-	Title            string    `json:"title"`
-	Description      string    `json:"description"`
-	URL              string    `json:"url"`
-	UpdatedAt        string    `json:"updatedAt"`
-	Priority         int       `json:"priority"`
-	Team             Named     `json:"team"`
-	Project          *Named    `json:"project"`
-	State            State     `json:"state"`
-	Assignee         *Named    `json:"assignee"`
-	Labels           []Named   `json:"labels"`
-	Comments         []Comment `json:"comments"`
-	CommentsPageInfo PageInfo  `json:"commentsPageInfo"`
+	ID               string          `json:"id"`
+	Identifier       string          `json:"identifier"`
+	Title            string          `json:"title"`
+	Description      string          `json:"description"`
+	URL              string          `json:"url"`
+	UpdatedAt        string          `json:"updatedAt"`
+	Priority         int             `json:"priority"`
+	Team             Named           `json:"team"`
+	Project          *Named          `json:"project"`
+	Parent           *IssueReference `json:"parent,omitempty"`
+	HasChildren      bool            `json:"hasChildren,omitempty"`
+	State            State           `json:"state"`
+	Assignee         *Named          `json:"assignee"`
+	Labels           []Named         `json:"labels"`
+	Comments         []Comment       `json:"comments"`
+	CommentsPageInfo PageInfo        `json:"commentsPageInfo"`
 }
 
 type IssueFilter struct {
+	ParentID   string `json:"parentId,omitempty"`
 	After      string `json:"after"`
 	Query      string `json:"query"`
 	TeamID     string `json:"teamId"`
@@ -139,6 +148,7 @@ type Issues struct {
 }
 
 type IssueInput struct {
+	ParentID          string   `json:"parentId,omitempty"`
 	Title             string   `json:"title"`
 	Description       string   `json:"description"`
 	TeamID            string   `json:"teamId"`

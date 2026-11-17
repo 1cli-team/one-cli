@@ -43,6 +43,7 @@ type LinearProject struct {
 }
 
 type ResolvedIssue struct {
+	SubtaskOrder []string      `json:"subtaskOrder,omitempty"`
 	Dispatchable bool          `json:"dispatchable"`
 	ID           string        `json:"id"`
 	Identifier   string        `json:"identifier"`
@@ -53,11 +54,13 @@ type ResolvedIssue struct {
 }
 
 type LinearExecution struct {
-	Project    LinearProject `json:"project"`
-	IssueID    string        `json:"issueId"`
-	Identifier string        `json:"identifier"`
-	Title      string        `json:"title"`
-	URL        string        `json:"url"`
+	SubtaskOrder []string        `json:"subtaskOrder,omitempty"`
+	Project      LinearProject   `json:"project"`
+	IssueID      string          `json:"issueId"`
+	Identifier   string          `json:"identifier"`
+	Title        string          `json:"title"`
+	URL          string          `json:"url"`
+	Revision     *LinearRevision `json:"revision,omitempty"`
 }
 
 type ExecutionInput struct {
@@ -84,7 +87,8 @@ func ValidWorkerID(id string) bool { return executionSelector.MatchString(id) }
 func (in ExecutionInput) Valid() bool {
 	if in.Kind == LinearWorkflow {
 		return in.Linear != nil && ValidIssueID(in.Linear.Project.ID) && ValidIssueID(in.Linear.IssueID) &&
-			ValidIssueReference(in.Linear.Identifier) && in.Codex.Valid()
+			ValidIssueReference(in.Linear.Identifier) && ValidSubtaskOrder(in.Linear.SubtaskOrder) && in.Codex.Valid() &&
+			(in.Linear.Revision == nil || ValidExecutionID(in.Linear.Revision.OriginID) && ValidIssueID(in.Linear.Revision.CommentID))
 	}
 	if in.Linear != nil {
 		return false
@@ -128,18 +132,22 @@ type Execution struct {
 	Result    *ExecutionResult    `json:"result,omitempty"`
 	Questions []ExecutionQuestion `json:"questions,omitempty"`
 	Progress  *ExecutionProgress  `json:"progress,omitempty"`
+	Subtasks  []SubtaskResult     `json:"subtasks,omitempty"`
+	CanRevise bool                `json:"canRevise,omitempty"`
 }
 
 type ExecutionResult struct {
-	PullRequests  []JobPullRequest `json:"pullRequests,omitempty"`
-	ExitCode      *int             `json:"exitCode,omitempty"`
-	TaskResult    json.RawMessage  `json:"taskResult,omitempty"`
-	CommitSHA     string           `json:"commitSha,omitempty"`
-	Ref           string           `json:"ref,omitempty"`
-	Response      string           `json:"response,omitempty"`
-	ThreadID      string           `json:"threadId,omitempty"`
-	Error         string           `json:"error,omitempty"`
-	LogsTruncated bool             `json:"logsTruncated,omitempty"`
+	RevisionIssueID string           `json:"revisionIssueId,omitempty"`
+	Subtasks        []SubtaskResult  `json:"subtasks,omitempty"`
+	PullRequests    []JobPullRequest `json:"pullRequests,omitempty"`
+	ExitCode        *int             `json:"exitCode,omitempty"`
+	TaskResult      json.RawMessage  `json:"taskResult,omitempty"`
+	CommitSHA       string           `json:"commitSha,omitempty"`
+	Ref             string           `json:"ref,omitempty"`
+	Response        string           `json:"response,omitempty"`
+	ThreadID        string           `json:"threadId,omitempty"`
+	Error           string           `json:"error,omitempty"`
+	LogsTruncated   bool             `json:"logsTruncated,omitempty"`
 }
 
 type ExecutionLogs struct {

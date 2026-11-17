@@ -97,7 +97,7 @@ func (s *Service) list(project string) api.Jobs {
 	_, enabled := s.project(project)
 	result := api.Jobs{Enabled: enabled, Issues: make(map[string]api.Status)}
 	for _, j := range s.store.list() {
-		if j.ProjectID == project {
+		if j.ProjectID == project && j.Revision == nil {
 			result.Issues[j.Issue.ID] = j.status()
 		}
 	}
@@ -109,7 +109,7 @@ func (s *Service) dispatch(ctx context.Context, req api.WorkRequest) (api.Status
 	if j, ok := s.store.get(projectID, issueID); ok {
 		return existingDispatch(j, options)
 	}
-	project, issue, code, err := s.resolveIssue(ctx, projectID, issueID)
+	project, issue, order, code, err := s.resolveDispatchIssue(ctx, projectID, issueID, req.SubtaskOrder)
 	if err != nil {
 		return "", code, err
 	}
@@ -127,9 +127,18 @@ func (s *Service) dispatch(ctx context.Context, req api.WorkRequest) (api.Status
 	if !matchesTeamFlow(flow, team) {
 		return "", http.StatusConflict, fmt.Errorf("configured Linear states do not match the team")
 	}
+	subtasks, err := s.planSubtasks(ctx, project, issue, order)
+	if err != nil {
+		return "", subtaskErrorStatus(err), err
+	}
+	if len(subtasks) != 0 && len(project.Repositories) == 1 {
+		single := project.Repositories[0].project()
+		single.ConnectionID, single.Teams = project.ConnectionID, project.Teams
+		project = single
+	}
 	job, err := s.store.enqueue(Job{
 		ProjectID: projectID, Project: project, Issue: issue, Codex: options,
-		AskUser: req.AskUser, TrackProgress: req.TrackProgress,
+		AskUser: req.AskUser, TrackProgress: req.TrackProgress, Subtasks: subtasks,
 	})
 	if err != nil {
 		return "", http.StatusInternalServerError, err
@@ -173,8 +182,8 @@ func (s *Service) resolveIssue(ctx context.Context, projectID, issueID string) (
 	return project, issue, http.StatusOK, nil
 }
 
-func (s *Service) resolvedIssue(ctx context.Context, projectID, issueID string) (api.ResolvedIssue, int, error) {
-	project, issue, code, err := s.resolveIssue(ctx, projectID, issueID)
+func (s *Service) resolvedIssue(ctx context.Context, projectID, issueID string, requestedOrder []string) (api.ResolvedIssue, int, error) {
+	project, issue, order, code, err := s.resolveDispatchIssue(ctx, projectID, issueID, requestedOrder)
 	if err != nil {
 		return api.ResolvedIssue{}, code, err
 	}
@@ -192,16 +201,27 @@ func (s *Service) resolvedIssue(ctx context.Context, projectID, issueID string) 
 	if existing, ok := s.store.get(projectID, issue.ID); ok {
 		resolved.LocalStatus = existing.status()
 	}
+	if resolved.LocalStatus == "" && (resolved.Dispatchable || len(order) != 0) {
+		subtasks, err := s.planSubtasks(ctx, project, issue, order)
+		if err != nil {
+			return api.ResolvedIssue{}, subtaskErrorStatus(err), err
+		}
+		// Carry the resolved order to the execution machine, including when
+		// the requested issue was a child and must run first.
+		for _, task := range subtasks {
+			resolved.SubtaskOrder = append(resolved.SubtaskOrder, task.Issue.ID)
+		}
+	}
 	return resolved, http.StatusOK, nil
 }
 
-func (s *Service) findResolvedIssue(ctx context.Context, issueID string) (api.ResolvedIssue, int, error) {
+func (s *Service) findResolvedIssue(ctx context.Context, issueID string, order []string) (api.ResolvedIssue, int, error) {
 	s.configMu.RLock()
 	projectIDs := slices.Sorted(maps.Keys(s.projects))
 	s.configMu.RUnlock()
 	var resolved api.ResolvedIssue
 	for _, projectID := range projectIDs {
-		candidate, code, err := s.resolvedIssue(ctx, projectID, issueID)
+		candidate, code, err := s.resolvedIssue(ctx, projectID, issueID, order)
 		if code == http.StatusNotFound {
 			continue
 		}
@@ -238,7 +258,7 @@ func (s *Service) Run(ctx context.Context) {
 				return
 			}
 			switch job.Stage {
-			case queued, running, verifying:
+			case queued, running, verifying, preparingSubtask, committingSubtask:
 				s.execute(ctx, job)
 			case waitingForAnswer, waitingToContinue:
 				if job.readyToResume() {
@@ -262,6 +282,9 @@ func (s *Service) Monitor(ctx context.Context) {
 		for _, job := range s.store.list() {
 			if ctx.Err() != nil {
 				return
+			}
+			if job.Revision != nil && job.Stage != publishing {
+				continue
 			}
 			switch job.Stage {
 			case publishing, opening, toReview, review, toDone:
@@ -313,22 +336,41 @@ func (s *Service) saveStage(job *Job, next stage) error {
 }
 
 func (s *Service) run(ctx context.Context, job *Job) error {
+	if job.Revision != nil && job.Stage != queued {
+		if _, err := s.openRevisionPR(ctx, *job); err != nil {
+			return err
+		}
+	}
 	flow := job.Project.Teams[job.Issue.Team.ID]
 	binding := job.Project.binding(job.ProjectID, job.Issue.Team.ID)
 	group := len(job.Project.Repositories) != 0
 	if job.Stage == queued {
-		var err error
-		if group {
-			err = s.prepareGroup(ctx, job)
+		if job.Revision != nil {
+			if err := s.prepareRevision(ctx, job); err != nil {
+				return err
+			}
+		} else if job.Issue.HasChildren && len(job.Subtasks) == 0 {
+			if err := s.linear.TransitionIssue(ctx, binding, job.Issue.ID, job.Issue.State.ID, flow.Running); err != nil {
+				return err
+			}
+			return s.saveStage(job, toDone)
 		} else {
-			err = s.git.Prepare(ctx, job, s.store.save)
+			var err error
+			if group {
+				err = s.prepareGroup(ctx, job)
+			} else {
+				err = s.git.Prepare(ctx, job, s.store.save)
+			}
+			if err != nil {
+				return err
+			}
+			if err := s.linear.TransitionIssue(ctx, binding, job.Issue.ID, job.Issue.State.ID, flow.Running); err != nil {
+				return err
+			}
 		}
-		if err != nil {
-			return err
-		}
-		if err := s.linear.TransitionIssue(ctx, binding, job.Issue.ID, job.Issue.State.ID, flow.Running); err != nil {
-			return err
-		}
+	}
+	if len(job.Subtasks) != 0 {
+		return s.runSubtask(ctx, job)
 	}
 	var commonDir string
 	if !group {
@@ -385,6 +427,9 @@ func (s *Service) checkFailed(ctx context.Context, job *Job, err error) error {
 }
 
 func (s *Service) deliver(ctx context.Context, job *Job) error {
+	if job.Revision != nil {
+		return s.publishRevision(ctx, job)
+	}
 	flow := job.Project.Teams[job.Issue.Team.ID]
 	binding := job.Project.binding(job.ProjectID, job.Issue.Team.ID)
 	switch job.Stage {
@@ -423,6 +468,9 @@ func (s *Service) deliver(ctx context.Context, job *Job) error {
 		}
 		// The user may already have merged every PR since publication.
 		if merged {
+			if len(job.Subtasks) != 0 {
+				return s.saveStage(job, toDone)
+			}
 			current, err := s.linear.Issue(ctx, binding, job.Issue.ID)
 			if err != nil {
 				return err
@@ -442,6 +490,9 @@ func (s *Service) deliver(ctx context.Context, job *Job) error {
 		}
 		return s.saveStage(job, review)
 	case toDone:
+		if job.Issue.HasChildren || len(job.Subtasks) != 0 {
+			return s.completeSubtasks(ctx, job)
+		}
 		if err := s.linear.TransitionIssue(ctx, binding, job.Issue.ID, flow.Review, flow.Done); err != nil {
 			return err
 		}
@@ -488,10 +539,21 @@ func pullRequestInput(job Job) codehost.PullRequestInput {
 	if len(job.Project.Check) != 0 {
 		bodyKey = "linear.cli.workflow_pr_verified"
 	}
+	body := i18n.Tf(bodyKey, job.Issue.URL, job.HeadSHA)
+	if len(job.Subtasks) != 0 {
+		body += "\n\n## " + i18n.T("gateway.workflow_subtasks") + "\n"
+		for _, task := range job.Subtasks {
+			result := i18n.T("gateway.workflow_subtask_no_changes")
+			if task.CommitSHA != "" {
+				result = "`" + task.CommitSHA + "`"
+			}
+			body += fmt.Sprintf("\n- [x] %s %s (%s)", task.Issue.Identifier, strings.Join(strings.Fields(task.Issue.Title), " "), result)
+		}
+	}
 	return codehost.PullRequestInput{
 		Title: strings.TrimSpace(job.Issue.Identifier + " " + strings.Join(strings.Fields(job.Issue.Title), " ")),
 		Head:  job.Branch,
 		Base:  job.Project.Base,
-		Body:  i18n.Tf(bodyKey, job.Issue.URL, job.HeadSHA),
+		Body:  body,
 	}
 }

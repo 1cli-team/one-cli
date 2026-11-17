@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
+	"slices"
 	"time"
 
 	api "github.com/torchstellar-team/one-cli/packages/one-core/pkg/modules/gateway"
@@ -51,7 +52,14 @@ func (s *Store) upload(workerID string, progress report) error {
 		!activeAssignment(job.State) {
 		return errNotFound
 	}
-	return s.saveLogs(job.ID, progress.Logs)
+	if err := s.saveLogs(job.ID, progress.Logs); err != nil {
+		return err
+	}
+	if progress.Result.Subtasks != nil && !slices.Equal(job.Subtasks, progress.Result.Subtasks) {
+		job.Subtasks = progress.Result.Subtasks
+		return s.save(job)
+	}
+	return nil
 }
 
 func (s *Store) RunLocal(ctx context.Context, runner Runner) error {
@@ -122,6 +130,11 @@ func runWorker(ctx context.Context, link workerLink, runner Runner) error {
 				finished = ch
 				go func(job assignment, logs *limitedLog) {
 					taskRunner := runner
+					if job.Input.Kind == api.LinearWorkflow {
+						taskRunner.reportSubtasks = func(ctx context.Context, subtasks []api.SubtaskResult) error {
+							return link.upload(ctx, report{JobID: job.ID, Attempt: job.Attempt, Result: api.ExecutionResult{Subtasks: subtasks}})
+						}
+					}
 					if job.CanAsk {
 						taskRunner.exchangeQuestion = func(ctx context.Context, question api.ExecutionQuestion, waiting bool) (api.ExecutionQuestion, error) {
 							question.Answer = ""
@@ -150,6 +163,10 @@ func runWorker(ctx context.Context, link workerLink, runner Runner) error {
 		case result := <-finished:
 			if ctx.Err() != nil && active.Input.Kind == api.LinearWorkflow && result.progress == nil {
 				return nil
+			}
+			if result.waitingForUser {
+				active, output, finished = nil, nil, nil
+				continue
 			}
 			pending = finish(active, output, result)
 			if err := writeJSON(journal, pending); err != nil {

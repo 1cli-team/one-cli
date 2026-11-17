@@ -676,6 +676,10 @@
 	},
 	"gateway": {
 		"execution": {
+			"revision": "返工",
+			"reviseFromComment": "按此评论修改",
+			"revisionComment": "本轮修改意见",
+			"viewRevision": "查看返工任务",
 			"workers": "执行机器",
 			"worker": "机器",
 			"addWorker": "添加执行机",
@@ -794,8 +798,11 @@
 		"projects_other": "已配置 {{count}} 个项目",
 		"tasks": "任务",
 		"taskList": {
-			"heading": "任务明细",
 			"empty": "还没有派发任务。",
+			"noMatching": "没有符合筛选条件的任务。",
+			"partial": "暂时无法读取本机的需求流程详情。",
+			"runs": "执行记录",
+			"initialRun": "首次执行",
 			"error": "暂时无法读取任务列表。请刷新重试。",
 			"updateRequired": "请更新 One Desktop、Gateway 和执行机器上的 One CLI，以查看任务详情。",
 			"codexResult": "Codex 执行结果",
@@ -813,6 +820,13 @@
 			"previous": "上一页",
 			"next": "下一页",
 			"stages": {
+				"revising": "修改中",
+				"succeeded": "已成功",
+				"outcome_unknown": "结果未知",
+				"preparing_subtask": "准备子任务",
+				"committing_subtask": "提交子任务",
+				"committed": "已提交",
+				"no_changes": "无代码改动",
 				"queued": "排队",
 				"running": "Codex 处理中",
 				"waiting_for_answer": "等待回答",
@@ -826,13 +840,6 @@
 				"done": "已完成",
 				"failed": "失败"
 			}
-		},
-		"counts": {
-			"queued": "排队",
-			"active": "处理中",
-			"review": "待审",
-			"completed": "已完成",
-			"failed": "失败"
 		},
 		"mappedRepository": "仓库",
 		"mappingListUnavailable": "更新 Gateway 后即可查看已配置的仓库映射。",
@@ -912,6 +919,12 @@
 		"addComment": "添加评论",
 		"sendComment": "发表评论",
 		"moreComments": "更多评论",
+		"noComments": "暂无评论。",
+		"subtasks": "子任务",
+		"createSubtask": "新建子任务",
+		"parentIssue": "主需求 {{issue}}",
+		"noSubtasks": "暂无子任务。",
+		"moreSubtasks": "更多子任务",
 		"openLinear": "在 Linear 中打开",
 		"unknownUser": "未知用户",
 		"unknown": "此操作的结果尚未确认。再次新建 Issue 或评论前，请先查询结果。",

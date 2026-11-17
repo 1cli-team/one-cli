@@ -28,6 +28,8 @@ const (
 	waitingForAnswer  stage = api.ExecutionWaitingForAnswer
 	waitingToContinue stage = api.ExecutionWaitingToContinue
 	verifying         stage = "verifying"
+	preparingSubtask  stage = "preparing_subtask"
+	committingSubtask stage = "committing_subtask"
 	publishing        stage = "publishing"
 	opening           stage = "opening"
 	toReview          stage = "to_review"
@@ -49,6 +51,7 @@ type Job struct {
 	Progress       *api.ExecutionProgress `json:"progress,omitempty"`
 	Stage          stage                  `json:"stage"`
 	Created        time.Time              `json:"created"`
+	Updated        time.Time              `json:"updated,omitzero"`
 	Worktree       string                 `json:"worktree,omitempty"`
 	CheckDir       string                 `json:"checkDir,omitempty"`
 	BaseSHA        string                 `json:"baseSha,omitempty"`
@@ -61,6 +64,8 @@ type Job struct {
 	PR             PullRequest            `json:"pr"`
 	LastError      string                 `json:"lastError,omitempty"`
 	RepositoryRuns []RepositoryRun        `json:"repositoryRuns,omitempty"`
+	Subtasks       []SubtaskRun           `json:"subtasks,omitempty"`
+	Revision       *Revision              `json:"revision,omitempty"`
 	readRoots      []string
 }
 
@@ -78,6 +83,7 @@ type RepositoryRun struct {
 
 func (j Job) clone() Job {
 	j.RepositoryRuns = slices.Clone(j.RepositoryRuns)
+	j.Subtasks = slices.Clone(j.Subtasks)
 	if j.Question != nil {
 		question := *j.Question
 		j.Question = &question
@@ -160,7 +166,7 @@ func (s *Store) load() error {
 		if len(job.RepositoryRuns) != 0 && len(job.RepositoryRuns) != len(job.Project.Repositories) {
 			return fmt.Errorf("invalid repository progress in job record %s", file.Name())
 		}
-		key := jobKey(job.ProjectID, job.Issue.ID)
+		key := job.recordKey()
 		if _, ok := s.jobs[key]; ok {
 			return fmt.Errorf("duplicate job for %s", key)
 		}
@@ -171,10 +177,26 @@ func (s *Store) load() error {
 
 func jobKey(project, issue string) string { return project + "/" + issue }
 
+func runKey(project, issue, comment string) string {
+	key := jobKey(project, issue)
+	if comment != "" {
+		key += "/" + comment
+	}
+	return key
+}
+
+func (j Job) recordKey() string {
+	return runKey(j.ProjectID, j.Issue.ID, j.revisionCommentID())
+}
+
 func (s *Store) get(project, issue string) (Job, bool) {
+	return s.getRun(project, issue, "")
+}
+
+func (s *Store) getRun(project, issue, comment string) (Job, bool) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	job, ok := s.jobs[jobKey(project, issue)]
+	job, ok := s.jobs[runKey(project, issue, comment)]
 	return job.clone(), ok
 }
 
@@ -192,8 +214,16 @@ func (s *Store) findID(id string) (Job, bool) {
 func (s *Store) enqueue(job Job) (Job, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	if existing, ok := s.jobs[jobKey(job.ProjectID, job.Issue.ID)]; ok {
+	if existing, ok := s.jobs[job.recordKey()]; ok {
 		return existing.clone(), nil
+	}
+	if job.Revision != nil {
+		for _, existing := range s.jobs {
+			if existing.Revision != nil && existing.Issue.ID == job.Issue.ID && existing.ProjectID == job.ProjectID &&
+				existing.Stage != failed && existing.Stage != review {
+				return Job{}, revisionInProgress
+			}
+		}
 	}
 	// Use a stable UUID basename for filesystem recovery and stored job validation.
 	var id [16]byte
@@ -211,10 +241,10 @@ func (s *Store) save(job Job) error {
 	return s.saveLocked(job)
 }
 
-func (s *Store) answer(projectID, issueID string, input api.ExecutionAnswer) (int, error) {
+func (s *Store) answer(projectID, issueID, commentID string, input api.ExecutionAnswer) (int, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	job, ok := s.jobs[jobKey(projectID, issueID)]
+	job, ok := s.jobs[runKey(projectID, issueID, commentID)]
 	if !ok {
 		return http.StatusNotFound, errors.New("workflow job not found")
 	}
@@ -236,10 +266,10 @@ func (s *Store) answer(projectID, issueID string, input api.ExecutionAnswer) (in
 	return http.StatusOK, nil
 }
 
-func (s *Store) requestContinue(projectID, issueID, progressID string) (int, error) {
+func (s *Store) requestContinue(projectID, issueID, commentID, progressID string) (int, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	job, ok := s.jobs[jobKey(projectID, issueID)]
+	job, ok := s.jobs[runKey(projectID, issueID, commentID)]
 	if !ok {
 		return http.StatusNotFound, errors.New("workflow job not found")
 	}
@@ -260,6 +290,7 @@ func (s *Store) requestContinue(projectID, issueID, progressID string) (int, err
 }
 
 func (s *Store) saveLocked(job Job) error {
+	job.Updated = time.Now().UTC()
 	data, err := json.Marshal(job)
 	if err != nil {
 		return err
@@ -267,7 +298,7 @@ func (s *Store) saveLocked(job Job) error {
 	if err := fsutil.WriteAtomic(filepath.Join(s.dir, job.ID+".json"), data, 0600); err != nil {
 		return err
 	}
-	s.jobs[jobKey(job.ProjectID, job.Issue.ID)] = job.clone()
+	s.jobs[job.recordKey()] = job.clone()
 	return nil
 }
 
@@ -289,10 +320,13 @@ func (s *Store) counts() api.QueueCounts {
 	defer s.mu.Unlock()
 	var counts api.QueueCounts
 	for _, job := range s.jobs {
+		if job.Revision != nil {
+			continue
+		}
 		switch job.Stage {
 		case queued:
 			counts.Queued++
-		case running, waitingForAnswer, waitingToContinue, verifying, publishing, opening, toReview, toDone:
+		case running, waitingForAnswer, waitingToContinue, verifying, preparingSubtask, committingSubtask, publishing, opening, toReview, toDone:
 			counts.Active++
 		case review:
 			counts.Review++

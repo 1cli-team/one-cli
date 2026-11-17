@@ -32,10 +32,23 @@ func validSelector(value string, maxBytes int) bool {
 }
 
 type DispatchInput struct {
-	Issue    string `json:"issue"`
-	WorkerID string `json:"workerId,omitempty"`
-	Source   string `json:"source,omitempty"`
+	Issue        string   `json:"issue"`
+	SubtaskOrder []string `json:"subtaskOrder,omitempty"`
+	WorkerID     string   `json:"workerId,omitempty"`
+	Source       string   `json:"source,omitempty"`
 	CodexOptions
+}
+
+func ValidSubtaskOrder(order []string) bool {
+	seen := make(map[string]bool, len(order))
+	for _, ref := range order {
+		key := strings.ToLower(ref)
+		if !ValidIssueReference(ref) || seen[key] {
+			return false
+		}
+		seen[key] = true
+	}
+	return true
 }
 
 type DispatchResult struct {

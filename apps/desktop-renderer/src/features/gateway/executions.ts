@@ -4,6 +4,7 @@ import {
 	repositoryRef,
 	type CodexModelCatalog,
 	type CodexOptions,
+	type GatewaySubtask,
 	type ProjectSummary,
 } from "./api";
 
@@ -91,19 +92,31 @@ export interface Execution extends Omit<ExecutionSubmission, "input"> {
 		| ExecutionInput
 		| {
 				kind: "linear-workflow";
-				linear: { identifier: string; title: string; url: string };
+				linear: {
+					identifier: string;
+					title: string;
+					url: string;
+					issueId: string;
+					project: { id: string };
+					subtaskOrder?: string[];
+					revision?: { originId: string; commentId: string };
+				};
 		  };
 	id: string;
 	source: "desktop" | "cli";
 	state: ExecutionState;
+	canRevise?: boolean;
 	questions?: ExecutionQuestion[];
 	progress?: ExecutionProgress;
+	subtasks?: GatewaySubtask[];
 	reason?: "worker_offline" | "worker_disconnected";
 	result?: {
+		revisionIssueId?: string;
 		exitCode?: number;
 		commitSha?: string;
 		ref?: string;
 		response?: string;
+		subtasks?: GatewaySubtask[];
 		threadId?: string;
 		pullRequests?: { number: number; url: string }[];
 		error?: string;
@@ -131,9 +144,19 @@ export function useWorkers(connection: string | undefined) {
 	);
 }
 
-export function useExecutions(connection: string) {
-	return useSWR(["/gateway/executions", connection], ([url]) => http.get<Execution[]>(url), {
-		refreshInterval: 4000,
+export function useExecutions(connection: string | undefined) {
+	return useSWR(
+		connection ? ["/gateway/executions", connection] : null,
+		([url]) => http.get<Execution[]>(url),
+		{
+			refreshInterval: 4000,
+		},
+	);
+}
+
+export function reviseExecution(id: string, commentId: string) {
+	return http.post<Execution>(`/gateway/executions/${encodeURIComponent(id)}/revise`, {
+		commentId,
 	});
 }
 

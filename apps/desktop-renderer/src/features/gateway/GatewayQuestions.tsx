@@ -10,7 +10,7 @@ export function GatewayQuestions({
 	job,
 	onAnswered,
 }: {
-	job: Execution;
+	job: Pick<Execution, "id" | "state" | "questions">;
 	onAnswered(question: ExecutionQuestion): void;
 }) {
 	const { t } = useTranslation();

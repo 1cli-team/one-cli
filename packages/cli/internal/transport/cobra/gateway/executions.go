@@ -24,7 +24,29 @@ func executionCommands() []*cobra.Command {
 		readCommand("executions", "gateway.cli.executions", func(ctx context.Context, client *gateway.Client) (any, error) {
 			return client.Executions(ctx)
 		}),
-		executionCommand(), waitExecutionCommand(), replyExecutionCommand(), continueExecutionCommand(), logsCommand()}
+		executionCommand(), waitExecutionCommand(), replyExecutionCommand(), continueExecutionCommand(), reviseExecutionCommand(), logsCommand()}
+}
+
+func reviseExecutionCommand() *cobra.Command {
+	var comment string
+	cmd := &cobra.Command{Use: "revise <job-id>", Args: i18n.ExactArgs(1), RunE: func(cmd *cobra.Command, args []string) error {
+		client, url, err := openClient()
+		if err != nil {
+			return err
+		}
+		ctx, cancel := context.WithTimeout(cmd.Context(), 10*time.Second)
+		defer cancel()
+		job, err := client.ReviseExecution(ctx, args[0], gateway.RevisionInput{CommentID: comment, Source: "cli"})
+		if err != nil {
+			return executionError(err)
+		}
+		emitExecution(url, job)
+		return nil
+	}}
+	cmd.Flags().StringVar(&comment, "comment", "", "")
+	i18n.MarkShort(cmd, "gateway.cli.revise")
+	i18n.MarkFlagUsage(cmd, "comment", "gateway.cli.flag_revision_comment")
+	return cmd
 }
 
 func emitExecution(url string, data any) {
@@ -194,7 +216,8 @@ func executionError(err error) error {
 	var response *gateway.ResponseError
 	if errors.As(err, &response) {
 		switch response.Reason {
-		case "execution_question_conflict", "invalid_execution_answer", "execution_continue_conflict", "invalid_execution_continue":
+		case "execution_question_conflict", "invalid_execution_answer", "execution_continue_conflict", "invalid_execution_continue",
+			"invalid_revision", "revision_requires_open_pr", "revision_in_progress":
 			return i18n.Errorf("gateway.execution_problem." + response.Reason)
 		}
 		return clierrors.New(clierrors.ONE_CLI_ERROR, i18n.Tf("gateway.cli.execution_response", response.Code)).

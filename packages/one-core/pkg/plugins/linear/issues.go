@@ -27,22 +27,26 @@ type remoteProject struct {
 	Teams       page[tracking.Named] `json:"teams"`
 }
 type remoteIssue struct {
-	ID          string                 `json:"id"`
-	Identifier  string                 `json:"identifier"`
-	Title       string                 `json:"title"`
-	Description string                 `json:"description"`
-	URL         string                 `json:"url"`
-	UpdatedAt   string                 `json:"updatedAt"`
-	Priority    int                    `json:"priority"`
-	Team        tracking.Named         `json:"team"`
-	Project     *tracking.Named        `json:"project"`
-	State       tracking.State         `json:"state"`
-	Assignee    *tracking.Named        `json:"assignee"`
-	Labels      page[tracking.Named]   `json:"labels"`
-	Comments    page[tracking.Comment] `json:"comments"`
+	ID          string                        `json:"id"`
+	Identifier  string                        `json:"identifier"`
+	Title       string                        `json:"title"`
+	Description string                        `json:"description"`
+	URL         string                        `json:"url"`
+	UpdatedAt   string                        `json:"updatedAt"`
+	Priority    int                           `json:"priority"`
+	Team        tracking.Named                `json:"team"`
+	Project     *tracking.Named               `json:"project"`
+	Parent      *tracking.IssueReference      `json:"parent"`
+	Children    page[tracking.IssueReference] `json:"children"`
+	State       tracking.State                `json:"state"`
+	Assignee    *tracking.Named               `json:"assignee"`
+	Labels      page[tracking.Named]          `json:"labels"`
+	Comments    page[tracking.Comment]        `json:"comments"`
 }
 
-const issueFields = `id identifier title description url updatedAt priority team { id name } project { id name } state { id name type position } assignee { id name } labels(first: 100) { nodes { id name } pageInfo { endCursor hasNextPage } }`
+var issueUUIDPattern = regexp.MustCompile(`(?i)^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$`)
+
+const issueFields = `id identifier title description url updatedAt priority team { id name } project { id name } parent { id identifier title } state { id name type position } assignee { id name } labels(first: 100) { nodes { id name } pageInfo { endCursor hasNextPage } }`
 
 func (r remoteIssue) public() tracking.Issue {
 	labels := r.Labels.Nodes
@@ -53,7 +57,7 @@ func (r remoteIssue) public() tracking.Issue {
 	if comments == nil {
 		comments = []tracking.Comment{}
 	}
-	return tracking.Issue{ID: r.ID, Identifier: r.Identifier, Title: r.Title, Description: r.Description, URL: r.URL, UpdatedAt: r.UpdatedAt, Priority: r.Priority, Team: r.Team, Project: r.Project, State: r.State, Assignee: r.Assignee, Labels: labels, Comments: comments, CommentsPageInfo: r.Comments.PageInfo}
+	return tracking.Issue{ID: r.ID, Identifier: r.Identifier, Title: r.Title, Description: r.Description, URL: r.URL, UpdatedAt: r.UpdatedAt, Priority: r.Priority, Team: r.Team, Project: r.Project, Parent: r.Parent, HasChildren: len(r.Children.Nodes) > 0, State: r.State, Assignee: r.Assignee, Labels: labels, Comments: comments, CommentsPageInfo: r.Comments.PageInfo}
 }
 
 func (p *Plugin) Projects(ctx context.Context, connection, after string) (tracking.Projects, error) {
@@ -171,7 +175,19 @@ func cursor(value string) any {
 }
 
 func (p *Plugin) Issues(ctx context.Context, binding tracking.Binding, filter tracking.IssueFilter) (tracking.Issues, error) {
-	where := map[string]any{"project": map[string]any{"id": map[string]any{"eq": binding.Project.ID}}}
+	projectFilter := map[string]any{"id": map[string]any{"eq": binding.Project.ID}}
+	where := map[string]any{"project": projectFilter}
+	if filter.ParentID != "" {
+		parentID := filter.ParentID
+		if !issueUUIDPattern.MatchString(parentID) {
+			parent, err := p.Issue(ctx, binding, parentID)
+			if err != nil {
+				return tracking.Issues{}, err
+			}
+			parentID = parent.ID
+		}
+		where["parent"] = map[string]any{"id": map[string]any{"eq": parentID}, "project": projectFilter}
+	}
 	if filter.Query != "" {
 		where["title"] = map[string]any{"containsIgnoreCase": filter.Query}
 	}
@@ -226,7 +242,7 @@ func (p *Plugin) Issue(ctx context.Context, binding tracking.Binding, id string)
 	var data struct {
 		Issue *remoteIssue `json:"issue"`
 	}
-	err := p.graph(ctx, binding.ConnectionID, `query OneLinearIssue($id:String!) { issue(id:$id) { `+issueFields+` comments(first:50) { nodes { id body createdAt user { id name } } pageInfo { endCursor hasNextPage } } } }`, map[string]any{"id": id}, &data)
+	err := p.graph(ctx, binding.ConnectionID, `query OneLinearIssue($id:String!) { issue(id:$id) { `+issueFields+` children(first:1) { nodes { id } } comments(first:50) { nodes { id body createdAt user { id name } } pageInfo { endCursor hasNextPage } } } }`, map[string]any{"id": id}, &data)
 	if err != nil {
 		return tracking.Issue{}, err
 	}
@@ -261,17 +277,59 @@ func (p *Plugin) Issue(ctx context.Context, binding tracking.Binding, id string)
 	return result, nil
 }
 
-func (p *Plugin) Comments(ctx context.Context, binding tracking.Binding, id, after string) ([]tracking.Comment, tracking.PageInfo, error) {
-	if _, err := p.Issue(ctx, binding, id); err != nil {
-		return nil, tracking.PageInfo{}, err
-	}
+// SubIssues checks the parent's actual children, including links that a
+// project-scoped list would omit.
+func (p *Plugin) SubIssues(ctx context.Context, binding tracking.Binding, parentID, after string) (tracking.Issues, error) {
 	var data struct {
-		Issue struct {
+		Issue *struct {
+			ID       string            `json:"id"`
+			Project  *tracking.Named   `json:"project"`
+			Children page[remoteIssue] `json:"children"`
+		} `json:"issue"`
+	}
+	err := p.graph(ctx, binding.ConnectionID, `query OneLinearSubIssues($id:String!,$after:String) {
+		issue(id:$id) { id project { id name } children(first:50, after:$after) {
+			nodes {
+				id identifier title description url team { id name } project { id name }
+				parent { id identifier title } state { id name type } children(first:1) { nodes { id } }
+			}
+			pageInfo { endCursor hasNextPage }
+		} }
+	}`, map[string]any{"id": parentID, "after": cursor(after)}, &data)
+	if err != nil {
+		return tracking.Issues{}, err
+	}
+	if data.Issue == nil || data.Issue.ID != parentID || data.Issue.Project == nil || data.Issue.Project.ID != binding.Project.ID {
+		return tracking.Issues{}, tracking.Fail("scope")
+	}
+	result := tracking.Issues{Nodes: []tracking.Issue{}, PageInfo: data.Issue.Children.PageInfo}
+	for _, child := range data.Issue.Children.Nodes {
+		if child.Project == nil || child.Project.ID != binding.Project.ID {
+			return tracking.Issues{}, tracking.Fail("scope")
+		}
+		result.Nodes = append(result.Nodes, child.public())
+	}
+	return result, nil
+}
+
+func (p *Plugin) Comments(ctx context.Context, binding tracking.Binding, id, after string) ([]tracking.Comment, tracking.PageInfo, error) {
+	var data struct {
+		Issue *struct {
+			Project  *tracking.Named        `json:"project"`
 			Comments page[tracking.Comment] `json:"comments"`
 		} `json:"issue"`
 	}
-	err := p.graph(ctx, binding.ConnectionID, `query OneLinearComments($id:String!,$after:String){issue(id:$id){comments(first:50,after:$after){nodes{id body createdAt user{id name}} pageInfo{endCursor hasNextPage}}}}`, map[string]any{"id": id, "after": cursor(after)}, &data)
-	return data.Issue.Comments.Nodes, data.Issue.Comments.PageInfo, err
+	err := p.graph(ctx, binding.ConnectionID, `query OneLinearComments($id:String!,$after:String){issue(id:$id){project{id} comments(first:50,after:$after){nodes{id body createdAt user{id name}} pageInfo{endCursor hasNextPage}}}}`, map[string]any{"id": id, "after": cursor(after)}, &data)
+	if err != nil {
+		return nil, tracking.PageInfo{}, err
+	}
+	if data.Issue == nil {
+		return nil, tracking.PageInfo{}, tracking.Fail("not_found")
+	}
+	if data.Issue.Project == nil || data.Issue.Project.ID != binding.Project.ID {
+		return nil, tracking.PageInfo{}, tracking.Fail("scope")
+	}
+	return data.Issue.Comments.Nodes, data.Issue.Comments.PageInfo, nil
 }
 
 func (p *Plugin) validateInput(ctx context.Context, binding tracking.Binding, input tracking.IssueInput) (tracking.Team, error) {
@@ -363,6 +421,16 @@ func issueValues(input tracking.IssueInput) map[string]any {
 }
 
 func (p *Plugin) CreateIssue(ctx context.Context, binding tracking.Binding, input tracking.IssueInput) (tracking.Issue, error) {
+	if input.ParentID != "" {
+		parent, err := p.Issue(ctx, binding, input.ParentID)
+		if err != nil {
+			return tracking.Issue{}, err
+		}
+		if input.TeamID != "" && input.TeamID != parent.Team.ID {
+			return tracking.Issue{}, tracking.Fail("team")
+		}
+		input.ParentID, input.TeamID = parent.ID, parent.Team.ID
+	}
 	if _, err := p.validateInput(ctx, binding, input); err != nil {
 		return tracking.Issue{}, err
 	}
@@ -381,6 +449,9 @@ func (p *Plugin) CreateIssue(ctx context.Context, binding tracking.Binding, inpu
 	values["id"] = input.OperationID
 	values["projectId"] = binding.Project.ID
 	values["teamId"] = input.TeamID
+	if input.ParentID != "" {
+		values["parentId"] = input.ParentID
+	}
 	if input.StateID != "" {
 		values["stateId"] = input.StateID
 	}
@@ -398,6 +469,9 @@ func (p *Plugin) CreateIssue(ctx context.Context, binding tracking.Binding, inpu
 }
 
 func (p *Plugin) UpdateIssue(ctx context.Context, binding tracking.Binding, id string, input tracking.IssueInput) (tracking.Issue, error) {
+	if input.ParentID != "" {
+		return tracking.Issue{}, tracking.Fail("input")
+	}
 	current, err := p.Issue(ctx, binding, id)
 	if err != nil {
 		return current, err
@@ -433,6 +507,11 @@ func (p *Plugin) UpdateIssue(ctx context.Context, binding tracking.Binding, id s
 }
 
 func (p *Plugin) readComment(ctx context.Context, binding tracking.Binding, id string) (tracking.Comment, error) {
+	comment, _, err := p.CommentByID(ctx, binding, id)
+	return comment, err
+}
+
+func (p *Plugin) CommentByID(ctx context.Context, binding tracking.Binding, id string) (tracking.Comment, string, error) {
 	var data struct {
 		Comment *struct {
 			tracking.Comment
@@ -444,22 +523,23 @@ func (p *Plugin) readComment(ctx context.Context, binding tracking.Binding, id s
 	}
 	err := p.graph(ctx, binding.ConnectionID, `query OneLinearComment($id:String!){comment(id:$id){id body createdAt user{id name} issue{id project{id name}}}}`, map[string]any{"id": id}, &data)
 	if err != nil {
-		return tracking.Comment{}, err
+		return tracking.Comment{}, "", err
 	}
 	if data.Comment == nil {
-		return tracking.Comment{}, tracking.Fail("not_found")
+		return tracking.Comment{}, "", tracking.Fail("not_found")
 	}
 	if data.Comment.Issue.Project == nil || data.Comment.Issue.Project.ID != binding.Project.ID {
-		return tracking.Comment{}, tracking.Fail("scope")
+		return tracking.Comment{}, "", tracking.Fail("scope")
 	}
-	return data.Comment.Comment, nil
+	return data.Comment.Comment, data.Comment.Issue.ID, nil
 }
 
 func (p *Plugin) Comment(ctx context.Context, binding tracking.Binding, issueID, body, operationID string) (tracking.Comment, error) {
 	if strings.TrimSpace(body) == "" {
 		return tracking.Comment{}, tracking.Fail("input")
 	}
-	if _, err := p.Issue(ctx, binding, issueID); err != nil {
+	issue, err := p.Issue(ctx, binding, issueID)
+	if err != nil {
 		return tracking.Comment{}, err
 	}
 	fresh, err := p.beginOperation(ctx, binding, operationID, "comment", issueID, body)
@@ -479,7 +559,7 @@ func (p *Plugin) Comment(ctx context.Context, binding tracking.Binding, issueID,
 			Comment *tracking.Comment `json:"comment"`
 		} `json:"commentCreate"`
 	}
-	err = p.graph(ctx, binding.ConnectionID, `mutation OneLinearCreateComment($input:CommentCreateInput!){commentCreate(input:$input){success comment{id body createdAt user{id name}}}}`, map[string]any{"input": map[string]any{"id": operationID, "issueId": issueID, "body": body}}, &data)
+	err = p.graph(ctx, binding.ConnectionID, `mutation OneLinearCreateComment($input:CommentCreateInput!){commentCreate(input:$input){success comment{id body createdAt user{id name}}}}`, map[string]any{"input": map[string]any{"id": operationID, "issueId": issue.ID, "body": body}}, &data)
 	if err != nil || !data.CommentCreate.Success || data.CommentCreate.Comment == nil || data.CommentCreate.Comment.ID != operationID {
 		return tracking.Comment{}, unknownOperation(operationID)
 	}

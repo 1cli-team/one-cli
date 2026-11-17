@@ -26,13 +26,12 @@ import {
 	getProjectBindings,
 	projectBindingsKey,
 	repositoryLabel,
-	useGatewayJobs,
+	useGatewayTasks,
 	useGatewayStatus,
 	type GatewaySnapshot,
+	type GatewayTaskFilters,
 	type ProjectSummary,
 } from "./api";
-
-const displayedCounts = ["queued", "active", "review", "completed", "failed"] as const;
 
 export function GatewayMonitor() {
 	const { t, i18n } = useTranslation();
@@ -41,6 +40,7 @@ export function GatewayMonitor() {
 	const [configure, setConfigure] = useState(false);
 	const [configured, setConfigured] = useState(false);
 	const [page, setPage] = useState(1);
+	const [filters, setFilters] = useState<GatewayTaskFilters>({ worker: "", stage: "", source: "" });
 	const [issueAction, setIssueAction] = useState<GatewayIssueAction>();
 	const [search, setSearch] = useSearchParams();
 	const selectedExecution = search.get("execution") ?? undefined;
@@ -49,6 +49,7 @@ export function GatewayMonitor() {
 	const mappedProjects = snapshot ? (snapshot.mappings ?? []) : undefined;
 	const workers = useWorkers(snapshot?.executions ? connection?.url : undefined);
 	const machines = workers.data ?? [];
+	const tasks = useGatewayTasks(connection, page, filters);
 	const openExecution = (id?: string) => {
 		setSearch(
 			(current) => {
@@ -59,9 +60,11 @@ export function GatewayMonitor() {
 			},
 			{ replace: true },
 		);
-		if (id && connection) void mutate(["/gateway/executions", connection.url]);
+		if (id && connection) {
+			void mutate(["/gateway/executions", connection.url]);
+			void tasks.mutate();
+		}
 	};
-	const jobs = useGatewayJobs(connection, page);
 	const locale = i18n.resolvedLanguage;
 	const formatTime = (value: string) => new Date(value).toLocaleString(locale);
 
@@ -80,10 +83,10 @@ export function GatewayMonitor() {
 						<Button
 							variant="outline"
 							size="sm"
-							disabled={status.isValidating || jobs.isValidating}
+							disabled={status.isValidating || tasks.isValidating}
 							onClick={() => {
 								void status.mutate();
-								void jobs.mutate();
+								void tasks.mutate();
 							}}
 						>
 							<RefreshCw />
@@ -162,9 +165,9 @@ export function GatewayMonitor() {
 				/>
 			)}
 
-			<section className="space-y-3" aria-labelledby="gateway-queue-heading">
+			<section className="space-y-3" aria-labelledby="gateway-tasks-heading">
 				<div className="flex flex-wrap items-center justify-between gap-3">
-					<h2 id="gateway-queue-heading" className="text-base font-medium">
+					<h2 id="gateway-tasks-heading" className="text-base font-medium">
 						{t("gateway.tasks")}
 					</h2>
 					{snapshot && (
@@ -180,17 +183,24 @@ export function GatewayMonitor() {
 						</div>
 					)}
 				</div>
-				{snapshot && <QueueSummary snapshot={snapshot} />}
+				{snapshot && (
+					<GatewayTaskList
+						connection={connection?.url}
+						data={tasks.data}
+						error={tasks.error}
+						isLoading={tasks.isLoading}
+						filters={filters}
+						machines={machines}
+						onFilterChange={(field, value) => {
+							setFilters((current) => ({ ...current, [field]: value }));
+							setPage(1);
+						}}
+						onPageChange={setPage}
+						onOpenRun={openExecution}
+						onRunUpdated={() => void tasks.mutate()}
+					/>
+				)}
 			</section>
-			{snapshot && (
-				<GatewayTaskList
-					connection={connection?.url}
-					data={jobs.data}
-					error={jobs.error}
-					isLoading={jobs.isLoading}
-					onPageChange={setPage}
-				/>
-			)}
 			{issueAction && (
 				<GatewayIssueDialog
 					action={issueAction}
@@ -199,7 +209,7 @@ export function GatewayMonitor() {
 					onClose={() => setIssueAction(undefined)}
 					onDispatched={(id) => {
 						if (id) openExecution(id);
-						if (page === 1) void jobs.mutate();
+						if (page === 1) void tasks.mutate();
 						setPage(1);
 						void status.mutate();
 					}}
@@ -302,27 +312,5 @@ function MappingTable({ mappings }: { mappings: ProjectSummary[] }) {
 				</TableBody>
 			</Table>
 		</div>
-	);
-}
-
-function QueueSummary({ snapshot }: { snapshot: GatewaySnapshot }) {
-	const { t, i18n } = useTranslation();
-	const format = new Intl.NumberFormat(i18n.resolvedLanguage);
-	return (
-		<dl className="grid grid-cols-2 gap-px overflow-hidden rounded-md border border-border bg-border @min-[42rem]:grid-cols-5">
-			{displayedCounts.map((count) => (
-				<div
-					key={count}
-					className="min-w-0 bg-card p-4 last:col-span-2 @min-[42rem]:last:col-span-1"
-				>
-					<dt className="break-words text-sm text-muted-foreground">
-						{t(`gateway.counts.${count}`)}
-					</dt>
-					<dd className="mt-1 text-2xl font-medium tabular-nums">
-						{format.format(snapshot.jobs[count])}
-					</dd>
-				</div>
-			))}
-		</dl>
 	);
 }

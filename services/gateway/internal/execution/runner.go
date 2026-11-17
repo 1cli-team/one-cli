@@ -31,6 +31,8 @@ type Runner struct {
 	exchangeQuestion func(context.Context, api.ExecutionQuestion, bool) (api.ExecutionQuestion, error)
 	trackProgress    bool
 	resumeProgressID string
+	resumeQuestionID string
+	reportSubtasks   func(context.Context, []api.SubtaskResult) error
 }
 
 func NewRunner(root, one string, readRoots []string) (Runner, error) {
@@ -80,7 +82,8 @@ func (r Runner) inventory(ctx context.Context) (api.ExecutionWorker, error) {
 
 type runOutcome struct {
 	api.ExecutionResult
-	progress *api.ExecutionProgress
+	progress       *api.ExecutionProgress
+	waitingForUser bool
 }
 
 func (r Runner) execute(ctx context.Context, job assignment, logs io.Writer) runOutcome {
@@ -91,6 +94,9 @@ func (r Runner) execute(ctx context.Context, job assignment, logs io.Writer) run
 		r.trackProgress = job.CanRequeue
 		if job.Progress != nil && job.Progress.ContinueRequested {
 			r.resumeProgressID = job.Progress.ID
+		}
+		if last := len(job.Questions) - 1; last >= 0 && job.Questions[last].Answer != "" {
+			r.resumeQuestionID = job.Questions[last].ID
 		}
 		return r.runLinear(ctx, job.Input, logs)
 	}

@@ -15,6 +15,7 @@ import (
 
 func dispatchCommand() *cobra.Command {
 	var worker, model, effort string
+	var subtaskOrder []string
 	cmd := &cobra.Command{
 		Use:  "dispatch <issue>",
 		Args: i18n.ExactArgs(1),
@@ -22,6 +23,9 @@ func dispatchCommand() *cobra.Command {
 			issue := strings.TrimSpace(args[0])
 			if !gateway.ValidIssueReference(issue) {
 				return i18n.Errorf("gateway.cli.invalid_issue")
+			}
+			if !gateway.ValidSubtaskOrder(subtaskOrder) {
+				return i18n.Errorf("gateway.execution_problem.invalid_subtask_order")
 			}
 			workerID := strings.TrimSpace(worker)
 			if workerID == "" {
@@ -41,7 +45,7 @@ func dispatchCommand() *cobra.Command {
 			ctx, cancel := context.WithTimeout(cmd.Context(), 45*time.Second)
 			defer cancel()
 			dispatch, err := client.DispatchIssue(ctx, gateway.DispatchInput{
-				Issue: issue, WorkerID: workerID, Source: "cli", CodexOptions: options,
+				Issue: issue, WorkerID: workerID, Source: "cli", CodexOptions: options, SubtaskOrder: subtaskOrder,
 			})
 			if err != nil {
 				var response *gateway.ResponseError
@@ -50,7 +54,8 @@ func dispatchCommand() *cobra.Command {
 					case "codex_options_conflict":
 						return i18n.Errorf("gateway.codex_options_conflict")
 					case "issue_unmapped", "issue_reference_ambiguous", "issue_worker_conflict", "issue_ineligible",
-						"worker_workflow_unavailable", "worker_not_found", "worker_model_unavailable", "workflow_dispatch":
+						"worker_workflow_unavailable", "worker_not_found", "worker_model_unavailable", "workflow_dispatch",
+						"invalid_subtask_order", "subtask_order_conflict", "subtasks_require_single_repository", "subtask_parent_unavailable":
 						return i18n.Errorf("gateway.execution_problem." + response.Reason)
 					case "":
 						if response.Code == http.StatusNotFound || response.Code == http.StatusMethodNotAllowed {
@@ -72,9 +77,11 @@ func dispatchCommand() *cobra.Command {
 	cmd.Flags().StringVar(&worker, "worker", "", "")
 	cmd.Flags().StringVar(&model, "model", "", "")
 	cmd.Flags().StringVar(&effort, "effort", "", "")
+	cmd.Flags().StringArrayVar(&subtaskOrder, "subtask", nil, "")
 	i18n.MarkFlagUsage(cmd, "worker", "gateway.cli.flag_worker")
 	i18n.MarkFlagUsage(cmd, "model", "gateway.cli.flag_model")
 	i18n.MarkFlagUsage(cmd, "effort", "gateway.cli.flag_effort")
+	i18n.MarkFlagUsage(cmd, "subtask", "gateway.cli.flag_subtask")
 	return cmd
 }
 

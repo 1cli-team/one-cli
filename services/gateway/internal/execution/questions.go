@@ -25,13 +25,15 @@ func (s *Store) exchangeQuestion(workerID string, update questionReport) (api.Ex
 	defer s.mu.Unlock()
 	job, ok := s.jobs[update.JobID]
 	if !ok || job.Input.Kind != api.LinearWorkflow || job.WorkerID != workerID || job.Attempt != update.Attempt ||
-		job.Session != update.Session || s.workers[workerID].Session != update.Session ||
-		!activeAssignment(job.State) {
+		job.Session != update.Session || s.workers[workerID].Session != update.Session {
 		return api.ExecutionQuestion{}, errNotFound
 	}
 	question := update.Question
 	last := len(job.Questions) - 1
 	if last >= 0 && job.Questions[last].ID == question.ID {
+		if !activeAssignment(job.State) && !(job.releasesOnQuestion() && job.State == api.ExecutionQueued && update.Waiting) {
+			return api.ExecutionQuestion{}, errNotFound
+		}
 		stored := job.Questions[last]
 		if stored.Text != question.Text || (!update.Waiting && stored.Answer == "") {
 			return api.ExecutionQuestion{}, errQuestionConflict
@@ -42,7 +44,7 @@ func (s *Store) exchangeQuestion(workerID string, update questionReport) (api.Ex
 		}
 		return stored, nil
 	}
-	if !update.Waiting || (last >= 0 && job.Questions[last].Answer == "") ||
+	if !activeAssignment(job.State) || !update.Waiting || (last >= 0 && job.Questions[last].Answer == "") ||
 		slices.ContainsFunc(job.Questions, func(q api.ExecutionQuestion) bool { return q.ID == question.ID }) {
 		return api.ExecutionQuestion{}, errQuestionConflict
 	}
@@ -75,5 +77,8 @@ func (s *Store) answer(id string, input api.ExecutionAnswer) (api.ExecutionQuest
 	job.Questions = slices.Clone(job.Questions)
 	job.Questions[index] = question
 	job.UpdatedAt = time.Now().UTC()
+	if job.releasesOnQuestion() {
+		job.State = api.ExecutionQueued
+	}
 	return question, s.save(job)
 }

@@ -284,8 +284,20 @@ func (m *finalCodexMessage) record(item codexItem) {
 }
 
 func (c Codex) Implement(ctx context.Context, job *Job, commonDir string, checkpoint func(Job) error) error {
+	issue := job.Issue
+	if index := job.activeSubtask(); index >= 0 {
+		issue = job.Subtasks[index].Issue
+	}
 	prompt := fmt.Sprintf("Implement Linear issue %s in the task workspace. Follow the instructions of every repository you change and leave your changes in its worktree. Use One CLI for repository tasks. Run the checks that apply to your changes and report the results. One CLI will run any configured checks, publish the pull requests, and update Linear. Keep your final response focused on the changes and checks.\n\nIssue title:\n%s\n\nIssue description:\n%s",
-		job.Issue.Identifier, job.Issue.Title, job.Issue.Description)
+		issue.Identifier, issue.Title, issue.Description)
+	if issue.ID != job.Issue.ID {
+		prompt += fmt.Sprintf("\n\nImplement only this subtask. Its parent is %s %s. Other subtasks use this same branch. Leave your changes uncommitted so One Gateway can create the subtask commit.\n\nParent description:\n%s",
+			job.Issue.Identifier, job.Issue.Title, job.Issue.Description)
+	}
+	if job.Revision != nil {
+		prompt = fmt.Sprintf("Apply the selected Linear feedback to the existing implementation for %s %s. The original parent is %s. Inspect the current worktree, then make the smallest changes that address this feedback. Leave the changes uncommitted. Gateway will append a commit to the existing open PR.\n\nParent description:\n%s\n\nSelected Linear comment:\n%s",
+			job.Revision.Issue.Identifier, job.Revision.Issue.Title, job.Issue.Identifier, job.Issue.Description, job.Revision.Body)
+	}
 	if len(job.RepositoryRuns) != 0 {
 		prompt = groupWorktreePrompt(*job) + "\n" + prompt
 	}
@@ -339,7 +351,8 @@ func (c Codex) runPrompt(ctx context.Context, job *Job, commonDir, prompt string
 	var thread struct {
 		Thread struct{ ID string } `json:"thread"`
 	}
-	resume := job.readyToResume()
+	resumeRevision := job.Revision != nil && job.Stage == queued && job.ThreadID != ""
+	resume := job.readyToResume() || resumeRevision
 	method := "thread/start"
 	threadParams := map[string]any{"cwd": job.Worktree, "approvalPolicy": "never"}
 	if resume {
@@ -347,20 +360,32 @@ func (c Codex) runPrompt(ctx context.Context, job *Job, commonDir, prompt string
 		threadParams["threadId"] = job.ThreadID
 		if job.Stage == waitingForAnswer {
 			prompt = answerPrompt(*job.Question)
-		} else {
+		} else if job.Stage == waitingToContinue {
 			prompt = continuePrompt(*job.Progress)
 		}
-	} else {
+	}
+	configureNewThread := func() {
+		delete(threadParams, "threadId")
 		threadParams["ephemeral"], threadParams["serviceName"] = false, "one_gateway"
 		if job.AskUser {
 			threadParams["dynamicTools"] = []map[string]any{questionToolDefinition()}
 		}
 	}
+	if !resume {
+		configureNewThread()
+	}
 	if job.Codex.Model != "" {
 		threadParams["model"] = job.Codex.Model
 	}
 	if err := session.call(method, threadParams, &thread, nil); err != nil {
-		return err
+		if !resumeRevision {
+			return err
+		}
+		resume = false
+		configureNewThread()
+		if err := session.call("thread/start", threadParams, &thread, nil); err != nil {
+			return err
+		}
 	}
 	if thread.Thread.ID == "" {
 		return fmt.Errorf("Codex returned an empty thread ID")
@@ -369,7 +394,8 @@ func (c Codex) runPrompt(ctx context.Context, job *Job, commonDir, prompt string
 		if thread.Thread.ID != job.ThreadID {
 			return i18n.Errorf("gateway.codex_resume_mismatch")
 		}
-	} else {
+	}
+	if !resume || resumeRevision {
 		job.ThreadID, job.Stage = thread.Thread.ID, running
 		if err := checkpoint(*job); err != nil {
 			return err

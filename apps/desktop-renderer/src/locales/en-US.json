@@ -676,6 +676,10 @@
 	},
 	"gateway": {
 		"execution": {
+			"revision": "Revision",
+			"reviseFromComment": "Revise from this comment",
+			"revisionComment": "Revision feedback",
+			"viewRevision": "View revision task",
 			"workers": "Execution machines",
 			"worker": "Machine",
 			"addWorker": "Add execution machine",
@@ -794,8 +798,11 @@
 		"projects_other": "{{count}} configured projects",
 		"tasks": "Tasks",
 		"taskList": {
-			"heading": "Task details",
 			"empty": "No tasks have been dispatched yet.",
+			"noMatching": "No tasks match the selected filters.",
+			"partial": "Local workflow details are temporarily unavailable.",
+			"runs": "Execution history",
+			"initialRun": "Initial execution",
 			"error": "Could not load tasks. Refresh to try again.",
 			"updateRequired": "Update One Desktop, Gateway, and One CLI on the execution machine to view task details.",
 			"codexResult": "Codex result",
@@ -813,6 +820,13 @@
 			"previous": "Previous",
 			"next": "Next",
 			"stages": {
+				"revising": "Revising",
+				"succeeded": "Succeeded",
+				"outcome_unknown": "Result unknown",
+				"preparing_subtask": "Preparing sub-issue",
+				"committing_subtask": "Committing sub-issue",
+				"committed": "Committed",
+				"no_changes": "No changes",
 				"queued": "Queued",
 				"running": "Codex working",
 				"waiting_for_answer": "Waiting for answer",
@@ -826,13 +840,6 @@
 				"done": "Completed",
 				"failed": "Failed"
 			}
-		},
-		"counts": {
-			"queued": "Queued",
-			"active": "Processing",
-			"review": "Awaiting review",
-			"completed": "Completed",
-			"failed": "Failed"
 		},
 		"mappedRepository": "Repository",
 		"mappingListUnavailable": "Update Gateway to view the configured repository mappings.",
@@ -912,6 +919,12 @@
 		"addComment": "Add a comment",
 		"sendComment": "Post comment",
 		"moreComments": "More comments",
+		"noComments": "No comments yet.",
+		"subtasks": "Sub-issues",
+		"createSubtask": "New sub-issue",
+		"parentIssue": "Parent issue {{issue}}",
+		"noSubtasks": "No sub-issues yet.",
+		"moreSubtasks": "More sub-issues",
 		"openLinear": "Open in Linear",
 		"unknownUser": "Unknown user",
 		"unknown": "This operation has not been confirmed. Check its result before creating another issue or comment.",

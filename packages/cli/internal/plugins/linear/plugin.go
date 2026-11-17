@@ -164,7 +164,9 @@ func (p *Plugin) Register(host lifecycle.Host) error {
 		return p.Issues(cmd.Context(), binding, filter)
 	})
 	issues.Flags().StringVar(&filter.Query, "query", "", "")
+	issues.Flags().StringVar(&filter.ParentID, "parent", "", "")
 	i18n.MarkFlagUsage(issues, "query", "linear.flag.query")
+	i18n.MarkFlagUsage(issues, "parent", "linear.flag.parent_filter")
 	root.AddCommand(issues)
 	root.AddCommand(command("issue <id>", "issue", i18n.ExactArgs(1), func(cmd *cobra.Command, args []string) (any, error) {
 		binding, err := service.Require(cmd.Context(), scope())
@@ -173,7 +175,22 @@ func (p *Plugin) Register(host lifecycle.Host) error {
 		}
 		return p.Issue(cmd.Context(), binding, args[0])
 	}))
+	root.AddCommand(command("comments <id>", "comments", i18n.ExactArgs(1), func(cmd *cobra.Command, args []string) (any, error) {
+		binding, err := service.Require(cmd.Context(), scope())
+		if err != nil {
+			return nil, err
+		}
+		nodes, page, err := p.Comments(cmd.Context(), binding, args[0], after)
+		if nodes == nil {
+			nodes = []tracking.Comment{}
+		}
+		return struct {
+			Nodes    []tracking.Comment `json:"nodes"`
+			PageInfo tracking.PageInfo  `json:"pageInfo"`
+		}{Nodes: nodes, PageInfo: page}, err
+	}))
 	var createFile, updateFile, commentFile string
+	var parentID string
 	create := command("create", "create", i18n.NoArgs, func(cmd *cobra.Command, _ []string) (any, error) {
 		binding, err := service.Require(cmd.Context(), scope())
 		if err != nil {
@@ -186,11 +203,19 @@ func (p *Plugin) Register(host lifecycle.Host) error {
 		if input.OperationID == "" {
 			input.OperationID = operationID()
 		}
-		if input.TeamID == "" {
+		if cmd.Flags().Changed("parent") {
+			if parentID == "" || input.ParentID != "" && input.ParentID != parentID {
+				return nil, tracking.Fail("input")
+			}
+			input.ParentID = parentID
+		}
+		if input.TeamID == "" && input.ParentID == "" {
 			input.TeamID = binding.TeamID
 		}
 		return p.CreateIssue(cmd.Context(), binding, input)
 	})
+	create.Flags().StringVar(&parentID, "parent", "", "")
+	i18n.MarkFlagUsage(create, "parent", "linear.flag.parent_create")
 	update := command("update <id>", "update", i18n.ExactArgs(1), func(cmd *cobra.Command, args []string) (any, error) {
 		binding, err := service.Require(cmd.Context(), scope())
 		if err != nil {

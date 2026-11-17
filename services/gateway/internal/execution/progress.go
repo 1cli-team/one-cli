@@ -32,6 +32,9 @@ func (s *Store) pause(job assignment, update report) error {
 		return err
 	}
 	job.Progress = &progress
+	if update.Result.Subtasks != nil {
+		job.Subtasks = update.Result.Subtasks
+	}
 	job.LogsTruncated = job.LogsTruncated || update.Result.LogsTruncated
 	job.State, job.UpdatedAt = api.ExecutionWaitingToContinue, time.Now().UTC()
 	return s.save(job)
