@@ -23,8 +23,10 @@ export interface DesktopAPI {
   retryBackend(): Promise<void>;
   confirmHealth(generation: string): Promise<void>;
   chooseWorkspace(): Promise<string | null>;
+  openDirectory(path: string): Promise<void>;
   openExternal(url: string): Promise<void>;
   setNativeLocale(locale: string): Promise<void>;
+  setNativeTheme(theme: "light" | "dark"): Promise<void>;
   checkUpdate(): Promise<UpdateInfo>;
   installUpdate(): Promise<void>;
 }

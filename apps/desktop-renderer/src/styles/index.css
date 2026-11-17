@@ -3,3 +3,4 @@
 @import "./reset.css" layer(reset);
 @import "./tokens.css";
 @import "./tailwind.css";
+@import "./window.css";

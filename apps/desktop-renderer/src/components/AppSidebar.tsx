@@ -1,8 +1,10 @@
 import {
 	AppWindow,
+	ClipboardList,
 	ArrowLeft,
 	ChevronRight,
 	House,
+	GitBranch,
 	KeyRound,
 	MonitorCog,
 	Package,
@@ -14,7 +16,7 @@ import {
 import { Collapsible } from "radix-ui";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useMatch, useNavigate, useParams } from "react-router-dom";
+import { useLocation, useMatch, useNavigate, useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { DiscardDialog } from "@/components/ui/discard-dialog";
@@ -32,15 +34,9 @@ import { useWorkspace } from "@/features/workspace-navigation/useWorkspace";
 import { useThemeStore } from "@/lib/stores/theme";
 import { cn } from "@/lib/utils";
 import { projectPath, workspacePath } from "@/router/paths";
-import type { OverviewProject, WorkspaceRegistryStatus } from "@/types/api";
+import { WorkspaceGroupsSidebar } from "@/features/workspace-groups/WorkspaceGroupsSidebar";
+import type { OverviewProject } from "@/types/api";
 
-const STATUS_DOT_CLASS: Record<WorkspaceRegistryStatus, string> = {
-	ready: "bg-success-foreground",
-	missing: "bg-muted-foreground",
-	invalid: "bg-error-foreground",
-	"identity-missing": "bg-warning-foreground",
-	"identity-conflict": "bg-warning-foreground",
-};
 const PROJECT_GROUPS = [
 	{ kind: "app", directory: "apps", icon: AppWindow },
 	{ kind: "package", directory: "packages", icon: Package },
@@ -96,7 +92,7 @@ function SidebarPanels({ entryId, homeTo }: Pick<SidebarProps, "entryId" | "home
 					inert={detailMode}
 					aria-hidden={detailMode}
 				>
-					<GlobalSidebar homeTo={homeTo} />
+					<GlobalSidebar />
 				</div>
 				<div
 					className="flex h-full w-1/2 min-w-0 shrink-0 flex-col"
@@ -119,81 +115,36 @@ function SidebarPanels({ entryId, homeTo }: Pick<SidebarProps, "entryId" | "home
 	);
 }
 
-function GlobalSidebar({ homeTo }: { homeTo: string }) {
+function GlobalSidebar() {
 	const { t } = useTranslation();
 	const { mode } = useThemeStore();
-	const { registry } = useWorkspace();
 	return (
 		<>
-			<div className="flex min-h-14 shrink-0 items-center gap-2.5 border-b border-border px-4">
+			<div className="window-titlebar window-sidebar-titlebar window-sidebar-brand flex min-h-14 shrink-0 items-center gap-2.5 border-b border-border px-4">
 				<img
 					src={mode === "dark" ? "/brand/icon-inverted.svg" : "/brand/icon.svg"}
 					alt=""
-					className="size-6"
+					className="size-6 shrink-0"
 				/>
-				<span className="text-base font-medium">One Desktop</span>
+				<span className="truncate text-base font-medium">One Desktop</span>
 			</div>
 			<nav className="flex shrink-0 flex-col gap-1 p-3" aria-label={t("navigation.global")}>
 				<Button variant="navigation" size="navigation-compact" className="min-h-9" asChild>
-					<EnvironmentNavLink to={homeTo} end>
-						<House />
+					<EnvironmentNavLink to="/" end>
+						<House strokeWidth={1.5} />
 						<span>{t("sidebar.home")}</span>
 					</EnvironmentNavLink>
 				</Button>
 			</nav>
 			<Separator />
-			<div className="flex items-center justify-between px-5 pt-4 pb-2 text-xs text-muted-foreground">
-				<span>{t("workspaces.rail.title")}</span>
-				<span className="font-mono tabular-nums">{registry.data?.workspaces.length}</span>
-			</div>
-			<nav
-				className="flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto px-3 pb-3"
-				aria-label={t("workspaces.rail.title")}
-			>
-				{registry.isLoading && <Skeleton className="h-9" />}
-				{registry.error && (
-					<Button variant="outline" onClick={() => void registry.mutate()}>
-						{t("workspaces.retry")}
-					</Button>
-				)}
-				{registry.data?.workspaces.length === 0 && (
-					<p className="px-2 text-sm text-muted-foreground">{t("workspaces.rail.empty")}</p>
-				)}
-				{registry.data?.workspaces.map((workspace) => (
-					<Button
-						key={workspace.entryId}
-						variant="navigation"
-						size="navigation-compact"
-						className="min-h-9"
-						asChild
-					>
-						<EnvironmentLink
-							to={workspacePath(workspace.entryId)}
-							title={`${workspace.name}\n${workspace.root}`}
-						>
-							<span
-								className={cn("size-2 shrink-0 rounded-full", STATUS_DOT_CLASS[workspace.status])}
-								role="img"
-								aria-label={t(`workspaces.status.${workspace.status}`)}
-							/>
-							<span className="min-w-0 flex-1 truncate">{workspace.name}</span>
-							<span
-								className="font-mono text-xs tabular-nums text-muted-foreground"
-								title={t("workspaces.home.projectCount", { count: workspace.projectCount })}
-							>
-								{workspace.projectCount}
-							</span>
-						</EnvironmentLink>
-					</Button>
-				))}
-			</nav>
+			<WorkspaceGroupsSidebar />
 			<nav
 				className="flex shrink-0 flex-col gap-1 border-t border-border p-3"
 				aria-label={t("sidebar.settings")}
 			>
 				<Button variant="navigation" size="navigation-compact" className="min-h-9" asChild>
 					<EnvironmentNavLink to="/settings">
-						<Settings2 />
+						<Settings2 strokeWidth={1.5} />
 						<span>{t("sidebar.settings")}</span>
 					</EnvironmentNavLink>
 				</Button>
@@ -206,11 +157,19 @@ function SettingsSidebar({ homeTo }: { homeTo: string }) {
 	const { t } = useTranslation();
 	return (
 		<>
-			<div className="flex min-h-14 shrink-0 items-center border-b border-border px-3">
-				<Button variant="ghost" className="w-full justify-start" asChild>
+			<div className="window-titlebar window-sidebar-titlebar flex min-h-14 shrink-0 items-center border-b border-border px-3">
+				<Button variant="ghost" className="w-full min-w-0 justify-start [&>span]:truncate" asChild>
 					<EnvironmentLink to={homeTo}>
 						<ArrowLeft />
-						<span>{t("navigation.allWorkspaces")}</span>
+						<span>
+							{t(
+								homeTo.startsWith("/projects/")
+									? "groups.backToProject"
+									: homeTo.startsWith("/workspaces")
+										? "groups.allWorkspaces"
+										: "groups.allProjects",
+							)}
+						</span>
 					</EnvironmentLink>
 				</Button>
 			</div>
@@ -237,13 +196,19 @@ function SettingsSidebar({ homeTo }: { homeTo: string }) {
 						<span>{t("global.title")}</span>
 					</EnvironmentNavLink>
 				</Button>
+				<Button variant="navigation" size="navigation-compact" className="min-h-9" asChild>
+					<EnvironmentNavLink to="/settings/linear" end>
+						<ClipboardList />
+						<span>{t("linear.settings")}</span>
+					</EnvironmentNavLink>
+				</Button>
 			</nav>
 		</>
 	);
 }
 
 function WorkspaceSidebar({
-	entryId,
+	entryId: logicalEntryId,
 	homeTo,
 	active,
 }: {
@@ -253,8 +218,15 @@ function WorkspaceSidebar({
 }) {
 	const { t } = useTranslation();
 	const { projectName } = useParams();
+	const { search } = useLocation();
 	const navigate = useNavigate();
-	const { workspace, overview, environment, available } = useWorkspace(entryId);
+	const {
+		workspace,
+		overview,
+		environment,
+		available,
+		contextEntryId: entryId,
+	} = useWorkspace(logicalEntryId);
 	const projects = overview.data?.projects ?? [];
 	const [createOpen, setCreateOpen] = useState(false);
 	const [bindingOpen, setBindingOpen] = useState(false);
@@ -271,11 +243,19 @@ function WorkspaceSidebar({
 	}
 	return (
 		<>
-			<div className="flex min-h-14 shrink-0 items-center border-b border-border px-3">
-				<Button variant="ghost" className="w-full justify-start" asChild>
+			<div className="window-titlebar window-sidebar-titlebar flex min-h-14 shrink-0 items-center border-b border-border px-3">
+				<Button variant="ghost" className="w-full min-w-0 justify-start [&>span]:truncate" asChild>
 					<EnvironmentLink to={homeTo}>
 						<ArrowLeft />
-						<span>{t("navigation.allWorkspaces")}</span>
+						<span>
+							{t(
+								homeTo.startsWith("/projects/")
+									? "groups.backToProject"
+									: homeTo.startsWith("/workspaces")
+										? "groups.allWorkspaces"
+										: "groups.allProjects",
+							)}
+						</span>
 					</EnvironmentLink>
 				</Button>
 			</div>
@@ -295,11 +275,29 @@ function WorkspaceSidebar({
 				aria-label={t("projectInspector.projectListLabel")}
 			>
 				{available && !overview.data && !overview.error && <Skeleton className="h-24" />}
+				<Button variant="navigation" size="navigation-compact" asChild>
+					<EnvironmentNavLink
+						to={
+							new URLSearchParams(search).get("group")
+								? `/projects/${encodeURIComponent(new URLSearchParams(search).get("group")!)}/issues`
+								: `/workspaces/${encodeURIComponent(logicalEntryId)}/issues`
+						}
+					>
+						<ClipboardList />
+						<span>{t("linear.issues")}</span>
+					</EnvironmentNavLink>
+				</Button>
 				{overview.error && (
 					<Button variant="outline" onClick={() => void overview.mutate()}>
 						{t("workspaces.retry")}
 					</Button>
 				)}
+				<Button variant="navigation" size="navigation-compact" asChild>
+					<EnvironmentNavLink to={`${workspacePath(entryId)}/git/worktrees`}>
+						<GitBranch />
+						<span>{t("git.title")}</span>
+					</EnvironmentNavLink>
+				</Button>
 				{PROJECT_GROUPS.map(({ kind, directory, icon: Icon }) => {
 					const group = projects.filter((project) => project.kind === kind);
 					if (!group.length) return null;
@@ -386,12 +384,7 @@ function WorkspaceSidebar({
 					onClose={() => setCreateOpen(false)}
 					onCreated={(name) => {
 						setCreateOpen(false);
-						navigate(
-							preserveEnvironment(
-								projectPath(entryId, name),
-								`?env=${encodeURIComponent(environment)}`,
-							),
-						);
+						navigate(preserveEnvironment(projectPath(entryId, name), search));
 					}}
 				/>
 			)}

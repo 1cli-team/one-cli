@@ -1,3 +1,5 @@
+import { workspaceGroupsKey } from "@/api/workspace-groups";
+import { useSessionSWRConfig } from "@/lib/desktop/cache";
 import { useSearchParams } from "react-router-dom";
 import { workspacePath } from "@/router/paths";
 import { OpenWorkspace } from "@/lib/desktop/OpenWorkspace";
@@ -128,6 +130,7 @@ export const WorkspaceHome: React.FC = () => {
 	const { t } = useTranslation();
 	const toast = useToast();
 	const registry = useSWR(workspacesKey, getWorkspaces);
+	const { mutate } = useSessionSWRConfig();
 	const [searchParams, setSearchParams] = useSearchParams();
 	const query = searchParams.get("q") ?? "";
 	const filter = searchParams.get("status") === "attention" ? "attention" : "all";
@@ -200,6 +203,7 @@ export const WorkspaceHome: React.FC = () => {
 						: current,
 				{ revalidate: false },
 			);
+			await mutate(workspaceGroupsKey, undefined, { revalidate: true, throwOnError: false });
 			toast.success(t("workspaces.forget.done", { name: workspaceToForget.name }));
 			setWorkspaceToForget(null);
 		} catch (error) {

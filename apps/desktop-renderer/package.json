@@ -19,6 +19,10 @@
     "typecheck": "tsc -b --pretty false"
   },
   "dependencies": {
+    "@base-ui/react": "1.8.0",
+    "@dnd-kit/abstract": "^0.5.3",
+    "@dnd-kit/dom": "^0.5.3",
+    "@dnd-kit/react": "^0.5.3",
     "@one-desktop/preload": "workspace:*",
     "@tailwindcss/vite": "^4.3.3",
     "axios": "^1.20.0",

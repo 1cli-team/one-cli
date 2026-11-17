@@ -79,37 +79,6 @@ export function createLifecycle({
       },
     ];
     tray?.setContextMenu(Menu.buildFromTemplate(items));
-    if (process.platform === "darwin") {
-      Menu.setApplicationMenu(
-        Menu.buildFromTemplate([
-          {
-            label: "One Desktop",
-            submenu: [
-              { role: "about" },
-              { type: "separator" },
-              { role: "services" },
-              { type: "separator" },
-              { role: "hide" },
-              { role: "hideOthers" },
-              { role: "unhide" },
-              { type: "separator" },
-              {
-                label: text.tray.quit,
-                accelerator: "Cmd+Q",
-                click: () => {
-                  void requestExit();
-                },
-              },
-            ],
-          },
-          { role: "editMenu" },
-          { role: "windowMenu" },
-        ]),
-      );
-    } else {
-      // The Tauri window has no menu bar on Windows/Linux.
-      Menu.setApplicationMenu(null);
-    }
   }
 
   function init() {

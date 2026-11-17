@@ -1,4 +1,4 @@
-import { BrowserWindow, protocol, net, type IpcMainInvokeEvent } from "electron";
+import { BrowserWindow, protocol, net, nativeTheme, type IpcMainInvokeEvent } from "electron";
 import { resolve, relative, isAbsolute, sep, join } from "node:path";
 import { pathToFileURL } from "node:url";
 import { readLegacyPreferences } from "./legacy.ts";
@@ -97,6 +97,13 @@ export function createMainWindow({
       minWidth: 760,
       minHeight: 560,
       show: false,
+      titleBarStyle: "hidden",
+      titleBarOverlay: {
+        height: 56,
+        color: "#00000000",
+        symbolColor: nativeTheme.shouldUseDarkColors ? "#ededf0" : "#242427",
+      },
+      trafficLightPosition: { x: 16, y: 20 },
       icon: join(assetsDirectory, "icon.png"),
       webPreferences: {
         preload: join(buildDirectory, "preload/index.cjs"),
@@ -146,6 +153,14 @@ export function createMainWindow({
       if (window?.isMinimized()) window.restore();
       window?.show();
       window?.focus();
+    },
+    setTheme(theme: "light" | "dark") {
+      nativeTheme.themeSource = theme;
+      if (process.platform !== "darwin") {
+        window?.setTitleBarOverlay({
+          symbolColor: theme === "dark" ? "#ededf0" : "#242427",
+        });
+      }
     },
     permitExit() {
       exiting = true;

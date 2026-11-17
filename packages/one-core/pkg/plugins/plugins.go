@@ -6,6 +6,8 @@ import (
 
 	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/core/backend"
 	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/modules/environment"
+	gitmodule "github.com/torchstellar-team/one-cli/packages/one-core/pkg/modules/git"
+	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/modules/issuetracking"
 	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/ports/secrets"
 )
 
@@ -17,17 +19,21 @@ type Plugin interface {
 }
 
 type Contributions struct {
-	Backends     []backend.BackendSpec
-	Environments []environment.Backend
-	Loaders      []secrets.Loader
-	Global       secrets.GlobalLoader
+	IssueTracking issuetracking.Backend
+	Git           gitmodule.Backend
+	Backends      []backend.BackendSpec
+	Environments  []environment.Backend
+	Loaders       []secrets.Loader
+	Global        secrets.GlobalLoader
 }
 
 type Registry struct {
-	Catalog      *backend.Catalog
-	Environments *environment.Service
-	Loaders      *secrets.Registry
-	Global       secrets.GlobalLoader
+	IssueTracking issuetracking.Backend
+	Git           gitmodule.Backend
+	Catalog       *backend.Catalog
+	Environments  *environment.Service
+	Loaders       *secrets.Registry
+	Global        secrets.GlobalLoader
 }
 
 func New(installed ...Plugin) (*Registry, error) {
@@ -36,6 +42,8 @@ func New(installed ...Plugin) (*Registry, error) {
 	var environments []environment.Backend
 	var loaders []secrets.Loader
 	var global secrets.GlobalLoader
+	var gitBackend gitmodule.Backend
+	var issueBackend issuetracking.Backend
 	for _, plugin := range installed {
 		if plugin == nil || plugin.ID() == "" {
 			return nil, fmt.Errorf("plugins: missing identity")
@@ -45,6 +53,18 @@ func New(installed ...Plugin) (*Registry, error) {
 		}
 		seen[plugin.ID()] = true
 		contributions := plugin.Contributions()
+		if contributions.IssueTracking != nil {
+			if issueBackend != nil {
+				return nil, fmt.Errorf("plugins: issue tracking backend registered twice")
+			}
+			issueBackend = contributions.IssueTracking
+		}
+		if contributions.Git != nil {
+			if gitBackend != nil {
+				return nil, fmt.Errorf("plugins: Git backend registered twice")
+			}
+			gitBackend = contributions.Git
+		}
 		specs = append(specs, contributions.Backends...)
 		environments = append(environments, contributions.Environments...)
 		loaders = append(loaders, contributions.Loaders...)
@@ -67,5 +87,5 @@ func New(installed ...Plugin) (*Registry, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &Registry{Catalog: catalog, Environments: environmentService, Loaders: registry, Global: global}, nil
+	return &Registry{Git: gitBackend, IssueTracking: issueBackend, Catalog: catalog, Environments: environmentService, Loaders: registry, Global: global}, nil
 }

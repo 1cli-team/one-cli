@@ -11,6 +11,9 @@ import (
 	catalog "github.com/torchstellar-team/one-cli/packages/one-core/pkg/core/backend"
 	creationmodule "github.com/torchstellar-team/one-cli/packages/one-core/pkg/modules/creation"
 	environmentmodule "github.com/torchstellar-team/one-cli/packages/one-core/pkg/modules/environment"
+	gitmodule "github.com/torchstellar-team/one-cli/packages/one-core/pkg/modules/git"
+	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/modules/issuetracking"
+	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/modules/workspacegroups"
 	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/platform/desktopcontrol"
 	cliErrors "github.com/torchstellar-team/one-cli/packages/one-core/pkg/platform/errors"
 	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/platform/i18n"
@@ -23,6 +26,9 @@ import (
 // MuxOpts is the static configuration for one running server. Tests
 // construct it directly; production goes through Run.
 type MuxOpts struct {
+	IssueTracking     *issuetracking.Service
+	GitService        *gitmodule.Service
+	GroupService      *workspacegroups.Service
 	Lifecycle         context.Context
 	SharedCredentials *authentication.SharedCredentialsService
 	ExpectedHosts     map[string]struct{}
@@ -105,6 +111,9 @@ func BuildMux(opts MuxOpts) http.Handler {
 	registerCatalogRoutes(api, opts)
 	registerPreferencesRoutes(api, opts)
 	registerWorkspacesRoutes(api, opts)
+	registerGroupRoutes(api, opts)
+	registerIssueTrackingRoutes(api, opts)
+	registerGitRoutes(api, opts)
 	registerDesktopRoutes(api, opts)
 
 	root := http.NewServeMux()

@@ -90,6 +90,16 @@ depends = ["check:static"]
 [tasks.fmt]
 depends = ["cli:fmt", "one-core:fmt", "desktop-api:fmt"]
 
+[tasks."linear:check"]
+description = "Verify the Linear plugin, project bindings, CLI and HTTP API"
+depends = ["sync-bundled"]
+run = ["go vet ./packages/one-core/pkg/plugins/linear ./packages/one-core/pkg/modules/issuetracking ./packages/cli/internal/plugins/linear ./services/desktop-api/internal/http", "go test -race ./packages/one-core/pkg/plugins/linear ./packages/one-core/pkg/modules/issuetracking ./packages/cli/internal/plugins/linear ./services/desktop-api/internal/http"]
+
+[tasks."git:check"]
+description = "Verify Git branches, worktrees, CLI and HTTP API"
+depends = ["sync-bundled"]
+run = ["go vet ./packages/one-core/pkg/plugins/git ./packages/one-core/pkg/modules/git ./packages/cli/internal/plugins/git ./services/desktop-api/internal/http", "go test -race ./packages/one-core/pkg/plugins/git ./packages/one-core/pkg/modules/git ./packages/cli/internal/plugins/git ./services/desktop-api/internal/http"]
+
 [tasks."fmt:check"]
 run = "go run ./packages/cli/tools/repo-checks gofmt"
 

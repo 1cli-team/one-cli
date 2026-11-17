@@ -12,8 +12,10 @@ const api: DesktopAPI = {
   retryBackend: () => ipcRenderer.invoke("desktop:retry"),
   confirmHealth: (generation) => ipcRenderer.invoke("desktop:health", generation),
   chooseWorkspace: () => ipcRenderer.invoke("desktop:choose-workspace"),
+  openDirectory: (path) => ipcRenderer.invoke("desktop:open-directory", path),
   openExternal: (url) => ipcRenderer.invoke("desktop:open-external", url),
   setNativeLocale: (locale) => ipcRenderer.invoke("desktop:locale", locale),
+  setNativeTheme: (theme) => ipcRenderer.invoke("desktop:theme", theme),
   checkUpdate: () => ipcRenderer.invoke("desktop:check-update"),
   installUpdate: () => ipcRenderer.invoke("desktop:install-update"),
 };

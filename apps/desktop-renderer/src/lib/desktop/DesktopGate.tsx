@@ -94,7 +94,7 @@ export function DesktopGate({ children }: { children: ReactNode }) {
 			{!state.connected ? (
 				<div
 					role="status"
-					className="fixed inset-0 z-50 grid place-items-center bg-background/95 p-6 text-foreground"
+					className="window-fallback fixed inset-0 z-50 grid place-items-center bg-background/95 p-6 text-foreground"
 				>
 					<div className="flex w-full max-w-md flex-col gap-4">
 						<h1 className="text-2xl font-medium">One Desktop</h1>

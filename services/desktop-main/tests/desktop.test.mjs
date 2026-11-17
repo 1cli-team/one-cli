@@ -98,6 +98,10 @@ test(
         page.evaluate(() => window.desktop.openExternal("file:///etc/passwd")),
         /invalid_url/,
       );
+      await assert.rejects(
+        page.evaluate(() => window.desktop.openDirectory("relative/path")),
+        /invalid_path/,
+      );
       assert.equal((await page.evaluate(() => window.desktop.checkUpdate())).enabled, false);
       await page.evaluate(() => {
         localStorage.setItem("one_desktop_setup_seen", "1");
@@ -168,12 +172,82 @@ test(
         path.join(workspace, "one.manifest.toml"),
         'version = 2\n[workspace]\nid = "desktop-test"\nname = "桌面测试"\n',
       );
+      for (const args of [
+        ["init", "-b", "main"],
+        ["add", "."],
+        [
+          "-c",
+          "user.name=Test",
+          "-c",
+          "user.email=test@example.invalid",
+          "commit",
+          "-m",
+          "initial",
+        ],
+      ])
+        execFileSync("git", args, { cwd: workspace });
       await application.evaluate(({ dialog }, selected) => {
         dialog.showOpenDialog = async () => ({ canceled: false, filePaths: [selected] });
       }, workspace);
       await page.getByRole("button", { name: "打开工作区", exact: true }).click();
+      await page.getByRole("dialog").getByRole("button", { name: "浏览", exact: true }).click();
+      await page
+        .getByRole("dialog")
+        .getByRole("button", { name: "打开工作区", exact: true })
+        .click();
       await page.waitForURL(/#\/workspaces\//);
       await page.waitForFunction(() => document.body.innerText.includes("桌面测试"));
+      await page
+        .getByRole("navigation")
+        .getByRole("link", { name: "Worktrees", exact: true })
+        .click();
+      await page.getByRole("heading", { name: "Worktrees", exact: true }).waitFor();
+      await page.getByRole("heading", { name: "main", exact: true }).waitFor();
+      await page.getByRole("button", { name: "创建工作树", exact: true }).click();
+      const create = page.getByRole("dialog");
+      await create.getByLabel("分支名称", { exact: true }).fill("feature/desktop-test");
+      const worktree = path.join(temporary, "工作树 with spaces");
+      await create.getByLabel("目标目录", { exact: true }).fill(worktree);
+      await create.getByRole("button", { name: "创建工作树", exact: true }).click();
+      await create.waitFor({ state: "hidden" });
+      await page.getByRole("heading", { name: "feature/desktop-test", exact: true }).waitFor();
+      await page.screenshot({ path: path.join(tmpdir(), "one-worktrees-zh.png") });
+      await page.getByRole("button", { name: "语言", exact: true }).click();
+      await page.getByRole("menuitemradio", { name: "English", exact: true }).click();
+      await page.getByRole("button", { name: "Create worktree", exact: true }).waitFor();
+      await page.setViewportSize({ width: 760, height: 640 });
+      await page.screenshot({ path: path.join(tmpdir(), "one-worktrees-en.png") });
+      assert.equal(
+        await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),
+        true,
+      );
+      await page.setViewportSize({ width: 1280, height: 820 });
+      await page.getByRole("button", { name: "Language", exact: true }).click();
+      await page.getByRole("menuitemradio", { name: "中文", exact: true }).click();
+      const linked = page
+        .getByRole("article")
+        .filter({ has: page.getByRole("heading", { name: "feature/desktop-test", exact: true }) });
+      const previousWorkspaceURL = page.url();
+      await linked.getByRole("button", { name: "打开工作区", exact: true }).click();
+      await page.waitForURL(
+        (url) => url.href !== previousWorkspaceURL && !url.hash.endsWith("/git/worktrees"),
+      );
+      await page
+        .getByRole("navigation")
+        .getByRole("link", { name: "Worktrees", exact: true })
+        .click();
+      const current = page
+        .getByRole("article")
+        .filter({ has: page.getByRole("heading", { name: "feature/desktop-test", exact: true }) });
+      await current.getByText("当前工作区", { exact: true }).waitFor();
+      await current.getByRole("button", { name: "移除", exact: true }).click();
+      await page.getByRole("dialog").getByRole("button", { name: "移除", exact: true }).click();
+      await page.waitForURL(/#\/workspaces\/.*\/git\/worktrees$/);
+      await assert.rejects(readFile(path.join(worktree, "one.manifest.toml")), { code: "ENOENT" });
+      execFileSync("git", ["show-ref", "--verify", "refs/heads/feature/desktop-test"], {
+        cwd: workspace,
+      });
+
       await page.evaluate(() => {
         window.location.hash = "#/desktop";
       });

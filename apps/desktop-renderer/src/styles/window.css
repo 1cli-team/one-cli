@@ -1,0 +1,60 @@
+@layer utilities {
+	:root[data-desktop] {
+		--window-controls-left: env(titlebar-area-x, 0px);
+		--window-controls-right: max(
+			0px,
+			calc(100vw - env(titlebar-area-x, 0px) - env(titlebar-area-width, 100vw))
+		);
+		--window-titlebar-height: max(3.5rem, env(titlebar-area-height, 0px));
+	}
+
+	[data-desktop] .window-titlebar {
+		app-region: drag;
+		user-select: none;
+		min-height: var(--window-titlebar-height);
+	}
+
+	[data-desktop]
+		.window-titlebar
+		:is(button, a, input, select, textarea, [role="button"], [role="combobox"]) {
+		app-region: no-drag;
+	}
+
+	[data-desktop] .window-sidebar-titlebar {
+		padding-left: max(1rem, calc(var(--window-controls-left) + 0.75rem));
+	}
+
+	[data-desktop] .window-sidebar-brand {
+		gap: 0.5rem;
+	}
+
+	[data-desktop] .window-sidebar-brand > span {
+		font-size: 0.875rem;
+	}
+
+	[data-desktop] .window-topbar {
+		padding-right: max(1rem, calc(var(--window-controls-right) + 0.75rem));
+	}
+
+	[data-desktop] .window-fallback::before {
+		content: "";
+		position: fixed;
+		top: 0;
+		left: 0;
+		right: 0;
+		height: var(--window-titlebar-height);
+		app-region: drag;
+	}
+
+	@media (width < 64rem) {
+		[data-desktop] .window-topbar {
+			padding-left: max(1rem, calc(var(--window-controls-left) + 0.75rem));
+		}
+	}
+
+	@media (width >= 64rem) {
+		[data-desktop] .window-topbar {
+			padding-right: max(1.5rem, calc(var(--window-controls-right) + 1rem));
+		}
+	}
+}

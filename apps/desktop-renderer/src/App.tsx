@@ -4,18 +4,22 @@ import { AppSidebar } from "@/components/AppSidebar";
 import { TopBar } from "@/components/TopBar";
 import { DesktopWelcome } from "@/lib/desktop/DesktopSettings";
 import { NavigationGuard } from "@/router/NavigationGuard";
+import { groupPath } from "@/router/paths";
 import { cn } from "@/lib/utils";
 
 export function App() {
 	const { pathname, search } = useLocation();
 	const entryId = useMatch("/workspaces/:entryId/*")?.params.entryId;
 	const workspaceMode = Boolean(entryId);
+	const detailMode = workspaceMode;
 	const credentialsMode = Boolean(useMatch("/settings/credentials"));
 	const [mobileOpen, setMobileOpen] = useState(false);
 	const homeTo = useRef("/");
 	const main = useRef<HTMLElement>(null);
 	const scrollPositions = useRef(new Map<string, number>());
-	if (pathname === "/") homeTo.current = `/${search}`;
+	if (pathname === "/" || pathname === "/workspaces") homeTo.current = `${pathname}${search}`;
+	const groupId = new URLSearchParams(search).get("group");
+	const workspaceHome = entryId && groupId ? groupPath(groupId) : homeTo.current;
 	useLayoutEffect(() => {
 		setMobileOpen(false);
 		const element = main.current;
@@ -28,25 +32,25 @@ export function App() {
 			<NavigationGuard />
 			<AppSidebar
 				entryId={entryId}
-				homeTo={homeTo.current}
+				homeTo={workspaceHome}
 				mobileOpen={mobileOpen}
 				onMobileOpenChange={setMobileOpen}
 			/>
 			<div className="flex min-w-0 flex-1 flex-col">
-				<TopBar homeTo={homeTo.current} onOpenNavigation={() => setMobileOpen(true)} />
+				<TopBar homeTo={workspaceHome} onOpenNavigation={() => setMobileOpen(true)} />
 				<main
 					ref={main}
 					onScroll={(event) => scrollPositions.current.set(pathname, event.currentTarget.scrollTop)}
 					className={cn(
 						"min-h-0 min-w-0 flex-1",
-						workspaceMode ? "overflow-hidden" : "overflow-y-auto p-4 ud-md:p-6",
+						detailMode ? "overflow-hidden" : "overflow-y-auto p-4 ud-md:p-6",
 					)}
 				>
 					<div
 						className={cn(
 							"w-full",
-							(workspaceMode || credentialsMode) && "h-full min-h-0",
-							!workspaceMode && "mx-auto max-w-[1600px]",
+							(detailMode || credentialsMode) && "h-full min-h-0",
+							!detailMode && "mx-auto max-w-[1600px]",
 						)}
 					>
 						<Outlet />

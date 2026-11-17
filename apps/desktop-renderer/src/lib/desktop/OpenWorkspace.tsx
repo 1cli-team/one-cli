@@ -1,36 +1,42 @@
-import { workspacePath } from "@/router/paths";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import { FolderOpen } from "lucide-react";
-import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { http } from "@/lib/http";
-import { chooseWorkspace } from "./runtime";
+import { AddWorkspaceDialog } from "@/features/workspace-navigation/AddWorkspaceDialog";
+import { addGroupMembers, workspaceGroupsKey } from "@/api/workspace-groups";
+import { groupWorkspacePath, workspacePath } from "@/router/paths";
 import { useSessionSWRConfig } from "./cache";
-export function OpenWorkspace() {
+
+export function OpenWorkspace({ groupId, label }: { groupId?: string; label?: string }) {
 	const { t } = useTranslation();
-	const [busy, setBusy] = useState(false);
+	const [open, setOpen] = useState(false);
 	const navigate = useNavigate();
 	const { mutate } = useSessionSWRConfig();
-	async function open() {
-		setBusy(true);
-		try {
-			const path = await chooseWorkspace();
-			if (!path) return;
-			const entry = await http.post<{ entryId: string }>("/workspaces", { path });
-			await mutate("/workspaces");
-			navigate(workspacePath(entry.entryId));
-		} catch (e) {
-			toast.error((e as Error).message || String(e));
-		} finally {
-			setBusy(false);
-		}
-	}
 	return (
-		<Button disabled={busy} onClick={() => void open()}>
-			<FolderOpen />
-			{t("desktop.openWorkspace")}
-		</Button>
+		<>
+			<Button onClick={() => setOpen(true)}>
+				<FolderOpen />
+				{label ?? t("desktop.openWorkspace")}
+			</Button>
+			{open && (
+				<AddWorkspaceDialog
+					onClose={() => setOpen(false)}
+					onSaved={async (workspace) => {
+						if (groupId) await addGroupMembers(groupId, [workspace.entryId]);
+						setOpen(false);
+						await Promise.all([
+							mutate("/workspaces", undefined, { revalidate: true, throwOnError: false }),
+							mutate(workspaceGroupsKey, undefined, { revalidate: true, throwOnError: false }),
+						]);
+						navigate(
+							groupId
+								? groupWorkspacePath(groupId, workspace.entryId, workspace.worktreeId)
+								: workspacePath(workspace.entryId, workspace.worktreeId),
+						);
+					}}
+				/>
+			)}
+		</>
 	);
 }

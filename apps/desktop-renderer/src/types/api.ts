@@ -125,7 +125,17 @@ export type WorkspaceRegistryStatus =
 	| "missing"
 	| "invalid"
 	| "identity-missing"
-	| "identity-conflict";
+	| "identity-conflict"
+ | "uninitialized";
+
+export interface WorkspaceWorktree {
+ id: string;
+ root: string;
+ branch: string;
+ main: boolean;
+ status: WorkspaceRegistryStatus;
+ projectCount: number;
+}
 
 export interface WorkspaceRegistryEntry {
 	entryId: string;
@@ -134,7 +144,11 @@ export interface WorkspaceRegistryEntry {
 	root: string;
 	status: WorkspaceRegistryStatus;
 	projectCount: number;
-	lastSeenAt: string;
+ lastSeenAt: string;
+ gitCommonDir?: string;
+ worktreeId?: string;
+ worktrees?: WorkspaceWorktree[];
+ aliases?: { entryId: string; worktreeId?: string }[];
 }
 
 export interface WorkspacesResponse {

@@ -79,7 +79,7 @@ const DefaultErrorFallback: React.FC<{
 	const { t } = useTranslation();
 
 	return (
-		<div className="flex min-h-screen items-center justify-center bg-background px-6 py-10 text-foreground">
+		<div className="window-fallback flex min-h-screen items-center justify-center bg-background px-6 py-10 text-foreground">
 			<section className="flex w-full max-w-2xl flex-col gap-6">
 				<header className="flex flex-col gap-4">
 					<div className="flex items-start justify-between gap-4">

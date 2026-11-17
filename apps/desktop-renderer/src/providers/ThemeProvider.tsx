@@ -14,6 +14,7 @@ export const ThemeProvider: React.FC<React.PropsWithChildren> = ({ children }) =
 		root.classList.toggle("dark", mode === "dark");
 		root.classList.toggle("light", mode === "light");
 		root.style.colorScheme = mode;
+		void window.desktop?.setNativeTheme?.(mode);
 	}, [mode]);
 
 	return (
