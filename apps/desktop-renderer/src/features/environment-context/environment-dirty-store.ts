@@ -13,11 +13,7 @@ interface EnvironmentDirtyState {
 
 const discardCallbacks = new Map<string, DiscardCallback>();
 
-/**
- * Bridges the project Profile editor and the environment control in the app
- * chrome. The selector lives outside the workspace route, so local component
- * state cannot protect an in-flight edit when the route's SWR key changes.
- */
+/** Tracks unsaved editors across route navigation, environment changes and dialogs. */
 export const useEnvironmentDirtyStore = createStore<EnvironmentDirtyState>(
 	(set, get) => ({
 		dirtyOwners: {},

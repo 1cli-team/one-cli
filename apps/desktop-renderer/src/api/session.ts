@@ -68,6 +68,31 @@ export const globalListingKey = (location: GlobalLocation, query: string) =>
 	`/global-env/secrets:${JSON.stringify([location.siteUrl, location.userId, location.organizationId, location.projectId])}${query}`;
 export const getGlobalListing = (query: string) =>
 	http.get<GlobalListing>(`/global-env/secrets${query}`);
+export const globalTreeKey = (location: GlobalLocation, environment: string) =>
+	`${globalListingKey(location, globalQuery(environment, "/"))}&scope=environment`;
+
+export async function getGlobalTree(environment: string): Promise<GlobalListing[]> {
+	const pending = ["/"];
+	const visited = new Set(pending);
+	const listings: GlobalListing[] = [];
+	while (pending.length > 0) {
+		const batch = pending.splice(0, 4);
+		const results = await Promise.all(
+			batch.map((path) => getGlobalListing(globalQuery(environment, path))),
+		);
+		for (const listing of results) {
+			listings.push(listing);
+			for (const path of listing.folders) {
+				if (!visited.has(path)) {
+					visited.add(path);
+					pending.push(path);
+				}
+			}
+		}
+	}
+	return listings.sort((a, b) => a.path.localeCompare(b.path));
+}
+
 export const readGlobalSecret = (key: string, query: string) =>
 	http.get<{ value: string }>(`/global-env/secrets/${encodeURIComponent(key)}${query}`);
 export const saveGlobalSecret = (key: string, value: string, query: string, existing: boolean) =>

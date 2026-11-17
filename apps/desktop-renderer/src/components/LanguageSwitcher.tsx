@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { useLocaleStore, type LocaleMode } from "@/lib/stores/locale";
-import { Languages } from "lucide-react";
+import { ChevronDown, Languages } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 interface Option {
@@ -39,7 +39,14 @@ export function LanguageSwitcher({ showLabel = false }: { showLabel?: boolean })
 					aria-label={t("sidebar.language")}
 				>
 					<Languages className="size-4" aria-hidden="true" />
-					{showLabel && t(OPTIONS.find((option) => option.mode === mode)!.labelKey)}
+					{showLabel && (
+						<>
+							<span className="min-w-0 flex-1 truncate text-left">
+								{t(OPTIONS.find((option) => option.mode === mode)!.labelKey)}
+							</span>
+							<ChevronDown aria-hidden="true" />
+						</>
+					)}
 				</Button>
 			</DropdownMenuTrigger>
 			<DropdownMenuContent

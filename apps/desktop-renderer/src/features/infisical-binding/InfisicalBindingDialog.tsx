@@ -233,6 +233,7 @@ function BindingForm({ workspaceEntryId, environment, readOnly, onOpenChange }: 
 	}
 	return (
 		<DialogContent
+			className="max-h-[85dvh] overflow-y-auto"
 			showCloseButton={!busy}
 			onEscapeKeyDown={(e) => {
 				if (busy) e.preventDefault();
@@ -250,7 +251,7 @@ function BindingForm({ workspaceEntryId, environment, readOnly, onOpenChange }: 
 			) : session.isLoading ? (
 				<p role="status">{t("session.loading")}</p>
 			) : !account?.loggedIn ? (
-				<div className="space-y-3">
+				<div className="flex flex-col gap-3">
 					<p>{t("global.loginRequired")}</p>
 					<Button asChild>
 						<Link to="/settings">{t("session.login")}</Link>
@@ -258,7 +259,7 @@ function BindingForm({ workspaceEntryId, environment, readOnly, onOpenChange }: 
 				</div>
 			) : (
 				<>
-					<dl className="grid gap-3 rounded-md border bg-muted/40 p-4 text-sm ud-sm:grid-cols-2">
+					<dl className="grid gap-3 border-b border-border pb-4 text-sm ud-sm:grid-cols-2">
 						<div>
 							<dt className="text-muted-foreground">{t("session.account")}</dt>
 							<dd className="break-all">{account.email || account.userId}</dd>
@@ -277,7 +278,7 @@ function BindingForm({ workspaceEntryId, environment, readOnly, onOpenChange }: 
 					{initialId && (
 						<p className="break-all text-sm">{t("binding.current", { name: currentName })}</p>
 					)}
-					<div className="space-y-2">
+					<div className="flex flex-col gap-2">
 						<Label>{t("binding.method")}</Label>
 						<Select
 							value={mode}
@@ -297,7 +298,7 @@ function BindingForm({ workspaceEntryId, environment, readOnly, onOpenChange }: 
 						</Select>
 					</div>
 					{isExisting ? (
-						<div className="space-y-2">
+						<div className="flex flex-col gap-2">
 							<Label>{t("global.project")}</Label>
 							<Select
 								value={selectedProject ? project : ""}
@@ -334,7 +335,7 @@ function BindingForm({ workspaceEntryId, environment, readOnly, onOpenChange }: 
 							)}
 						</div>
 					) : null}
-					<div className="space-y-1 rounded-md border p-4 text-sm">
+					<div className="flex flex-col gap-1 border-t border-border pt-4 text-sm">
 						<p className="break-all font-medium">
 							{t("binding.target", {
 								name: isExisting

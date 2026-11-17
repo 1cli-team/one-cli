@@ -2,20 +2,16 @@ import { DesktopSettings } from "@/lib/desktop/DesktopSettings";
 import { AlertTriangle, ArrowLeft, FolderX, RefreshCw } from "lucide-react";
 import type React from "react";
 import { useTranslation } from "react-i18next";
-import { Navigate, type RouteObject, useLocation, useParams, useRoutes } from "react-router-dom";
-import useSWR from "swr";
-import { getOverview, overviewKeyFor } from "@/api/workspace";
-import { getWorkspaces, workspacesKey } from "@/api/workspaces";
+import { Navigate, type RouteObject, useLocation, useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { StatePanel } from "@/components/ui/page-layout";
+import { PageHeader, StatePanel } from "@/components/ui/page-layout";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EnvironmentLink } from "@/features/environment-context/EnvironmentLink";
-import {
-	environmentFromSearch,
-	preserveEnvironment,
-} from "@/features/environment-context/environment";
 import { Overview } from "@/pages/Overview";
+import { App } from "@/App";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { useWorkspace } from "@/features/workspace-navigation/useWorkspace";
+import { legacyWorkspaceLocation, projectPath, workspacePath } from "./paths";
 import { AccountSettings } from "@/features/infisical-session/AccountSettings";
 import { GlobalVariables } from "@/features/global-variables/GlobalVariables";
 
@@ -25,64 +21,42 @@ import type { WorkspaceRegistryEntry } from "@/types/api";
 const NotFoundRoute: React.FC = () => {
 	const { t } = useTranslation();
 	return (
-		<Card>
-			<StatePanel
-				icon={FolderX}
-				heading="h1"
-				title={t("notFound.title")}
-				description={t("notFound.description")}
-			>
-				<Button asChild>
-					<EnvironmentLink to="/">
-						<ArrowLeft />
-						{t("workspaces.unknown.back")}
-					</EnvironmentLink>
-				</Button>
-			</StatePanel>
-		</Card>
+		<StatePanel
+			icon={FolderX}
+			heading="h1"
+			title={t("notFound.title")}
+			description={t("notFound.description")}
+		>
+			<Button asChild>
+				<EnvironmentLink to="/">
+					<ArrowLeft />
+					{t("workspaces.unknown.back")}
+				</EnvironmentLink>
+			</Button>
+		</StatePanel>
 	);
 };
 
-const LegacySectionRedirect: React.FC = () => {
+const LegacySettingsRedirect: React.FC = () => {
 	const { search } = useLocation();
-	const { domain = "", backend = "" } = useParams<{
-		domain: string;
-		backend: string;
-	}>();
-	return (
-		<Navigate
-			replace
-			to={preserveEnvironment(
-				`/settings/${encodeURIComponent(domain)}/${encodeURIComponent(backend)}`,
-				search,
-			)}
-		/>
-	);
+	return <Navigate replace to={{ pathname: "/settings/general", search }} />;
 };
 
-const LegacyProfileRedirect: React.FC = () => {
+const LegacyWorkspaceRedirect: React.FC = () => {
+	const { entryId = "" } = useParams();
 	const { search } = useLocation();
-	return <Navigate replace to={preserveEnvironment("/settings", search)} />;
+	return <Navigate replace to={legacyWorkspaceLocation(entryId, search)} />;
+};
+
+const LegacyGlobalRedirect: React.FC<{ to: string }> = ({ to }) => {
+	const { search } = useLocation();
+	return <Navigate replace to={{ pathname: to, search }} />;
 };
 
 const WorkspaceRoute: React.FC = () => {
-	const { entryId = "" } = useParams<{ entryId: string }>();
-	return <WorkspaceContent key={entryId} />;
-};
-
-const WorkspaceContent: React.FC = () => {
-	const { entryId = "" } = useParams<{ entryId: string }>();
+	const { entryId = "", projectName } = useParams();
 	const { search } = useLocation();
-	const environment = environmentFromSearch(search);
-	const registry = useSWR(workspacesKey, getWorkspaces);
-	const workspace = registry.data?.workspaces.find((entry) => entry.entryId === entryId);
-	const canLoadOverview =
-		workspace?.status === "ready" || workspace?.status === "identity-conflict";
-	const overviewKey = entryId && canLoadOverview ? overviewKeyFor(entryId, environment) : null;
-	const overview = useSWR(overviewKey, () => getOverview(entryId, environment), {
-		shouldRetryOnError: false,
-		keepPreviousData: true,
-	});
+	const { registry, workspace, overview } = useWorkspace(entryId);
 
 	if (registry.isLoading && !registry.data)
 		return (
@@ -102,20 +76,18 @@ const WorkspaceContent: React.FC = () => {
 				<UnknownWorkspace />
 			</WorkspaceStateLayout>
 		);
-	if (workspace.status !== "ready" && workspace.status !== "identity-conflict") {
+	if (workspace.status !== "ready" && workspace.status !== "identity-conflict")
 		return (
 			<WorkspaceStateLayout>
 				<WorkspaceStatusPage workspace={workspace} />
 			</WorkspaceStateLayout>
 		);
-	}
-	if (overview.error) {
+	if (overview.error)
 		return (
 			<WorkspaceStateLayout>
 				<WorkspaceLoadError workspace={workspace} onRetry={() => void overview.mutate()} />
 			</WorkspaceStateLayout>
 		);
-	}
 	if (!overview.data)
 		return (
 			<WorkspaceStateLayout>
@@ -123,25 +95,62 @@ const WorkspaceContent: React.FC = () => {
 			</WorkspaceStateLayout>
 		);
 
+	const projects = overview.data.projects ?? [];
+	if (!projectName && projects.length) {
+		const requested = new URLSearchParams(search).get("project");
+		const location = legacyWorkspaceLocation(entryId, search);
+		return (
+			<Navigate
+				replace
+				to={{ ...location, pathname: projectPath(entryId, requested || projects[0].name) }}
+			/>
+		);
+	}
+	const project = projects.find((item) => item.name === projectName);
+	if (projectName && !project)
+		return (
+			<WorkspaceStateLayout>
+				<UnknownProject entryId={entryId} />
+			</WorkspaceStateLayout>
+		);
+
 	return (
 		<Overview
-			data={overview.data}
-			workspaceEntryId={workspace.entryId}
+			project={project}
+			workspaceEntryId={entryId}
 			readOnly={workspace.status === "identity-conflict"}
 		/>
 	);
 };
 
+const UnknownProject: React.FC<{ entryId: string }> = ({ entryId }) => {
+	const { t } = useTranslation();
+	return (
+		<StatePanel
+			icon={FolderX}
+			heading="h1"
+			title={t("navigation.projectMissing")}
+			description={t("navigation.projectMissingDescription")}
+		>
+			<Button asChild>
+				<EnvironmentLink to={workspacePath(entryId)}>
+					{t("navigation.backToWorkspace")}
+				</EnvironmentLink>
+			</Button>
+		</StatePanel>
+	);
+};
+
 const WorkspaceStateLayout: React.FC<React.PropsWithChildren> = ({ children }) => (
 	<div className="h-full overflow-y-auto p-4 ud-md:p-6">
-		<div className="mx-auto max-w-5xl">{children}</div>
+		<div className="mx-auto max-w-[1120px]">{children}</div>
 	</div>
 );
 
 const WorkspaceLoading: React.FC = () => {
 	const { t } = useTranslation();
 	return (
-		<div className="w-full space-y-3" role="status" aria-label={t("workspaces.loading")}>
+		<div className="flex w-full flex-col gap-4" role="status" aria-label={t("workspaces.loading")}>
 			<Skeleton className="h-11 w-full rounded-lg" />
 			<Skeleton className="h-64 w-full rounded-lg opacity-75" />
 		</div>
@@ -151,120 +160,115 @@ const WorkspaceLoading: React.FC = () => {
 const WorkspaceRegistryError: React.FC<{ onRetry(): void }> = ({ onRetry }) => {
 	const { t } = useTranslation();
 	return (
-		<Card className="w-full rounded-lg border-error-border">
-			<CardContent className="grid min-h-80 place-items-center p-6 text-center">
-				<div className="max-w-md">
-					<AlertTriangle className="mx-auto h-8 w-8 text-error-foreground" />
-					<h1 className="mt-4 text-lg font-semibold">{t("workspaces.registryError.title")}</h1>
-					<p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-						{t("workspaces.registryError.description")}
-					</p>
-					<div className="mt-5 flex justify-center gap-2">
-						<Button variant="outline" onClick={onRetry}>
-							<RefreshCw />
-							{t("workspaces.retry")}
-						</Button>
-						<Button asChild>
-							<EnvironmentLink to="/settings">{t("workspaces.openProfiles")}</EnvironmentLink>
-						</Button>
-					</div>
-				</div>
-			</CardContent>
-		</Card>
+		<StatePanel
+			icon={AlertTriangle}
+			heading="h1"
+			title={t("workspaces.registryError.title")}
+			description={t("workspaces.registryError.description")}
+		>
+			<Button variant="outline" onClick={onRetry}>
+				<RefreshCw />
+				{t("workspaces.retry")}
+			</Button>
+			<Button asChild>
+				<EnvironmentLink to="/settings">{t("workspaces.openProfiles")}</EnvironmentLink>
+			</Button>
+		</StatePanel>
 	);
 };
 
 const WorkspaceStatusPage: React.FC<{ workspace: WorkspaceRegistryEntry }> = ({ workspace }) => {
 	const { t } = useTranslation();
 	return (
-		<Card className="w-full rounded-lg">
-			<CardContent className="grid min-h-80 place-items-center p-6 text-center">
-				<div className="max-w-lg">
-					<div className="mx-auto grid h-12 w-12 place-items-center border border-warning-border bg-warning-surface text-warning-foreground">
-						<FolderX className="h-5 w-5" />
-					</div>
-					<p className="mt-4 text-xs font-medium text-muted-foreground">
-						{t("workspaces.workspaceLabel")}
-					</p>
-					<h1 className="mt-1 text-xl font-semibold">{workspace.name}</h1>
-					<p className="mt-2 break-all rounded-md bg-muted/45 px-3 py-2 font-mono text-xs text-muted-foreground">
-						{workspace.root}
-					</p>
-					<h2 className="mt-6 text-sm font-semibold">
-						{t(`workspaces.state.${workspace.status}.title`)}
-					</h2>
-					<p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-						{t(`workspaces.state.${workspace.status}.description`)}
-					</p>
-					<p className="mt-5 text-xs text-muted-foreground">{t("workspaces.forget.pageHint")}</p>
-					<Button asChild variant="outline" className="mt-5">
-						<EnvironmentLink to="/">
-							<ArrowLeft />
-							{t("workspaces.unknown.back")}
-						</EnvironmentLink>
-					</Button>
-				</div>
-			</CardContent>
-		</Card>
+		<div className="flex flex-col gap-6">
+			<PageHeader title={workspace.name} />
+			<p className="break-all font-mono text-sm text-muted-foreground">{workspace.root}</p>
+			<StatePanel
+				icon={FolderX}
+				title={t(`workspaces.state.${workspace.status}.title`)}
+				description={t(`workspaces.state.${workspace.status}.description`)}
+			>
+				<p className="w-full text-xs text-muted-foreground">{t("workspaces.forget.pageHint")}</p>
+				<Button asChild variant="outline">
+					<EnvironmentLink to="/">
+						<ArrowLeft />
+						{t("workspaces.unknown.back")}
+					</EnvironmentLink>
+				</Button>
+			</StatePanel>
+		</div>
 	);
 };
 
-const WorkspaceLoadError: React.FC<{
-	workspace: WorkspaceRegistryEntry;
-	onRetry(): void;
-}> = ({ workspace, onRetry }) => {
+const WorkspaceLoadError: React.FC<{ workspace: WorkspaceRegistryEntry; onRetry(): void }> = ({
+	workspace,
+	onRetry,
+}) => {
 	const { t } = useTranslation();
 	return (
-		<Card className="w-full rounded-lg border-error-border">
-			<CardContent className="grid min-h-80 place-items-center p-6 text-center">
-				<div className="max-w-md">
-					<AlertTriangle className="mx-auto h-8 w-8 text-error-foreground" />
-					<h1 className="mt-4 text-lg font-semibold">
-						{t("workspaces.overviewError.title", { name: workspace.name })}
-					</h1>
-					<p className="mt-2 text-sm text-muted-foreground">
-						{t("workspaces.overviewError.description")}
-					</p>
-					<Button variant="outline" className="mt-5" onClick={onRetry}>
-						<RefreshCw />
-						{t("workspaces.retry")}
-					</Button>
-				</div>
-			</CardContent>
-		</Card>
+		<StatePanel
+			icon={AlertTriangle}
+			heading="h1"
+			title={t("workspaces.overviewError.title", { name: workspace.name })}
+			description={t("workspaces.overviewError.description")}
+		>
+			<Button variant="outline" onClick={onRetry}>
+				<RefreshCw />
+				{t("workspaces.retry")}
+			</Button>
+		</StatePanel>
 	);
 };
 
 const UnknownWorkspace: React.FC = () => {
 	const { t } = useTranslation();
 	return (
-		<Card className="w-full rounded-lg">
-			<CardContent className="grid min-h-80 place-items-center p-6 text-center">
-				<div>
-					<FolderX className="mx-auto h-8 w-8 text-muted-foreground" />
-					<h1 className="mt-4 text-lg font-semibold">{t("workspaces.unknown.title")}</h1>
-					<p className="mt-2 text-sm text-muted-foreground">
-						{t("workspaces.unknown.description")}
-					</p>
-					<Button asChild variant="outline" className="mt-5">
-						<EnvironmentLink to="/">{t("workspaces.unknown.back")}</EnvironmentLink>
-					</Button>
-				</div>
-			</CardContent>
-		</Card>
+		<StatePanel
+			icon={FolderX}
+			heading="h1"
+			title={t("workspaces.unknown.title")}
+			description={t("workspaces.unknown.description")}
+		>
+			<Button asChild variant="outline">
+				<EnvironmentLink to="/">{t("workspaces.unknown.back")}</EnvironmentLink>
+			</Button>
+		</StatePanel>
 	);
 };
 
-const routes: RouteObject[] = [
-	{ path: "/desktop", element: <DesktopSettings /> },
-	{ path: "/", element: <WorkspaceHome /> },
-	{ path: "/workspace/:entryId", element: <WorkspaceRoute /> },
-	{ path: "/settings", element: <AccountSettings /> },
-	{ path: "/global", element: <GlobalVariables /> },
-	{ path: "/settings/:domain/:backend", element: <LegacyProfileRedirect /> },
-	{ path: "/profile", element: <LegacyProfileRedirect /> },
-	{ path: "/section/:domain/:backend", element: <LegacySectionRedirect /> },
-	{ path: "*", element: <NotFoundRoute /> },
+export const routes: RouteObject[] = [
+	{
+		element: (
+			<ErrorBoundary>
+				<App />
+			</ErrorBoundary>
+		),
+		children: [
+			{ index: true, element: <WorkspaceHome /> },
+			{ path: "credentials", element: <LegacyGlobalRedirect to="/settings/credentials" /> },
+			{
+				path: "settings",
+				children: [
+					{ index: true, element: <LegacySettingsRedirect /> },
+					{ path: "general", element: <AccountSettings /> },
+					{ path: "desktop", element: <DesktopSettings /> },
+					{ path: "credentials", element: <GlobalVariables /> },
+					{ path: ":domain/:backend", element: <LegacySettingsRedirect /> },
+				],
+			},
+			{
+				path: "workspaces/:entryId",
+				children: [
+					{ index: true, element: <WorkspaceRoute /> },
+					{ path: "projects/:projectName", element: <WorkspaceRoute /> },
+				],
+			},
+			{ path: "workspace/:entryId", element: <LegacyWorkspaceRedirect /> },
+			{ path: "desktop", element: <LegacyGlobalRedirect to="/settings/desktop" /> },
+			{ path: "global", element: <LegacyGlobalRedirect to="/settings/credentials" /> },
+			{ path: "profile", element: <LegacySettingsRedirect /> },
+			{ path: "section/:domain/:backend", element: <LegacySettingsRedirect /> },
+			{ path: "*", element: <NotFoundRoute /> },
+		],
+	},
 ];
-
-export const AppRoutes: React.FC = () => useRoutes(routes);

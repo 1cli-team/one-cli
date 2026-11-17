@@ -1,16 +1,8 @@
+import { useSearchParams } from "react-router-dom";
+import { workspacePath } from "@/router/paths";
 import { OpenWorkspace } from "@/lib/desktop/OpenWorkspace";
 import { PageHeader } from "@/components/ui/page-layout";
-import {
-	AlertTriangle,
-	ArrowUpRight,
-	CheckCircle2,
-	FolderGit2,
-	FolderPlus,
-	RefreshCw,
-	Search,
-	Trash2,
-	X,
-} from "lucide-react";
+import { AlertTriangle, FolderGit2, FolderPlus, RefreshCw, Search, Trash2, X } from "lucide-react";
 import type React from "react";
 import { useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -55,7 +47,7 @@ function formatLastSeen(value: string, locale: string): string {
 	return new Intl.DateTimeFormat(locale, { dateStyle: "medium", timeStyle: "short" }).format(date);
 }
 
-const WorkspaceCard: React.FC<{ workspace: WorkspaceRegistryEntry; onForget(): void }> = ({
+const WorkspaceRow: React.FC<{ workspace: WorkspaceRegistryEntry; onForget(): void }> = ({
 	workspace,
 	onForget,
 }) => {
@@ -65,61 +57,61 @@ const WorkspaceCard: React.FC<{ workspace: WorkspaceRegistryEntry; onForget(): v
 		workspace.projectCount === 0;
 	const ready = workspace.status === "ready";
 	return (
-		<article className="group relative min-w-0 rounded-lg border border-border bg-card transition-[border-color,box-shadow] duration-150 hover:border-primary/40 hover:shadow-sm">
+		<article className="group relative min-w-0 border-b border-border last:border-b-0 hover:bg-muted/40">
 			<EnvironmentLink
-				to={`/workspace/${encodeURIComponent(workspace.entryId)}`}
-				className="flex h-full flex-col rounded-lg p-5 outline-none focus-visible:ring-2 focus-visible:ring-ring"
+				to={workspacePath(workspace.entryId)}
+				className="grid items-center gap-x-6 gap-y-3 p-4 pr-12 outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring @min-[640px]:grid-cols-[minmax(0,1fr)_10rem] @min-[960px]:grid-cols-[minmax(0,1fr)_10rem_13rem]"
 			>
-				<div className="flex min-w-0 items-center gap-3 pr-8">
-					<span className="grid size-10 shrink-0 place-items-center rounded-lg bg-accent text-primary-text">
-						<FolderGit2 className="size-5" />
-					</span>
-					<h2 className="min-w-0 break-words text-base font-semibold leading-6">
-						{workspace.name}
-					</h2>
-				</div>
-				<p
-					title={workspace.root}
-					className="mt-4 truncate font-mono text-xs leading-5 text-muted-foreground"
-				>
-					{workspace.root}
-				</p>
-				<div className="my-5 flex flex-wrap items-center justify-between gap-3">
-					<div className="flex items-baseline gap-2">
-						<span className="text-2xl font-semibold leading-9">
-							{countUnavailable ? "-" : workspace.projectCount}
-						</span>
-						<span className="text-sm text-muted-foreground">{t("workspaces.home.projects")}</span>
+				<div className="flex min-w-0 items-center gap-3">
+					<FolderGit2 aria-hidden className="size-5 shrink-0 text-muted-foreground" />
+					<div className="flex min-w-0 flex-col gap-1">
+						<h2 className="break-words text-sm font-medium">{workspace.name}</h2>
+						<p title={workspace.root} className="truncate font-mono text-xs text-muted-foreground">
+							{workspace.root}
+						</p>
 					</div>
+				</div>
+				<div className="flex flex-wrap items-center gap-3">
+					<span className="whitespace-nowrap text-xs text-muted-foreground">
+						<span className="font-mono text-sm text-foreground">
+							{countUnavailable ? "—" : workspace.projectCount}
+						</span>{" "}
+						{t("workspaces.home.projects", { count: workspace.projectCount })}
+					</span>
 					<Badge
 						variant={
 							ready
-								? "success"
+								? "ghost"
 								: workspace.status === "invalid"
 									? "error"
 									: workspace.status === "missing"
 										? "muted"
 										: "warning"
 						}
+						className={ready ? "gap-1.5 px-0 text-success-foreground" : "gap-1.5"}
 					>
-						{ready ? <CheckCircle2 /> : <AlertTriangle />}
+						{ready ? (
+							<span aria-hidden className="size-1.5 rounded-full bg-current" />
+						) : (
+							<AlertTriangle />
+						)}
 						{t(`workspaces.status.${workspace.status}`)}
 					</Badge>
 				</div>
-				<div className="mt-auto flex items-start justify-between gap-3 border-t border-border pt-3 text-xs leading-5 text-muted-foreground">
-					<time dateTime={workspace.lastSeenAt}>
-						{t("workspaces.home.lastDetected")} ·{" "}
-						{formatLastSeen(workspace.lastSeenAt, i18n.resolvedLanguage ?? i18n.language)}
-					</time>
-					<ArrowUpRight aria-hidden className="mt-0.5 size-4 shrink-0 text-primary-text" />
-				</div>
+				<time
+					dateTime={workspace.lastSeenAt}
+					className="text-xs text-muted-foreground @min-[640px]:col-span-2 @min-[960px]:col-span-1 @min-[960px]:text-right"
+				>
+					{t("workspaces.home.lastDetected")} ·{" "}
+					{formatLastSeen(workspace.lastSeenAt, i18n.resolvedLanguage ?? i18n.language)}
+				</time>
 			</EnvironmentLink>
 			<Tooltip>
 				<TooltipTrigger asChild>
 					<Button
 						variant="danger-ghost"
 						size="icon"
-						className="absolute top-5 right-4"
+						className="absolute right-3 top-4"
 						aria-label={t("workspaces.forget.action", { name: workspace.name })}
 						onClick={onForget}
 					>
@@ -136,8 +128,31 @@ export const WorkspaceHome: React.FC = () => {
 	const { t } = useTranslation();
 	const toast = useToast();
 	const registry = useSWR(workspacesKey, getWorkspaces);
-	const [query, setQuery] = useState("");
-	const [filter, setFilter] = useState<"all" | "attention">("all");
+	const [searchParams, setSearchParams] = useSearchParams();
+	const query = searchParams.get("q") ?? "";
+	const filter = searchParams.get("status") === "attention" ? "attention" : "all";
+	function setQuery(value: string) {
+		setSearchParams(
+			(current) => {
+				const next = new URLSearchParams(current);
+				if (value) next.set("q", value);
+				else next.delete("q");
+				return next;
+			},
+			{ replace: true },
+		);
+	}
+	function setFilter(value: "all" | "attention") {
+		setSearchParams(
+			(current) => {
+				const next = new URLSearchParams(current);
+				if (value === "attention") next.set("status", value);
+				else next.delete("status");
+				return next;
+			},
+			{ replace: true },
+		);
+	}
 	const searchRef = useRef<HTMLInputElement>(null);
 	const [workspaceToForget, setWorkspaceToForget] = useState<WorkspaceRegistryEntry | null>(null);
 	const [forgetting, setForgetting] = useState(false);
@@ -152,8 +167,15 @@ export const WorkspaceHome: React.FC = () => {
 				.includes(query.trim().toLocaleLowerCase()),
 	);
 	function clearFilters() {
-		setQuery("");
-		setFilter("all");
+		setSearchParams(
+			(current) => {
+				const next = new URLSearchParams(current);
+				next.delete("q");
+				next.delete("status");
+				return next;
+			},
+			{ replace: true },
+		);
 		searchRef.current?.focus();
 	}
 	async function confirmForget() {
@@ -188,13 +210,12 @@ export const WorkspaceHome: React.FC = () => {
 	}
 	return (
 		<TooltipProvider delayDuration={300}>
-			<div className="mx-auto w-full max-w-6xl space-y-6 pb-4">
+			<div className="@container mx-auto flex w-full max-w-[1120px] flex-col gap-8 pb-4">
 				<PageHeader
 					title={t("workspaces.home.title")}
 					description={t("workspaces.home.description")}
 					actions={
 						<>
-							{" "}
 							<OpenWorkspace />
 							<Button
 								variant="outline"
@@ -229,16 +250,16 @@ export const WorkspaceHome: React.FC = () => {
 					</Alert>
 				) : null}
 				{registry.isLoading && !registry.data ? (
-					<div role="status" className="grid gap-4 ud-sm:grid-cols-2 ud-lg:grid-cols-3">
+					<div role="status" className="flex flex-col gap-3">
 						<span className="sr-only">{t("workspaces.home.loading")}</span>
 						{[0, 1, 2].map((key) => (
-							<Skeleton key={key} className="h-56 rounded-lg" />
+							<Skeleton key={key} className="h-20 rounded-lg" />
 						))}
 					</div>
 				) : registry.data ? (
 					<>
 						{workspaces.length === 0 ? (
-							<Empty className="min-h-72 rounded-lg border border-dashed border-border bg-card">
+							<Empty className="min-h-72">
 								<EmptyHeader>
 									<EmptyMedia variant="icon">
 										<FolderPlus className="text-primary-text" />
@@ -252,7 +273,7 @@ export const WorkspaceHome: React.FC = () => {
 						) : (
 							<section
 								aria-label={t("workspaces.home.listLabel")}
-								className="space-y-4"
+								className="flex flex-col gap-4"
 								aria-busy={registry.isValidating}
 							>
 								<div className="flex flex-col gap-3 ud-sm:flex-row ud-sm:items-center ud-sm:justify-between">
@@ -262,20 +283,26 @@ export const WorkspaceHome: React.FC = () => {
 										aria-label={t("workspaces.home.filterLabel")}
 									>
 										<Button
-											variant={filter === "all" ? "secondary" : "ghost"}
+											variant="ghost"
+											className="aria-pressed:bg-muted aria-pressed:text-foreground aria-pressed:shadow-[inset_0_0_0_1px_var(--border)]"
 											aria-pressed={filter === "all"}
 											onClick={() => setFilter("all")}
 										>
 											{t("workspaces.home.all")}
-											<span className="tabular-nums">{workspaces.length}</span>
+											<span className="font-mono text-xs tabular-nums text-muted-foreground">
+												{workspaces.length}
+											</span>
 										</Button>
 										<Button
-											variant={filter === "attention" ? "secondary" : "ghost"}
+											variant="ghost"
+											className="aria-pressed:bg-muted aria-pressed:text-foreground aria-pressed:shadow-[inset_0_0_0_1px_var(--border)]"
 											aria-pressed={filter === "attention"}
 											onClick={() => setFilter("attention")}
 										>
 											{t("workspaces.home.attention")}
-											<span className="tabular-nums">{attention}</span>
+											<span className="font-mono text-xs tabular-nums text-muted-foreground">
+												{attention}
+											</span>
 										</Button>
 									</div>
 									<InputGroup className="ud-sm:max-w-72">
@@ -309,9 +336,9 @@ export const WorkspaceHome: React.FC = () => {
 									{t("workspaces.home.resultCount", { count: filtered.length })}
 								</p>
 								{filtered.length > 0 ? (
-									<div className="grid grid-cols-1 gap-4 ud-sm:grid-cols-2 ud-lg:grid-cols-3 ud-xl:grid-cols-4">
+									<div className="overflow-hidden rounded-lg border border-border bg-card">
 										{filtered.map((workspace) => (
-											<WorkspaceCard
+											<WorkspaceRow
 												key={workspace.entryId}
 												workspace={workspace}
 												onForget={() => {
@@ -322,7 +349,7 @@ export const WorkspaceHome: React.FC = () => {
 										))}
 									</div>
 								) : (
-									<Empty className="min-h-64 rounded-lg border border-dashed border-border bg-card">
+									<Empty className="min-h-64">
 										<EmptyHeader>
 											<EmptyMedia variant="icon">
 												<Search />

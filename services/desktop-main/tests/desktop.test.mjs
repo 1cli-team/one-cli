@@ -172,7 +172,7 @@ test(
         dialog.showOpenDialog = async () => ({ canceled: false, filePaths: [selected] });
       }, workspace);
       await page.getByRole("button", { name: "打开工作区", exact: true }).click();
-      await page.waitForURL(/#\/workspace\//);
+      await page.waitForURL(/#\/workspaces\//);
       await page.waitForFunction(() => document.body.innerText.includes("桌面测试"));
       await page.evaluate(() => {
         window.location.hash = "#/desktop";

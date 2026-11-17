@@ -45,22 +45,26 @@
 		"openProfiles": "Open settings",
 		"home": {
 			"title": "Workspaces",
-			"description": "Open a registered Workspace and manage its projects.",
+			"description": "Manage local workspaces and their projects",
 			"loading": "Loading Workspaces…",
 			"loadFailedTitle": "Could not load Workspaces",
 			"loadFailedDescription": "The local Workspace registry could not be read.",
 			"retry": "Retry",
-			"projectCount": "{{count}} Projects",
-			"projects": "Projects",
+			"projectCount": "{{count}} projects",
+			"projectCount_one": "{{count}} project",
+			"projectCount_other": "{{count}} projects",
+			"projects": "projects",
+			"projects_one": "project",
+			"projects_other": "projects",
 			"lastDetected": "Last detected",
 			"emptyTitle": "No Workspaces yet",
 			"emptyDescription": "Run one create to create a workspace, or choose Open workspace to register an existing folder.",
 			"listLabel": "Registered Workspaces",
 			"refresh": "Refresh",
-			"search": "Search name, path or ID…",
+			"search": "Search name, path or ID",
 			"clearSearch": "Clear search",
 			"filterLabel": "Filter workspaces",
-			"all": "All workspaces",
+			"all": "All",
 			"attention": "Needs attention",
 			"noResults": "No matching workspaces",
 			"noResultsDescription": "Try another name or path, or clear your filters.",
@@ -181,7 +185,7 @@
 	"secrets": {
 		"title": "Infisical secrets",
 		"unavailableTitle": "Remote secrets are not enabled",
-		"unavailableDescription": "Click Bind project in Project information to connect storage and manage remote variables.",
+		"unavailableDescription": "Connect a storage project in Workspace configuration to manage environment variables",
 		"scope": "Secret scope",
 		"workspaceScope": "Workspace shared",
 		"add": "Add secret",
@@ -229,7 +233,7 @@
 		}
 	},
 	"session": {
-		"description": "CLI and Dashboard share one Infisical session.",
+		"description": "One Desktop and the CLI share the same Infisical session",
 		"loading": "Loading…",
 		"organization": "Organization",
 		"logout": "Log out",
@@ -250,9 +254,15 @@
 		"theme": "Appearance",
 		"themeHint": "Choose a light or dark theme. Your choice is saved in this browser.",
 		"themeLight": "Light",
-		"themeDark": "Dark"
+		"themeDark": "Dark",
+		"accountConnection": "Account connection",
+		"preferences": "Interface preferences"
 	},
 	"global": {
+		"name": "Name",
+		"searchAll": "Search variable names or folder paths",
+		"searching": "Searching all folders in this environment…",
+		"folderActions": "Folder actions for {{path}}",
 		"title": "Shared credentials",
 		"loginRequired": "Sign in to Infisical to manage shared credentials.",
 		"project": "Storage project",
@@ -292,7 +302,8 @@
 		"noMatchesHint": "Try another name or clear the search.",
 		"emptyHint": "Add a variable to share it across your projects.",
 		"preparing": "Preparing shared credentials…",
-		"preparationFailed": "You are signed in, but shared credentials could not be prepared."
+		"preparationFailed": "You are signed in, but shared credentials could not be prepared.",
+		"description": "Manage shared workspace credentials and browse variables by folder and environment"
 	},
 	"projectCreate": {
 		"title": "New project",
@@ -480,6 +491,7 @@
 		"welcomeHint": "The desktop backend is connected. Review terminal integration, or continue without installing a terminal command.",
 		"updates": "Desktop updates",
 		"updateHint": "The desktop app, Go API and bundled CLI update together. Terminal CLI integration is a separate installation.",
+		"updateNotChecked": "Updates have not been checked yet",
 		"checkUpdate": "Check for updates",
 		"updateAvailable": "Version {{version}} is available.",
 		"upToDate": "You are up to date.",
@@ -522,5 +534,17 @@
 			"cancel": "Cancel",
 			"failed": "The backend could not stop. Please try again."
 		}
+	},
+	"navigation": {
+		"generalSettings": "General settings",
+		"label": "Navigation",
+		"global": "Global navigation",
+		"open": "Open navigation",
+		"allWorkspaces": "Back to home",
+		"workspaceSettings": "Workspace configuration",
+		"emptyWorkspace": "Create your first project from the sidebar.",
+		"projectMissing": "Project not found",
+		"projectMissingDescription": "This project may have been renamed or removed. Select another project from the sidebar.",
+		"backToWorkspace": "Back to workspace"
 	}
 }

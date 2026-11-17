@@ -3,7 +3,8 @@ import useSWR from "swr";
 import { desktop } from "./runtime";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { SettingsDetails, SettingsPage, SettingsSection } from "@/components/settings-layout";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
 	Dialog,
 	DialogContent,
@@ -11,7 +12,7 @@ import {
 	DialogTitle,
 	DialogDescription,
 } from "@/components/ui/dialog";
-import { PageHeader } from "@/components/ui/page-layout";
+import { ErrorNotice } from "@/components/ui/page-layout";
 import { http } from "@/lib/http";
 interface Installation {
 	target: string;
@@ -32,7 +33,12 @@ interface Update {
 	reason?: string;
 }
 export function DesktopSettings() {
-	return <SettingsBody />;
+	const { t } = useTranslation();
+	return (
+		<SettingsPage title={t("desktop.settings")}>
+			<SettingsBody />
+		</SettingsPage>
+	);
 }
 function SettingsBody({ onDone }: { onDone?: () => void }) {
 	const { t } = useTranslation();
@@ -40,10 +46,11 @@ function SettingsBody({ onDone }: { onDone?: () => void }) {
 		http.get<Installation>("/desktop/installation"),
 	);
 	const [busy, setBusy] = useState(false);
-	const [error, setError] = useState("");
+	const [installationError, setInstallationError] = useState("");
+	const [updateError, setUpdateError] = useState("");
 	const [update, setUpdate] = useState<Update>();
 	const s = state.data;
-	async function action(work: () => Promise<unknown>) {
+	async function action(work: () => Promise<unknown>, setError: (message: string) => void) {
 		setBusy(true);
 		setError("");
 		try {
@@ -55,42 +62,37 @@ function SettingsBody({ onDone }: { onDone?: () => void }) {
 		}
 	}
 	return (
-		<div className="mx-auto max-w-4xl space-y-6">
-			{!onDone ? (
-				<PageHeader title={t("desktop.settings")} description={t("desktop.settingsHint")} />
-			) : null}
-			<Card>
-				<CardContent className="space-y-4 p-6">
-					<h2 className="text-lg font-semibold">{t("desktop.terminal")}</h2>
-					<p className="text-sm text-muted-foreground">{t("desktop.installHint")}</p>
-					{s ? (
-						<>
-							<dl className="grid gap-2 text-sm">
-								<dt className="text-muted-foreground">{t("desktop.bundledVersion")}</dt>
-								<dd>{s.bundledVersion}</dd>
-								<dt className="text-muted-foreground">{t("desktop.target")}</dt>
-								<dd className="break-all font-mono">{s.target}</dd>
-								<dt className="text-muted-foreground">{t("desktop.existingVersion")}</dt>
-								<dd>{s.version || t("desktop.notInstalled")}</dd>
-								<dt className="text-muted-foreground">{t("desktop.configuration")}</dt>
-								<dd className="break-all font-mono">{s.configPath}</dd>
-							</dl>
-							<p>{t(`desktop.installAction.${s.action}`)}</p>
-							{!s.pathReady ? (
-								<div className="rounded-md bg-muted p-3 text-sm">
-									<p>{t("desktop.pathPending")}</p>
-									<p className="mt-2 break-all">{s.pathHint}</p>
-									{s.resolvedPath ? (
-										<p className="mt-2 break-all">
-											{t("desktop.resolvedPath", { path: s.resolvedPath })}
-										</p>
-									) : null}
-								</div>
-							) : (
-								<p>{t("desktop.pathDetected")}</p>
-							)}
-							<div className="flex flex-wrap gap-2">
-								{["install", "upgrade"].includes(s.action) ? (
+		<div className="flex flex-col gap-8">
+			<SettingsSection title={t("desktop.terminal")}>
+				{s ? (
+					<>
+						<SettingsDetails>
+							<dt>{t("desktop.bundledVersion")}</dt>
+							<dd className="font-mono">{s.bundledVersion}</dd>
+							<dt>{t("desktop.target")}</dt>
+							<dd className="font-mono">{s.target}</dd>
+							<dt>{t("desktop.existingVersion")}</dt>
+							<dd className="font-mono">{s.version || t("desktop.notInstalled")}</dd>
+							<dt>{t("desktop.configuration")}</dt>
+							<dd className="font-mono">{s.configPath}</dd>
+						</SettingsDetails>
+						{!s.pathReady ? (
+							<div className="flex flex-col gap-2 rounded-md bg-muted/50 p-3 text-sm">
+								<p>{t("desktop.pathPending")}</p>
+								<p className="break-all">{s.pathHint}</p>
+								{s.resolvedPath && (
+									<p className="break-all">{t("desktop.resolvedPath", { path: s.resolvedPath })}</p>
+								)}
+							</div>
+						) : (
+							<p className="text-sm text-muted-foreground">{t("desktop.pathDetected")}</p>
+						)}
+						<div className="flex flex-wrap items-center justify-between gap-4 border-t border-border pt-4">
+							<p className="min-w-0 flex-1 text-sm text-muted-foreground">
+								{t(`desktop.installAction.${s.action}`)}
+							</p>
+							<div className="flex flex-wrap items-center justify-end gap-2">
+								{["install", "upgrade"].includes(s.action) && (
 									<Button
 										disabled={busy}
 										onClick={() =>
@@ -101,72 +103,93 @@ function SettingsBody({ onDone }: { onDone?: () => void }) {
 													{ timeout: 30000 },
 												);
 												await state.mutate();
-											})
+											}, setInstallationError)
 										}
 									>
 										{busy ? t("desktop.working") : t("desktop.install")}
 									</Button>
-								) : null}
-								<Button variant="outline" disabled={busy} onClick={() => void state.mutate()}>
+								)}
+								<Button
+									variant="outline"
+									disabled={busy || state.isValidating}
+									onClick={() => void state.mutate()}
+								>
 									{t("desktop.refresh")}
 								</Button>
 							</div>
-						</>
-					) : (
-						<p>{state.error?.message ?? t("desktop.working")}</p>
-					)}
-				</CardContent>
-			</Card>
-			{!onDone ? (
-				<Card>
-					<CardContent className="space-y-4 p-6">
-						<h2 className="text-lg font-semibold">{t("desktop.updates")}</h2>
-						<p className="text-sm text-muted-foreground">{t("desktop.updateHint")}</p>
+						</div>
+					</>
+				) : state.isLoading ? (
+					<div role="status" aria-label={t("desktop.working")} className="flex flex-col gap-3">
+						<Skeleton className="h-5 w-48" />
+						<Skeleton className="h-20" />
+					</div>
+				) : null}
+				{(installationError || state.error) && (
+					<ErrorNotice>
+						{installationError
+							? t(`desktop.native.${installationError}`, { defaultValue: installationError })
+							: state.error.message}
+					</ErrorNotice>
+				)}
+			</SettingsSection>
+			{!onDone && (
+				<SettingsSection title={t("desktop.updates")}>
+					<div className="flex flex-wrap items-center justify-between gap-4">
+						<p className="min-w-0 flex-1 text-sm text-muted-foreground">
+							{update
+								? update.enabled
+									? update.version
+										? t("desktop.updateAvailable", { version: update.version })
+										: t("desktop.upToDate")
+									: t("desktop.updateUnconfigured")
+								: t("desktop.updateNotChecked")}
+						</p>
 						<Button
 							disabled={busy}
 							variant="outline"
-							onClick={() => void action(async () => setUpdate(await desktop().checkUpdate()))}
+							onClick={() =>
+								void action(async () => setUpdate(await desktop().checkUpdate()), setUpdateError)
+							}
 						>
 							{t("desktop.checkUpdate")}
 						</Button>
-						{update ? (
-							<>
-								<p>
-									{update.enabled
-										? update.version
-											? t("desktop.updateAvailable", { version: update.version })
-											: t("desktop.upToDate")
-										: t("desktop.updateUnconfigured")}
-								</p>
-								{update.notes ? (
-									<p className="whitespace-pre-wrap text-sm">{update.notes}</p>
-								) : null}
-								{update.version ? (
+					</div>
+					{update && (update.notes || update.version) && (
+						<div className="flex flex-col gap-3 border-t border-border pt-4">
+							{update.notes && (
+								<p className="whitespace-pre-wrap text-sm text-muted-foreground">{update.notes}</p>
+							)}
+							{update.version && (
+								<div className="flex justify-end">
 									<Button
 										disabled={busy}
-										onClick={() => void action(() => desktop().installUpdate())}
+										onClick={() => void action(() => desktop().installUpdate(), setUpdateError)}
 									>
 										{t("desktop.installUpdate")}
 									</Button>
-								) : null}
-							</>
-						) : null}
-					</CardContent>
-				</Card>
-			) : null}
-			{error ? (
-				<p role="alert" className="break-all text-sm text-error-foreground">
-					{t(`desktop.native.${error}`, { defaultValue: error })}
-				</p>
-			) : null}
-			{onDone ? (
-				<Button variant="outline" disabled={busy} onClick={onDone}>
-					{t(s?.installed ? "desktop.continue" : "desktop.skipTerminal")}
-				</Button>
-			) : null}
+								</div>
+							)}
+						</div>
+					)}
+					{updateError && (
+						<ErrorNotice>
+							{t(`desktop.native.${updateError}`, { defaultValue: updateError })}
+						</ErrorNotice>
+					)}
+				</SettingsSection>
+			)}
+			{onDone && (
+				<div className="flex justify-end">
+					<Button variant="outline" disabled={busy} onClick={onDone}>
+						{t(s?.installed ? "desktop.continue" : "desktop.skipTerminal")}
+					</Button>
+				</div>
+			)}
 		</div>
 	);
 }
+
 export function DesktopWelcome() {
 	const { t } = useTranslation();
 	const [open, setOpen] = useState(() => localStorage.getItem("one_desktop_setup_seen") !== "1");
