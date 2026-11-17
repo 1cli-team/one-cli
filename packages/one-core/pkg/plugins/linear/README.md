@@ -6,13 +6,15 @@ The compiled-in Linear plugin connects One Desktop home projects to a Linear pro
 
 Open **Settings → Linear connection**. Create an OAuth application on [Linear’s application creation page](https://linear.app/settings/api/applications/new) and register the redirect URI displayed by One. The default is `http://127.0.0.1:39127/oauth/linear/callback`. Enter the application's public Client ID, save, and connect. Keep One running while completing authorization in the browser. A different local port can be configured if the default is occupied.
 
-Authorization uses PKCE S256 with a one-use state and a ten-minute timeout. The requested scopes are `read`, `issues:create`, and `comments:create`. A client secret is unnecessary for this PKCE flow. Tokens rotate under a cross-process file lock and are saved together using atomic replacement.
+Authorization uses PKCE S256 with a one-use state and a ten-minute timeout. The standard connection requests `read`, `issues:create`, and `comments:create`. To create and bind a project, use **Allow project creation** and authorize the same account with `read` and `write`. A client secret is unnecessary for this PKCE flow. Tokens rotate under a cross-process file lock and are saved together using atomic replacement.
 
 Local credentials are stored in `ONE_HOME/config/linear/connections.json`, with a private directory and mode `0600` for the file. This follows One's local credential storage pattern. Project bindings are stored in `ONE_HOME/config/issue-bindings.json`. These files are machine-local and the connection file contains credentials. Disconnect removes the local connection. The authorization can also be revoked in Linear's application settings.
 
 ## Project and Issue management
 
 Open a home project's **Issues** page, choose a connected account, Linear project, and default team. Available projects use cursor pagination. Teams, workflow statuses, members, and labels are loaded from Linear. Team choices come from the selected project. Add a new team to that project in Linear before selecting it in One. Refresh in the binding form reloads project choices and project teams. Refresh on the Issues page reloads the live project, team metadata, and Issue list; saved bindings provide identity and the default team without freezing the displayed team list.
+
+**Create Linear project** starts with the One project's name and lets you select a Linear team. **Create and bind** creates the project and uses that team for new issues. If creation is unconfirmed, submitting the same account, name, and team checks the original project ID before retrying with that ID.
 
 The Issue list supports title search, team, status, assignee, and priority filters. Select a team to load its status and assignee options. Issues and comments use cursor pagination. The detail panel supports creating and editing title, Markdown description, status, assignee, priority, labels, and posting comments. Editing preserves the current team. Reloading latest content refreshes an edit that conflicts with a remote update. The pre-save `updatedAt` check detects changes already present when validation starts. Linear's update mutation does not provide atomic compare-and-swap here, so simultaneous changes after that check can still race.
 
@@ -46,6 +48,6 @@ Run `one run linear:check` for the plugin, binding, CLI input, and HTTP regressi
 
 API behavior follows [Linear's OAuth documentation](https://linear.app/developers/oauth-2-0-authentication) and [GraphQL documentation](https://linear.app/developers/graphql). UUID creation fields were checked against the official `@linear/sdk` 102.0.0 type definitions.
 
-任务列表与详情提供「创建分支」入口。项目组可选择成员 Git 仓库，单工作区使用当前仓库；默认分支名包含任务编号和标题。用户可指定起始引用，并选择创建后切换。操作通过既有 Git 服务执行并回显本地结果。
+任务列表与详情提供「创建工作树」入口。项目组可选择成员 Git 仓库，单工作区使用当前仓库。默认分支名包含任务编号和标题，同名分支已存在时默认使用该分支。创建后会显示工作树目录。
 
-The Issue list and detail panel can create a local branch through the Git service. Project groups offer their member repositories, and workspace scopes use their current repository. The suggested name contains the issue identifier and title. Users choose the starting ref and can opt into switching to the new branch.
+The Issue list and detail panel can create a Git worktree. Project groups offer their member repositories, and standalone workspaces use their current repository. The suggested branch name includes the issue identifier and title. If the branch already exists, the form defaults to using it. The dialog displays the worktree directory after creation.

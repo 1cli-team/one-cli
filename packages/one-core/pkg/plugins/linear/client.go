@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"slices"
 	"strings"
 	"time"
 
@@ -14,9 +15,20 @@ import (
 )
 
 type tokenResult struct {
-	AccessToken  string `json:"access_token"`
-	RefreshToken string `json:"refresh_token"`
-	ExpiresIn    int64  `json:"expires_in"`
+	AccessToken  string          `json:"access_token"`
+	RefreshToken string          `json:"refresh_token"`
+	ExpiresIn    int64           `json:"expires_in"`
+	Scope        json.RawMessage `json:"scope,omitempty"`
+}
+
+func (r tokenResult) canWrite() bool {
+	var scope string
+	if json.Unmarshal(r.Scope, &scope) == nil {
+		return slices.Contains(strings.Fields(scope), "write")
+	}
+	var scopes []string
+	_ = json.Unmarshal(r.Scope, &scopes)
+	return slices.Contains(scopes, "write")
 }
 
 func (p *Plugin) exchange(ctx context.Context, values url.Values) (tokenResult, error) {

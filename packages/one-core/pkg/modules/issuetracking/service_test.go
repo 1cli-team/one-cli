@@ -81,3 +81,74 @@ func TestBindingIsolationAliasesAndDisconnectedAccount(t *testing.T) {
 		t.Fatal("unbinding workspace removed group binding")
 	}
 }
+
+type projectCreationBackend struct {
+	bindingBackend
+	write    bool
+	visible  bool
+	attempts int
+	project  Project
+}
+
+func (b *projectCreationBackend) Status(context.Context) (ConnectionState, error) {
+	return ConnectionState{Connections: []Connection{{ID: "connection", OrganizationID: "org", CanCreateProjects: b.write}}}, nil
+}
+
+func (b *projectCreationBackend) CreateProject(_ context.Context, id string, input ProjectInput) (Project, error) {
+	b.attempts++
+	b.project = Project{Named: Named{ID: id, Name: input.Name}, Teams: []Named{{ID: input.TeamID}}}
+	return Project{}, Fail("network")
+}
+
+func (b *projectCreationBackend) Project(_ context.Context, _ string, id string) (Project, error) {
+	if b.visible && id == b.project.ID {
+		return b.project, nil
+	}
+	return Project{}, Fail("not_found")
+}
+
+func TestCreateAndBindRecoversLostResponse(t *testing.T) {
+	t.Setenv("ONE_HOME", t.TempDir())
+	ctx := context.Background()
+	registry, err := workspaceapp.NewRegistryService(&memoryRegistry{document: workspace.Registry{Version: 1, GitRepositoriesImported: true}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	groups := workspacegroups.NewService(registry)
+	group, err := groups.Create(ctx, "One project")
+	if err != nil {
+		t.Fatal(err)
+	}
+	scope := Scope{Kind: "group", ID: group.ID}
+	input := ProjectInput{ConnectionID: "connection", Name: "  One project  ", TeamID: "team"}
+	backend := &projectCreationBackend{}
+	service := New(backend, groups)
+	if _, err := service.CreateAndBind(ctx, scope, input); !hasCode(err, "project_write_scope") || backend.attempts != 0 {
+		t.Fatalf("creation without write authorization: %v (%d attempts)", err, backend.attempts)
+	}
+	backend.write = true
+	_, err = service.CreateAndBind(ctx, scope, input)
+	var unknown *Error
+	if !errors.As(err, &unknown) || unknown.Code != "project_create_unknown" || unknown.OperationID != backend.project.ID {
+		t.Fatalf("lost mutation result: %v", err)
+	}
+
+	backend.visible = true
+	service = New(backend, groups)
+	changed := input
+	changed.TeamID = "another team"
+	if _, err := service.CreateAndBind(ctx, scope, changed); !hasCode(err, "project_create_pending") {
+		t.Fatalf("changed pending request accepted: %v", err)
+	}
+	binding, err := service.CreateAndBind(ctx, scope, input)
+	if err != nil || binding.Project.ID != unknown.OperationID || binding.Project.Name != "One project" || binding.TeamID != input.TeamID || backend.attempts != 1 {
+		t.Fatalf("creation did not recover: %+v, %v (%d attempts)", binding, err, backend.attempts)
+	}
+	saved, err := service.Binding(ctx, scope)
+	if err != nil || saved == nil || saved.Project.ID != binding.Project.ID {
+		t.Fatalf("binding was not persisted: %+v, %v", saved, err)
+	}
+	if _, err := service.CreateAndBind(ctx, scope, changed); !hasCode(err, "project_bound") || backend.attempts != 1 {
+		t.Fatalf("creation replaced an existing binding: %v (%d attempts)", err, backend.attempts)
+	}
+}

@@ -28,6 +28,7 @@ export default defineConfig({
 					groups: [
 						{
 							debugName: "vendor-groups",
+							entriesAware: true,
 							name(id) {
 								if (!id.includes("node_modules")) return null;
 								if (

@@ -10,6 +10,7 @@ import { SettingsPage, SettingsSection } from "@/components/settings-layout";
 import { openExternal } from "@/lib/desktop/runtime";
 import {
 	authorize,
+	authorizeProjectCreation,
 	cancelAuthorization,
 	connectionKey,
 	disconnect,
@@ -48,6 +49,12 @@ export function LinearSettings() {
 		}
 	}
 	const pending = state.data?.authorization?.status === "pending";
+	const canAuthorize = !busy && !pending && !!state.data?.config.clientId && !dirty;
+	async function connect(request: typeof authorize) {
+		const auth = await request();
+		await state.mutate();
+		await openExternal(auth.url);
+	}
 	return (
 		<SettingsPage title={t("linear.settings")}>
 			<SettingsSection title={t("linear.settings")}>
@@ -108,18 +115,16 @@ export function LinearSettings() {
 					</Button>
 				</form>
 				<div className="flex flex-wrap gap-2">
-					<Button
-						disabled={busy || pending || !state.data?.config.clientId || dirty}
-						onClick={() =>
-							void act(async () => {
-								const auth = await authorize();
-								await state.mutate();
-								await openExternal(auth.url);
-							})
-						}
-					>
+					<Button disabled={!canAuthorize} onClick={() => void act(() => connect(authorize))}>
 						<Link2 />
 						{t("linear.connect")}
+					</Button>
+					<Button
+						variant="outline"
+						disabled={!canAuthorize}
+						onClick={() => void act(() => connect(authorizeProjectCreation))}
+					>
+						{t("linear.authorizeProjectCreation")}
 					</Button>
 					{pending && (
 						<>

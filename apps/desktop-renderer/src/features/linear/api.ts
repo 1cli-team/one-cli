@@ -20,6 +20,7 @@ export interface Page<T> {
 export interface Connection extends Named {
 	organizationId: string;
 	organizationName: string;
+	canCreateProjects: boolean;
 }
 export interface OAuthConfig {
 	clientId: string;
@@ -106,6 +107,8 @@ export const projectKey = (connection: string, project: string) =>
 	`/issue-tracking/projects/${encodeURIComponent(project)}?${new URLSearchParams({ connection })}`;
 export const teamKey = (connection: string, team: string) =>
 	`/issue-tracking/teams/${encodeURIComponent(team)}?${new URLSearchParams({ connection })}`;
+export const teamsKey = (connection: string) =>
+	`/issue-tracking/teams?${new URLSearchParams({ connection })}`;
 export function scopeQuery(scope: Scope, values: Record<string, string> = {}) {
 	const query = new URLSearchParams({ kind: scope.kind, scope: scope.id });
 	for (const [key, value] of Object.entries(values)) if (value !== "") query.set(key, value);
@@ -117,6 +120,8 @@ export const fetchJSON = <T>(url: string) => http.get<T>(url, { timeout: 90000 }
 export const saveConfig = (config: OAuthConfig) =>
 	http.put<ConnectionState>("/linear/config", config);
 export const authorize = () => http.post<Authorization>("/linear/authorize");
+export const authorizeProjectCreation = () =>
+	http.post<Authorization>("/linear/authorize/project-creation");
 export const cancelAuthorization = () => http.delete<ConnectionState>("/linear/authorize");
 export const disconnect = (id: string) =>
 	http.delete<ConnectionState>(`/linear/connections/${encodeURIComponent(id)}`);
@@ -127,6 +132,17 @@ export const saveBinding = (scope: Scope, connectionId: string, project: Project
 		{ timeout: 90000 },
 	);
 export const unbind = (scope: Scope) => http.delete(scoped(scope, "binding"));
+export const createAndBindProject = (
+	scope: Scope,
+	connectionId: string,
+	name: string,
+	teamId: string,
+) =>
+	http.post<Binding>(
+		scoped(scope, "projects"),
+		{ connectionId, name, teamId },
+		{ timeout: 120000 },
+	);
 export const createIssue = (scope: Scope, input: IssueInput) =>
 	http.post<Issue>(scoped(scope, "issues"), input, { timeout: 120000 });
 export const updateIssue = (scope: Scope, id: string, input: IssueInput) =>

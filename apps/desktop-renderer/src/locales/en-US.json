@@ -582,6 +582,7 @@
 		"newBranch": "Create new branch",
 		"existingBranch": "Use existing branch",
 		"branch": "Branch name",
+		"branchExists": "This branch already exists. Use the existing branch or enter a different name.",
 		"startPoint": "Starting branch or commit",
 		"path": "Destination directory",
 		"destination": "Will create at {{path}}",
@@ -650,6 +651,14 @@
 		"openProject": "Open project"
 	},
 	"linear": {
+		"createProject": "Create Linear project",
+		"createAndBind": "Create and bind",
+		"createProjectDescription": "Create a project in {{workspace}} and link it to this One project. The selected team will be the default for new issues.",
+		"createProjectAccessHint": "Project creation requires Linear write access. In Linear connection settings, select Allow project creation and authorize the same account.",
+		"authorizeProjectCreation": "Allow project creation",
+		"projectName": "Project name",
+		"chooseTeam": "Choose a team",
+		"noTeams": "No teams are available for this Linear account.",
 		"settings": "Linear connection",
 		"oauthSetup": "Register a Linear OAuth application, then enter its public Client ID. Authorization uses PKCE and stores tokens locally.",
 		"registerApp": "Register OAuth application",
@@ -723,16 +732,36 @@
 		"pendingOperation": "Unconfirmed write",
 		"projectTeamsHint": "Teams shown here belong to the selected Linear project. After creating a team, add it in the Linear project details and refresh.",
 		"chooseTeam": "Choose a team",
-		"createBranch": "Create branch",
-		"createBranchFor": "Create branch for {{identifier}}",
-		"branchRepository": "Repository",
-		"branchChooseRepository": "Choose a repository",
-		"branchNoRepository": "This project has no available Git repositories.",
-		"branchStartHint": "Choose a local branch or enter a commit or remote ref. HEAD uses the current commit.",
-		"branchCheckout": "Switch to the new branch after creating it",
-		"branchCreated": "Branch created",
-		"branchCreatedAndSwitched": "Branch created and checked out",
-		"branchDone": "Done",
-		"branchExists": "This branch already exists. Choose another name."
+		"createWorktreeFor": "Create worktree for {{identifier}}",
+		"issueLabels": {
+			"feature": "Feature",
+			"bug": "Bug",
+			"improvement": "Improvement"
+		},
+		"workflowStates": {
+			"backlog": "Backlog",
+			"todo": "Todo",
+			"inProgress": "In Progress",
+			"done": "Done",
+			"canceled": "Canceled",
+			"duplicate": "Duplicate",
+			"inReview": "In Review"
+		},
+		"markdownEditor": {
+			"emptyTask": "Empty task",
+			"formatting": "{{label}} formatting",
+			"source": "Markdown source",
+			"bold": "Bold",
+			"italic": "Italic",
+			"heading": "Heading",
+			"bulletList": "Bulleted list",
+			"orderedList": "Numbered list",
+			"taskList": "Task list",
+			"codeBlock": "Code block",
+			"sourceRequired": "Edit in Markdown source mode to preserve the original formatting."
+		},
+		"worktreeRepository": "Target repository",
+		"worktreeChooseRepository": "Choose a repository",
+		"worktreeNoRepository": "This project has no available Git repository."
 	}
 }

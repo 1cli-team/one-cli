@@ -40,11 +40,13 @@ function DialogOverlay({
 function DialogContent({
 	className,
 	children,
+	placement = "center",
 	showCloseButton = true,
 	onOpenAutoFocus,
 	onCloseAutoFocus,
 	...props
 }: React.ComponentProps<typeof DialogPrimitive.Content> & {
+	placement?: "center" | "right";
 	showCloseButton?: boolean;
 }) {
 	const { t } = useTranslation();
@@ -52,7 +54,13 @@ function DialogContent({
 
 	return (
 		<DialogPortal>
-			<DialogOverlay />
+			<DialogOverlay
+				className={
+					placement === "right"
+						? "duration-200 motion-reduce:data-[state=closed]:animate-none motion-reduce:data-[state=open]:animate-none"
+						: undefined
+				}
+			/>
 			<DialogPrimitive.Content
 				data-slot="dialog-content"
 				onOpenAutoFocus={(event) => {
@@ -72,7 +80,10 @@ function DialogContent({
 					}
 				}}
 				className={cn(
-					"fixed top-1/2 left-1/2 z-50 grid w-full max-w-[calc(100%-2rem)] -translate-x-1/2 -translate-y-1/2 gap-5 max-h-[calc(100dvh-4rem)] overflow-y-auto rounded-lg border border-border bg-card p-6 shadow-lg duration-200 outline-none data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95 data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95 ud-sm:max-w-[37.5rem]",
+					"fixed z-50 grid w-full gap-5 overflow-y-auto border border-border bg-card p-6 shadow-lg duration-200 outline-none",
+					placement === "right"
+						? "inset-y-0 right-0 content-start rounded-none data-[state=closed]:slide-out-to-right data-[state=closed]:ease-in data-[state=open]:slide-in-from-right data-[state=open]:ease-out motion-safe:data-[state=closed]:animate-out motion-safe:data-[state=open]:animate-in"
+						: "top-1/2 left-1/2 max-h-[calc(100dvh-4rem)] max-w-[calc(100%-2rem)] -translate-x-1/2 -translate-y-1/2 rounded-lg data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95 data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95 ud-sm:max-w-[37.5rem]",
 					className,
 				)}
 				{...props}

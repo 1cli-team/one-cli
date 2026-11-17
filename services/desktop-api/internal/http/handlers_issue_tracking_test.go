@@ -38,6 +38,7 @@ func TestLinearRoutesValidationAndAvailability(t *testing.T) {
 		{http.MethodPut, "/linear/config", `{"clientId":"public","redirectUri":"http://127.0.0.1:39127/oauth/linear/callback"}`, 200},
 		{http.MethodPut, "/linear/config", `{"clientId":"invalid"}`, 400},
 		{http.MethodPut, "/linear/config", `not-json`, 400},
+		{http.MethodPost, "/issue-tracking/projects?kind=workspace&scope=test", `not-json`, 400},
 	} {
 		request := httptest.NewRequest(test.method, test.path, strings.NewReader(test.body))
 		request.Header.Set("Content-Type", "application/json")

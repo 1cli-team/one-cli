@@ -15,11 +15,12 @@ import (
 
 type bindingStore struct{}
 type bindingDocument struct {
-	Version  int                `json:"version"`
-	Bindings map[string]Binding `json:"bindings"`
+	Version   int                        `json:"version"`
+	Bindings  map[string]Binding         `json:"bindings"`
+	Creations map[string]projectCreation `json:"creations,omitempty"`
 }
 
-func (*bindingStore) access(ctx context.Context, change func(*bindingDocument) bool) error {
+func (*bindingStore) access(ctx context.Context, change func(*bindingDocument) (bool, error)) error {
 	root, err := userdirs.Config()
 	if err != nil {
 		return err
@@ -48,8 +49,9 @@ func (*bindingStore) access(ctx context.Context, change func(*bindingDocument) b
 	} else if !errors.Is(err, os.ErrNotExist) {
 		return err
 	}
-	if !change(&doc) {
-		return nil
+	changed, err := change(&doc)
+	if err != nil || !changed {
+		return err
 	}
 	raw, err = json.MarshalIndent(doc, "", "  ")
 	if err != nil {
@@ -81,21 +83,22 @@ func (*bindingStore) access(ctx context.Context, change func(*bindingDocument) b
 
 func (s *bindingStore) get(ctx context.Context, scope Scope) (*Binding, error) {
 	var result *Binding
-	err := s.access(ctx, func(doc *bindingDocument) bool {
+	err := s.access(ctx, func(doc *bindingDocument) (bool, error) {
 		if found, ok := doc.Bindings[scope.Key()]; ok {
 			result = &found
 		}
-		return false
+		return false, nil
 	})
 	return result, err
 }
 func (s *bindingStore) put(ctx context.Context, scope Scope, binding *Binding) error {
-	return s.access(ctx, func(doc *bindingDocument) bool {
+	return s.access(ctx, func(doc *bindingDocument) (bool, error) {
 		if binding == nil {
 			delete(doc.Bindings, scope.Key())
 		} else {
 			doc.Bindings[scope.Key()] = *binding
+			delete(doc.Creations, scope.Key())
 		}
-		return true
+		return true, nil
 	})
 }

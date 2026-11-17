@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { RefreshCw } from "lucide-react";
+import { Plus, RefreshCw } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import useSWR from "swr";
 import { Button } from "@/components/ui/button";
@@ -11,24 +11,36 @@ import {
 	fetchJSON,
 	projectKey,
 	saveBinding,
+	type Binding,
 	type ConnectionState,
 	type Page,
 	type Project,
 	type Scope,
 } from "./api";
 import { Choice } from "./Choice";
+import { CreateLinearProjectDialog } from "./CreateLinearProjectDialog";
 
-export function BindingForm({ scope, onSaved }: { scope: Scope; onSaved(): void }) {
+export function BindingForm({
+	scope,
+	projectName,
+	onSaved,
+}: {
+	scope: Scope;
+	projectName: string;
+	onSaved(binding: Binding): void;
+}) {
 	const { t } = useTranslation();
 	const connections = useSWR<ConnectionState>(connectionKey, fetchJSON);
 	const [selectedConnection, setConnection] = useState("");
-	const connection = selectedConnection || connections.data?.connections[0]?.id || "";
+	const [creatingFor, setCreatingFor] = useState("");
+	const accounts = connections.data?.connections || [];
+	const account = accounts.find((item) => item.id === selectedConnection) || accounts[0];
 	return (
 		<div className="space-y-4 rounded-lg border border-border bg-card p-5">
 			<h2 className="font-medium">{t("linear.bind")}</h2>
 			{connections.error && <ErrorNotice>{errorText(connections.error)}</ErrorNotice>}
 			{!connections.data && !connections.error && <p role="status">{t("linear.loading")}</p>}
-			{connections.data && !connection && (
+			{connections.data && !account && (
 				<>
 					<p className="text-sm text-muted-foreground">{t("linear.connectFirst")}</p>
 					<Button asChild>
@@ -36,18 +48,33 @@ export function BindingForm({ scope, onSaved }: { scope: Scope; onSaved(): void 
 					</Button>
 				</>
 			)}
-			{connection && (
+			{account && (
 				<>
 					<Choice
 						label={t("linear.account")}
-						value={connection}
+						value={account.id}
 						onChange={setConnection}
-						options={connections.data!.connections.map((c) => ({
+						options={accounts.map((c) => ({
 							id: c.id,
 							name: `${c.organizationName} · ${c.name}`,
 						}))}
 					/>
-					<ProjectPicker key={connection} connection={connection} scope={scope} onSaved={onSaved} />
+					<ProjectPicker
+						key={account.id}
+						connection={account.id}
+						scope={scope}
+						onCreate={() => setCreatingFor(account.id)}
+						onSaved={onSaved}
+					/>
+					{creatingFor === account.id && (
+						<CreateLinearProjectDialog
+							scope={scope}
+							account={account}
+							projectName={projectName}
+							onClose={() => setCreatingFor("")}
+							onSaved={onSaved}
+						/>
+					)}
 				</>
 			)}
 		</div>
@@ -57,11 +84,13 @@ export function BindingForm({ scope, onSaved }: { scope: Scope; onSaved(): void 
 function ProjectPicker({
 	connection,
 	scope,
+	onCreate,
 	onSaved,
 }: {
 	connection: string;
 	scope: Scope;
-	onSaved(): void;
+	onCreate(): void;
+	onSaved(binding: Binding): void;
 }) {
 	const { t } = useTranslation();
 	const [after, setAfter] = useState("");
@@ -93,7 +122,7 @@ function ProjectPicker({
 			className="space-y-4"
 			onSubmit={(e) => {
 				e.preventDefault();
-				if (!project.data) return;
+				if (busy || refreshing || !project.data || !selectedTeam) return;
 				setBusy(true);
 				setError("");
 				void saveBinding(scope, connection, project.data, selectedTeam)
@@ -161,9 +190,15 @@ function ProjectPicker({
 			{(error || projects.error || project.error) && (
 				<ErrorNotice>{error || errorText(projects.error || project.error)}</ErrorNotice>
 			)}
-			<Button type="submit" disabled={busy || refreshing || !selectedTeam}>
-				{busy ? t("git.working") : t("linear.bind")}
-			</Button>
+			<div className="flex flex-wrap gap-2">
+				<Button type="submit" disabled={busy || refreshing || !selectedTeam}>
+					{busy ? t("git.working") : t("linear.bind")}
+				</Button>
+				<Button type="button" variant="outline" disabled={busy} onClick={onCreate}>
+					<Plus data-icon="inline-start" />
+					{t("linear.createProject")}
+				</Button>
+			</div>
 		</form>
 	);
 }

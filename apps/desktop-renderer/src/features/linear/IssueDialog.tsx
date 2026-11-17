@@ -1,11 +1,11 @@
-import { useEffect, useState } from "react";
+import { lazy, Suspense, useEffect, useState, type ComponentProps } from "react";
 import { useTranslation } from "react-i18next";
 import useSWR from "swr";
-import { ExternalLink, GitBranchPlus } from "lucide-react";
+import { ExternalLink, FolderPlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
 	Dialog,
@@ -17,7 +17,8 @@ import {
 import { ErrorNotice } from "@/components/ui/page-layout";
 import { openExternal } from "@/lib/desktop/runtime";
 import { Choice } from "./Choice";
-import { CreateIssueBranchDialog } from "./CreateIssueBranchDialog";
+import { CreateIssueWorktreeDialog } from "./CreateIssueWorktreeDialog";
+import { issueLabelName, workflowStateLabel } from "./display-labels";
 import {
 	createComment,
 	createIssue,
@@ -36,6 +37,24 @@ import {
 	type Scope,
 	type Team,
 } from "./api";
+
+const IssueMarkdownEditor = lazy(() => import("./IssueMarkdownEditor"));
+
+function MarkdownField(props: ComponentProps<typeof IssueMarkdownEditor>) {
+	const { t } = useTranslation();
+	return (
+		<Suspense
+			fallback={
+				<div role="status" className="space-y-2" aria-label={t("linear.loading")}>
+					<Label>{props.label}</Label>
+					<Skeleton className={props.compact ? "h-28 w-full" : "h-40 w-full"} />
+				</div>
+			}
+		>
+			<IssueMarkdownEditor {...props} />
+		</Suspense>
+	);
+}
 
 export function IssueDialog({
 	scope,
@@ -68,7 +87,8 @@ export function IssueDialog({
 		operationId: crypto.randomUUID(),
 	});
 	const [loaded, setLoaded] = useState(isNew);
-	const [creatingBranch, setCreatingBranch] = useState(false);
+	const [open, setOpen] = useState(true);
+	const [creatingWorktree, setCreatingWorktree] = useState(false);
 	const [busy, setBusy] = useState(false);
 	const [error, setError] = useState("");
 	const [pending, setPending] = useState<{ id: string; kind: "issue" | "comment" } | null>(null);
@@ -108,7 +128,7 @@ export function IssueDialog({
 				? await createIssue(scope, input)
 				: await updateIssue(scope, issueId, input);
 			onSaved();
-			if (isNew) onClose();
+			if (isNew) setOpen(false);
 			else {
 				setInput((current) => ({ ...current, expectedUpdatedAt: saved.updatedAt }));
 				await detail.mutate();
@@ -145,7 +165,7 @@ export function IssueDialog({
 			const result = await fetchJSON<Operation>(scoped(scope, `operations/${pending.id}`));
 			if (result.status === "confirmed") {
 				onSaved();
-				if (pending.kind === "issue") onClose();
+				if (pending.kind === "issue") setOpen(false);
 				else {
 					setPending(null);
 					setComment("");
@@ -161,14 +181,18 @@ export function IssueDialog({
 	}
 	return (
 		<Dialog
-			open
-			onOpenChange={(open) => {
-				if (!open && !busy) onClose();
+			open={open}
+			onOpenChange={(next) => {
+				if (!next && !busy) setOpen(false);
 			}}
 		>
 			<DialogContent
-				className="fixed top-0 right-0 left-auto h-dvh max-h-dvh w-full max-w-[640px] translate-x-0 translate-y-0 gap-5 overflow-y-auto rounded-none p-6 ud-sm:max-w-[640px]"
+				placement="right"
+				className="max-w-[640px]"
 				showCloseButton={!busy}
+				onCloseAutoFocus={() => {
+					if (!open) onClose();
+				}}
 			>
 				<DialogHeader>
 					<DialogTitle>
@@ -182,17 +206,17 @@ export function IssueDialog({
 						variant="outline"
 						className="justify-self-start"
 						disabled={busy || !!pending}
-						onClick={() => setCreatingBranch(true)}
+						onClick={() => setCreatingWorktree(true)}
 					>
-						<GitBranchPlus />
-						{t("linear.createBranch")}
+						<FolderPlus />
+						{t("git.create")}
 					</Button>
 				)}
-				{creatingBranch && detail.data && (
-					<CreateIssueBranchDialog
+				{creatingWorktree && detail.data && (
+					<CreateIssueWorktreeDialog
 						scope={scope}
 						issue={detail.data}
-						onClose={() => setCreatingBranch(false)}
+						onClose={() => setCreatingWorktree(false)}
 					/>
 				)}
 				{(error || detail.error || team.error) && (
@@ -210,7 +234,11 @@ export function IssueDialog({
 						</Button>
 					</div>
 				)}
-				{!loaded && !detail.error && <p role="status">{t("linear.loading")}</p>}
+				{!loaded && !detail.error && (
+					<p role="status" className="text-sm text-muted-foreground">
+						{t("linear.loading")}
+					</p>
+				)}
 				{loaded && (
 					<>
 						<form
@@ -231,15 +259,12 @@ export function IssueDialog({
 										autoFocus={isNew}
 									/>
 								</div>
-								<div className="space-y-2">
-									<Label htmlFor="issue-description">{t("linear.description")}</Label>
-									<Textarea
-										id="issue-description"
-										className="min-h-32"
-										value={input.description}
-										onChange={(e) => field("description", e.target.value)}
-									/>
-								</div>
+								<MarkdownField
+									label={t("linear.description")}
+									value={input.description}
+									onChange={(value) => field("description", value)}
+									disabled={busy || !!pending}
+								/>
 								<div className="grid grid-cols-2 gap-4">
 									<Choice
 										label={t("linear.team")}
@@ -260,7 +285,12 @@ export function IssueDialog({
 									<Choice
 										label={t("linear.state")}
 										value={input.stateId}
-										options={team.data?.states || []}
+										options={
+											team.data?.states.map(({ id, name }) => ({
+												id,
+												name: workflowStateLabel(name, t),
+											})) || []
+										}
 										placeholder={t("linear.defaultState")}
 										onChange={(v) => field("stateId", v)}
 									/>
@@ -302,7 +332,7 @@ export function IssueDialog({
 														)
 													}
 												/>
-												{label.name}
+												{issueLabelName(label.name, t)}
 											</Label>
 										))}
 									</div>
@@ -387,12 +417,12 @@ export function IssueDialog({
 										void addComment();
 									}}
 								>
-									<Label htmlFor="issue-comment">{t("linear.addComment")}</Label>
-									<Textarea
-										id="issue-comment"
+									<MarkdownField
+										label={t("linear.addComment")}
 										value={comment}
-										onChange={(e) => setComment(e.target.value)}
+										onChange={setComment}
 										disabled={busy || !!pending}
+										compact
 									/>
 									<Button type="submit" disabled={busy || !!pending || !comment.trim()}>
 										{t("linear.sendComment")}
