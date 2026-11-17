@@ -13,6 +13,7 @@ import (
 	"golang.org/x/term"
 
 	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/platform/output"
+	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/platform/terminalui"
 )
 
 // frames is the spinner glyph cycle. Braille dots are visually consistent
@@ -48,6 +49,10 @@ type spinnerStatus struct {
 // updates replace the spinner title instead of interleaving terminal output.
 func SpinContext(ctx context.Context, title string, action func(context.Context) error) error {
 	if !output.IsTTY() {
+		return action(ctx)
+	}
+	if !term.IsTerminal(int(os.Stderr.Fd())) || os.Getenv("TERM") == "dumb" {
+		fmt.Fprintln(os.Stderr, "  "+title)
 		return action(ctx)
 	}
 
@@ -88,10 +93,7 @@ func ReportProgress(ctx context.Context, message string) {
 func renderSpinner(w io.Writer, status *spinnerStatus, stop <-chan struct{}, done chan<- struct{}) {
 	defer close(done)
 
-	// Use the terminal's cyan palette entry. Importing lipgloss/compat probes
-	// the background synchronously during package initialization, delaying even
-	// commands that never show a spinner when the terminal does not respond.
-	frameStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("6"))
+	styles := terminalui.NewStyles()
 
 	t := time.NewTicker(frameInterval)
 	defer t.Stop()
@@ -104,7 +106,7 @@ func renderSpinner(w io.Writer, status *spinnerStatus, stop <-chan struct{}, don
 		status.mu.Unlock()
 		// Clear the previous title, including when a new phase is shorter or
 		// contains wide characters, before drawing the next frame.
-		line := fmt.Sprintf("%s %s ", frameStyle.Render(frames[idx]), title)
+		line := fmt.Sprintf("  %s %s ", styles.Accent.Render(frames[idx]), title)
 		if terminal, ok := w.(interface{ Fd() uintptr }); ok {
 			if columns, _, err := term.GetSize(int(terminal.Fd())); err == nil && columns > 0 {
 				// Leave the last column free to avoid terminal auto-wrap. ANSI
@@ -137,8 +139,12 @@ func Step(message string) {
 	if !output.IsTTY() {
 		return
 	}
-	check := lipgloss.NewStyle().
-		Foreground(lipgloss.Color("2")).
-		SetString("✓")
-	lipgloss.Fprintf(os.Stderr, "%s %s\n", check, message)
+	terminalui.New(os.Stderr).Success(message)
+}
+
+// Warning displays a non-fatal notice without marking it as a completed step.
+func Warning(message string) {
+	if output.IsTTY() {
+		terminalui.New(os.Stderr).Warning(message)
+	}
 }

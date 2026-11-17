@@ -231,6 +231,6 @@ func runField(field huh.Field) error {
 }
 
 func runFieldContext(ctx context.Context, field huh.Field) error {
-	form := huh.NewForm(huh.NewGroup(field)).WithTheme(defaultTheme()).WithKeyMap(defaultKeyMap()).WithShowHelp(false)
+	form := huh.NewForm(huh.NewGroup(field)).WithTheme(defaultTheme()).WithKeyMap(defaultKeyMap()).WithShowHelp(true).WithOutput(os.Stderr)
 	return runHuh(func() error { return form.RunWithContext(ctx) })
 }

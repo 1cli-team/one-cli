@@ -6,11 +6,11 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"strings"
 
 	"gopkg.in/yaml.v3"
 
 	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/platform/i18n"
+	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/platform/terminalui"
 )
 
 // TTYRenderer is implemented by result payloads that want a
@@ -20,7 +20,7 @@ import (
 //
 // Implementations should write idiomatic short-form output: tabular
 // for lists (text/tabwriter is enough), key-value for single objects.
-// Don't include ANSI colours — keep stdlib-only and Windows-friendly.
+// Use terminalui for styled text so redirected output stays free of ANSI codes.
 type TTYRenderer interface {
 	RenderTTY(w io.Writer)
 }
@@ -47,9 +47,7 @@ func Emit(payload any) {
 }
 
 // EmitError writes the error envelope on stderr. Structured modes (JSON / YAML)
-// emit the corresponding format; TTY mode emits a short human line (in
-// addition, callers usually print their own clack `outro` style failure
-// message).
+// emit the corresponding format; TTY mode presents the cause and recovery steps.
 func EmitError(err *Error) {
 	emitErrorTo(os.Stderr, err)
 }
@@ -67,28 +65,29 @@ func emitErrorTo(w io.Writer, err *Error) {
 	case resolvedYAML:
 		emitYAML(w, err.envelope())
 	default:
-		message := err.Error()
-		fmt.Fprintf(w, "✗ %s\n", strings.ReplaceAll(message, "\n", "\n  "))
+		ui := terminalui.New(w)
+		ui.Blank()
+		ui.Error(err.Error())
 		printedHeader := false
 		for _, step := range err.Remediation {
 			if step.Hint == "" && step.Command == "" {
 				continue
 			}
 			if !printedHeader {
-				fmt.Fprintln(w)
-				fmt.Fprintln(w, i18n.T("error.try_label"))
+				ui.Section(i18n.T("error.try_label"))
 				printedHeader = true
 			}
 			if step.Hint != "" {
-				hint := step.Hint
-				fmt.Fprintf(w, "  %s\n", hint)
+				ui.Text(step.Hint)
 			}
 			if step.Command != "" {
-				fmt.Fprintf(w, "    %s\n", step.Command)
+				ui.Command(step.Command)
 			}
 		}
 		// Keep support metadata secondary to the problem and recovery.
-		fmt.Fprintf(w, "\n  %s%s\n", i18n.T("error.code_label"), err.Code)
+		ui.Blank()
+		ui.Note(i18n.T("error.code_label") + err.Code)
+		ui.Blank()
 	}
 }
 

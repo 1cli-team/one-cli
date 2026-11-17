@@ -94,12 +94,8 @@ func runCreate(deps Dependencies, cmd *cobra.Command, rawDir string, flags *crea
 	}); err != nil {
 		return err
 	}
-	prompt.Step(i18n.Tf("create.generated", displayPath))
 	if result.EnvironmentWarn != nil {
-		prompt.Step(i18n.Tf(
-			"create.infisical_binding_warning",
-			result.EnvironmentWarn,
-		))
+		prompt.Warning(i18n.Tf("create.infisical_binding_warning", result.EnvironmentWarn))
 	}
 
 	// v2 envelope: replaces the v1 `enabled_backends []string` with

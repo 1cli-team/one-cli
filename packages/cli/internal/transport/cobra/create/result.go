@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/platform/i18n"
+	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/platform/terminalui"
 	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/platform/userdirs"
 )
 
@@ -28,30 +29,37 @@ func (r *createResult) RenderTTY(w io.Writer) {
 	if r == nil {
 		return
 	}
-	fmt.Fprintf(w, i18n.T("create.success")+"\n", r.ProjectName)
-	fmt.Fprintf(w, i18n.T("create.location")+"\n", compactHomePath(r.CreatedPath))
+	ui := terminalui.New(w)
+	ui.Header("one create")
+	ui.Success(i18n.Tf("create.success", r.ProjectName))
+	ui.Blank()
+	fields := []terminalui.Field{{Label: i18n.T("create.location"), Value: compactHomePath(r.CreatedPath)}}
 	if r.PackageManager != "" {
-		fmt.Fprintf(w, i18n.T("create.package_manager")+"\n", r.PackageManager)
+		fields = append(fields, terminalui.Field{Label: i18n.T("create.package_manager"), Value: r.PackageManager})
 	}
 	if r.SecretsBackend == "" {
-		fmt.Fprintln(w, i18n.T("create.env_local"))
+		fields = append(fields, terminalui.Field{Label: i18n.T("create.env_source"), Value: i18n.T("create.env_local")})
 	} else {
-		fmt.Fprintf(w, i18n.T("create.env_source")+"\n", r.SecretsBackend)
+		fields = append(fields, terminalui.Field{Label: i18n.T("create.env_source"), Value: r.SecretsBackend})
 	}
 	if r.DevEnabled {
-		fmt.Fprintln(w, i18n.T("create.dev_enabled"))
+		fields = append(fields, terminalui.Field{Label: i18n.T("create.dev_enabled"), Value: "one dev"})
+	}
+	ui.Fields(fields...)
+	if len(r.Warnings) > 0 {
+		ui.Blank()
 	}
 	for _, warning := range r.Warnings {
-		fmt.Fprintln(w, warning)
+		ui.Warning(warning)
 	}
-	fmt.Fprintln(w)
-	fmt.Fprintln(w, i18n.T("common.next_steps"))
+	ui.Section(i18n.T("common.next_steps"))
 	cdPath := r.displayPath
 	if cdPath == "" {
 		cdPath = r.CreatedPath
 	}
-	fmt.Fprintf(w, "  cd %s\n", cdPath)
-	fmt.Fprintln(w, "  one add")
+	ui.Command(fmt.Sprintf("cd %s", cdPath))
+	ui.Command("one add")
+	ui.Blank()
 }
 
 func compactHomePath(path string) string {
