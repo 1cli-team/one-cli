@@ -22,3 +22,11 @@ export function legacyWorkspaceLocation(entryId: string, search: string) {
 		search: parameters.size ? `?${parameters}` : "",
 	};
 }
+
+export function groupPath(groupId: string): string {
+	return `/projects/${encodeURIComponent(groupId)}`;
+}
+
+export function groupWorkspacePath(groupId: string, entryId: string, worktreeId?: string): string {
+	return `${workspacePath(entryId, worktreeId)}?group=${encodeURIComponent(groupId)}`;
+}

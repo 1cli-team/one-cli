@@ -1,3 +1,5 @@
+import useSWR from "swr";
+import { getWorkspaceGroups, workspaceGroupsKey } from "@/api/workspace-groups";
 import { Menu, MoonStar, SunMedium } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useLocation, useMatch } from "react-router-dom";
@@ -22,7 +24,13 @@ export { ManifestSaveControl } from "@/features/manifest-draft/ManifestSaveContr
 export function TopBar({ homeTo, onOpenNavigation }: { homeTo: string; onOpenNavigation(): void }) {
 	const { t } = useTranslation();
 	const { mode, toggle } = useThemeStore();
-	const { pathname } = useLocation();
+	const { pathname, search } = useLocation();
+	const groupMatch = useMatch("/projects/:groupId");
+	const groupId = groupMatch?.params.groupId || new URLSearchParams(search).get("group");
+	const groups = useSWR(groupId ? workspaceGroupsKey : null, getWorkspaceGroups, {
+		revalidateOnFocus: true,
+	});
+	const group = groups.data?.groups.find((item) => item.id === groupId);
 	const match = useMatch("/workspaces/:entryId/*");
 	const settingsMatch = useMatch("/settings/*");
 	const baseWorktreesMatch = useMatch("/workspaces/:entryId/git/worktrees");
@@ -38,7 +46,8 @@ export function TopBar({ homeTo, onOpenNavigation }: { homeTo: string; onOpenNav
 	const { workspace, overview, available } = useWorkspace(match?.params.entryId);
 	const themeLabel = t(mode === "light" ? "sidebar.themeToDark" : "sidebar.themeToLight");
 	const titles: Record<string, string> = {
-		"/": t("sidebar.home"),
+		"/": t("groups.title"),
+		"/workspaces": t("groups.allWorkspaces"),
 		"/settings/credentials": t("global.title"),
 		"/settings": t("sidebar.settings"),
 		"/settings/general": t("navigation.generalSettings"),
@@ -62,7 +71,14 @@ export function TopBar({ homeTo, onOpenNavigation }: { homeTo: string; onOpenNav
 							<>
 								<BreadcrumbItem>
 									<BreadcrumbLink asChild>
-										<EnvironmentLink to={homeTo}>{t("sidebar.home")}</EnvironmentLink>
+										<EnvironmentLink to={homeTo}>
+											{group?.name ??
+												t(
+													homeTo.startsWith("/workspaces")
+														? "groups.allWorkspaces"
+														: "groups.allProjects",
+												)}
+										</EnvironmentLink>
 									</BreadcrumbLink>
 								</BreadcrumbItem>
 								<BreadcrumbSeparator />
@@ -91,6 +107,18 @@ export function TopBar({ homeTo, onOpenNavigation }: { homeTo: string; onOpenNav
 										</BreadcrumbItem>
 									</>
 								)}
+							</>
+						) : groupMatch ? (
+							<>
+								<BreadcrumbItem>
+									<BreadcrumbLink asChild>
+										<EnvironmentLink to="/">{t("groups.title")}</EnvironmentLink>
+									</BreadcrumbLink>
+								</BreadcrumbItem>
+								<BreadcrumbSeparator />
+								<BreadcrumbItem>
+									<BreadcrumbPage>{group?.name ?? t("groups.title")}</BreadcrumbPage>
+								</BreadcrumbItem>
 							</>
 						) : settingsMatch && pathname !== "/settings" ? (
 							<>

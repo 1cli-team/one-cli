@@ -4,6 +4,7 @@ import { AppSidebar } from "@/components/AppSidebar";
 import { TopBar } from "@/components/TopBar";
 import { DesktopWelcome } from "@/lib/desktop/DesktopSettings";
 import { NavigationGuard } from "@/router/NavigationGuard";
+import { groupPath } from "@/router/paths";
 import { cn } from "@/lib/utils";
 
 export function App() {
@@ -16,7 +17,9 @@ export function App() {
 	const homeTo = useRef("/");
 	const main = useRef<HTMLElement>(null);
 	const scrollPositions = useRef(new Map<string, number>());
-	if (pathname === "/") homeTo.current = `/${search}`;
+	if (pathname === "/" || pathname === "/workspaces") homeTo.current = `${pathname}${search}`;
+	const groupId = new URLSearchParams(search).get("group");
+	const workspaceHome = entryId && groupId ? groupPath(groupId) : homeTo.current;
 	useLayoutEffect(() => {
 		setMobileOpen(false);
 		const element = main.current;
@@ -29,12 +32,12 @@ export function App() {
 			<NavigationGuard />
 			<AppSidebar
 				entryId={entryId}
-				homeTo={homeTo.current}
+				homeTo={workspaceHome}
 				mobileOpen={mobileOpen}
 				onMobileOpenChange={setMobileOpen}
 			/>
 			<div className="flex min-w-0 flex-1 flex-col">
-				<TopBar homeTo={homeTo.current} onOpenNavigation={() => setMobileOpen(true)} />
+				<TopBar homeTo={workspaceHome} onOpenNavigation={() => setMobileOpen(true)} />
 				<main
 					ref={main}
 					onScroll={(event) => scrollPositions.current.set(pathname, event.currentTarget.scrollTop)}

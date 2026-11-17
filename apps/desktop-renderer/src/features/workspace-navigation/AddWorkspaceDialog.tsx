@@ -35,7 +35,7 @@ export function AddWorkspaceDialog({
 }: {
 	workspace?: WorkspaceRegistryEntry;
 	onClose(): void;
-	onSaved(entry: WorkspaceRegistryEntry): void;
+	onSaved(entry: WorkspaceRegistryEntry): void | Promise<void>;
 }) {
 	const { t } = useTranslation();
 	const [mode, setMode] = useState("local");
@@ -43,21 +43,32 @@ export function AddWorkspaceDialog({
 	const [url, setURL] = useState("");
 	const [busy, setBusy] = useState(false);
 	const [error, setError] = useState("");
+	const [pendingWorkspace, setPendingWorkspace] = useState<WorkspaceRegistryEntry>();
+	async function save(entry: WorkspaceRegistryEntry) {
+		setPendingWorkspace(entry);
+		setMode("local");
+		setPath(entry.root);
+		await onSaved(entry);
+	}
 
 	async function submit() {
 		setBusy(true);
 		setError("");
 		try {
+			if (pendingWorkspace) {
+				await onSaved(pendingWorkspace);
+				return;
+			}
 			if (workspace) {
-				onSaved(await relocateWorkspace(workspace.entryId, path));
+				await save(await relocateWorkspace(workspace.entryId, path));
 				return;
 			}
 			if (mode === "local") {
-				onSaved(await openLocalWorkspace(path));
+				await save(await openLocalWorkspace(path));
 				return;
 			}
 			const result = await cloneRepository(url, path);
-			if (result.workspace) onSaved(result.workspace);
+			if (result.workspace) await save(result.workspace);
 			else {
 				setMode("local");
 				setPath(result.path);
@@ -105,7 +116,11 @@ export function AddWorkspaceDialog({
 					{!workspace && (
 						<div className="space-y-2">
 							<Label htmlFor="repository-mode">{t("git.repositorySource")}</Label>
-							<Select value={mode} onValueChange={setMode} disabled={busy}>
+							<Select
+								value={mode}
+								onValueChange={setMode}
+								disabled={busy || Boolean(pendingWorkspace)}
+							>
 								<SelectTrigger id="repository-mode">
 									<SelectValue />
 								</SelectTrigger>
@@ -123,7 +138,7 @@ export function AddWorkspaceDialog({
 								id="repository-url"
 								value={url}
 								onChange={(event) => setURL(event.target.value)}
-								disabled={busy}
+								disabled={busy || Boolean(pendingWorkspace)}
 								required
 								placeholder="git@github.com:owner/repository.git"
 							/>
@@ -139,14 +154,14 @@ export function AddWorkspaceDialog({
 								id="repository-path"
 								value={path}
 								onChange={(event) => setPath(event.target.value)}
-								disabled={busy}
+								disabled={busy || Boolean(pendingWorkspace)}
 								required
 							/>
 							{mode === "local" && window.desktop && (
 								<Button
 									type="button"
 									variant="outline"
-									disabled={busy}
+									disabled={busy || Boolean(pendingWorkspace)}
 									onClick={() => void chooseDirectory()}
 								>
 									<FolderOpen />

@@ -1,7 +1,9 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useNavigate } from "react-router-dom";
-import { useSWRConfig } from "swr";
+import { useLocation, useNavigate } from "react-router-dom";
+import { useSessionSWRConfig } from "@/lib/desktop/cache";
+import { workspaceGroupsKey } from "@/api/workspace-groups";
+import { preserveEnvironment } from "@/features/environment-context/environment";
 import { Button } from "@/components/ui/button";
 import {
 	Dialog,
@@ -20,7 +22,8 @@ import type { WorkspaceRegistryEntry } from "@/types/api";
 
 export function InitializeWorkspace({ workspace }: { workspace: WorkspaceRegistryEntry }) {
 	const { t } = useTranslation();
-	const { mutate } = useSWRConfig();
+	const { mutate } = useSessionSWRConfig();
+	const { search } = useLocation();
 	const navigate = useNavigate();
 	const [open, setOpen] = useState(false);
 	const [name, setName] = useState(workspace.name);
@@ -31,9 +34,9 @@ export function InitializeWorkspace({ workspace }: { workspace: WorkspaceRegistr
 		setError("");
 		try {
 			const result = await initializeWorkspace(workspace.entryId, name);
-			await mutate(workspacesKey);
+			await Promise.all([mutate(workspacesKey), mutate(workspaceGroupsKey)]);
 			setOpen(false);
-			navigate(workspacePath(result.entryId, result.worktreeId));
+			navigate(preserveEnvironment(workspacePath(result.entryId, result.worktreeId), search));
 		} catch (error) {
 			setError((error as Error).message);
 		} finally {

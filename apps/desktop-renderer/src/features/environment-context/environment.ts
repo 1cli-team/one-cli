@@ -13,18 +13,21 @@ export function environmentFromSearch(search: string): DashboardEnvironment {
 	return isDashboardEnvironment(requested) ? requested : "dev";
 }
 
-/** Keep an explicitly selected environment while navigating between Dashboard pages. */
+/** Keep environment and project context when navigating between workspace pages. */
 export function preserveEnvironment(to: To, currentSearch: string): To {
-	const requested = new URLSearchParams(currentSearch).get("env");
-	if (!isDashboardEnvironment(requested)) return to;
-
-	if (typeof to === "string") {
-		const target = new URL(to, "http://one.local");
-		target.searchParams.set("env", requested);
-		return `${target.pathname}${target.search}${target.hash}`;
+	const current = new URLSearchParams(currentSearch);
+	const requested = current.get("env");
+	const group = current.get("group");
+	const target = typeof to === "string" ? new URL(to, "http://one.local") : to;
+	const carriesGroup = Boolean(group && target.pathname?.startsWith("/workspaces/"));
+	if (!isDashboardEnvironment(requested) && !carriesGroup) return to;
+	const parameters = new URLSearchParams(target.search);
+	if (isDashboardEnvironment(requested)) parameters.set("env", requested);
+	if (group && carriesGroup && !parameters.has("group")) {
+		parameters.set("group", group);
 	}
-
-	const targetSearch = new URLSearchParams(to.search);
-	targetSearch.set("env", requested);
-	return { ...to, search: `?${targetSearch.toString()}` };
+	const search = parameters.size ? `?${parameters}` : "";
+	return typeof to === "string"
+		? `${target.pathname}${search}${target.hash ?? ""}`
+		: { ...to, search };
 }

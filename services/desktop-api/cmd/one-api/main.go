@@ -24,7 +24,7 @@ func main() {
 	}
 	if err := app.Run(identity, func() serve.MuxOpts {
 		d := bootstrap.Compose()
-		return serve.MuxOpts{GitService: d.Git, Catalog: d.Catalog, ManifestService: d.Manifest, CreationService: d.Creation, EnvironmentService: d.Environments, WorkspaceService: d.Workspaces, RegistryService: d.Registry}
+		return serve.MuxOpts{GitService: d.Git, GroupService: d.Groups, Catalog: d.Catalog, ManifestService: d.Manifest, CreationService: d.Creation, EnvironmentService: d.Environments, WorkspaceService: d.Workspaces, RegistryService: d.Registry}
 	}); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)

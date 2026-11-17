@@ -1,8 +1,11 @@
 import { FolderOpen, GitBranch, Plus, RefreshCw, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useNavigate, useParams } from "react-router-dom";
-import useSWR, { useSWRConfig } from "swr";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
+import useSWR from "swr";
+import { useSessionSWRConfig } from "@/lib/desktop/cache";
+import { workspaceGroupsKey } from "@/api/workspace-groups";
+import { preserveEnvironment } from "@/features/environment-context/environment";
 import {
 	addWorktree,
 	type GitScope,
@@ -46,7 +49,8 @@ export function Worktrees() {
 	const scope: GitScope = { kind: "workspace", id: contextEntryId };
 	const { t } = useTranslation();
 	const navigate = useNavigate();
-	const { mutate } = useSWRConfig();
+	const { mutate } = useSessionSWRConfig();
+	const { search } = useLocation();
 	const repository = useSWR(worktreesKey(scope), () => getWorktrees(scope), {
 		shouldRetryOnError: false,
 	});
@@ -81,7 +85,7 @@ export function Worktrees() {
 			setCreating(false);
 			setNotice(t("git.created", { path: result.worktree.path }));
 			if (result.warning) setError(result.warning);
-			await Promise.all([repository.mutate(), mutate(workspacesKey)]);
+			await Promise.all([repository.mutate(), mutate(workspacesKey), mutate(workspaceGroupsKey)]);
 		});
 	}
 
@@ -90,14 +94,18 @@ export function Worktrees() {
 			await removeWorktree(scope, tree.id);
 			setRemoving(null);
 			const updated = await mutate(workspacesKey);
+			await mutate(workspaceGroupsKey);
 			if (workspace && tree.workspaceRoot === workspace.root) {
 				const remaining = updated?.workspaces?.find(
 					(entry: { entryId: string }) => entry.entryId === registered?.entryId,
 				);
 				navigate(
-					remaining
-						? `${workspacePath(remaining.entryId, remaining.worktreeId)}/git/worktrees`
-						: "/",
+					preserveEnvironment(
+						remaining
+							? `${workspacePath(remaining.entryId, remaining.worktreeId)}/git/worktrees`
+							: "/",
+						search,
+					),
 				);
 				return;
 			}
@@ -214,7 +222,12 @@ export function Worktrees() {
 												void act(async () => {
 													const selected = await openWorktree(scope, tree.id);
 													await mutate(workspacesKey);
-													navigate(workspacePath(selected.entryId, selected.worktreeId));
+													navigate(
+														preserveEnvironment(
+															workspacePath(selected.entryId, selected.worktreeId),
+															search,
+														),
+													);
 												})
 											}
 										>

@@ -12,6 +12,7 @@ import (
 	environmentmodule "github.com/torchstellar-team/one-cli/packages/one-core/pkg/modules/environment"
 	gitmodule "github.com/torchstellar-team/one-cli/packages/one-core/pkg/modules/git"
 	skillsmodule "github.com/torchstellar-team/one-cli/packages/one-core/pkg/modules/skills"
+	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/modules/workspacegroups"
 	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/platform/prompt"
 	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/plugins"
 	runtimeport "github.com/torchstellar-team/one-cli/packages/one-core/pkg/ports/runtime"
@@ -32,6 +33,7 @@ type Dependencies struct {
 	Global       secrets.GlobalLoader
 	Workspaces   *workspaceapp.Service
 	Registry     *workspaceapp.RegistryService
+	Groups       *workspacegroups.Service
 }
 
 // ComposePlugins builds an isolated application from explicitly installed plugins.
@@ -67,6 +69,7 @@ func ComposePlugins(installed ...plugins.Plugin) (Dependencies, error) {
 		Global:       pluginRegistry.Global,
 		Workspaces:   workspaceapp.NewService(),
 		Registry:     registry,
+		Groups:       workspacegroups.NewService(registry),
 	}, nil
 }
 

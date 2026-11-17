@@ -19,6 +19,8 @@ import { InitializeWorkspace } from "@/features/workspace-navigation/InitializeW
 import { AddWorkspaceDialog } from "@/features/workspace-navigation/AddWorkspaceDialog";
 import { useState } from "react";
 import { Worktrees } from "@/features/git/Worktrees";
+import { preserveEnvironment } from "@/features/environment-context/environment";
+import { WorkspaceGroupsPage } from "@/features/workspace-groups/WorkspaceGroupsPage";
 import { WorkspaceHome } from "@/pages/WorkspaceHome";
 import type { WorkspaceRegistryEntry } from "@/types/api";
 
@@ -183,6 +185,7 @@ const WorkspaceRegistryError: React.FC<{ onRetry(): void }> = ({ onRetry }) => {
 
 const WorkspaceStatusPage: React.FC<{ workspace: WorkspaceRegistryEntry }> = ({ workspace }) => {
 	const { t } = useTranslation();
+	const { search } = useLocation();
 	const [relocating, setRelocating] = useState(false);
 	const navigate = useNavigate();
 	return (
@@ -214,7 +217,7 @@ const WorkspaceStatusPage: React.FC<{ workspace: WorkspaceRegistryEntry }> = ({ 
 						onClose={() => setRelocating(false)}
 						onSaved={(entry) => {
 							setRelocating(false);
-							navigate(workspacePath(entry.entryId, entry.worktreeId));
+							navigate(preserveEnvironment(workspacePath(entry.entryId, entry.worktreeId), search));
 						}}
 					/>
 				)}
@@ -273,7 +276,9 @@ export const routes: RouteObject[] = [
 			</ErrorBoundary>
 		),
 		children: [
-			{ index: true, element: <WorkspaceHome /> },
+			{ index: true, element: <WorkspaceGroupsPage /> },
+			{ path: "projects/:groupId", element: <WorkspaceGroupsPage /> },
+			{ path: "workspaces", element: <WorkspaceHome /> },
 			{ path: "git/repositories", element: <Navigate replace to="/" /> },
 			{ path: "git/repositories/:repositoryId", element: <LegacyRepositoryRedirect /> },
 			{ path: "credentials", element: <LegacyGlobalRedirect to="/settings/credentials" /> },
