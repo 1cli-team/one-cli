@@ -122,7 +122,7 @@ export function CreateProjectDialog({ entryId, projectNames, onClose, onCreated 
 					<DialogTitle>{t("projectCreate.title")}</DialogTitle>
 					<DialogDescription>{t("projectCreate.description")}</DialogDescription>
 				</DialogHeader>
-				<form className="space-y-5" onSubmit={submit} noValidate aria-busy={pending}>
+				<form className="flex flex-col gap-5" onSubmit={submit} noValidate aria-busy={pending}>
 					<Field>
 						<FieldLabel htmlFor={`${id}-name`}>{t("projectCreate.name")}</FieldLabel>
 						<Input
@@ -214,13 +214,13 @@ export function CreateProjectDialog({ entryId, projectNames, onClose, onCreated 
 						)}
 					</Field>
 					{selected && (
-						<div className="rounded-md border border-border bg-muted/40 p-3">
+						<div className="flex flex-col gap-1 border-t border-border pt-4">
 							<p className="text-xs text-muted-foreground">{t("projectCreate.location")}</p>
 							{(selected.projects ?? [{ directory: selected.directory, suffix: "" }]).map(
 								(project) => (
 									<p
 										key={`${project.directory}${project.suffix}`}
-										className="mt-1 break-all font-mono text-sm"
+										className="break-all font-mono text-sm"
 									>
 										{project.directory}/{validName ? cleanName : "…"}
 										{project.suffix}

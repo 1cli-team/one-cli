@@ -113,6 +113,10 @@
 	h3 {
 		font-family: var(--font-family-heading);
 	}
+
+	svg.lucide {
+		stroke-width: 1.5;
+	}
 }
 
 @layer components {

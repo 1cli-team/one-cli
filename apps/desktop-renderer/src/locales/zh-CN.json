@@ -45,22 +45,26 @@
 		"openProfiles": "打开设置",
 		"home": {
 			"title": "工作区",
-			"description": "查看本机已登记的工作区并继续管理项目。",
+			"description": "管理本机已登记的工作区与项目",
 			"loading": "正在加载工作区…",
 			"loadFailedTitle": "无法加载工作区",
 			"loadFailedDescription": "无法读取本机工作区注册表。",
 			"retry": "重试",
 			"projectCount": "{{count}} 个项目",
+			"projectCount_one": "{{count}} 个项目",
+			"projectCount_other": "{{count}} 个项目",
 			"projects": "项目",
+			"projects_one": "项目",
+			"projects_other": "项目",
 			"lastDetected": "最近识别",
 			"emptyTitle": "尚未登记工作区",
 			"emptyDescription": "运行 one create 创建工作区，或选择“打开工作区”登记已有目录。",
 			"listLabel": "已登记的工作区",
 			"refresh": "刷新",
-			"search": "搜索名称、路径或 ID…",
+			"search": "搜索名称、路径或 ID",
 			"clearSearch": "清除搜索",
 			"filterLabel": "筛选工作区",
-			"all": "全部工作区",
+			"all": "全部",
 			"attention": "需要关注",
 			"noResults": "没有匹配的工作区",
 			"noResultsDescription": "试试其他名称或路径，或清除筛选条件。",
@@ -181,7 +185,7 @@
 	"secrets": {
 		"title": "Infisical 密钥",
 		"unavailableTitle": "远端密钥尚未启用",
-		"unavailableDescription": "请点击项目信息中的「绑定项目」，连接存储项目后管理远端变量。",
+		"unavailableDescription": "在“工作区配置”中连接存储项目后，即可管理环境变量",
 		"scope": "密钥作用域",
 		"workspaceScope": "Workspace 共享",
 		"add": "新增密钥",
@@ -229,7 +233,7 @@
 		}
 	},
 	"session": {
-		"description": "CLI 和 Dashboard 共用一个 Infisical 登录。",
+		"description": "One Desktop 与 CLI 共用 Infisical 登录",
 		"loading": "正在加载…",
 		"organization": "组织",
 		"logout": "退出登录",
@@ -250,9 +254,15 @@
 		"theme": "外观主题",
 		"themeHint": "选择浅色或深色主题，偏好会保存在当前浏览器中。",
 		"themeLight": "浅色",
-		"themeDark": "深色"
+		"themeDark": "深色",
+		"accountConnection": "账号连接",
+		"preferences": "界面偏好"
 	},
 	"global": {
+		"name": "名称",
+		"searchAll": "搜索当前环境的变量名或目录路径",
+		"searching": "正在搜索当前环境的全部目录…",
+		"folderActions": "{{path}} 的目录操作",
 		"title": "共享凭据",
 		"loginRequired": "登录 Infisical 后即可查看和管理共享凭据。",
 		"project": "存放项目",
@@ -292,7 +302,8 @@
 		"noMatchesHint": "尝试其他名称，或清除搜索条件。",
 		"emptyHint": "添加变量，让多个项目共享使用。",
 		"preparing": "正在准备共享凭据…",
-		"preparationFailed": "已登录，但共享凭据准备失败。"
+		"preparationFailed": "已登录，但共享凭据准备失败。",
+		"description": "管理多个工作区共用的凭据，按目录和环境查找变量"
 	},
 	"projectCreate": {
 		"title": "新建项目",
@@ -480,6 +491,7 @@
 		"welcomeHint": "桌面后端已连接。请检查终端集成，也可以暂不安装终端命令，继续使用桌面。",
 		"updates": "桌面更新",
 		"updateHint": "桌面应用、Go API 与内置 CLI 整包更新；终端 CLI 是独立的安装。",
+		"updateNotChecked": "尚未检查更新",
 		"checkUpdate": "检查更新",
 		"updateAvailable": "发现新版本 {{version}}。",
 		"upToDate": "当前已是最新版本。",
@@ -522,5 +534,17 @@
 			"cancel": "取消",
 			"failed": "无法停止后端，请稍后重试。"
 		}
+	},
+	"navigation": {
+		"generalSettings": "基础设置",
+		"label": "导航",
+		"global": "全局导航",
+		"open": "打开导航",
+		"allWorkspaces": "返回首页",
+		"workspaceSettings": "工作区配置",
+		"emptyWorkspace": "从侧边栏创建第一个项目。",
+		"projectMissing": "项目不存在",
+		"projectMissingDescription": "此项目可能已被重命名或移除，请从侧边栏选择其他项目。",
+		"backToWorkspace": "返回工作区"
 	}
 }

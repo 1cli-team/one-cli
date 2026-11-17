@@ -1,42 +1,51 @@
-import { Layers3 } from "lucide-react";
-import type React from "react";
+import { FolderOpen, Layers3 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useLocation } from "react-router-dom";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { StatePanel } from "@/components/ui/page-layout";
 import { environmentFromSearch } from "@/features/environment-context/environment";
 import { ProjectInspector } from "@/features/project-settings/ProjectInspector";
-import type { Overview as OverviewPayload } from "@/types/api";
+import type { OverviewProject } from "@/types/api";
 
-export const Overview: React.FC<{
-	data: OverviewPayload;
+export function Overview({
+	project,
+	workspaceEntryId,
+	readOnly,
+}: {
+	project?: OverviewProject;
 	workspaceEntryId: string;
 	readOnly?: boolean;
-}> = ({ data, workspaceEntryId, readOnly }) => {
+}) {
 	const { t } = useTranslation();
 	const { search } = useLocation();
 	const environment = environmentFromSearch(search);
-	const projects = data.projects ?? [];
-
 	return (
 		<div className="flex h-full min-h-0 w-full flex-col">
-			{readOnly ? (
+			{readOnly && (
 				<Alert className="shrink-0 rounded-none border-x-0 border-t-0">
-					<Layers3 className="h-4 w-4" />
+					<Layers3 />
 					<AlertTitle>{t("workspaces.conflict.title")}</AlertTitle>
 					<AlertDescription>{t("workspaces.conflict.description")}</AlertDescription>
 				</Alert>
-			) : null}
-
+			)}
 			<div className="min-h-0 flex-1">
-				<ProjectInspector
-					key={workspaceEntryId}
-					projects={projects}
-					environments={data.workspace?.environments}
-					environment={environment}
-					workspaceEntryId={workspaceEntryId}
-					readOnly={readOnly}
-				/>
+				{project ? (
+					<ProjectInspector
+						key={`${workspaceEntryId}/${project.name}/${environment}`}
+						project={project}
+						environment={environment}
+						workspaceEntryId={workspaceEntryId}
+						readOnly={readOnly}
+					/>
+				) : (
+					<StatePanel
+						icon={FolderOpen}
+						heading="h1"
+						title={t("projectInspector.empty")}
+						description={t("navigation.emptyWorkspace")}
+					/>
+				)}
 			</div>
 		</div>
 	);
-};
+}

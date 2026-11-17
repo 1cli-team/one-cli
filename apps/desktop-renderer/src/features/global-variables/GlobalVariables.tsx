@@ -1,19 +1,14 @@
-import { useEffect, useRef, useState } from "react";
+import { useEnvironmentDirtyStore } from "@/features/environment-context/environment-dirty-store";
+import { useEffect, useId, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import useSWR from "swr";
 import { useSessionSWRConfig } from "@/lib/desktop/cache";
 import { Link } from "react-router-dom";
 import {
-	ArrowUp,
-	Copy,
 	Eye,
 	EyeOff,
-	Folder,
 	FolderPlus,
-	KeyRound,
 	LockKeyhole,
-	MoreHorizontal,
-	Pencil,
 	Plus,
 	RefreshCw,
 	SearchX,
@@ -23,7 +18,8 @@ import {
 import {
 	createGlobalFolder,
 	deleteGlobalSecret,
-	getGlobalListing,
+	getGlobalTree,
+	globalTreeKey,
 	getProject,
 	getSession,
 	globalQuery,
@@ -35,15 +31,15 @@ import {
 	sessionKey,
 	type GlobalLocation,
 } from "@/api/session";
-import { FolderTree } from "./FolderTree";
+import { CredentialGroup, type CredentialActions } from "./CredentialTable";
 import { SharedCredentialsNotice } from "@/features/infisical-session/SharedCredentialsNotice";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Field, FieldLabel } from "@/components/ui/field";
 import { IconButton } from "@/components/ui/icon-button";
-import { ErrorNotice, SearchInput, SectionHeading, StatePanel } from "@/components/ui/page-layout";
+import { ErrorNotice, SearchInput, StatePanel } from "@/components/ui/page-layout";
+import { SettingsPage } from "@/components/settings-layout";
 import { DiscardDialog } from "@/components/ui/discard-dialog";
 import { Spinner } from "@/components/ui/spinner";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -72,13 +68,6 @@ import {
 	AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import {
-	DropdownMenu,
-	DropdownMenuContent,
-	DropdownMenuItem,
-	DropdownMenuSeparator,
-	DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import {
 	Table,
 	TableBody,
 	TableCell,
@@ -101,7 +90,7 @@ export function GlobalVariables() {
 		current.siteUrl === account.siteUrl &&
 		current.organizationId === account.organizationId;
 	return (
-		<div className="mx-auto flex h-full min-h-0 w-full max-w-6xl flex-col gap-4">
+		<SettingsPage title={t("global.title")} className="h-full min-h-0">
 			{session.error ? (
 				<ErrorNotice
 					action={
@@ -123,7 +112,7 @@ export function GlobalVariables() {
 					<Skeleton className="min-h-0 flex-1" />
 				</div>
 			) : !account?.loggedIn ? (
-				<Card className="min-h-0 flex-1">
+				<Card>
 					<StatePanel
 						icon={LockKeyhole}
 						title={t("session.signedOut")}
@@ -146,7 +135,7 @@ export function GlobalVariables() {
 					location={current}
 				/>
 			) : (
-				<Card className="min-h-0 flex-1 p-4">
+				<Card className="p-5">
 					<SharedCredentialsNotice
 						key={JSON.stringify([
 							account.siteUrl,
@@ -159,7 +148,7 @@ export function GlobalVariables() {
 					/>
 				</Card>
 			)}
-		</div>
+		</SettingsPage>
 	);
 }
 
@@ -170,12 +159,17 @@ function VariableBrowser({ location }: { location: GlobalLocation }) {
 	const [environment, setEnvironment] = useState(location.defaultEnvironment);
 	const [path, setPath] = useState("/");
 	const [search, setSearch] = useState("");
+	const [expanded, setExpanded] = useState<Record<string, boolean>>({});
 	const detail = useSWR(
 		remoteProjectsKey({ loggedIn: true, expired: false, ...location }, location.projectId),
 		() => getProject(location.projectId),
 	);
 	const query = globalQuery(environment, path);
-	const listing = useSWR(globalListingKey(location, query), () => getGlobalListing(query));
+	const term = search.trim().toLocaleLowerCase();
+	const searching = term.length > 0;
+	const tree = useSWR(searching ? globalTreeKey(location, environment) : null, () =>
+		getGlobalTree(environment),
+	);
 	const [revealed, setRevealed] = useState<Record<string, string>>({});
 	const epoch = useRef(0);
 	const pending = useRef(false);
@@ -204,13 +198,17 @@ function VariableBrowser({ location }: { location: GlobalLocation }) {
 		return () => {
 			epoch.current++;
 		};
-	}, [query]);
+	}, [environment]);
+	const dirtyOwner = useId();
+	const setDirty = useEnvironmentDirtyStore((state) => state.setDirty);
+	const clearOwner = useEnvironmentDirtyStore((state) => state.clearOwner);
 	useEffect(() => {
-		if (!dirty) return;
-		const warn = (e: BeforeUnloadEvent) => e.preventDefault();
-		window.addEventListener("beforeunload", warn);
-		return () => window.removeEventListener("beforeunload", warn);
-	}, [dirty]);
+		setDirty(dirtyOwner, dirty, () => {
+			setEditor(null);
+			setFolder(null);
+		});
+		return () => clearOwner(dirtyOwner);
+	}, [dirty, dirtyOwner, setDirty, clearOwner]);
 	async function action(fn: () => Promise<void>) {
 		if (pending.current) return;
 		pending.current = true;
@@ -226,22 +224,45 @@ function VariableBrowser({ location }: { location: GlobalLocation }) {
 			setBusy(false);
 		}
 	}
-	async function read(key: string, copy: boolean) {
+	async function refresh() {
+		setRevealed({});
+		const prefix = `${globalListingKey(location, "")}?${new URLSearchParams({ env: environment })}&`;
+		if (!searching) {
+			await mutate(globalTreeKey(location, environment), undefined, { revalidate: false });
+		}
+		await mutate((key) => typeof key === "string" && key.startsWith(prefix));
+	}
+	async function read(folderPath: string, key: string, copy: boolean) {
+		const scopedQuery = globalQuery(environment, folderPath);
+		const identity = `${scopedQuery}:${key}`;
+		if (!copy && revealed[identity] !== undefined) {
+			setRevealed((current) => {
+				const next = { ...current };
+				delete next[identity];
+				return next;
+			});
+			return;
+		}
 		const current = epoch.current;
 		await action(async () => {
-			const { value } = await readGlobalSecret(key, query);
+			const { value } = await readGlobalSecret(key, scopedQuery);
 			if (current !== epoch.current) return;
 			if (copy) {
 				await navigator.clipboard.writeText(value);
 				toast.success(t("global.copied"));
-			} else setRevealed((v) => ({ ...v, [`${query}:${key}`]: value }));
+			} else setRevealed((values) => ({ ...values, [identity]: value }));
 		});
 	}
-	function openEditor(key = "", existing = false) {
-		if (!existing) actionTrigger.current = null;
+	function openEditor(folderPath: string, key = "", existing = false) {
+		setPath(folderPath);
 		setError("");
 		setShowValue(false);
 		setEditor({ key, value: "", existing });
+	}
+	function openFolder(folderPath: string) {
+		setPath(folderPath);
+		setError("");
+		setFolder("");
 	}
 	function closeEditor() {
 		if (busy) return;
@@ -253,242 +274,208 @@ function VariableBrowser({ location }: { location: GlobalLocation }) {
 		}
 	}
 	const editing = editor !== null || folder !== null || deleting !== null;
-	const variables =
-		listing.data?.variables.filter((v) =>
-			v.key.toLocaleLowerCase().includes(search.trim().toLocaleLowerCase()),
-		) ?? [];
-	const unavailable = busy || editing || listing.isLoading || Boolean(listing.error);
+	const unavailable = busy || editing;
+	const matches = (tree.data ?? [])
+		.map((listing) => ({
+			...listing,
+			folders: [],
+			variables: listing.variables.filter(
+				(variable) =>
+					variable.key.toLocaleLowerCase().includes(term) ||
+					listing.path.toLocaleLowerCase().includes(term),
+			),
+		}))
+		.filter(
+			(listing) => listing.variables.length > 0 || listing.path.toLocaleLowerCase().includes(term),
+		);
+	function expansionKey(folderPath: string) {
+		return JSON.stringify([environment, searching ? "search" : "tree", folderPath]);
+	}
+	function isExpanded(folderPath: string) {
+		return expanded[expansionKey(folderPath)] ?? (searching || folderPath === "/");
+	}
+	function toggle(folderPath: string) {
+		const key = expansionKey(folderPath);
+		setExpanded((current) => ({
+			...current,
+			[key]: !(current[key] ?? (searching || folderPath === "/")),
+		}));
+	}
+	function expandPath(folderPath: string) {
+		setExpanded((current) => {
+			const next = { ...current };
+			next[JSON.stringify([environment, "tree", "/"])] = true;
+			let ancestor = "";
+			for (const part of folderPath.split("/").filter(Boolean)) {
+				ancestor += `/${part}`;
+				next[JSON.stringify([environment, "tree", ancestor])] = true;
+			}
+			return next;
+		});
+	}
+	const actions: CredentialActions = {
+		read: (folderPath, key, copy) => {
+			void read(folderPath, key, copy);
+		},
+		edit: (folderPath, key) => openEditor(folderPath, key, true),
+		remove: (folderPath, key) => {
+			setPath(folderPath);
+			setError("");
+			setDeleting(key);
+		},
+		addVariable: (folderPath) => openEditor(folderPath),
+		addFolder: openFolder,
+	};
+	const groupProps = {
+		location,
+		environment,
+		isExpanded,
+		toggle,
+		actions,
+		revealed,
+		disabled: unavailable,
+		actionTrigger,
+	};
 	return (
 		<>
-			<Card className="min-h-0 flex-1 gap-0 overflow-hidden">
-				<div className="shrink-0 border-b border-border p-4">
-					<SectionHeading
-						icon={ShieldCheck}
-						title={location.projectName}
-						actions={
-							<div className="flex items-center gap-2">
-								<Select
-									value={environment}
-									onValueChange={setEnvironment}
-									disabled={editing || busy || detail.isLoading}
-								>
-									<SelectTrigger className="w-48" aria-label={t("global.environment")}>
-										<SelectValue />
-									</SelectTrigger>
-									<SelectContent>
-										{detail.data?.environments.map((e) => (
-											<SelectItem key={e.slug} value={e.slug}>
-												{e.name} ({e.slug})
-											</SelectItem>
-										))}
-									</SelectContent>
-								</Select>
-								<IconButton
-									label={t("global.refresh")}
-									disabled={busy || listing.isValidating || editing}
-									onClick={() => {
-										void mutate(
-											(key) =>
-												typeof key === "string" &&
-												key.startsWith(
-													`${globalListingKey(location, "")}?${new URLSearchParams({ env: environment })}&`,
-												),
-										);
-										void detail.mutate();
-									}}
-								>
-									<RefreshCw className={listing.isValidating ? "animate-spin" : ""} />
-								</IconButton>
-							</div>
-						}
-					/>
-				</div>
-				{listing.error || detail.error || (error && !editing) ? (
-					<div className="p-4">
-						<ErrorNotice>{error || message(listing.error || detail.error)}</ErrorNotice>
-					</div>
-				) : null}
-				<div className="grid min-h-0 flex-1 grid-rows-[minmax(100px,180px)_minmax(0,1fr)] ud-sm:grid-cols-[200px_minmax(0,1fr)] ud-sm:grid-rows-[minmax(0,1fr)] ud-md:grid-cols-[220px_minmax(0,1fr)]">
-					<nav
-						aria-label={t("global.folders")}
-						className="flex min-h-0 min-w-0 flex-col border-b border-border bg-muted/25 p-2 ud-sm:border-r ud-sm:border-b-0"
+			<div className="flex min-h-0 flex-1 flex-col gap-4">
+				<div className="flex shrink-0 flex-wrap items-center gap-3">
+					<Select
+						value={environment}
+						onValueChange={setEnvironment}
+						disabled={unavailable || detail.isLoading}
 					>
-						<div className="mb-1 flex shrink-0 items-center justify-between gap-2 px-1">
-							<h3 className="text-xs font-medium text-muted-foreground">{t("global.folders")}</h3>
-							<IconButton
-								label={t("global.addFolder")}
-								disabled={unavailable}
-								onClick={() => {
-									setError("");
-									setFolder("");
-								}}
-							>
-								<FolderPlus />
-							</IconButton>
-						</div>
-						<div className="min-h-0 flex-1 overflow-auto">
-							<FolderTree
-								key={environment}
-								location={location}
-								environment={environment}
-								selectedPath={path}
-								onSelect={setPath}
-								disabled={editing || busy}
-							/>
-						</div>
-					</nav>
-					<div className="flex min-h-0 min-w-0 flex-col overflow-hidden">
-						<div className="flex shrink-0 flex-wrap items-center gap-2 border-b border-border px-4 py-2">
-							<IconButton
-								label={t("global.parent")}
-								disabled={path === "/" || editing || busy}
-								onClick={() => setPath(path.slice(0, path.lastIndexOf("/")) || "/")}
-							>
-								<ArrowUp />
-							</IconButton>
-							<Folder className="size-4 text-muted-foreground" aria-hidden="true" />
-							<code className="min-w-0 flex-1 break-all text-xs">{path}</code>
-							{listing.data && (
-								<Badge variant="muted">
-									{t("global.count", { count: listing.data.variables.length })}
-								</Badge>
-							)}
-						</div>
-						<div className="flex shrink-0 flex-wrap gap-3 p-3">
-							<div className="min-w-40 flex-1">
-								<SearchInput
-									aria-label={t("global.search")}
-									placeholder={t("global.search")}
-									value={search}
-									onChange={(e) => setSearch(e.target.value)}
-								/>
-							</div>
-							<Button disabled={unavailable} onClick={() => openEditor()}>
-								<Plus />
-								{t("global.add")}
-							</Button>
-						</div>
-						<div className="min-h-0 flex-1 overflow-auto">
-							{listing.isLoading ? (
-								<div role="status" aria-label={t("session.loading")} className="space-y-3 p-4">
-									<Skeleton className="h-10" />
-									<Skeleton className="h-10" />
-									<Skeleton className="h-10" />
-								</div>
-							) : listing.data && variables.length > 0 ? (
-								<Table>
-									<TableHeader>
-										<TableRow>
-											<TableHead>{t("global.key")}</TableHead>
-											<TableHead>{t("global.value")}</TableHead>
-											<TableHead className="w-28 text-right">{t("global.actions")}</TableHead>
-										</TableRow>
-									</TableHeader>
-									<TableBody>
-										{variables.map((v) => (
-											<TableRow key={v.key}>
-												<TableCell className="max-w-64">
-													<code className="break-all font-medium">{v.key}</code>
-													{v.description && (
-														<p className="mt-1 whitespace-pre-wrap text-xs text-muted-foreground">
-															{v.description}
-														</p>
-													)}
-												</TableCell>
-												<TableCell className="max-w-64 break-all font-mono text-xs">
-													{revealed[`${query}:${v.key}`] ?? "••••••••"}
-												</TableCell>
-												<TableCell>
-													<div className="flex justify-end gap-1">
-														<IconButton
-															label={t(
-																revealed[`${query}:${v.key}`] !== undefined
-																	? "global.hide"
-																	: "global.reveal",
-															)}
-															disabled={busy}
-															onClick={() =>
-																revealed[`${query}:${v.key}`] !== undefined
-																	? setRevealed((r) => {
-																			const next = { ...r };
-																			delete next[`${query}:${v.key}`];
-																			return next;
-																		})
-																	: void read(v.key, false)
-															}
-														>
-															{revealed[`${query}:${v.key}`] !== undefined ? <EyeOff /> : <Eye />}
-														</IconButton>
-														<IconButton
-															label={t("global.copy")}
-															disabled={busy}
-															onClick={() => void read(v.key, true)}
-														>
-															<Copy />
-														</IconButton>
-														<DropdownMenu>
-															<DropdownMenuTrigger asChild>
-																<Button
-																	variant="ghost"
-																	size="icon"
-																	aria-label={t("global.more", { key: v.key })}
-																	onPointerDown={(event) => {
-																		actionTrigger.current = event.currentTarget;
-																	}}
-																	onFocus={(event) => {
-																		actionTrigger.current = event.currentTarget;
-																	}}
-																	disabled={busy}
-																>
-																	<MoreHorizontal />
-																</Button>
-															</DropdownMenuTrigger>
-															<DropdownMenuContent align="end">
-																<DropdownMenuItem onSelect={() => openEditor(v.key, true)}>
-																	<Pencil />
-																	{t("global.edit")}
-																</DropdownMenuItem>
-																<DropdownMenuSeparator />
-																<DropdownMenuItem
-																	variant="destructive"
-																	onSelect={() => {
-																		setError("");
-																		setDeleting(v.key);
-																	}}
-																>
-																	<Trash2 />
-																	{t("global.delete")}
-																</DropdownMenuItem>
-															</DropdownMenuContent>
-														</DropdownMenu>
-													</div>
-												</TableCell>
-											</TableRow>
-										))}
-									</TableBody>
-								</Table>
-							) : listing.data && !listing.error ? (
-								<StatePanel
-									icon={search.trim() ? SearchX : KeyRound}
-									title={t(search.trim() ? "global.noMatches" : "global.empty")}
-									description={t(search.trim() ? "global.noMatchesHint" : "global.emptyHint")}
-								>
-									{search.trim() ? (
-										<Button variant="outline" onClick={() => setSearch("")}>
-											{t("workspaces.home.clearSearch")}
-										</Button>
-									) : (
-										<Button variant="outline" onClick={() => openEditor()} disabled={unavailable}>
-											<Plus />
-											{t("global.add")}
-										</Button>
-									)}
-								</StatePanel>
-							) : null}
-						</div>
+						<SelectTrigger className="w-48" aria-label={t("global.environment")}>
+							<SelectValue />
+						</SelectTrigger>
+						<SelectContent>
+							{detail.data?.environments.map((item) => (
+								<SelectItem key={item.slug} value={item.slug}>
+									{item.name} ({item.slug})
+								</SelectItem>
+							))}
+						</SelectContent>
+					</Select>
+					<div className="min-w-48 max-w-sm flex-1">
+						<SearchInput
+							aria-label={t("global.searchAll")}
+							placeholder={t("global.searchAll")}
+							value={search}
+							onChange={(event) => setSearch(event.target.value)}
+							disabled={editing}
+						/>
+					</div>
+					<div className="ml-auto flex items-center gap-2">
+						<IconButton
+							label={t("global.refresh")}
+							disabled={unavailable}
+							onClick={() =>
+								void action(async () => {
+									await Promise.all([refresh(), detail.mutate()]);
+								})
+							}
+						>
+							<RefreshCw />
+						</IconButton>
+						<IconButton
+							label={t("global.addFolder")}
+							disabled={unavailable}
+							onClick={(event) => {
+								actionTrigger.current = event.currentTarget;
+								openFolder("/");
+							}}
+						>
+							<FolderPlus />
+						</IconButton>
+						<Button
+							disabled={unavailable}
+							onClick={(event) => {
+								actionTrigger.current = event.currentTarget;
+								openEditor("/");
+							}}
+						>
+							<Plus />
+							{t("global.add")}
+						</Button>
 					</div>
 				</div>
-			</Card>
+				{(detail.error || (error && !editing)) && (
+					<ErrorNotice>{error || message(detail.error)}</ErrorNotice>
+				)}
+				<Table
+					containerClassName="min-h-0 overflow-auto rounded-lg border border-border bg-card"
+					className="min-w-[32rem] table-fixed"
+				>
+					<colgroup>
+						<col className="w-1/2" />
+						<col />
+						<col className="w-28" />
+					</colgroup>
+					<TableHeader className="sticky top-0 z-10 bg-card">
+						<TableRow>
+							<TableHead className="px-4">{t("global.name")}</TableHead>
+							<TableHead className="px-4">{t("global.value")}</TableHead>
+							<TableHead className="px-4 text-right">{t("global.actions")}</TableHead>
+						</TableRow>
+					</TableHeader>
+					<TableBody>
+						{searching ? (
+							tree.isLoading ? (
+								<TableRow>
+									<TableCell colSpan={3}>
+										<span
+											role="status"
+											className="flex items-center gap-2 py-4 text-muted-foreground"
+										>
+											<Spinner />
+											{t("global.searching")}
+										</span>
+									</TableCell>
+								</TableRow>
+							) : tree.error ? (
+								<TableRow>
+									<TableCell colSpan={3}>
+										<ErrorNotice
+											action={
+												<Button variant="outline" size="sm" onClick={() => void tree.mutate()}>
+													{t("secrets.retry")}
+												</Button>
+											}
+										>
+											{message(tree.error)}
+										</ErrorNotice>
+									</TableCell>
+								</TableRow>
+							) : matches.length > 0 ? (
+								matches.map((listing) => (
+									<CredentialGroup
+										{...groupProps}
+										key={`${environment}:search:${listing.path}`}
+										path={listing.path}
+										depth={0}
+										listing={listing}
+									/>
+								))
+							) : (
+								<TableRow>
+									<TableCell colSpan={3}>
+										<StatePanel icon={SearchX} title={t("global.noMatches")}>
+											<Button variant="outline" onClick={() => setSearch("")}>
+												{t("workspaces.home.clearSearch")}
+											</Button>
+										</StatePanel>
+									</TableCell>
+								</TableRow>
+							)
+						) : (
+							<CredentialGroup {...groupProps} key={`${environment}:tree`} path="/" depth={0} />
+						)}
+					</TableBody>
+				</Table>
+				<p className="shrink-0 text-xs text-muted-foreground">
+					{t("global.project")} · <span className="font-mono">{location.projectName}</span>
+				</p>
+			</div>
 			<Dialog
 				open={editor !== null}
 				onOpenChange={(open) => {
@@ -512,15 +499,16 @@ function VariableBrowser({ location }: { location: GlobalLocation }) {
 						</DialogDescription>
 					</DialogHeader>
 					<form
-						className="space-y-5"
+						className="flex flex-col gap-5"
 						onSubmit={(e) => {
 							e.preventDefault();
 							if (!editor?.key.trim()) return;
 							void action(async () => {
 								await saveGlobalSecret(editor.key.trim(), editor.value, query, editor.existing);
+								expandPath(path);
 								setRevealed({});
 								setEditor(null);
-								await listing.mutate();
+								await refresh();
 								toast.success(t("global.saved"));
 							});
 						}}
@@ -609,7 +597,7 @@ function VariableBrowser({ location }: { location: GlobalLocation }) {
 									await deleteGlobalSecret(deleting, query);
 									setRevealed({});
 									setDeleting(null);
-									await listing.mutate();
+									await refresh();
 									toast.success(t("secrets.deleted"));
 								})
 							}
@@ -626,7 +614,16 @@ function VariableBrowser({ location }: { location: GlobalLocation }) {
 					if (!open) closeEditor();
 				}}
 			>
-				<DialogContent showCloseButton={!busy}>
+				<DialogContent
+					showCloseButton={!busy}
+					onCloseAutoFocus={(event) => {
+						if (actionTrigger.current?.isConnected) {
+							event.preventDefault();
+							actionTrigger.current.focus();
+							actionTrigger.current = null;
+						}
+					}}
+				>
 					<DialogHeader>
 						<DialogTitle>{t("global.addFolder")}</DialogTitle>
 						<DialogDescription>
@@ -634,14 +631,15 @@ function VariableBrowser({ location }: { location: GlobalLocation }) {
 						</DialogDescription>
 					</DialogHeader>
 					<form
-						className="space-y-5"
+						className="flex flex-col gap-5"
 						onSubmit={(e) => {
 							e.preventDefault();
 							if (!folder?.trim()) return;
 							void action(async () => {
 								await createGlobalFolder(folder.trim(), query);
+								expandPath(path);
 								setFolder(null);
-								await listing.mutate();
+								await refresh();
 								toast.success(t("global.folderCreated"));
 							});
 						}}

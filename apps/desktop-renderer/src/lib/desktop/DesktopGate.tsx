@@ -96,8 +96,8 @@ export function DesktopGate({ children }: { children: ReactNode }) {
 					role="status"
 					className="fixed inset-0 z-50 grid place-items-center bg-background/95 p-6 text-foreground"
 				>
-					<div className="w-full max-w-lg space-y-4 rounded-xl border bg-card p-8 shadow-sm">
-						<h1 className="text-2xl font-semibold">One Desktop</h1>
+					<div className="flex w-full max-w-md flex-col gap-4">
+						<h1 className="text-2xl font-medium">One Desktop</h1>
 						<p>
 							{t(`desktop.connection.${state.status}`, {
 								defaultValue: t("desktop.connection.starting"),

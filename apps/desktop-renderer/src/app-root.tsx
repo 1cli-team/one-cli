@@ -1,14 +1,16 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
-import { HashRouter } from "react-router-dom";
+import { createHashRouter, RouterProvider } from "react-router-dom";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { SWRProvider } from "./providers/SWRProvider";
-import { App } from "./App";
+import { routes } from "./router/routes";
 import { DesktopGate } from "./lib/desktop/DesktopGate";
 import { I18nProvider } from "./providers/I18nProvider";
 import { ThemeProvider } from "./providers/ThemeProvider";
 import "@/lib/i18n";
 import "@/styles/index.css";
+
+const router = createHashRouter(routes);
 
 ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(
 	<React.StrictMode>
@@ -16,11 +18,9 @@ ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(
 			<DesktopGate>
 				<I18nProvider>
 					<SWRProvider>
-						<HashRouter>
-							<ErrorBoundary>
-								<App />
-							</ErrorBoundary>
-						</HashRouter>
+						<ErrorBoundary>
+							<RouterProvider router={router} />
+						</ErrorBoundary>
 					</SWRProvider>
 				</I18nProvider>
 			</DesktopGate>

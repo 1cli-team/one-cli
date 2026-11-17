@@ -115,7 +115,7 @@ export const ManifestSaveControl: React.FC<{ entryId: string }> = ({ entryId }) 
 				<AlertDialogContent size="wide" className="max-h-[92dvh] flex flex-col">
 					<AlertDialogHeader>
 						<div className="flex items-start gap-3">
-							<div className="mt-0.5 grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-accent text-primary-text">
+							<div className="mt-0.5 grid size-6 shrink-0 place-items-center text-muted-foreground">
 								<FileDiff className="h-4 w-4" />
 							</div>
 							<div>

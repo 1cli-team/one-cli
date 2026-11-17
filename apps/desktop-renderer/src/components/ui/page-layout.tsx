@@ -13,10 +13,12 @@ export function PageHeader({
 	actions?: ReactNode;
 }) {
 	return (
-		<header className="flex flex-wrap items-start justify-between gap-4">
-			<div className="min-w-0 space-y-1">
-				<h1 className="text-2xl font-semibold tracking-tight">{title}</h1>
-				{description && <p className="max-w-3xl text-sm text-muted-foreground">{description}</p>}
+		<header className="flex shrink-0 flex-wrap items-start justify-between gap-4">
+			<div className="flex min-w-0 flex-col gap-2">
+				<h1 className="text-2xl font-medium leading-8">{title}</h1>
+				{description && (
+					<p className="max-w-3xl text-sm leading-5 text-muted-foreground">{description}</p>
+				)}
 			</div>
 			{actions && <div className="flex shrink-0 flex-wrap items-center gap-2">{actions}</div>}
 		</header>
@@ -37,11 +39,11 @@ export function SectionHeading({
 	return (
 		<div className="flex flex-wrap items-start justify-between gap-3">
 			<div className="flex min-w-0 items-start gap-3">
-				<span className="grid size-9 shrink-0 place-items-center rounded-lg bg-accent text-primary-text">
-					<Icon className="size-5" aria-hidden="true" />
+				<span className="grid size-6 shrink-0 place-items-center text-muted-foreground">
+					<Icon className="size-4" aria-hidden="true" />
 				</span>
 				<div className="min-w-0">
-					<h2 className="text-base font-semibold">{title}</h2>
+					<h2 className="text-base font-medium">{title}</h2>
 					{description && <p className="mt-1 text-sm text-muted-foreground">{description}</p>}
 				</div>
 			</div>
@@ -85,10 +87,10 @@ export function StatePanel({
 				className,
 			)}
 		>
-			<span className="mb-4 grid size-12 place-items-center rounded-xl bg-accent text-primary-text">
-				<Icon className="size-6" aria-hidden="true" />
+			<span className="mb-4 grid size-10 place-items-center rounded-lg bg-muted text-muted-foreground">
+				<Icon className="size-5" aria-hidden="true" />
 			</span>
-			<Heading className="text-base font-semibold">{title}</Heading>
+			<Heading className="text-base font-medium">{title}</Heading>
 			{description && (
 				<div className="mt-2 max-w-lg text-sm text-muted-foreground">{description}</div>
 			)}

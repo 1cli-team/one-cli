@@ -3,7 +3,6 @@ import React from "react";
 import { useTranslation } from "react-i18next";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
 interface ErrorBoundaryState {
 	hasError: boolean;
@@ -81,35 +80,33 @@ const DefaultErrorFallback: React.FC<{
 
 	return (
 		<div className="flex min-h-screen items-center justify-center bg-background px-6 py-10 text-foreground">
-			<Card className="w-full max-w-3xl border-destructive/20 bg-card/95 shadow-[0_30px_90px_-40px_rgba(15,23,42,0.7)]">
-				<CardHeader className="gap-4">
+			<section className="flex w-full max-w-2xl flex-col gap-6">
+				<header className="flex flex-col gap-4">
 					<div className="flex items-start justify-between gap-4">
-						<div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-destructive/10 text-destructive">
+						<div className="flex size-10 items-center justify-center text-destructive">
 							<AlertTriangle className="h-6 w-6" />
 						</div>
 						<LanguageSwitcher />
 					</div>
-					<div className="space-y-2">
-						<CardTitle className="text-2xl">{t("errorBoundary.title")}</CardTitle>
-						<CardDescription className="max-w-2xl text-base">
-							{t("errorBoundary.body")}
-						</CardDescription>
+					<div className="flex flex-col gap-2">
+						<h1 className="text-2xl font-medium">{t("errorBoundary.title")}</h1>
+						<p className="max-w-2xl text-sm text-muted-foreground">{t("errorBoundary.body")}</p>
 					</div>
-				</CardHeader>
-				<CardContent className="space-y-6">
+				</header>
+				<div className="flex flex-col gap-6">
 					{errorId ? (
-						<div className="rounded-2xl border border-border/70 bg-background/75 px-4 py-3 text-sm">
+						<div className="text-sm">
 							<span className="text-muted-foreground">{t("errorBoundary.errorId")} </span>
 							<code className="font-mono text-foreground">{errorId}</code>
 						</div>
 					) : null}
 
 					{isDev && error ? (
-						<div className="space-y-3">
+						<div className="flex flex-col gap-3">
 							<p className="text-sm font-medium text-destructive">
 								{t("errorBoundary.devDetails")}
 							</p>
-							<pre className="max-h-80 overflow-auto rounded-2xl border border-border/70 bg-background/80 p-4 font-mono text-xs leading-6 text-muted-foreground">
+							<pre className="max-h-80 overflow-auto rounded-lg border border-border bg-card p-4 font-mono text-xs leading-6 text-muted-foreground">
 								{error.message}
 								{error.stack ? `\n\nStack trace:\n${error.stack}` : ""}
 							</pre>
@@ -124,15 +121,16 @@ const DefaultErrorFallback: React.FC<{
 						<Button
 							variant="outline"
 							onClick={() => {
-								window.location.href = "/";
+								window.location.hash = "#/";
+								window.location.reload();
 							}}
 						>
 							<Home />
 							{t("errorBoundary.home")}
 						</Button>
 					</div>
-				</CardContent>
-			</Card>
+				</div>
+			</section>
 		</div>
 	);
 };

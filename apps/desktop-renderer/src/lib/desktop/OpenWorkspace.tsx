@@ -1,3 +1,4 @@
+import { workspacePath } from "@/router/paths";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
@@ -19,7 +20,7 @@ export function OpenWorkspace() {
 			if (!path) return;
 			const entry = await http.post<{ entryId: string }>("/workspaces", { path });
 			await mutate("/workspaces");
-			navigate(`/workspace/${encodeURIComponent(entry.entryId)}`);
+			navigate(workspacePath(entry.entryId));
 		} catch (e) {
 			toast.error((e as Error).message || String(e));
 		} finally {
