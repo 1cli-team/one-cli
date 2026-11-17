@@ -88,7 +88,7 @@ func (p *Plugin) Register(host lifecycle.Host) error {
 	}}
 	i18n.MarkShort(remove, "git.remove.short")
 	trees.AddCommand(list, add, remove)
-	parent.AddCommand(trees, repositoryCommand(service, &directory), cloneCommand(service, &directory))
+	parent.AddCommand(trees, repositoryCommand(service, &directory), cloneCommand(service, &directory), hostCommand(), prCommand(service, &directory))
 	host.Root.AddCommand(parent)
 	return nil
 }

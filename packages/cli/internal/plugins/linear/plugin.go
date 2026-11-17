@@ -238,6 +238,18 @@ func (p *Plugin) Register(host lifecycle.Host) error {
 		}
 		return p.Operation(cmd.Context(), binding, args[0])
 	}))
+	root.AddCommand(workflowCommand(host.Dependencies.Git, p.Plugin))
+	root.AddCommand(command("transition <id> <from-state> <to-state>", "transition", i18n.ExactArgs(3), func(cmd *cobra.Command, args []string) (any, error) {
+		ctx := cmd.Context()
+		binding, err := service.Require(ctx, scope())
+		if err != nil {
+			return nil, err
+		}
+		if err := p.TransitionIssue(ctx, binding, args[0], args[1], args[2]); err != nil {
+			return nil, err
+		}
+		return p.Issue(ctx, binding, args[0])
+	}))
 	host.Root.AddCommand(root)
 	return nil
 }

@@ -14,6 +14,9 @@ import { useWorkspace } from "@/features/workspace-navigation/useWorkspace";
 import { legacyWorkspaceLocation, projectPath, workspacePath } from "./paths";
 import { AccountSettings } from "@/features/infisical-session/AccountSettings";
 import { GlobalVariables } from "@/features/global-variables/GlobalVariables";
+import { CodeHostSettings } from "@/features/code-hosts/CodeHostSettings";
+import { GatewaySettings } from "@/features/gateway/GatewaySettings";
+import { GatewayMonitor } from "@/features/gateway/GatewayMonitor";
 import { LinearSettings } from "@/features/linear/LinearSettings";
 import { IssuesPage } from "@/features/linear/IssuesPage";
 
@@ -282,6 +285,7 @@ export const routes: RouteObject[] = [
 			{ path: "projects/:groupId", element: <WorkspaceGroupsPage /> },
 			{ path: "projects/:groupId/issues", element: <IssuesPage /> },
 			{ path: "workspaces", element: <WorkspaceHome /> },
+			{ path: "gateway", element: <GatewayMonitor /> },
 			{ path: "git/repositories", element: <Navigate replace to="/" /> },
 			{ path: "git/repositories/:repositoryId", element: <LegacyRepositoryRedirect /> },
 			{ path: "credentials", element: <LegacyGlobalRedirect to="/settings/credentials" /> },
@@ -293,6 +297,8 @@ export const routes: RouteObject[] = [
 					{ path: "desktop", element: <DesktopSettings /> },
 					{ path: "credentials", element: <GlobalVariables /> },
 					{ path: "linear", element: <LinearSettings /> },
+					{ path: "gateway", element: <GatewaySettings /> },
+					{ path: "code-hosts", element: <CodeHostSettings /> },
 					{ path: ":domain/:backend", element: <LegacySettingsRedirect /> },
 				],
 			},

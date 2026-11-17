@@ -22,14 +22,17 @@ import { issueLabelName, workflowStateLabel } from "./display-labels";
 import {
 	createComment,
 	createIssue,
+	dispatchToGateway,
 	errorCode,
 	errorText,
 	fetchJSON,
+	gatewayJobsKey,
 	scoped,
 	teamKey,
 	updateIssue,
 	type Binding,
 	type Comment,
+	type GatewayJobs,
 	type Issue,
 	type IssueInput,
 	type Operation,
@@ -76,6 +79,8 @@ export function IssueDialog({
 		fetchJSON,
 		{ revalidateOnFocus: false },
 	);
+	const jobs = useSWR<GatewayJobs>(!isNew ? gatewayJobsKey(scope) : null, fetchJSON);
+	const gatewayStatus = jobs.data?.issues[issueId];
 	const [input, setInput] = useState<IssueInput>({
 		title: "",
 		description: "",
@@ -157,6 +162,25 @@ export function IssueDialog({
 			setBusy(false);
 		}
 	}
+	async function dispatch() {
+		setBusy(true);
+		setError("");
+		try {
+			const { status } = await dispatchToGateway(scope, issueId);
+			await jobs.mutate(
+				(current) => ({
+					enabled: true,
+					issues: { ...current?.issues, [issueId]: status },
+				}),
+				{ revalidate: false },
+			);
+		} catch (e) {
+			setError(errorText(e));
+			void jobs.mutate();
+		} finally {
+			setBusy(false);
+		}
+	}
 	async function reconcile() {
 		if (!pending) return;
 		setBusy(true);
@@ -201,16 +225,34 @@ export function IssueDialog({
 					<DialogDescription>{binding.project.name}</DialogDescription>
 				</DialogHeader>
 				{!isNew && detail.data && (
-					<Button
-						type="button"
-						variant="outline"
-						className="justify-self-start"
-						disabled={busy || !!pending}
-						onClick={() => setCreatingWorktree(true)}
-					>
-						<FolderPlus />
-						{t("git.create")}
-					</Button>
+					<div className="flex flex-wrap items-center gap-2">
+						<Button
+							type="button"
+							variant="outline"
+							disabled={busy || !!pending}
+							onClick={() => setCreatingWorktree(true)}
+						>
+							<FolderPlus />
+							{t("git.create")}
+						</Button>
+						{jobs.data?.enabled &&
+							!gatewayStatus &&
+							!["completed", "canceled"].includes(detail.data.state.type) && (
+								<Button
+									type="button"
+									variant="outline"
+									disabled={busy || !!pending}
+									onClick={() => void dispatch()}
+								>
+									{t("gateway.dispatch")}
+								</Button>
+							)}
+						{gatewayStatus === "processing" && (
+							<span role="status" className="text-sm text-muted-foreground">
+								{t("gateway.processing")}
+							</span>
+						)}
+					</div>
 				)}
 				{creatingWorktree && detail.data && (
 					<CreateIssueWorktreeDialog

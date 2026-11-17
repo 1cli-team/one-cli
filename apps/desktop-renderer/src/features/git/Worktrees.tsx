@@ -1,4 +1,4 @@
-import { FolderOpen, GitBranch, Plus, RefreshCw, Trash2 } from "lucide-react";
+import { FolderOpen, GitBranch, GitFork, Plus, RefreshCw, Trash2 } from "lucide-react";
 import { useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
@@ -9,6 +9,7 @@ import { preserveEnvironment } from "@/features/environment-context/environment"
 import {
 	addWorktree,
 	type GitScope,
+	type GitRemote,
 	getWorktrees,
 	openWorktree,
 	removeWorktree,
@@ -33,6 +34,7 @@ import { InitializeWorkspace } from "@/features/workspace-navigation/InitializeW
 import { workspacePath } from "@/router/paths";
 import type { HttpError } from "@/types/api";
 import { WorktreeForm } from "./WorktreeForm";
+import { GitOriginDialog } from "./GitOriginDialog";
 
 export function Worktrees() {
 	const { entryId = "" } = useParams();
@@ -46,12 +48,14 @@ export function Worktrees() {
 		shouldRetryOnError: false,
 	});
 	const [creating, setCreating] = useState(false);
+	const [originDraft, setOriginDraft] = useState<{ scope: GitScope; origin?: GitRemote }>();
 	const createContent = useRef<HTMLDivElement>(null);
 	const [removing, setRemoving] = useState<Worktree | null>(null);
 	const [busy, setBusy] = useState(false);
 	const [error, setError] = useState("");
 	const [notice, setNotice] = useState("");
 	const readOnly = Boolean(repository.error);
+	const origin = repository.data?.remotes.find((remote) => remote.name === "origin");
 
 	function message(error: unknown) {
 		const text = (error as HttpError | Error)?.message;
@@ -148,8 +152,29 @@ export function Worktrees() {
 				)}
 				{workspace?.status === "uninitialized" && <InitializeWorkspace workspace={workspace} />}
 				{repository.isLoading && <Skeleton className="h-48 w-full" />}
-				{repository.data?.remotes?.length ? (
-					<div className="space-y-2 rounded-lg border border-border p-4">
+				{repository.data && (
+					<section
+						className="space-y-3 rounded-lg border border-border bg-card p-4"
+						aria-labelledby="git-remotes-title"
+					>
+						<header className="flex flex-wrap items-center justify-between gap-3">
+							<h2 id="git-remotes-title" className="flex items-center gap-2 text-base font-medium">
+								<GitFork aria-hidden="true" className="size-4 text-muted-foreground" />
+								{t("git.remoteRepositories")}
+							</h2>
+							<Button
+								variant="outline"
+								size="sm"
+								disabled={busy || readOnly}
+								onClick={() => {
+									setNotice("");
+									setOriginDraft({ scope, origin });
+								}}
+							>
+								{t(origin ? "git.editOrigin" : "git.bindOrigin")}
+							</Button>
+						</header>
+						{!origin && <p className="text-sm text-muted-foreground">{t("git.originMissing")}</p>}
 						{repository.data.remotes.map((remote) => (
 							<div key={remote.name} className="min-w-0 text-sm">
 								<span className="font-medium">{remote.name}</span>
@@ -163,8 +188,8 @@ export function Worktrees() {
 								)}
 							</div>
 						))}
-					</div>
-				) : null}
+					</section>
+				)}
 				{repository.data && (
 					<div className="divide-y divide-border rounded-lg border border-border bg-card">
 						{repository.data.worktrees.map((tree) => (
@@ -265,6 +290,23 @@ export function Worktrees() {
 					</div>
 				)}
 			</div>
+			{originDraft && (
+				<GitOriginDialog
+					scope={originDraft.scope}
+					origin={originDraft.origin}
+					onClose={() => setOriginDraft(undefined)}
+					onSaved={(saved) => {
+						setNotice(t("git.originSaved"));
+						void mutate(worktreesKey(originDraft.scope), (current: typeof repository.data) => {
+							if (!current) return current;
+							const remotes = current.remotes.some((remote) => remote.name === "origin")
+								? current.remotes.map((remote) => (remote.name === "origin" ? saved : remote))
+								: [...current.remotes, saved];
+							return { ...current, remotes };
+						});
+					}}
+				/>
+			)}
 			{creating && repository.data && (
 				<Dialog
 					open

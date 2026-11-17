@@ -38,6 +38,17 @@ const extensions = [
 	Markdown.configure({ markedOptions }),
 ];
 
+const markdownContentClass = cn(
+	"text-sm leading-relaxed [overflow-wrap:anywhere]",
+	"[&_:is(h1,h2,h3,h4,h5,h6)]:font-semibold [&_h1]:text-xl [&_h2]:text-lg [&_h3]:text-base [&>*+*]:mt-2",
+	"[&_ul]:list-disc [&_ol]:list-decimal [&_:is(ul,ol)]:pl-5 [&_ul[data-type=taskList]]:list-none [&_ul[data-type=taskList]]:pl-0",
+	"[&_li[data-checked]]:flex [&_li[data-checked]]:gap-2 [&_li[data-checked]>div]:min-w-0",
+	"[&_blockquote]:border-l-2 [&_blockquote]:pl-3 [&_blockquote]:text-muted-foreground",
+	"[&_a]:text-primary-text [&_a]:underline [&_code]:rounded [&_code]:bg-muted [&_code]:px-1 [&_code]:font-mono",
+	"[&_pre]:overflow-x-auto [&_pre]:rounded-md [&_pre]:bg-muted [&_pre]:p-3 [&_pre]:text-xs [&_pre_code]:p-0",
+	"[&_table]:w-full [&_table]:border-collapse [&_:is(th,td)]:border [&_:is(th,td)]:border-border [&_:is(th,td)]:px-2 [&_:is(th,td)]:py-1 [&_th]:bg-muted [&_img]:max-w-full",
+);
+
 const tools = [
 	{
 		key: "bold",
@@ -93,6 +104,61 @@ function containsRawHTML(editor: Editor, markdown: string) {
 	return found;
 }
 
+export function IssueMarkdownPreview({
+	value,
+	onOpenLink,
+}: {
+	value: string;
+	onOpenLink(url: string): void;
+}) {
+	const [renderedValue, setRenderedValue] = useState<string>();
+	const editor = useEditor({
+		extensions,
+		immediatelyRender: false,
+		editable: false,
+		shouldRerenderOnTransaction: false,
+		editorProps: {
+			attributes: { class: markdownContentClass },
+			handleDOMEvents: {
+				click: (_view, event) => {
+					const target = event.target;
+					const link = target instanceof Element ? target.closest("a[href]") : null;
+					if (!link) return false;
+					event.preventDefault();
+					const href = link.getAttribute("href");
+					if (href) onOpenLink(href);
+					return true;
+				},
+			},
+		},
+	});
+
+	useEffect(() => {
+		if (!editor || editor.isDestroyed) return;
+		let rendered = false;
+		try {
+			rendered =
+				!containsRawHTML(editor, value) &&
+				editor.commands.setContent(value, {
+					contentType: "markdown",
+					emitUpdate: false,
+					errorOnInvalidContent: true,
+				});
+		} catch {
+			// Show the original text if the document cannot be rendered.
+		}
+		setRenderedValue(rendered ? value : undefined);
+	}, [editor, value]);
+
+	const showSource = renderedValue !== value;
+	return (
+		<>
+			<EditorContent editor={editor} hidden={showSource} />
+			{showSource && <p className="whitespace-pre-wrap wrap-anywhere">{value}</p>}
+		</>
+	);
+}
+
 export default function IssueMarkdownEditor({
 	label,
 	value,
@@ -123,17 +189,7 @@ export default function IssueMarkdownEditor({
 				role: "textbox",
 				"aria-labelledby": labelId,
 				"aria-multiline": "true",
-				class: cn(
-					minHeight,
-					"px-3 py-2.5 text-sm leading-relaxed outline-none [overflow-wrap:anywhere]",
-					"[&_:is(h1,h2,h3,h4,h5,h6)]:font-semibold [&_h1]:text-xl [&_h2]:text-lg [&_h3]:text-base [&>*+*]:mt-2",
-					"[&_ul]:list-disc [&_ol]:list-decimal [&_:is(ul,ol)]:pl-5 [&_ul[data-type=taskList]]:list-none [&_ul[data-type=taskList]]:pl-0",
-					"[&_li[data-checked]]:flex [&_li[data-checked]]:gap-2 [&_li[data-checked]>div]:min-w-0",
-					"[&_blockquote]:border-l-2 [&_blockquote]:pl-3 [&_blockquote]:text-muted-foreground",
-					"[&_a]:text-primary-text [&_a]:underline [&_code]:rounded [&_code]:bg-muted [&_code]:px-1 [&_code]:font-mono",
-					"[&_pre]:overflow-x-auto [&_pre]:rounded-md [&_pre]:bg-muted [&_pre]:p-3 [&_pre]:text-xs [&_pre_code]:p-0",
-					"[&_table]:w-full [&_table]:border-collapse [&_:is(th,td)]:border [&_:is(th,td)]:border-border [&_:is(th,td)]:px-2 [&_:is(th,td)]:py-1 [&_th]:bg-muted [&_img]:max-w-full",
-				),
+				class: cn(minHeight, "px-3 py-2.5 outline-none", markdownContentClass),
 			},
 		},
 		onUpdate: ({ editor }) => {

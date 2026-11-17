@@ -67,7 +67,7 @@ dir = "packages/cli"
 run = "task verify-node-workspace"
 
 [tasks."check:go"]
-depends = ["cli:check", "one-core:check", "desktop-api:check"]
+depends = ["cli:check", "one-core:check", "desktop-api:check", "gateway:check"]
 
 [tasks."check:desktop-ui"]
 depends = ["install-deps"]
@@ -88,7 +88,23 @@ description = "Run static checks on the current platform"
 depends = ["check:static"]
 
 [tasks.fmt]
-depends = ["cli:fmt", "one-core:fmt", "desktop-api:fmt"]
+depends = ["cli:fmt", "one-core:fmt", "desktop-api:fmt", "gateway:fmt"]
+
+[tasks."gateway:check"]
+dir = "services/gateway"
+run = ["go vet ./...", "go test -race ./..."]
+
+[tasks."gateway:build"]
+dir = "services/gateway"
+run = "go build -trimpath -o bin/ ./cmd/one-gateway"
+
+[tasks."gateway:fmt"]
+dir = "services/gateway"
+run = "go fmt ./..."
+
+[tasks."gateway:tidy"]
+dir = "services/gateway"
+run = "go mod tidy"
 
 [tasks."linear:check"]
 description = "Verify the Linear plugin, project bindings, CLI and HTTP API"
@@ -107,7 +123,7 @@ run = "go run ./packages/cli/tools/repo-checks gofmt"
 depends = ["check:go"]
 
 [tasks.tidy]
-depends = ["cli:tidy", "one-core:tidy", "desktop-api:tidy"]
+depends = ["cli:tidy", "one-core:tidy", "desktop-api:tidy", "gateway:tidy"]
 run = "go work sync"
 
 [tasks.install]

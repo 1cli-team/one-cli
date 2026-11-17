@@ -159,3 +159,18 @@ export function errorCode(error: unknown) {
 export function errorText(error: unknown) {
 	return (error as HttpError)?.message || String(error);
 }
+
+export type GatewayStatus = "processing" | "submitted" | "failed";
+
+export interface GatewayJobs {
+	enabled: boolean;
+	issues: Record<string, GatewayStatus>;
+}
+
+export const gatewayJobsKey = (scope: Scope) => scoped(scope, "gateway/jobs");
+export const dispatchToGateway = (scope: Scope, id: string) =>
+	http.post<{ status: GatewayStatus }>(
+		scoped(scope, `gateway/jobs/${encodeURIComponent(id)}`),
+		undefined,
+		{ timeout: 60000 },
+	);

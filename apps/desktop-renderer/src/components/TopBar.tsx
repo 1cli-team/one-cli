@@ -47,6 +47,9 @@ export function TopBar({ homeTo, onOpenNavigation }: { homeTo: string; onOpenNav
 	const themeLabel = t(mode === "light" ? "sidebar.themeToDark" : "sidebar.themeToLight");
 	const titles: Record<string, string> = {
 		"/settings/linear": t("linear.settings"),
+		"/settings/gateway": t("gateway.settings"),
+		"/settings/code-hosts": t("codeHosts.settings"),
+		"/gateway": t("gateway.monitor"),
 		"/": t("groups.title"),
 		"/workspaces": t("groups.allWorkspaces"),
 		"/settings/credentials": t("global.title"),

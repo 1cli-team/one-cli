@@ -4,4 +4,5 @@ use (
 	./packages/cli
 	./packages/one-core
 	./services/desktop-api
+	./services/gateway
 )

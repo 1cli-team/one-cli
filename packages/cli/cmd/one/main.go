@@ -10,6 +10,7 @@ import (
 	"os"
 
 	"github.com/torchstellar-team/one-cli/packages/cli/internal/bootstrap/cli"
+	"github.com/torchstellar-team/one-cli/packages/cli/internal/plugins/linear"
 	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/platform/desktopcontrol"
 	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/platform/installation"
 	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/platform/output"
@@ -52,6 +53,18 @@ func main() {
 				os.Exit(1)
 			}
 			_ = json.NewEncoder(os.Stdout).Encode(status)
+			return
+		case "__issue-worker":
+			if len(os.Args) != 4 {
+				os.Exit(2)
+			}
+			if err := cli.InitializeStorage(os.Args[1:]); err != nil {
+				os.Exit(1)
+			}
+			if err := linear.RunWorker(os.Args[2], os.Args[3]); err != nil {
+				fmt.Fprintln(os.Stderr, err)
+				os.Exit(1)
+			}
 			return
 		case "__desktop-identity":
 			_ = json.NewEncoder(os.Stdout).Encode(identity)
