@@ -1,6 +1,6 @@
 import { useState } from "react";
 import useSWR from "swr";
-import { Activity, RefreshCw, Settings2, SlidersHorizontal } from "lucide-react";
+import { Activity, Plus, RefreshCw, Send, Settings2, SlidersHorizontal } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -16,7 +16,7 @@ import {
 } from "@/components/ui/table";
 import { EnvironmentLink } from "@/features/environment-context/EnvironmentLink";
 import { ConnectionBadge } from "./ConnectionBadge";
-import { GatewayAgentConnect } from "./GatewayAgentConnect";
+import { GatewayIssueDialog, type GatewayIssueAction } from "./GatewayIssueDialog";
 import { GatewayProjectDialog } from "./GatewayProjectDialog";
 import { GatewayTaskList } from "./GatewayTaskList";
 import {
@@ -37,8 +37,12 @@ export function GatewayMonitor() {
 	const [configure, setConfigure] = useState(false);
 	const [configured, setConfigured] = useState(false);
 	const [page, setPage] = useState(1);
+	const [issueAction, setIssueAction] = useState<GatewayIssueAction>();
 	const connection = status.error ? undefined : status.data;
 	const snapshot = connection?.snapshot;
+	const mappedProjectIds = snapshot
+		? (snapshot.mappings ?? []).map(({ projectId }) => projectId)
+		: undefined;
 	const jobs = useGatewayJobs(connection, page);
 	const locale = i18n.resolvedLanguage;
 	const formatTime = (value: string) => new Date(value).toLocaleString(locale);
@@ -49,7 +53,6 @@ export function GatewayMonitor() {
 				title={t("gateway.monitor")}
 				actions={
 					<>
-						<GatewayAgentConnect />
 						<Button variant="outline" size="sm" asChild>
 							<EnvironmentLink to="/settings/gateway">
 								<Settings2 />
@@ -119,13 +122,6 @@ export function GatewayMonitor() {
 							setConfigure(true);
 						}}
 					/>
-					<QueueSummary snapshot={snapshot} />
-					<GatewayTaskList
-						data={jobs.data}
-						error={jobs.error}
-						isLoading={jobs.isLoading}
-						onPageChange={setPage}
-					/>
 				</>
 			) : connection ? (
 				<StatePanel
@@ -138,6 +134,46 @@ export function GatewayMonitor() {
 					)}
 				/>
 			) : null}
+			<section className="space-y-3" aria-labelledby="gateway-queue-heading">
+				<div className="flex flex-wrap items-center justify-between gap-3">
+					<h2 id="gateway-queue-heading" className="text-base font-medium">
+						{t("gateway.tasks")}
+					</h2>
+					{snapshot && (
+						<div className="flex flex-wrap gap-2">
+							<Button variant="outline" size="sm" onClick={() => setIssueAction("new")}>
+								<Plus />
+								{t("gateway.issueActions.new")}
+							</Button>
+							<Button size="sm" onClick={() => setIssueAction("dispatch")}>
+								<Send />
+								{t("gateway.issueActions.dispatch")}
+							</Button>
+						</div>
+					)}
+				</div>
+				{snapshot && <QueueSummary snapshot={snapshot} />}
+			</section>
+			{snapshot && (
+				<GatewayTaskList
+					data={jobs.data}
+					error={jobs.error}
+					isLoading={jobs.isLoading}
+					onPageChange={setPage}
+				/>
+			)}
+			{issueAction && (
+				<GatewayIssueDialog
+					action={issueAction}
+					mappedProjectIds={mappedProjectIds}
+					onClose={() => setIssueAction(undefined)}
+					onDispatched={() => {
+						if (page === 1) void jobs.mutate();
+						setPage(1);
+						void status.mutate();
+					}}
+				/>
+			)}
 			{configure && (
 				<GatewayProjectDialog
 					onClose={() => setConfigure(false)}
@@ -241,25 +277,20 @@ function QueueSummary({ snapshot }: { snapshot: GatewaySnapshot }) {
 	const { t, i18n } = useTranslation();
 	const format = new Intl.NumberFormat(i18n.resolvedLanguage);
 	return (
-		<section className="space-y-3" aria-labelledby="gateway-queue-heading">
-			<h2 id="gateway-queue-heading" className="text-base font-medium">
-				{t("gateway.tasks")}
-			</h2>
-			<dl className="grid grid-cols-2 gap-px overflow-hidden rounded-md border border-border bg-border @min-[42rem]:grid-cols-5">
-				{displayedCounts.map((count) => (
-					<div
-						key={count}
-						className="min-w-0 bg-card p-4 last:col-span-2 @min-[42rem]:last:col-span-1"
-					>
-						<dt className="break-words text-sm text-muted-foreground">
-							{t(`gateway.counts.${count}`)}
-						</dt>
-						<dd className="mt-1 text-2xl font-medium tabular-nums">
-							{format.format(snapshot.jobs[count])}
-						</dd>
-					</div>
-				))}
-			</dl>
-		</section>
+		<dl className="grid grid-cols-2 gap-px overflow-hidden rounded-md border border-border bg-border @min-[42rem]:grid-cols-5">
+			{displayedCounts.map((count) => (
+				<div
+					key={count}
+					className="min-w-0 bg-card p-4 last:col-span-2 @min-[42rem]:last:col-span-1"
+				>
+					<dt className="break-words text-sm text-muted-foreground">
+						{t(`gateway.counts.${count}`)}
+					</dt>
+					<dd className="mt-1 text-2xl font-medium tabular-nums">
+						{format.format(snapshot.jobs[count])}
+					</dd>
+				</div>
+			))}
+		</dl>
 	);
 }

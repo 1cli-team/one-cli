@@ -149,6 +149,19 @@ one gateway dispatch MG-3
 one gateway jobs --issue MG-3
 ```
 
+Use `--model` and `--effort` to override the execution machine's Codex
+configuration for one task. Each omitted flag uses the configured default.
+The Desktop **Send to Codex** dialog offers the same fields. A previously
+dispatched task keeps the settings it was created with.
+
+可用 `--model` 和 `--effort` 指定本次任务的模型与推理强度。省略的选项
+沿用执行机器上的 Codex 配置。One Desktop 的「交给 Codex」弹窗提供相同选项。
+已经派发的任务沿用首次派发时的设置。
+
+```sh
+one gateway dispatch MG-3 --model gpt-6.2-sol --effort xhigh
+```
+
 ## One Desktop
 
 Open **Settings → Gateway connection**. Enter the server address and the same

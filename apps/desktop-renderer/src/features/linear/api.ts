@@ -1,3 +1,4 @@
+import type { CodexOptions } from "@/features/gateway/api";
 import http from "@/lib/http";
 import type { HttpError } from "@/types/api";
 
@@ -168,9 +169,12 @@ export interface GatewayJobs {
 }
 
 export const gatewayJobsKey = (scope: Scope) => scoped(scope, "gateway/jobs");
-export const dispatchToGateway = (scope: Scope, id: string) =>
-	http.post<{ status: GatewayStatus }>(
-		scoped(scope, `gateway/jobs/${encodeURIComponent(id)}`),
-		undefined,
+export function dispatchToGateway(scope: Scope, id: string, options: CodexOptions) {
+	const configured = !!(options.model || options.effort);
+	const path = configured ? "gateway/jobs" : `gateway/jobs/${encodeURIComponent(id)}`;
+	return http.post<{ status: GatewayStatus }>(
+		scoped(scope, path),
+		configured ? { issue: id, ...options } : undefined,
 		{ timeout: 60000 },
 	);
+}

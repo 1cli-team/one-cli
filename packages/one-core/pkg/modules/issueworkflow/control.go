@@ -3,6 +3,7 @@ package issueworkflow
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/rpc"
 	"net/rpc/jsonrpc"
@@ -31,6 +32,17 @@ func (s *Service) Handle(ctx context.Context, req api.WorkRequest) api.WorkReply
 	switch req.Operation {
 	case api.WorkStatus:
 		return reply(http.StatusOK, s.snapshot())
+	case api.WorkCodexModels:
+		if reader, ok := s.runner.(interface {
+			CodexModels(context.Context) (api.CodexModelCatalog, error)
+		}); ok {
+			catalog, err := reader.CodexModels(ctx)
+			if err != nil {
+				return problem(http.StatusBadGateway, "codex_models_unavailable", err)
+			}
+			return reply(http.StatusOK, catalog)
+		}
+		return problem(http.StatusNotFound, "codex_models_unavailable", nil)
 	case api.WorkMonitorJobs:
 		if req.IssueID != "" && !api.ValidIssueReference(req.IssueID) {
 			return problem(http.StatusBadRequest, "invalid_issue_reference", nil)
@@ -40,9 +52,15 @@ func (s *Service) Handle(ctx context.Context, req api.WorkRequest) api.WorkReply
 		if uuidPattern.MatchString(req.ProjectID) {
 			return reply(http.StatusOK, s.list(req.ProjectID))
 		}
-	case api.WorkDispatch:
+	case api.WorkDispatch, api.WorkDispatchWithOptions:
 		if uuidPattern.MatchString(req.ProjectID) && api.ValidIssueReference(req.IssueID) {
-			status, code, err := s.dispatch(ctx, req.ProjectID, req.IssueID)
+			if !req.Codex.Valid() {
+				return problem(http.StatusBadRequest, "invalid_codex_options", nil)
+			}
+			status, code, err := s.dispatch(ctx, req.ProjectID, req.IssueID, req.Codex)
+			if errors.Is(err, api.ErrCodexOptionsConflict) {
+				return problem(code, "codex_options_conflict", nil)
+			}
 			if err != nil {
 				return problem(code, "workflow_dispatch", err)
 			}

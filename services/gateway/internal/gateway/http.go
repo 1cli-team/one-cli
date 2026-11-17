@@ -42,6 +42,19 @@ func Handler(token string, forward func(context.Context, api.WorkRequest) (api.W
 					return
 				}
 			}
+			if op == api.WorkDispatchWithOptions {
+				var dispatch api.DispatchInput
+				decoder := json.NewDecoder(http.MaxBytesReader(w, r.Body, 4<<10))
+				decoder.DisallowUnknownFields()
+				if decoder.Decode(&dispatch) != nil || decoder.Decode(new(any)) != io.EOF ||
+					!api.ValidIssueReference(dispatch.Issue) || !dispatch.CodexOptions.Valid() {
+					w.Header().Set("Content-Type", "application/json")
+					w.WriteHeader(http.StatusBadRequest)
+					_, _ = w.Write([]byte(`{"reason":"invalid_codex_options"}`))
+					return
+				}
+				input.IssueID, input.Codex = dispatch.Issue, dispatch.CodexOptions
+			}
 			reply, err := forward(r.Context(), input)
 			if err != nil || reply.Status < 200 || reply.Status > 599 {
 				w.WriteHeader(http.StatusServiceUnavailable)
@@ -53,12 +66,14 @@ func Handler(token string, forward func(context.Context, api.WorkRequest) (api.W
 		})
 	}
 	register("GET /v1/status", api.WorkStatus)
+	register("GET /v1/codex/models", api.WorkCodexModels)
 	register("GET /v1/jobs", api.WorkMonitorJobs)
 	register("GET /v1/repositories", api.WorkRepositories)
 	register("GET /v1/repositories/{repository}", api.WorkRepository)
 	register("GET /v1/projects/{project}/configuration", api.WorkMapping)
 	register("PUT /v1/projects/{project}/configuration", api.WorkSaveMapping)
 	register("GET /v1/projects/{project}/jobs", api.WorkList)
+	register("POST /v1/projects/{project}/jobs", api.WorkDispatchWithOptions)
 	register("POST /v1/projects/{project}/jobs/{issue}", api.WorkDispatch)
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Cache-Control", "no-store")

@@ -12,14 +12,16 @@ import (
 type WorkOperation string
 
 const (
-	WorkStatus       WorkOperation = "status"
-	WorkMonitorJobs  WorkOperation = "monitor_jobs"
-	WorkList         WorkOperation = "list"
-	WorkDispatch     WorkOperation = "dispatch"
-	WorkRepositories WorkOperation = "repositories"
-	WorkRepository   WorkOperation = "repository"
-	WorkMapping      WorkOperation = "mapping"
-	WorkSaveMapping  WorkOperation = "save_mapping"
+	WorkStatus              WorkOperation = "status"
+	WorkMonitorJobs         WorkOperation = "monitor_jobs"
+	WorkCodexModels         WorkOperation = "codex_models"
+	WorkList                WorkOperation = "list"
+	WorkDispatch            WorkOperation = "dispatch"
+	WorkDispatchWithOptions WorkOperation = "dispatch_with_options"
+	WorkRepositories        WorkOperation = "repositories"
+	WorkRepository          WorkOperation = "repository"
+	WorkMapping             WorkOperation = "mapping"
+	WorkSaveMapping         WorkOperation = "save_mapping"
 )
 
 const WorkMethod = "OneWorkflow.Call"
@@ -31,6 +33,7 @@ type WorkRequest struct {
 	IssueID      string
 	RepositoryID string
 	Mapping      ProjectInput
+	Codex        CodexOptions
 }
 
 type WorkReply struct {

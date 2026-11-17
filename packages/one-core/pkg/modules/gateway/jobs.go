@@ -35,6 +35,7 @@ type JobSummary struct {
 	Stage        string          `json:"stage"`
 	CreatedAt    time.Time       `json:"createdAt"`
 	LastError    string          `json:"lastError,omitempty"`
+	Codex        CodexOptions    `json:"codex,omitzero"`
 	Repositories []JobRepository `json:"repositories"`
 }
 

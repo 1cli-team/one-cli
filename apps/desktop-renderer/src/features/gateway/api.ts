@@ -16,6 +16,23 @@ export interface GatewayConnection {
 	token: string;
 }
 
+export interface CodexOptions {
+	model?: string;
+	effort?: string;
+}
+
+export interface CodexModelCatalog {
+	models: { id: string; name: string; efforts: string[] }[];
+	defaultModel?: string;
+	defaultEffort?: string;
+}
+
+export function useCodexModels() {
+	return useSWR("/gateway/codex/models", (path) =>
+		http.get<CodexModelCatalog>(path, { timeout: 40000 }),
+	);
+}
+
 interface RepositoryIdentity {
 	github: string;
 	repository?: { host: string; slug: string };
@@ -77,6 +94,7 @@ export interface GatewayJob {
 	stage: string;
 	createdAt: string;
 	lastError?: string;
+	codex?: CodexOptions;
 	repositories: JobRepository[];
 }
 

@@ -108,14 +108,6 @@ func (c *Client) List(ctx context.Context, project string) (Jobs, error) {
 	return jobs, err
 }
 
-func (c *Client) Dispatch(ctx context.Context, project, issue string) (Status, error) {
-	var result struct {
-		Status Status `json:"status"`
-	}
-	err := c.do(ctx, http.MethodPost, &result, "projects", url.PathEscape(project), "jobs", url.PathEscape(issue))
-	return result.Status, err
-}
-
 func (c *Client) Snapshot(ctx context.Context) (Snapshot, error) {
 	var result Snapshot
 	if err := c.do(ctx, http.MethodGet, &result, "status"); err != nil {

@@ -675,17 +675,34 @@
 	},
 	"gateway": {
 		"dispatch": "Send to Codex",
+		"codex": {
+			"model": "Codex model",
+			"effort": "Reasoning effort",
+			"default": "Codex default",
+			"defaultValue": "Codex default · {{value}}",
+			"modelsLoading": "Loading models from the execution machine…",
+			"modelsUnavailable": "Could not load models from the execution machine. You can still send using Codex defaults.",
+			"sending": "Sending…"
+		},
+		"issueActions": {
+			"new": "New issue",
+			"dispatch": "Dispatch issue",
+			"newDescription": "Create a Linear issue in a project mapped in Gateway. You can send it to Codex immediately.",
+			"dispatchDescription": "Select a Linear project and issue, then choose the Codex settings for this task.",
+			"selectProject": "Select a Linear project",
+			"selectIssue": "Select an issue",
+			"noIssues": "This page has no issues available to dispatch.",
+			"noMappedProjects": "Configure a project mapping in Gateway to continue.",
+			"noMappedBindings": "Bind a mapped Linear project from its Issues page in One Desktop to continue.",
+			"createOnly": "Create only",
+			"createAndDispatch": "Create and send to Codex",
+			"created": "Created {{issue}} in Linear.",
+			"dispatched": "Issue sent to Codex. Follow its progress in Task details.",
+			"alreadyFailed": "This issue already has a failed task. See Task details."
+		},
 		"processing": "Processing",
 		"settings": "Gateway connection",
 		"monitor": "Gateway monitor",
-		"agent": {
-			"connect": "Connect with Agent",
-			"description": "Paste the prompt below into an agent on this machine. It uses the latest One CLI and the locally saved Gateway connection.",
-			"prompt": "Use One CLI to check the Gateway configured on this machine.\n\n{{status}}\n{{jobs}}\n\nOnce you confirm Gateway is online, summarize recent tasks and include any available PR links.",
-			"copy": "Copy for Agent",
-			"copied": "Agent connection instructions copied.",
-			"copyError": "Could not copy. Select the instructions above to copy them manually."
-		},
 		"connection": "Connection",
 		"address": "Address",
 		"addressHint": "Use HTTPS for a remote Gateway or HTTP for a local Gateway.",

@@ -675,17 +675,34 @@
 	},
 	"gateway": {
 		"dispatch": "交给 Codex",
+		"codex": {
+			"model": "Codex 模型",
+			"effort": "推理强度",
+			"default": "Codex 默认",
+			"defaultValue": "Codex 默认 · {{value}}",
+			"modelsLoading": "正在从执行机器读取模型列表…",
+			"modelsUnavailable": "无法从执行机器读取模型列表。仍可使用 Codex 默认配置派发。",
+			"sending": "正在派发…"
+		},
+		"issueActions": {
+			"new": "新建需求",
+			"dispatch": "派发需求",
+			"newDescription": "在已配置 Gateway 映射的 Linear 项目中新建需求，也可以创建后直接交给 Codex。",
+			"dispatchDescription": "选择 Linear 项目和需求，再选择本次任务的 Codex 配置。",
+			"selectProject": "选择 Linear 项目",
+			"selectIssue": "选择需求",
+			"noIssues": "本页没有可派发的需求。",
+			"noMappedProjects": "请先在 Gateway 配置项目映射。",
+			"noMappedBindings": "请先在 One Desktop 的任务页面绑定一个已配置 Gateway 映射的 Linear 项目。",
+			"createOnly": "仅创建",
+			"createAndDispatch": "创建并交给 Codex",
+			"created": "已在 Linear 创建 {{issue}}。",
+			"dispatched": "已交给 Codex，可以在任务明细中查看进度。",
+			"alreadyFailed": "该需求已有失败的任务，请查看任务明细。"
+		},
 		"processing": "处理中",
 		"settings": "Gateway 连接",
 		"monitor": "Gateway 监控",
-		"agent": {
-			"connect": "用 Agent 连接",
-			"description": "将下面的提示粘贴给本机的 Agent。它会用最新版 One CLI 读取保存在本机的 Gateway 连接。",
-			"prompt": "请用 One CLI 查看本机已配置的 Gateway。\n\n{{status}}\n{{jobs}}\n\n确认 Gateway 在线后，汇报最近任务的状态，并附上已有的 PR 链接。",
-			"copy": "复制给 Agent",
-			"copied": "已复制 Agent 连接说明。",
-			"copyError": "无法复制。可以选中上面的说明手动复制。"
-		},
 		"connection": "连接状态",
 		"address": "地址",
 		"addressHint": "远程 Gateway 使用 HTTPS，本机 Gateway 可以使用 HTTP。",

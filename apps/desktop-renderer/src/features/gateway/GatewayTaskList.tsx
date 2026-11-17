@@ -126,6 +126,18 @@ function GatewayTaskRow({ job }: { job: GatewayJob }) {
 							<p className="mt-1 whitespace-pre-wrap wrap-anywhere">{job.lastError}</p>
 						</ErrorNotice>
 					)}
+					{job.codex && (
+						<dl className="grid gap-2 rounded-md border border-border p-3 sm:grid-cols-2">
+							<div className="min-w-0">
+								<dt className="text-xs text-muted-foreground">{t("gateway.codex.model")}</dt>
+								<dd className="wrap-anywhere">{job.codex.model || t("gateway.codex.default")}</dd>
+							</div>
+							<div className="min-w-0">
+								<dt className="text-xs text-muted-foreground">{t("gateway.codex.effort")}</dt>
+								<dd className="wrap-anywhere">{job.codex.effort || t("gateway.codex.default")}</dd>
+							</div>
+						</dl>
+					)}
 					{expanded && job.description && (
 						<Suspense
 							fallback={<p className="whitespace-pre-wrap wrap-anywhere">{job.description}</p>}

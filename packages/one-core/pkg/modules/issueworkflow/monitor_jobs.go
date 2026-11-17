@@ -32,6 +32,7 @@ func (j Job) monitorSummary() api.JobSummary {
 		ID: j.ID, ProjectID: j.ProjectID, Identifier: j.Issue.Identifier, Title: j.Issue.Title,
 		Description: monitorText(j.Issue.Description), URL: j.Issue.URL,
 		Stage: string(j.Stage), CreatedAt: j.Created, LastError: monitorText(j.LastError),
+		Codex: j.Codex,
 	}
 	if j.Issue.Project != nil {
 		summary.ProjectName = j.Issue.Project.Name

@@ -29,6 +29,8 @@ func TestGatewayOnlyForwardsWorkflowOperations(t *testing.T) {
 		{http.MethodGet, "/v1/code-hosts", token, "", http.StatusNotFound},
 		{http.MethodPut, "/v1/projects/project/configuration", token, `{"unexpected":true}`, http.StatusBadRequest},
 		{http.MethodPost, "/v1/projects/project/jobs/issue", token, "", http.StatusAccepted},
+		{http.MethodPost, "/v1/projects/project/jobs", token, `{"issue":"ONE-1","model":"fixture-model","effort":"xhigh"}`, http.StatusAccepted},
+		{http.MethodPost, "/v1/projects/project/jobs", token, `{"issue":"ONE-1","effort":"two words"}`, http.StatusBadRequest},
 	} {
 		req := httptest.NewRequest(tc.method, tc.path, strings.NewReader(tc.body))
 		req.Header.Set("Authorization", "Bearer "+tc.secret)
@@ -38,8 +40,12 @@ func TestGatewayOnlyForwardsWorkflowOperations(t *testing.T) {
 			t.Fatalf("%s %s got %d", tc.method, tc.path, rec.Code)
 		}
 	}
-	if len(calls) != 1 || calls[0].Operation != api.WorkDispatch || calls[0].ProjectID != "project" || calls[0].IssueID != "issue" {
+	if len(calls) != 2 || calls[0].Operation != api.WorkDispatch || calls[0].ProjectID != "project" || calls[0].IssueID != "issue" {
 		t.Fatalf("unexpected forwarded operations: %+v", calls)
+	}
+	if options := calls[1]; options.Operation != api.WorkDispatchWithOptions || options.ProjectID != "project" ||
+		options.IssueID != "ONE-1" || options.Codex != (api.CodexOptions{Model: "fixture-model", Effort: "xhigh"}) {
+		t.Fatalf("configured dispatch: %+v", options)
 	}
 }
 

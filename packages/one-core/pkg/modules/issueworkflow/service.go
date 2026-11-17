@@ -103,9 +103,9 @@ func (s *Service) list(project string) api.Jobs {
 	return result
 }
 
-func (s *Service) dispatch(ctx context.Context, projectID, issueID string) (api.Status, int, error) {
+func (s *Service) dispatch(ctx context.Context, projectID, issueID string, options api.CodexOptions) (api.Status, int, error) {
 	if j, ok := s.store.get(projectID, issueID); ok {
-		return j.status(), http.StatusOK, nil
+		return existingDispatch(j, options)
 	}
 	project, ok := s.project(projectID)
 	if !ok {
@@ -125,7 +125,7 @@ func (s *Service) dispatch(ctx context.Context, projectID, issueID string) (api.
 		return "", http.StatusConflict, fmt.Errorf("Linear returned an issue that does not match the requested reference")
 	}
 	if j, ok := s.store.get(projectID, issue.ID); ok {
-		return j.status(), http.StatusOK, nil
+		return existingDispatch(j, options)
 	}
 	flow, ok := project.Teams[issue.Team.ID]
 	if !ok || issue.State.Type == "completed" || issue.State.Type == "canceled" {
@@ -138,15 +138,25 @@ func (s *Service) dispatch(ctx context.Context, projectID, issueID string) (api.
 	if !matchesTeamFlow(flow, team) {
 		return "", http.StatusConflict, fmt.Errorf("configured Linear states do not match the team")
 	}
-	job, err := s.store.enqueue(Job{ProjectID: projectID, Project: project, Issue: issue})
+	job, err := s.store.enqueue(Job{ProjectID: projectID, Project: project, Issue: issue, Codex: options})
 	if err != nil {
 		return "", http.StatusInternalServerError, err
+	}
+	if job.Codex != options {
+		return existingDispatch(job, options)
 	}
 	select {
 	case s.wake <- struct{}{}:
 	default:
 	}
 	return job.status(), http.StatusAccepted, nil
+}
+
+func existingDispatch(job Job, options api.CodexOptions) (api.Status, int, error) {
+	if options != (api.CodexOptions{}) && options != job.Codex {
+		return "", http.StatusConflict, api.ErrCodexOptionsConflict
+	}
+	return job.status(), http.StatusOK, nil
 }
 
 func (s *Service) Run(ctx context.Context) {

@@ -34,23 +34,24 @@ const (
 )
 
 type Job struct {
-	ID             string          `json:"id"`
-	ProjectID      string          `json:"projectId"`
-	Issue          tracking.Issue  `json:"issue"`
-	Project        Project         `json:"project"`
-	Stage          stage           `json:"stage"`
-	Created        time.Time       `json:"created"`
-	Worktree       string          `json:"worktree,omitempty"`
-	CheckDir       string          `json:"checkDir,omitempty"`
-	BaseSHA        string          `json:"baseSha,omitempty"`
-	Branch         string          `json:"branch,omitempty"`
-	ThreadID       string          `json:"threadId,omitempty"`
-	TurnID         string          `json:"turnId,omitempty"`
-	HeadSHA        string          `json:"headSha,omitempty"`
-	OpenSince      time.Time       `json:"openSince,omitzero"`
-	PR             PullRequest     `json:"pr"`
-	LastError      string          `json:"lastError,omitempty"`
-	RepositoryRuns []RepositoryRun `json:"repositoryRuns,omitempty"`
+	ID             string           `json:"id"`
+	ProjectID      string           `json:"projectId"`
+	Issue          tracking.Issue   `json:"issue"`
+	Project        Project          `json:"project"`
+	Codex          api.CodexOptions `json:"codex,omitzero"`
+	Stage          stage            `json:"stage"`
+	Created        time.Time        `json:"created"`
+	Worktree       string           `json:"worktree,omitempty"`
+	CheckDir       string           `json:"checkDir,omitempty"`
+	BaseSHA        string           `json:"baseSha,omitempty"`
+	Branch         string           `json:"branch,omitempty"`
+	ThreadID       string           `json:"threadId,omitempty"`
+	TurnID         string           `json:"turnId,omitempty"`
+	HeadSHA        string           `json:"headSha,omitempty"`
+	OpenSince      time.Time        `json:"openSince,omitzero"`
+	PR             PullRequest      `json:"pr"`
+	LastError      string           `json:"lastError,omitempty"`
+	RepositoryRuns []RepositoryRun  `json:"repositoryRuns,omitempty"`
 	readRoots      []string
 }
 

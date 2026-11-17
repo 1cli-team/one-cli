@@ -1,11 +1,10 @@
-import { lazy, Suspense, useEffect, useState, type ComponentProps } from "react";
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import useSWR from "swr";
 import { ExternalLink, FolderPlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Skeleton } from "@/components/ui/skeleton";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
 	Dialog,
@@ -18,11 +17,11 @@ import { ErrorNotice } from "@/components/ui/page-layout";
 import { openExternal } from "@/lib/desktop/runtime";
 import { Choice } from "./Choice";
 import { CreateIssueWorktreeDialog } from "./CreateIssueWorktreeDialog";
+import { IssueMarkdownField } from "./IssueMarkdownField";
 import { issueLabelName, workflowStateLabel } from "./display-labels";
 import {
 	createComment,
 	createIssue,
-	dispatchToGateway,
 	errorCode,
 	errorText,
 	fetchJSON,
@@ -40,24 +39,6 @@ import {
 	type Scope,
 	type Team,
 } from "./api";
-
-const IssueMarkdownEditor = lazy(() => import("./IssueMarkdownEditor"));
-
-function MarkdownField(props: ComponentProps<typeof IssueMarkdownEditor>) {
-	const { t } = useTranslation();
-	return (
-		<Suspense
-			fallback={
-				<div role="status" className="space-y-2" aria-label={t("linear.loading")}>
-					<Label>{props.label}</Label>
-					<Skeleton className={props.compact ? "h-28 w-full" : "h-40 w-full"} />
-				</div>
-			}
-		>
-			<IssueMarkdownEditor {...props} />
-		</Suspense>
-	);
-}
 
 export function IssueDialog({
 	scope,
@@ -162,25 +143,6 @@ export function IssueDialog({
 			setBusy(false);
 		}
 	}
-	async function dispatch() {
-		setBusy(true);
-		setError("");
-		try {
-			const { status } = await dispatchToGateway(scope, issueId);
-			await jobs.mutate(
-				(current) => ({
-					enabled: true,
-					issues: { ...current?.issues, [issueId]: status },
-				}),
-				{ revalidate: false },
-			);
-		} catch (e) {
-			setError(errorText(e));
-			void jobs.mutate();
-		} finally {
-			setBusy(false);
-		}
-	}
 	async function reconcile() {
 		if (!pending) return;
 		setBusy(true);
@@ -235,18 +197,6 @@ export function IssueDialog({
 							<FolderPlus />
 							{t("git.create")}
 						</Button>
-						{jobs.data?.enabled &&
-							!gatewayStatus &&
-							!["completed", "canceled"].includes(detail.data.state.type) && (
-								<Button
-									type="button"
-									variant="outline"
-									disabled={busy || !!pending}
-									onClick={() => void dispatch()}
-								>
-									{t("gateway.dispatch")}
-								</Button>
-							)}
 						{gatewayStatus === "processing" && (
 							<span role="status" className="text-sm text-muted-foreground">
 								{t("gateway.processing")}
@@ -301,7 +251,7 @@ export function IssueDialog({
 										autoFocus={isNew}
 									/>
 								</div>
-								<MarkdownField
+								<IssueMarkdownField
 									label={t("linear.description")}
 									value={input.description}
 									onChange={(value) => field("description", value)}
@@ -459,7 +409,7 @@ export function IssueDialog({
 										void addComment();
 									}}
 								>
-									<MarkdownField
+									<IssueMarkdownField
 										label={t("linear.addComment")}
 										value={comment}
 										onChange={setComment}

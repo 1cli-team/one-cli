@@ -253,10 +253,14 @@ func (c Codex) Implement(ctx context.Context, job *Job, commonDir string, checkp
 	var thread struct {
 		Thread struct{ ID string } `json:"thread"`
 	}
-	if err := session.call("thread/start", map[string]any{
+	threadParams := map[string]any{
 		"cwd": job.Worktree, "approvalPolicy": "never",
 		"ephemeral": false, "serviceName": "one_gateway",
-	}, &thread, nil); err != nil {
+	}
+	if job.Codex.Model != "" {
+		threadParams["model"] = job.Codex.Model
+	}
+	if err := session.call("thread/start", threadParams, &thread, nil); err != nil {
 		return err
 	}
 	if thread.Thread.ID == "" {
@@ -288,10 +292,14 @@ func (c Codex) Implement(ctx context.Context, job *Job, commonDir string, checkp
 			completed = event.Turn
 		}
 	}
-	if err := session.call("turn/start", map[string]any{
+	turnParams := map[string]any{
 		"threadId": job.ThreadID, "cwd": job.Worktree, "approvalPolicy": "never",
 		"input": []map[string]string{{"type": "text", "text": prompt}},
-	}, &started, notify); err != nil {
+	}
+	if job.Codex.Effort != "" {
+		turnParams["effort"] = job.Codex.Effort
+	}
+	if err := session.call("turn/start", turnParams, &started, notify); err != nil {
 		return err
 	}
 	if started.Turn.ID == "" {

@@ -191,7 +191,7 @@ func TestVerificationFailureStopsPublication(t *testing.T) {
 	project.Check = []string{"true"}
 	service.projects[projectID] = project
 	runner.checkError = errors.New("check failed")
-	if _, _, err := service.dispatch(t.Context(), projectID, issueID); err != nil {
+	if _, _, err := service.dispatch(t.Context(), projectID, issueID, api.CodexOptions{}); err != nil {
 		t.Fatal(err)
 	}
 	job, _ := store.get(projectID, issueID)
@@ -212,7 +212,18 @@ func TestDispatchAndFilterByIssueReference(t *testing.T) {
 	dispatch := api.WorkRequest{Operation: api.WorkDispatch, ProjectID: projectID, IssueID: "ONE-2"}
 	verifyWorkRequest(t, service, dispatch, http.StatusConflict)
 	dispatch.IssueID = "one-1"
+	dispatch.Operation = api.WorkDispatchWithOptions
+	options := api.CodexOptions{Model: "fixture-model", Effort: "high"}
+	dispatch.Codex = options
 	verifyWorkRequest(t, service, dispatch, http.StatusAccepted)
+	verifyWorkRequest(t, service, dispatch, http.StatusOK)
+	dispatch.Codex.Effort = "low"
+	conflict := verifyWorkRequest(t, service, dispatch, http.StatusConflict)
+	if string(conflict) != `{"reason":"codex_options_conflict"}` {
+		t.Fatalf("dispatch conflict: %s", conflict)
+	}
+	dispatch.Operation = api.WorkDispatch
+	dispatch.Codex = api.CodexOptions{}
 	dispatch.IssueID = issueID
 	verifyWorkRequest(t, service, dispatch, http.StatusOK)
 	for _, reference := range []string{"ONE-1", issueID, "ONE-2"} {
@@ -228,7 +239,8 @@ func TestDispatchAndFilterByIssueReference(t *testing.T) {
 			continue
 		}
 		if page.Issue != reference || len(page.Items) != 1 ||
-			page.Items[0].ProjectID != projectID || page.Items[0].Stage != string(queued) {
+			page.Items[0].ProjectID != projectID || page.Items[0].Stage != string(queued) ||
+			page.Items[0].Codex != options {
 			t.Fatalf("filtered job list: %+v", page)
 		}
 	}

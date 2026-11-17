@@ -2,6 +2,7 @@ package gatewaycmd
 
 import (
 	"context"
+	"errors"
 	"slices"
 	"strings"
 	"time"
@@ -14,6 +15,7 @@ import (
 
 func dispatchCommand() *cobra.Command {
 	var selectedProject string
+	var model, effort string
 	cmd := &cobra.Command{
 		Use:  "dispatch <issue>",
 		Args: i18n.ExactArgs(1),
@@ -21,6 +23,10 @@ func dispatchCommand() *cobra.Command {
 			issue := strings.TrimSpace(args[0])
 			if !gateway.ValidIssueReference(issue) {
 				return i18n.Errorf("gateway.cli.invalid_issue")
+			}
+			options := gateway.CodexOptions{Model: strings.TrimSpace(model), Effort: strings.TrimSpace(effort)}
+			if !options.Valid() {
+				return i18n.Errorf("gateway.codex_options_invalid")
 			}
 			client, url, err := openClient()
 			if err != nil {
@@ -36,8 +42,15 @@ func dispatchCommand() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			status, err := client.Dispatch(ctx, project, issue)
-			if err != nil {
+			status, err := client.DispatchWithOptions(ctx, project, issue, options)
+			switch {
+			case errors.Is(err, gateway.ErrCodexOptionsConflict):
+				return i18n.Errorf("gateway.codex_options_conflict")
+			case errors.Is(err, gateway.ErrCodexOptionsUnsupported):
+				return i18n.Errorf("gateway.codex_options_unsupported")
+			case errors.Is(err, gateway.ErrInvalidCodexOptions):
+				return i18n.Errorf("gateway.codex_options_invalid")
+			case err != nil:
 				return i18n.Errorf("gateway.cli.dispatch_failed", err)
 			}
 			output.Emit(result{
@@ -50,7 +63,11 @@ func dispatchCommand() *cobra.Command {
 	i18n.MarkShort(cmd, "gateway.cli.dispatch")
 	i18n.MarkLong(cmd, "gateway.cli.dispatch_long")
 	cmd.Flags().StringVar(&selectedProject, "project", "", "")
+	cmd.Flags().StringVar(&model, "model", "", "")
+	cmd.Flags().StringVar(&effort, "effort", "", "")
 	i18n.MarkFlagUsage(cmd, "project", "gateway.cli.flag_project")
+	i18n.MarkFlagUsage(cmd, "model", "gateway.cli.flag_model")
+	i18n.MarkFlagUsage(cmd, "effort", "gateway.cli.flag_effort")
 	return cmd
 }
 
