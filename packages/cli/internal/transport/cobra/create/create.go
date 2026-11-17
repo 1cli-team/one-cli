@@ -77,7 +77,10 @@ func runCreate(deps Dependencies, cmd *cobra.Command, rawDir string, flags *crea
 
 	displayPath := relativeOrAbs(cwd, targetDir, useCurrentDir)
 
-	enables := append([]string(nil), workspaceDefaultEnables...)
+	enables := []string{"dev/process"}
+	if backend := deps.Creation.EnvironmentBackend(); backend != "" {
+		enables = append(enables, "env/"+backend)
+	}
 
 	var result creationmodule.WorkspaceResult
 	if err := prompt.SpinContext(cmd.Context(), i18n.T("create.generating"), func(ctx context.Context) error {

@@ -90,17 +90,6 @@ func validProjectFieldPath(path string) bool {
 	return true
 }
 
-// Builtin constructs the canonical catalog shipped in the binary. Returning a
-// fresh instance keeps application composition isolated without making
-// callers maintain the built-in descriptor list.
-func Builtin() *Catalog {
-	c, err := New(builtinSpecs()...)
-	if err != nil {
-		panic(err)
-	}
-	return c
-}
-
 func cloneSpec(spec BackendSpec) BackendSpec {
 	spec.Capabilities = append([]Capability(nil), spec.Capabilities...)
 	spec.Traits = append([]Trait(nil), spec.Traits...)
@@ -109,7 +98,7 @@ func cloneSpec(spec BackendSpec) BackendSpec {
 	return spec
 }
 
-// All returns descriptors in the stable product order declared by Builtin.
+// All returns descriptors in the stable product order declared during composition.
 func (c *Catalog) All() []BackendSpec {
 	if c == nil {
 		return nil

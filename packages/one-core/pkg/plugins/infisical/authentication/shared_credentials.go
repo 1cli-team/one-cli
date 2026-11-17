@@ -8,9 +8,9 @@ import (
 	"sync"
 	"time"
 
-	environment "github.com/torchstellar-team/one-cli/packages/one-core/pkg/modules/environment"
 	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/platform/i18n"
-	session "github.com/torchstellar-team/one-cli/packages/one-core/pkg/platform/infisicalsession"
+	environment "github.com/torchstellar-team/one-cli/packages/one-core/pkg/plugins/infisical/internal/remote"
+	session "github.com/torchstellar-team/one-cli/packages/one-core/pkg/plugins/infisical/session"
 )
 
 const preparationTimeout = 2 * time.Minute

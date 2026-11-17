@@ -4,8 +4,8 @@ import (
 	"net/http"
 	"sync"
 
-	remote "github.com/torchstellar-team/one-cli/packages/one-core/pkg/modules/environment"
-	session "github.com/torchstellar-team/one-cli/packages/one-core/pkg/platform/infisicalsession"
+	remote "github.com/torchstellar-team/one-cli/packages/one-core/pkg/plugins/infisical"
+	session "github.com/torchstellar-team/one-cli/packages/one-core/pkg/plugins/infisical/session"
 )
 
 func registerSessionRoutes(mux *http.ServeMux, opts MuxOpts) {

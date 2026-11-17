@@ -4,7 +4,6 @@ import (
 	"context"
 	"strings"
 
-	"github.com/torchstellar-team/one-cli/packages/one-core/internal/adapters/env/infisical"
 	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/application/execution"
 	catalog "github.com/torchstellar-team/one-cli/packages/one-core/pkg/core/backend"
 	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/core/workspace"
@@ -30,27 +29,18 @@ func (s *Service) Get(ctx context.Context, input GetInput) (*GetResult, error) {
 	}
 	root := resolution.Workspace.Root()
 	environment := resolution.Scope.Environment()
-	if err := requireInfisicalBackend(resolution); err != nil {
-		return nil, err
-	}
-	config, credentials, err := s.resolveInfisical()
+	provider, err := s.backend(resolution)
 	if err != nil {
 		return nil, err
 	}
-	path, err := s.resolveInfisicalFolderPath(resolution.Workspace, config, input.Project)
+	if err := provider.Require(resolution.Workspace.Root()); err != nil {
+		return nil, err
+	}
+	path, err := resolveFolderPath(resolution.Workspace, input.Project)
 	if err != nil {
 		return nil, err
 	}
-	result, err := infisical.Get(ctx, root, infisical.GetInput{
-		Env: environment, Path: path, Key: input.Key, Cfg: config, Creds: credentials,
-	})
-	if result == nil || err != nil {
-		return nil, err
-	}
-	return &GetResult{
-		Schema: result.Schema, Environment: result.Env, Path: result.Path,
-		Key: result.Key, Value: result.Value,
-	}, nil
+	return provider.Get(ctx, root, environment, path, input.Key)
 }
 
 type ListInput struct {
@@ -69,28 +59,18 @@ func (s *Service) List(ctx context.Context, input ListInput) (*ListResult, error
 	}
 	root := resolution.Workspace.Root()
 	environment := resolution.Scope.Environment()
-	if err := requireInfisicalBackend(resolution); err != nil {
-		return nil, err
-	}
-	config, credentials, err := s.resolveInfisical()
+	provider, err := s.backend(resolution)
 	if err != nil {
 		return nil, err
 	}
-	path, err := s.resolveInfisicalFolderPath(resolution.Workspace, config, input.Project)
+	if err := provider.Require(resolution.Workspace.Root()); err != nil {
+		return nil, err
+	}
+	path, err := resolveFolderPath(resolution.Workspace, input.Project)
 	if err != nil {
 		return nil, err
 	}
-	result, err := infisical.List(ctx, root, infisical.ListInput{
-		Env: environment, Path: path, Cfg: config, Creds: credentials,
-	})
-	if result == nil || err != nil {
-		return nil, err
-	}
-	total := result.Total
-	return &ListResult{
-		Schema: result.Schema, Environment: result.Env, Path: result.Path,
-		Keys: result.Keys, Total: &total,
-	}, nil
+	return provider.List(ctx, root, environment, path)
 }
 
 type PlanSetInput struct {
@@ -121,7 +101,11 @@ func (s *Service) PlanSet(input PlanSetInput) (SetPlan, error) {
 	if err := validateWriteEnvironment(resolved); err != nil {
 		return SetPlan{}, err
 	}
-	if err := requireInfisicalBackend(resolved); err != nil {
+	provider, err := s.backend(resolved)
+	if err != nil {
+		return SetPlan{}, err
+	}
+	if err := provider.Require(resolved.Workspace.Root()); err != nil {
 		return SetPlan{}, err
 	}
 	plan := SetPlan{
@@ -169,11 +153,15 @@ func (s *Service) Set(ctx context.Context, input SetInput) (*SetResult, error) {
 	if err := validateWriteEnvironment(resolution); err != nil {
 		return nil, err
 	}
-	if err := requireInfisicalBackend(resolution); err != nil {
+	provider, err := s.backend(resolution)
+	if err != nil {
+		return nil, err
+	}
+	if err := provider.Require(resolution.Workspace.Root()); err != nil {
 		return nil, err
 	}
 	// Validate selectors before authentication or remote writes.
-	path, err := s.resolveInfisicalFolderPath(resolution.Workspace, nil, input.Plan.project)
+	path, err := resolveFolderPath(resolution.Workspace, input.Plan.project)
 	if err != nil {
 		return nil, err
 	}
@@ -183,14 +171,7 @@ func (s *Service) Set(ctx context.Context, input SetInput) (*SetResult, error) {
 				i18n.T("env.dashboard_environment_required"))
 		}
 	}
-	config, credentials, err := s.resolveInfisical()
-	if err != nil {
-		return nil, err
-	}
-	result, err := infisical.Set(ctx, root, infisical.SetInput{
-		Env: environment, Path: path, Key: input.Key, Value: input.Value,
-		Overwrite: input.Overwrite, Cfg: config, Creds: credentials,
-	})
+	result, err := provider.Set(ctx, root, environment, path, input.Key, input.Value, input.Overwrite)
 	if result == nil || err != nil {
 		return nil, err
 	}
@@ -203,7 +184,7 @@ func (s *Service) Set(ctx context.Context, input SetInput) (*SetResult, error) {
 	}
 
 	return &SetResult{
-		Schema: result.Schema, Environment: result.Env, Path: result.Path,
+		Schema: result.Schema, Environment: result.Environment, Path: result.Path,
 		Key: result.Key, Action: result.Action, CreatedEnvironment: createdEnvironment,
 	}, nil
 }
@@ -215,7 +196,7 @@ type DeleteInput struct {
 	Key         string
 }
 
-func (s *Service) Delete(ctx context.Context, input DeleteInput) (*infisical.DeleteResult, error) {
+func (s *Service) Delete(ctx context.Context, input DeleteInput) (*DeleteResult, error) {
 	resolution, err := s.resolve(resolveInput{
 		Scope: input.Scope, Requested: input.Environment,
 		Capability: catalog.CapabilityEnvDelete, Verb: "delete",
@@ -223,24 +204,19 @@ func (s *Service) Delete(ctx context.Context, input DeleteInput) (*infisical.Del
 	if err != nil {
 		return nil, err
 	}
-	if resolution.Scope.Backend().Name != workspace.EnvBackendInfisical {
-		return nil, unsupportedVerb(resolution.Scope.Backend().Name, "delete")
-	}
-	if err := requireInfisicalBackend(resolution); err != nil {
-		return nil, err
-	}
-	config, credentials, err := s.resolveInfisical()
+
+	provider, err := s.backend(resolution)
 	if err != nil {
 		return nil, err
 	}
-	path, err := s.resolveInfisicalFolderPath(resolution.Workspace, config, input.Project)
+	if err := provider.Require(resolution.Workspace.Root()); err != nil {
+		return nil, err
+	}
+	path, err := resolveFolderPath(resolution.Workspace, input.Project)
 	if err != nil {
 		return nil, err
 	}
-	return infisical.Delete(ctx, resolution.Workspace.Root(), infisical.DeleteInput{
-		Env: resolution.Scope.Environment(), Path: path, Key: input.Key,
-		Cfg: config, Creds: credentials,
-	})
+	return provider.Delete(ctx, resolution.Workspace.Root(), resolution.Scope.Environment(), path, input.Key)
 }
 
 func contains(values []string, target string) bool {
@@ -254,7 +230,7 @@ func contains(values []string, target string) bool {
 
 func validateWriteEnvironment(resolution resolution) error {
 	if environment := resolution.Scope.Environment(); environment != "" {
-		_, err := infisical.SanitizeEnvName(environment)
+		_, err := secrets.ValidateEnvName(environment)
 		return err
 	}
 	return nil

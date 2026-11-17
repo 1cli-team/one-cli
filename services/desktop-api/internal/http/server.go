@@ -8,8 +8,8 @@ import (
 	"net/http"
 	"time"
 
-	authentication "github.com/torchstellar-team/one-cli/packages/one-core/pkg/application/authentication"
 	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/platform/i18n"
+	authentication "github.com/torchstellar-team/one-cli/packages/one-core/pkg/plugins/infisical/authentication"
 )
 
 // Run binds before announcing readiness. There is no unauthenticated or web

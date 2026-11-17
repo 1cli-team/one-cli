@@ -17,7 +17,7 @@ import (
 
 	cliErrors "github.com/torchstellar-team/one-cli/packages/one-core/pkg/platform/errors"
 	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/platform/i18n"
-	session "github.com/torchstellar-team/one-cli/packages/one-core/pkg/platform/infisicalsession"
+	session "github.com/torchstellar-team/one-cli/packages/one-core/pkg/plugins/infisical/session"
 )
 
 func isolateSession(t *testing.T) string {

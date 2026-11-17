@@ -293,6 +293,7 @@
   "exec.internal_project_required": "internal execution requires --project",
   "exec.operation_arguments": "generated operation tasks do not accept extra arguments; use one exec for custom commands",
   "exec.internal_command_required": "internal execution requires -- followed by a command",
+  "exec.global_unavailable": "Shared credentials are unavailable because no plugin provides them.",
   "exec.global_conflict": "--global cannot be combined with a project.",
   "exec.global_command_missing": "Command %s was not found. Use an installed tool or provide an explicit executable path.",
   "exec.control_variable": "The shared folder contains process-control variable %s. Use --keys to select application credentials before injection.",

@@ -293,6 +293,7 @@
   "exec.internal_project_required": "内部执行需要 --project",
   "exec.operation_arguments": "生成的任务不接受额外参数；请用 one exec 执行自定义命令",
   "exec.internal_command_required": "内部执行需要用 -- 分隔要运行的命令",
+  "exec.global_unavailable": "未加载提供共享凭据的插件，无法使用全局执行。",
   "exec.global_conflict": "--global 不能与项目选择参数同时使用。",
   "exec.global_command_missing": "找不到命令 %s；请使用已安装的工具或显式指定可执行文件路径",
   "exec.control_variable": "全局目录包含进程控制变量 %s，拒绝注入；请通过 --keys 选择业务凭据",

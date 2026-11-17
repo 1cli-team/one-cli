@@ -13,8 +13,8 @@ import (
 	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/core/workspace"
 	cliErrors "github.com/torchstellar-team/one-cli/packages/one-core/pkg/platform/errors"
 	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/platform/i18n"
-	session "github.com/torchstellar-team/one-cli/packages/one-core/pkg/platform/infisicalsession"
 	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/platform/output"
+	session "github.com/torchstellar-team/one-cli/packages/one-core/pkg/plugins/infisical/session"
 )
 
 // InitInput captures the auto-bind inputs for an Infisical workspace.

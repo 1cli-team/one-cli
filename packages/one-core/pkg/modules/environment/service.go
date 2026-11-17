@@ -1,14 +1,11 @@
 // Package environment owns the complete environment-variable feature slice.
-// It composes the Infisical adapter behind one workflow
-// boundary so transports do not reproduce backend selection or workspace
-// policy.
+// Registered backends own vendor operations; this package owns workspace policy.
 package environment
 
 import (
-	"context"
+	"fmt"
 	"strings"
 
-	"github.com/torchstellar-team/one-cli/packages/one-core/internal/adapters/env/infisical"
 	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/application/execution"
 	catalog "github.com/torchstellar-team/one-cli/packages/one-core/pkg/core/backend"
 	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/core/workspace"
@@ -18,21 +15,32 @@ import (
 )
 
 type Service struct {
-	catalog       *catalog.Catalog
-	initInfisical func(context.Context, string, infisical.InitInput) (*infisical.InitResult, error)
+	catalog  *catalog.Catalog
+	backends map[string]Backend
 }
 
 func NewService(
 	backendCatalog *catalog.Catalog,
+	backends ...Backend,
 ) (*Service, error) {
 	if backendCatalog == nil {
 		return nil, i18n.Errorf("env.catalog_required")
 	}
 
-	return &Service{
-		catalog:       backendCatalog,
-		initInfisical: infisical.Init,
-	}, nil
+	registered := make(map[string]Backend, len(backends))
+	for _, provider := range backends {
+		if provider == nil || provider.ID() == "" {
+			return nil, fmt.Errorf("environment: missing backend identity")
+		}
+		if _, exists := registered[provider.ID()]; exists {
+			return nil, fmt.Errorf("environment: duplicate backend %q", provider.ID())
+		}
+		if _, exists := backendCatalog.Lookup(catalog.DomainEnv, provider.ID()); !exists {
+			return nil, fmt.Errorf("environment: backend %q has no descriptor", provider.ID())
+		}
+		registered[provider.ID()] = provider
+	}
+	return &Service{catalog: backendCatalog, backends: registered}, nil
 }
 
 type resolveInput struct {
@@ -58,7 +66,12 @@ func (s *Service) resolve(input resolveInput) (resolution, error) {
 	manifest := activeWorkspace.Manifest()
 	backendName := workspace.EnvBackend(manifest)
 	if backendName == "" {
-		backendName = workspace.EnvBackendInfisical
+		for _, candidate := range s.catalog.All() {
+			if candidate.ID.Domain == catalog.DomainEnv {
+				backendName = candidate.ID.Name
+				break
+			}
+		}
 	}
 	backend, ok := s.catalog.Lookup(catalog.DomainEnv, backendName)
 	if !ok {
@@ -113,4 +126,13 @@ func (s *Service) Summary(scope execution.Scope) (*Summary, error) {
 		result.Project = project.Name
 	}
 	return result, nil
+}
+
+func (s *Service) backend(resolved resolution) (Backend, error) {
+	id := resolved.Scope.Backend().Name
+	provider := s.backends[id]
+	if provider == nil {
+		return nil, cliErrors.New(cliErrors.ENV_BACKEND_INVALID, i18n.Tf("env.backend_unknown", id))
+	}
+	return provider, nil
 }

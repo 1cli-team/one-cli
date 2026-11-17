@@ -163,7 +163,7 @@ func requireInfisicalSecretBackend(
 	r *http.Request,
 	opts MuxOpts,
 ) bool {
-	if err := opts.EnvironmentService.RequireInfisicalBackend(
+	if err := opts.EnvironmentService.RequireBackend(
 		execution.NewScope(r.Context(), opts.WorkspaceRoot),
 		r.URL.Query().Get("env"),
 	); err != nil {

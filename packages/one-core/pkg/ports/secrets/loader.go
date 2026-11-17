@@ -98,3 +98,9 @@ func (r *Registry) Find(id string) Loader {
 	}
 	return nil
 }
+
+// GlobalLoader resolves shared credentials for explicit global execution.
+type GlobalLoader interface {
+	ValidatePath(string) (string, error)
+	Values(context.Context, string, string, []string) (map[string]string, error)
+}

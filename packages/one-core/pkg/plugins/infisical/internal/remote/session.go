@@ -1,6 +1,6 @@
 package infisical
 
-import session "github.com/torchstellar-team/one-cli/packages/one-core/pkg/platform/infisicalsession"
+import session "github.com/torchstellar-team/one-cli/packages/one-core/pkg/plugins/infisical/session"
 
 func sessionCredentials() (*Credentials, string, error) {
 	current, err := session.Require()

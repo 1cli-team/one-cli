@@ -7,6 +7,7 @@ import (
 
 	environmentmodule "github.com/torchstellar-team/one-cli/packages/one-core/pkg/modules/environment"
 	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/platform/i18n"
+	remote "github.com/torchstellar-team/one-cli/packages/one-core/pkg/plugins/infisical"
 )
 
 type summaryOutput struct{ *environmentmodule.Summary }
@@ -37,7 +38,7 @@ func (r summaryOutput) RenderTTY(w io.Writer) {
 type listOutput struct{ *environmentmodule.ListResult }
 
 type bindOutput struct {
-	*environmentmodule.GlobalLocation
+	*remote.GlobalLocation
 }
 
 type workspaceBindOutput struct {

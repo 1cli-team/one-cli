@@ -4,10 +4,10 @@ import (
 	"github.com/spf13/cobra"
 
 	environmentmodule "github.com/torchstellar-team/one-cli/packages/one-core/pkg/modules/environment"
-	remote "github.com/torchstellar-team/one-cli/packages/one-core/pkg/modules/environment"
 	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/platform/i18n"
 	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/platform/output"
 	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/platform/prompt"
+	remote "github.com/torchstellar-team/one-cli/packages/one-core/pkg/plugins/infisical"
 )
 
 func configureGlobal(parent *cobra.Command, deps Dependencies) {

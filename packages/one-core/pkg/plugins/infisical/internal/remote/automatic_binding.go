@@ -4,7 +4,7 @@ import (
 	"context"
 
 	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/platform/i18n"
-	session "github.com/torchstellar-team/one-cli/packages/one-core/pkg/platform/infisicalsession"
+	session "github.com/torchstellar-team/one-cli/packages/one-core/pkg/plugins/infisical/session"
 )
 
 // Resolve messages when displayed so a cached preparation failure follows a

@@ -16,12 +16,13 @@ one-core/
     modules/         任务、创建、环境、技能等功能
     platform/        语言、偏好、进程、安装和更新能力
     ports/           运行时、变量和存储契约
+    plugins/         内置厂商插件、私有实现和注册契约
   internal/
     adapters/        厂商、文件存储与运行时的具体实现
     resources/       模板、registry 和技能的内嵌资源
 ```
 
-`packages/cli` 和 `services/desktop-api` 通过 `pkg/...` 引用共享能力。具体适配器由 `pkg/bootstrap` 组装，消费方不直接导入 `internal`。HTTP 和 Cobra 传输层仍分别归属 API 与 CLI。
+`packages/cli` 和 `services/desktop-api` 通过 `pkg/...` 引用共享能力。具体适配器和内置插件由 `pkg/bootstrap` 组装，消费方不直接导入 `internal`。Infisical 的私有实现位于 `pkg/plugins/infisical/internal/remote`，仅该插件可以导入。HTTP 和 Cobra 传输层仍分别归属 API 与 CLI。生命周期和扩展边界见根目录 `ARCHITECTURE.md`。
 
 内嵌资源由仓库根的 `mise run sync-bundled` 生成，源码中的 `go:embed` 保留在资源包内。运行 `one run build -p one-core` 构建此库，`one run check -p one-core` 执行静态检查；首次使用可直接运行根级 `mise run check`。
 
@@ -29,4 +30,4 @@ one-core/
 
 One Core is the shared Go library used by the CLI and desktop API. Its module identity remains unchanged. The community project-layout convention separates intentionally importable packages under `pkg/` from private adapters and embedded resources under `internal/`. Go enforces the latter boundary.
 
-Consumers import `pkg/...`; `pkg/bootstrap` assembles private adapters. The library has no executable, so it needs no `cmd/` directory. HTTP and Cobra remain in their respective applications. Generate embedded resources with `mise run sync-bundled`, build with `one run build -p one-core`, and run the complete repository gate with `mise run check`.
+Consumers import `pkg/...`; `pkg/bootstrap` assembles adapters and explicitly registered built-in plugins. Infisical's private implementation is confined to `pkg/plugins/infisical/internal/remote`. The library has no executable, so it needs no `cmd/` directory. HTTP and Cobra remain in their respective applications. See the root `ARCHITECTURE.md` for lifecycle and extension contracts. Generate embedded resources with `mise run sync-bundled`, build with `one run build -p one-core`, and run the complete repository gate with `mise run check`.

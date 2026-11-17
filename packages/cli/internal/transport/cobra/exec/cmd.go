@@ -1,4 +1,4 @@
-// Package execcmd executes commands with optional Infisical injection.
+// Package execcmd executes commands with optional plugin-provided variables.
 package execcmd
 
 import (
@@ -26,11 +26,12 @@ import (
 	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/ports/secrets"
 )
 
-func Commands(loaders *secrets.Registry, provider runtimeport.Provider) []*cobra.Command {
-	return []*cobra.Command{newRunCmd(loaders, provider)}
+func Commands(loaders *secrets.Registry, provider runtimeport.Provider, global secrets.GlobalLoader) []*cobra.Command {
+	return []*cobra.Command{newRunCmd(loaders, provider, global)}
 }
 
 type runFlags struct {
+	globalLoader secrets.GlobalLoader
 	global       bool
 	globalPath   string
 	globalKeys   []string
@@ -42,8 +43,8 @@ type runFlags struct {
 	outputFormat string
 }
 
-func newRunCmd(loaders *secrets.Registry, provider runtimeport.Provider) *cobra.Command {
-	flags := &runFlags{provider: provider}
+func newRunCmd(loaders *secrets.Registry, provider runtimeport.Provider, global secrets.GlobalLoader) *cobra.Command {
+	flags := &runFlags{provider: provider, globalLoader: global}
 	cmd := &cobra.Command{
 		Use:                   "exec [project] [-p <name|path>] [--env <name>] -- <cmd> [args...]",
 		DisableFlagsInUseLine: true,
@@ -63,6 +64,9 @@ func newRunCmd(loaders *secrets.Registry, provider runtimeport.Provider) *cobra.
 				return cmd.Help()
 			}
 			if flags.global {
+				if flags.globalLoader == nil {
+					return i18n.Errorf("exec.global_unavailable")
+				}
 				return runGlobal(cmd.Context(), flags, commandArgs)
 			}
 			if cmd.Flags().Changed("path") || cmd.Flags().Changed("keys") {
@@ -239,7 +243,7 @@ func runRun(ctx context.Context, loaders *secrets.Registry, flags *runFlags, arg
 	return err
 }
 
-// loadRunSecrets fetches Infisical variables only when the project enables injection.
+// loadRunSecrets calls the registered loader only when the workspace enables injection.
 func loadRunSecrets(
 	ctx context.Context,
 	loaders *secrets.Registry,
