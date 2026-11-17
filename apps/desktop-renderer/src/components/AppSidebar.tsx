@@ -130,7 +130,7 @@ function GlobalSidebar() {
 			<nav className="flex shrink-0 flex-col gap-1 p-3" aria-label={t("navigation.global")}>
 				<Button variant="navigation" size="navigation-compact" className="min-h-9" asChild>
 					<EnvironmentNavLink to="/" end>
-						<House />
+						<House strokeWidth={1.5} />
 						<span>{t("sidebar.home")}</span>
 					</EnvironmentNavLink>
 				</Button>
@@ -143,7 +143,7 @@ function GlobalSidebar() {
 			>
 				<Button variant="navigation" size="navigation-compact" className="min-h-9" asChild>
 					<EnvironmentNavLink to="/settings">
-						<Settings2 />
+						<Settings2 strokeWidth={1.5} />
 						<span>{t("sidebar.settings")}</span>
 					</EnvironmentNavLink>
 				</Button>
