@@ -88,6 +88,9 @@ func TestWorkspaceSessionsContinueWithoutReplayingATurn(t *testing.T) {
 		if err := json.NewDecoder(r.Body).Decode(&body); err != nil || body["target_uri"] != root {
 			t.Errorf("unscoped memory search: %+v, %v", body, err)
 		}
+		if body["include_provenance"] != false || body["read_content"] != false {
+			t.Error("search options must send boolean values accepted by hosted OpenViking")
+		}
 		return map[string]any{"memories": []any{
 			map[string]string{"uri": memoryURI, "abstract": "same workspace"},
 			map[string]string{"uri": "viking://user/alice/peers/" + workspacePeer(other) + "/memories/secret.md"},

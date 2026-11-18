@@ -203,6 +203,23 @@ func (*Plugin) Connection(ctx context.Context) (*knowledge.Connection, error) {
 	return &public, nil
 }
 
+// ConnectionForSync returns credentials for server-side forwarding to an
+// explicitly selected execution machine. Client-facing status uses Connection.
+func (*Plugin) ConnectionForSync(ctx context.Context) (knowledge.ConnectionInput, error) {
+	dir, err := configDirectory()
+	if err != nil {
+		return knowledge.ConnectionInput{}, err
+	}
+	saved, err := loadConnection(ctx, dir)
+	if err != nil {
+		return knowledge.ConnectionInput{}, err
+	}
+	if err := requireConnection(saved); err != nil {
+		return knowledge.ConnectionInput{}, err
+	}
+	return knowledge.ConnectionInput{URL: saved.URL, APIKey: &saved.APIKey}, nil
+}
+
 func configured(saved connection, input knowledge.ConnectionInput) (connection, error) {
 	address, err := parseAddress(input.URL)
 	if err != nil {

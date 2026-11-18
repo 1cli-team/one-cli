@@ -16,6 +16,7 @@ import (
 	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/platform/process"
 	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/platform/userdirs"
 	linearplugin "github.com/torchstellar-team/one-cli/packages/one-core/pkg/plugins/linear"
+	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/plugins/openviking"
 )
 
 type setupService struct {
@@ -62,6 +63,12 @@ func (s *setupService) handle(ctx context.Context, in api.SetupInput) api.WorkRe
 		}
 		host, err := s.hosts.Save(ctx, *in.Gitea)
 		return setupReply("setup_gitea", host, err)
+	case api.SetupOpenViking:
+		if in.OpenViking == nil || in.OpenViking.APIKey == nil {
+			break
+		}
+		connection, err := openviking.New().Configure(ctx, *in.OpenViking)
+		return setupReply("setup_openviking", connection, err)
 	case api.SetupClone:
 		repo, err := s.clone(ctx, in.Remote)
 		return setupReply("setup_clone", repo, err)

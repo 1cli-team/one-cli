@@ -165,6 +165,7 @@ export function GatewayMonitor() {
 						<Tabs.Content value="workers" className="min-w-0">
 							<GatewayWorkers
 								key={connection.url}
+								connection={connection.url}
 								machines={machines}
 								isLoading={workers.isLoading}
 								hasError={!!workers.error}

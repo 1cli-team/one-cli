@@ -11,11 +11,13 @@ import (
 	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/modules/codehost"
 	gitmodule "github.com/torchstellar-team/one-cli/packages/one-core/pkg/modules/git"
 	tracking "github.com/torchstellar-team/one-cli/packages/one-core/pkg/modules/issuetracking"
+	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/modules/knowledge"
 )
 
 const (
 	SetupStatus       = "status"
 	SetupGitea        = "gitea"
+	SetupOpenViking   = "openviking"
 	SetupClone        = "clone"
 	SetupProject      = "project"
 	SetupLinearStart  = "linear-start"
@@ -24,13 +26,14 @@ const (
 )
 
 type SetupInput struct {
-	Operation string                `json:"operation"`
-	Gitea     *codehost.Input       `json:"gitea,omitempty"`
-	OAuth     *tracking.OAuthConfig `json:"oauth,omitempty"`
-	State     string                `json:"state,omitempty"`
-	Code      string                `json:"code,omitempty"`
-	Remote    string                `json:"remote,omitempty"`
-	Project   *SetupMapping         `json:"project,omitempty"`
+	Operation  string                     `json:"operation"`
+	Gitea      *codehost.Input            `json:"gitea,omitempty"`
+	OpenViking *knowledge.ConnectionInput `json:"openviking,omitempty"`
+	OAuth      *tracking.OAuthConfig      `json:"oauth,omitempty"`
+	State      string                     `json:"state,omitempty"`
+	Code       string                     `json:"code,omitempty"`
+	Remote     string                     `json:"remote,omitempty"`
+	Project    *SetupMapping              `json:"project,omitempty"`
 }
 
 type SetupMapping struct {

@@ -24,6 +24,7 @@ import { LinearComments } from "@/features/linear/LinearComments";
 import type { HttpError } from "@/types/api";
 import { CodexResultMessage } from "./GatewayMarkdown";
 import { GatewayProgress } from "./GatewayProgress";
+import { GatewayOpenVikingSyncDialog } from "./GatewayOpenVikingSyncDialog";
 import { GatewayQuestions } from "./GatewayQuestions";
 import { GatewaySubtasks } from "./GatewaySubtasks";
 import { openExternal } from "@/lib/desktop/runtime";
@@ -41,11 +42,13 @@ import {
 
 export function GatewayWorkers({
 	canInvite,
+	connection,
 	machines,
 	isLoading,
 	hasError,
 }: {
 	canInvite: boolean;
+	connection: string;
 	machines: ExecutionWorker[];
 	isLoading: boolean;
 	hasError: boolean;
@@ -54,6 +57,7 @@ export function GatewayWorkers({
 	const [invite, setInvite] = useState<WorkerInvite>();
 	const [inviting, setInviting] = useState(false);
 	const [inviteError, setInviteError] = useState("");
+	const [syncTarget, setSyncTarget] = useState<ExecutionWorker>();
 
 	async function pair() {
 		setInviting(true);
@@ -94,6 +98,9 @@ export function GatewayWorkers({
 								<TableRow>
 									<TableHead>{t("gateway.execution.worker")}</TableHead>
 									<TableHead>{t("gateway.execution.status")}</TableHead>
+									<TableHead className="text-right">
+										{t("gateway.execution.workerActions")}
+									</TableHead>
 								</TableRow>
 							</TableHeader>
 							<TableBody>
@@ -110,11 +117,30 @@ export function GatewayWorkers({
 												)}
 											</Badge>
 										</TableCell>
+										<TableCell className="text-right">
+											{worker.remoteSetup ? (
+												<Button
+													variant="outline"
+													size="sm"
+													disabled={!worker.online}
+													onClick={() => setSyncTarget(worker)}
+													aria-label={t("gateway.execution.openViking.actionFor", {
+														worker: worker.name,
+													})}
+												>
+													{t("gateway.execution.openViking.title")}
+												</Button>
+											) : (
+												<span className="text-xs text-muted-foreground">
+													{t("gateway.execution.openViking.httpsRequired")}
+												</span>
+											)}
+										</TableCell>
 									</TableRow>
 								))}
 								{machines.length === 0 && (
 									<TableRow>
-										<TableCell colSpan={2}>{t("gateway.execution.noWorkers")}</TableCell>
+										<TableCell colSpan={3}>{t("gateway.execution.noWorkers")}</TableCell>
 									</TableRow>
 								)}
 							</TableBody>
@@ -122,6 +148,13 @@ export function GatewayWorkers({
 					</div>
 				)}
 			</section>
+			{syncTarget && (
+				<GatewayOpenVikingSyncDialog
+					connection={connection}
+					worker={syncTarget}
+					onClose={() => setSyncTarget(undefined)}
+				/>
+			)}
 
 			{invite && (
 				<Dialog

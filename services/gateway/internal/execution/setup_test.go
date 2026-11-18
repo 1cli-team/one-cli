@@ -9,11 +9,14 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync/atomic"
 	"testing"
 	"time"
 
 	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/modules/codehost"
 	api "github.com/torchstellar-team/one-cli/packages/one-core/pkg/modules/gateway"
+	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/modules/knowledge"
+	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/plugins/openviking"
 )
 
 func TestSetupRoutesOnlyToTheHTTPSPairedTarget(t *testing.T) {
@@ -131,5 +134,46 @@ func TestSetupRoutesOnlyToTheHTTPSPairedTarget(t *testing.T) {
 	defer setup.mu.Unlock()
 	if len(setup.pending) != 0 {
 		t.Fatal("completed setup inputs were retained")
+	}
+}
+
+func TestOpenVikingSetupValidatesBeforeSaving(t *testing.T) {
+	t.Setenv("ONE_HOME", t.TempDir())
+	const secret = "fixture-openviking-secret"
+	service := newSetupService(t.Context(), Runner{})
+	var requests atomic.Int32
+	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Header.Get("Authorization") != "Bearer "+secret {
+			w.WriteHeader(http.StatusUnauthorized)
+			return
+		}
+		switch r.URL.Path {
+		case "/api/v1/fs/ls":
+			requests.Add(1)
+			_, _ = w.Write([]byte(`{"status":"ok","result":[]}`))
+		case "/health":
+			_, _ = w.Write([]byte(`{"account_id":"team","user_id":"test"}`))
+		default:
+			http.NotFound(w, r)
+		}
+	}))
+	defer upstream.Close()
+	sync := func(key string) api.WorkReply {
+		return service.handle(t.Context(), api.SetupInput{
+			Operation:  api.SetupOpenViking,
+			OpenViking: &knowledge.ConnectionInput{URL: upstream.URL, APIKey: &key},
+		})
+	}
+	reply := sync(secret)
+	if reply.Status != http.StatusOK || requests.Load() != 1 || strings.Contains(string(reply.Body), secret) ||
+		!strings.Contains(string(reply.Body), upstream.URL) {
+		t.Fatalf("OpenViking setup returned HTTP %d", reply.Status)
+	}
+	if reply := sync("invalid"); reply.Status != http.StatusUnprocessableEntity {
+		t.Fatalf("invalid credentials returned HTTP %d", reply.Status)
+	}
+	public, err := openviking.New().TestConnection(t.Context(), knowledge.ConnectionInput{})
+	if err != nil || public.Account != "team" || !public.HasAPIKey || requests.Load() != 2 {
+		t.Fatal("failed setup changed the validated connection")
 	}
 }

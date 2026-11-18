@@ -1,15 +1,22 @@
 package serve
 
 import (
+	"context"
 	"errors"
 	"net/http"
 
 	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/modules/gateway"
+	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/modules/knowledge"
 	clierrors "github.com/torchstellar-team/one-cli/packages/one-core/pkg/platform/errors"
 	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/platform/i18n"
 )
 
-func registerGatewayExecutionRoutes(mux *http.ServeMux, connect func() (*gateway.Client, error)) {
+func registerGatewayExecutionRoutes(mux *http.ServeMux, connect func() (*gateway.Client, error), backend knowledge.Backend) {
+	if source, ok := backend.(interface {
+		ConnectionForSync(context.Context) (knowledge.ConnectionInput, error)
+	}); ok {
+		registerGatewayOpenVikingSyncRoute(mux, source.ConnectionForSync, gateway.ReadConnection)
+	}
 	handle := func(pattern string, status int, call func(http.ResponseWriter, *http.Request, *gateway.Client) (any, error)) {
 		mux.HandleFunc(pattern, func(w http.ResponseWriter, r *http.Request) {
 			setNoStore(w)

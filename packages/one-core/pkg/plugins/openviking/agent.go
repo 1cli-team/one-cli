@@ -158,7 +158,9 @@ func memoryMatches(ctx context.Context, client *ov.Client, saved connection, wor
 		}
 		return matches, nil
 	}
-	result, err := client.Find(ctx, query, &ov.FindOptions{TargetURI: root, Limit: limit, ContextType: "memory"})
+	options := findOptions(root, limit)
+	options.ContextType = "memory"
+	result, err := client.Find(ctx, query, &options)
 	if isMissing(err) {
 		return matches, nil
 	}
