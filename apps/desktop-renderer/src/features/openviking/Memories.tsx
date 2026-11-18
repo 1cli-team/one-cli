@@ -1,3 +1,4 @@
+import { Plus, SearchX } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import useSWR from "swr";
@@ -10,7 +11,7 @@ import {
 	DialogTitle,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { ErrorNotice, SearchInput } from "@/components/ui/page-layout";
+import { ErrorNotice, PageToolbar, SearchInput, StatePanel } from "@/components/ui/page-layout";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
@@ -27,6 +28,7 @@ export function Memories({ endpoint }: { endpoint: string }) {
 	const [uri, setURI] = useState("");
 	const content = useSWR(uri ? [endpoint, "memory", uri] : null, () => readMemory(endpoint, uri));
 	const [text, setText] = useState("");
+	const [composing, setComposing] = useState(false);
 	const [receipt, setReceipt] = useState("");
 	const [openReceipt, setOpenReceipt] = useState(false);
 	const [pending, setPending] = useState(false);
@@ -46,6 +48,37 @@ export function Memories({ endpoint }: { endpoint: string }) {
 
 	return (
 		<section className="space-y-4">
+			<form
+				onSubmit={(event) => {
+					event.preventDefault();
+					setQuery(draft.trim());
+					if (draft.trim() === query) void hits.mutate();
+				}}
+			>
+				<PageToolbar>
+					<SearchInput
+						groupClassName="min-w-40 max-w-sm flex-1"
+						aria-label={t("openviking.searchMemories")}
+						placeholder={t("openviking.searchMemories")}
+						value={draft}
+						onChange={(event) => setDraft(event.target.value)}
+					/>
+					<Button type="submit" variant="outline">
+						{t("openviking.search")}
+					</Button>
+					<Button
+						type="button"
+						className="ms-auto"
+						aria-expanded={composing}
+						aria-controls="openviking-memory-editor"
+						onClick={() => setComposing((open) => !open)}
+						disabled={pending}
+					>
+						<Plus />
+						{t("openviking.newMemory")}
+					</Button>
+				</PageToolbar>
+			</form>
 			<div className="flex items-center justify-between gap-4 rounded-lg border bg-card p-4">
 				<div className="space-y-1">
 					<Label htmlFor="openviking-auto-memory">{t("openviking.automaticMemory")}</Label>
@@ -69,12 +102,15 @@ export function Memories({ endpoint }: { endpoint: string }) {
 				</ErrorNotice>
 			)}
 			<form
-				className="space-y-2"
+				id="openviking-memory-editor"
+				className="space-y-2 rounded-lg border border-border bg-card p-4"
+				hidden={!composing}
 				onSubmit={(event) => {
 					event.preventDefault();
 					void change(async () => {
 						const session = await writeMemory(endpoint, text);
 						setText("");
+						setComposing(false);
 						setReceipt(session.id);
 					});
 				}}
@@ -92,38 +128,21 @@ export function Memories({ endpoint }: { endpoint: string }) {
 				<Button type="submit" disabled={pending || !text.trim()}>
 					{t("openviking.writeMemory")}
 				</Button>
-				{receipt && (
-					<p
-						role="status"
-						className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground"
-					>
-						{t("openviking.memoryQueued")}
-						<Button type="button" variant="link" size="sm" onClick={() => setOpenReceipt(true)}>
-							{t("openviking.viewSession")}
-						</Button>
-					</p>
-				)}
 			</form>
-			<form
-				className="flex flex-wrap gap-2"
-				onSubmit={(event) => {
-					event.preventDefault();
-					setQuery(draft.trim());
-					if (draft.trim() === query) void hits.mutate();
-				}}
-			>
-				<SearchInput
-					className="flex-1"
-					aria-label={t("openviking.searchMemories")}
-					placeholder={t("openviking.searchMemories")}
-					value={draft}
-					onChange={(event) => setDraft(event.target.value)}
-				/>
-				<Button variant="outline">{t("openviking.search")}</Button>
-			</form>
+			{receipt && (
+				<p
+					role="status"
+					className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground"
+				>
+					{t("openviking.memoryQueued")}
+					<Button type="button" variant="link" size="sm" onClick={() => setOpenReceipt(true)}>
+						{t("openviking.viewSession")}
+					</Button>
+				</p>
+			)}
 			{hits.isLoading && <Skeleton className="h-20" />}
 			{hits.data?.length === 0 && (
-				<p className="text-sm text-muted-foreground">{t("openviking.noMemories")}</p>
+				<StatePanel framed icon={SearchX} title={t("openviking.noMemories")} />
 			)}
 			{Boolean(hits.data?.length) && (
 				<ul className="divide-y rounded-lg border bg-card">

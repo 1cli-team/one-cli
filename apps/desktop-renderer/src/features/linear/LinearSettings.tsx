@@ -57,7 +57,7 @@ export function LinearSettings() {
 	}
 	return (
 		<SettingsPage title={t("linear.settings")}>
-			<SettingsSection title={t("linear.settings")}>
+			<SettingsSection>
 				<p className="text-sm text-muted-foreground">{t("linear.oauthSetup")}</p>
 				<Button
 					variant="outline"

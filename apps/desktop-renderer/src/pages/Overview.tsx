@@ -114,7 +114,7 @@ export function Overview({
 					icon={FolderOpen}
 					title={t("projectInspector.empty")}
 					description={t("navigation.emptyWorkspace")}
-					className="rounded-lg border border-border bg-card"
+					framed
 				/>
 			)}
 			{bindingOpen && !readOnly && (

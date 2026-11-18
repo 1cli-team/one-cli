@@ -8,7 +8,16 @@ import {
 	type DragStartEvent,
 } from "@dnd-kit/react";
 import { isSortable, useSortable } from "@dnd-kit/react/sortable";
-import { FolderGit2, FolderKanban, GripVertical, Pencil, Plus, Trash2, X } from "lucide-react";
+import {
+	FolderGit2,
+	FolderKanban,
+	GripVertical,
+	Pencil,
+	Plus,
+	SearchX,
+	Trash2,
+	X,
+} from "lucide-react";
 import { useEffect, useRef, useState, type ComponentProps, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate, useParams } from "react-router-dom";
@@ -33,7 +42,14 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
-import { ErrorNotice, PageHeader, StatePanel } from "@/components/ui/page-layout";
+import {
+	ErrorNotice,
+	PageContent,
+	PageHeader,
+	PageToolbar,
+	SearchInput,
+	StatePanel,
+} from "@/components/ui/page-layout";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EnvironmentLink } from "@/features/environment-context/EnvironmentLink";
 import { OpenWorkspace } from "@/lib/desktop/OpenWorkspace";
@@ -52,37 +68,51 @@ export function WorkspaceGroupsPage() {
 	const navigate = useNavigate();
 	const result = useWorkspaceGroups();
 	const [creating, setCreating] = useState(false);
+	const [search, setSearch] = useState("");
 	const refresh = () => result.mutate();
 	if (result.error)
 		return (
-			<ErrorNotice
-				action={
-					<Button variant="outline" onClick={() => void refresh()}>
-						{t("workspaces.retry")}
-					</Button>
-				}
-			>
-				{errorMessage(result.error)}
-			</ErrorNotice>
+			<PageContent>
+				<PageHeader title={t("groups.title")} />
+				<ErrorNotice
+					action={
+						<Button variant="outline" onClick={() => void refresh()}>
+							{t("workspaces.retry")}
+						</Button>
+					}
+				>
+					{errorMessage(result.error)}
+				</ErrorNotice>
+			</PageContent>
 		);
-	if (!result.data) return <Skeleton className="h-64 w-full" />;
+	if (!result.data)
+		return (
+			<PageContent>
+				<PageHeader title={t("groups.title")} />
+				<Skeleton className="h-64 w-full" />
+			</PageContent>
+		);
 	const data = result.data;
 	if (groupId) {
 		const group = data.groups.find((item) => item.id === groupId);
 		if (!group)
 			return (
-				<StatePanel icon={FolderKanban} title={t("groups.notFound")}>
-					<Button asChild>
-						<EnvironmentLink to="/">{t("groups.allProjects")}</EnvironmentLink>
-					</Button>
-				</StatePanel>
+				<PageContent>
+					<StatePanel framed heading="h1" icon={FolderKanban} title={t("groups.notFound")}>
+						<Button asChild>
+							<EnvironmentLink to="/">{t("groups.allProjects")}</EnvironmentLink>
+						</Button>
+					</StatePanel>
+				</PageContent>
 			);
 		return (
 			<GroupDetail key={group.id} group={group} workspaces={data.workspaces} onChange={refresh} />
 		);
 	}
+	const query = search.trim().toLowerCase();
+	const projects = data.projects.filter((project) => project.name.toLowerCase().includes(query));
 	return (
-		<div className="@container mx-auto flex w-full max-w-[1120px] flex-col gap-6">
+		<PageContent>
 			<PageHeader
 				title={t("groups.title")}
 				actions={
@@ -95,9 +125,20 @@ export function WorkspaceGroupsPage() {
 					</>
 				}
 			/>
-			{data.projects.length ? (
+			{data.projects.length > 0 && (
+				<PageToolbar>
+					<SearchInput
+						groupClassName="max-w-sm"
+						aria-label={t("groups.searchProjects")}
+						placeholder={t("groups.searchProjects")}
+						value={search}
+						onChange={(event) => setSearch(event.target.value)}
+					/>
+				</PageToolbar>
+			)}
+			{projects.length > 0 ? (
 				<div className="grid gap-3 @min-[36rem]:grid-cols-2 @min-[56rem]:grid-cols-3">
-					{data.projects.map((project) => {
+					{projects.map((project) => {
 						const workspace =
 							project.kind === "workspace"
 								? data.workspaces.find((entry) => entry.entryId === project.id)
@@ -132,8 +173,15 @@ export function WorkspaceGroupsPage() {
 						);
 					})}
 				</div>
+			) : data.projects.length > 0 ? (
+				<StatePanel framed icon={SearchX} title={t("groups.noMatchingProjects")}>
+					<Button variant="outline" onClick={() => setSearch("")}>
+						{t("workspaces.home.clearFilters")}
+					</Button>
+				</StatePanel>
 			) : (
 				<StatePanel
+					framed
 					icon={FolderKanban}
 					title={t("groups.empty")}
 					description={t("groups.emptyDescription")}
@@ -152,7 +200,7 @@ export function WorkspaceGroupsPage() {
 					}}
 				/>
 			)}
-		</div>
+		</PageContent>
 	);
 }
 
@@ -205,7 +253,7 @@ function GroupDetail({
 		setDialog(value);
 	}
 	return (
-		<div className="flex flex-col gap-6">
+		<PageContent>
 			<PageHeader
 				title={group.name}
 				description={t("groups.memberCount", { count: group.workspaceIds.length })}
@@ -216,23 +264,27 @@ function GroupDetail({
 								{t("linear.issues")}
 							</EnvironmentLink>
 						</Button>
-						<Button variant="ghost" disabled={busy} onClick={() => openDialog("rename")}>
-							<Pencil />
-							{t("groups.rename")}
-						</Button>
-						<Button variant="danger-ghost" disabled={busy} onClick={() => openDialog("delete")}>
-							<Trash2 />
-							{t("groups.delete")}
-						</Button>
-						<Button variant="outline" disabled={busy} onClick={() => openDialog("members")}>
-							<Plus />
-							{t("groups.addMembers")}
-						</Button>
 						<OpenWorkspace groupId={group.id} />
 					</>
 				}
 			/>
 			{error && !dialog && <ErrorNotice>{error}</ErrorNotice>}
+			<PageToolbar>
+				<Button variant="outline" disabled={busy} onClick={() => openDialog("members")}>
+					<Plus />
+					{t("groups.addMembers")}
+				</Button>
+				<div className="ms-auto flex flex-wrap items-center gap-1">
+					<Button variant="ghost" disabled={busy} onClick={() => openDialog("rename")}>
+						<Pencil />
+						{t("groups.rename")}
+					</Button>
+					<Button variant="danger-ghost" disabled={busy} onClick={() => openDialog("delete")}>
+						<Trash2 />
+						{t("groups.delete")}
+					</Button>
+				</div>
+			</PageToolbar>
 			<DragDropProvider
 				modifiers={[RestrictToVerticalAxis]}
 				plugins={(defaults) => [
@@ -284,7 +336,10 @@ function GroupDetail({
 					if (!saved) setOrderedIds(previous);
 				}}
 			>
-				<div className="divide-y divide-border rounded-lg border border-border" aria-busy={busy}>
+				<div
+					className="divide-y divide-border rounded-lg border border-border bg-card"
+					aria-busy={busy}
+				>
 					{orderedIds.map((id, index) => (
 						<SortableWorkspaceMember
 							key={id}
@@ -419,7 +474,7 @@ function GroupDetail({
 					</DialogFooter>
 				</DialogContent>
 			</Dialog>
-		</div>
+		</PageContent>
 	);
 }
 

@@ -2,9 +2,16 @@ import { DesktopSettings } from "@/lib/desktop/DesktopSettings";
 import { AlertTriangle, ArrowLeft, FolderX, RefreshCw } from "lucide-react";
 import type React from "react";
 import { useTranslation } from "react-i18next";
-import { Navigate, type RouteObject, useLocation, useParams, useNavigate } from "react-router-dom";
+import {
+	Navigate,
+	type RouteObject,
+	useLocation,
+	useMatch,
+	useParams,
+	useNavigate,
+} from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { PageHeader, StatePanel } from "@/components/ui/page-layout";
+import { PageContent, PageHeader, StatePanel } from "@/components/ui/page-layout";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EnvironmentLink } from "@/features/environment-context/EnvironmentLink";
 import { OpenVikingSettings } from "@/features/openviking/OpenVikingSettings";
@@ -33,20 +40,24 @@ import type { WorkspaceRegistryEntry } from "@/types/api";
 
 const NotFoundRoute: React.FC = () => {
 	const { t } = useTranslation();
+	const workspaceRoute = useMatch("/workspaces/:entryId/*");
 	return (
-		<StatePanel
-			icon={FolderX}
-			heading="h1"
-			title={t("notFound.title")}
-			description={t("notFound.description")}
-		>
-			<Button asChild>
-				<EnvironmentLink to="/">
-					<ArrowLeft />
-					{t("workspaces.unknown.back")}
-				</EnvironmentLink>
-			</Button>
-		</StatePanel>
+		<PageContent scroll={Boolean(workspaceRoute)}>
+			<StatePanel
+				framed
+				icon={FolderX}
+				heading="h1"
+				title={t("notFound.title")}
+				description={t("notFound.description")}
+			>
+				<Button asChild>
+					<EnvironmentLink to="/">
+						<ArrowLeft />
+						{t("workspaces.unknown.back")}
+					</EnvironmentLink>
+				</Button>
+			</StatePanel>
+		</PageContent>
 	);
 };
 
@@ -151,9 +162,7 @@ const WorkspaceRoute: React.FC<{ variables?: boolean; knowledge?: boolean }> = (
 };
 
 const WorkspaceStateLayout: React.FC<React.PropsWithChildren> = ({ children }) => (
-	<div className="h-full overflow-y-auto p-4 ud-md:p-6">
-		<div className="mx-auto max-w-[1120px]">{children}</div>
-	</div>
+	<PageContent scroll>{children}</PageContent>
 );
 
 const WorkspaceLoading: React.FC = () => {
@@ -170,6 +179,7 @@ const WorkspaceRegistryError: React.FC<{ onRetry(): void }> = ({ onRetry }) => {
 	const { t } = useTranslation();
 	return (
 		<StatePanel
+			framed
 			icon={AlertTriangle}
 			heading="h1"
 			title={t("workspaces.registryError.title")}
@@ -192,10 +202,13 @@ const WorkspaceStatusPage: React.FC<{ workspace: WorkspaceRegistryEntry }> = ({ 
 	const [relocating, setRelocating] = useState(false);
 	const navigate = useNavigate();
 	return (
-		<div className="flex flex-col gap-6">
-			<PageHeader title={workspace.name} />
-			<p className="break-all font-mono text-sm text-muted-foreground">{workspace.root}</p>
+		<>
+			<PageHeader
+				title={workspace.name}
+				description={<code className="font-mono text-xs wrap-anywhere">{workspace.root}</code>}
+			/>
 			<StatePanel
+				framed
 				icon={FolderX}
 				title={t(`workspaces.state.${workspace.status}.title`)}
 				description={t(`workspaces.state.${workspace.status}.description`)}
@@ -231,7 +244,7 @@ const WorkspaceStatusPage: React.FC<{ workspace: WorkspaceRegistryEntry }> = ({ 
 					</EnvironmentLink>
 				</Button>
 			</StatePanel>
-		</div>
+		</>
 	);
 };
 
@@ -242,6 +255,7 @@ const WorkspaceLoadError: React.FC<{ workspace: WorkspaceRegistryEntry; onRetry(
 	const { t } = useTranslation();
 	return (
 		<StatePanel
+			framed
 			icon={AlertTriangle}
 			heading="h1"
 			title={t("workspaces.overviewError.title", { name: workspace.name })}
@@ -259,6 +273,7 @@ const UnknownWorkspace: React.FC = () => {
 	const { t } = useTranslation();
 	return (
 		<StatePanel
+			framed
 			icon={FolderX}
 			heading="h1"
 			title={t("workspaces.unknown.title")}
@@ -333,7 +348,9 @@ export const routes: RouteObject[] = [
 function LegacyRepositoryRedirect() {
 	const { repositoryId = "" } = useParams();
 	const { registry, workspace, contextEntryId } = useWorkspace(repositoryId);
-	if (registry.isLoading) return <WorkspaceLoading />;
-	if (!workspace) return <UnknownWorkspace />;
+	if (registry.isLoading || !workspace)
+		return (
+			<PageContent>{registry.isLoading ? <WorkspaceLoading /> : <UnknownWorkspace />}</PageContent>
+		);
 	return <Navigate replace to={`${workspacePath(contextEntryId)}/git/worktrees`} />;
 }

@@ -1,6 +1,7 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
+import { PageHeader } from "@/components/ui/page-layout";
 import { http } from "@/lib/http";
 import i18n from "@/lib/i18n";
 import { useLocaleStore } from "@/lib/stores/locale";
@@ -96,13 +97,13 @@ export function DesktopGate({ children }: { children: ReactNode }) {
 					role="status"
 					className="window-fallback fixed inset-0 z-50 grid place-items-center bg-background/95 p-6 text-foreground"
 				>
-					<div className="flex w-full max-w-md flex-col gap-4">
-						<h1 className="text-2xl font-medium">One Desktop</h1>
-						<p>
-							{t(`desktop.connection.${state.status}`, {
+					<div className="flex w-full max-w-md flex-col gap-4 rounded-lg border border-border bg-card p-6">
+						<PageHeader
+							title="One Desktop"
+							description={t(`desktop.connection.${state.status}`, {
 								defaultValue: t("desktop.connection.starting"),
 							})}
-						</p>
+						/>
 						{state.error ? (
 							<p className="break-all text-sm text-muted-foreground">
 								{t(`desktop.native.${state.error}`, { defaultValue: state.error })}
@@ -110,6 +111,7 @@ export function DesktopGate({ children }: { children: ReactNode }) {
 						) : null}
 						{native && ["failed", "connectionFailed", "stopped"].includes(state.status) ? (
 							<Button
+								className="self-start"
 								onClick={() => {
 									void (
 										state.status === "connectionFailed"

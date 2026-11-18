@@ -1,3 +1,4 @@
+import { Plus, SearchX } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import useSWR from "swr";
@@ -21,7 +22,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ErrorNotice, SearchInput } from "@/components/ui/page-layout";
+import { ErrorNotice, PageToolbar, SearchInput, StatePanel } from "@/components/ui/page-layout";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -64,24 +65,28 @@ export function Skills({ endpoint }: { endpoint: string }) {
 	return (
 		<section className="space-y-3">
 			<form
-				className="flex flex-wrap items-center gap-2"
 				onSubmit={(event) => {
 					event.preventDefault();
 					setQuery(draft.trim());
 					if (query === draft.trim()) void skills.mutate();
 				}}
 			>
-				<SearchInput
-					className="flex-1"
-					aria-label={t("openviking.searchSkills")}
-					placeholder={t("openviking.searchSkills")}
-					value={draft}
-					onChange={(event) => setDraft(event.target.value)}
-				/>
-				<Button variant="outline">{t("openviking.search")}</Button>
-				<Button type="button" onClick={() => setAdding(true)}>
-					{t("openviking.addSkill")}
-				</Button>
+				<PageToolbar>
+					<SearchInput
+						groupClassName="min-w-40 max-w-sm flex-1"
+						aria-label={t("openviking.searchSkills")}
+						placeholder={t("openviking.searchSkills")}
+						value={draft}
+						onChange={(event) => setDraft(event.target.value)}
+					/>
+					<Button type="submit" variant="outline">
+						{t("openviking.search")}
+					</Button>
+					<Button type="button" className="ms-auto" onClick={() => setAdding(true)}>
+						<Plus />
+						{t("openviking.addSkill")}
+					</Button>
+				</PageToolbar>
 			</form>
 			{(error || skills.error || agent.error) && (
 				<ErrorNotice>
@@ -95,7 +100,7 @@ export function Skills({ endpoint }: { endpoint: string }) {
 			)}
 			{skills.isLoading && <Skeleton className="h-20" />}
 			{skills.data?.length === 0 && (
-				<p className="text-sm text-muted-foreground">{t("openviking.noSkills")}</p>
+				<StatePanel framed icon={SearchX} title={t("openviking.noSkills")} />
 			)}
 			{Boolean(skills.data?.length) && (
 				<ul className="divide-y rounded-lg border bg-card">

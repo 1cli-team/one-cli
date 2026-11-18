@@ -553,6 +553,8 @@
 	},
 	"git": {
 		"title": "Worktrees",
+		"searchWorktrees": "搜索分支名或路径",
+		"noMatchingWorktrees": "没有找到匹配的工作树。",
 		"refresh": "刷新",
 		"create": "创建工作树",
 		"main": "主工作树",
@@ -621,6 +623,8 @@
 	},
 	"groups": {
 		"title": "项目",
+		"searchProjects": "搜索项目名称",
+		"noMatchingProjects": "没有找到匹配的项目。",
 		"allProjects": "所有项目",
 		"allWorkspaces": "所有工作区",
 		"rename": "重命名",

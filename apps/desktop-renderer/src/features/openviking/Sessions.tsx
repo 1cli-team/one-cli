@@ -1,3 +1,4 @@
+import { MessageSquare, RefreshCw } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import useSWR from "swr";
@@ -10,7 +11,7 @@ import {
 	DialogHeader,
 	DialogTitle,
 } from "@/components/ui/dialog";
-import { ErrorNotice } from "@/components/ui/page-layout";
+import { ErrorNotice, PageToolbar, StatePanel } from "@/components/ui/page-layout";
 import { Skeleton } from "@/components/ui/skeleton";
 import { getSession, getSessions } from "./api";
 import { knowledgeErrorMessage } from "./errors";
@@ -29,16 +30,16 @@ export function Sessions({
 	const [opened, setOpened] = useState(initialSession ?? "");
 	return (
 		<section className="space-y-3">
-			<div className="flex items-center justify-between gap-2">
-				<h2 className="font-medium">{t("openviking.sessions")}</h2>
-				<Button variant="outline" size="sm" onClick={() => void mutate()}>
+			<PageToolbar className="justify-end">
+				<Button variant="outline" onClick={() => void mutate()}>
+					<RefreshCw />
 					{t("openviking.refresh")}
 				</Button>
-			</div>
+			</PageToolbar>
 			{error && <ErrorNotice>{knowledgeErrorMessage(error, t("openviking.error"))}</ErrorNotice>}
 			{isLoading && <Skeleton className="h-20" />}
 			{data?.length === 0 && (
-				<p className="text-sm text-muted-foreground">{t("openviking.noSessions")}</p>
+				<StatePanel framed icon={MessageSquare} title={t("openviking.noSessions")} />
 			)}
 			{Boolean(data?.length) && (
 				<ul className="divide-y rounded-lg border bg-card">

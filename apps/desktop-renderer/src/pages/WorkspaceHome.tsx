@@ -3,7 +3,7 @@ import { useSessionSWRConfig } from "@/lib/desktop/cache";
 import { useSearchParams } from "react-router-dom";
 import { workspacePath } from "@/router/paths";
 import { OpenWorkspace } from "@/lib/desktop/OpenWorkspace";
-import { PageHeader } from "@/components/ui/page-layout";
+import { PageContent, PageHeader, PageToolbar, StatePanel } from "@/components/ui/page-layout";
 import { AlertTriangle, FolderGit2, FolderPlus, RefreshCw, Search, Trash2, X } from "lucide-react";
 import type React from "react";
 import { useRef, useState } from "react";
@@ -23,13 +23,6 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-	Empty,
-	EmptyDescription,
-	EmptyHeader,
-	EmptyMedia,
-	EmptyTitle,
-} from "@/components/ui/empty";
 import {
 	InputGroup,
 	InputGroupAddon,
@@ -214,7 +207,7 @@ export const WorkspaceHome: React.FC = () => {
 	}
 	return (
 		<TooltipProvider delayDuration={300}>
-			<div className="@container mx-auto flex w-full max-w-[1120px] flex-col gap-8 pb-4">
+			<PageContent>
 				<PageHeader
 					title={t("workspaces.home.title")}
 					description={t("workspaces.home.description")}
@@ -263,24 +256,19 @@ export const WorkspaceHome: React.FC = () => {
 				) : registry.data ? (
 					<>
 						{workspaces.length === 0 ? (
-							<Empty className="min-h-72">
-								<EmptyHeader>
-									<EmptyMedia variant="icon">
-										<FolderPlus className="text-primary-text" />
-									</EmptyMedia>
-									<EmptyTitle>
-										<h2>{t("workspaces.home.emptyTitle")}</h2>
-									</EmptyTitle>
-									<EmptyDescription>{t("workspaces.home.emptyDescription")}</EmptyDescription>
-								</EmptyHeader>
-							</Empty>
+							<StatePanel
+								framed
+								icon={FolderPlus}
+								title={t("workspaces.home.emptyTitle")}
+								description={t("workspaces.home.emptyDescription")}
+							/>
 						) : (
 							<section
 								aria-label={t("workspaces.home.listLabel")}
 								className="flex flex-col gap-4"
 								aria-busy={registry.isValidating}
 							>
-								<div className="flex flex-col gap-3 ud-sm:flex-row ud-sm:items-center ud-sm:justify-between">
+								<PageToolbar className="justify-between">
 									<div
 										className="flex flex-wrap items-center gap-2"
 										role="group"
@@ -309,7 +297,7 @@ export const WorkspaceHome: React.FC = () => {
 											</span>
 										</Button>
 									</div>
-									<InputGroup className="ud-sm:max-w-72">
+									<InputGroup className="w-full ud-sm:max-w-72">
 										<InputGroupAddon>
 											<Search />
 										</InputGroupAddon>
@@ -335,7 +323,7 @@ export const WorkspaceHome: React.FC = () => {
 											</InputGroupAddon>
 										) : null}
 									</InputGroup>
-								</div>
+								</PageToolbar>
 								<p role="status" className="sr-only">
 									{t("workspaces.home.resultCount", { count: filtered.length })}
 								</p>
@@ -353,20 +341,16 @@ export const WorkspaceHome: React.FC = () => {
 										))}
 									</div>
 								) : (
-									<Empty className="min-h-64">
-										<EmptyHeader>
-											<EmptyMedia variant="icon">
-												<Search />
-											</EmptyMedia>
-											<EmptyTitle>{t("workspaces.home.noResults")}</EmptyTitle>
-											<EmptyDescription>
-												{t("workspaces.home.noResultsDescription")}
-											</EmptyDescription>
-										</EmptyHeader>
+									<StatePanel
+										framed
+										icon={Search}
+										title={t("workspaces.home.noResults")}
+										description={t("workspaces.home.noResultsDescription")}
+									>
 										<Button variant="outline" onClick={clearFilters}>
 											{t("workspaces.home.clearFilters")}
 										</Button>
-									</Empty>
+									</StatePanel>
 								)}
 							</section>
 						)}
@@ -412,7 +396,7 @@ export const WorkspaceHome: React.FC = () => {
 						</AlertDialogFooter>
 					</AlertDialogContent>
 				</AlertDialog>
-			</div>
+			</PageContent>
 		</TooltipProvider>
 	);
 };

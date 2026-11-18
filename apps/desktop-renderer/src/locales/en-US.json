@@ -553,6 +553,8 @@
 	},
 	"git": {
 		"title": "Worktrees",
+		"searchWorktrees": "Search branches or paths",
+		"noMatchingWorktrees": "No worktrees match this search.",
 		"refresh": "Refresh",
 		"create": "Create worktree",
 		"main": "Main worktree",
@@ -621,6 +623,8 @@
 	},
 	"groups": {
 		"title": "Projects",
+		"searchProjects": "Search projects by name",
+		"noMatchingProjects": "No projects match this search.",
 		"allProjects": "All projects",
 		"allWorkspaces": "All workspaces",
 		"rename": "Rename",

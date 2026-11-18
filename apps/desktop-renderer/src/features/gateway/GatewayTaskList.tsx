@@ -122,7 +122,7 @@ export function GatewayTaskList({
 					) : !data.partial ? (
 						<StatePanel
 							icon={ClipboardList}
-							className="rounded-lg border border-border bg-card"
+							framed
 							title={t(
 								filters.worker || filters.stage || filters.source
 									? "gateway.taskList.noMatching"

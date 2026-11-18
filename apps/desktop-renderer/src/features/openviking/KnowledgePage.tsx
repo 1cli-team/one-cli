@@ -1,3 +1,5 @@
+import { BookOpen, SearchX } from "lucide-react";
+import { Tabs } from "radix-ui";
 import { useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
@@ -12,7 +14,15 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ErrorNotice, PageHeader, SearchInput } from "@/components/ui/page-layout";
+import {
+	ErrorNotice,
+	PageContent,
+	PageHeader,
+	PageTab,
+	PageTabList,
+	SearchInput,
+	StatePanel,
+} from "@/components/ui/page-layout";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EnvironmentLink } from "@/features/environment-context/EnvironmentLink";
 import { knowledgeErrorMessage } from "./errors";
@@ -46,7 +56,7 @@ export function KnowledgePage({ entryId }: { entryId: string }) {
 		requested === "memories" || requested === "sessions" || requested === "skills"
 			? requested
 			: "resources";
-	function selectSection(value: "resources" | "memories" | "sessions" | "skills") {
+	function selectSection(value: string) {
 		const next = new URLSearchParams(searchParams);
 		next.delete("session");
 		if (value === "resources") next.delete("section");
@@ -56,87 +66,91 @@ export function KnowledgePage({ entryId }: { entryId: string }) {
 	const binding = data?.binding;
 
 	return (
-		<div className="h-full overflow-y-auto p-4 ud-md:p-6">
-			<div className="mx-auto flex max-w-[1120px] flex-col gap-6">
-				<PageHeader
-					title={t("openviking.title")}
-					actions={
-						data?.configured &&
-						!data.needsRebind &&
-						binding &&
-						!editing && (
-							<Button variant="outline" onClick={() => setEditing(true)}>
-								{t("openviking.configure")}
-							</Button>
-						)
-					}
-				/>
-				{error && (
-					<ErrorNotice
-						action={
-							<Button variant="outline" onClick={() => void mutate()}>
-								{t("workspaces.retry")}
-							</Button>
-						}
-					>
-						{knowledgeErrorMessage(error, t("openviking.error"))}
-					</ErrorNotice>
-				)}
-				{!data && !error && <Skeleton className="h-44 w-full" />}
-				{data && !data.configured && (
-					<div className="space-y-3 rounded-lg border bg-card p-4">
-						<p className="text-sm text-muted-foreground">{t("openviking.configureFirst")}</p>
-						<Button asChild variant="outline">
-							<EnvironmentLink to="/settings/openviking">
-								{t("openviking.settings")}
-							</EnvironmentLink>
+		<PageContent scroll>
+			<PageHeader
+				title={t("openviking.title")}
+				description={
+					data?.configured && !data.needsRebind && binding && !editing ? (
+						<code className="font-mono text-xs wrap-anywhere">{binding.uri}</code>
+					) : undefined
+				}
+				actions={
+					data?.configured &&
+					!data.needsRebind &&
+					binding &&
+					!editing && (
+						<Button variant="outline" onClick={() => setEditing(true)}>
+							{t("openviking.configure")}
 						</Button>
-					</div>
-				)}
-				{data?.configured && data.needsRebind && (
-					<ErrorNotice>{t("openviking.rebindRequired")}</ErrorNotice>
-				)}
-				{data?.configured &&
-					(!binding || editing || data.needsRebind ? (
-						<BindingForm
-							endpoint={endpoint}
-							binding={binding ?? undefined}
-							onClose={editing && !data.needsRebind ? () => setEditing(false) : undefined}
-							onSaved={(result) => {
-								void mutate(result, { revalidate: false });
-								setEditing(false);
-							}}
-						/>
-					) : (
-						<>
-							<nav
-								className="flex flex-wrap gap-2 border-b pb-2"
-								aria-label={t("openviking.title")}
-							>
-								{(["resources", "memories", "sessions", "skills"] as const).map((item) => (
-									<Button
-										key={item}
-										variant={section === item ? "secondary" : "ghost"}
-										size="sm"
-										aria-current={section === item ? "page" : undefined}
-										onClick={() => selectSection(item)}
-									>
-										{t("openviking." + item)}
-									</Button>
-								))}
-							</nav>
-							{section === "resources" && (
-								<KnowledgeSearch key={binding.uri} endpoint={endpoint} binding={binding} />
-							)}
-							{section === "memories" && <Memories endpoint={endpoint} />}
-							{section === "sessions" && (
-								<Sessions key={session ?? "list"} endpoint={endpoint} initialSession={session} />
-							)}
-							{section === "skills" && <Skills endpoint={endpoint} />}
-						</>
-					))}
-			</div>
-		</div>
+					)
+				}
+			/>
+			{error && (
+				<ErrorNotice
+					action={
+						<Button variant="outline" onClick={() => void mutate()}>
+							{t("workspaces.retry")}
+						</Button>
+					}
+				>
+					{knowledgeErrorMessage(error, t("openviking.error"))}
+				</ErrorNotice>
+			)}
+			{!data && !error && <Skeleton className="h-44 w-full" />}
+			{data && !data.configured && (
+				<StatePanel
+					framed
+					icon={BookOpen}
+					title={t("openviking.connection")}
+					description={t("openviking.configureFirst")}
+				>
+					<Button asChild variant="outline">
+						<EnvironmentLink to="/settings/openviking">{t("openviking.settings")}</EnvironmentLink>
+					</Button>
+				</StatePanel>
+			)}
+			{data?.configured && data.needsRebind && (
+				<ErrorNotice>{t("openviking.rebindRequired")}</ErrorNotice>
+			)}
+			{data?.configured &&
+				(!binding || editing || data.needsRebind ? (
+					<BindingForm
+						endpoint={endpoint}
+						binding={binding ?? undefined}
+						onClose={editing && !data.needsRebind ? () => setEditing(false) : undefined}
+						onSaved={(result) => {
+							void mutate(result, { revalidate: false });
+							setEditing(false);
+						}}
+					/>
+				) : (
+					<Tabs.Root
+						value={section}
+						onValueChange={selectSection}
+						className="flex min-w-0 flex-col gap-4"
+					>
+						<PageTabList aria-label={t("openviking.title")}>
+							{(["resources", "memories", "sessions", "skills"] as const).map((item) => (
+								<PageTab key={item} value={item}>
+									{t("openviking." + item)}
+								</PageTab>
+							))}
+						</PageTabList>
+						<Tabs.Content value="resources" className="min-w-0">
+							<KnowledgeSearch key={binding.uri} endpoint={endpoint} />
+						</Tabs.Content>
+						<Tabs.Content value="memories" className="min-w-0">
+							<Memories endpoint={endpoint} />
+						</Tabs.Content>
+						<Tabs.Content value="sessions" className="min-w-0">
+							<Sessions key={session ?? "list"} endpoint={endpoint} initialSession={session} />
+						</Tabs.Content>
+						<Tabs.Content value="skills" className="min-w-0">
+							<Skills endpoint={endpoint} />
+						</Tabs.Content>
+					</Tabs.Root>
+				))}
+		</PageContent>
 	);
 }
 
@@ -281,7 +295,7 @@ function BindingForm({
 	);
 }
 
-function KnowledgeSearch({ endpoint, binding }: { endpoint: string; binding: KnowledgeBinding }) {
+function KnowledgeSearch({ endpoint }: { endpoint: string }) {
 	const { t } = useTranslation();
 	const [query, setQuery] = useState("");
 	const [matches, setMatches] = useState<KnowledgeMatch[] | null>(null);
@@ -320,31 +334,30 @@ function KnowledgeSearch({ endpoint, binding }: { endpoint: string; binding: Kno
 
 	return (
 		<div className="flex min-w-0 flex-col gap-4">
-			<p className="break-all font-mono text-sm text-muted-foreground">{binding.uri}</p>
 			<ImportDocument
 				endpoint={endpoint}
 				onSearch={(name) => void search(name)}
 				searchBusy={busy !== null}
+				searchControl={
+					<form
+						className="flex min-w-0 flex-1 basis-60 items-center gap-2"
+						onSubmit={(event) => {
+							event.preventDefault();
+							void search(query);
+						}}
+					>
+						<SearchInput
+							aria-label={t("openviking.query")}
+							placeholder={t("openviking.query")}
+							value={query}
+							onChange={(e) => setQuery(e.target.value)}
+						/>
+						<Button type="submit" disabled={!query.trim() || busy !== null}>
+							{t("openviking.search")}
+						</Button>
+					</form>
+				}
 			/>
-			<form
-				className="flex items-center gap-2"
-				onSubmit={(event) => {
-					event.preventDefault();
-					void search(query);
-				}}
-			>
-				<div className="min-w-0 flex-1">
-					<SearchInput
-						aria-label={t("openviking.query")}
-						placeholder={t("openviking.query")}
-						value={query}
-						onChange={(e) => setQuery(e.target.value)}
-					/>
-				</div>
-				<Button type="submit" disabled={!query.trim() || busy !== null}>
-					{t("openviking.search")}
-				</Button>
-			</form>
 			{busy && (
 				<p role="status" className="text-sm text-muted-foreground">
 					{t(busy === "find" ? "openviking.searching" : "openviking.reading")}
@@ -352,9 +365,7 @@ function KnowledgeSearch({ endpoint, binding }: { endpoint: string; binding: Kno
 			)}
 			{error && <ErrorNotice>{error}</ErrorNotice>}
 			{matches?.length === 0 && (
-				<p className="rounded-lg border border-dashed p-5 text-sm text-muted-foreground">
-					{t("openviking.noResults")}
-				</p>
+				<StatePanel framed icon={SearchX} title={t("openviking.noResults")} />
 			)}
 			{matches && matches.length > 0 && (
 				<ul aria-label={t("openviking.results")} className="divide-y rounded-lg border bg-card">

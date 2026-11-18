@@ -1,13 +1,45 @@
 import type { ComponentProps, ReactNode } from "react";
 import { AlertCircle, Search, type LucideIcon } from "lucide-react";
+import { Tabs } from "radix-ui";
 import { cn } from "@/lib/utils";
 import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/input-group";
 
-export function PageContent({ children, scroll }: { children: ReactNode; scroll?: boolean }) {
+export function PageContent({
+	children,
+	scroll,
+	className,
+}: {
+	children: ReactNode;
+	scroll?: boolean;
+	className?: string;
+}) {
 	const content = (
-		<div className="@container mx-auto flex w-full max-w-[1120px] flex-col gap-4">{children}</div>
+		<div className={cn("@container mx-auto flex w-full max-w-[1120px] flex-col gap-4", className)}>
+			{children}
+		</div>
 	);
 	return scroll ? <div className="h-full overflow-y-auto p-4 ud-md:p-6">{content}</div> : content;
+}
+
+export function PageTabList({ className, ...props }: ComponentProps<typeof Tabs.List>) {
+	return (
+		<Tabs.List
+			className={cn("flex gap-1 overflow-x-auto border-b border-border", className)}
+			{...props}
+		/>
+	);
+}
+
+export function PageTab({ className, ...props }: ComponentProps<typeof Tabs.Trigger>) {
+	return (
+		<Tabs.Trigger
+			className={cn(
+				"min-h-9 shrink-0 border-b-2 border-transparent px-3 text-sm font-medium text-muted-foreground outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring data-[state=active]:border-primary data-[state=active]:text-primary-text",
+				className,
+			)}
+			{...props}
+		/>
+	);
 }
 
 export function PageToolbar({ className, ...props }: ComponentProps<"div">) {
@@ -29,7 +61,7 @@ export function PageHeader({
 	status,
 }: {
 	title: string;
-	description?: string;
+	description?: ReactNode;
 	actions?: ReactNode;
 	status?: ReactNode;
 }) {
@@ -96,6 +128,7 @@ export function StatePanel({
 	description,
 	children,
 	className,
+	framed,
 }: {
 	icon: LucideIcon;
 	heading?: "h1" | "h2";
@@ -103,11 +136,13 @@ export function StatePanel({
 	description?: ReactNode;
 	children?: ReactNode;
 	className?: string;
+	framed?: boolean;
 }) {
 	return (
 		<div
 			className={cn(
 				"flex min-h-48 flex-col items-center justify-center px-6 py-8 text-center",
+				framed && "rounded-lg border border-border bg-card",
 				className,
 			)}
 		>

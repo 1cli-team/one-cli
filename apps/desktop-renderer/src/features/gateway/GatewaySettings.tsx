@@ -16,11 +16,11 @@ export function GatewaySettings() {
 	const status = useGatewayStatus();
 
 	return (
-		<SettingsPage title={t("gateway.settings")}>
-			<SettingsSection
-				title={t("gateway.settings")}
-				actions={status.data && <ConnectionBadge state={status.data.state} />}
-			>
+		<SettingsPage
+			title={t("gateway.settings")}
+			status={status.data && <ConnectionBadge state={status.data.state} />}
+		>
+			<SettingsSection>
 				{status.error && <ErrorNotice>{t("gateway.statusError")}</ErrorNotice>}
 				{status.data ? (
 					<ConnectionForm

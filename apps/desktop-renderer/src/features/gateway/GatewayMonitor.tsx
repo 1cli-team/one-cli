@@ -5,7 +5,14 @@ import { Activity, Plus, RefreshCw, Send, Settings2, SlidersHorizontal } from "l
 import { Popover, Tabs } from "radix-ui";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
-import { ErrorNotice, PageContent, PageHeader, StatePanel } from "@/components/ui/page-layout";
+import {
+	ErrorNotice,
+	PageContent,
+	PageHeader,
+	PageTab,
+	PageTabList,
+	StatePanel,
+} from "@/components/ui/page-layout";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
 	Table,
@@ -33,9 +40,6 @@ import {
 	type GatewayTaskFilters,
 	type ProjectSummary,
 } from "./api";
-
-const tabStyle =
-	"min-h-9 shrink-0 border-b-2 border-transparent px-3 text-sm font-medium text-muted-foreground outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring data-[state=active]:border-primary data-[state=active]:text-primary-text";
 
 export function GatewayMonitor() {
 	const { t } = useTranslation();
@@ -133,22 +137,13 @@ export function GatewayMonitor() {
 					}}
 					className="flex min-w-0 flex-col gap-4"
 				>
-					<Tabs.List
-						aria-label={t("gateway.monitor")}
-						className="flex gap-1 overflow-x-auto border-b border-border"
-					>
-						<Tabs.Trigger value="tasks" className={tabStyle}>
-							{t("gateway.tasks")}
-						</Tabs.Trigger>
+					<PageTabList aria-label={t("gateway.monitor")}>
+						<PageTab value="tasks">{t("gateway.tasks")}</PageTab>
 						{snapshot.executions && (
-							<Tabs.Trigger value="workers" className={tabStyle}>
-								{t("gateway.execution.workers")}
-							</Tabs.Trigger>
+							<PageTab value="workers">{t("gateway.execution.workers")}</PageTab>
 						)}
-						<Tabs.Trigger value="mappings" className={tabStyle}>
-							{t("gateway.projectMappings")}
-						</Tabs.Trigger>
-					</Tabs.List>
+						<PageTab value="mappings">{t("gateway.projectMappings")}</PageTab>
+					</PageTabList>
 					<Tabs.Content value="tasks" forceMount className="min-w-0 data-[state=inactive]:hidden">
 						<GatewayTaskList
 							connection={connection.url}
@@ -190,7 +185,7 @@ export function GatewayMonitor() {
 				</Tabs.Root>
 			) : connection ? (
 				<StatePanel
-					className="rounded-lg border border-border bg-card"
+					framed
 					icon={Activity}
 					title={t("gateway.snapshotUnavailable")}
 					description={t(

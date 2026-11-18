@@ -19,7 +19,6 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { DiscardDialog } from "@/components/ui/discard-dialog";
 import { Separator } from "@/components/ui/separator";
-import { Skeleton } from "@/components/ui/skeleton";
 import {
 	EnvironmentLink,
 	EnvironmentNavLink,
@@ -272,7 +271,6 @@ function WorkspaceSidebar({
 				className="flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto px-3 pb-3"
 				aria-label={t("navigation.workspace")}
 			>
-				{available && !overview.data && !overview.error && <Skeleton className="h-24" />}
 				<Button variant="navigation" size="navigation-compact" asChild>
 					<EnvironmentNavLink
 						to={

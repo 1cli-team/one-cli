@@ -1,4 +1,4 @@
-import { FolderOpen, GitBranch, GitFork, Plus, RefreshCw, Trash2 } from "lucide-react";
+import { FolderOpen, GitBranch, GitFork, Plus, RefreshCw, SearchX, Trash2 } from "lucide-react";
 import { useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
@@ -18,6 +18,7 @@ import {
 	type Worktree,
 } from "@/api/git";
 import { workspacesKey } from "@/api/workspaces";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
 	Dialog,
@@ -27,7 +28,15 @@ import {
 	DialogHeader,
 	DialogTitle,
 } from "@/components/ui/dialog";
-import { ErrorNotice, PageHeader, StatePanel } from "@/components/ui/page-layout";
+import {
+	ErrorNotice,
+	PageContent,
+	PageHeader,
+	PageToolbar,
+	SearchInput,
+	SectionHeading,
+	StatePanel,
+} from "@/components/ui/page-layout";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useWorkspace } from "@/features/workspace-navigation/useWorkspace";
 import { InitializeWorkspace } from "@/features/workspace-navigation/InitializeWorkspace";
@@ -54,8 +63,13 @@ export function Worktrees() {
 	const [busy, setBusy] = useState(false);
 	const [error, setError] = useState("");
 	const [notice, setNotice] = useState("");
+	const [filter, setFilter] = useState("");
 	const readOnly = Boolean(repository.error);
 	const origin = repository.data?.remotes.find((remote) => remote.name === "origin");
+	const query = filter.trim().toLowerCase();
+	const worktrees = (repository.data?.worktrees ?? []).filter(
+		(tree) => tree.path.toLowerCase().includes(query) || tree.branch?.toLowerCase().includes(query),
+	);
 
 	function message(error: unknown) {
 		const text = (error as HttpError | Error)?.message;
@@ -111,185 +125,188 @@ export function Worktrees() {
 	}
 
 	return (
-		<div className="h-full overflow-y-auto p-4 ud-md:p-6">
-			<div className="mx-auto flex max-w-[1120px] flex-col gap-6">
-				<PageHeader
-					title={
-						repository.data?.name
-							? t("git.repositoryWorktrees", { name: repository.data.name })
-							: t("git.title")
-					}
-					actions={
-						<>
-							<Button
-								variant="outline"
-								disabled={busy || repository.isValidating}
-								onClick={() => void repository.mutate()}
-							>
-								<RefreshCw />
-								{t("git.refresh")}
-							</Button>
-							<Button
-								disabled={busy || !repository.data || readOnly}
-								onClick={() => {
-									setError("");
-									setCreating(true);
-								}}
-							>
-								<Plus />
-								{t("git.create")}
-							</Button>
-						</>
-					}
-				/>
-				{(error || repository.error) && (
-					<ErrorNotice>{error || message(repository.error)}</ErrorNotice>
-				)}
-				{notice && (
-					<p role="status" className="break-all text-sm text-success-foreground">
-						{notice}
-					</p>
-				)}
-				{workspace?.status === "uninitialized" && <InitializeWorkspace workspace={workspace} />}
-				{repository.isLoading && <Skeleton className="h-48 w-full" />}
-				{repository.data && (
-					<section
-						className="space-y-3 rounded-lg border border-border bg-card p-4"
-						aria-labelledby="git-remotes-title"
+		<PageContent scroll>
+			<PageHeader
+				title={t("git.title")}
+				description={repository.data?.name}
+				actions={
+					<>
+						<Button
+							variant="outline"
+							disabled={busy || repository.isValidating}
+							onClick={() => void repository.mutate()}
+						>
+							<RefreshCw />
+							{t("git.refresh")}
+						</Button>
+						<Button
+							disabled={busy || !repository.data || readOnly}
+							onClick={() => {
+								setError("");
+								setCreating(true);
+							}}
+						>
+							<Plus />
+							{t("git.create")}
+						</Button>
+					</>
+				}
+			/>
+			{(error || repository.error) && (
+				<ErrorNotice>{error || message(repository.error)}</ErrorNotice>
+			)}
+			{notice && (
+				<p role="status" className="break-all text-sm text-success-foreground">
+					{notice}
+				</p>
+			)}
+			{workspace?.status === "uninitialized" && <InitializeWorkspace workspace={workspace} />}
+			{repository.isLoading && <Skeleton className="h-48 w-full" />}
+			{repository.data && (
+				<PageToolbar className="justify-between">
+					<SearchInput
+						groupClassName="max-w-sm"
+						aria-label={t("git.searchWorktrees")}
+						placeholder={t("git.searchWorktrees")}
+						value={filter}
+						onChange={(event) => setFilter(event.target.value)}
+					/>
+					<Button
+						variant="outline"
+						disabled={busy || readOnly}
+						onClick={() => {
+							setNotice("");
+							setOriginDraft({ scope, origin });
+						}}
 					>
-						<header className="flex flex-wrap items-center justify-between gap-3">
-							<h2 id="git-remotes-title" className="flex items-center gap-2 text-base font-medium">
-								<GitFork aria-hidden="true" className="size-4 text-muted-foreground" />
-								{t("git.remoteRepositories")}
-							</h2>
-							<Button
-								variant="outline"
-								size="sm"
-								disabled={busy || readOnly}
-								onClick={() => {
-									setNotice("");
-									setOriginDraft({ scope, origin });
-								}}
-							>
-								{t(origin ? "git.editOrigin" : "git.bindOrigin")}
-							</Button>
-						</header>
-						{!origin && <p className="text-sm text-muted-foreground">{t("git.originMissing")}</p>}
-						{repository.data.remotes.map((remote) => (
-							<div key={remote.name} className="min-w-0 text-sm">
-								<span className="font-medium">{remote.name}</span>
-								<p className="break-all font-mono text-xs text-muted-foreground">
-									{remote.fetchUrl}
-								</p>
-								{remote.pushUrl !== remote.fetchUrl && (
-									<p className="break-all font-mono text-xs text-muted-foreground">
-										{t("git.pushURL", { url: remote.pushUrl })}
-									</p>
+						<GitFork />
+						{t(origin ? "git.editOrigin" : "git.bindOrigin")}
+					</Button>
+				</PageToolbar>
+			)}
+			{repository.data && (
+				<div className="divide-y divide-border rounded-lg border border-border bg-card">
+					{worktrees.map((tree) => (
+						<article key={tree.id} className="flex flex-wrap items-start justify-between gap-4 p-4">
+							<div className="min-w-0 flex-1 space-y-2">
+								<div className="flex flex-wrap items-center gap-2">
+									<GitBranch className="size-4 shrink-0 text-muted-foreground" />
+									<h2 className="break-all font-medium">
+										{tree.branch || t(tree.bare ? "git.bare" : "git.detached")}
+									</h2>
+									{tree.main && <Badge variant="muted">{t("git.main")}</Badge>}
+									{workspace && tree.workspaceRoot === workspace.root && (
+										<Badge variant="secondary">{t("git.current")}</Badge>
+									)}
+								</div>
+								<p className="break-all font-mono text-xs text-muted-foreground">{tree.path}</p>
+								<div className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground">
+									{tree.head && <span className="font-mono">{tree.head.slice(0, 10)}</span>}
+									{!tree.bare && !tree.missing && !tree.statusError && (
+										<span>{t(tree.dirty ? "git.dirty" : "git.clean")}</span>
+									)}
+									{tree.missing && <span>{t("git.missing")}</span>}
+									{tree.prunable && <span>{t("git.prunable")}</span>}
+									{tree.locked && (
+										<span>
+											{t("git.locked")}
+											{tree.lockReason && ` · ${tree.lockReason}`}
+										</span>
+									)}
+								</div>
+								{tree.statusError && (
+									<p className="break-words text-sm text-error-foreground">{tree.statusError}</p>
 								)}
 							</div>
-						))}
-					</section>
-				)}
-				{repository.data && (
-					<div className="divide-y divide-border rounded-lg border border-border bg-card">
-						{repository.data.worktrees.map((tree) => (
-							<article
-								key={tree.id}
-								className="flex flex-wrap items-start justify-between gap-4 p-4"
-							>
-								<div className="min-w-0 flex-1 space-y-2">
-									<div className="flex flex-wrap items-center gap-2">
-										<GitBranch className="size-4 shrink-0 text-muted-foreground" />
-										<h2 className="break-all font-medium">
-											{tree.branch || t(tree.bare ? "git.bare" : "git.detached")}
-										</h2>
-										{tree.main && (
-											<span className="text-xs text-muted-foreground">{t("git.main")}</span>
-										)}
-										{workspace && tree.workspaceRoot === workspace.root && (
-											<span className="text-xs text-primary">{t("git.current")}</span>
-										)}
-									</div>
-									<p className="break-all font-mono text-xs text-muted-foreground">{tree.path}</p>
-									<div className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground">
-										{tree.head && <span className="font-mono">{tree.head.slice(0, 10)}</span>}
-										{!tree.bare && !tree.missing && !tree.statusError && (
-											<span>{t(tree.dirty ? "git.dirty" : "git.clean")}</span>
-										)}
-										{tree.missing && <span>{t("git.missing")}</span>}
-										{tree.prunable && <span>{t("git.prunable")}</span>}
-										{tree.locked && (
-											<span>
-												{t("git.locked")}
-												{tree.lockReason && ` · ${tree.lockReason}`}
-											</span>
-										)}
-									</div>
-									{tree.statusError && (
-										<p className="break-words text-sm text-error-foreground">{tree.statusError}</p>
-									)}
-								</div>
-								<div className="flex flex-wrap gap-2">
-									{tree.workspaceRoot && (
-										<Button
-											variant="outline"
-											size="sm"
-											disabled={busy || readOnly}
-											onClick={() =>
-												void act(async () => {
-													const selected = await openWorktree(scope, tree.id);
-													await mutate(workspacesKey);
-													navigate(
-														preserveEnvironment(
-															workspacePath(selected.entryId, selected.worktreeId),
-															search,
-														),
-													);
-												})
-											}
-										>
-											{t("git.openWorkspace")}
-										</Button>
-									)}
-									{window.desktop && (
-										<Button
-											variant="outline"
-											size="sm"
-											disabled={busy || tree.missing}
-											aria-label={t("git.openDirectoryFor", { path: tree.path })}
-											onClick={() =>
-												void act(async () => {
-													await window.desktop!.openDirectory(tree.path);
-												})
-											}
-										>
-											<FolderOpen />
-											{t("git.openDirectory")}
-										</Button>
-									)}
-									{!tree.main && !tree.bare && (
-										<Button
-											variant="outline"
-											size="sm"
-											disabled={busy || readOnly || tree.locked}
-											onClick={() => {
-												setError("");
-												setRemoving(tree);
-											}}
-										>
-											<Trash2 />
-											{t("git.remove")}
-										</Button>
-									)}
-								</div>
-							</article>
-						))}
-						{!repository.data.worktrees.length && (
+							<div className="flex flex-wrap gap-2">
+								{tree.workspaceRoot && (
+									<Button
+										variant="outline"
+										size="sm"
+										disabled={busy || readOnly}
+										onClick={() =>
+											void act(async () => {
+												const selected = await openWorktree(scope, tree.id);
+												await mutate(workspacesKey);
+												navigate(
+													preserveEnvironment(
+														workspacePath(selected.entryId, selected.worktreeId),
+														search,
+													),
+												);
+											})
+										}
+									>
+										{t("git.openWorkspace")}
+									</Button>
+								)}
+								{window.desktop && (
+									<Button
+										variant="outline"
+										size="sm"
+										disabled={busy || tree.missing}
+										aria-label={t("git.openDirectoryFor", { path: tree.path })}
+										onClick={() =>
+											void act(async () => {
+												await window.desktop!.openDirectory(tree.path);
+											})
+										}
+									>
+										<FolderOpen />
+										{t("git.openDirectory")}
+									</Button>
+								)}
+								{!tree.main && !tree.bare && (
+									<Button
+										variant="outline"
+										size="sm"
+										disabled={busy || readOnly || tree.locked}
+										onClick={() => {
+											setError("");
+											setRemoving(tree);
+										}}
+									>
+										<Trash2 />
+										{t("git.remove")}
+									</Button>
+								)}
+							</div>
+						</article>
+					))}
+					{worktrees.length === 0 &&
+						(repository.data.worktrees.length > 0 ? (
+							<StatePanel icon={SearchX} title={t("git.noMatchingWorktrees")}>
+								<Button variant="outline" onClick={() => setFilter("")}>
+									{t("workspaces.home.clearFilters")}
+								</Button>
+							</StatePanel>
+						) : (
 							<StatePanel icon={GitBranch} title={t("git.empty")} />
-						)}
-					</div>
-				)}
-			</div>
+						))}
+				</div>
+			)}
+			{repository.data && (
+				<section
+					className="space-y-3 rounded-lg border border-border bg-card p-4"
+					aria-label={t("git.remoteRepositories")}
+				>
+					<SectionHeading icon={GitFork} title={t("git.remoteRepositories")} />
+					{!origin && <p className="text-sm text-muted-foreground">{t("git.originMissing")}</p>}
+					{repository.data.remotes.map((remote) => (
+						<div key={remote.name} className="min-w-0 text-sm">
+							<span className="font-medium">{remote.name}</span>
+							<p className="font-mono text-xs text-muted-foreground wrap-anywhere">
+								{remote.fetchUrl}
+							</p>
+							{remote.pushUrl !== remote.fetchUrl && (
+								<p className="font-mono text-xs text-muted-foreground wrap-anywhere">
+									{t("git.pushURL", { url: remote.pushUrl })}
+								</p>
+							)}
+						</div>
+					))}
+				</section>
+			)}
 			{originDraft && (
 				<GitOriginDialog
 					scope={originDraft.scope}
@@ -360,6 +377,6 @@ export function Worktrees() {
 					</DialogFooter>
 				</DialogContent>
 			</Dialog>
-		</div>
+		</PageContent>
 	);
 }

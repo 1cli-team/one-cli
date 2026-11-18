@@ -1,9 +1,9 @@
 import { FileUp } from "lucide-react";
-import { useRef, useState } from "react";
+import { useRef, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import useSWR from "swr";
 import { Button } from "@/components/ui/button";
-import { ErrorNotice } from "@/components/ui/page-layout";
+import { ErrorNotice, PageToolbar } from "@/components/ui/page-layout";
 import { knowledgeErrorMessage } from "./errors";
 import {
 	getImportStatus,
@@ -19,10 +19,12 @@ export function ImportDocument({
 	endpoint,
 	onSearch,
 	searchBusy,
+	searchControl,
 }: {
 	endpoint: string;
 	onSearch(name: string): void;
 	searchBusy: boolean;
+	searchControl: ReactNode;
 }) {
 	const { t } = useTranslation();
 	const picker = useRef<HTMLInputElement>(null);
@@ -59,26 +61,29 @@ export function ImportDocument({
 	}
 
 	return (
-		<div className="space-y-2">
-			<input
-				ref={picker}
-				type="file"
-				className="hidden"
-				onChange={(event) => {
-					const file = event.currentTarget.files?.[0];
-					event.currentTarget.value = "";
-					if (file) void upload(file);
-				}}
-			/>
-			<Button
-				type="button"
-				variant="outline"
-				onClick={() => picker.current?.click()}
-				disabled={uploading || Boolean(task && processing(task.status) && !status.error)}
-			>
-				<FileUp />
-				{t(uploading ? "openviking.uploading" : "openviking.importDocument")}
-			</Button>
+		<div className="space-y-3">
+			<PageToolbar>
+				{searchControl}
+				<input
+					ref={picker}
+					type="file"
+					className="hidden"
+					onChange={(event) => {
+						const file = event.currentTarget.files?.[0];
+						event.currentTarget.value = "";
+						if (file) void upload(file);
+					}}
+				/>
+				<Button
+					type="button"
+					variant="outline"
+					onClick={() => picker.current?.click()}
+					disabled={uploading || Boolean(task && processing(task.status) && !status.error)}
+				>
+					<FileUp />
+					{t(uploading ? "openviking.uploading" : "openviking.importDocument")}
+				</Button>
+			</PageToolbar>
 			{uploadError && <ErrorNotice>{uploadError}</ErrorNotice>}
 			{submission && task && !uploading && (
 				<div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border bg-card p-3 text-sm">
