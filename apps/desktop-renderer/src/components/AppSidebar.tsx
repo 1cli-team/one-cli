@@ -1,21 +1,16 @@
 import {
 	Activity,
-	AppWindow,
 	ClipboardList,
 	ArrowLeft,
-	ChevronRight,
 	House,
 	GitBranch,
 	KeyRound,
 	MonitorCog,
-	Package,
 	Plus,
-	Server,
 	Network,
 	Settings2,
 	SlidersHorizontal,
 } from "lucide-react";
-import { Collapsible } from "radix-ui";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useLocation, useMatch, useNavigate, useParams } from "react-router-dom";
@@ -35,15 +30,8 @@ import { CreateProjectDialog } from "@/features/project-creation/CreateProjectDi
 import { useWorkspace } from "@/features/workspace-navigation/useWorkspace";
 import { useThemeStore } from "@/lib/stores/theme";
 import { cn } from "@/lib/utils";
-import { projectPath, workspacePath } from "@/router/paths";
+import { workspacePath, workspaceVariablesPath } from "@/router/paths";
 import { WorkspaceGroupsSidebar } from "@/features/workspace-groups/WorkspaceGroupsSidebar";
-import type { OverviewProject } from "@/types/api";
-
-const PROJECT_GROUPS = [
-	{ kind: "app", directory: "apps", icon: AppWindow },
-	{ kind: "package", directory: "packages", icon: Package },
-	{ kind: "service", directory: "services", icon: Server },
-] as const;
 
 interface SidebarProps {
 	entryId?: string;
@@ -251,9 +239,6 @@ function WorkspaceSidebar({
 	const [createOpen, setCreateOpen] = useState(false);
 	const [bindingOpen, setBindingOpen] = useState(false);
 	const [pendingAction, setPendingAction] = useState<(() => void) | null>(null);
-	const [collapsedGroups, setCollapsedGroups] = useState<
-		Partial<Record<OverviewProject["kind"], boolean>>
-	>({});
 	const dirty = useEnvironmentDirtyStore((state) => state.dirty);
 	const discardAll = useEnvironmentDirtyStore((state) => state.discardAll);
 	const readOnly = workspace?.status === "identity-conflict";
@@ -292,7 +277,7 @@ function WorkspaceSidebar({
 			</div>
 			<nav
 				className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto px-3 pb-3"
-				aria-label={t("projectInspector.projectListLabel")}
+				aria-label={t("navigation.workspace")}
 			>
 				{available && !overview.data && !overview.error && <Skeleton className="h-24" />}
 				<Button variant="navigation" size="navigation-compact" asChild>
@@ -318,65 +303,12 @@ function WorkspaceSidebar({
 						<span>{t("git.title")}</span>
 					</EnvironmentNavLink>
 				</Button>
-				{PROJECT_GROUPS.map(({ kind, directory, icon: Icon }) => {
-					const group = projects.filter((project) => project.kind === kind);
-					if (!group.length) return null;
-					return (
-						<Collapsible.Root
-							key={kind}
-							open={!collapsedGroups[kind]}
-							onOpenChange={(open) =>
-								setCollapsedGroups((current) => ({ ...current, [kind]: !open }))
-							}
-						>
-							<Collapsible.Trigger asChild>
-								<Button
-									variant="ghost"
-									size="sm"
-									className="w-full justify-start"
-									aria-label={t("projectInspector.groupLabel", {
-										group: directory,
-										count: group.length,
-									})}
-								>
-									<ChevronRight
-										className={cn(
-											"transition-transform motion-reduce:transition-none",
-											!collapsedGroups[kind] && "rotate-90",
-										)}
-									/>
-									<span className="flex-1 text-left font-mono">{directory}</span>
-									<span className="font-mono tabular-nums text-muted-foreground">
-										{group.length}
-									</span>
-								</Button>
-							</Collapsible.Trigger>
-							<Collapsible.Content className="flex flex-col gap-1 pt-1">
-								{group.map((project) => (
-									<Button
-										key={project.name}
-										variant="navigation"
-										size="navigation-compact"
-										className="min-h-9"
-										asChild
-									>
-										<EnvironmentLink
-											to={projectPath(entryId, project.name)}
-											aria-current={projectName === project.name ? "page" : undefined}
-											title={project.relativeDir}
-										>
-											<Icon />
-											<span className="min-w-0 flex-1 truncate">{project.name}</span>
-										</EnvironmentLink>
-									</Button>
-								))}
-							</Collapsible.Content>
-						</Collapsible.Root>
-					);
-				})}
-				{overview.data && !projects.length && (
-					<p className="px-2 text-sm text-muted-foreground">{t("projectInspector.empty")}</p>
-				)}
+				<Button variant="navigation" size="navigation-compact" asChild>
+					<EnvironmentNavLink to={workspaceVariablesPath(entryId, projectName)}>
+						<KeyRound />
+						<span>{t("navigation.environmentVariables")}</span>
+					</EnvironmentNavLink>
+				</Button>
 			</nav>
 			{available && (
 				<div className="flex shrink-0 flex-col gap-2 border-t border-border p-3">
@@ -404,7 +336,7 @@ function WorkspaceSidebar({
 					onClose={() => setCreateOpen(false)}
 					onCreated={(name) => {
 						setCreateOpen(false);
-						navigate(preserveEnvironment(projectPath(entryId, name), search));
+						navigate(preserveEnvironment(workspaceVariablesPath(entryId, name), search));
 					}}
 				/>
 			)}

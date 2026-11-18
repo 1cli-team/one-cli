@@ -174,8 +174,6 @@
 	},
 	"projectInspector": {
 		"workspaceTitle": "项目设置",
-		"projectsTitle": "项目",
-		"groupLabel": "{{group}}，{{count}} 个项目",
 		"projectListLabel": "工作区项目",
 		"empty": "这个工作区还没有项目。",
 		"loadFailed": "无法加载项目配置",
@@ -551,10 +549,9 @@
 		"open": "打开导航",
 		"allWorkspaces": "返回首页",
 		"workspaceSettings": "工作区配置",
-		"emptyWorkspace": "从侧边栏创建第一个项目。",
-		"projectMissing": "项目不存在",
-		"projectMissingDescription": "此项目可能已被重命名或移除，请从侧边栏选择其他项目。",
-		"backToWorkspace": "返回工作区"
+		"workspace": "工作区导航",
+		"environmentVariables": "环境变量",
+		"emptyWorkspace": "从侧边栏创建第一个项目。"
 	},
 	"git": {
 		"title": "Worktrees",

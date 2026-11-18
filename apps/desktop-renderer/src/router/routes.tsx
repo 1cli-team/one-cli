@@ -11,7 +11,7 @@ import { Overview } from "@/pages/Overview";
 import { App } from "@/App";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { useWorkspace } from "@/features/workspace-navigation/useWorkspace";
-import { legacyWorkspaceLocation, projectPath, workspacePath } from "./paths";
+import { legacyWorkspaceLocation, workspacePath, workspaceVariablesPath } from "./paths";
 import { AccountSettings } from "@/features/infisical-session/AccountSettings";
 import { GlobalVariables } from "@/features/global-variables/GlobalVariables";
 import { CodeHostSettings } from "@/features/code-hosts/CodeHostSettings";
@@ -64,7 +64,7 @@ const LegacyGlobalRedirect: React.FC<{ to: string }> = ({ to }) => {
 	return <Navigate replace to={{ pathname: to, search }} />;
 };
 
-const WorkspaceRoute: React.FC = () => {
+const WorkspaceRoute: React.FC<{ variables?: boolean }> = ({ variables }) => {
 	const { entryId = "", projectName } = useParams();
 	const { search } = useLocation();
 	const { registry, workspace, overview, contextEntryId } = useWorkspace(entryId);
@@ -106,49 +106,31 @@ const WorkspaceRoute: React.FC = () => {
 			</WorkspaceStateLayout>
 		);
 
-	const projects = overview.data.projects ?? [];
-	if (!projectName && projects.length) {
-		const requested = new URLSearchParams(search).get("project");
+	if (!variables) {
 		const location = legacyWorkspaceLocation(contextEntryId, search);
 		return (
 			<Navigate
 				replace
-				to={{ ...location, pathname: projectPath(contextEntryId, requested || projects[0].name) }}
+				to={
+					projectName
+						? { ...location, pathname: workspaceVariablesPath(contextEntryId, projectName) }
+						: location
+				}
 			/>
 		);
 	}
-	const project = projects.find((item) => item.name === projectName);
+	const projects = overview.data.projects ?? [];
+	const project = projectName ? projects.find((item) => item.name === projectName) : projects[0];
 	if (projectName && !project)
-		return (
-			<WorkspaceStateLayout>
-				<UnknownProject entryId={contextEntryId} />
-			</WorkspaceStateLayout>
-		);
+		return <Navigate replace to={{ pathname: workspaceVariablesPath(contextEntryId), search }} />;
 
 	return (
 		<Overview
 			project={project}
+			projects={projects}
 			workspaceEntryId={contextEntryId}
 			readOnly={workspace.status === "identity-conflict"}
 		/>
-	);
-};
-
-const UnknownProject: React.FC<{ entryId: string }> = ({ entryId }) => {
-	const { t } = useTranslation();
-	return (
-		<StatePanel
-			icon={FolderX}
-			heading="h1"
-			title={t("navigation.projectMissing")}
-			description={t("navigation.projectMissingDescription")}
-		>
-			<Button asChild>
-				<EnvironmentLink to={workspacePath(entryId)}>
-					{t("navigation.backToWorkspace")}
-				</EnvironmentLink>
-			</Button>
-		</StatePanel>
 	);
 };
 
@@ -307,10 +289,15 @@ export const routes: RouteObject[] = [
 				children: [
 					{ index: true, element: <WorkspaceRoute /> },
 					{ path: "projects/:projectName", element: <WorkspaceRoute /> },
+					{ path: "environment-variables/:projectName?", element: <WorkspaceRoute variables /> },
 					{ path: "git/worktrees", element: <Worktrees /> },
 					{ path: "issues", element: <IssuesPage /> },
 					{ path: "worktrees/:worktreeId", element: <WorkspaceRoute /> },
 					{ path: "worktrees/:worktreeId/projects/:projectName", element: <WorkspaceRoute /> },
+					{
+						path: "worktrees/:worktreeId/environment-variables/:projectName?",
+						element: <WorkspaceRoute variables />,
+					},
 					{ path: "worktrees/:worktreeId/git/worktrees", element: <Worktrees /> },
 				],
 			},

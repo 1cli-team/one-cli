@@ -174,8 +174,6 @@
 	},
 	"projectInspector": {
 		"workspaceTitle": "Project settings",
-		"projectsTitle": "Projects",
-		"groupLabel": "{{group}}, {{count}} projects",
 		"projectListLabel": "Workspace projects",
 		"empty": "This workspace has no projects.",
 		"loadFailed": "Unable to load project configuration",
@@ -551,10 +549,9 @@
 		"open": "Open navigation",
 		"allWorkspaces": "Back to home",
 		"workspaceSettings": "Workspace configuration",
-		"emptyWorkspace": "Create your first project from the sidebar.",
-		"projectMissing": "Project not found",
-		"projectMissingDescription": "This project may have been renamed or removed. Select another project from the sidebar.",
-		"backToWorkspace": "Back to workspace"
+		"workspace": "Workspace navigation",
+		"environmentVariables": "Environment variables",
+		"emptyWorkspace": "Create your first project from the sidebar."
 	},
 	"git": {
 		"title": "Worktrees",

@@ -38,11 +38,11 @@ export function TopBar({ homeTo, onOpenNavigation }: { homeTo: string; onOpenNav
 		"/workspaces/:entryId/worktrees/:worktreeId/git/worktrees",
 	);
 	const worktreesMatch = baseWorktreesMatch || checkoutWorktreesMatch;
-	const baseProjectMatch = useMatch("/workspaces/:entryId/projects/:projectName");
-	const checkoutProjectMatch = useMatch(
-		"/workspaces/:entryId/worktrees/:worktreeId/projects/:projectName",
+	const baseVariablesMatch = useMatch("/workspaces/:entryId/environment-variables/:projectName?");
+	const checkoutVariablesMatch = useMatch(
+		"/workspaces/:entryId/worktrees/:worktreeId/environment-variables/:projectName?",
 	);
-	const projectMatch = baseProjectMatch || checkoutProjectMatch;
+	const variablesMatch = baseVariablesMatch || checkoutVariablesMatch;
 	const { workspace, overview, available } = useWorkspace(match?.params.entryId);
 	const themeLabel = t(mode === "light" ? "sidebar.themeToDark" : "sidebar.themeToLight");
 	const titles: Record<string, string> = {
@@ -87,7 +87,7 @@ export function TopBar({ homeTo, onOpenNavigation }: { homeTo: string; onOpenNav
 								</BreadcrumbItem>
 								<BreadcrumbSeparator />
 								<BreadcrumbItem>
-									{projectMatch || worktreesMatch ? (
+									{variablesMatch || worktreesMatch ? (
 										<BreadcrumbLink asChild>
 											<EnvironmentLink
 												to={workspacePath(workspace?.entryId || match.params.entryId!)}
@@ -101,12 +101,12 @@ export function TopBar({ homeTo, onOpenNavigation }: { homeTo: string; onOpenNav
 										</BreadcrumbPage>
 									)}
 								</BreadcrumbItem>
-								{(projectMatch || worktreesMatch) && (
+								{(variablesMatch || worktreesMatch) && (
 									<>
 										<BreadcrumbSeparator />
 										<BreadcrumbItem>
 											<BreadcrumbPage>
-												{worktreesMatch ? t("git.title") : projectMatch?.params.projectName}
+												{t(worktreesMatch ? "git.title" : "navigation.environmentVariables")}
 											</BreadcrumbPage>
 										</BreadcrumbItem>
 									</>
