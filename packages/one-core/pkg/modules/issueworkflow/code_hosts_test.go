@@ -2,6 +2,7 @@ package issueworkflow
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -29,8 +30,8 @@ func TestGiteaCodeHostAndPRLifecycle(t *testing.T) {
 			return
 		}
 		switch {
-		case r.URL.Path == "/api/v1/user":
-			writeJSON(w, http.StatusOK, map[string]string{"login": "test-user"})
+		case r.URL.Path == "/api/v1/repos/"+slug && r.Method == http.MethodGet:
+			writeJSON(w, http.StatusOK, map[string]string{"full_name": slug})
 		case r.URL.Path == pulls && r.Method == http.MethodGet:
 			if r.URL.Query().Get("state") != "all" || r.URL.Query().Get("base_branch") != "main" {
 				t.Error("missing pull request filters")
@@ -76,18 +77,22 @@ func TestGiteaCodeHostAndPRLifecycle(t *testing.T) {
 	linear.issue.Title = "Implement sample"
 	hosts := codehost.Service{}
 	service.pr = hosts
-	if _, err := hosts.Save(t.Context(), codehost.Input{URL: remote.URL, Token: "rejected"}); err != codehost.ErrAuth {
+	if _, err := hosts.Save(t.Context(), codehost.Input{URL: remote.URL, Token: "rejected", Repository: slug}); err != codehost.ErrAuth {
 		t.Fatalf("bad token = %v", err)
 	}
-	local, err := hosts.Save(t.Context(), codehost.Input{URL: remote.URL, Token: credential})
-	if err != nil || local.Account != "test-user" {
+	local, err := hosts.Save(t.Context(), codehost.Input{URL: remote.URL, Token: credential, Repository: slug})
+	if err != nil || local.Repository != slug || local.Account != "" {
 		t.Fatalf("save connection = %+v, %v", local, err)
 	}
-	if _, err := hosts.Save(t.Context(), codehost.Input{URL: remote.URL, Token: "rejected-rotation"}); err != codehost.ErrAuth {
+	if _, err := hosts.Save(t.Context(), codehost.Input{URL: remote.URL, Token: "rejected-rotation", Repository: slug}); err != codehost.ErrAuth {
 		t.Fatalf("bad rotation = %v", err)
 	}
 	if _, err := hosts.Test(t.Context(), "127.0.0.1"); err != nil {
 		t.Fatal(err)
+	}
+	otherRepo := gitmodule.RepositoryRef{Host: local.Host, Slug: "team/other"}
+	if _, err := hosts.Read(t.Context(), otherRepo, 42); !errors.Is(err, codehost.ErrRepositoryScope) {
+		t.Fatalf("read outside the configured repository = %v", err)
 	}
 	// The public view can be loaded independently from the workflow.
 	views, err := (codehost.Service{}).List()

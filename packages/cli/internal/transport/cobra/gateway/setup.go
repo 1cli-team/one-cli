@@ -42,12 +42,13 @@ func setupCommand() *cobra.Command {
 	status := &cobra.Command{Use: "status", Args: i18n.NoArgs, RunE: func(cmd *cobra.Command, _ []string) error {
 		return run(cmd, gateway.SetupStatus, gateway.SetupInput{}, new(gateway.SetupReadiness))
 	}}
+	var repository string
 	host := &cobra.Command{Use: "gitea <url>", Args: i18n.ExactArgs(1), RunE: func(cmd *cobra.Command, args []string) error {
 		token, err := readGiteaToken(cmd)
 		if err != nil {
 			return err
 		}
-		input := gateway.SetupInput{Gitea: &codehost.Input{URL: args[0], Token: token}}
+		input := gateway.SetupInput{Gitea: &codehost.Input{URL: args[0], Token: token, Repository: repository}}
 		return run(cmd, gateway.SetupGitea, input, new(codehost.Connection))
 	}}
 	clone := &cobra.Command{Use: "clone <url>", Args: i18n.ExactArgs(1), RunE: func(cmd *cobra.Command, args []string) error {
@@ -76,8 +77,10 @@ func setupCommand() *cobra.Command {
 	}}
 	project.Flags().StringVar(&configPath, "config", "", "")
 	project.Flags().StringVar(&connection, "connection", "", "")
+	host.Flags().StringVar(&repository, "repository", "", "")
 	i18n.MarkFlagUsage(project, "config", "gateway.cli.setup_config")
 	i18n.MarkFlagUsage(project, "connection", "gateway.cli.setup_connection")
+	i18n.MarkFlagUsage(host, "repository", "git.host.flag.repository")
 	i18n.MarkShort(status, "gateway.cli.setup_status")
 	i18n.MarkShort(host, "gateway.cli.setup_gitea")
 	i18n.MarkShort(clone, "gateway.cli.setup_clone")

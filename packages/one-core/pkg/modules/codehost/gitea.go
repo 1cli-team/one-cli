@@ -61,15 +61,30 @@ func (c credential) request(ctx context.Context, method string, query url.Values
 	return nil
 }
 
-func (c credential) currentUser(ctx context.Context) (string, error) {
+func (c *credential) verify(ctx context.Context) error {
+	if c.Repository != "" {
+		owner, name, _ := strings.Cut(c.Repository, "/")
+		var repo struct {
+			FullName string `json:"full_name"`
+		}
+		if err := c.request(ctx, http.MethodGet, nil, nil, &repo, "repos", owner, name); err != nil {
+			return c.connectionFailure(err)
+		}
+		if !strings.EqualFold(repo.FullName, c.Repository) {
+			return ErrRepositoryAccess
+		}
+		return nil
+	}
+
 	var user userView
 	if err := c.request(ctx, http.MethodGet, nil, nil, &user, "user"); err != nil {
-		return "", err
+		return c.connectionFailure(err)
 	}
 	if strings.TrimSpace(user.Login) == "" {
-		return "", ErrTest
+		return ErrTest
 	}
-	return user.Login, nil
+	c.Account = user.Login
+	return nil
 }
 
 type giteaBranch struct {

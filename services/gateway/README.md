@@ -108,13 +108,20 @@ Gitea 映射使用 `"repository": {"host": "git.example.com", "slug": "team/repo
 
 ```sh
 one git host list
-one git host configure https://git.example.com < /path/to/token
+one git host configure https://git.example.com --repository team/repo < /path/to/token
 one git host test git.example.com
 one git -C /srv/repos/project pr view 42
 ```
 
 One Desktop 的「设置 → 代码库」也可管理本机的这些设置。同一用户和 `ONE_HOME`
 下，CLI 和 Desktop 读取同一份代码库配置。
+
+`--repository owner/repo` verifies and uses the token for that repository. For a
+Forgejo token restricted to that repository, grant repository read and write to
+open pull requests. Omitting the flag uses account verification (`read:user`).
+
+`--repository owner/repo` 用于验证目标仓库，令牌仅用于该仓库。在 Forgejo 中，创建
+PR 需要授予此仓库的读写权限。省略该参数时使用账号验证（`read:user`）。
 
 Build One CLI and Gateway with `mise run cli:build` and `mise run gateway:build`. Set a randomly generated
 `ONE_GATEWAY_TOKEN` of at least 32 characters in your service environment.
@@ -237,7 +244,8 @@ task counts. Use **Dispatch issue** to select a Linear issue and an eligible
 execution machine.
 
 在 **设置 → Gateway 连接** 填入服务地址和相同的令牌，测试连接后保存。
-在 **设置 → 代码库** 测试本机 GitHub 或保存 Gitea 的 HTTPS 根地址及 API Token。
+在 **设置 → 代码库** 测试本机 GitHub，或为 Gitea / Forgejo 填写 HTTPS 根地址、
+目标仓库及 API Token。
 Desktop 和执行机器分开部署时，在执行机器通过 One CLI 配置该机的连接。
 在首页侧栏打开 **Gateway 监控 → 配置项目**，选择已绑定的 Linear 项目。
 One Desktop 根据每个工作区的 Git `origin` 匹配执行机器上已登记的仓库，并一起保存。
@@ -247,9 +255,8 @@ One CLI 在同一 Codex 会话中提供这些 worktree，为有改动的仓库�
 保存后可在 **派发需求** 中选择需求和执行机。One CLI 在开始执行时读取远端的默认分支。
 
 Use **Settings → Code repositories** to test the local GitHub connection or add
-a Gitea server. Enter the root HTTPS URL and an API token with account read and
-pull request permissions. For a separate execution machine, configure its One
-CLI account there.
+a Gitea or Forgejo server. Enter the root HTTPS URL, target repository, and API
+token. For a separate execution machine, configure its One CLI account there.
 
 Use **Gateway monitor → Configure project** after connecting. Select a bound
 Linear project. One Desktop matches each workspace's Git `origin` to a registered
@@ -359,7 +366,7 @@ standard input. The target saves the credentials in its own One configuration.
 
 ```sh
 one gateway setup linear --worker WORKER_ID
-one gateway setup gitea https://git.example.internal --worker WORKER_ID
+one gateway setup gitea https://git.example.internal --repository team/repo --worker WORKER_ID
 one gateway setup clone https://git.example.internal/team/repo.git --worker WORKER_ID
 one gateway setup project LINEAR_PROJECT_ID --worker WORKER_ID
 one gateway setup status --worker WORKER_ID -o json

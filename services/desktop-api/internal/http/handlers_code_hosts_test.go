@@ -15,19 +15,20 @@ import (
 
 func TestCodeHostSettingsUseLocalOneWithNoGateway(t *testing.T) {
 	const token = "fixture-gitea-token"
+	const repository = "team/local-one"
 	local := t.TempDir()
 	t.Setenv("ONE_HOME", local)
 	gitea := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path != "/api/v1/user" || r.Header.Get("Authorization") != "token "+token {
+		if r.Method != http.MethodGet || r.URL.Path != "/api/v1/repos/"+repository || r.Header.Get("Authorization") != "token "+token {
 			w.WriteHeader(http.StatusUnauthorized)
 			return
 		}
-		writeJSON(w, http.StatusOK, map[string]string{"login": "local-one"})
+		writeJSON(w, http.StatusOK, map[string]string{"full_name": repository})
 	}))
 	defer gitea.Close()
 	mux := http.NewServeMux()
 	registerCodeHostRoutes(mux)
-	request := func(method, path string, body any) {
+	request := func(method, path string, body any) []byte {
 		t.Helper()
 		data, err := json.Marshal(body)
 		if err != nil {
@@ -39,13 +40,18 @@ func TestCodeHostSettingsUseLocalOneWithNoGateway(t *testing.T) {
 			strings.Contains(rec.Body.String(), token) {
 			t.Fatalf("%s %s returned %d", method, path, rec.Code)
 		}
+		return rec.Body.Bytes()
 	}
 	request(http.MethodGet, "/code-hosts", nil)
-	request(http.MethodPut, "/code-hosts", codehost.Input{URL: gitea.URL, Token: token})
-	request(http.MethodPost, "/code-hosts/127.0.0.1/test", nil)
+	request(http.MethodPut, "/code-hosts", codehost.Input{URL: gitea.URL, Token: token, Repository: repository})
+	var verified codehost.Connection
+	if err := json.Unmarshal(request(http.MethodPost, "/code-hosts/127.0.0.1/test", nil), &verified); err != nil ||
+		verified.Repository != repository || verified.Account != "" {
+		t.Fatalf("verified repository connection: %+v, %v", verified, err)
+	}
 
 	hosts, err := (codehost.Service{}).List()
-	if err != nil || len(hosts) != 2 || hosts[1].Account != "local-one" {
+	if err != nil || len(hosts) != 2 || hosts[1] != verified {
 		t.Fatalf("local One host configuration: %+v, %v", hosts, err)
 	}
 	if _, err := os.Stat(filepath.Join(local, "config", "gateway.json")); !os.IsNotExist(err) {

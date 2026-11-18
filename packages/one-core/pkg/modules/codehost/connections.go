@@ -28,15 +28,17 @@ import (
 const gitea = "gitea"
 
 type Connection struct {
-	Provider string `json:"provider"`
-	Host     string `json:"host"`
-	URL      string `json:"url"`
-	Account  string `json:"account,omitempty"`
+	Provider   string `json:"provider"`
+	Host       string `json:"host"`
+	URL        string `json:"url"`
+	Account    string `json:"account,omitempty"`
+	Repository string `json:"repository,omitempty"`
 }
 
 type Input struct {
-	URL   string `json:"url"`
-	Token string `json:"token"`
+	URL        string `json:"url"`
+	Token      string `json:"token"`
+	Repository string `json:"repository,omitempty"`
 }
 
 type Failure string
@@ -44,13 +46,15 @@ type Failure string
 func (f Failure) Error() string { return i18n.T("git.code_host." + string(f)) }
 
 const (
-	ErrInvalid         Failure = "invalid"
-	ErrMissing         Failure = "missing"
-	ErrAuth            Failure = "auth"
-	ErrTest            Failure = "test"
-	ErrAddressConflict Failure = "address_conflict"
-	ErrSave            Failure = "save"
-	ErrLoad            Failure = "load"
+	ErrInvalid          Failure = "invalid"
+	ErrMissing          Failure = "missing"
+	ErrAuth             Failure = "auth"
+	ErrTest             Failure = "test"
+	ErrRepositoryAccess Failure = "repository_access"
+	ErrRepositoryScope  Failure = "repository_scope"
+	ErrAddressConflict  Failure = "address_conflict"
+	ErrSave             Failure = "save"
+	ErrLoad             Failure = "load"
 )
 
 var githubHost = Connection{Provider: "github", Host: gitmodule.GitHubHost, URL: "https://github.com"}
@@ -92,8 +96,9 @@ func readCredentials(path string) (map[string]credential, error) {
 		return nil, ErrLoad
 	}
 	for host, saved := range values {
-		parsed, valid := parseInput(Input{URL: saved.URL, Token: saved.Token})
-		if !valid || host != parsed.Host || saved.Host != host || saved.URL != parsed.URL || saved.Provider != gitea {
+		parsed, valid := parseInput(Input{URL: saved.URL, Token: saved.Token, Repository: saved.Repository})
+		if !valid || host != parsed.Host || saved.Host != host || saved.URL != parsed.URL ||
+			saved.Provider != gitea || saved.Repository != parsed.Repository {
 			return nil, ErrLoad
 		}
 	}
@@ -102,8 +107,9 @@ func readCredentials(path string) (map[string]credential, error) {
 
 func parseInput(input Input) (credential, bool) {
 	address, token := strings.TrimSpace(input.URL), strings.TrimSpace(input.Token)
+	repository := strings.TrimSpace(input.Repository)
 	u, err := url.Parse(address)
-	if err != nil || len(address)+len(token) > 8<<10 || u.Hostname() == "" || u.User != nil ||
+	if err != nil || len(address)+len(token)+len(repository) > 8<<10 || u.Hostname() == "" || u.User != nil ||
 		u.ForceQuery || u.RawQuery != "" || u.Fragment != "" || strings.Trim(u.Path, "/") != "" ||
 		token == "" || strings.ContainsFunc(token, func(r rune) bool { return unicode.IsSpace(r) || unicode.IsControl(r) }) {
 		return credential{}, false
@@ -111,6 +117,9 @@ func parseInput(input Input) (credential, bool) {
 	host := strings.TrimSuffix(strings.ToLower(u.Hostname()), ".")
 	loopback := net.ParseIP(host).IsLoopback() || host == "localhost"
 	if host == "" || host == gitmodule.GitHubHost || (u.Scheme != "https" && !(u.Scheme == "http" && loopback)) {
+		return credential{}, false
+	}
+	if repository != "" && !(gitmodule.RepositoryRef{Host: host, Slug: repository}).Valid() {
 		return credential{}, false
 	}
 	if port := u.Port(); port != "" {
@@ -121,7 +130,7 @@ func parseInput(input Input) (credential, bool) {
 		u.Host = host
 	}
 	u.Path, u.RawPath = "", ""
-	return credential{Connection: Connection{Provider: gitea, Host: host, URL: u.String()}, Token: token}, true
+	return credential{Connection: Connection{Provider: gitea, Host: host, URL: u.String(), Repository: repository}, Token: token}, true
 }
 
 func (Service) List() ([]Connection, error) {
@@ -156,6 +165,17 @@ func (Service) connection(host string) (credential, error) {
 	return c, nil
 }
 
+func (s Service) repositoryConnection(ref gitmodule.RepositoryRef) (credential, error) {
+	c, err := s.connection(ref.Host)
+	if err != nil {
+		return credential{}, err
+	}
+	if c.Repository != "" && !strings.EqualFold(c.Repository, ref.Slug) {
+		return credential{}, ErrRepositoryScope
+	}
+	return c, nil
+}
+
 func update(ctx context.Context, change func(map[string]credential) (bool, error)) error {
 	path, err := configPath()
 	if err != nil {
@@ -186,12 +206,10 @@ func (Service) Save(ctx context.Context, input Input) (Connection, error) {
 	if !ok {
 		return Connection{}, ErrInvalid
 	}
-	account, err := c.currentUser(ctx)
-	if err != nil {
-		return Connection{}, connectionFailure(err)
+	if err := c.verify(ctx); err != nil {
+		return Connection{}, err
 	}
-	c.Account = account
-	err = update(ctx, func(values map[string]credential) (bool, error) {
+	err := update(ctx, func(values map[string]credential) (bool, error) {
 		if old, exists := values[c.Host]; exists && old.URL != c.URL {
 			return false, ErrAddressConflict
 		}
@@ -217,9 +235,8 @@ func (s Service) Test(ctx context.Context, host string) (Connection, error) {
 	if err != nil {
 		return Connection{}, err
 	}
-	c.Account, err = c.currentUser(ctx)
-	if err != nil {
-		return Connection{}, connectionFailure(err)
+	if err := c.verify(ctx); err != nil {
+		return Connection{}, err
 	}
 	return c.Connection, nil
 }
@@ -239,7 +256,7 @@ func (s Service) MatchesOrigin(ref gitmodule.RepositoryRef, remote string) bool 
 	if ref.Host == githubHost.Host {
 		return true
 	}
-	c, err := s.connection(ref.Host)
+	c, err := s.repositoryConnection(ref)
 	if err != nil {
 		return false
 	}
@@ -288,10 +305,17 @@ type userView struct {
 	Login string `json:"login"`
 }
 
-func connectionFailure(err error) error {
+func (c credential) connectionFailure(err error) error {
 	var response *giteaHTTPError
-	if errors.As(err, &response) && (response.code == http.StatusUnauthorized || response.code == http.StatusForbidden) {
-		return ErrAuth
+	if errors.As(err, &response) {
+		switch response.code {
+		case http.StatusUnauthorized, http.StatusForbidden:
+			return ErrAuth
+		case http.StatusNotFound:
+			if c.Repository != "" {
+				return ErrRepositoryAccess
+			}
+		}
 	}
 	return ErrTest
 }
@@ -301,8 +325,8 @@ func (s Service) VerifyRepository(ref gitmodule.RepositoryRef) error {
 		return i18n.Errorf("git.pr_origin")
 	}
 	if ref.Host != githubHost.Host {
-		if _, err := s.connection(ref.Host); err != nil {
-			return fmt.Errorf("%s: %w", ref.Host, err)
+		if _, err := s.repositoryConnection(ref); err != nil {
+			return fmt.Errorf("%s/%s: %w", ref.Host, ref.Slug, err)
 		}
 	}
 	return nil
