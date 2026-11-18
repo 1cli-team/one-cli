@@ -17,6 +17,13 @@ type Code string
 const (
 	// Bundled skill installation.
 
+	// Workspace knowledge.
+	OPENVIKING_INVALID_INPUT  Code = "OPENVIKING_INVALID_INPUT"
+	OPENVIKING_UNBOUND        Code = "OPENVIKING_UNBOUND"
+	OPENVIKING_ACCESS_DENIED  Code = "OPENVIKING_ACCESS_DENIED"
+	OPENVIKING_NOT_FOUND      Code = "OPENVIKING_NOT_FOUND"
+	OPENVIKING_UPSTREAM_ERROR Code = "OPENVIKING_UPSTREAM_ERROR"
+
 	// Generic / lifecycle.
 	ONE_CLI_ERROR         Code = "ONE_CLI_ERROR"
 	UNKNOWN_COMMAND       Code = "UNKNOWN_COMMAND"
@@ -148,6 +155,12 @@ var Codes = map[Code]Definition{
 	UNKNOWN_COMMAND:          {Summary: "First positional argument did not match any known subcommand.", Remediation: []output.Remediation{{Action: "show-help", Hint: "查看可用命令", Command: "one --help"}}},
 	PROMPT_CANCELLED:         {Summary: "User cancelled an interactive prompt (Ctrl+C / ESC)."},
 	OUTPUT_MARSHAL_FAILED:    {Summary: "Internal: failed to marshal a result payload to JSON. Should never fire in practice."},
+
+	OPENVIKING_INVALID_INPUT:  {Summary: "The OpenViking binding or request is invalid."},
+	OPENVIKING_UNBOUND:        {Summary: "The workspace has no OpenViking binding."},
+	OPENVIKING_ACCESS_DENIED:  {Summary: "The requested OpenViking resource cannot be accessed."},
+	OPENVIKING_NOT_FOUND:      {Summary: "The OpenViking resource or endpoint was not found."},
+	OPENVIKING_UPSTREAM_ERROR: {Summary: "OpenViking could not complete the request."},
 
 	NOT_ONE_PROJECT:            {Summary: "Current directory is not a One workspace (one.manifest.toml is missing).", Remediation: []output.Remediation{{Action: "create-workspace", Hint: "当前目录缺少 one.manifest.toml；请先创建工作区，或 cd 到已有工作区", Command: "one create <dir>"}}},
 	NODE_VERSION_UNSUPPORTED:   {Summary: "Local Node version is below the supported minimum.", Remediation: []output.Remediation{{Action: "upgrade-node", Hint: "升级到 Node.js 18+"}}},

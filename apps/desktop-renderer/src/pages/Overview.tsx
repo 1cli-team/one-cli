@@ -1,12 +1,16 @@
 import { AppWindow, ChevronRight, FolderOpen, Layers3, Package, Server } from "lucide-react";
 import { Collapsible } from "radix-ui";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useLocation } from "react-router-dom";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
+import { DiscardDialog } from "@/components/ui/discard-dialog";
 import { StatePanel } from "@/components/ui/page-layout";
 import { EnvironmentLink } from "@/features/environment-context/EnvironmentLink";
 import { environmentFromSearch } from "@/features/environment-context/environment";
+import { useEnvironmentDirtyStore } from "@/features/environment-context/environment-dirty-store";
+import { InfisicalBindingDialog } from "@/features/infisical-binding/InfisicalBindingDialog";
 import { ProjectInspector } from "@/features/project-settings/ProjectInspector";
 import { workspaceVariablesPath } from "@/router/paths";
 import type { OverviewProject } from "@/types/api";
@@ -31,6 +35,21 @@ export function Overview({
 	const { t } = useTranslation();
 	const { search } = useLocation();
 	const environment = environmentFromSearch(search);
+	const [bindingOpen, setBindingOpen] = useState(false);
+	const [discardOpen, setDiscardOpen] = useState(false);
+	const [bindingVersion, setBindingVersion] = useState(0);
+	const storageAction = (
+		<Button
+			variant="outline"
+			disabled={readOnly}
+			onClick={() => {
+				if (useEnvironmentDirtyStore.getState().dirty) setDiscardOpen(true);
+				else setBindingOpen(true);
+			}}
+		>
+			{t("binding.storageProject")}
+		</Button>
+	);
 	return (
 		<div className="@container flex h-full min-h-0 w-full flex-col">
 			{readOnly && (
@@ -54,11 +73,14 @@ export function Overview({
 							environment={environment}
 							workspaceEntryId={workspaceEntryId}
 							readOnly={readOnly}
+							storageAction={storageAction}
+							bindingVersion={bindingVersion}
 						/>
 					</div>
 				</div>
 			) : (
-				<div className="min-h-0 flex-1 overflow-y-auto">
+				<div className="min-h-0 flex-1 overflow-y-auto p-4 ud-md:p-6">
+					<div className="mx-auto flex max-w-[1120px] justify-end">{storageAction}</div>
 					<StatePanel
 						icon={FolderOpen}
 						heading="h1"
@@ -67,6 +89,23 @@ export function Overview({
 					/>
 				</div>
 			)}
+			{bindingOpen && !readOnly && (
+				<InfisicalBindingDialog
+					open={bindingOpen}
+					onOpenChange={setBindingOpen}
+					workspaceEntryId={workspaceEntryId}
+					environment={environment}
+					onBound={() => setBindingVersion((version) => version + 1)}
+				/>
+			)}
+			<DiscardDialog
+				open={discardOpen && !readOnly}
+				onOpenChange={setDiscardOpen}
+				onDiscard={() => {
+					useEnvironmentDirtyStore.getState().discardAll();
+					setBindingOpen(true);
+				}}
+			/>
 		</div>
 	);
 }

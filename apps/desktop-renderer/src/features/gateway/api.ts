@@ -1,3 +1,4 @@
+import type { SessionLink } from "@/features/openviking/api";
 import useSWR from "swr";
 import http from "@/lib/http";
 import { scopeQuery, type Binding, type Scope } from "@/features/linear/api";
@@ -88,6 +89,7 @@ export interface JobRepository {
 }
 
 export interface GatewayTask {
+	openViking?: SessionLink;
 	id: string;
 	identifier?: string;
 	title?: string;

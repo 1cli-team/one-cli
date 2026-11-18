@@ -1,5 +1,6 @@
 import useSWR from "swr";
 import http from "@/lib/http";
+import type { SessionLink } from "@/features/openviking/api";
 import {
 	repositoryRef,
 	type CodexModelCatalog,
@@ -82,6 +83,7 @@ export interface ExecutionQuestion {
 }
 
 export interface ExecutionProgress {
+	openViking?: SessionLink;
 	id: string;
 	summary: string;
 	continueRequested?: boolean;
@@ -111,6 +113,7 @@ export interface Execution extends Omit<ExecutionSubmission, "input"> {
 	subtasks?: GatewaySubtask[];
 	reason?: "worker_offline" | "worker_disconnected";
 	result?: {
+		openViking?: SessionLink;
 		revisionIssueId?: string;
 		exitCode?: number;
 		commitSha?: string;

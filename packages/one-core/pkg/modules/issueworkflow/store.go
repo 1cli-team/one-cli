@@ -16,6 +16,7 @@ import (
 	"github.com/gofrs/flock"
 	api "github.com/torchstellar-team/one-cli/packages/one-core/pkg/modules/gateway"
 	tracking "github.com/torchstellar-team/one-cli/packages/one-core/pkg/modules/issuetracking"
+	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/modules/knowledge"
 	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/platform/fsutil"
 	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/platform/i18n"
 )
@@ -40,33 +41,37 @@ const (
 )
 
 type Job struct {
-	ID             string                 `json:"id"`
-	ProjectID      string                 `json:"projectId"`
-	Issue          tracking.Issue         `json:"issue"`
-	Project        Project                `json:"project"`
-	Codex          api.CodexOptions       `json:"codex,omitzero"`
-	AskUser        bool                   `json:"askUser,omitempty"`
-	TrackProgress  bool                   `json:"trackProgress,omitempty"`
-	Question       *api.ExecutionQuestion `json:"question,omitempty"`
-	Progress       *api.ExecutionProgress `json:"progress,omitempty"`
-	Stage          stage                  `json:"stage"`
-	Created        time.Time              `json:"created"`
-	Updated        time.Time              `json:"updated,omitzero"`
-	Worktree       string                 `json:"worktree,omitempty"`
-	CheckDir       string                 `json:"checkDir,omitempty"`
-	BaseSHA        string                 `json:"baseSha,omitempty"`
-	Branch         string                 `json:"branch,omitempty"`
-	ThreadID       string                 `json:"threadId,omitempty"`
-	TurnID         string                 `json:"turnId,omitempty"`
-	CodexResponse  string                 `json:"codexResponse,omitempty"`
-	HeadSHA        string                 `json:"headSha,omitempty"`
-	OpenSince      time.Time              `json:"openSince,omitzero"`
-	PR             PullRequest            `json:"pr"`
-	LastError      string                 `json:"lastError,omitempty"`
-	RepositoryRuns []RepositoryRun        `json:"repositoryRuns,omitempty"`
-	Subtasks       []SubtaskRun           `json:"subtasks,omitempty"`
-	Revision       *Revision              `json:"revision,omitempty"`
-	readRoots      []string
+	ID                  string                 `json:"id"`
+	ProjectID           string                 `json:"projectId"`
+	Issue               tracking.Issue         `json:"issue"`
+	Project             Project                `json:"project"`
+	Codex               api.CodexOptions       `json:"codex,omitzero"`
+	AskUser             bool                   `json:"askUser,omitempty"`
+	TrackProgress       bool                   `json:"trackProgress,omitempty"`
+	Question            *api.ExecutionQuestion `json:"question,omitempty"`
+	Progress            *api.ExecutionProgress `json:"progress,omitempty"`
+	Stage               stage                  `json:"stage"`
+	Created             time.Time              `json:"created"`
+	Updated             time.Time              `json:"updated,omitzero"`
+	Worktree            string                 `json:"worktree,omitempty"`
+	CheckDir            string                 `json:"checkDir,omitempty"`
+	BaseSHA             string                 `json:"baseSha,omitempty"`
+	Branch              string                 `json:"branch,omitempty"`
+	ThreadID            string                 `json:"threadId,omitempty"`
+	OpenVikingSkillTool bool                   `json:"openVikingSkillTool,omitempty"`
+	KnowledgeScope      string                 `json:"knowledgeScope,omitempty"`
+	OpenViking          *knowledge.SessionLink `json:"openViking,omitempty"`
+	memoryPrompt        string
+	TurnID              string          `json:"turnId,omitempty"`
+	CodexResponse       string          `json:"codexResponse,omitempty"`
+	HeadSHA             string          `json:"headSha,omitempty"`
+	OpenSince           time.Time       `json:"openSince,omitzero"`
+	PR                  PullRequest     `json:"pr"`
+	LastError           string          `json:"lastError,omitempty"`
+	RepositoryRuns      []RepositoryRun `json:"repositoryRuns,omitempty"`
+	Subtasks            []SubtaskRun    `json:"subtasks,omitempty"`
+	Revision            *Revision       `json:"revision,omitempty"`
+	readRoots           []string
 }
 
 type RepositoryRun struct {
@@ -93,6 +98,7 @@ func (j Job) clone() Job {
 		j.Progress = &progress
 	}
 	j.readRoots = nil
+	j.memoryPrompt = ""
 	return j
 }
 

@@ -43,11 +43,21 @@ export function TopBar({ homeTo, onOpenNavigation }: { homeTo: string; onOpenNav
 		"/workspaces/:entryId/worktrees/:worktreeId/environment-variables/:projectName?",
 	);
 	const variablesMatch = baseVariablesMatch || checkoutVariablesMatch;
+	const knowledgeMatch = useMatch("/workspaces/:entryId/knowledge");
+	const checkoutKnowledgeMatch = useMatch("/workspaces/:entryId/worktrees/:worktreeId/knowledge");
+	const workspacePageTitle = worktreesMatch
+		? t("git.title")
+		: variablesMatch
+			? t("navigation.environmentVariables")
+			: knowledgeMatch || checkoutKnowledgeMatch
+				? t("openviking.title")
+				: undefined;
 	const { workspace, overview, available } = useWorkspace(match?.params.entryId);
 	const themeLabel = t(mode === "light" ? "sidebar.themeToDark" : "sidebar.themeToLight");
 	const titles: Record<string, string> = {
 		"/settings/linear": t("linear.settings"),
 		"/settings/gateway": t("gateway.settings"),
+		"/settings/openviking": t("openviking.settings"),
 		"/settings/code-hosts": t("codeHosts.settings"),
 		"/gateway": t("gateway.monitor"),
 		"/": t("groups.title"),
@@ -87,7 +97,7 @@ export function TopBar({ homeTo, onOpenNavigation }: { homeTo: string; onOpenNav
 								</BreadcrumbItem>
 								<BreadcrumbSeparator />
 								<BreadcrumbItem>
-									{variablesMatch || worktreesMatch ? (
+									{workspacePageTitle ? (
 										<BreadcrumbLink asChild>
 											<EnvironmentLink
 												to={workspacePath(workspace?.entryId || match.params.entryId!)}
@@ -101,13 +111,11 @@ export function TopBar({ homeTo, onOpenNavigation }: { homeTo: string; onOpenNav
 										</BreadcrumbPage>
 									)}
 								</BreadcrumbItem>
-								{(variablesMatch || worktreesMatch) && (
+								{workspacePageTitle && (
 									<>
 										<BreadcrumbSeparator />
 										<BreadcrumbItem>
-											<BreadcrumbPage>
-												{t(worktreesMatch ? "git.title" : "navigation.environmentVariables")}
-											</BreadcrumbPage>
+											<BreadcrumbPage>{workspacePageTitle}</BreadcrumbPage>
 										</BreadcrumbItem>
 									</>
 								)}

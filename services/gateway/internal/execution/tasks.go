@@ -127,6 +127,7 @@ func (e taskEntry) finish(localName string) api.Task {
 		task.UpdatedAt = later(task.UpdatedAt, later(flow.UpdatedAt, flow.CreatedAt))
 		if len(task.Runs) == 0 {
 			task.WorkerName, task.Codex = localName, flow.Codex
+			task.OpenViking = flow.OpenViking
 			if flow.CanReadCodexResult {
 				task.LocalResultJobID = flow.ID
 			}

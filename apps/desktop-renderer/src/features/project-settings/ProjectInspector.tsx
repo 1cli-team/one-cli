@@ -1,4 +1,5 @@
 import { LockKeyhole } from "lucide-react";
+import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import useSWR from "swr";
 import { getProjectSettings, projectSettingsKey } from "@/api/workspace";
@@ -17,11 +18,15 @@ export function ProjectInspector({
 	environment,
 	workspaceEntryId,
 	readOnly,
+	storageAction,
+	bindingVersion,
 }: {
 	project: OverviewProject;
 	environment: string;
 	workspaceEntryId: string;
 	readOnly?: boolean;
+	storageAction: ReactNode;
+	bindingVersion: number;
 }) {
 	const { t } = useTranslation();
 	const result = useSWR(projectSettingsKey(project.name, workspaceEntryId, environment), () =>
@@ -41,9 +46,12 @@ export function ProjectInspector({
 					<Alert variant="destructive">
 						<AlertTitle>{t("projectInspector.loadFailed")}</AlertTitle>
 						<AlertDescription>
-							<Button variant="outline" className="mt-3" onClick={() => void result.mutate()}>
-								{t("projectInspector.retry")}
-							</Button>
+							<div className="mt-3 flex flex-wrap gap-2">
+								<Button variant="outline" onClick={() => void result.mutate()}>
+									{t("projectInspector.retry")}
+								</Button>
+								{!result.data && storageAction}
+							</div>
 						</AlertDescription>
 					</Alert>
 				)}
@@ -52,22 +60,26 @@ export function ProjectInspector({
 						<GeneralForm
 							project={result.data.project}
 							actions={
-								(readOnly || draft) && (
-									<div className="flex flex-wrap items-center justify-end gap-2">
-										{readOnly ? (
-											<Badge variant="muted">
-												<LockKeyhole />
-												{t("projectInspector.manifestReadOnly")}
-											</Badge>
-										) : (
-											<Badge variant="warning">{t("projectInspector.manifestDraft")}</Badge>
-										)}
-										{!readOnly && <ManifestSaveControl entryId={workspaceEntryId} />}
-									</div>
-								)
+								<div className="flex flex-wrap items-center justify-end gap-2">
+									{(readOnly || draft) && (
+										<>
+											{readOnly ? (
+												<Badge variant="muted">
+													<LockKeyhole />
+													{t("projectInspector.manifestReadOnly")}
+												</Badge>
+											) : (
+												<Badge variant="warning">{t("projectInspector.manifestDraft")}</Badge>
+											)}
+											{!readOnly && <ManifestSaveControl entryId={workspaceEntryId} />}
+										</>
+									)}
+									{storageAction}
+								</div>
 							}
 						/>
 						<EnvironmentForm
+							key={bindingVersion}
 							project={result.data.project}
 							environment={environment}
 							workspaceEntryId={workspaceEntryId}

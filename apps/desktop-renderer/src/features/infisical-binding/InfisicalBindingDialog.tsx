@@ -25,7 +25,6 @@ import { Button } from "@/components/ui/button";
 import {
 	Dialog,
 	DialogContent,
-	DialogDescription,
 	DialogFooter,
 	DialogHeader,
 	DialogTitle,
@@ -50,7 +49,7 @@ type Props = {
 	onOpenChange(open: boolean): void;
 	workspaceEntryId: string;
 	environment?: string;
-	readOnly?: boolean;
+	onBound(): void;
 };
 
 export function InfisicalBindingDialog(props: Props) {
@@ -69,7 +68,7 @@ export function InfisicalBindingDialog(props: Props) {
 	);
 }
 
-function BindingForm({ workspaceEntryId, environment, readOnly, onOpenChange }: Props) {
+function BindingForm({ workspaceEntryId, environment, onBound, onOpenChange }: Props) {
 	const { t } = useTranslation();
 	const toast = useToast();
 	const { mutate } = useSessionSWRConfig();
@@ -127,7 +126,6 @@ function BindingForm({ workspaceEntryId, environment, readOnly, onOpenChange }: 
 	const unavailableBinding =
 		initialId && projects.data && !projects.error && !projects.data.some((p) => p.id === initialId);
 	const canBind =
-		!readOnly &&
 		!busy &&
 		!draft &&
 		!conflict &&
@@ -148,6 +146,7 @@ function BindingForm({ workspaceEntryId, environment, readOnly, onOpenChange }: 
 	async function finish(name: string) {
 		if (!active.current) return;
 		toast.success(t("binding.success", { name }));
+		onBound();
 		onOpenChange(false);
 		await Promise.allSettled([
 			mutate(
@@ -233,7 +232,8 @@ function BindingForm({ workspaceEntryId, environment, readOnly, onOpenChange }: 
 	}
 	return (
 		<DialogContent
-			className="max-h-[85dvh] overflow-y-auto"
+			className="ud-sm:max-w-lg"
+			aria-describedby={undefined}
 			showCloseButton={!busy}
 			onEscapeKeyDown={(e) => {
 				if (busy) e.preventDefault();
@@ -244,7 +244,6 @@ function BindingForm({ workspaceEntryId, environment, readOnly, onOpenChange }: 
 		>
 			<DialogHeader>
 				<DialogTitle>{t(initialId ? "binding.change" : "binding.workspaceTitle")}</DialogTitle>
-				<DialogDescription>{t("binding.workspaceHint")}</DialogDescription>
 			</DialogHeader>
 			{session.error ? (
 				<ErrorNotice>{message(session.error)}</ErrorNotice>
@@ -257,24 +256,18 @@ function BindingForm({ workspaceEntryId, environment, readOnly, onOpenChange }: 
 						<Link to="/settings">{t("session.login")}</Link>
 					</Button>
 				</div>
+			) : !account.organizationId ? (
+				<ErrorNotice
+					action={
+						<Button asChild variant="outline">
+							<Link to="/settings">{t("session.login")}</Link>
+						</Button>
+					}
+				>
+					{t("binding.organizationRequired")}
+				</ErrorNotice>
 			) : (
 				<>
-					<dl className="grid gap-3 border-b border-border pb-4 text-sm ud-sm:grid-cols-2">
-						<div>
-							<dt className="text-muted-foreground">{t("session.account")}</dt>
-							<dd className="break-all">{account.email || account.userId}</dd>
-						</div>
-						<div>
-							<dt className="text-muted-foreground">{t("session.organization")}</dt>
-							<dd className="break-all">
-								{account.organizationId || t("binding.organizationRequired")}
-							</dd>
-						</div>
-						<div className="ud-sm:col-span-2">
-							<dt className="text-muted-foreground">{t("session.site")}</dt>
-							<dd className="break-all">{account.siteUrl}</dd>
-						</div>
-					</dl>
 					{initialId && (
 						<p className="break-all text-sm">{t("binding.current", { name: currentName })}</p>
 					)}
@@ -282,7 +275,7 @@ function BindingForm({ workspaceEntryId, environment, readOnly, onOpenChange }: 
 						<Label>{t("binding.method")}</Label>
 						<Select
 							value={mode}
-							disabled={busy || readOnly}
+							disabled={busy}
 							onValueChange={(v) => {
 								setMode(v);
 								setError("");
@@ -306,7 +299,7 @@ function BindingForm({ workspaceEntryId, environment, readOnly, onOpenChange }: 
 									setProject(id);
 									setError("");
 								}}
-								disabled={busy || readOnly || projects.isLoading}
+								disabled={busy || projects.isLoading}
 							>
 								<SelectTrigger aria-label={t("global.project")}>
 									<SelectValue placeholder={t("global.selectProject")} />
@@ -335,20 +328,6 @@ function BindingForm({ workspaceEntryId, environment, readOnly, onOpenChange }: 
 							)}
 						</div>
 					) : null}
-					<div className="flex flex-col gap-1 border-t border-border pt-4 text-sm">
-						<p className="break-all font-medium">
-							{t("binding.target", {
-								name: isExisting
-									? detail.data?.name || selectedProject?.name || t("global.selectProject")
-									: targetName || t("session.loading"),
-							})}
-						</p>
-						{initialId && (!isExisting || project !== initialId) && (
-							<p className="text-muted-foreground">{t("binding.replaceHint")}</p>
-						)}
-						<p>{t("binding.defaultEnvironment")}</p>
-						<p className="text-muted-foreground">{t("binding.workspaceStorage")}</p>
-					</div>
 					{settings.error || overview.error || (isExisting && (projects.error || detail.error)) ? (
 						<ErrorNotice>
 							{message(settings.error || overview.error || projects.error || detail.error)}

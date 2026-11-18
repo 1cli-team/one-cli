@@ -1,3 +1,4 @@
+import { GatewaySessionLink } from "@/features/openviking/GatewaySessionLink";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import useSWR from "swr";
@@ -187,6 +188,7 @@ function ExecutionDetails({
 	const { t } = useTranslation();
 	const { job, logs } = useExecution(connection, id);
 	const result = job.data?.result;
+	const session = result?.openViking ?? job.data?.progress?.openViking;
 	const issue = job.data?.input.kind === "linear-workflow" ? job.data.input.linear : undefined;
 	const commentIssueId = result?.revisionIssueId ?? issue?.issueId;
 	const bindings = useSWR(issue ? projectBindingsKey : null, getProjectBindings);
@@ -297,6 +299,7 @@ function ExecutionDetails({
 						{result?.commitSha && <code className="break-all text-sm">{result.commitSha}</code>}
 						{result?.ref && <code className="break-all text-sm">{result.ref}</code>}
 						{result?.response && <CodexResultMessage value={result.response} />}
+						{session && <GatewaySessionLink session={session} />}
 						<GatewaySubtasks subtasks={job.data.subtasks ?? result?.subtasks} />
 						{result?.pullRequests?.map(({ number, url }) => (
 							<Button

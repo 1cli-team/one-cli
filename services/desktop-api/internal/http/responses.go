@@ -73,6 +73,16 @@ func defaultRem(value []output.Remediation) []output.Remediation {
 
 func statusForCode(code string) int {
 	switch code {
+	case string(cliErrors.OPENVIKING_INVALID_INPUT):
+		return http.StatusBadRequest
+	case string(cliErrors.OPENVIKING_UNBOUND):
+		return http.StatusConflict
+	case string(cliErrors.OPENVIKING_ACCESS_DENIED):
+		return http.StatusForbidden
+	case string(cliErrors.OPENVIKING_NOT_FOUND):
+		return http.StatusNotFound
+	case string(cliErrors.OPENVIKING_UPSTREAM_ERROR):
+		return http.StatusBadGateway
 	case string(cliErrors.ENV_KEY_NOT_FOUND):
 		return http.StatusNotFound
 	case string(cliErrors.INFISICAL_FOLDER_NOT_FOUND), string(cliErrors.INFISICAL_PROJECT_NOT_FOUND):

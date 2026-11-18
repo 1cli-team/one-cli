@@ -9,6 +9,7 @@ import (
 
 	api "github.com/torchstellar-team/one-cli/packages/one-core/pkg/modules/gateway"
 	tracking "github.com/torchstellar-team/one-cli/packages/one-core/pkg/modules/issuetracking"
+	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/modules/knowledge"
 	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/platform/i18n"
 )
 
@@ -31,12 +32,15 @@ func subtaskErrorStatus(err error) int {
 }
 
 type SubtaskRun struct {
-	Issue     tracking.Issue `json:"issue"`
-	StartSHA  string         `json:"startSha,omitempty"`
-	CommitSHA string         `json:"commitSha,omitempty"`
-	ThreadID  string         `json:"threadId,omitempty"`
-	Response  string         `json:"response,omitempty"`
-	Completed bool           `json:"completed,omitempty"`
+	KnowledgeScope      string                 `json:"knowledgeScope,omitempty"`
+	OpenVikingSkillTool bool                   `json:"openVikingSkillTool,omitempty"`
+	OpenViking          *knowledge.SessionLink `json:"openViking,omitempty"`
+	Issue               tracking.Issue         `json:"issue"`
+	StartSHA            string                 `json:"startSha,omitempty"`
+	CommitSHA           string                 `json:"commitSha,omitempty"`
+	ThreadID            string                 `json:"threadId,omitempty"`
+	Response            string                 `json:"response,omitempty"`
+	Completed           bool                   `json:"completed,omitempty"`
 }
 
 func (s *Service) resolveDispatchIssue(ctx context.Context, projectID, ref string, order []string) (Project, tracking.Issue, []string, int, error) {
@@ -207,6 +211,7 @@ func (s *Service) runSubtask(ctx context.Context, job *Job) error {
 		return err
 	}
 	task.CommitSHA, task.ThreadID, task.Response, task.Completed = sha, job.ThreadID, job.CodexResponse, true
+	task.KnowledgeScope, task.OpenVikingSkillTool, task.OpenViking = job.KnowledgeScope, job.OpenVikingSkillTool, job.OpenViking
 	if sha != "" {
 		job.HeadSHA = sha
 	}

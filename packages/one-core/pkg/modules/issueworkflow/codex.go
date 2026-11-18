@@ -16,10 +16,12 @@ import (
 	"time"
 
 	api "github.com/torchstellar-team/one-cli/packages/one-core/pkg/modules/gateway"
+	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/modules/knowledge"
 	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/platform/i18n"
 )
 
 type Codex struct {
+	Knowledge    WorkspaceKnowledge
 	Executable   string
 	One          string
 	Launch       api.CodexLauncher
@@ -288,6 +290,7 @@ func (c Codex) Implement(ctx context.Context, job *Job, commonDir string, checkp
 	if index := job.activeSubtask(); index >= 0 {
 		issue = job.Subtasks[index].Issue
 	}
+	job.memoryPrompt = issue.Title + "\n" + issue.Description
 	prompt := fmt.Sprintf("Implement Linear issue %s in the task workspace. Follow the instructions of every repository you change and leave your changes in its worktree. Use One CLI for repository tasks. Run the checks that apply to your changes and report the results. One CLI will run any configured checks, publish the pull requests, and update Linear. Keep your final response focused on the changes and checks.\n\nIssue title:\n%s\n\nIssue description:\n%s",
 		issue.Identifier, issue.Title, issue.Description)
 	if issue.ID != job.Issue.ID {
@@ -295,6 +298,7 @@ func (c Codex) Implement(ctx context.Context, job *Job, commonDir string, checkp
 			job.Issue.Identifier, job.Issue.Title, job.Issue.Description)
 	}
 	if job.Revision != nil {
+		job.memoryPrompt = job.Revision.Body
 		prompt = fmt.Sprintf("Apply the selected Linear feedback to the existing implementation for %s %s. The original parent is %s. Inspect the current worktree, then make the smallest changes that address this feedback. Leave the changes uncommitted. Gateway will append a commit to the existing open PR.\n\nParent description:\n%s\n\nSelected Linear comment:\n%s",
 			job.Revision.Issue.Identifier, job.Revision.Issue.Title, job.Issue.Identifier, job.Issue.Description, job.Revision.Body)
 	}
@@ -309,12 +313,13 @@ func (c Codex) Implement(ctx context.Context, job *Job, commonDir string, checkp
 }
 
 type PromptResult struct {
-	ThreadID string
-	Response string
+	ThreadID   string
+	Response   string
+	OpenViking *knowledge.SessionLink
 }
 
 func (c Codex) RunPrompt(ctx context.Context, worktree, commonDir, prompt string, options api.CodexOptions, logs io.Writer) (PromptResult, error) {
-	job := Job{Worktree: worktree, Codex: options}
+	job := Job{Worktree: worktree, Codex: options, memoryPrompt: prompt}
 	err := c.runPrompt(ctx, &job, commonDir, prompt, func(Job) error { return nil }, func(frame rpcFrame) {
 		if frame.Method != "item/agentMessage/delta" || logs == nil {
 			return
@@ -327,7 +332,7 @@ func (c Codex) RunPrompt(ctx context.Context, worktree, commonDir, prompt string
 			_, _ = io.WriteString(logs, event.Delta)
 		}
 	})
-	return PromptResult{ThreadID: job.ThreadID, Response: job.CodexResponse}, err
+	return PromptResult{ThreadID: job.ThreadID, Response: job.CodexResponse, OpenViking: job.OpenViking}, err
 }
 
 func (c Codex) runPrompt(ctx context.Context, job *Job, commonDir, prompt string, checkpoint func(Job) error, observe func(rpcFrame)) (runErr error) {
@@ -339,6 +344,8 @@ func (c Codex) runPrompt(ctx context.Context, job *Job, commonDir, prompt string
 		return err
 	}
 	defer session.stop()
+	workspaceContext := c.resolveKnowledge(ctx, job)
+	source := job.memoryPrompt
 	defer func() {
 		if errors.Is(runErr, errCodexWaitingForAnswer) {
 			// The checkpoint is durable. Give Codex time to flush the interrupted turn.
@@ -360,15 +367,24 @@ func (c Codex) runPrompt(ctx context.Context, job *Job, commonDir, prompt string
 		threadParams["threadId"] = job.ThreadID
 		if job.Stage == waitingForAnswer {
 			prompt = answerPrompt(*job.Question)
+			source = job.Question.Answer
 		} else if job.Stage == waitingToContinue {
 			prompt = continuePrompt(*job.Progress)
+			source = ""
 		}
 	}
 	configureNewThread := func() {
 		delete(threadParams, "threadId")
 		threadParams["ephemeral"], threadParams["serviceName"] = false, "one_gateway"
+		var tools []map[string]any
 		if job.AskUser {
-			threadParams["dynamicTools"] = []map[string]any{questionToolDefinition()}
+			tools = append(tools, questionToolDefinition())
+		}
+		if workspaceContext != nil {
+			tools = append(tools, openVikingSkillDefinition())
+		}
+		if len(tools) > 0 {
+			threadParams["dynamicTools"] = tools
 		}
 	}
 	if !resume {
@@ -395,6 +411,14 @@ func (c Codex) runPrompt(ctx context.Context, job *Job, commonDir, prompt string
 			return i18n.Errorf("gateway.codex_resume_mismatch")
 		}
 	}
+	if !resume {
+		job.KnowledgeScope = ""
+		job.OpenVikingSkillTool = workspaceContext != nil
+		job.OpenViking = nil
+		if workspaceContext != nil && workspaceContext.settings.Automatic {
+			job.KnowledgeScope = workspaceContext.settings.Generation
+		}
+	}
 	if !resume || resumeRevision {
 		job.ThreadID, job.Stage = thread.Thread.ID, running
 		if err := checkpoint(*job); err != nil {
@@ -402,11 +426,23 @@ func (c Codex) runPrompt(ctx context.Context, job *Job, commonDir, prompt string
 		}
 	}
 	job.TurnID = ""
-	if job.AskUser {
+	if job.AskUser || workspaceContext != nil {
 		session.handleRequest = func(frame rpcFrame) (bool, error) {
-			return session.captureQuestion(job, checkpoint, frame)
+			if job.AskUser {
+				if handled, err := session.captureQuestion(job, checkpoint, func(updated *Job) {
+					workspaceContext.record(ctx, updated, source, updated.Question.Text)
+				}, frame); handled || err != nil {
+					return handled, err
+				}
+			}
+			return workspaceContext.readSkill(ctx, session, job, frame)
 		}
 	}
+	query := source
+	if resume {
+		query = ""
+	}
+	prompt += workspaceContext.prompt(ctx, query, job.OpenVikingSkillTool)
 
 	var started struct {
 		Turn codexTurn `json:"turn"`
@@ -487,6 +523,15 @@ func (c Codex) runPrompt(ctx context.Context, job *Job, commonDir, prompt string
 		for _, item := range completed.Items {
 			message.record(item)
 		}
+	}
+	if completed.Status == "completed" || job.TrackProgress {
+		response := message.text
+		if job.TrackProgress {
+			if outcome, ok := parseTurnOutcome(message.text); ok {
+				response = outcome.Summary
+			}
+		}
+		workspaceContext.record(ctx, job, source, response)
 	}
 	return recordTurnOutcome(job, completed.Status, message, checkpoint)
 }

@@ -17,7 +17,7 @@ import (
 
 func (r Runner) codex() issueworkflow.Codex {
 	one, _ := exec.LookPath(r.one)
-	return issueworkflow.Codex{Executable: "codex", One: one, StateDir: r.root, ReadRoots: r.readRoots}
+	return issueworkflow.Codex{Executable: "codex", One: one, StateDir: r.root, ReadRoots: r.readRoots, Knowledge: r.knowledge}
 }
 
 func (r Runner) models(ctx context.Context) *api.CodexModelCatalog {
@@ -56,7 +56,7 @@ func (r Runner) runCodex(ctx context.Context, job assignment, root, commit strin
 		return failed(err.Error())
 	}
 	prompt, err := r.codex().RunPrompt(ctx, root, common, job.Input.Prompt, job.Input.Codex, logs)
-	result := api.ExecutionResult{ThreadID: prompt.ThreadID, Response: prompt.Response}
+	result := api.ExecutionResult{ThreadID: prompt.ThreadID, Response: prompt.Response, OpenViking: prompt.OpenViking}
 	if err != nil {
 		result.Error = err.Error()
 		return result

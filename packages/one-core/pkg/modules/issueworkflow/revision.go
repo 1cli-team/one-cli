@@ -96,17 +96,21 @@ func (s *Service) revise(ctx context.Context, req api.WorkRequest) error {
 	}
 	issue := parent.Issue
 	threadID := job.ThreadID
+	knowledgeScope, skillTool, ovSession := job.KnowledgeScope, job.OpenVikingSkillTool, job.OpenViking
 	if issue.ID != issueID {
 		index := slices.IndexFunc(parent.Subtasks, func(task SubtaskRun) bool { return task.Issue.ID == issueID && task.Completed })
 		if index < 0 {
 			return revisionCommentScope
 		}
-		issue, threadID = parent.Subtasks[index].Issue, parent.Subtasks[index].ThreadID
+		task := parent.Subtasks[index]
+		issue, threadID = task.Issue, task.ThreadID
+		knowledgeScope, skillTool, ovSession = task.KnowledgeScope, task.OpenVikingSkillTool, task.OpenViking
 	}
 	revision := Job{
 		ProjectID: parent.ProjectID, Project: job.Project, Issue: parent.Issue,
 		Worktree: job.Worktree, CheckDir: job.CheckDir, Branch: job.Branch, PR: pr, ThreadID: threadID,
 		Codex: req.Codex, AskUser: req.AskUser, TrackProgress: req.TrackProgress,
+		KnowledgeScope: knowledgeScope, OpenVikingSkillTool: skillTool, OpenViking: ovSession,
 		Revision: &Revision{
 			CommentID: req.RevisionCommentID, Body: comment.Body,
 			Issue: tracking.IssueReference{ID: issue.ID, Identifier: issue.Identifier, Title: issue.Title},

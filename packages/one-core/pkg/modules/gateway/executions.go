@@ -10,6 +10,7 @@ import (
 	"time"
 
 	gitmodule "github.com/torchstellar-team/one-cli/packages/one-core/pkg/modules/git"
+	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/modules/knowledge"
 )
 
 const (
@@ -137,17 +138,18 @@ type Execution struct {
 }
 
 type ExecutionResult struct {
-	RevisionIssueID string           `json:"revisionIssueId,omitempty"`
-	Subtasks        []SubtaskResult  `json:"subtasks,omitempty"`
-	PullRequests    []JobPullRequest `json:"pullRequests,omitempty"`
-	ExitCode        *int             `json:"exitCode,omitempty"`
-	TaskResult      json.RawMessage  `json:"taskResult,omitempty"`
-	CommitSHA       string           `json:"commitSha,omitempty"`
-	Ref             string           `json:"ref,omitempty"`
-	Response        string           `json:"response,omitempty"`
-	ThreadID        string           `json:"threadId,omitempty"`
-	Error           string           `json:"error,omitempty"`
-	LogsTruncated   bool             `json:"logsTruncated,omitempty"`
+	OpenViking      *knowledge.SessionLink `json:"openViking,omitempty"`
+	RevisionIssueID string                 `json:"revisionIssueId,omitempty"`
+	Subtasks        []SubtaskResult        `json:"subtasks,omitempty"`
+	PullRequests    []JobPullRequest       `json:"pullRequests,omitempty"`
+	ExitCode        *int                   `json:"exitCode,omitempty"`
+	TaskResult      json.RawMessage        `json:"taskResult,omitempty"`
+	CommitSHA       string                 `json:"commitSha,omitempty"`
+	Ref             string                 `json:"ref,omitempty"`
+	Response        string                 `json:"response,omitempty"`
+	ThreadID        string                 `json:"threadId,omitempty"`
+	Error           string                 `json:"error,omitempty"`
+	LogsTruncated   bool                   `json:"logsTruncated,omitempty"`
 }
 
 type ExecutionLogs struct {

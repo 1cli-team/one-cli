@@ -33,7 +33,6 @@ import {
 	secretsKey,
 	updateSecret,
 } from "@/api/secrets";
-import { InfisicalBindingDialog } from "@/features/infisical-binding/InfisicalBindingDialog";
 import {
 	AlertDialog,
 	AlertDialogCancel,
@@ -112,7 +111,6 @@ export const SecretsManager: React.FC<{
 	const [deleteKey, setDeleteKey] = useState("");
 	const [deleteConfirmation, setDeleteConfirmation] = useState("");
 	const [saving, setSaving] = useState(false);
-	const [bindingOpen, setBindingOpen] = useState(false);
 	const [retrying, setRetrying] = useState(false);
 	const [recoveryError, setRecoveryError] = useState("");
 	const [search, setSearch] = useState("");
@@ -139,7 +137,6 @@ export const SecretsManager: React.FC<{
 		requestEpoch.current++;
 		setRevealed({});
 		setEditor(null);
-		setBindingOpen(false);
 		setDeleteKey("");
 		setDeleteConfirmation("");
 		setRecoveryError("");
@@ -366,25 +363,15 @@ export const SecretsManager: React.FC<{
 						<StatePanel
 							className="rounded-lg border border-border bg-card"
 							icon={KeyRound}
-							title={t(
-								listError.code === "INFISICAL_NOT_CONFIGURED"
-									? "secrets.notConfiguredTitle"
-									: "secrets.loadError",
-							)}
+							title={t(needsInitialization ? "secrets.notConfiguredTitle" : "secrets.loadError")}
 							description={
-								listError.code === "INFISICAL_NOT_CONFIGURED"
+								needsInitialization
 									? t("secrets.notConfiguredHint")
 									: recoveryError || listError.message
 							}
 						>
-							{recoveryError && listError.code === "INFISICAL_NOT_CONFIGURED" ? (
+							{recoveryError && needsInitialization ? (
 								<ErrorNotice>{recoveryError}</ErrorNotice>
-							) : null}
-							{needsInitialization ? (
-								<Button disabled={readOnly} onClick={() => setBindingOpen(true)}>
-									<KeyRound />
-									{t("binding.workspaceTitle")}
-								</Button>
 							) : null}
 							<Button variant="outline" disabled={retrying} onClick={() => void retryList()}>
 								{retrying ? <Spinner /> : <RefreshCw />}
@@ -519,13 +506,6 @@ export const SecretsManager: React.FC<{
 				)}
 			</div>
 
-			<InfisicalBindingDialog
-				open={bindingOpen}
-				onOpenChange={setBindingOpen}
-				workspaceEntryId={workspaceEntryId}
-				environment={environment}
-				readOnly={readOnly}
-			/>
 			<SecretEditor
 				editor={editor}
 				error={editorError}

@@ -7,6 +7,8 @@ import { Button } from "@/components/ui/button";
 import { PageHeader, StatePanel } from "@/components/ui/page-layout";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EnvironmentLink } from "@/features/environment-context/EnvironmentLink";
+import { OpenVikingSettings } from "@/features/openviking/OpenVikingSettings";
+import { KnowledgePage } from "@/features/openviking/KnowledgePage";
 import { Overview } from "@/pages/Overview";
 import { App } from "@/App";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
@@ -64,7 +66,10 @@ const LegacyGlobalRedirect: React.FC<{ to: string }> = ({ to }) => {
 	return <Navigate replace to={{ pathname: to, search }} />;
 };
 
-const WorkspaceRoute: React.FC<{ variables?: boolean }> = ({ variables }) => {
+const WorkspaceRoute: React.FC<{ variables?: boolean; knowledge?: boolean }> = ({
+	variables,
+	knowledge,
+}) => {
 	const { entryId = "", projectName } = useParams();
 	const { search } = useLocation();
 	const { registry, workspace, overview, contextEntryId } = useWorkspace(entryId);
@@ -93,6 +98,16 @@ const WorkspaceRoute: React.FC<{ variables?: boolean }> = ({ variables }) => {
 				<WorkspaceStatusPage workspace={workspace} />
 			</WorkspaceStateLayout>
 		);
+	if (knowledge) {
+		if (workspace.status === "identity-conflict") {
+			return (
+				<WorkspaceStateLayout>
+					<WorkspaceStatusPage workspace={workspace} />
+				</WorkspaceStateLayout>
+			);
+		}
+		return <KnowledgePage key={contextEntryId} entryId={contextEntryId} />;
+	}
 	if (overview.error)
 		return (
 			<WorkspaceStateLayout>
@@ -126,6 +141,7 @@ const WorkspaceRoute: React.FC<{ variables?: boolean }> = ({ variables }) => {
 
 	return (
 		<Overview
+			key={contextEntryId}
 			project={project}
 			projects={projects}
 			workspaceEntryId={contextEntryId}
@@ -280,6 +296,7 @@ export const routes: RouteObject[] = [
 					{ path: "credentials", element: <GlobalVariables /> },
 					{ path: "linear", element: <LinearSettings /> },
 					{ path: "gateway", element: <GatewaySettings /> },
+					{ path: "openviking", element: <OpenVikingSettings /> },
 					{ path: "code-hosts", element: <CodeHostSettings /> },
 					{ path: ":domain/:backend", element: <LegacySettingsRedirect /> },
 				],
@@ -291,6 +308,7 @@ export const routes: RouteObject[] = [
 					{ path: "projects/:projectName", element: <WorkspaceRoute /> },
 					{ path: "environment-variables/:projectName?", element: <WorkspaceRoute variables /> },
 					{ path: "git/worktrees", element: <Worktrees /> },
+					{ path: "knowledge", element: <WorkspaceRoute knowledge /> },
 					{ path: "issues", element: <IssuesPage /> },
 					{ path: "worktrees/:worktreeId", element: <WorkspaceRoute /> },
 					{ path: "worktrees/:worktreeId/projects/:projectName", element: <WorkspaceRoute /> },
@@ -299,6 +317,7 @@ export const routes: RouteObject[] = [
 						element: <WorkspaceRoute variables />,
 					},
 					{ path: "worktrees/:worktreeId/git/worktrees", element: <Worktrees /> },
+					{ path: "worktrees/:worktreeId/knowledge", element: <WorkspaceRoute knowledge /> },
 				],
 			},
 			{ path: "workspace/:entryId", element: <LegacyWorkspaceRedirect /> },

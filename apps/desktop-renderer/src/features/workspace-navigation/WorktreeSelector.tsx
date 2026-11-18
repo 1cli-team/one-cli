@@ -8,7 +8,12 @@ import {
 	SelectValue,
 } from "@/components/ui/select";
 import { useWorkspace } from "./useWorkspace";
-import { workspaceContext, workspacePath, workspaceVariablesPath } from "@/router/paths";
+import {
+	workspaceContext,
+	workspaceKnowledgePath,
+	workspacePath,
+	workspaceVariablesPath,
+} from "@/router/paths";
 
 export function WorktreeSelector({ entryId }: { entryId: string }) {
 	const { t } = useTranslation();
@@ -24,7 +29,9 @@ export function WorktreeSelector({ entryId }: { entryId: string }) {
 				const context = workspaceContext(registered.entryId, id);
 				const target = pathname.endsWith("/git/worktrees")
 					? `${workspacePath(context)}/git/worktrees`
-					: workspaceVariablesPath(context, projectName);
+					: pathname.endsWith("/knowledge")
+						? workspaceKnowledgePath(context)
+						: workspaceVariablesPath(context, projectName);
 				navigate({ pathname: target, search });
 			}}
 		>

@@ -334,10 +334,11 @@ func (r Runner) runLinear(ctx context.Context, input api.ExecutionInput, logs io
 							result = failed(job.LastError)
 						}
 						result.Subtasks = job.Subtasks
+						result.OpenViking = job.OpenViking
 						result.RevisionIssueID = job.RevisionIssueID
 						return runOutcome{ExecutionResult: result}
 					case "review", "done":
-						result := api.ExecutionResult{Subtasks: job.Subtasks, CommitSHA: job.CommitSHA, RevisionIssueID: job.RevisionIssueID}
+						result := api.ExecutionResult{Subtasks: job.Subtasks, CommitSHA: job.CommitSHA, RevisionIssueID: job.RevisionIssueID, OpenViking: job.OpenViking}
 						if job.CanReadCodexResult {
 							result.Response = readLinearCodexResult(ctx, r.workflow, job.ID)
 						}

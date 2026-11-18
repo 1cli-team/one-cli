@@ -27,7 +27,7 @@ func questionToolDefinition() map[string]any {
 	}
 }
 
-func (s *codexSession) captureQuestion(job *Job, checkpoint func(Job) error, frame rpcFrame) (bool, error) {
+func (s *codexSession) captureQuestion(job *Job, checkpoint func(Job) error, record func(*Job), frame rpcFrame) (bool, error) {
 	if frame.Method != "item/tool/call" {
 		return false, nil
 	}
@@ -53,6 +53,7 @@ func (s *codexSession) captureQuestion(job *Job, checkpoint func(Job) error, fra
 	}
 	updated := *job
 	updated.TurnID, updated.Question, updated.Stage = event.TurnID, &question, waitingForAnswer
+	record(&updated)
 	if err := checkpoint(updated); err != nil {
 		return true, err
 	}

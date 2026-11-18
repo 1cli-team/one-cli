@@ -104,6 +104,7 @@ class HttpClient {
 			withCredentials: false,
 			headers: {
 				"Content-Type": "application/json",
+				...config?.headers,
 				Authorization: `Bearer ${c.token}`,
 				"X-One-Backend-Generation": c.generation,
 				"X-One-Request-Id": crypto.randomUUID(),

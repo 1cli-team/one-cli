@@ -8,6 +8,7 @@ import (
 	"time"
 
 	gitmodule "github.com/torchstellar-team/one-cli/packages/one-core/pkg/modules/git"
+	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/modules/knowledge"
 )
 
 type TaskFilter struct {
@@ -38,6 +39,7 @@ type TaskPage struct {
 }
 
 type Task struct {
+	OpenViking       *knowledge.SessionLink   `json:"openViking,omitempty"`
 	ID               string                   `json:"id"`
 	Identifier       string                   `json:"identifier,omitempty"`
 	Title            string                   `json:"title,omitempty"`

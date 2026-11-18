@@ -9,6 +9,7 @@ import (
 	"time"
 
 	gitmodule "github.com/torchstellar-team/one-cli/packages/one-core/pkg/modules/git"
+	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/modules/knowledge"
 )
 
 var identifierUUID = regexp.MustCompile(`(?i)^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$`)
@@ -29,27 +30,28 @@ type JobPage struct {
 }
 
 type JobSummary struct {
-	RevisionCommentID  string             `json:"revisionCommentId,omitempty"`
-	RevisionIssueID    string             `json:"revisionIssueId,omitempty"`
-	CommitSHA          string             `json:"commitSha,omitempty"`
-	Subtasks           []SubtaskResult    `json:"subtasks,omitempty"`
-	CanReadCodexResult bool               `json:"canReadCodexResult,omitempty"`
-	ID                 string             `json:"id"`
-	ProjectID          string             `json:"projectId"`
-	IssueID            string             `json:"issueId"`
-	Identifier         string             `json:"identifier"`
-	Title              string             `json:"title"`
-	ProjectName        string             `json:"projectName,omitempty"`
-	Description        string             `json:"description,omitempty"`
-	URL                string             `json:"url,omitempty"`
-	Stage              string             `json:"stage"`
-	CreatedAt          time.Time          `json:"createdAt"`
-	UpdatedAt          time.Time          `json:"updatedAt,omitzero"`
-	LastError          string             `json:"lastError,omitempty"`
-	Codex              CodexOptions       `json:"codex,omitzero"`
-	Repositories       []JobRepository    `json:"repositories"`
-	Question           *ExecutionQuestion `json:"question,omitempty"`
-	Progress           *ExecutionProgress `json:"progress,omitempty"`
+	OpenViking         *knowledge.SessionLink `json:"openViking,omitempty"`
+	RevisionCommentID  string                 `json:"revisionCommentId,omitempty"`
+	RevisionIssueID    string                 `json:"revisionIssueId,omitempty"`
+	CommitSHA          string                 `json:"commitSha,omitempty"`
+	Subtasks           []SubtaskResult        `json:"subtasks,omitempty"`
+	CanReadCodexResult bool                   `json:"canReadCodexResult,omitempty"`
+	ID                 string                 `json:"id"`
+	ProjectID          string                 `json:"projectId"`
+	IssueID            string                 `json:"issueId"`
+	Identifier         string                 `json:"identifier"`
+	Title              string                 `json:"title"`
+	ProjectName        string                 `json:"projectName,omitempty"`
+	Description        string                 `json:"description,omitempty"`
+	URL                string                 `json:"url,omitempty"`
+	Stage              string                 `json:"stage"`
+	CreatedAt          time.Time              `json:"createdAt"`
+	UpdatedAt          time.Time              `json:"updatedAt,omitzero"`
+	LastError          string                 `json:"lastError,omitempty"`
+	Codex              CodexOptions           `json:"codex,omitzero"`
+	Repositories       []JobRepository        `json:"repositories"`
+	Question           *ExecutionQuestion     `json:"question,omitempty"`
+	Progress           *ExecutionProgress     `json:"progress,omitempty"`
 }
 
 type SubtaskResult struct {

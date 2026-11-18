@@ -263,7 +263,7 @@ func (p *Plugin) Register(host lifecycle.Host) error {
 		}
 		return p.Operation(cmd.Context(), binding, args[0])
 	}))
-	root.AddCommand(workflowCommand(host.Dependencies.Git, p.Plugin))
+	root.AddCommand(workflowCommand(host.Dependencies, p.Plugin))
 	root.AddCommand(command("transition <id> <from-state> <to-state>", "transition", i18n.ExactArgs(3), func(cmd *cobra.Command, args []string) (any, error) {
 		ctx := cmd.Context()
 		binding, err := service.Require(ctx, scope())

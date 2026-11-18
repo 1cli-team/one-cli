@@ -1,5 +1,6 @@
 import {
 	Activity,
+	BookOpen,
 	ClipboardList,
 	ArrowLeft,
 	House,
@@ -25,12 +26,11 @@ import {
 } from "@/features/environment-context/EnvironmentLink";
 import { useEnvironmentDirtyStore } from "@/features/environment-context/environment-dirty-store";
 import { preserveEnvironment } from "@/features/environment-context/environment";
-import { InfisicalBindingDialog } from "@/features/infisical-binding/InfisicalBindingDialog";
 import { CreateProjectDialog } from "@/features/project-creation/CreateProjectDialog";
 import { useWorkspace } from "@/features/workspace-navigation/useWorkspace";
 import { useThemeStore } from "@/lib/stores/theme";
 import { cn } from "@/lib/utils";
-import { workspacePath, workspaceVariablesPath } from "@/router/paths";
+import { workspaceKnowledgePath, workspacePath, workspaceVariablesPath } from "@/router/paths";
 import { WorkspaceGroupsSidebar } from "@/features/workspace-groups/WorkspaceGroupsSidebar";
 
 interface SidebarProps {
@@ -222,6 +222,12 @@ function SettingsSidebar() {
 						<span>{t("gateway.settings")}</span>
 					</EnvironmentNavLink>
 				</Button>
+				<Button variant="navigation" size="navigation-compact" className="min-h-9" asChild>
+					<EnvironmentNavLink to="/settings/openviking" end>
+						<BookOpen />
+						<span>{t("openviking.settings")}</span>
+					</EnvironmentNavLink>
+				</Button>
 			</nav>
 		</>
 	);
@@ -238,16 +244,9 @@ function WorkspaceSidebar({
 	const { projectName } = useParams();
 	const { search } = useLocation();
 	const navigate = useNavigate();
-	const {
-		workspace,
-		overview,
-		environment,
-		available,
-		contextEntryId: entryId,
-	} = useWorkspace(logicalEntryId);
+	const { workspace, overview, available, contextEntryId: entryId } = useWorkspace(logicalEntryId);
 	const projects = overview.data?.projects ?? [];
 	const [createOpen, setCreateOpen] = useState(false);
-	const [bindingOpen, setBindingOpen] = useState(false);
 	const [pendingAction, setPendingAction] = useState<(() => void) | null>(null);
 	const dirty = useEnvironmentDirtyStore((state) => state.dirty);
 	const discardAll = useEnvironmentDirtyStore((state) => state.discardAll);
@@ -303,6 +302,12 @@ function WorkspaceSidebar({
 						<span>{t("navigation.environmentVariables")}</span>
 					</EnvironmentNavLink>
 				</Button>
+				<Button variant="navigation" size="navigation-compact" asChild>
+					<EnvironmentNavLink to={workspaceKnowledgePath(entryId)}>
+						<BookOpen />
+						<span>{t("openviking.title")}</span>
+					</EnvironmentNavLink>
+				</Button>
 			</nav>
 			{available && (
 				<div className="flex shrink-0 flex-col gap-2 border-t border-border p-3">
@@ -312,14 +317,6 @@ function WorkspaceSidebar({
 					>
 						<Plus />
 						{t("projectCreate.title")}
-					</Button>
-					<Button
-						variant="outline"
-						disabled={readOnly || !overview.data}
-						onClick={() => requestAction(() => setBindingOpen(true))}
-					>
-						<Settings2 />
-						{t("navigation.workspaceSettings")}
 					</Button>
 				</div>
 			)}
@@ -332,15 +329,6 @@ function WorkspaceSidebar({
 						setCreateOpen(false);
 						navigate(preserveEnvironment(workspaceVariablesPath(entryId, name), search));
 					}}
-				/>
-			)}
-			{active && (
-				<InfisicalBindingDialog
-					open={bindingOpen}
-					onOpenChange={setBindingOpen}
-					workspaceEntryId={entryId}
-					environment={environment}
-					readOnly={readOnly}
 				/>
 			)}
 			<DiscardDialog

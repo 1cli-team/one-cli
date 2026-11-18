@@ -3,16 +3,19 @@ package gateway
 import (
 	"context"
 	"net/http"
+
+	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/modules/knowledge"
 )
 
 const ExecutionWaitingToContinue = "waiting_to_continue"
 const MaxExecutionProgress = 8 << 10
 
 type ExecutionProgress struct {
-	ID                string `json:"id"`
-	Round             int    `json:"round"`
-	Summary           string `json:"summary"`
-	ContinueRequested bool   `json:"continueRequested,omitempty"`
+	OpenViking        *knowledge.SessionLink `json:"openViking,omitempty"`
+	ID                string                 `json:"id"`
+	Round             int                    `json:"round"`
+	Summary           string                 `json:"summary"`
+	ContinueRequested bool                   `json:"continueRequested,omitempty"`
 }
 
 func (p ExecutionProgress) Valid() bool {

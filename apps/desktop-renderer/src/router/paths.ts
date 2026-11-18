@@ -8,6 +8,8 @@ export function workspacePath(entryId: string, worktreeId?: string): string {
 	return selected ? `${base}/worktrees/${encodeURIComponent(selected)}` : base;
 }
 
+export const workspaceKnowledgePath = (entryId: string) => workspacePath(entryId) + "/knowledge";
+
 export function workspaceVariablesPath(entryId: string, projectName?: string): string {
 	const base = `${workspacePath(entryId)}/environment-variables`;
 	return projectName ? `${base}/${encodeURIComponent(projectName)}` : base;

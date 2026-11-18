@@ -35,11 +35,7 @@ func recordTurnOutcome(job *Job, status string, message finalCodexMessage, check
 		job.CodexResponse = message.text
 		return nil
 	}
-	var outcome struct {
-		Completed *bool  `json:"completed"`
-		Summary   string `json:"summary"`
-	}
-	valid := json.Unmarshal([]byte(message.text), &outcome) == nil && outcome.Completed != nil && strings.TrimSpace(outcome.Summary) != ""
+	outcome, valid := parseTurnOutcome(message.text)
 	if status == "completed" && valid && *outcome.Completed {
 		job.CodexResponse = strings.TrimSpace(outcome.Summary)
 		return nil
@@ -60,6 +56,17 @@ func recordTurnOutcome(job *Job, status string, message finalCodexMessage, check
 	return saveExecutionProgress(job, summary, checkpoint)
 }
 
+type turnOutcome struct {
+	Completed *bool  `json:"completed"`
+	Summary   string `json:"summary"`
+}
+
+func parseTurnOutcome(text string) (turnOutcome, bool) {
+	var outcome turnOutcome
+	valid := json.Unmarshal([]byte(text), &outcome) == nil && outcome.Completed != nil && strings.TrimSpace(outcome.Summary) != ""
+	return outcome, valid
+}
+
 func saveExecutionProgress(job *Job, summary string, checkpoint func(Job) error) error {
 	summary = strings.TrimSpace(strings.ReplaceAll(summary, "\x00", ""))
 	summary = strings.ToValidUTF8(summary[:min(len(summary), api.MaxExecutionProgress)], "")
@@ -71,7 +78,7 @@ func saveExecutionProgress(job *Job, summary string, checkpoint func(Job) error)
 	if job.Progress != nil {
 		round = job.Progress.Round + 1
 	}
-	updated.Progress = &api.ExecutionProgress{ID: rand.Text(), Round: round, Summary: summary}
+	updated.Progress = &api.ExecutionProgress{ID: rand.Text(), Round: round, Summary: summary, OpenViking: job.OpenViking}
 	updated.Stage, updated.LastError, updated.CodexResponse = waitingToContinue, "", ""
 	if err := checkpoint(updated); err != nil {
 		return err

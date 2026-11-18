@@ -1,3 +1,4 @@
+import { GatewaySessionLink } from "@/features/openviking/GatewaySessionLink";
 import { useState } from "react";
 import { ChevronDown, ExternalLink } from "lucide-react";
 import { useTranslation } from "react-i18next";
@@ -233,6 +234,7 @@ function GatewayTaskRow({
 					{showResult && (
 						<CodexResultMessage isLoading={result.isLoading} value={result.data?.response} />
 					)}
+					{expanded && task.openViking && <GatewaySessionLink session={task.openViking} />}
 					{expanded && <GatewaySubtasks subtasks={task.subtasks} />}
 					{!!task.repositories?.length && (
 						<ul className="divide-y divide-border rounded-md border border-border">

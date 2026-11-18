@@ -17,15 +17,18 @@ import (
 	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/bootstrap"
 	api "github.com/torchstellar-team/one-cli/packages/one-core/pkg/modules/gateway"
 	gitmodule "github.com/torchstellar-team/one-cli/packages/one-core/pkg/modules/git"
+	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/modules/issueworkflow"
 	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/platform/i18n"
 	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/platform/process"
 	gitplugin "github.com/torchstellar-team/one-cli/packages/one-core/pkg/plugins/git"
+	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/plugins/openviking"
 )
 
 type Runner struct {
 	root             string
 	one              string
 	git              *gitmodule.Service
+	knowledge        issueworkflow.WorkspaceKnowledge
 	readRoots        []string
 	workflow         workflowCall
 	exchangeQuestion func(context.Context, api.ExecutionQuestion, bool) (api.ExecutionQuestion, error)
@@ -36,8 +39,8 @@ type Runner struct {
 }
 
 func NewRunner(root, one string, readRoots []string) (Runner, error) {
-	deps, err := bootstrap.ComposePlugins(gitplugin.New())
-	return Runner{root: root, one: one, git: deps.Git, readRoots: readRoots}, err
+	deps, err := bootstrap.ComposePlugins(gitplugin.New(), openviking.New())
+	return Runner{root: root, one: one, git: deps.Git, readRoots: readRoots, knowledge: issueworkflow.WorkspaceKnowledge{Backend: deps.Knowledge, Registry: deps.Registry}}, err
 }
 
 func (r Runner) WithWorkflow(call workflowCall) Runner {
