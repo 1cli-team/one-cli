@@ -15,7 +15,8 @@ var (
 	ErrCodexOptionsUnsupported = errors.New("Gateway does not support Codex execution options")
 )
 
-// CodexOptions overrides the execution machine's defaults for one task.
+// CodexOptions describes a model and reasoning effort. Dispatch can omit either
+// field to use the execution machine's default.
 type CodexOptions struct {
 	Model  string `json:"model,omitempty"`
 	Effort string `json:"effort,omitempty"`

@@ -217,7 +217,7 @@ func executionError(err error) error {
 	if errors.As(err, &response) {
 		switch response.Reason {
 		case "execution_question_conflict", "invalid_execution_answer", "execution_continue_conflict", "invalid_execution_continue",
-			"invalid_revision", "revision_requires_open_pr", "revision_in_progress":
+			"invalid_revision", "revision_requires_open_pr", "revision_in_progress", "worker_mirror_unavailable":
 			return i18n.Errorf("gateway.execution_problem." + response.Reason)
 		}
 		return clierrors.New(clierrors.ONE_CLI_ERROR, i18n.Tf("gateway.cli.execution_response", response.Code)).

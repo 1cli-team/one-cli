@@ -111,7 +111,7 @@ export interface Execution extends Omit<ExecutionSubmission, "input"> {
 	questions?: ExecutionQuestion[];
 	progress?: ExecutionProgress;
 	subtasks?: GatewaySubtask[];
-	reason?: "worker_offline" | "worker_disconnected";
+	reason?: "worker_offline" | "worker_disconnected" | "worker_mirror_unavailable";
 	result?: {
 		openViking?: SessionLink;
 		revisionIssueId?: string;

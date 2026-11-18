@@ -40,6 +40,7 @@ func workerMode(args []string) error {
 		}
 		flags := flag.NewFlagSet("worker join", flag.ContinueOnError)
 		name := flags.String("name", host, i18n.T("gateway.worker_name"))
+		replace := flags.Bool("replace", false, i18n.T("gateway.flag_worker_replace"))
 		if err := flags.Parse(args[2:]); err != nil {
 			return err
 		}
@@ -50,7 +51,7 @@ func workerMode(args []string) error {
 		if err != nil {
 			return err
 		}
-		id, err := execution.Join(ctx, args[1], *name, code)
+		id, err := execution.Join(ctx, args[1], *name, code, *replace)
 		if err != nil {
 			return err
 		}

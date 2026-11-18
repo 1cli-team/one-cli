@@ -22,6 +22,87 @@ func (l loopTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 	return recorder.Result(), nil
 }
 
+func TestWorkerCanReportCodexCompletionToLegacyGateway(t *testing.T) {
+	ctx := t.Context()
+	settings := api.CodexOptions{Model: "resolved-model", Effort: "medium"}
+	calls := 0
+	link, err := newRemote(workerConfig{
+		URL: "http://worker.example.test", ID: "w-" + strings.ToLower(rand.Text()), Name: "worker", Token: rand.Text() + rand.Text(),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	link.http.Transport = loopTransport{http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var input report
+		if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
+			t.Error(err)
+		}
+		calls++
+		if input.Result.Response != "completed response" {
+			t.Errorf("completion lost its response: %+v", input)
+		}
+		if calls == 1 && input.Result.EffectiveCodex == settings {
+			problem(w, http.StatusBadRequest, "invalid_worker_report")
+			return
+		}
+		if input.Result.EffectiveCodex != (api.CodexOptions{}) {
+			t.Errorf("legacy completion still contains settings: %+v", input.Result.EffectiveCodex)
+		}
+		respond(w, http.StatusOK, struct{}{})
+	})}
+	if err := link.complete(ctx, report{Result: api.ExecutionResult{Response: "completed response", EffectiveCodex: settings}}); err != nil || calls != 2 {
+		t.Fatalf("completed after %d requests, err = %v", calls, err)
+	}
+}
+
+func TestChinaMirrorAssignmentWaitsForWorkerCapability(t *testing.T) {
+	ctx := t.Context()
+	store, err := Open(t.TempDir(), "gateway")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer store.Close()
+	cfg := workerConfig{
+		URL: "http://worker.example.test", ID: "w-" + strings.ToLower(rand.Text()), Name: "worker", Token: rand.Text() + rand.Text(),
+	}
+	if err := store.join(joinRequest{ID: cfg.ID, Name: cfg.Name, Code: store.invite().Code}, cfg.Token, false); err != nil {
+		t.Fatal(err)
+	}
+	if err := store.setDownloadSettings(api.DownloadSettings{ChinaMirror: true}); err != nil {
+		t.Fatal(err)
+	}
+	ref := gitmodule.RepositoryRef{Host: "example.test", Slug: "owner/repo"}
+	input := api.ExecutionSubmission{WorkerID: cfg.ID, RequestID: "with-mirror", Source: "cli", Input: api.ExecutionInput{
+		Kind: api.OneTask, Repository: ref, Ref: "refs/heads/main", Project: "app", Task: "check",
+	}}
+	job, err := store.submit(input)
+	if err != nil || !job.ChinaMirror || job.Reason != "worker_offline" {
+		t.Fatalf("offline dispatch: %+v, %v", job, err)
+	}
+	session := rand.Text()
+	inventory := api.ExecutionWorker{Repositories: []gitmodule.RepositoryRef{ref}}
+	if err := store.heartbeat(cfg.ID, session, inventory); err != nil {
+		t.Fatal(err)
+	}
+	if claim, err := store.claim(cfg.ID, session); claim != nil || err != nil {
+		t.Fatalf("older worker could claim mirror assignment: %+v, %v", claim, err)
+	}
+	if held, err := store.job(job.ID); err != nil || held.Reason != errWorkerMirror.Error() {
+		t.Fatalf("queued assignment did not report the required update: %+v, %v", held, err)
+	}
+	link, err := newRemote(cfg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	link.http.Transport = loopTransport{WorkerAPI(store)}
+	if err := link.heartbeat(ctx, session, inventory); err != nil {
+		t.Fatal(err)
+	}
+	if claim, err := link.claim(ctx, session); err != nil || claim == nil || !claim.ChinaMirror || claim.ID != job.ID {
+		t.Fatalf("upgraded worker did not receive mirror assignment: %+v, %v", claim, err)
+	}
+}
+
 func TestRemoteWorkerOwnsOnlyItsJobsAndCanReportAfterRestart(t *testing.T) {
 	root := t.TempDir()
 	s, err := Open(root, "host")

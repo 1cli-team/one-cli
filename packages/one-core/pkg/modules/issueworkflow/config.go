@@ -119,6 +119,31 @@ func LoadConfig(path string) (Config, error) {
 	return cfg, nil
 }
 
+// SetupMapping exports project settings that can be applied on another machine.
+func (cfg Config) SetupMapping(id string) (api.SetupMapping, error) {
+	project, exists := cfg.Projects[id]
+	if !exists {
+		return api.SetupMapping{}, i18n.Errorf("gateway.cli.setup_project_missing", id)
+	}
+	organization, _, _ := strings.Cut(project.ConnectionID, ":")
+	result := api.SetupMapping{ID: id, Organization: organization, Teams: project.Teams}
+	settings := project.repositorySettings()
+	for _, setting := range settings {
+		result.Repositories = append(result.Repositories, setting.project().ref())
+		if len(settings) == 1 {
+			result.Base = setting.Base
+			if len(setting.Check) == 3 && slices.Equal(setting.Check[:2], []string{"mise", "run"}) {
+				result.CheckTask = setting.Check[2]
+				continue
+			}
+		}
+		if (len(settings) != 1 && setting.Base != "") || len(setting.Check) != 0 {
+			return api.SetupMapping{}, i18n.Errorf("gateway.cli.setup_project_check", id)
+		}
+	}
+	return result, nil
+}
+
 func (p Project) ref() gitmodule.RepositoryRef {
 	return api.RepositoryOption{GitHub: p.GitHub, Repository: p.Repository}.Ref()
 }

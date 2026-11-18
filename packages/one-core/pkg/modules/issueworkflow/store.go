@@ -46,6 +46,8 @@ type Job struct {
 	Issue               tracking.Issue         `json:"issue"`
 	Project             Project                `json:"project"`
 	Codex               api.CodexOptions       `json:"codex,omitzero"`
+	ChinaMirror         bool                   `json:"chinaMirror,omitempty"`
+	EffectiveCodex      api.CodexOptions       `json:"effectiveCodex,omitzero"`
 	AskUser             bool                   `json:"askUser,omitempty"`
 	TrackProgress       bool                   `json:"trackProgress,omitempty"`
 	Question            *api.ExecutionQuestion `json:"question,omitempty"`

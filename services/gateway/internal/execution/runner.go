@@ -18,6 +18,7 @@ import (
 	api "github.com/torchstellar-team/one-cli/packages/one-core/pkg/modules/gateway"
 	gitmodule "github.com/torchstellar-team/one-cli/packages/one-core/pkg/modules/git"
 	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/modules/issueworkflow"
+	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/modules/mirror"
 	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/platform/i18n"
 	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/platform/process"
 	gitplugin "github.com/torchstellar-team/one-cli/packages/one-core/pkg/plugins/git"
@@ -35,7 +36,7 @@ type Runner struct {
 	trackProgress    bool
 	resumeProgressID string
 	resumeQuestionID string
-	reportSubtasks   func(context.Context, []api.SubtaskResult) error
+	reportProgress   func(context.Context, api.ExecutionResult) error
 }
 
 func NewRunner(root, one string, readRoots []string) (Runner, error) {
@@ -101,7 +102,7 @@ func (r Runner) execute(ctx context.Context, job assignment, logs io.Writer) run
 		if last := len(job.Questions) - 1; last >= 0 && job.Questions[last].Answer != "" {
 			r.resumeQuestionID = job.Questions[last].ID
 		}
-		return r.runLinear(ctx, job.Input, logs)
+		return r.runLinear(ctx, job.Input, job.ChinaMirror, logs)
 	}
 	return runOutcome{ExecutionResult: r.runRepositoryTask(ctx, job, logs)}
 }
@@ -118,6 +119,9 @@ func (r Runner) runRepositoryTask(ctx context.Context, job assignment, logs io.W
 	}
 	cmd := process.CommandContext(ctx, r.one, "run", job.Input.Task, "-p", job.Input.Project, "--ui", "stream", "-o", "json")
 	cmd.Dir, cmd.Env, cmd.Stderr = root, childEnv(), logs
+	if job.ChinaMirror {
+		cmd.Env = mirror.WithChinaMirror(cmd.Env)
+	}
 	var stdout limitedLog
 	cmd.Stdout = &stdout
 	err = cmd.Run()

@@ -26,6 +26,13 @@ type Resolution struct {
 	MiseSource string   `json:"-"`
 }
 
+// ChinaMirrorEnv opts a child process into One's public environment preset.
+const ChinaMirrorEnv = "ONE_CHINA_MIRROR"
+
+func WithChinaMirror(env []string) []string {
+	return set(slices.Clone(env), ChinaMirrorEnv, "1")
+}
+
 // Resolve adds defaults to one child environment, never to os.Environ or tool
 // configuration files. Explicit settings are inspected without evaluating any
 // mise templates, plugins or shell commands.
@@ -38,6 +45,15 @@ func Resolve(directory string, base []string) (*Resolution, error) {
 		base = os.Environ()
 	}
 	base = withoutInheritedDefaults(base)
+	if enabled, _ := lookup(base, ChinaMirrorEnv); enabled == "1" {
+		config := Config{Version: 2}
+		if c != nil {
+			config = *c
+		}
+		public, _ := preset(EnvGroup, "public")
+		config.Env = &Selection{Preset: public.ID, Sources: public.Sources}
+		c = &config
+	}
 	r := &Resolution{Config: c, Env: slices.Clone(base), Entries: []Entry{}}
 
 	existing, err := inspect(directory, base)

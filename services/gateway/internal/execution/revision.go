@@ -51,6 +51,9 @@ func (s *Store) revise(id string, input api.RevisionInput) (api.Execution, error
 	if !job.canRevise() {
 		return api.Execution{}, errRevisionPR
 	}
+	if worker := s.workers[job.WorkerID]; s.downloads.ChinaMirror && online(worker) && !worker.SupportsChinaMirror {
+		return api.Execution{}, errWorkerMirror
+	}
 	for _, other := range s.jobs {
 		if other.Input.Linear != nil && other.Input.Linear.Revision != nil &&
 			other.Input.Linear.Revision.OriginID == job.ID &&
@@ -67,6 +70,7 @@ func (s *Store) revise(id string, input api.RevisionInput) (api.Execution, error
 	now := time.Now().UTC()
 	next := assignment{Execution: api.Execution{
 		ID: revisionID, State: api.ExecutionQueued, CreatedAt: now, UpdatedAt: now,
+		ChinaMirror: s.downloads.ChinaMirror,
 		ExecutionSubmission: api.ExecutionSubmission{WorkerID: job.WorkerID, Source: source, RequestID: requestID,
 			Input: api.ExecutionInput{Kind: api.LinearWorkflow, Linear: &linear, Codex: job.Input.Codex}},
 	}}

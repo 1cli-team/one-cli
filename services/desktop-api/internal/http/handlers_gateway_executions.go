@@ -34,6 +34,17 @@ func registerGatewayExecutionRoutes(mux *http.ServeMux, connect func() (*gateway
 	handle("GET /gateway/workers", http.StatusOK, func(_ http.ResponseWriter, r *http.Request, client *gateway.Client) (any, error) {
 		return client.ExecutionWorkers(r.Context())
 	})
+	handle("GET /gateway/settings/downloads", http.StatusOK, func(_ http.ResponseWriter, r *http.Request, client *gateway.Client) (any, error) {
+		return client.DownloadSettings(r.Context())
+	})
+	handle("PUT /gateway/settings/downloads", http.StatusOK, func(w http.ResponseWriter, r *http.Request, client *gateway.Client) (any, error) {
+		var input gateway.DownloadSettingsInput
+		r.Body = http.MaxBytesReader(w, r.Body, 1024)
+		if err := decodeJSON(r, &input); err != nil || input.ChinaMirror == nil {
+			return nil, &gateway.ResponseError{Code: http.StatusBadRequest, Reason: "invalid_download_settings"}
+		}
+		return client.SetDownloadSettings(r.Context(), input)
+	})
 	handle("GET /gateway/tasks", http.StatusOK, func(_ http.ResponseWriter, r *http.Request, client *gateway.Client) (any, error) {
 		filter, valid := gateway.ParseTaskFilter(r.URL.Query())
 		if !valid {
@@ -83,6 +94,7 @@ func registerGatewayExecutionRoutes(mux *http.ServeMux, connect func() (*gateway
 func gatewayExecutionError(reason string) string {
 	switch reason {
 	case "worker_not_found", "worker_repository_unavailable", "worker_kind_unavailable", "worker_model_unavailable",
+		"worker_mirror_unavailable", "invalid_download_settings",
 		"execution_conflict", "execution_not_found", "invalid_execution", "invalid_execution_id",
 		"issue_worker_conflict", "worker_workflow_unavailable", "workflow_dispatch", "invalid_issue_reference", "issue_ineligible",
 		"execution_question_conflict", "invalid_execution_answer", "execution_continue_conflict", "invalid_execution_continue",

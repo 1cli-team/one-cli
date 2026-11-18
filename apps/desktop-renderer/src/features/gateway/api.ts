@@ -80,6 +80,26 @@ export function useGatewayStatus() {
 	return useSWR(statusKey, fetchStatus, { refreshInterval: 5000 });
 }
 
+interface GatewayDownloadSettings {
+	chinaMirror: boolean;
+}
+
+const downloadSettingsPath = "/gateway/settings/downloads";
+
+export function useGatewayDownloadSettings(connection?: GatewayStatus) {
+	return useSWR<GatewayDownloadSettings, HttpError>(
+		connection?.state === "connected"
+			? ([downloadSettingsPath, connection.url, connection.snapshot?.startedAt] as const)
+			: null,
+		([path]) => http.get<GatewayDownloadSettings>(path),
+		{ shouldRetryOnError: (error) => error.status !== 404 },
+	);
+}
+
+export function setGatewayDownloadSettings(chinaMirror: boolean) {
+	return http.put<GatewayDownloadSettings>(downloadSettingsPath, { chinaMirror });
+}
+
 export interface JobRepository {
 	repository: { host: string; slug: string };
 	base?: string;
@@ -91,6 +111,7 @@ export interface JobRepository {
 export interface GatewayTask {
 	openViking?: SessionLink;
 	id: string;
+	kind?: "one-task" | "codex" | "linear-workflow";
 	identifier?: string;
 	title?: string;
 	projectName?: string;
@@ -102,6 +123,7 @@ export interface GatewayTask {
 	lastError?: string;
 	localResultJobId?: string;
 	codex?: CodexOptions;
+	effectiveCodex?: CodexOptions;
 	repository?: { host: string; slug: string };
 	repositories?: JobRepository[];
 	pullRequests?: NonNullable<JobRepository["pr"]>[];

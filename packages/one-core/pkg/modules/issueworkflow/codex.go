@@ -2,6 +2,7 @@ package issueworkflow
 
 import (
 	"bufio"
+	"cmp"
 	"context"
 	"encoding/json"
 	"errors"
@@ -17,6 +18,7 @@ import (
 
 	api "github.com/torchstellar-team/one-cli/packages/one-core/pkg/modules/gateway"
 	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/modules/knowledge"
+	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/modules/mirror"
 	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/platform/i18n"
 )
 
@@ -25,6 +27,8 @@ type Codex struct {
 	Executable   string
 	One          string
 	Launch       api.CodexLauncher
+	OnSettings   func(api.CodexOptions)
+	ChinaMirror  bool
 	ReadRoots    []string
 	StateDir     string
 	miseInstalls string
@@ -138,6 +142,9 @@ func (c Codex) start(ctx context.Context, cwd, commonDir, tmp string) (*codexSes
 	if c.One != "" {
 		path := filepath.Join(tmp, "bin") + string(os.PathListSeparator) + os.Getenv("PATH")
 		args = append(args, "-c", "shell_environment_policy.set.PATH = "+strconv.Quote(path))
+	}
+	if c.ChinaMirror {
+		args = append(args, "-c", "shell_environment_policy.set."+mirror.ChinaMirrorEnv+` = "1"`)
 	}
 	launcher := c.Launch
 	if launcher == nil {
@@ -313,14 +320,22 @@ func (c Codex) Implement(ctx context.Context, job *Job, commonDir string, checkp
 }
 
 type PromptResult struct {
-	ThreadID   string
-	Response   string
-	OpenViking *knowledge.SessionLink
+	ThreadID       string
+	Response       string
+	OpenViking     *knowledge.SessionLink
+	EffectiveCodex api.CodexOptions
 }
 
 func (c Codex) RunPrompt(ctx context.Context, worktree, commonDir, prompt string, options api.CodexOptions, logs io.Writer) (PromptResult, error) {
-	job := Job{Worktree: worktree, Codex: options, memoryPrompt: prompt}
-	err := c.runPrompt(ctx, &job, commonDir, prompt, func(Job) error { return nil }, func(frame rpcFrame) {
+	job := Job{Worktree: worktree, Codex: options, ChinaMirror: c.ChinaMirror, memoryPrompt: prompt}
+	var reported api.CodexOptions
+	err := c.runPrompt(ctx, &job, commonDir, prompt, func(job Job) error {
+		if c.OnSettings != nil && job.EffectiveCodex != reported {
+			c.OnSettings(job.EffectiveCodex)
+			reported = job.EffectiveCodex
+		}
+		return nil
+	}, func(frame rpcFrame) {
 		if frame.Method != "item/agentMessage/delta" || logs == nil {
 			return
 		}
@@ -332,10 +347,11 @@ func (c Codex) RunPrompt(ctx context.Context, worktree, commonDir, prompt string
 			_, _ = io.WriteString(logs, event.Delta)
 		}
 	})
-	return PromptResult{ThreadID: job.ThreadID, Response: job.CodexResponse, OpenViking: job.OpenViking}, err
+	return PromptResult{ThreadID: job.ThreadID, Response: job.CodexResponse, OpenViking: job.OpenViking, EffectiveCodex: job.EffectiveCodex}, err
 }
 
 func (c Codex) runPrompt(ctx context.Context, job *Job, commonDir, prompt string, checkpoint func(Job) error, observe func(rpcFrame)) (runErr error) {
+	c.ChinaMirror = job.ChinaMirror
 	c.ReadRoots = append(slices.Clone(c.ReadRoots), job.readRoots...)
 	sessionCtx, cancel := context.WithCancel(ctx)
 	defer cancel()
@@ -357,6 +373,8 @@ func (c Codex) runPrompt(ctx context.Context, job *Job, commonDir, prompt string
 	}()
 	var thread struct {
 		Thread struct{ ID string } `json:"thread"`
+		Model  string              `json:"model"`
+		Effort string              `json:"reasoningEffort"`
 	}
 	resumeRevision := job.Revision != nil && job.Stage == queued && job.ThreadID != ""
 	resume := job.readyToResume() || resumeRevision
@@ -450,11 +468,25 @@ func (c Codex) runPrompt(ctx context.Context, job *Job, commonDir, prompt string
 	var completed codexTurn
 	var message finalCodexMessage
 	var messageTurnID string
+	var rerouted struct {
+		TurnID string `json:"turnId"`
+		Model  string `json:"toModel"`
+	}
 	notify := func(frame rpcFrame) {
 		if observe != nil {
 			observe(frame)
 		}
 		switch frame.Method {
+		case "model/rerouted":
+			var event struct {
+				ThreadID string `json:"threadId"`
+				TurnID   string `json:"turnId"`
+				Model    string `json:"toModel"`
+			}
+			if json.Unmarshal(frame.Params, &event) == nil && event.ThreadID == job.ThreadID &&
+				(job.TurnID == "" || event.TurnID == job.TurnID) {
+				rerouted.TurnID, rerouted.Model = event.TurnID, event.Model
+			}
 		case "item/completed":
 			var event struct {
 				ThreadID string    `json:"threadId"`
@@ -503,6 +535,10 @@ func (c Codex) runPrompt(ctx context.Context, job *Job, commonDir, prompt string
 		return fmt.Errorf("Codex returned an empty turn ID")
 	}
 	job.TurnID, job.Stage = started.Turn.ID, running
+	job.EffectiveCodex = api.CodexOptions{Model: thread.Model, Effort: cmp.Or(job.Codex.Effort, thread.Effort)}
+	if rerouted.TurnID == job.TurnID && rerouted.Model != "" {
+		job.EffectiveCodex.Model = rerouted.Model
+	}
 	if messageTurnID != "" && messageTurnID != job.TurnID {
 		message, messageTurnID = finalCodexMessage{}, ""
 	}
@@ -518,6 +554,12 @@ func (c Codex) runPrompt(ctx context.Context, job *Job, commonDir, prompt string
 			return err
 		}
 		notify(frame)
+		if rerouted.TurnID == job.TurnID && rerouted.Model != "" && rerouted.Model != job.EffectiveCodex.Model {
+			job.EffectiveCodex.Model = rerouted.Model
+			if err := checkpoint(*job); err != nil {
+				return err
+			}
+		}
 	}
 	if !message.final {
 		for _, item := range completed.Items {
@@ -576,6 +618,7 @@ func (c Codex) Recover(ctx context.Context, job *Job, checkpoint func(Job) error
 }
 
 func (c Codex) Verify(ctx context.Context, job Job, commonDir string) error {
+	c.ChinaMirror = job.ChinaMirror
 	c.ReadRoots = append(slices.Clone(c.ReadRoots), job.readRoots...)
 	workingDir := job.Worktree
 	command := slices.Clone(job.Project.Check)

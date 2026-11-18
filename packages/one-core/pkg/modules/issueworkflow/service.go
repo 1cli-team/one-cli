@@ -138,7 +138,8 @@ func (s *Service) dispatch(ctx context.Context, req api.WorkRequest) (api.Status
 	}
 	job, err := s.store.enqueue(Job{
 		ProjectID: projectID, Project: project, Issue: issue, Codex: options,
-		AskUser: req.AskUser, TrackProgress: req.TrackProgress, Subtasks: subtasks,
+		ChinaMirror: req.ChinaMirror,
+		AskUser:     req.AskUser, TrackProgress: req.TrackProgress, Subtasks: subtasks,
 	})
 	if err != nil {
 		return "", http.StatusInternalServerError, err
