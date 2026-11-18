@@ -20,7 +20,13 @@ import { Overview } from "@/pages/Overview";
 import { App } from "@/App";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { useWorkspace } from "@/features/workspace-navigation/useWorkspace";
-import { legacyWorkspaceLocation, workspacePath, workspaceVariablesPath } from "./paths";
+import { WorkspaceOverview } from "@/features/workspace-navigation/WorkspaceOverview";
+import {
+	legacyWorkspaceLocation,
+	workspaceContext,
+	workspacePath,
+	workspaceVariablesPath,
+} from "./paths";
 import { AccountSettings } from "@/features/infisical-session/AccountSettings";
 import { GlobalVariables } from "@/features/global-variables/GlobalVariables";
 import { CodeHostSettings } from "@/features/code-hosts/CodeHostSettings";
@@ -29,7 +35,6 @@ import { GatewayMonitor } from "@/features/gateway/GatewayMonitor";
 import { LinearSettings } from "@/features/linear/LinearSettings";
 import { IssuesPage } from "@/features/linear/IssuesPage";
 
-import { InitializeWorkspace } from "@/features/workspace-navigation/InitializeWorkspace";
 import { AddWorkspaceDialog } from "@/features/workspace-navigation/AddWorkspaceDialog";
 import { useState } from "react";
 import { Worktrees } from "@/features/git/Worktrees";
@@ -67,9 +72,20 @@ const LegacySettingsRedirect: React.FC = () => {
 };
 
 const LegacyWorkspaceRedirect: React.FC = () => {
-	const { entryId = "" } = useParams();
+	const { entryId = "", worktreeId, projectName } = useParams();
 	const { search } = useLocation();
-	return <Navigate replace to={legacyWorkspaceLocation(entryId, search)} />;
+	const context = workspaceContext(entryId, worktreeId);
+	const location = legacyWorkspaceLocation(context, search);
+	return (
+		<Navigate
+			replace
+			to={
+				projectName
+					? { ...location, pathname: workspaceVariablesPath(context, projectName) }
+					: location
+			}
+		/>
+	);
 };
 
 const LegacyGlobalRedirect: React.FC<{ to: string }> = ({ to }) => {
@@ -77,13 +93,12 @@ const LegacyGlobalRedirect: React.FC<{ to: string }> = ({ to }) => {
 	return <Navigate replace to={{ pathname: to, search }} />;
 };
 
-const WorkspaceRoute: React.FC<{ variables?: boolean; knowledge?: boolean }> = ({
-	variables,
-	knowledge,
+const WorkspaceRoute: React.FC<{ view?: "overview" | "variables" | "knowledge" }> = ({
+	view = "overview",
 }) => {
 	const { entryId = "", projectName } = useParams();
 	const { search } = useLocation();
-	const { registry, workspace, overview, contextEntryId } = useWorkspace(entryId);
+	const { registry, workspace, overview, contextEntryId, available } = useWorkspace(entryId);
 
 	if (registry.isLoading && !registry.data)
 		return (
@@ -103,13 +118,22 @@ const WorkspaceRoute: React.FC<{ variables?: boolean; knowledge?: boolean }> = (
 				<UnknownWorkspace />
 			</WorkspaceStateLayout>
 		);
-	if (workspace.status !== "ready" && workspace.status !== "identity-conflict")
+	if (view === "overview" && (available || workspace.status === "uninitialized")) {
+		const params = new URLSearchParams(search);
+		if (available && (params.has("project") || params.has("tab")))
+			return <LegacyWorkspaceRedirect />;
+		return <WorkspaceOverview key={contextEntryId} workspace={workspace} />;
+	}
+	if (workspace.status === "uninitialized") {
+		return <Navigate replace to={preserveEnvironment(workspacePath(contextEntryId), search)} />;
+	}
+	if (!available)
 		return (
 			<WorkspaceStateLayout>
 				<WorkspaceStatusPage workspace={workspace} />
 			</WorkspaceStateLayout>
 		);
-	if (knowledge) {
+	if (view === "knowledge") {
 		if (workspace.status === "identity-conflict") {
 			return (
 				<WorkspaceStateLayout>
@@ -132,19 +156,6 @@ const WorkspaceRoute: React.FC<{ variables?: boolean; knowledge?: boolean }> = (
 			</WorkspaceStateLayout>
 		);
 
-	if (!variables) {
-		const location = legacyWorkspaceLocation(contextEntryId, search);
-		return (
-			<Navigate
-				replace
-				to={
-					projectName
-						? { ...location, pathname: workspaceVariablesPath(contextEntryId, projectName) }
-						: location
-				}
-			/>
-		);
-	}
 	const projects = overview.data.projects ?? [];
 	const project = projectName ? projects.find((item) => item.name === projectName) : projects[0];
 	if (projectName && !project)
@@ -214,7 +225,6 @@ const WorkspaceStatusPage: React.FC<{ workspace: WorkspaceRegistryEntry }> = ({ 
 				description={t(`workspaces.state.${workspace.status}.description`)}
 			>
 				<p className="w-full text-xs text-muted-foreground">{t("workspaces.forget.pageHint")}</p>
-				{workspace.status === "uninitialized" && <InitializeWorkspace workspace={workspace} />}
 				{workspace.gitCommonDir && (
 					<Button variant="outline" asChild>
 						<EnvironmentLink to={`${workspacePath(workspace.entryId)}/git/worktrees`}>
@@ -320,19 +330,25 @@ export const routes: RouteObject[] = [
 				path: "workspaces/:entryId",
 				children: [
 					{ index: true, element: <WorkspaceRoute /> },
-					{ path: "projects/:projectName", element: <WorkspaceRoute /> },
-					{ path: "environment-variables/:projectName?", element: <WorkspaceRoute variables /> },
+					{ path: "projects/:projectName", element: <LegacyWorkspaceRedirect /> },
+					{
+						path: "environment-variables/:projectName?",
+						element: <WorkspaceRoute view="variables" />,
+					},
 					{ path: "git/worktrees", element: <Worktrees /> },
-					{ path: "knowledge", element: <WorkspaceRoute knowledge /> },
+					{ path: "knowledge", element: <WorkspaceRoute view="knowledge" /> },
 					{ path: "issues", element: <IssuesPage /> },
 					{ path: "worktrees/:worktreeId", element: <WorkspaceRoute /> },
-					{ path: "worktrees/:worktreeId/projects/:projectName", element: <WorkspaceRoute /> },
+					{
+						path: "worktrees/:worktreeId/projects/:projectName",
+						element: <LegacyWorkspaceRedirect />,
+					},
 					{
 						path: "worktrees/:worktreeId/environment-variables/:projectName?",
-						element: <WorkspaceRoute variables />,
+						element: <WorkspaceRoute view="variables" />,
 					},
 					{ path: "worktrees/:worktreeId/git/worktrees", element: <Worktrees /> },
-					{ path: "worktrees/:worktreeId/knowledge", element: <WorkspaceRoute knowledge /> },
+					{ path: "worktrees/:worktreeId/knowledge", element: <WorkspaceRoute view="knowledge" /> },
 				],
 			},
 			{ path: "workspace/:entryId", element: <LegacyWorkspaceRedirect /> },

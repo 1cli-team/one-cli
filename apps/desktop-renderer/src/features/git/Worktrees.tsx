@@ -39,7 +39,6 @@ import {
 } from "@/components/ui/page-layout";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useWorkspace } from "@/features/workspace-navigation/useWorkspace";
-import { InitializeWorkspace } from "@/features/workspace-navigation/InitializeWorkspace";
 import { workspacePath } from "@/router/paths";
 import type { HttpError } from "@/types/api";
 import { WorktreeForm } from "./WorktreeForm";
@@ -160,7 +159,6 @@ export function Worktrees() {
 					{notice}
 				</p>
 			)}
-			{workspace?.status === "uninitialized" && <InitializeWorkspace workspace={workspace} />}
 			{repository.isLoading && <Skeleton className="h-48 w-full" />}
 			{repository.data && (
 				<PageToolbar className="justify-between">

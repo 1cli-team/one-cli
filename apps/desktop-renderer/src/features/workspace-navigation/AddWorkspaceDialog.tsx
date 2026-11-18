@@ -30,14 +30,22 @@ function errorMessage(error: unknown) {
 
 export function AddWorkspaceDialog({
 	workspace,
+	kind = "workspace",
 	onClose,
 	onSaved,
 }: {
 	workspace?: WorkspaceRegistryEntry;
+	kind?: "project" | "workspace";
 	onClose(): void;
 	onSaved(entry: WorkspaceRegistryEntry): void | Promise<void>;
 }) {
 	const { t } = useTranslation();
+	const openLabel = t(kind === "project" ? "groups.openProject" : "desktop.openWorkspace");
+	const description = workspace
+		? "git.locateRepositoryDescription"
+		: kind === "project"
+			? "groups.openProjectDescription"
+			: "git.linkRepositoryDescription";
 	const [mode, setMode] = useState("local");
 	const [path, setPath] = useState(workspace?.root ?? "");
 	const [url, setURL] = useState("");
@@ -101,10 +109,8 @@ export function AddWorkspaceDialog({
 		>
 			<DialogContent showCloseButton={!busy}>
 				<DialogHeader>
-					<DialogTitle>{t(workspace ? "git.locateRepository" : "git.linkRepository")}</DialogTitle>
-					<DialogDescription>
-						{t(workspace ? "git.locateRepositoryDescription" : "git.linkRepositoryDescription")}
-					</DialogDescription>
+					<DialogTitle>{workspace ? t("git.locateRepository") : openLabel}</DialogTitle>
+					<DialogDescription>{t(description)}</DialogDescription>
 				</DialogHeader>
 				<form
 					className="space-y-4"
@@ -181,9 +187,7 @@ export function AddWorkspaceDialog({
 							{t("git.cancel")}
 						</Button>
 						<Button type="submit" disabled={busy}>
-							{busy
-								? t("git.working")
-								: t(mode === "clone" ? "git.cloneRepository" : "git.saveRepository")}
+							{busy ? t("git.working") : mode === "clone" ? t("git.cloneRepository") : openLabel}
 						</Button>
 					</DialogFooter>
 				</form>

@@ -1221,6 +1221,7 @@
   "gateway.codex_models_unavailable": "Could not read the Codex model list from the execution machine.",
   "gateway.status_failed": "Could not read One Gateway status: %s",
   "gateway.jobs_failed": "Could not read jobs from One Gateway.",
+  "gateway.skill_archive_failed": "Could not create the Gateway skill ZIP.",
   "gateway.jobs_invalid_page": "The job page number must be a positive integer.",
   "gateway.jobs_unavailable": "Update Gateway and One CLI on the execution machine to view job details.",
   "gateway.worker_unavailable": "The local issue workflow is unavailable.",

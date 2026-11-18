@@ -1,7 +1,6 @@
-import { FolderGit2, FolderKanban, PanelsTopLeft } from "lucide-react";
+import { FolderGit2, FolderKanban } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
-import { Skeleton } from "@/components/ui/skeleton";
 import {
 	EnvironmentLink,
 	EnvironmentNavLink,
@@ -41,7 +40,6 @@ export function WorkspaceGroupsSidebar() {
 			className="flex min-h-0 flex-1 flex-col gap-0.5 overflow-y-auto p-3"
 			aria-label={t("groups.title")}
 		>
-			{result.isLoading && <Skeleton className="h-20" />}
 			{result.error && (
 				<Button variant="outline" onClick={() => void result.mutate()}>
 					{t("workspaces.retry")}
@@ -74,20 +72,6 @@ export function WorkspaceGroupsSidebar() {
 					)}
 				</section>
 			))}
-
-			<div className="mt-3 border-t border-border/70 pt-3">
-				<Button
-					variant="navigation"
-					size="navigation-compact"
-					className="text-muted-foreground hover:text-foreground"
-					asChild
-				>
-					<EnvironmentNavLink to="/workspaces" end>
-						<PanelsTopLeft strokeWidth={1.5} />
-						{t("groups.allWorkspaces")}
-					</EnvironmentNavLink>
-				</Button>
-			</div>
 		</nav>
 	);
 }

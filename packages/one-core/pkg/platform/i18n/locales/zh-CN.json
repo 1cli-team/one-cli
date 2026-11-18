@@ -1221,6 +1221,7 @@
   "gateway.codex_models_unavailable": "无法读取执行机器上的 Codex 模型列表。",
   "gateway.status_failed": "无法读取 One Gateway 状态：%s",
   "gateway.jobs_failed": "无法读取 One Gateway 的任务列表。",
+  "gateway.skill_archive_failed": "无法生成 Gateway 技能 ZIP。",
   "gateway.jobs_invalid_page": "任务页码必须为正整数。",
   "gateway.jobs_unavailable": "请更新 Gateway 与执行机器上的 One CLI，以查看任务详情。",
   "gateway.worker_unavailable": "本机需求流程暂时不可用。",

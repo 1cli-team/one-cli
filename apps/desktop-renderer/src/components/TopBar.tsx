@@ -61,7 +61,7 @@ export function TopBar({ homeTo, onOpenNavigation }: { homeTo: string; onOpenNav
 		"/settings/code-hosts": t("codeHosts.settings"),
 		"/gateway": t("gateway.monitor"),
 		"/": t("groups.title"),
-		"/workspaces": t("groups.allWorkspaces"),
+		"/workspaces": t("workspaces.home.title"),
 		"/settings/credentials": t("global.title"),
 		"/settings": t("sidebar.settings"),
 		"/settings/general": t("navigation.generalSettings"),

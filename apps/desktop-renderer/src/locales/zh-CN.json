@@ -1,6 +1,5 @@
 {
 	"sidebar": {
-		"home": "首页",
 		"settings": "设置",
 		"themeToDark": "切深色",
 		"themeToLight": "切浅色",
@@ -43,9 +42,13 @@
 		"loading": "正在加载 Workspace",
 		"retry": "重试",
 		"openProfiles": "打开设置",
+		"overview": {
+			"directory": "本地目录",
+			"modules": "模块数",
+			"moreActions": "更多操作"
+		},
 		"home": {
 			"title": "工作区",
-			"description": "管理本机已登记的工作区与模块",
 			"loading": "正在加载工作区…",
 			"loadFailedTitle": "无法加载工作区",
 			"loadFailedDescription": "无法读取本机工作区注册表。",
@@ -56,18 +59,14 @@
 			"projects": "模块",
 			"projects_one": "模块",
 			"projects_other": "模块",
-			"lastDetected": "最近识别",
 			"emptyTitle": "尚未登记工作区",
 			"emptyDescription": "运行 one create 创建工作区，或选择“打开工作区”登记已有目录。",
 			"listLabel": "已登记的工作区",
 			"refresh": "刷新",
 			"search": "搜索名称、路径或 ID",
 			"clearSearch": "清除搜索",
-			"filterLabel": "筛选工作区",
-			"all": "全部",
-			"attention": "需要关注",
 			"noResults": "没有匹配的工作区",
-			"noResultsDescription": "试试其他名称或路径，或清除筛选条件。",
+			"noResultsDescription": "试试其他名称、路径或 ID，或清除搜索。",
 			"clearFilters": "清除筛选",
 			"resultCount": "找到 {{count}} 个工作区"
 		},
@@ -104,10 +103,6 @@
 			"identity-conflict": {
 				"title": "Workspace ID 重复",
 				"description": "Workspace 仍可查看，但为了避免 Profile 绑定串用，配置保持只读。"
-			},
-			"uninitialized": {
-				"title": "初始化 One 工作区",
-				"description": "这个目录已关联到工作区。初始化后即可管理其中的模块和配置。"
 			}
 		},
 		"forget": {
@@ -115,7 +110,7 @@
 			"confirm": "要移除 Workspace「{{name}}」吗？这里只会移除本机注册记录，不会删除模块文件或远端变量。",
 			"done": "已移除 {{name}}",
 			"failed": "无法移除 Workspace",
-			"pageHint": "可点击左侧该 Workspace 旁的垃圾桶，只移除它的本机注册记录。"
+			"pageHint": "在「工作区」页面，点击卡片右上角的移除按钮，可移除本机登记记录。"
 		},
 		"registryError": {
 			"title": "Workspace 注册表不可用",
@@ -491,10 +486,9 @@
 		"pathDetected": "桌面环境可以找到此 CLI，请新开终端确认 PATH 和版本。",
 		"resolvedPath": "当前命中：{{path}}",
 		"install": "安装 / 更新终端 CLI",
-		"continue": "进入工作区",
 		"skipTerminal": "稍后配置终端",
 		"welcome": "欢迎使用 One Desktop",
-		"welcomeHint": "桌面后端已连接。请检查终端集成，也可以暂不安装终端命令，继续使用桌面。",
+		"welcomeHint": "你可以设置终端命令，也可以稍后再设置。",
 		"updates": "桌面更新",
 		"updateHint": "桌面应用、Go API 与内置 CLI 整包更新；终端 CLI 是独立的安装。",
 		"updateNotChecked": "尚未检查更新",
@@ -504,13 +498,14 @@
 		"updateUnconfigured": "此开发构建不启用更新，或正式发布签名尚未配置。",
 		"installUpdate": "下载、校验并安装",
 		"connection": {
-			"starting": "正在启动本地后端…",
-			"connecting": "正在验证本地 HTTP 连接…",
-			"failed": "后端启动失败。",
-			"stopped": "后端已停止。",
-			"stopping": "正在结束操作并关闭后端…",
-			"connectionFailed": "后端已运行，但界面未能连接，请重试连接。",
-			"preview": "请在 One Desktop 中打开此界面。浏览器预览没有后端会话。"
+			"starting": "正在打开 One Desktop…",
+			"reconnecting": "正在重新连接…",
+			"failed": "One Desktop 启动失败。",
+			"stopped": "连接已断开，请重试。",
+			"stopping": "正在关闭 One Desktop…",
+			"connectionFailed": "暂时无法连接，请重试。",
+			"preview": "请在 One Desktop 应用中打开此页面。",
+			"details": "查看错误详情"
 		},
 		"installAction": {
 			"install": "可以安装内置 CLI。",
@@ -548,6 +543,7 @@
 		"open": "打开导航",
 		"allWorkspaces": "返回首页",
 		"workspace": "工作区导航",
+		"overview": "概览",
 		"environmentVariables": "环境变量",
 		"emptyWorkspace": "从侧边栏创建第一个模块。"
 	},
@@ -589,9 +585,9 @@
 		"empty": "此仓库没有工作树",
 		"failed": "操作失败，请刷新后重试。",
 		"invalidPath": "请选择有效的绝对目录路径。",
+		"repository": "Git 仓库",
 		"repositories": "Git 仓库",
 		"repositoryWorktrees": "{{name}} · Worktrees",
-		"linkRepository": "添加工作区",
 		"repositoriesEmpty": "还没有关联 Git 仓库",
 		"repositoriesEmptyDescription": "选择本地仓库，或输入远程地址克隆后管理它的工作树。",
 		"openRepository": "打开仓库",
@@ -600,7 +596,7 @@
 		"forgetRepositoryDescription": "将从 One 中移除仓库 {{name}} 的关联记录。",
 		"repositoryLastOpened": "最近打开 · {{date}}",
 		"locateRepositoryDescription": "选择工作区当前所在的目录。",
-		"linkRepositoryDescription": "打开本地 Git 仓库，或克隆远程仓库为 One 工作区。",
+		"linkRepositoryDescription": "选择本地 Git 仓库，或克隆远程仓库，将它添加到工作区列表。",
 		"repositorySource": "仓库来源",
 		"localRepository": "已有本地仓库",
 		"cloneRepository": "克隆远程仓库",
@@ -610,7 +606,6 @@
 		"cloneDestination": "本地目标目录",
 		"browse": "浏览",
 		"cloning": "正在克隆仓库，完成后会自动关联…",
-		"saveRepository": "打开工作区",
 		"cloneAssociationWarning": "仓库已克隆到 {{path}}，关联失败。请通过本地仓库入口重试关联。{{error}}",
 		"remoteRepositories": "Git 远端",
 		"originMissing": "此工作区还没有配置 origin。",
@@ -623,6 +618,7 @@
 	},
 	"groups": {
 		"title": "项目",
+		"loading": "正在加载项目…",
 		"searchProjects": "搜索项目名称",
 		"noMatchingProjects": "没有找到匹配的项目。",
 		"allProjects": "所有项目",
@@ -631,9 +627,9 @@
 		"delete": "删除项目",
 		"save": "保存",
 		"name": "项目名称",
-		"nameDescription": "为这组关联的工作区设置项目名称。",
+		"nameDescription": "为项目设置名称。一个项目可以包含多个工作区。",
 		"empty": "还没有项目",
-		"emptyDescription": "打开一个仓库作为独立项目，或创建工作区组关联多个仓库。",
+		"emptyDescription": "打开一个仓库作为独立项目，或新建项目来组织多个工作区。",
 		"memberCount_one": "{{count}} 个工作区",
 		"memberCount_other": "{{count}} 个工作区",
 		"addMembers": "添加工作区",
@@ -653,8 +649,9 @@
 		"missingMember": "工作区已取消登记",
 		"notFound": "项目不存在或已被删除",
 		"backToProject": "返回项目",
-		"createGroup": "新建工作区组",
-		"openProject": "打开项目"
+		"createProject": "新建项目",
+		"openProject": "打开项目",
+		"openProjectDescription": "选择本地 Git 仓库，或克隆远程仓库作为项目打开。"
 	},
 	"codeHosts": {
 		"settings": "代码库",
@@ -789,6 +786,8 @@
 			"saveError": "无法保存 Gateway 的下载设置。"
 		},
 		"monitor": "Gateway 监控",
+		"downloadSkill": "下载 Gateway Skill",
+		"skillDownloadError": "无法下载 Gateway Skill，请重试。",
 		"connection": "连接状态",
 		"connectionDetails": "连接详情",
 		"address": "地址",
