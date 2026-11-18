@@ -1,6 +1,6 @@
 import useSWR from "swr";
 import http from "@/lib/http";
-import type { SessionLink } from "@/features/openviking/api";
+import type { OpenVikingConnection, SessionLink } from "@/features/openviking/api";
 import {
 	repositoryRef,
 	type CodexModelCatalog,
@@ -19,6 +19,7 @@ export interface ExecutionWorker {
 	name: string;
 	online: boolean;
 	busy: boolean;
+	remoteSetup?: boolean;
 	repositories: ExecutionRepository[] | null;
 	models?: CodexModelCatalog;
 	linearProjects?: { id: string; repositories: WorkflowRepository[] }[];
@@ -111,7 +112,7 @@ export interface Execution extends Omit<ExecutionSubmission, "input"> {
 	questions?: ExecutionQuestion[];
 	progress?: ExecutionProgress;
 	subtasks?: GatewaySubtask[];
-	reason?: "worker_offline" | "worker_disconnected";
+	reason?: "worker_offline" | "worker_disconnected" | "worker_mirror_unavailable";
 	result?: {
 		openViking?: SessionLink;
 		revisionIssueId?: string;
@@ -144,6 +145,14 @@ export function useWorkers(connection: string | undefined) {
 		{
 			refreshInterval: 4000,
 		},
+	);
+}
+
+export function syncWorkerOpenViking(gatewayUrl: string, workerId: string) {
+	return http.post<OpenVikingConnection>(
+		"/gateway/workers/" + encodeURIComponent(workerId) + "/openviking",
+		{ gatewayUrl },
+		{ timeout: 48_000 },
 	);
 }
 

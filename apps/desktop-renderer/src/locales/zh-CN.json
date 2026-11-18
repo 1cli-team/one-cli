@@ -685,6 +685,19 @@
 			"inviteDescription": "在执行机上运行以下命令，并在 {{time}} 前输入配对码。",
 			"inviteCode": "配对码",
 			"status": "状态",
+			"workerActions": "操作",
+			"openViking": {
+				"title": "同步 OpenViking",
+				"actionFor": "同步 OpenViking 到 {{worker}}",
+				"description": "通过 Gateway 将本机已保存的 OpenViking 地址和 API Key 同步到 {{worker}}，替换该执行机的现有连接。",
+				"action": "同步连接",
+				"pending": "正在同步…",
+				"success": "已在 {{worker}} 上验证并保存连接。",
+				"failed": "无法同步 OpenViking 连接。",
+				"loadFailed": "无法加载本机已保存的 OpenViking 连接。",
+				"localRequired": "请先在设置中保存本机的 OpenViking 连接。",
+				"httpsRequired": "需通过 HTTPS 配对"
+			},
 			"noWorkers": "尚未登记执行机器。",
 			"jobs": "执行任务",
 			"all": "全部",
@@ -709,7 +722,8 @@
 			},
 			"reason": {
 				"worker_offline": "正在等待所选机器重新连接。",
-				"worker_disconnected": "机器在执行中断开连接，结果待确认。"
+				"worker_disconnected": "机器在执行中断开连接，结果待确认。",
+				"worker_mirror_unavailable": "正在等待所选机器升级至支持国内镜像的版本。"
 			},
 			"loadError": "无法读取 Gateway 执行数据。",
 			"noJobs": "没有符合筛选条件的执行任务。",
@@ -764,6 +778,16 @@
 		},
 		"processing": "处理中",
 		"settings": "Gateway 连接",
+		"downloads": {
+			"title": "任务下载",
+			"useChinaMirror": "使用国内镜像",
+			"hint": "开启后，此 Gateway 为新派发的任务下发公共镜像预设。",
+			"connect": "连接 Gateway 后即可修改此设置。",
+			"updateRequired": "请升级 Gateway 以使用任务下载设置。",
+			"saving": "正在保存下载设置",
+			"loadError": "无法读取 Gateway 的下载设置。",
+			"saveError": "无法保存 Gateway 的下载设置。"
+		},
 		"monitor": "Gateway 监控",
 		"connection": "连接状态",
 		"connectionDetails": "连接详情",
@@ -802,6 +826,8 @@
 			"noMatching": "没有符合筛选条件的任务。",
 			"partial": "暂时无法读取本机的需求流程详情。",
 			"runs": "执行记录",
+			"requestedSetting": "{{value}}（派发设置）",
+			"unrecordedSetting": "未记录",
 			"initialRun": "首次执行",
 			"error": "暂时无法读取任务列表。请刷新重试。",
 			"updateRequired": "请更新 One Desktop、Gateway 和执行机器上的 One CLI，以查看任务详情。",

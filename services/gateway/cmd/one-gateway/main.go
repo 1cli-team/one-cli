@@ -54,6 +54,7 @@ func run() error {
 	configPath := flag.String("config", "", i18n.T("gateway.flag_config"))
 	one := flag.String("one", "one", i18n.T("gateway.flag_one"))
 	addr := flag.String("listen", "127.0.0.1:39128", i18n.T("gateway.flag_listen"))
+	workerHTTPS := flag.String("worker-https-url", "", i18n.T("gateway.flag_worker_https"))
 	workerAddr := flag.String("worker-listen", "", i18n.T("gateway.flag_worker_listen"))
 	cert := flag.String("tls-cert", "", i18n.T("gateway.flag_tls_cert"))
 	key := flag.String("tls-key", "", i18n.T("gateway.flag_tls_key"))
@@ -73,6 +74,11 @@ func run() error {
 	loopback := net.ParseIP(host).IsLoopback()
 	if (*cert == "") != (*key == "") || (*cert == "" && !loopback) {
 		return i18n.Errorf("gateway.tls_required")
+	}
+	if *workerHTTPS != "" {
+		if err := execution.ValidateWorkerHTTPS(*workerHTTPS); err != nil {
+			return err
+		}
 	}
 	cfg, err := issueworkflow.LoadConfig(*configPath)
 	if err != nil {
@@ -151,7 +157,18 @@ func run() error {
 		body, err := json.Marshal(snapshot)
 		return api.WorkReply{Status: http.StatusOK, Body: body}, err
 	}
-	server.Handler = execution.Control(token, store, gateway.Handler(token, forward), workerURL)
+	setup := execution.NewSetup(ctx, runner.WithWorkflow(worker.Call))
+	if *workerHTTPS != "" {
+		workerURL = *workerHTTPS
+	}
+	control := execution.Control(token, store, gateway.Handler(token, forward), workerURL, setup)
+	server.Handler = control
+	if *workerHTTPS != "" {
+		mux := http.NewServeMux()
+		mux.Handle("/worker/v1/", setup.SecureWorkers(store, *cert == "" && loopback))
+		mux.Handle("/", control)
+		server.Handler = mux
+	}
 
 	go func() {
 		slog.Info(i18n.T("gateway.listening"), "address", ln.Addr())

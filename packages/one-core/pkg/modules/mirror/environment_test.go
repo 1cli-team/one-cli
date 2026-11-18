@@ -77,6 +77,32 @@ func TestEnvironmentPreservesExplicitSources(t *testing.T) {
 	}
 }
 
+func TestChinaMirrorChildUsesPublicDefaultsWithoutSaving(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
+	t.Setenv("ONE_HOME", t.TempDir())
+	dir := t.TempDir()
+	if _, err := Select(t.Context(), EnvGroup, "huawei", false); err != nil {
+		t.Fatal(err)
+	}
+	base := []string{"npm_config_registry=https://npm.internal/"}
+	result, err := Resolve(dir, WithChinaMirror(base))
+	if err != nil {
+		t.Fatal(err)
+	}
+	node, _ := lookup(result.Env, "MISE_NODE_MIRROR_URL")
+	npm, _ := lookup(result.Env, "npm_config_registry")
+	if node != Current(result.Config, EnvGroup).Sources["node"] || result.Config.Env.Preset != "public" || npm != "https://npm.internal/" {
+		t.Fatalf("effective preset = %s, Node = %s, npm = %s", result.Config.Env.Preset, node, npm)
+	}
+	local, err := Resolve(dir, base)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if local.Config.Env.Preset != "huawei" {
+		t.Fatalf("local selection changed: %+v", local.Config)
+	}
+}
+
 func TestGoRewriteRetainsOfficialChecksum(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
 	t.Setenv("ONE_HOME", t.TempDir())

@@ -45,6 +45,7 @@ func (r *LinearRouter) Forward(ctx context.Context, req api.WorkRequest) (api.Wo
 
 func (r *LinearRouter) dispatch(ctx context.Context, req api.WorkRequest) (api.WorkReply, error) {
 	remote := req.WorkerID != "" && req.WorkerID != LocalWorkerID
+	req.ChinaMirror = r.store.downloadSettings().ChinaMirror
 	if (req.ProjectID != "" && !api.ValidIssueID(req.ProjectID)) || !api.ValidIssueReference(req.IssueID) {
 		return linearProblem(http.StatusBadRequest, "invalid_issue_reference")
 	}
@@ -96,7 +97,7 @@ func (r *LinearRouter) dispatch(ctx context.Context, req api.WorkRequest) (api.W
 		return linearReply(http.StatusAccepted, api.DispatchResult{Status: api.Processing, JobID: job.ID, ProjectID: req.ProjectID})
 	case errWorker:
 		return linearProblem(http.StatusNotFound, err.Error())
-	case errWorkflow, errModel:
+	case errWorkflow, errModel, errWorkerMirror:
 		return linearProblem(http.StatusConflict, err.Error())
 	default:
 		return api.WorkReply{}, err
@@ -229,7 +230,7 @@ func linearProjects(ctx context.Context, call workflowCall) []api.LinearProject 
 	return projects
 }
 
-func (r Runner) runLinear(ctx context.Context, input api.ExecutionInput, logs io.Writer) runOutcome {
+func (r Runner) runLinear(ctx context.Context, input api.ExecutionInput, chinaMirror bool, logs io.Writer) runOutcome {
 	if r.workflow == nil {
 		return runOutcome{ExecutionResult: failed(i18n.T("gateway.worker_workflow_unavailable"))}
 	}
@@ -255,6 +256,7 @@ func (r Runner) runLinear(ctx context.Context, input api.ExecutionInput, logs io
 	req := api.WorkRequest{
 		Operation: api.WorkDispatchWithOptions, ProjectID: target.Project.ID, IssueID: target.IssueID,
 		Codex: input.Codex, AskUser: r.exchangeQuestion != nil,
+		ChinaMirror:   chinaMirror,
 		TrackProgress: r.trackProgress,
 		SubtaskOrder:  target.SubtaskOrder,
 	}
@@ -276,6 +278,7 @@ func (r Runner) runLinear(ctx context.Context, input api.ExecutionInput, logs io
 	}
 	var lastStage, resumedQuestion string
 	var lastSubtasks []api.SubtaskResult
+	var lastSettings api.CodexOptions
 	for {
 		req.Operation = api.WorkMonitorJobs
 		reply, err := r.workflow(ctx, req)
@@ -290,11 +293,12 @@ func (r Runner) runLinear(ctx context.Context, input api.ExecutionInput, logs io
 						_, _ = fmt.Fprintln(logs, i18n.Tf("gateway.worker_workflow_stage", job.Identifier, i18n.T("gateway.worker_stage."+job.Stage)))
 						lastStage = job.Stage
 					}
-					if r.reportSubtasks != nil && !slices.Equal(job.Subtasks, lastSubtasks) {
-						if err := r.reportSubtasks(ctx, job.Subtasks); err != nil {
+					result := api.ExecutionResult{Subtasks: job.Subtasks, EffectiveCodex: job.EffectiveCodex}
+					if r.reportProgress != nil && (!slices.Equal(job.Subtasks, lastSubtasks) || job.EffectiveCodex != lastSettings) {
+						if err := r.reportProgress(ctx, result); err != nil {
 							slog.Warn(i18n.T("gateway.worker_contact"), "error", err)
 						} else {
-							lastSubtasks = job.Subtasks
+							lastSubtasks, lastSettings = job.Subtasks, job.EffectiveCodex
 						}
 					}
 					if r.exchangeQuestion != nil && job.Question != nil && job.Question.ID != resumedQuestion &&
@@ -321,7 +325,7 @@ func (r Runner) runLinear(ctx context.Context, input api.ExecutionInput, logs io
 							return runOutcome{ExecutionResult: failed(i18n.T("gateway.worker_progress_missing"))}
 						}
 						if job.Progress.ID != r.resumeProgressID {
-							return runOutcome{ExecutionResult: api.ExecutionResult{Subtasks: job.Subtasks}, progress: job.Progress}
+							return runOutcome{ExecutionResult: result, progress: job.Progress}
 						}
 						if !job.Progress.ContinueRequested {
 							if err := r.continueWorkflow(ctx, req, job.Progress.ID); err != nil {
@@ -329,16 +333,15 @@ func (r Runner) runLinear(ctx context.Context, input api.ExecutionInput, logs io
 							}
 						}
 					case "failed":
-						result := failed(i18n.T("gateway.worker_workflow_dispatch"))
-						if job.LastError != "" {
-							result = failed(job.LastError)
+						result.Error = job.LastError
+						if result.Error == "" {
+							result.Error = i18n.T("gateway.worker_workflow_dispatch")
 						}
-						result.Subtasks = job.Subtasks
 						result.OpenViking = job.OpenViking
 						result.RevisionIssueID = job.RevisionIssueID
 						return runOutcome{ExecutionResult: result}
 					case "review", "done":
-						result := api.ExecutionResult{Subtasks: job.Subtasks, CommitSHA: job.CommitSHA, RevisionIssueID: job.RevisionIssueID, OpenViking: job.OpenViking}
+						result.CommitSHA, result.RevisionIssueID, result.OpenViking = job.CommitSHA, job.RevisionIssueID, job.OpenViking
 						if job.CanReadCodexResult {
 							result.Response = readLinearCodexResult(ctx, r.workflow, job.ID)
 						}

@@ -28,14 +28,16 @@ const LinearWorkflow = "linear-workflow"
 const MaxExecutionLogs = 256 << 10
 
 type ExecutionWorker struct {
-	LinearProjects []LinearProject           `json:"linearProjects,omitempty"`
-	ID             string                    `json:"id"`
-	Name           string                    `json:"name"`
-	Online         bool                      `json:"online"`
-	Busy           bool                      `json:"busy"`
-	LastSeen       time.Time                 `json:"lastSeen,omitzero"`
-	Repositories   []gitmodule.RepositoryRef `json:"repositories"`
-	Models         *CodexModelCatalog        `json:"models,omitempty"`
+	SupportsChinaMirror bool                      `json:"supportsChinaMirror,omitempty"`
+	RemoteSetup         bool                      `json:"remoteSetup,omitempty"`
+	LinearProjects      []LinearProject           `json:"linearProjects,omitempty"`
+	ID                  string                    `json:"id"`
+	Name                string                    `json:"name"`
+	Online              bool                      `json:"online"`
+	Busy                bool                      `json:"busy"`
+	LastSeen            time.Time                 `json:"lastSeen,omitzero"`
+	Repositories        []gitmodule.RepositoryRef `json:"repositories"`
+	Models              *CodexModelCatalog        `json:"models,omitempty"`
 }
 
 type LinearProject struct {
@@ -126,18 +128,21 @@ func (s ExecutionSubmission) Valid() bool {
 type Execution struct {
 	ID string `json:"id"`
 	ExecutionSubmission
-	State     string              `json:"state"`
-	Reason    string              `json:"reason,omitempty"`
-	CreatedAt time.Time           `json:"createdAt"`
-	UpdatedAt time.Time           `json:"updatedAt"`
-	Result    *ExecutionResult    `json:"result,omitempty"`
-	Questions []ExecutionQuestion `json:"questions,omitempty"`
-	Progress  *ExecutionProgress  `json:"progress,omitempty"`
-	Subtasks  []SubtaskResult     `json:"subtasks,omitempty"`
-	CanRevise bool                `json:"canRevise,omitempty"`
+	State          string              `json:"state"`
+	Reason         string              `json:"reason,omitempty"`
+	CreatedAt      time.Time           `json:"createdAt"`
+	UpdatedAt      time.Time           `json:"updatedAt"`
+	Result         *ExecutionResult    `json:"result,omitempty"`
+	Questions      []ExecutionQuestion `json:"questions,omitempty"`
+	Progress       *ExecutionProgress  `json:"progress,omitempty"`
+	Subtasks       []SubtaskResult     `json:"subtasks,omitempty"`
+	EffectiveCodex CodexOptions        `json:"effectiveCodex,omitzero"`
+	ChinaMirror    bool                `json:"chinaMirror,omitempty"`
+	CanRevise      bool                `json:"canRevise,omitempty"`
 }
 
 type ExecutionResult struct {
+	EffectiveCodex  CodexOptions           `json:"effectiveCodex,omitzero"`
 	OpenViking      *knowledge.SessionLink `json:"openViking,omitempty"`
 	RevisionIssueID string                 `json:"revisionIssueId,omitempty"`
 	Subtasks        []SubtaskResult        `json:"subtasks,omitempty"`

@@ -444,3 +444,53 @@ func TestTransitionIssueWritesOnlyStateAndReadsItBack(t *testing.T) {
 		t.Fatalf("retry did not recognize the state: %v, writes=%d", err, writes.Load())
 	}
 }
+
+func TestRelayedAuthorizationExchangesValidStateOnceOnTarget(t *testing.T) {
+	var exchanges atomic.Int32
+	var gotChallenge atomic.Value
+	p := testPlugin(t, func(w http.ResponseWriter, r *http.Request) {
+		if r.Header.Get("Authorization") == "Bearer remote-access" {
+			reply(w, map[string]any{"viewer": map[string]any{"id": "user", "name": "Remote User", "organization": map[string]string{"id": "remote-org"}}})
+			return
+		}
+		exchanges.Add(1)
+		if err := r.ParseForm(); err != nil || r.Form.Get("code") != "test-code" || r.Form.Get("client_id") != "remote-client" {
+			t.Error("unexpected OAuth token request")
+		}
+		challenge := sha256.Sum256([]byte(r.Form.Get("code_verifier")))
+		gotChallenge.Store(base64.RawURLEncoding.EncodeToString(challenge[:]))
+		_, _ = io.WriteString(w, `{"access_token":"remote-access","refresh_token":"remote-refresh","expires_in":3600}`)
+	})
+	ctx := t.Context()
+	listener, err := net.Listen("tcp4", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer listener.Close()
+	cfg := tracking.OAuthConfig{ClientID: "remote-client", RedirectURI: "http://" + listener.Addr().String() + "/oauth/linear/callback"}
+	if err := p.Configure(ctx, cfg); err != nil {
+		t.Fatal(err)
+	}
+	authorization, err := p.BeginRelayedAuthorization(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	assertCode(t, p.CompleteRelayedAuthorization(ctx, "bad-state", "test-code"), "oauth_state")
+	if exchanges.Load() != 0 {
+		t.Fatal("invalid state reached the token endpoint")
+	}
+	if err := p.CompleteRelayedAuthorization(ctx, authorization.ID, "test-code"); err != nil {
+		t.Fatal(err)
+	}
+	if err := p.CompleteRelayedAuthorization(ctx, authorization.ID, "test-code"); err != nil {
+		t.Fatal(err)
+	}
+	u, _ := url.Parse(authorization.URL)
+	if exchanges.Load() != 1 || gotChallenge.Load() != u.Query().Get("code_challenge") {
+		t.Fatal("authorization was replayed or PKCE challenge did not match")
+	}
+	state, err := p.Status(ctx)
+	if err != nil || state.Authorization.Status != "connected" || len(state.Connections) != 2 || state.Connections[1].ID != "remote-org:user" {
+		t.Fatalf("target authorization was not saved: %+v, %v", state, err)
+	}
+}

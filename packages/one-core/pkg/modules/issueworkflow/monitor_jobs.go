@@ -36,7 +36,7 @@ func (j Job) monitorSummary() api.JobSummary {
 		ID: j.ID, ProjectID: j.ProjectID, IssueID: j.Issue.ID, Identifier: j.Issue.Identifier, Title: j.Issue.Title,
 		Description: monitorText(j.Issue.Description), URL: j.Issue.URL,
 		Stage: string(j.Stage), CreatedAt: j.Created, UpdatedAt: j.Updated, LastError: monitorText(j.LastError),
-		Codex: j.Codex, CanReadCodexResult: j.canReadCodexResult(), Question: j.Question, Progress: j.Progress,
+		Codex: j.Codex, EffectiveCodex: j.EffectiveCodex, CanReadCodexResult: j.canReadCodexResult(), Question: j.Question, Progress: j.Progress,
 		Subtasks: j.subtaskResults(), OpenViking: j.OpenViking,
 	}
 	if j.Revision != nil {

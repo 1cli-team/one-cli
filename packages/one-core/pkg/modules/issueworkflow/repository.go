@@ -24,14 +24,34 @@ type Repository struct {
 var errNoChanges = errors.New("no code changes to publish")
 
 func git(ctx context.Context, dir string, args ...string) (string, error) {
+	return gitWithEnv(ctx, os.Environ(), dir, args...)
+}
+
+func gitWithEnv(ctx context.Context, env []string, dir string, args ...string) (string, error) {
 	cmd := exec.CommandContext(ctx, "git", append([]string{"-c", "core.hooksPath=" + os.DevNull}, args...)...)
 	cmd.Dir = dir
-	cmd.Env = append(os.Environ(), "GIT_TERMINAL_PROMPT=0")
+	cmd.Env = append(env, "GIT_TERMINAL_PROMPT=0")
 	out, err := cmd.Output()
 	if err != nil {
 		return "", fmt.Errorf("git %s in %s: %w", args[0], dir, err)
 	}
 	return strings.TrimSpace(string(out)), nil
+}
+
+func (r Repository) gitOrigin(ctx context.Context, dir string, args ...string) (string, error) {
+	flags := []string{"remote", "get-url", "origin"}
+	if args[0] == "push" {
+		flags = []string{"remote", "get-url", "--push", "origin"}
+	}
+	remote, err := git(ctx, dir, flags...)
+	if err != nil {
+		return "", err
+	}
+	env, err := r.Hosts.GitEnvironment(os.Environ(), remote)
+	if err != nil {
+		return "", err
+	}
+	return gitWithEnv(ctx, env, dir, args...)
 }
 
 func (r Repository) origin(ctx context.Context, p Project) error {
@@ -61,7 +81,7 @@ func (r Repository) Prepare(ctx context.Context, job *Job, checkpoint func(Job) 
 			job.Project.Base = base
 		}
 		ref := "refs/remotes/origin/" + job.Project.Base
-		if _, err := git(ctx, job.Project.Root, "fetch", "--no-tags", "origin", "+refs/heads/"+job.Project.Base+":"+ref); err != nil {
+		if _, err := r.gitOrigin(ctx, job.Project.Root, "fetch", "--no-tags", "origin", "+refs/heads/"+job.Project.Base+":"+ref); err != nil {
 			return err
 		}
 		sha, err := git(ctx, job.Project.Root, "rev-parse", "--verify", ref+"^{commit}")
@@ -97,7 +117,7 @@ func (r Repository) Prepare(ctx context.Context, job *Job, checkpoint func(Job) 
 }
 
 func originDefaultBranch(ctx context.Context, root string) (string, error) {
-	output, err := git(ctx, root, "ls-remote", "--symref", "origin", "HEAD")
+	output, err := (Repository{}).gitOrigin(ctx, root, "ls-remote", "--symref", "origin", "HEAD")
 	if err != nil {
 		return "", i18n.Errorf("linear.cli.workflow_read_default_branch", err)
 	}
@@ -150,7 +170,7 @@ func (r Repository) Push(ctx context.Context, job Job) error {
 	if err := r.origin(ctx, job.Project); err != nil {
 		return err
 	}
-	_, err := git(ctx, job.Worktree, "push", "origin", job.HeadSHA+":refs/heads/"+job.Branch)
+	_, err := r.gitOrigin(ctx, job.Worktree, "push", "origin", job.HeadSHA+":refs/heads/"+job.Branch)
 	return err
 }
 
@@ -233,7 +253,7 @@ func (r Repository) PrepareRevision(ctx context.Context, job Job) (string, error
 	if err := r.ValidateSubtaskStart(ctx, job, head); err != nil {
 		return "", err
 	}
-	if _, err := git(ctx, job.Worktree, "fetch", "--no-tags", "origin", "refs/heads/"+job.Branch); err != nil {
+	if _, err := r.gitOrigin(ctx, job.Worktree, "fetch", "--no-tags", "origin", "refs/heads/"+job.Branch); err != nil {
 		return "", err
 	}
 	base, err := git(ctx, job.Worktree, "rev-parse", "--verify", "FETCH_HEAD^{commit}")
@@ -266,7 +286,7 @@ func (r Repository) PushRevision(ctx context.Context, job Job) error {
 		return revisionBranchChanged
 	}
 	ref := "refs/heads/" + job.Branch
-	remote, err := git(ctx, job.Worktree, "ls-remote", "origin", ref)
+	remote, err := r.gitOrigin(ctx, job.Worktree, "ls-remote", "origin", ref)
 	if err != nil {
 		return err
 	}
@@ -278,6 +298,6 @@ func (r Repository) PushRevision(ctx context.Context, job Job) error {
 	}
 	// The single-parent check makes this a fast-forward. The lease prevents
 	// recreating a branch deleted on merge or racing with another update.
-	_, err = git(ctx, job.Worktree, "push", "--force-with-lease="+ref+":"+job.BaseSHA, "origin", job.HeadSHA+":"+ref)
+	_, err = r.gitOrigin(ctx, job.Worktree, "push", "--force-with-lease="+ref+":"+job.BaseSHA, "origin", job.HeadSHA+":"+ref)
 	return err
 }

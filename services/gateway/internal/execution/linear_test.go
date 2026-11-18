@@ -23,7 +23,7 @@ func TestLinearDispatchPreservesTargetAcrossAliasesAndRestart(t *testing.T) {
 		Repositories: []api.RepositorySummary{{GitHub: "owner/repo"}}}
 	issue := api.ResolvedIssue{Dispatchable: true, ID: "22222222-2222-2222-2222-222222222222", Identifier: "TEST-42", Project: project}
 	worker := "w-" + strings.ToLower(rand.Text())
-	if err := store.join(joinRequest{ID: worker, Name: "remote", Code: store.invite().Code}, rand.Text()+rand.Text()); err != nil {
+	if err := store.join(joinRequest{ID: worker, Name: "remote", Code: store.invite().Code}, rand.Text()+rand.Text(), false); err != nil {
 		t.Fatal(err)
 	}
 	session := rand.Text()
@@ -72,6 +72,23 @@ func TestLinearDispatchPreservesTargetAcrossAliasesAndRestart(t *testing.T) {
 	if err != nil || resumed == nil || resumed.Attempt != claimed.Attempt || resumed.Session != newSession {
 		t.Fatalf("resumption did not keep the Linear assignment: %+v %v", resumed, err)
 	}
+	settings := api.CodexOptions{Model: "resolved-model", Effort: "low"}
+	progress := report{JobID: resumed.ID, Attempt: resumed.Attempt, Result: api.ExecutionResult{EffectiveCodex: settings}}
+	if err := store.upload(worker, progress); err != nil {
+		t.Fatal(err)
+	}
+	assertTaskSettings := func() {
+		t.Helper()
+		task := store.taskPage(api.TaskFilter{}, nil).Items[0]
+		if task.Kind != api.LinearWorkflow || task.Codex != req.Codex || task.EffectiveCodex != settings {
+			t.Fatalf("task request = %+v, recorded settings = %+v", task.Codex, task.EffectiveCodex)
+		}
+	}
+	assertTaskSettings()
+	if err := store.complete(worker, report{JobID: resumed.ID, Attempt: resumed.Attempt}); err != nil {
+		t.Fatal(err)
+	}
+	assertTaskSettings()
 
 	// A legacy local dispatch reserved before this review stays assigned locally.
 	issue.ID, issue.Identifier, issue.LocalStatus = "33333333-3333-3333-3333-333333333333", "TEST-43", api.Submitted
@@ -87,19 +104,20 @@ func TestLinearExecutionUsesWorkerWorkflowAndReturnsPR(t *testing.T) {
 		Repositories: []api.RepositorySummary{{GitHub: "owner/repo"}}}
 	issue := &api.LinearExecution{IssueID: "22222222-2222-2222-2222-222222222222", Identifier: "TEST-42", Project: project}
 	options := api.CodexOptions{Model: "fixture-model"}
+	settings := api.CodexOptions{Model: "resolved-model", Effort: "medium"}
 	pr := api.JobPullRequest{Number: 42, URL: "https://github.com/owner/repo/pull/42"}
 	runner := Runner{workflow: func(_ context.Context, req api.WorkRequest) (api.WorkReply, error) {
 		switch req.Operation {
 		case api.WorkStatus:
 			return linearReply(http.StatusOK, api.Snapshot{Mappings: []api.ProjectSummary{{ProjectID: project.ID, GitHub: "owner/repo"}}})
 		case api.WorkDispatchWithOptions:
-			if req.ProjectID != project.ID || req.IssueID != issue.IssueID || req.Codex != options {
+			if req.ProjectID != project.ID || req.IssueID != issue.IssueID || req.Codex != options || !req.ChinaMirror {
 				t.Fatalf("worker dispatch: %+v", req)
 			}
 			return linearReply(http.StatusAccepted, api.DispatchResult{Status: api.Processing})
 		case api.WorkMonitorJobs:
 			return linearReply(http.StatusOK, api.JobPage{Items: []api.JobSummary{{
-				ProjectID: project.ID, Identifier: issue.Identifier, Stage: "review",
+				ProjectID: project.ID, Identifier: issue.Identifier, Stage: "review", EffectiveCodex: settings,
 				Repositories: []api.JobRepository{{PR: &pr}},
 			}}})
 		}
@@ -107,8 +125,8 @@ func TestLinearExecutionUsesWorkerWorkflowAndReturnsPR(t *testing.T) {
 		return api.WorkReply{}, nil
 	}}
 	var logs bytes.Buffer
-	result := runner.runLinear(t.Context(), api.ExecutionInput{Kind: api.LinearWorkflow, Linear: issue, Codex: options}, &logs)
-	if result.Error != "" || len(result.PullRequests) != 1 || result.PullRequests[0] != pr ||
+	result := runner.runLinear(t.Context(), api.ExecutionInput{Kind: api.LinearWorkflow, Linear: issue, Codex: options}, true, &logs)
+	if result.Error != "" || result.EffectiveCodex != settings || len(result.PullRequests) != 1 || result.PullRequests[0] != pr ||
 		!strings.Contains(logs.String(), issue.Identifier) {
 		t.Fatalf("result: %+v, logs: %s", result, &logs)
 	}

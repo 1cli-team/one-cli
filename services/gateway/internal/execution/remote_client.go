@@ -66,6 +66,7 @@ func (l remoteLink) send(ctx context.Context, endpoint *url.URL, input, out any)
 	}
 	req.Header.Set("Authorization", "Bearer "+l.config.Token)
 	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set(mirrorCapabilityHeader, "1")
 	resp, err := l.http.Do(req)
 	if err != nil {
 		return err
@@ -101,11 +102,26 @@ func (l remoteLink) claim(ctx context.Context, session string) (*assignment, err
 }
 
 func (l remoteLink) complete(ctx context.Context, input report) error {
-	return l.send(ctx, l.endpoint("complete"), input, new(struct{}))
+	return l.sendReport(ctx, "complete", input)
 }
 
 func (l remoteLink) upload(ctx context.Context, input report) error {
-	return l.send(ctx, l.endpoint("logs"), input, new(struct{}))
+	return l.sendReport(ctx, "logs", input)
+}
+
+func (l remoteLink) sendReport(ctx context.Context, operation string, input report) error {
+	endpoint := l.endpoint(operation)
+	err := l.send(ctx, endpoint, input, new(struct{}))
+	if input.Result.EffectiveCodex != (api.CodexOptions{}) && rejectsWorkerReport(err) {
+		input.Result.EffectiveCodex = api.CodexOptions{}
+		return l.send(ctx, endpoint, input, new(struct{}))
+	}
+	return err
+}
+
+func rejectsWorkerReport(err error) bool {
+	var response *api.ResponseError
+	return errors.As(err, &response) && response.Code == http.StatusBadRequest && response.Reason == "invalid_worker_report"
 }
 
 func (l remoteLink) exchangeQuestion(ctx context.Context, input questionReport) (api.ExecutionQuestion, error) {
@@ -127,7 +143,7 @@ func readWorkerConfig(path string) (workerConfig, error) {
 	return cfg, err
 }
 
-func Join(ctx context.Context, endpoint, name, code string) (string, error) {
+func Join(ctx context.Context, endpoint, name, code string, replace bool) (string, error) {
 	dir, err := userdirs.Config()
 	if err != nil {
 		return "", err
@@ -146,7 +162,14 @@ func Join(ctx context.Context, endpoint, name, code string) (string, error) {
 	}
 	defer lock.Close()
 
-	cfg, err := readWorkerConfig(path)
+	proposed := path
+	if replace {
+		if err := ValidateWorkerHTTPS(endpoint); err != nil {
+			return "", err
+		}
+		proposed = path + ".pending"
+	}
+	cfg, err := readWorkerConfig(proposed)
 	if errors.Is(err, os.ErrNotExist) {
 		cfg = workerConfig{URL: endpoint, Name: name, ID: "w-" + strings.ToLower(rand.Text()), Token: rand.Text() + rand.Text()}
 	} else if err != nil {
@@ -160,11 +183,17 @@ func Join(ctx context.Context, endpoint, name, code string) (string, error) {
 	}
 	defer client.http.CloseIdleConnections()
 	// Persist the proposed identity so a lost join response can be retried.
-	if err := writeJSON(path, cfg); err != nil {
+	if err := writeJSON(proposed, cfg); err != nil {
 		return "", err
 	}
 	if err := client.send(ctx, client.base.JoinPath("worker", "v1", "join"), joinRequest{ID: cfg.ID, Name: cfg.Name, Code: code}, new(struct{})); err != nil {
 		return "", i18n.Errorf("gateway.worker_join_failed", err)
+	}
+	if replace {
+		if err := writeJSON(path, cfg); err != nil {
+			return "", err
+		}
+		_ = os.Remove(proposed)
 	}
 	return cfg.ID, nil
 }
@@ -200,6 +229,18 @@ func RunRemote(ctx context.Context, one, workflowConfig string) error {
 	if err != nil {
 		return err
 	}
+	secure := client.base.Scheme == "https"
+	if secure && workflowConfig == "" {
+		workflowConfig = filepath.Join(paths.Config, "gateway-worker-workflow-"+cfg.ID+".json")
+		if _, err := os.Stat(workflowConfig); errors.Is(err, os.ErrNotExist) {
+			initial := issueworkflow.Config{StateDir: filepath.Join(root, "workflow"), Projects: map[string]issueworkflow.Project{}}
+			if err := writeJSON(workflowConfig, initial); err != nil {
+				return err
+			}
+		} else if err != nil {
+			return err
+		}
+	}
 	if workflowConfig == "" {
 		return runWorker(ctx, client, runner)
 	}
@@ -214,6 +255,10 @@ func RunRemote(ctx context.Context, one, workflowConfig string) error {
 	var background sync.WaitGroup
 	background.Go(func() { supervisor.Run(ctx, one, workflowConfig) })
 	background.Go(func() { client.syncTaskSnapshots(ctx, supervisor.Call) })
+	if secure {
+		setup := newSetupService(ctx, runner)
+		background.Go(func() { client.runSetup(ctx, setup.handle) })
+	}
 	defer func() {
 		cancel()
 		background.Wait()

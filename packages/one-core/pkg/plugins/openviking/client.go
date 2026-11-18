@@ -120,6 +120,12 @@ func sdk(saved connection, timeout time.Duration) (*ov.Client, error) {
 	return ov.NewClient(ov.Config{BaseURL: saved.URL, HTTPClient: &transport, ExtraHeaders: headers})
 }
 
+func findOptions(uri string, limit int) ov.FindOptions {
+	// The Go SDK serializes unset boolean pointers as null. The hosted
+	// search API requires boolean values for these options when present.
+	return ov.FindOptions{TargetURI: uri, Limit: limit, IncludeProvenance: new(false), ReadContent: new(false)}
+}
+
 func sdkError(err error) error {
 	if err == nil || errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
 		return err

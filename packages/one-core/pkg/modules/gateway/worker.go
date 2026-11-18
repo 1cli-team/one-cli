@@ -47,6 +47,7 @@ type WorkRequest struct {
 	RepositoryID      string
 	Mapping           ProjectInput
 	Codex             CodexOptions
+	ChinaMirror       bool
 	AskUser           bool
 	TrackProgress     bool
 	Answer            ExecutionAnswer

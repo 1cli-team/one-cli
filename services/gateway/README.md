@@ -330,6 +330,60 @@ one-gateway worker join http://192.168.1.20:39129 --name linux-01
 one-gateway worker run
 ```
 
+### 通过 One 配置远端授权 / Configure remote accounts with One
+
+Start Gateway with `-worker-https-url https://gateway.example.internal` to
+accept Worker connections through the same HTTPS origin as the control API.
+Use direct TLS or a local TLS-terminating proxy that overwrites
+`X-Forwarded-Proto`. On the target, run the current Gateway binary and join using
+the HTTPS invite. For an existing HTTP Worker, finish its assigned jobs, stop the
+service, and pass `--replace` to `worker join` to obtain a new HTTPS identity.
+Restart `worker run` and use the new ID from `one gateway workers`.
+
+启动 Gateway 时加上 `-worker-https-url https://gateway.example.internal`，
+Worker 和控制 API 即可共用同一个 HTTPS 地址。使用直接 TLS，或由本机代理终止 TLS
+并覆盖 `X-Forwarded-Proto`。执行机使用新版 Gateway 二进制和 HTTPS 邀请配对。
+已有 HTTP Worker 时，先等已派发任务结束，再停止服务，用
+`worker join --replace` 获取新的 HTTPS 身份。重启 `worker run` 后，
+从 `one gateway workers` 取得新的 ID。
+
+Run the following from the initiating machine. The Linear command opens the
+local browser and sends the one-time callback code to the target for exchange.
+It uses the public client ID and redirect URI from the local One configuration
+by default. Gitea reads a target-specific token from the hidden prompt or
+standard input. The target saves the credentials in its own One configuration.
+
+从发起端运行以下命令。Linear 在本机浏览器中授权，随后把一次性授权码交给目标机器
+交换令牌。默认使用本机 One 配置中的公开 Client ID 和回调地址。Gitea 令牌使用目标机
+专用令牌，可通过隐藏提示或标准输入传入。两种凭据均保存在目标机器自己的 One 配置中。
+
+```sh
+one gateway setup linear --worker WORKER_ID
+one gateway setup gitea https://git.example.internal --worker WORKER_ID
+one gateway setup clone https://git.example.internal/team/repo.git --worker WORKER_ID
+one gateway setup project LINEAR_PROJECT_ID --worker WORKER_ID
+one gateway setup status --worker WORKER_ID -o json
+```
+
+Repeat for the Gateway's built-in execution machine (`--worker local`), which
+resolves and routes Linear issues. Each target uses its own Linear connection,
+Git identity, Gitea token and Codex login. Use a distinct service account or
+`ONE_HOME` when running two roles on the same host with independent credentials.
+A Worker paired over HTTPS initializes its own workflow config if
+`--workflow-config` is omitted. `setup project` reads the initiating machine’s
+`gateway-server.json` by default and applies repository references and Linear
+states to the target's workflow. Use `--config` for a different source file.
+After setup, the target continues to execute and report results while the
+initiating machine is offline.
+
+Gateway 本机（`--worker local`）负责查找 Linear 需求和派发，也需要配置。
+每台目标机器使用自己的 Linear 连接、Git 提交身份、Gitea 令牌和 Codex 登录。
+同一机器运行两个角色且需要独立凭据时，请分别使用服务账号或 `ONE_HOME`。
+HTTPS Worker 在省略 `--workflow-config` 时会初始化专用流程配置。
+`setup project` 默认读取发起端的 `gateway-server.json`，并向目标导入仓库引用及
+Linear 状态映射。可用 `--config` 指定其他来源文件。配置完成后，发起端离线时，
+目标机器仍可执行任务并回传结果。
+
 ### 在指定机器派发 Linear 需求 / Dispatch Linear issues to a specific machine
 
 In **Gateway monitor → Dispatch issue**, select a Linear issue and an eligible

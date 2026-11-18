@@ -109,7 +109,7 @@ func (s *Service) revise(ctx context.Context, req api.WorkRequest) error {
 	revision := Job{
 		ProjectID: parent.ProjectID, Project: job.Project, Issue: parent.Issue,
 		Worktree: job.Worktree, CheckDir: job.CheckDir, Branch: job.Branch, PR: pr, ThreadID: threadID,
-		Codex: req.Codex, AskUser: req.AskUser, TrackProgress: req.TrackProgress,
+		Codex: req.Codex, ChinaMirror: req.ChinaMirror, AskUser: req.AskUser, TrackProgress: req.TrackProgress,
 		KnowledgeScope: knowledgeScope, OpenVikingSkillTool: skillTool, OpenViking: ovSession,
 		Revision: &Revision{
 			CommentID: req.RevisionCommentID, Body: comment.Body,

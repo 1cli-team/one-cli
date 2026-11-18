@@ -685,6 +685,19 @@
 			"inviteDescription": "Run these commands on the execution machine. Enter the pairing code before {{time}}.",
 			"inviteCode": "Pairing code",
 			"status": "Status",
+			"workerActions": "Actions",
+			"openViking": {
+				"title": "Sync OpenViking",
+				"actionFor": "Sync OpenViking to {{worker}}",
+				"description": "Send the saved OpenViking address and API key to {{worker}} through Gateway. This replaces its saved connection.",
+				"action": "Sync connection",
+				"pending": "Syncing…",
+				"success": "The connection was verified and saved on {{worker}}.",
+				"failed": "Could not sync the OpenViking connection.",
+				"loadFailed": "Could not load the saved OpenViking connection.",
+				"localRequired": "Save an OpenViking connection in Settings first.",
+				"httpsRequired": "HTTPS pairing required"
+			},
 			"noWorkers": "No execution machines are registered.",
 			"jobs": "Execution tasks",
 			"all": "All",
@@ -709,7 +722,8 @@
 			},
 			"reason": {
 				"worker_offline": "Waiting for the selected machine to reconnect.",
-				"worker_disconnected": "The machine disconnected during execution. Its outcome is pending."
+				"worker_disconnected": "The machine disconnected during execution. Its outcome is pending.",
+				"worker_mirror_unavailable": "Waiting for the selected machine to update to a version that supports China mirrors."
 			},
 			"loadError": "Could not load Gateway execution data.",
 			"noJobs": "No execution tasks match these filters.",
@@ -764,6 +778,16 @@
 		},
 		"processing": "Processing",
 		"settings": "Gateway connection",
+		"downloads": {
+			"title": "Task downloads",
+			"useChinaMirror": "Use China mirrors",
+			"hint": "Gateway sends the public mirror preset with newly dispatched tasks when enabled.",
+			"connect": "Connect to a Gateway to change this setting.",
+			"updateRequired": "Update Gateway to configure task downloads.",
+			"saving": "Saving download settings",
+			"loadError": "Could not load Gateway download settings.",
+			"saveError": "Could not save Gateway download settings."
+		},
 		"monitor": "Gateway monitor",
 		"connection": "Connection",
 		"connectionDetails": "Connection details",
@@ -802,6 +826,8 @@
 			"noMatching": "No tasks match the selected filters.",
 			"partial": "Local workflow details are temporarily unavailable.",
 			"runs": "Execution history",
+			"requestedSetting": "{{value}} (requested)",
+			"unrecordedSetting": "Not recorded",
 			"initialRun": "Initial execution",
 			"error": "Could not load tasks. Refresh to try again.",
 			"updateRequired": "Update One Desktop, Gateway, and One CLI on the execution machine to view task details.",

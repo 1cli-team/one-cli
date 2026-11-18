@@ -55,7 +55,7 @@ func TestLocalExecutionSurvivesRestart(t *testing.T) {
 
 	root := t.TempDir()
 	one := filepath.Join(root, "one")
-	if err := os.WriteFile(one, []byte("#!/bin/sh\nset -eu\ntest -z \"${ONE_GATEWAY_TOKEN:-}\"\ntest -e one.manifest.toml\ntest \"$1 $2 $3 $4\" = 'run check -p app'\nprintf 'checking\\n' >&2\nprintf '{\"status\":\"succeeded\"}'\n"), 0700); err != nil {
+	if err := os.WriteFile(one, []byte("#!/bin/sh\nset -eu\ntest -z \"${ONE_GATEWAY_TOKEN:-}\"\ntest \"${ONE_CHINA_MIRROR:-}\" = 1\ntest -e one.manifest.toml\ntest \"$1 $2 $3 $4\" = 'run check -p app'\nprintf 'checking\\n' >&2\nprintf '{\"status\":\"succeeded\"}'\n"), 0700); err != nil {
 		t.Fatal(err)
 	}
 	runner, err := NewRunner(filepath.Join(root, "local"), one, nil)
@@ -102,10 +102,22 @@ func TestLocalExecutionSurvivesRestart(t *testing.T) {
 		CommitSHA: sha, Project: "app", Task: "check",
 	}}
 	var job, duplicate api.Execution
+	const downloadsPath = "/v1/settings/downloads"
+	var downloads api.DownloadSettings
+	call(handler, "GET", downloadsPath, nil, http.StatusOK, &downloads)
+	if downloads.ChinaMirror {
+		t.Fatal("China mirrors must be opt-in")
+	}
+	call(handler, "PUT", downloadsPath, struct{}{}, http.StatusBadRequest, nil)
+	call(handler, "PUT", downloadsPath, api.DownloadSettings{ChinaMirror: true}, http.StatusOK, &downloads)
+	if !downloads.ChinaMirror {
+		t.Fatal("PUT did not return the saved download settings")
+	}
 	call(handler, "POST", "/v1/executions", input, http.StatusAccepted, &job)
+	call(handler, "PUT", downloadsPath, api.DownloadSettings{}, http.StatusOK, nil)
 	call(handler, "POST", "/v1/executions", input, http.StatusAccepted, &duplicate)
-	if job.ID != duplicate.ID {
-		t.Fatalf("duplicate job IDs: %s and %s", job.ID, duplicate.ID)
+	if job.ID != duplicate.ID || !job.ChinaMirror || !duplicate.ChinaMirror {
+		t.Fatalf("repeated dispatch lost the original settings: %+v, %+v", job, duplicate)
 	}
 	conflict := input
 	conflict.Input.Task = "another"
@@ -130,9 +142,13 @@ func TestLocalExecutionSurvivesRestart(t *testing.T) {
 	}
 	defer reopened.Close()
 	handler = Control(token, reopened, http.NotFoundHandler(), "")
+	call(handler, "GET", downloadsPath, nil, http.StatusOK, &downloads)
+	if downloads.ChinaMirror {
+		t.Fatal("disabled setting did not persist after restart")
+	}
 	var persisted api.Execution
 	call(handler, "GET", path, nil, http.StatusOK, &persisted)
-	if persisted.State != api.ExecutionSucceeded || persisted.Result == nil || persisted.Result.CommitSHA != sha {
+	if persisted.State != api.ExecutionSucceeded || persisted.Result == nil || persisted.Result.CommitSHA != sha || !persisted.ChinaMirror {
 		t.Fatalf("unexpected persisted result: %+v", persisted)
 	}
 	var logs api.ExecutionLogs

@@ -39,6 +39,7 @@ type TaskPage struct {
 }
 
 type Task struct {
+	Kind             string                   `json:"kind,omitempty"`
 	OpenViking       *knowledge.SessionLink   `json:"openViking,omitempty"`
 	ID               string                   `json:"id"`
 	Identifier       string                   `json:"identifier,omitempty"`
@@ -52,6 +53,7 @@ type Task struct {
 	LastError        string                   `json:"lastError,omitempty"`
 	LocalResultJobID string                   `json:"localResultJobId,omitempty"`
 	Codex            CodexOptions             `json:"codex,omitzero"`
+	EffectiveCodex   CodexOptions             `json:"effectiveCodex,omitzero"`
 	Repository       *gitmodule.RepositoryRef `json:"repository,omitempty"`
 	Repositories     []JobRepository          `json:"repositories,omitempty"`
 	PullRequests     []JobPullRequest         `json:"pullRequests,omitempty"`
@@ -60,15 +62,17 @@ type Task struct {
 }
 
 type TaskRun struct {
-	ID         string             `json:"id"`
-	WorkerID   string             `json:"workerId"`
-	WorkerName string             `json:"workerName"`
-	Source     string             `json:"source"`
-	State      string             `json:"state"`
-	Revision   bool               `json:"revision,omitempty"`
-	CreatedAt  time.Time          `json:"createdAt"`
-	Question   *ExecutionQuestion `json:"question,omitempty"`
-	Progress   *ExecutionProgress `json:"progress,omitempty"`
+	Codex          CodexOptions       `json:"codex,omitzero"`
+	EffectiveCodex CodexOptions       `json:"effectiveCodex,omitzero"`
+	ID             string             `json:"id"`
+	WorkerID       string             `json:"workerId"`
+	WorkerName     string             `json:"workerName"`
+	Source         string             `json:"source"`
+	State          string             `json:"state"`
+	Revision       bool               `json:"revision,omitempty"`
+	CreatedAt      time.Time          `json:"createdAt"`
+	Question       *ExecutionQuestion `json:"question,omitempty"`
+	Progress       *ExecutionProgress `json:"progress,omitempty"`
 }
 
 func (c *Client) Tasks(ctx context.Context, filter TaskFilter) (TaskPage, error) {

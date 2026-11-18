@@ -36,6 +36,7 @@ import {
 	SelectValue,
 } from "@/components/ui/select";
 import { useThemeStore, type ThemeMode } from "@/lib/stores/theme";
+import { GatewayDownloadSettings } from "@/features/gateway/GatewayDownloadSettings";
 
 export function AccountSettings() {
 	const { t } = useTranslation();
@@ -246,6 +247,7 @@ export function AccountSettings() {
 					</SettingsRow>
 				</div>
 			</SettingsSection>
+			<GatewayDownloadSettings />
 		</SettingsPage>
 	);
 }

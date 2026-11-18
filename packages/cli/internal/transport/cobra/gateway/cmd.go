@@ -59,6 +59,7 @@ func Command() *cobra.Command {
 
 	root.AddCommand(
 		configureCommand(),
+		setupCommand(),
 		dispatchCommand(),
 		readCommand("status", "gateway.cli.status", func(ctx context.Context, client *gateway.Client) (any, error) {
 			return client.Snapshot(ctx)

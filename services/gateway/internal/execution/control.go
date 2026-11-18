@@ -40,7 +40,7 @@ func storeProblem(w http.ResponseWriter, err error) {
 	switch {
 	case errors.Is(err, errNotFound), errors.Is(err, errWorker):
 		problem(w, http.StatusNotFound, err.Error())
-	case errors.Is(err, errConflict), errors.Is(err, errRepository), errors.Is(err, errKind), errors.Is(err, errModel),
+	case errors.Is(err, errConflict), errors.Is(err, errRepository), errors.Is(err, errKind), errors.Is(err, errModel), errors.Is(err, errWorkerMirror),
 		errors.Is(err, errQuestionConflict), errors.Is(err, errContinueConflict), errors.Is(err, errRevisionPR), errors.Is(err, errRevisionBusy):
 		problem(w, http.StatusConflict, err.Error())
 	default:
@@ -48,7 +48,7 @@ func storeProblem(w http.ResponseWriter, err error) {
 	}
 }
 
-func Control(token string, s *Store, fallback http.Handler, workerURL string) http.Handler {
+func Control(token string, s *Store, fallback http.Handler, workerURL string, setup ...*Setup) http.Handler {
 	mux := http.NewServeMux()
 	handle := func(pattern string, fn http.HandlerFunc) {
 		mux.HandleFunc(pattern, func(w http.ResponseWriter, r *http.Request) {
@@ -59,8 +59,29 @@ func Control(token string, s *Store, fallback http.Handler, workerURL string) ht
 			fn(w, r)
 		})
 	}
+	if len(setup) > 0 {
+		handle("POST /v1/workers/{worker}/setup", func(w http.ResponseWriter, r *http.Request) {
+			setup[0].control(s, w, r)
+		})
+	}
 	handle("GET /v1/workers", func(w http.ResponseWriter, _ *http.Request) {
 		respond(w, http.StatusOK, s.workersList())
+	})
+	handle("GET /v1/settings/downloads", func(w http.ResponseWriter, _ *http.Request) {
+		respond(w, http.StatusOK, s.downloadSettings())
+	})
+	handle("PUT /v1/settings/downloads", func(w http.ResponseWriter, r *http.Request) {
+		var input api.DownloadSettingsInput
+		if !readBody(w, r, 1024, &input) || input.ChinaMirror == nil {
+			problem(w, http.StatusBadRequest, "invalid_download_settings")
+			return
+		}
+		settings := api.DownloadSettings{ChinaMirror: *input.ChinaMirror}
+		if err := s.setDownloadSettings(settings); err != nil {
+			storeProblem(w, err)
+			return
+		}
+		respond(w, http.StatusOK, settings)
 	})
 	if workerURL != "" {
 		handle("POST /v1/workers/invite", func(w http.ResponseWriter, _ *http.Request) {

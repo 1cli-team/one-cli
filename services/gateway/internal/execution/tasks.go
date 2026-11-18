@@ -66,6 +66,7 @@ func (s *Store) taskPage(filter api.TaskFilter, local []api.JobSummary) api.Task
 		run := api.TaskRun{
 			ID: job.ID, WorkerID: job.WorkerID, WorkerName: cmp.Or(workerNames[job.WorkerID], job.WorkerID),
 			Source: job.Source, State: job.State, CreatedAt: job.CreatedAt, Revision: linear != nil && linear.Revision != nil,
+			Codex: job.Input.Codex, EffectiveCodex: job.EffectiveCodex,
 		}
 		if job.State == api.ExecutionWaitingForAnswer && len(job.Questions) != 0 {
 			run.Question = &job.Questions[len(job.Questions)-1]
@@ -105,6 +106,7 @@ func (e taskEntry) finish(localName string) api.Task {
 	task := e.task
 	root := e.original
 	if root != nil {
+		task.Kind = root.Input.Kind
 		if issue := root.Input.Linear; issue != nil {
 			task.Identifier, task.Title, task.URL = issue.Identifier, issue.Title, issue.URL
 		} else {
@@ -118,6 +120,7 @@ func (e taskEntry) finish(localName string) api.Task {
 		}
 	}
 	if flow := e.workflow; flow != nil {
+		task.Kind = api.LinearWorkflow
 		task.Identifier, task.Title, task.URL = flow.Identifier, flow.Title, flow.URL
 		task.ProjectName, task.Description, task.LastError = flow.ProjectName, flow.Description, flow.LastError
 		task.Repositories = flow.Repositories
@@ -126,7 +129,7 @@ func (e taskEntry) finish(localName string) api.Task {
 		}
 		task.UpdatedAt = later(task.UpdatedAt, later(flow.UpdatedAt, flow.CreatedAt))
 		if len(task.Runs) == 0 {
-			task.WorkerName, task.Codex = localName, flow.Codex
+			task.WorkerName, task.Codex, task.EffectiveCodex = localName, flow.Codex, flow.EffectiveCodex
 			task.OpenViking = flow.OpenViking
 			if flow.CanReadCodexResult {
 				task.LocalResultJobID = flow.ID
@@ -137,7 +140,11 @@ func (e taskEntry) finish(localName string) api.Task {
 		return cmp.Or(b.CreatedAt.Compare(a.CreatedAt), cmp.Compare(a.ID, b.ID))
 	})
 	if len(task.Runs) > 0 {
-		task.WorkerName = task.Runs[0].WorkerName
+		latest := task.Runs[0]
+		task.WorkerName, task.Codex, task.EffectiveCodex = latest.WorkerName, latest.Codex, latest.EffectiveCodex
+		if !latest.Revision && e.workflow != nil && task.EffectiveCodex == (api.CodexOptions{}) {
+			task.EffectiveCodex = e.workflow.EffectiveCodex
+		}
 	}
 	if len(task.Subtasks) > 0 {
 		task.Subtasks = slices.Clone(task.Subtasks)

@@ -181,6 +181,16 @@ function GatewayTaskRow({
 		showResult ? task.localResultJobId : undefined,
 	);
 	const updated = new Date(task.updatedAt).toLocaleString(i18n.resolvedLanguage);
+	const usesCodex = task.kind === "codex" || task.kind === "linear-workflow" || !!task.identifier;
+	const codexSetting = (key: "model" | "effort") => {
+		const recorded = task.effectiveCodex?.[key];
+		const requested = task.codex?.[key];
+		if (recorded) return recorded;
+		if (requested) return t("gateway.taskList.requestedSetting", { value: requested });
+		return t(
+			task.stage === "queued" ? "gateway.codex.default" : "gateway.taskList.unrecordedSetting",
+		);
+	};
 	const variant = stageColors[task.stage as keyof typeof stageColors] ?? "secondary";
 	const fallbackPRs = task.pullRequests?.filter(
 		(pr) =>
@@ -220,18 +230,6 @@ function GatewayTaskRow({
 							<p className="mt-1 whitespace-pre-wrap wrap-anywhere">{task.lastError}</p>
 						</ErrorNotice>
 					)}
-					{task.codex && (
-						<dl className="grid gap-2 rounded-md border border-border p-3 sm:grid-cols-2">
-							<div className="min-w-0">
-								<dt className="text-xs text-muted-foreground">{t("gateway.codex.model")}</dt>
-								<dd className="wrap-anywhere">{task.codex.model || t("gateway.codex.default")}</dd>
-							</div>
-							<div className="min-w-0">
-								<dt className="text-xs text-muted-foreground">{t("gateway.codex.effort")}</dt>
-								<dd className="wrap-anywhere">{task.codex.effort || t("gateway.codex.default")}</dd>
-							</div>
-						</dl>
-					)}
 					{expanded && task.description && <GatewayMarkdown value={task.description} />}
 					{showResult && (
 						<CodexResultMessage isLoading={result.isLoading} value={result.data?.response} />
@@ -256,6 +254,18 @@ function GatewayTaskRow({
 								</li>
 							))}
 						</ul>
+					)}
+					{expanded && usesCodex && (
+						<dl className="flex flex-wrap items-baseline gap-x-6 gap-y-1 text-xs">
+							<div className="flex min-w-0 items-baseline gap-2">
+								<dt className="shrink-0 text-muted-foreground">{t("gateway.codex.model")}</dt>
+								<dd className="font-medium wrap-anywhere">{codexSetting("model")}</dd>
+							</div>
+							<div className="flex min-w-0 items-baseline gap-2">
+								<dt className="shrink-0 text-muted-foreground">{t("gateway.codex.effort")}</dt>
+								<dd className="font-medium wrap-anywhere">{codexSetting("effort")}</dd>
+							</div>
+						</dl>
 					)}
 					{expanded && !!task.runs?.length && (
 						<section className="space-y-2">

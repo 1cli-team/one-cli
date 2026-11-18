@@ -9,7 +9,6 @@ import (
 	cliErrors "github.com/torchstellar-team/one-cli/packages/one-core/pkg/platform/errors"
 	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/platform/i18n"
 	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/plugins"
-	ov "github.com/volcengine/OpenViking/sdk/go"
 )
 
 type Plugin struct{}
@@ -33,7 +32,8 @@ func (p *Plugin) Find(ctx context.Context, workspaceID, query string) ([]knowled
 	if err != nil {
 		return nil, err
 	}
-	found, err := client.Find(ctx, query, &ov.FindOptions{TargetURI: root.value, Limit: 20})
+	options := findOptions(root.value, 20)
+	found, err := client.Find(ctx, query, &options)
 	if err != nil {
 		return nil, sdkError(err)
 	}

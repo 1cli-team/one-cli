@@ -49,6 +49,7 @@ type JobSummary struct {
 	UpdatedAt          time.Time              `json:"updatedAt,omitzero"`
 	LastError          string                 `json:"lastError,omitempty"`
 	Codex              CodexOptions           `json:"codex,omitzero"`
+	EffectiveCodex     CodexOptions           `json:"effectiveCodex,omitzero"`
 	Repositories       []JobRepository        `json:"repositories"`
 	Question           *ExecutionQuestion     `json:"question,omitempty"`
 	Progress           *ExecutionProgress     `json:"progress,omitempty"`

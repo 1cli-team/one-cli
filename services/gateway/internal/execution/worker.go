@@ -25,6 +25,7 @@ type workerLink interface {
 type localLink struct{ store *Store }
 
 func (l localLink) heartbeat(_ context.Context, session string, inventory api.ExecutionWorker) error {
+	inventory.SupportsChinaMirror = true
 	return l.store.heartbeat(LocalWorkerID, session, inventory)
 }
 
@@ -55,8 +56,12 @@ func (s *Store) upload(workerID string, progress report) error {
 	if err := s.saveLogs(job.ID, progress.Logs); err != nil {
 		return err
 	}
+	updated := job.recordCodexSettings(progress.Result.EffectiveCodex)
 	if progress.Result.Subtasks != nil && !slices.Equal(job.Subtasks, progress.Result.Subtasks) {
 		job.Subtasks = progress.Result.Subtasks
+		updated = true
+	}
+	if updated {
 		return s.save(job)
 	}
 	return nil
@@ -130,9 +135,9 @@ func runWorker(ctx context.Context, link workerLink, runner Runner) error {
 				finished = ch
 				go func(job assignment, logs *limitedLog) {
 					taskRunner := runner
-					if job.Input.Kind == api.LinearWorkflow {
-						taskRunner.reportSubtasks = func(ctx context.Context, subtasks []api.SubtaskResult) error {
-							return link.upload(ctx, report{JobID: job.ID, Attempt: job.Attempt, Result: api.ExecutionResult{Subtasks: subtasks}})
+					if job.Input.Kind == api.LinearWorkflow || job.Input.Kind == api.CodexTask {
+						taskRunner.reportProgress = func(ctx context.Context, result api.ExecutionResult) error {
+							return link.upload(ctx, report{JobID: job.ID, Attempt: job.Attempt, Result: result})
 						}
 					}
 					if job.CanAsk {

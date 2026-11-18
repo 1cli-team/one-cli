@@ -48,17 +48,19 @@ type assignment struct {
 
 type registeredWorker struct {
 	api.ExecutionWorker
-	TokenHash string `json:"tokenHash,omitempty"`
-	Session   string `json:"-"`
+	TokenHash     string `json:"tokenHash,omitempty"`
+	SecurePairing bool   `json:"securePairing,omitempty"`
+	Session       string `json:"-"`
 }
 
 type Store struct {
-	mu      sync.Mutex
-	root    string
-	lock    *flock.Flock
-	jobs    map[string]assignment
-	workers map[string]registeredWorker
-	invites map[string]time.Time
+	mu        sync.Mutex
+	root      string
+	lock      *flock.Flock
+	jobs      map[string]assignment
+	workers   map[string]registeredWorker
+	invites   map[string]time.Time
+	downloads api.DownloadSettings
 }
 
 func Open(root, localName string) (*Store, error) {
@@ -101,6 +103,9 @@ func writeJSON(path string, value any) error {
 }
 
 func (s *Store) load() error {
+	if err := s.loadDownloadSettings(); err != nil {
+		return err
+	}
 	if err := readJSON(filepath.Join(s.root, "workers.json"), &s.workers); err != nil && !errors.Is(err, os.ErrNotExist) {
 		return err
 	}
@@ -170,6 +175,9 @@ func (s *Store) submit(input api.ExecutionSubmission) (api.Execution, error) {
 	}
 	// An offline machine's capabilities will be confirmed when it reconnects.
 	if online(worker) {
+		if s.downloads.ChinaMirror && !worker.SupportsChinaMirror {
+			return api.Execution{}, errWorkerMirror
+		}
 		if input.Input.Kind != api.LinearWorkflow && !slices.ContainsFunc(worker.Repositories, input.Input.Repository.Matches) {
 			return api.Execution{}, errRepository
 		}
@@ -181,7 +189,10 @@ func (s *Store) submit(input api.ExecutionSubmission) (api.Execution, error) {
 		}
 	}
 	now := time.Now().UTC()
-	job := assignment{Execution: api.Execution{ID: id, ExecutionSubmission: input, State: api.ExecutionQueued, CreatedAt: now, UpdatedAt: now}}
+	job := assignment{Execution: api.Execution{
+		ID: id, ExecutionSubmission: input, State: api.ExecutionQueued, CreatedAt: now, UpdatedAt: now,
+		ChinaMirror: s.downloads.ChinaMirror,
+	}}
 	return s.view(job), s.save(job)
 }
 
@@ -203,6 +214,8 @@ func (s *Store) view(job assignment) api.Execution {
 	case api.ExecutionQueued:
 		if !online(worker) {
 			result.Reason = "worker_offline"
+		} else if job.ChinaMirror && !worker.SupportsChinaMirror {
+			result.Reason = errWorkerMirror.Error()
 		}
 	case api.ExecutionRunning:
 		if !online(worker) || worker.Session != job.Session {
@@ -252,6 +265,7 @@ func (s *Store) workersList() []api.ExecutionWorker {
 	for _, worker := range s.workers {
 		item := worker.ExecutionWorker
 		item.Online = online(worker)
+		item.RemoteSetup = worker.SecurePairing || worker.ID == LocalWorkerID
 		item.Busy = item.Online && slicesContainsRunning(s.jobs, worker.ID, worker.Session)
 		workers = append(workers, item)
 	}
@@ -290,8 +304,10 @@ func (s *Store) heartbeat(workerID, session string, inventory api.ExecutionWorke
 		return errWorker
 	}
 	changed := !slices.Equal(worker.Repositories, inventory.Repositories) ||
-		!reflect.DeepEqual(worker.Models, inventory.Models) || !reflect.DeepEqual(worker.LinearProjects, inventory.LinearProjects)
+		!reflect.DeepEqual(worker.Models, inventory.Models) || !reflect.DeepEqual(worker.LinearProjects, inventory.LinearProjects) ||
+		worker.SupportsChinaMirror != inventory.SupportsChinaMirror
 	worker.Repositories, worker.Models, worker.LinearProjects = inventory.Repositories, inventory.Models, inventory.LinearProjects
+	worker.SupportsChinaMirror = inventory.SupportsChinaMirror
 	if workerID != LocalWorkerID && changed {
 		if err := s.saveWorker(worker); err != nil {
 			return err
@@ -318,7 +334,7 @@ func (s *Store) claim(workerID, session string) (*assignment, error) {
 	}
 	var next *assignment
 	for _, job := range s.jobs {
-		if job.WorkerID != workerID {
+		if job.WorkerID != workerID || (job.ChinaMirror && !worker.SupportsChinaMirror) {
 			continue
 		}
 		if job.reservesWorker() {
@@ -375,6 +391,15 @@ type report struct {
 	Progress *api.ExecutionProgress `json:"progress,omitempty"`
 }
 
+func (job *assignment) recordCodexSettings(settings api.CodexOptions) bool {
+	if (job.Input.Kind != api.CodexTask && job.Input.Kind != api.LinearWorkflow) ||
+		settings == (api.CodexOptions{}) || !settings.Valid() || settings == job.EffectiveCodex {
+		return false
+	}
+	job.EffectiveCodex = settings
+	return true
+}
+
 func (s *Store) complete(workerID string, done report) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -385,6 +410,7 @@ func (s *Store) complete(workerID string, done report) error {
 	if job.Result != nil {
 		return nil
 	}
+	job.recordCodexSettings(done.Result.EffectiveCodex)
 	if done.Progress != nil {
 		return s.pause(job, done)
 	}

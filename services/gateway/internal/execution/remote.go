@@ -51,12 +51,12 @@ func validWorkerName(name string) bool {
 	return name != "" && len(name) <= 120 && name == strings.TrimSpace(name) && !strings.ContainsFunc(name, unicode.IsControl)
 }
 
-func (s *Store) join(input joinRequest, token string) error {
+func (s *Store) join(input joinRequest, token string, secure bool) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	hash := digest(token)
 	if worker, exists := s.workers[input.ID]; exists {
-		if worker.Name != input.Name || subtle.ConstantTimeCompare([]byte(worker.TokenHash), []byte(hash)) != 1 {
+		if worker.SecurePairing != secure || worker.Name != input.Name || subtle.ConstantTimeCompare([]byte(worker.TokenHash), []byte(hash)) != 1 {
 			return errCredentials
 		}
 		return nil
@@ -69,6 +69,7 @@ func (s *Store) join(input joinRequest, token string) error {
 	worker := registeredWorker{
 		ExecutionWorker: api.ExecutionWorker{ID: input.ID, Name: input.Name},
 		TokenHash:       hash,
+		SecurePairing:   secure,
 	}
 	if err := s.saveWorker(worker); err != nil {
 		return err
@@ -78,17 +79,21 @@ func (s *Store) join(input joinRequest, token string) error {
 	return nil
 }
 
-func (s *Store) authorizedWorker(id, token string) bool {
+func (s *Store) authorizedWorker(id, token string, secure bool) bool {
 	if !workerIDPattern.MatchString(id) || !api.ValidToken(token) {
 		return false
 	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	w := s.workers[id]
-	return subtle.ConstantTimeCompare([]byte(w.TokenHash), []byte(digest(token))) == 1
+	return w.SecurePairing == secure && subtle.ConstantTimeCompare([]byte(w.TokenHash), []byte(digest(token))) == 1
 }
 
 func WorkerAPI(s *Store) http.Handler {
+	return workerAPI(s, nil)
+}
+
+func workerAPI(s *Store, setup *Setup) http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("POST /worker/v1/join", func(w http.ResponseWriter, r *http.Request) {
 		token, ok := strings.CutPrefix(r.Header.Get("Authorization"), "Bearer ")
@@ -98,7 +103,7 @@ func WorkerAPI(s *Store) http.Handler {
 			problem(w, http.StatusBadRequest, "invalid_worker")
 			return
 		}
-		if err := s.join(input, token); err != nil {
+		if err := s.join(input, token, setup != nil); err != nil {
 			if errors.Is(err, errCredentials) {
 				problem(w, http.StatusUnauthorized, err.Error())
 			} else {
@@ -113,12 +118,16 @@ func WorkerAPI(s *Store) http.Handler {
 		mux.HandleFunc("POST /worker/v1/workers/{id}/"+operation, func(w http.ResponseWriter, r *http.Request) {
 			id := r.PathValue("id")
 			token, ok := strings.CutPrefix(r.Header.Get("Authorization"), "Bearer ")
-			if !ok || !s.authorizedWorker(id, token) {
+			if !ok || !s.authorizedWorker(id, token, setup != nil) {
 				problem(w, http.StatusUnauthorized, "unauthorized")
 				return
 			}
 			fn(w, r, id)
 		})
+	}
+	if setup != nil {
+		handle("setup/claim", setup.claim)
+		handle("setup/result", setup.complete)
 	}
 	handle("heartbeat", func(w http.ResponseWriter, r *http.Request, id string) {
 		var input heartbeatRequest
@@ -132,6 +141,7 @@ func WorkerAPI(s *Store) http.Handler {
 				return
 			}
 		}
+		input.Inventory.SupportsChinaMirror = r.Header.Get(mirrorCapabilityHeader) == "1"
 		workerResponse(w, s.heartbeat(id, input.Session, input.Inventory))
 	})
 	handle("claim", func(w http.ResponseWriter, r *http.Request, id string) {

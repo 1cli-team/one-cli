@@ -21,11 +21,14 @@ import (
 
 type authAttempt struct {
 	public   tracking.Authorization
+	ctx      context.Context
 	cancel   context.CancelFunc
 	state    string
 	verifier string
 	consumed bool
 	scopes   string
+	relayed  bool
+	config   tracking.OAuthConfig
 }
 
 func validateConfig(cfg tracking.OAuthConfig) error {
@@ -49,14 +52,20 @@ func randomSecret() (string, error) {
 }
 
 func (p *Plugin) Authorize(parent context.Context) (tracking.Authorization, error) {
-	return p.authorize(parent, "read,issues:create,comments:create")
+	return p.authorize(parent, "read,issues:create,comments:create", false)
 }
 
 func (p *Plugin) AuthorizeProjectCreation(parent context.Context) (tracking.Authorization, error) {
-	return p.authorize(parent, "read,write")
+	return p.authorize(parent, "read,write", false)
 }
 
-func (p *Plugin) authorize(parent context.Context, scopes string) (tracking.Authorization, error) {
+// BeginRelayedAuthorization creates a PKCE attempt without opening a callback
+// listener. An authenticated caller must relay the code from its loopback callback.
+func (p *Plugin) BeginRelayedAuthorization(parent context.Context) (tracking.Authorization, error) {
+	return p.authorize(parent, "read,issues:create,comments:create", true)
+}
+
+func (p *Plugin) authorize(parent context.Context, scopes string, relayed bool) (tracking.Authorization, error) {
 	var cfg tracking.OAuthConfig
 	if err := p.transaction(parent, func(doc *document) (bool, error) { cfg = doc.Config; return false, nil }); err != nil {
 		return tracking.Authorization{}, err
@@ -67,33 +76,38 @@ func (p *Plugin) authorize(parent context.Context, scopes string) (tracking.Auth
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	if p.auth != nil && p.auth.public.Status == "pending" {
-		if p.auth.scopes != scopes {
+		if p.auth.scopes != scopes || p.auth.relayed != relayed {
 			return tracking.Authorization{}, tracking.Fail("busy")
 		}
 		return p.auth.public, nil
 	}
 	u, _ := url.Parse(cfg.RedirectURI)
-	listener, err := net.Listen("tcp4", net.JoinHostPort("127.0.0.1", u.Port()))
-	if err != nil {
-		return tracking.Authorization{}, tracking.Fail("callback_busy")
-	}
 	state, err := randomSecret()
 	if err != nil {
-		listener.Close()
 		return tracking.Authorization{}, err
 	}
 	verifier, err := randomSecret()
 	if err != nil {
-		listener.Close()
 		return tracking.Authorization{}, err
+	}
+	var listener net.Listener
+	if !relayed {
+		listener, err = net.Listen("tcp4", net.JoinHostPort("127.0.0.1", u.Port()))
+		if err != nil {
+			return tracking.Authorization{}, tracking.Fail("callback_busy")
+		}
 	}
 	ctx, cancel := context.WithTimeout(parent, 10*time.Minute)
 	challenge := sha256.Sum256([]byte(verifier))
 	authorize, _ := url.Parse(p.authorizeURL)
 	query := url.Values{"client_id": {cfg.ClientID}, "redirect_uri": {cfg.RedirectURI}, "response_type": {"code"}, "scope": {scopes}, "actor": {"user"}, "state": {state}, "code_challenge": {base64.RawURLEncoding.EncodeToString(challenge[:])}, "code_challenge_method": {"S256"}, "prompt": {"consent"}}
 	authorize.RawQuery = query.Encode()
-	attempt := &authAttempt{public: tracking.Authorization{ID: state, URL: authorize.String(), Status: "pending"}, cancel: cancel, state: state, verifier: verifier, scopes: scopes}
+	attempt := &authAttempt{public: tracking.Authorization{ID: state, URL: authorize.String(), Status: "pending"}, ctx: ctx, cancel: cancel, state: state, verifier: verifier, scopes: scopes, relayed: relayed, config: cfg}
 	p.auth = attempt
+	go p.expireAuthorization(ctx, attempt)
+	if relayed {
+		return attempt.public, nil
+	}
 	server := &http.Server{ReadHeaderTimeout: 5 * time.Second, BaseContext: func(net.Listener) context.Context { return ctx }}
 	server.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Cache-Control", "no-store")
@@ -103,32 +117,15 @@ func (p *Plugin) authorize(parent context.Context, scopes string) (tracking.Auth
 			http.NotFound(w, r)
 			return
 		}
-		p.mu.Lock()
-		valid := p.auth == attempt && !attempt.consumed && ctx.Err() == nil && subtle.ConstantTimeCompare([]byte(r.URL.Query().Get("state")), []byte(attempt.state)) == 1
-		if valid {
-			attempt.consumed = true
-		}
-		p.mu.Unlock()
-		if !valid {
+		if !p.consumeAuthorization(ctx, attempt, r.URL.Query().Get("state")) {
 			http.Error(w, i18n.T("linear.error.oauth_state"), http.StatusBadRequest)
 			return
 		}
-		var authErr error
-		if r.URL.Query().Get("error") != "" || r.URL.Query().Get("code") == "" {
-			authErr = tracking.Fail("oauth_denied")
-		} else {
-			authErr = p.finishAuthorization(ctx, attempt, cfg, r.URL.Query().Get("code"))
+		code := r.URL.Query().Get("code")
+		if r.URL.Query().Get("error") != "" {
+			code = ""
 		}
-		p.mu.Lock()
-		if p.auth == attempt && attempt.public.Status == "pending" {
-			if authErr == nil {
-				attempt.public.Status = "connected"
-			} else {
-				attempt.public.Status = "failed"
-				attempt.public.ErrorCode = "oauth_failed"
-			}
-		}
-		p.mu.Unlock()
+		authErr := p.completeAuthorization(ctx, attempt, cfg, code)
 		message := i18n.T("linear.oauth.success")
 		if authErr != nil {
 			message = i18n.T("linear.error.oauth_failed")
@@ -143,14 +140,72 @@ func (p *Plugin) authorize(parent context.Context, scopes string) (tracking.Auth
 		shutdown, stop := context.WithTimeout(context.Background(), time.Second)
 		defer stop()
 		_ = server.Shutdown(shutdown)
-		p.mu.Lock()
-		defer p.mu.Unlock()
-		if p.auth == attempt && attempt.public.Status == "pending" {
-			attempt.public.Status = "expired"
-			attempt.public.ErrorCode = "oauth_expired"
-		}
 	}()
 	return attempt.public, nil
+}
+
+func (p *Plugin) expireAuthorization(ctx context.Context, attempt *authAttempt) {
+	<-ctx.Done()
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	if p.auth == attempt && attempt.public.Status == "pending" {
+		attempt.public.Status = "expired"
+		attempt.public.ErrorCode = "oauth_expired"
+	}
+}
+
+func (p *Plugin) consumeAuthorization(ctx context.Context, attempt *authAttempt, state string) bool {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	if p.auth != attempt || attempt.consumed || attempt.public.Status != "pending" || ctx.Err() != nil || attempt.ctx.Err() != nil ||
+		subtle.ConstantTimeCompare([]byte(state), []byte(attempt.state)) != 1 {
+		return false
+	}
+	attempt.consumed = true
+	return true
+}
+
+func (p *Plugin) completeAuthorization(ctx context.Context, attempt *authAttempt, cfg tracking.OAuthConfig, code string) error {
+	err := tracking.Fail("oauth_denied")
+	if code != "" {
+		err = p.finishAuthorization(ctx, attempt, cfg, code)
+	}
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	if p.auth == attempt && attempt.public.Status == "pending" {
+		if err == nil {
+			attempt.public.Status = "connected"
+		} else {
+			attempt.public.Status = "failed"
+			attempt.public.ErrorCode = "oauth_failed"
+		}
+	}
+	return err
+}
+
+// CompleteRelayedAuthorization exchanges the one-time callback code using this
+// machine's PKCE verifier. Credentials are written by the existing Linear store.
+func (p *Plugin) CompleteRelayedAuthorization(ctx context.Context, state, code string) error {
+	p.mu.Lock()
+	attempt := p.auth
+	if attempt == nil || !attempt.relayed || subtle.ConstantTimeCompare([]byte(state), []byte(attempt.state)) != 1 {
+		p.mu.Unlock()
+		return tracking.Fail("oauth_state")
+	}
+	if attempt.public.Status == "connected" {
+		p.mu.Unlock()
+		return nil
+	}
+	p.mu.Unlock()
+	if !p.consumeAuthorization(ctx, attempt, state) {
+		return tracking.Fail("oauth_state")
+	}
+	defer attempt.cancel()
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+	stop := context.AfterFunc(attempt.ctx, cancel)
+	defer stop()
+	return p.completeAuthorization(ctx, attempt, attempt.config, code)
 }
 
 func (p *Plugin) finishAuthorization(ctx context.Context, attempt *authAttempt, cfg tracking.OAuthConfig, code string) error {
@@ -173,7 +228,7 @@ func (p *Plugin) finishAuthorization(ctx context.Context, attempt *authAttempt, 
 	}
 	p.mu.Lock()
 	defer p.mu.Unlock()
-	if p.auth != attempt || ctx.Err() != nil || attempt.public.Status != "pending" {
+	if p.auth != attempt || ctx.Err() != nil || attempt.ctx.Err() != nil || attempt.public.Status != "pending" {
 		return tracking.Fail("oauth_expired")
 	}
 	id := data.Viewer.Organization.ID + ":" + data.Viewer.ID

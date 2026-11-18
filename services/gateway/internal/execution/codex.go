@@ -3,6 +3,7 @@ package execution
 import (
 	"context"
 	"io"
+	"log/slog"
 	"os"
 	"os/exec"
 	"slices"
@@ -55,8 +56,19 @@ func (r Runner) runCodex(ctx context.Context, job assignment, root, commit strin
 	if err != nil {
 		return failed(err.Error())
 	}
-	prompt, err := r.codex().RunPrompt(ctx, root, common, job.Input.Prompt, job.Input.Codex, logs)
-	result := api.ExecutionResult{ThreadID: prompt.ThreadID, Response: prompt.Response, OpenViking: prompt.OpenViking}
+	codex := r.codex()
+	codex.ChinaMirror = job.ChinaMirror
+	if r.reportProgress != nil {
+		codex.OnSettings = func(settings api.CodexOptions) {
+			if err := r.reportProgress(ctx, api.ExecutionResult{EffectiveCodex: settings}); err != nil {
+				slog.Warn(i18n.T("gateway.worker_contact"), "error", err)
+			}
+		}
+	}
+	prompt, err := codex.RunPrompt(ctx, root, common, job.Input.Prompt, job.Input.Codex, logs)
+	result := api.ExecutionResult{
+		ThreadID: prompt.ThreadID, Response: prompt.Response, OpenViking: prompt.OpenViking, EffectiveCodex: prompt.EffectiveCodex,
+	}
 	if err != nil {
 		result.Error = err.Error()
 		return result

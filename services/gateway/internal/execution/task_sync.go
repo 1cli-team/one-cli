@@ -45,7 +45,7 @@ func (l remoteLink) syncTaskSnapshots(ctx context.Context, call workflowCall) {
 			var workflows []api.JobSummary
 			if json.Unmarshal(reply.Body, &workflows) == nil {
 				for batch := range slices.Chunk(workflows, 20) {
-					if err := l.send(ctx, l.endpoint("workflows"), batch, new(struct{})); err != nil {
+					if err := l.sendWorkflows(ctx, batch); err != nil {
 						slog.Warn(i18n.T("gateway.worker_task_sync"), "error", err)
 						break
 					}
@@ -57,4 +57,20 @@ func (l remoteLink) syncTaskSnapshots(ctx context.Context, call workflowCall) {
 		case <-ticker.C:
 		}
 	}
+}
+
+func (l remoteLink) sendWorkflows(ctx context.Context, batch []api.JobSummary) error {
+	endpoint := l.endpoint("workflows")
+	err := l.send(ctx, endpoint, batch, new(struct{}))
+	if rejectsWorkerReport(err) && slices.ContainsFunc(batch, func(job api.JobSummary) bool {
+		return job.EffectiveCodex != (api.CodexOptions{})
+	}) {
+		// Older Gateways reject unknown fields in worker requests.
+		legacy := slices.Clone(batch)
+		for i := range legacy {
+			legacy[i].EffectiveCodex = api.CodexOptions{}
+		}
+		return l.send(ctx, endpoint, legacy, new(struct{}))
+	}
+	return err
 }
