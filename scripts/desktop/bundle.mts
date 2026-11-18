@@ -8,7 +8,7 @@ import { notarizeMacApp, notarizeMacDMG, verifyMacApp } from "./macos/signing.mt
 import type { DesktopConfig } from "./config.mts";
 import type { Sidecars } from "./sidecars.mts";
 
-const executableName = "one-desktop";
+const productName = "One Desktop";
 
 export function writeBundleConfig(config: DesktopConfig, sidecars: Sidecars, identity?: string) {
   const manifest = {
@@ -32,8 +32,8 @@ export function writeBundleConfig(config: DesktopConfig, sidecars: Sidecars, ide
         ? resolve(require.resolve("electron/package.json"), "../dist")
         : undefined,
     appId: "team.1cli.desktop",
-    productName: "One Desktop",
-    executableName,
+    productName,
+    executableName: "one-desktop",
     artifactName: `one-desktop_${config.version}_${config.platform.os}_${config.platform.arch}.\${ext}`,
     extraMetadata: { version: config.version },
     directories: { output: config.bundleDirectory, buildResources: "assets" },
@@ -43,6 +43,7 @@ export function writeBundleConfig(config: DesktopConfig, sidecars: Sidecars, ide
     npmRebuild: false,
     publish: null,
     mac: {
+      executableName: productName,
       category: "public.app-category.developer-tools",
       minimumSystemVersion: "13.3",
       icon: "assets/icon.icns",
@@ -137,7 +138,7 @@ export async function buildBundle(config: DesktopConfig, sidecars: Sidecars) {
       ? resolve(
           config.bundleDirectory,
           config.platform.arch === "arm64" ? "mac-arm64" : "mac",
-          `${executableName}.app`,
+          `${productName}.app`,
         )
       : resolve(
           config.bundleDirectory,

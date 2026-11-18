@@ -8,7 +8,13 @@ import { addGroupMembers, workspaceGroupsKey } from "@/api/workspace-groups";
 import { groupWorkspacePath, workspacePath } from "@/router/paths";
 import { useSessionSWRConfig } from "./cache";
 
-export function OpenWorkspace({ groupId, label }: { groupId?: string; label?: string }) {
+export function OpenWorkspace({
+	groupId,
+	kind = "workspace",
+}: {
+	groupId?: string;
+	kind?: "project" | "workspace";
+}) {
 	const { t } = useTranslation();
 	const [open, setOpen] = useState(false);
 	const navigate = useNavigate();
@@ -17,10 +23,11 @@ export function OpenWorkspace({ groupId, label }: { groupId?: string; label?: st
 		<>
 			<Button onClick={() => setOpen(true)}>
 				<FolderOpen />
-				{label ?? t("desktop.openWorkspace")}
+				{t(kind === "project" ? "groups.openProject" : "desktop.openWorkspace")}
 			</Button>
 			{open && (
 				<AddWorkspaceDialog
+					kind={kind}
 					onClose={() => setOpen(false)}
 					onSaved={async (workspace) => {
 						if (groupId) await addGroupMembers(groupId, [workspace.entryId]);

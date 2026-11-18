@@ -1,7 +1,15 @@
 import { useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import useSWR, { useSWRConfig } from "swr";
-import { Activity, Plus, RefreshCw, Send, Settings2, SlidersHorizontal } from "lucide-react";
+import {
+	Activity,
+	Download,
+	Plus,
+	RefreshCw,
+	Send,
+	Settings2,
+	SlidersHorizontal,
+} from "lucide-react";
 import { Popover, Tabs } from "radix-ui";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
@@ -23,6 +31,8 @@ import {
 	TableRow,
 } from "@/components/ui/table";
 import { EnvironmentLink } from "@/features/environment-context/EnvironmentLink";
+import http from "@/lib/http";
+import toast from "@/lib/toast";
 import { ConnectionBadge } from "./ConnectionBadge";
 import { GatewayExecutionDetails, GatewayWorkers } from "./GatewayExecutions";
 import { useWorkers } from "./executions";
@@ -46,6 +56,7 @@ export function GatewayMonitor() {
 	const status = useGatewayStatus();
 	const { mutate } = useSWRConfig();
 	const [configure, setConfigure] = useState(false);
+	const [downloadingSkill, setDownloadingSkill] = useState(false);
 	const [configured, setConfigured] = useState(false);
 	const [page, setPage] = useState(1);
 	const [filters, setFilters] = useState<GatewayTaskFilters>({ worker: "", stage: "", source: "" });
@@ -63,6 +74,24 @@ export function GatewayMonitor() {
 	const workers = useWorkers(snapshot?.executions ? connection?.url : undefined);
 	const machines = workers.data ?? [];
 	const tasks = useGatewayTasks(connection, page, filters);
+	async function downloadSkill() {
+		setDownloadingSkill(true);
+		try {
+			const filename = "one-gateway.zip";
+			const archive = await http.get<Blob>(`/gateway/${filename}`, { responseType: "blob" });
+			const url = URL.createObjectURL(archive);
+			const link = document.createElement("a");
+			link.href = url;
+			link.download = filename;
+			link.click();
+			// Give Chromium time to hand off the URL to the download manager.
+			window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+		} catch {
+			toast.error(t("gateway.skillDownloadError"));
+		} finally {
+			setDownloadingSkill(false);
+		}
+	}
 	const openExecution = (id?: string) => {
 		setSearch(
 			(current) => {
@@ -86,6 +115,10 @@ export function GatewayMonitor() {
 				status={connection && <ConnectionBadge state={connection.state} />}
 				actions={
 					<>
+						<Button variant="outline" onClick={downloadSkill} disabled={downloadingSkill}>
+							<Download />
+							{t("gateway.downloadSkill")}
+						</Button>
 						<GatewayConnectionDetails connection={connection} />
 						<Button
 							variant="outline"

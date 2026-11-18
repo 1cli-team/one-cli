@@ -14,6 +14,7 @@ import (
 )
 
 func registerGatewayRoutes(mux *http.ServeMux, opts MuxOpts, connect func() (*gateway.Client, error)) {
+	mux.HandleFunc("GET /gateway/one-gateway.zip", handleGatewaySkillDownload)
 	mux.HandleFunc("GET /gateway/codex/models", func(w http.ResponseWriter, r *http.Request) {
 		setNoStore(w)
 		client, err := connect()

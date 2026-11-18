@@ -32,19 +32,28 @@ interface Update {
 	notes?: string;
 	reason?: string;
 }
+
+function useInstallation(enabled = true) {
+	return useSWR(enabled ? "/desktop/installation" : null, (path) => http.get<Installation>(path));
+}
+
 export function DesktopSettings() {
 	const { t } = useTranslation();
+	const installation = useInstallation();
 	return (
 		<SettingsPage title={t("desktop.settings")}>
-			<SettingsBody />
+			<SettingsBody state={installation} />
 		</SettingsPage>
 	);
 }
-function SettingsBody({ onDone }: { onDone?: () => void }) {
+function SettingsBody({
+	state,
+	onDone,
+}: {
+	state: ReturnType<typeof useInstallation>;
+	onDone?: () => void;
+}) {
 	const { t } = useTranslation();
-	const state = useSWR("/desktop/installation", () =>
-		http.get<Installation>("/desktop/installation"),
-	);
 	const [busy, setBusy] = useState(false);
 	const [installationError, setInstallationError] = useState("");
 	const [updateError, setUpdateError] = useState("");
@@ -182,7 +191,7 @@ function SettingsBody({ onDone }: { onDone?: () => void }) {
 			{onDone && (
 				<div className="flex justify-end">
 					<Button variant="outline" disabled={busy} onClick={onDone}>
-						{t(s?.installed ? "desktop.continue" : "desktop.skipTerminal")}
+						{t("desktop.skipTerminal")}
 					</Button>
 				</div>
 			)}
@@ -192,14 +201,20 @@ function SettingsBody({ onDone }: { onDone?: () => void }) {
 
 export function DesktopWelcome() {
 	const { t } = useTranslation();
-	const [open, setOpen] = useState(() => localStorage.getItem("one_desktop_setup_seen") !== "1");
+	const [dismissed, setDismissed] = useState(
+		() => localStorage.getItem("one_desktop_setup_seen") === "1",
+	);
+	const installation = useInstallation(!dismissed);
+	const status = installation.data;
+	if (dismissed || !status || status.installed || status.resolvedPath) return null;
+
 	function done() {
 		localStorage.setItem("one_desktop_setup_seen", "1");
-		setOpen(false);
+		setDismissed(true);
 	}
 	return (
 		<Dialog
-			open={open}
+			open
 			onOpenChange={(value) => {
 				if (!value) done();
 			}}
@@ -209,7 +224,7 @@ export function DesktopWelcome() {
 					<DialogTitle>{t("desktop.welcome")}</DialogTitle>
 					<DialogDescription>{t("desktop.welcomeHint")}</DialogDescription>
 				</DialogHeader>
-				<SettingsBody onDone={done} />
+				<SettingsBody state={installation} onDone={done} />
 			</DialogContent>
 		</Dialog>
 	);

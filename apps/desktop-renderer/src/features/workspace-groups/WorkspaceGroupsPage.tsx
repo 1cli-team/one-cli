@@ -30,6 +30,7 @@ import {
 	renameWorkspaceGroup,
 	type WorkspaceGroup,
 } from "@/api/workspace-groups";
+import { ProjectCard, ProjectCardGrid } from "@/components/ProjectCards";
 import { Button } from "@/components/ui/button";
 import {
 	Dialog,
@@ -50,8 +51,12 @@ import {
 	SearchInput,
 	StatePanel,
 } from "@/components/ui/page-layout";
-import { Skeleton } from "@/components/ui/skeleton";
+import { Spinner } from "@/components/ui/spinner";
 import { EnvironmentLink } from "@/features/environment-context/EnvironmentLink";
+import {
+	isGitRepositoryWithoutManifest,
+	workspaceDisplayStatus,
+} from "@/features/workspace-navigation/workspace-status";
 import { OpenWorkspace } from "@/lib/desktop/OpenWorkspace";
 import { cn } from "@/lib/utils";
 import { groupPath, groupWorkspacePath, workspacePath } from "@/router/paths";
@@ -89,7 +94,10 @@ export function WorkspaceGroupsPage() {
 		return (
 			<PageContent>
 				<PageHeader title={t("groups.title")} />
-				<Skeleton className="h-64 w-full" />
+				<div role="status" className="flex items-center gap-2 py-1 text-sm text-muted-foreground">
+					<Spinner aria-hidden="true" className="shrink-0 motion-reduce:animate-none" />
+					<span>{t("groups.loading")}</span>
+				</div>
 			</PageContent>
 		);
 	const data = result.data;
@@ -119,9 +127,9 @@ export function WorkspaceGroupsPage() {
 					<>
 						<Button variant="outline" onClick={() => setCreating(true)}>
 							<Plus />
-							{t("groups.createGroup")}
+							{t("groups.createProject")}
 						</Button>
-						<OpenWorkspace label={t("groups.openProject")} />
+						<OpenWorkspace kind="project" />
 					</>
 				}
 			/>
@@ -137,42 +145,29 @@ export function WorkspaceGroupsPage() {
 				</PageToolbar>
 			)}
 			{projects.length > 0 ? (
-				<div className="grid gap-3 @min-[36rem]:grid-cols-2 @min-[56rem]:grid-cols-3">
+				<ProjectCardGrid>
 					{projects.map((project) => {
 						const workspace =
 							project.kind === "workspace"
 								? data.workspaces.find((entry) => entry.entryId === project.id)
 								: undefined;
-						const Icon = project.kind === "workspace" ? FolderGit2 : FolderKanban;
 						return (
-							<EnvironmentLink
+							<ProjectCard
 								key={project.id}
 								to={
 									project.kind === "workspace" ? workspacePath(project.id) : groupPath(project.id)
 								}
-								className="flex min-w-0 items-start gap-3 rounded-lg border border-border bg-card p-4 transition-[background-color,border-color,box-shadow,translate] duration-150 ease-ui hover:border-input hover:shadow-sm focus-visible:outline-ring motion-safe:hover:-translate-y-0.5"
-							>
-								<span className="grid size-9 shrink-0 place-items-center rounded-md border border-border bg-muted/50 text-muted-foreground">
-									<Icon aria-hidden="true" className="size-4" />
-								</span>
-								<div className="min-w-0 flex-1">
-									<h2 className="break-words font-semibold">{project.name}</h2>
-									<p className="text-xs text-muted-foreground">
-										{t("groups.memberCount", { count: project.workspaceIds.length })}
-									</p>
-									{workspace && (
-										<p
-											className="mt-2 truncate border-t border-border pt-2 font-mono text-xs text-muted-foreground"
-											title={workspace.root}
-										>
-											{workspace.root}
-										</p>
-									)}
-								</div>
-							</EnvironmentLink>
+								icon={project.kind === "workspace" ? FolderGit2 : FolderKanban}
+								title={project.name}
+								summary={
+									workspace && isGitRepositoryWithoutManifest(workspace)
+										? t("git.repository")
+										: t("groups.memberCount", { count: project.workspaceIds.length })
+								}
+							/>
 						);
 					})}
-				</div>
+				</ProjectCardGrid>
 			) : data.projects.length > 0 ? (
 				<StatePanel framed icon={SearchX} title={t("groups.noMatchingProjects")}>
 					<Button variant="outline" onClick={() => setSearch("")}>
@@ -190,7 +185,7 @@ export function WorkspaceGroupsPage() {
 
 			{creating && (
 				<GroupNameDialog
-					title={t("groups.createGroup")}
+					title={t("groups.createProject")}
 					onClose={() => setCreating(false)}
 					onSave={async (name) => {
 						const group = await createWorkspaceGroup(name);
@@ -575,7 +570,7 @@ function WorkspaceMember({
 				</p>
 			</div>
 			<span className="shrink-0 text-xs text-muted-foreground">
-				{workspace && t(`workspaces.status.${workspace.status}`)}
+				{workspace && t(`workspaces.status.${workspaceDisplayStatus(workspace)}`)}
 			</span>
 		</>
 	);

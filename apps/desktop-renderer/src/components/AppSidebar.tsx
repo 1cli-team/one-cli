@@ -3,10 +3,12 @@ import {
 	BookOpen,
 	ClipboardList,
 	ArrowLeft,
-	House,
+	FolderKanban,
 	GitBranch,
 	KeyRound,
+	LayoutDashboard,
 	MonitorCog,
+	PanelsTopLeft,
 	Plus,
 	Network,
 	Settings2,
@@ -148,8 +150,14 @@ function GlobalSidebar() {
 			<nav className="flex shrink-0 flex-col gap-0.5 p-3" aria-label={t("navigation.global")}>
 				<Button variant="navigation" size="navigation-compact" asChild>
 					<EnvironmentNavLink to="/" end>
-						<House strokeWidth={1.5} />
-						<span>{t("sidebar.home")}</span>
+						<FolderKanban strokeWidth={1.5} />
+						<span>{t("groups.title")}</span>
+					</EnvironmentNavLink>
+				</Button>
+				<Button variant="navigation" size="navigation-compact" asChild>
+					<EnvironmentNavLink to="/workspaces" end>
+						<PanelsTopLeft strokeWidth={1.5} />
+						<span>{t("workspaces.home.title")}</span>
 					</EnvironmentNavLink>
 				</Button>
 				<Button variant="navigation" size="navigation-compact" asChild>
@@ -186,15 +194,15 @@ function SettingsSidebar() {
 				aria-label={t("sidebar.settings")}
 			>
 				<Button variant="navigation" size="navigation-compact" className="min-h-9" asChild>
-					<EnvironmentNavLink to="/settings/desktop" end>
-						<MonitorCog />
-						<span>{t("desktop.settings")}</span>
-					</EnvironmentNavLink>
-				</Button>
-				<Button variant="navigation" size="navigation-compact" className="min-h-9" asChild>
 					<EnvironmentNavLink to="/settings/general" end>
 						<SlidersHorizontal />
 						<span>{t("navigation.generalSettings")}</span>
+					</EnvironmentNavLink>
+				</Button>
+				<Button variant="navigation" size="navigation-compact" className="min-h-9" asChild>
+					<EnvironmentNavLink to="/settings/desktop" end>
+						<MonitorCog />
+						<span>{t("desktop.settings")}</span>
 					</EnvironmentNavLink>
 				</Button>
 				<Button variant="navigation" size="navigation-compact" className="min-h-9" asChild>
@@ -240,7 +248,7 @@ function WorkspaceSidebar({
 	active: boolean;
 }) {
 	const { t } = useTranslation();
-	const { projectName } = useParams();
+	const { projectName, worktreeId } = useParams();
 	const { search } = useLocation();
 	const navigate = useNavigate();
 	const { workspace, overview, available, contextEntryId: entryId } = useWorkspace(logicalEntryId);
@@ -272,6 +280,12 @@ function WorkspaceSidebar({
 				aria-label={t("navigation.workspace")}
 			>
 				<Button variant="navigation" size="navigation-compact" asChild>
+					<EnvironmentNavLink to={workspacePath(logicalEntryId, worktreeId)} end>
+						<LayoutDashboard data-icon="inline-start" />
+						<span>{t("navigation.overview")}</span>
+					</EnvironmentNavLink>
+				</Button>
+				<Button variant="navigation" size="navigation-compact" asChild>
 					<EnvironmentNavLink
 						to={
 							new URLSearchParams(search).get("group")
@@ -294,18 +308,22 @@ function WorkspaceSidebar({
 						<span>{t("git.title")}</span>
 					</EnvironmentNavLink>
 				</Button>
-				<Button variant="navigation" size="navigation-compact" asChild>
-					<EnvironmentNavLink to={workspaceVariablesPath(entryId, projectName)}>
-						<KeyRound />
-						<span>{t("navigation.environmentVariables")}</span>
-					</EnvironmentNavLink>
-				</Button>
-				<Button variant="navigation" size="navigation-compact" asChild>
-					<EnvironmentNavLink to={workspaceKnowledgePath(entryId)}>
-						<BookOpen />
-						<span>{t("openviking.title")}</span>
-					</EnvironmentNavLink>
-				</Button>
+				{workspace && workspace.status !== "uninitialized" && (
+					<>
+						<Button variant="navigation" size="navigation-compact" asChild>
+							<EnvironmentNavLink to={workspaceVariablesPath(entryId, projectName)}>
+								<KeyRound />
+								<span>{t("navigation.environmentVariables")}</span>
+							</EnvironmentNavLink>
+						</Button>
+						<Button variant="navigation" size="navigation-compact" asChild>
+							<EnvironmentNavLink to={workspaceKnowledgePath(entryId)}>
+								<BookOpen />
+								<span>{t("openviking.title")}</span>
+							</EnvironmentNavLink>
+						</Button>
+					</>
+				)}
 			</nav>
 			{available && (
 				<div className="flex shrink-0 flex-col gap-2 border-t border-border p-3">

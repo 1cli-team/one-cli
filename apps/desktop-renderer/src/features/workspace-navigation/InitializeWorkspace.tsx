@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { Ellipsis } from "lucide-react";
+import { useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useSessionSWRConfig } from "@/lib/desktop/cache";
@@ -13,6 +14,13 @@ import {
 	DialogDescription,
 	DialogFooter,
 } from "@/components/ui/dialog";
+import {
+	DropdownMenu,
+	DropdownMenuContent,
+	DropdownMenuGroup,
+	DropdownMenuItem,
+	DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ErrorNotice } from "@/components/ui/page-layout";
@@ -25,6 +33,7 @@ export function InitializeWorkspace({ workspace }: { workspace: WorkspaceRegistr
 	const { mutate } = useSessionSWRConfig();
 	const { search } = useLocation();
 	const navigate = useNavigate();
+	const menuTrigger = useRef<HTMLButtonElement>(null);
 	const [open, setOpen] = useState(false);
 	const [name, setName] = useState(workspace.name);
 	const [busy, setBusy] = useState(false);
@@ -45,14 +54,41 @@ export function InitializeWorkspace({ workspace }: { workspace: WorkspaceRegistr
 	}
 	return (
 		<>
-			<Button onClick={() => setOpen(true)}>{t("workspaces.initialize")}</Button>
+			<DropdownMenu modal={false}>
+				<DropdownMenuTrigger asChild>
+					<Button ref={menuTrigger} variant="outline">
+						<Ellipsis data-icon="inline-start" />
+						{t("workspaces.overview.moreActions")}
+					</Button>
+				</DropdownMenuTrigger>
+				<DropdownMenuContent
+					align="end"
+					onCloseAutoFocus={(event) => {
+						if (open) event.preventDefault();
+					}}
+				>
+					<DropdownMenuGroup>
+						<DropdownMenuItem onSelect={() => setOpen(true)}>
+							{t("workspaces.initialize")}
+						</DropdownMenuItem>
+					</DropdownMenuGroup>
+				</DropdownMenuContent>
+			</DropdownMenu>
 			<Dialog
 				open={open}
 				onOpenChange={(value) => {
 					if (!busy) setOpen(value);
 				}}
 			>
-				<DialogContent showCloseButton={!busy}>
+				<DialogContent
+					showCloseButton={!busy}
+					onCloseAutoFocus={(event) => {
+						if (menuTrigger.current?.isConnected) {
+							event.preventDefault();
+							menuTrigger.current.focus();
+						}
+					}}
+				>
 					<DialogHeader>
 						<DialogTitle>{t("workspaces.initialize")}</DialogTitle>
 						<DialogDescription>

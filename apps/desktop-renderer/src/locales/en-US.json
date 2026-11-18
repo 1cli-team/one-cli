@@ -1,6 +1,5 @@
 {
 	"sidebar": {
-		"home": "Home",
 		"settings": "Settings",
 		"themeToDark": "Switch to dark mode",
 		"themeToLight": "Switch to light mode",
@@ -43,9 +42,13 @@
 		"loading": "Loading workspace",
 		"retry": "Retry",
 		"openProfiles": "Open settings",
+		"overview": {
+			"directory": "Local directory",
+			"modules": "Module count",
+			"moreActions": "More actions"
+		},
 		"home": {
 			"title": "Workspaces",
-			"description": "Manage local workspaces and their modules",
 			"loading": "Loading Workspaces…",
 			"loadFailedTitle": "Could not load Workspaces",
 			"loadFailedDescription": "The local Workspace registry could not be read.",
@@ -56,18 +59,14 @@
 			"projects": "modules",
 			"projects_one": "module",
 			"projects_other": "modules",
-			"lastDetected": "Last detected",
 			"emptyTitle": "No Workspaces yet",
 			"emptyDescription": "Run one create to create a workspace, or choose Open workspace to register an existing folder.",
 			"listLabel": "Registered Workspaces",
 			"refresh": "Refresh",
 			"search": "Search name, path or ID",
 			"clearSearch": "Clear search",
-			"filterLabel": "Filter workspaces",
-			"all": "All",
-			"attention": "Needs attention",
 			"noResults": "No matching workspaces",
-			"noResultsDescription": "Try another name or path, or clear your filters.",
+			"noResultsDescription": "Try another name, path, or ID, or clear the search.",
 			"clearFilters": "Clear filters",
 			"resultCount": "{{count}} matching workspaces"
 		},
@@ -104,10 +103,6 @@
 			"identity-conflict": {
 				"title": "This Workspace ID is duplicated",
 				"description": "The Workspace remains available for inspection, but configuration is read-only."
-			},
-			"uninitialized": {
-				"title": "Initialize One workspace",
-				"description": "This directory is linked to the workspace. Initialize it to manage its modules and configuration."
 			}
 		},
 		"forget": {
@@ -115,7 +110,7 @@
 			"confirm": "Remove Workspace \"{{name}}\"? This only removes the local registry entry; no module files or remote variables will be deleted.",
 			"done": "Removed {{name}}",
 			"failed": "Could not remove Workspace",
-			"pageHint": "Use the trash action beside this Workspace in the left rail to remove only its local registry entry."
+			"pageHint": "Use the remove button in the top-right corner of the card on the Workspaces page to remove its local entry."
 		},
 		"registryError": {
 			"title": "Workspace registry unavailable",
@@ -491,10 +486,9 @@
 		"pathDetected": "The desktop environment resolves this CLI. Open a new terminal to confirm its PATH and version.",
 		"resolvedPath": "Currently resolved: {{path}}",
 		"install": "Install / update terminal CLI",
-		"continue": "Continue to workspaces",
 		"skipTerminal": "Set up terminal later",
 		"welcome": "Welcome to One Desktop",
-		"welcomeHint": "The desktop backend is connected. Review terminal integration, or continue without installing a terminal command.",
+		"welcomeHint": "You can set up the terminal command now or do it later.",
 		"updates": "Desktop updates",
 		"updateHint": "The desktop app, Go API and bundled CLI update together. Terminal CLI integration is a separate installation.",
 		"updateNotChecked": "Updates have not been checked yet",
@@ -504,13 +498,14 @@
 		"updateUnconfigured": "Updates are unavailable for this development build or until release signing is configured.",
 		"installUpdate": "Download, verify and install",
 		"connection": {
-			"starting": "Starting the local backend…",
-			"connecting": "Verifying the local HTTP connection…",
-			"failed": "The backend could not start.",
-			"stopped": "The backend has stopped.",
-			"stopping": "Stopping operations and closing the backend…",
-			"connectionFailed": "The backend is running, but the interface could not connect. Retry the connection.",
-			"preview": "Open this interface in One Desktop. A browser preview has no backend session."
+			"starting": "Opening One Desktop…",
+			"reconnecting": "Reconnecting…",
+			"failed": "One Desktop couldn't start.",
+			"stopped": "Disconnected. Try again.",
+			"stopping": "Closing One Desktop…",
+			"connectionFailed": "Couldn't connect. Try again.",
+			"preview": "Open this page in the One Desktop app.",
+			"details": "Show error details"
 		},
 		"installAction": {
 			"install": "Ready to install the bundled CLI.",
@@ -548,6 +543,7 @@
 		"open": "Open navigation",
 		"allWorkspaces": "Back to home",
 		"workspace": "Workspace navigation",
+		"overview": "Overview",
 		"environmentVariables": "Environment variables",
 		"emptyWorkspace": "Create your first module from the sidebar."
 	},
@@ -589,9 +585,9 @@
 		"empty": "This repository has no worktrees",
 		"failed": "The operation failed. Refresh and try again.",
 		"invalidPath": "Choose a valid absolute directory path.",
+		"repository": "Git repository",
 		"repositories": "Git repositories",
 		"repositoryWorktrees": "{{name}} · Worktrees",
-		"linkRepository": "Add workspace",
 		"repositoriesEmpty": "No Git repositories linked",
 		"repositoriesEmptyDescription": "Choose a local repository, or clone a remote URL to manage its worktrees.",
 		"openRepository": "Open repository",
@@ -600,7 +596,7 @@
 		"forgetRepositoryDescription": "Remove the association for {{name}} from One.",
 		"repositoryLastOpened": "Last opened · {{date}}",
 		"locateRepositoryDescription": "Choose the current directory of this workspace.",
-		"linkRepositoryDescription": "Open a local Git repository or clone a remote repository as a One workspace.",
+		"linkRepositoryDescription": "Choose a local Git repository or clone a remote one to add it to Workspaces.",
 		"repositorySource": "Repository source",
 		"localRepository": "Existing local repository",
 		"cloneRepository": "Clone remote repository",
@@ -610,7 +606,6 @@
 		"cloneDestination": "Local destination",
 		"browse": "Browse",
 		"cloning": "Cloning repository. It will be linked when complete…",
-		"saveRepository": "Open workspace",
 		"cloneAssociationWarning": "Repository cloned to {{path}}, but linking failed. Link the local repository to retry. {{error}}",
 		"remoteRepositories": "Git remotes",
 		"originMissing": "This workspace has no origin remote.",
@@ -623,6 +618,7 @@
 	},
 	"groups": {
 		"title": "Projects",
+		"loading": "Loading projects…",
 		"searchProjects": "Search projects by name",
 		"noMatchingProjects": "No projects match this search.",
 		"allProjects": "All projects",
@@ -631,9 +627,9 @@
 		"delete": "Delete project",
 		"save": "Save",
 		"name": "Project name",
-		"nameDescription": "Name the project formed by these related workspaces.",
+		"nameDescription": "Name the project. A project can contain multiple workspaces.",
 		"empty": "No projects yet",
-		"emptyDescription": "Open a repository as a standalone project, or create a workspace group for related repositories.",
+		"emptyDescription": "Open a repository as a standalone project, or create a project to organize related workspaces.",
 		"memberCount_one": "{{count}} workspace",
 		"memberCount_other": "{{count}} workspaces",
 		"addMembers": "Add workspaces",
@@ -653,8 +649,9 @@
 		"missingMember": "Workspace registration missing",
 		"notFound": "Project not found or deleted",
 		"backToProject": "Back to project",
-		"createGroup": "New workspace group",
-		"openProject": "Open project"
+		"createProject": "New project",
+		"openProject": "Open project",
+		"openProjectDescription": "Choose a local Git repository or clone a remote one to open it as a project."
 	},
 	"codeHosts": {
 		"settings": "Code repositories",
@@ -789,6 +786,8 @@
 			"saveError": "Could not save Gateway download settings."
 		},
 		"monitor": "Gateway monitor",
+		"downloadSkill": "Download Gateway Skill",
+		"skillDownloadError": "Could not download the Gateway Skill. Try again.",
 		"connection": "Connection",
 		"connectionDetails": "Connection details",
 		"address": "Address",

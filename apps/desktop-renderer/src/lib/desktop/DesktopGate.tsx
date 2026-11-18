@@ -2,6 +2,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/ui/page-layout";
+import { Spinner } from "@/components/ui/spinner";
 import { http } from "@/lib/http";
 import i18n from "@/lib/i18n";
 import { useLocaleStore } from "@/lib/stores/locale";
@@ -85,6 +86,15 @@ export function DesktopGate({ children }: { children: ReactNode }) {
 			unlisten?.();
 		};
 	}, [attempt]);
+	const canRetry = native && ["failed", "connectionFailed", "stopped"].includes(state.status);
+	const showRecovery = canRetry || state.status === "preview";
+	const opening = state.status === "starting" || state.status === "connecting";
+	const status = opening ? (mounted ? "reconnecting" : "starting") : state.status;
+	const message = t(`desktop.connection.${status}`, {
+		defaultValue: t("desktop.connection.starting"),
+	});
+	const errorKey = `desktop.native.${state.error}`;
+	const knownError = state.error && i18n.exists(errorKey);
 	return (
 		<>
 			{mounted ? (
@@ -93,37 +103,47 @@ export function DesktopGate({ children }: { children: ReactNode }) {
 				</div>
 			) : null}
 			{!state.connected ? (
-				<div
-					role="status"
-					className="window-fallback fixed inset-0 z-50 grid place-items-center bg-background/95 p-6 text-foreground"
-				>
-					<div className="flex w-full max-w-md flex-col gap-4 rounded-lg border border-border bg-card p-6">
-						<PageHeader
-							title="One Desktop"
-							description={t(`desktop.connection.${state.status}`, {
-								defaultValue: t("desktop.connection.starting"),
-							})}
-						/>
-						{state.error ? (
-							<p className="break-all text-sm text-muted-foreground">
-								{t(`desktop.native.${state.error}`, { defaultValue: state.error })}
-							</p>
-						) : null}
-						{native && ["failed", "connectionFailed", "stopped"].includes(state.status) ? (
-							<Button
-								className="self-start"
-								onClick={() => {
-									void (
-										state.status === "connectionFailed"
-											? Promise.resolve()
-											: desktop().retryBackend()
-									).then(() => setAttempt((n) => n + 1));
-								}}
-							>
-								{t("desktop.retry")}
-							</Button>
-						) : null}
-					</div>
+				<div className="window-fallback fixed inset-0 z-50 grid place-items-center bg-background/95 p-6 text-foreground">
+					{showRecovery ? (
+						<div className="flex w-full max-w-md flex-col gap-4 rounded-lg border border-border bg-card p-6">
+							<PageHeader
+								title="One Desktop"
+								description={<span role={canRetry ? "alert" : undefined}>{message}</span>}
+							/>
+							{knownError ? (
+								<p className="text-sm text-muted-foreground">{t(errorKey)}</p>
+							) : state.error ? (
+								<details className="text-sm text-muted-foreground">
+									<summary className="w-fit cursor-pointer rounded-sm focus-visible:outline-2 focus-visible:outline-ring">
+										{t("desktop.connection.details")}
+									</summary>
+									<p className="mt-2 wrap-anywhere whitespace-pre-wrap">{state.error}</p>
+								</details>
+							) : null}
+							{canRetry && (
+								<Button
+									className="self-start"
+									onClick={() => {
+										void (
+											state.status === "connectionFailed"
+												? Promise.resolve()
+												: desktop().retryBackend()
+										).then(() => setAttempt((n) => n + 1));
+									}}
+								>
+									{t("desktop.retry")}
+								</Button>
+							)}
+						</div>
+					) : (
+						<div role="status" className="flex max-w-sm flex-col items-center gap-3 text-center">
+							<Spinner
+								aria-hidden="true"
+								className="size-6 text-primary motion-reduce:animate-none"
+							/>
+							<p className="text-sm font-medium">{message}</p>
+						</div>
+					)}
 				</div>
 			) : null}
 		</>

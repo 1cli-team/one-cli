@@ -1,5 +1,5 @@
 import { useTranslation } from "react-i18next";
-import { useLocation, useNavigate, useParams } from "react-router-dom";
+import { matchPath, useLocation, useNavigate, useParams } from "react-router-dom";
 import {
 	Select,
 	SelectContent,
@@ -22,11 +22,18 @@ export function WorktreeSelector({ entryId }: { entryId: string }) {
 	const { pathname, search } = useLocation();
 	const navigate = useNavigate();
 	if (!registered?.worktrees?.length || !workspace?.worktreeId) return null;
+	const onOverview =
+		matchPath("/workspaces/:entryId", pathname) ||
+		matchPath("/workspaces/:entryId/worktrees/:worktreeId", pathname);
 	return (
 		<Select
 			value={workspace.worktreeId}
 			onValueChange={(id) => {
 				const context = workspaceContext(registered.entryId, id);
+				if (onOverview) {
+					navigate({ pathname: workspacePath(context), search });
+					return;
+				}
 				const target = pathname.endsWith("/git/worktrees")
 					? `${workspacePath(context)}/git/worktrees`
 					: pathname.endsWith("/knowledge")
