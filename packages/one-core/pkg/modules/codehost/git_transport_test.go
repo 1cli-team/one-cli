@@ -4,9 +4,33 @@ import (
 	"encoding/base64"
 	"os"
 	"os/exec"
+	"slices"
 	"strings"
 	"testing"
 )
+
+func TestGitEnvironmentUsesScopedTokenWithoutAccount(t *testing.T) {
+	t.Setenv("ONE_HOME", t.TempDir())
+	saved, ok := parseInput(Input{URL: "https://git.example.invalid", Token: "fixture-token", Repository: "team/repo"})
+	if !ok {
+		t.Fatal("invalid fixture")
+	}
+	if err := update(t.Context(), func(values map[string]credential) (bool, error) {
+		values[saved.Host] = saved
+		return true, nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	service := Service{}
+	env, err := service.GitEnvironment(nil, saved.URL+"/team/repo.git")
+	auth := "GIT_CONFIG_VALUE_0=Authorization: Basic " + base64.StdEncoding.EncodeToString([]byte(saved.Token+":"))
+	if err != nil || !slices.Contains(env, auth) {
+		t.Fatalf("expected Git HTTPS authentication for the target repository, got error %v", err)
+	}
+	if env, err := service.GitEnvironment(nil, saved.URL+"/team/other.git"); err != nil || len(env) != 0 {
+		t.Fatalf("unexpected Git HTTPS authentication for a different repository, got error %v", err)
+	}
+}
 
 func TestGitEnvironmentScopesAuthorizationToRepoOrigin(t *testing.T) {
 	t.Setenv("ONE_HOME", t.TempDir())

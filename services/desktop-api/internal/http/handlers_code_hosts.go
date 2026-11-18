@@ -26,7 +26,7 @@ func registerCodeHostRoutes(mux *http.ServeMux) {
 				status = http.StatusBadRequest
 			case codehost.ErrMissing:
 				status = http.StatusNotFound
-			case codehost.ErrAuth, codehost.ErrTest:
+			case codehost.ErrAuth, codehost.ErrTest, codehost.ErrRepositoryAccess:
 				status = http.StatusBadGateway
 			case codehost.ErrAddressConflict:
 				status = http.StatusConflict

@@ -43,26 +43,30 @@ func hostCommand() *cobra.Command {
 	hosts := codehost.Service{}
 	parent := &cobra.Command{Use: "host"}
 	i18n.MarkShort(parent, "git.host.short")
+	var repository string
+	configure := providerCommand("configure <url>", "git.host.configure.short", i18n.ExactArgs(1), func(cmd *cobra.Command, args []string) (any, error) {
+		input := cmd.InOrStdin()
+		var token []byte
+		var err error
+		if file, ok := input.(*os.File); ok && term.IsTerminal(int(file.Fd())) {
+			fmt.Fprint(cmd.ErrOrStderr(), i18n.T("git.host.token_prompt")+" ")
+			token, err = term.ReadPassword(int(file.Fd()))
+			fmt.Fprintln(cmd.ErrOrStderr())
+		} else {
+			token, err = io.ReadAll(io.LimitReader(input, (8<<10)+1))
+		}
+		if err != nil || len(token) > 8<<10 {
+			return nil, i18n.Errorf("git.host.read_token")
+		}
+		return hosts.Save(cmd.Context(), codehost.Input{URL: args[0], Token: string(token), Repository: repository})
+	})
+	configure.Flags().StringVar(&repository, "repository", "", "")
+	i18n.MarkFlagUsage(configure, "repository", "git.host.flag.repository")
 	parent.AddCommand(
 		providerCommand("list", "git.host.list.short", i18n.NoArgs, func(*cobra.Command, []string) (any, error) {
 			return hosts.List()
 		}),
-		providerCommand("configure <url>", "git.host.configure.short", i18n.ExactArgs(1), func(cmd *cobra.Command, args []string) (any, error) {
-			input := cmd.InOrStdin()
-			var token []byte
-			var err error
-			if file, ok := input.(*os.File); ok && term.IsTerminal(int(file.Fd())) {
-				fmt.Fprint(cmd.ErrOrStderr(), i18n.T("git.host.token_prompt")+" ")
-				token, err = term.ReadPassword(int(file.Fd()))
-				fmt.Fprintln(cmd.ErrOrStderr())
-			} else {
-				token, err = io.ReadAll(io.LimitReader(input, (8<<10)+1))
-			}
-			if err != nil || len(token) > 8<<10 {
-				return nil, i18n.Errorf("git.host.read_token")
-			}
-			return hosts.Save(cmd.Context(), codehost.Input{URL: args[0], Token: string(token)})
-		}),
+		configure,
 		providerCommand("test <host>", "git.host.test.short", i18n.ExactArgs(1), func(cmd *cobra.Command, args []string) (any, error) {
 			return hosts.Test(cmd.Context(), args[0])
 		}),

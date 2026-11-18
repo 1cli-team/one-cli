@@ -19,8 +19,8 @@ func (s Service) GitEnvironment(env []string, remote string) ([]string, error) {
 	if err != nil || !ref.Valid() || u.Scheme != "https" || u.User != nil || ref.Host == gitmodule.GitHubHost {
 		return env, nil
 	}
-	c, err := s.connection(ref.Host)
-	if errors.Is(err, ErrMissing) {
+	c, err := s.repositoryConnection(ref)
+	if errors.Is(err, ErrMissing) || errors.Is(err, ErrRepositoryScope) {
 		return env, nil
 	}
 	if err != nil {
@@ -35,7 +35,12 @@ func (s Service) GitEnvironment(env []string, remote string) ([]string, error) {
 		upper := strings.ToUpper(key)
 		return strings.HasPrefix(upper, "GIT_CONFIG_") || strings.HasPrefix(upper, "GIT_TRACE") || upper == "GIT_CURL_VERBOSE"
 	})
-	authorization := base64.StdEncoding.EncodeToString([]byte(c.Account + ":" + c.Token))
+	credentials := c.Account + ":" + c.Token
+	if c.Repository != "" {
+		// Gitea and Forgejo accept the token as the Basic username with an empty password.
+		credentials = c.Token + ":"
+	}
+	authorization := base64.StdEncoding.EncodeToString([]byte(credentials))
 	return append(env,
 		"GIT_CONFIG_COUNT=2",
 		"GIT_CONFIG_KEY_0=http."+base.JoinPath(strings.TrimPrefix(u.Path, "/")).String()+".extraHeader",

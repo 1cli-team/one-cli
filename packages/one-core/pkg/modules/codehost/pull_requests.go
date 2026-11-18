@@ -40,7 +40,7 @@ func (s Service) Find(ctx context.Context, ref gitmodule.RepositoryRef, head, ba
 		return PullRequest{}, i18n.Errorf("git.pr_input")
 	}
 	if ref.Host != githubHost.Host {
-		c, err := s.connection(ref.Host)
+		c, err := s.repositoryConnection(ref)
 		if err != nil {
 			return PullRequest{}, err
 		}
@@ -64,7 +64,7 @@ func (s Service) Create(ctx context.Context, ref gitmodule.RepositoryRef, input 
 		return PullRequest{}, i18n.Errorf("git.pr_input")
 	}
 	if ref.Host != githubHost.Host {
-		c, err := s.connection(ref.Host)
+		c, err := s.repositoryConnection(ref)
 		if err != nil {
 			return PullRequest{}, err
 		}
@@ -83,7 +83,7 @@ func (s Service) Read(ctx context.Context, ref gitmodule.RepositoryRef, number i
 		return PullRequest{}, i18n.Errorf("git.pr_input")
 	}
 	if ref.Host != githubHost.Host {
-		c, err := s.connection(ref.Host)
+		c, err := s.repositoryConnection(ref)
 		if err != nil {
 			return PullRequest{}, err
 		}
