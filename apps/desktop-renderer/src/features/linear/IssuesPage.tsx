@@ -1,11 +1,17 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import useSWR from "swr";
 import { ArrowLeft, ClipboardList, FolderPlus, Plus, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { ErrorNotice, PageHeader } from "@/components/ui/page-layout";
+import {
+	ErrorNotice,
+	PageContent,
+	PageHeader,
+	PageToolbar,
+	SearchInput,
+	StatePanel,
+} from "@/components/ui/page-layout";
 import { EnvironmentLink } from "@/features/environment-context/EnvironmentLink";
 import { useWorkspaceGroups } from "@/features/workspace-groups/useWorkspaceGroups";
 import { BindingForm } from "./BindingForm";
@@ -60,23 +66,22 @@ function ProjectIssues({ scope }: { scope: Scope }) {
 						workspace.entryId === entryId ||
 						workspace.aliases?.some((alias) => alias.entryId === entryId),
 				)?.name;
-	return (
-		<div className="mx-auto flex h-full w-full max-w-[1440px] flex-col gap-5 overflow-y-auto p-1">
-			<div>
-				<Button asChild variant="ghost" size="sm">
-					<EnvironmentLink
-						to={
-							scope.kind === "group"
-								? `/projects/${encodeURIComponent(scope.id)}`
-								: `/workspaces/${encodeURIComponent(scope.id)}`
-						}
-					>
-						<ArrowLeft />
-						{name || t("linear.back")}
-					</EnvironmentLink>
-				</Button>
-			</div>
-			<PageHeader title={t("linear.issues")} description={currentBinding?.project.name} />
+	const backAction = (
+		<Button asChild variant="ghost" className="min-w-0 max-w-full">
+			<EnvironmentLink
+				to={
+					scope.kind === "group"
+						? `/projects/${encodeURIComponent(scope.id)}`
+						: `/workspaces/${encodeURIComponent(scope.id)}`
+				}
+			>
+				<ArrowLeft />
+				<span className="truncate">{name || t("linear.back")}</span>
+			</EnvironmentLink>
+		</Button>
+	);
+	const notices = (
+		<>
 			{binding.error && (
 				<ErrorNotice
 					action={
@@ -89,35 +94,50 @@ function ProjectIssues({ scope }: { scope: Scope }) {
 				</ErrorNotice>
 			)}
 			{project.error && <ErrorNotice>{errorText(project.error)}</ErrorNotice>}
-			{!binding.data && !binding.error && <p role="status">{t("linear.loading")}</p>}
-			{binding.data && !binding.data.binding && (
-				<BindingForm
-					scope={scope}
-					projectName={name || ""}
-					onSaved={(saved) => void binding.mutate({ binding: saved }, { revalidate: false })}
-				/>
-			)}
-			{currentBinding && (
+		</>
+	);
+	return (
+		<PageContent scroll={scope.kind === "workspace"}>
+			{currentBinding ? (
 				<IssueList
 					key={`${currentBinding.connectionId}:${currentBinding.project.id}`}
 					scope={scope}
 					binding={currentBinding}
+					backAction={backAction}
+					notices={notices}
 					onRefreshProject={() => project.mutate()}
 					onUnbound={() => void binding.mutate()}
 				/>
+			) : (
+				<>
+					<PageHeader title={t("linear.issues")} actions={backAction} />
+					{notices}
+					{!binding.data && !binding.error && <p role="status">{t("linear.loading")}</p>}
+					{binding.data && (
+						<BindingForm
+							scope={scope}
+							projectName={name || ""}
+							onSaved={(saved) => void binding.mutate({ binding: saved }, { revalidate: false })}
+						/>
+					)}
+				</>
 			)}
-		</div>
+		</PageContent>
 	);
 }
 
 function IssueList({
 	scope,
 	binding,
+	backAction,
+	notices,
 	onUnbound,
 	onRefreshProject,
 }: {
 	scope: Scope;
 	binding: Binding;
+	backAction: ReactNode;
+	notices: ReactNode;
 	onUnbound(): void;
 	onRefreshProject(): Promise<unknown>;
 }) {
@@ -176,6 +196,42 @@ function IssueList({
 	}
 	return (
 		<>
+			<PageHeader
+				title={t("linear.issues")}
+				description={binding.project.name}
+				actions={
+					<>
+						{backAction}
+						<Button
+							variant="ghost"
+							disabled={busy}
+							onClick={() => {
+								setBusy(true);
+								setError("");
+								void unbind(scope)
+									.then(onUnbound)
+									.catch((e) => setError(errorText(e)))
+									.finally(() => setBusy(false));
+							}}
+						>
+							{t("linear.unbind")}
+						</Button>
+						<Button
+							variant="outline"
+							onClick={() => void refresh()}
+							disabled={refreshing || list.isValidating}
+						>
+							<RefreshCw />
+							{t("linear.refresh")}
+						</Button>
+						<Button onClick={() => setSelected("new")}>
+							<Plus />
+							{t("linear.create")}
+						</Button>
+					</>
+				}
+			/>
+			{notices}
 			{operations.data?.map((operation) => (
 				<div
 					key={operation.id}
@@ -206,99 +262,76 @@ function IssueList({
 					</Button>
 				</div>
 			))}
-			<div className="flex flex-wrap items-center justify-between gap-3">
-				<p className="text-sm text-muted-foreground">
-					{t("linear.boundTeam", {
-						name:
-							binding.project.teams.find((team) => team.id === binding.teamId)?.name ||
-							t("linear.chooseTeam"),
-					})}
-				</p>
-				<div className="flex flex-wrap gap-2">
-					<Button
-						variant="ghost"
-						disabled={busy}
-						onClick={() => {
-							setBusy(true);
-							setError("");
-							void unbind(scope)
-								.then(onUnbound)
-								.catch((e) => setError(errorText(e)))
-								.finally(() => setBusy(false));
-						}}
-					>
-						{t("linear.unbind")}
+			<PageToolbar className="grid items-end @min-[56rem]:grid-cols-[minmax(15rem,1fr)_minmax(0,2.6fr)]">
+				<form
+					className="flex min-w-0 gap-2"
+					onSubmit={(e) => {
+						e.preventDefault();
+						change("q", query);
+					}}
+				>
+					<SearchInput
+						groupClassName="h-9"
+						aria-label={t("linear.search")}
+						placeholder={t("linear.search")}
+						value={query}
+						onChange={(e) => setQuery(e.target.value)}
+					/>
+					<Button type="submit" variant="outline" className="h-9">
+						{t("linear.searchAction")}
 					</Button>
-					<Button
-						variant="outline"
-						onClick={() => void refresh()}
-						disabled={refreshing || list.isValidating}
-					>
-						<RefreshCw />
-						{t("linear.refresh")}
-					</Button>
-					<Button onClick={() => setSelected("new")}>
-						<Plus />
-						{t("linear.create")}
-					</Button>
+				</form>
+				<div className="grid min-w-0 grid-cols-2 gap-3 @min-[36rem]:grid-cols-4">
+					<Choice
+						label={t("linear.team")}
+						value={filter.team}
+						onChange={(v) => change("team", v)}
+						options={binding.project.teams}
+						placeholder={t("linear.allTeams")}
+					/>
+					<Choice
+						label={t("linear.state")}
+						value={filter.state}
+						onChange={(v) => change("state", v)}
+						options={
+							team.data?.states.map(({ id, name }) => ({
+								id,
+								name: workflowStateLabel(name, t),
+							})) || []
+						}
+						disabled={!filter.team || !team.data}
+						placeholder={t("linear.allStates")}
+					/>
+					<Choice
+						label={t("linear.assignee")}
+						value={filter.assignee}
+						onChange={(v) => change("assignee", v)}
+						options={team.data?.members || []}
+						disabled={!filter.team || !team.data}
+						placeholder={t("linear.allAssignees")}
+					/>
+					<Choice
+						label={t("linear.priority")}
+						value={filter.priority}
+						onChange={(v) => change("priority", v)}
+						options={[0, 1, 2, 3, 4].map((n) => ({
+							id: String(n),
+							name: t(`linear.priorities.${n}`),
+						}))}
+						placeholder={t("linear.allPriorities")}
+					/>
 				</div>
-			</div>
-			<p className="text-xs text-muted-foreground">{t("linear.projectTeamsHint")}</p>
-			<form
-				className="flex gap-2"
-				onSubmit={(e) => {
-					e.preventDefault();
-					change("q", query);
-				}}
-			>
-				<Input
-					aria-label={t("linear.search")}
-					placeholder={t("linear.search")}
-					value={query}
-					onChange={(e) => setQuery(e.target.value)}
-				/>
-				<Button type="submit" variant="outline">
-					{t("linear.searchAction")}
-				</Button>
-			</form>
-			<div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-				<Choice
-					label={t("linear.team")}
-					value={filter.team}
-					onChange={(v) => change("team", v)}
-					options={binding.project.teams}
-					placeholder={t("linear.allTeams")}
-				/>
-				<Choice
-					label={t("linear.state")}
-					value={filter.state}
-					onChange={(v) => change("state", v)}
-					options={
-						team.data?.states.map(({ id, name }) => ({ id, name: workflowStateLabel(name, t) })) ||
-						[]
-					}
-					disabled={!filter.team || !team.data}
-					placeholder={t("linear.allStates")}
-				/>
-				<Choice
-					label={t("linear.assignee")}
-					value={filter.assignee}
-					onChange={(v) => change("assignee", v)}
-					options={team.data?.members || []}
-					disabled={!filter.team || !team.data}
-					placeholder={t("linear.allAssignees")}
-				/>
-				<Choice
-					label={t("linear.priority")}
-					value={filter.priority}
-					onChange={(v) => change("priority", v)}
-					options={[0, 1, 2, 3, 4].map((n) => ({
-						id: String(n),
-						name: t(`linear.priorities.${n}`),
-					}))}
-					placeholder={t("linear.allPriorities")}
-				/>
-			</div>
+				<div className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground @min-[56rem]:col-span-2">
+					<span className="font-medium">
+						{t("linear.boundTeam", {
+							name:
+								binding.project.teams.find((team) => team.id === binding.teamId)?.name ||
+								t("linear.chooseTeam"),
+						})}
+					</span>
+					<span>{t("linear.projectTeamsHint")}</span>
+				</div>
+			</PageToolbar>
 			{(error || team.error || list.error || operations.error) && (
 				<ErrorNotice>
 					{error || errorText(team.error || list.error || operations.error)}
@@ -315,12 +348,7 @@ function IssueList({
 					className="overflow-hidden rounded-lg border border-border bg-card"
 					aria-busy={list.isValidating}
 				>
-					{!list.data.nodes.length && (
-						<div className="flex flex-col items-center gap-3 p-12 text-muted-foreground">
-							<ClipboardList className="size-7" />
-							<p>{t("linear.empty")}</p>
-						</div>
-					)}
+					{!list.data.nodes.length && <StatePanel icon={ClipboardList} title={t("linear.empty")} />}
 					{list.data.nodes.map((issue) => (
 						<div
 							key={issue.id}
@@ -329,10 +357,10 @@ function IssueList({
 							<Button
 								variant="ghost"
 								type="button"
-								className="h-auto min-w-0 flex-1 justify-start gap-3 whitespace-normal rounded-none px-4 py-3 text-left font-normal hover:bg-transparent"
+								className="h-auto min-w-0 flex-1 justify-start gap-3 whitespace-normal rounded-none px-4 py-2.5 text-left font-normal hover:bg-transparent focus-visible:ring-inset focus-visible:ring-offset-0"
 								onClick={() => setSelected(issue.id)}
 							>
-								<span className="w-20 shrink-0 font-mono text-xs text-muted-foreground">
+								<span className="min-w-12 shrink-0 font-mono text-xs text-muted-foreground">
 									{issue.identifier}
 								</span>
 								<span className="min-w-0 flex-1">

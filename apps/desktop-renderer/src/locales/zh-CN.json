@@ -175,6 +175,9 @@
 	"projectInspector": {
 		"workspaceTitle": "模块设置",
 		"projectListLabel": "工作区模块",
+		"selectModule": "切换模块，当前为 {{module}}",
+		"searchModules": "搜索模块名或路径",
+		"noMatchingModules": "没有找到匹配的模块。",
 		"empty": "这个工作区还没有模块。",
 		"loadFailed": "无法加载模块配置",
 		"retry": "重试",
@@ -759,6 +762,7 @@
 		"settings": "Gateway 连接",
 		"monitor": "Gateway 监控",
 		"connection": "连接状态",
+		"connectionDetails": "连接详情",
 		"address": "地址",
 		"addressHint": "远程 Gateway 使用 HTTPS，本机 Gateway 可以使用 HTTP。",
 		"token": "令牌",

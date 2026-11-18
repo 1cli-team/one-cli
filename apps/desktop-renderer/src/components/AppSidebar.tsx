@@ -75,7 +75,7 @@ function SidebarPanels({ entryId, homeTo }: Pick<SidebarProps, "entryId" | "home
 			<SidebarTitlebar homeTo={detailMode ? homeTo : undefined} />
 			<div
 				className={cn(
-					"flex min-h-0 w-[200%] flex-1 transition-transform duration-[220ms] ease-out motion-reduce:transition-none",
+					"flex min-h-0 w-[200%] flex-1 transition-transform duration-200 ease-ui motion-reduce:transition-none",
 					detailMode && "-translate-x-1/2",
 				)}
 			>
@@ -146,14 +146,14 @@ function GlobalSidebar() {
 	const { t } = useTranslation();
 	return (
 		<>
-			<nav className="flex shrink-0 flex-col gap-1 p-3" aria-label={t("navigation.global")}>
-				<Button variant="navigation" size="navigation-compact" className="min-h-9" asChild>
+			<nav className="flex shrink-0 flex-col gap-0.5 p-3" aria-label={t("navigation.global")}>
+				<Button variant="navigation" size="navigation-compact" asChild>
 					<EnvironmentNavLink to="/" end>
 						<House strokeWidth={1.5} />
 						<span>{t("sidebar.home")}</span>
 					</EnvironmentNavLink>
 				</Button>
-				<Button variant="navigation" size="navigation-compact" className="min-h-9" asChild>
+				<Button variant="navigation" size="navigation-compact" asChild>
 					<EnvironmentNavLink to="/gateway" end>
 						<Activity strokeWidth={1.5} />
 						<span>{t("gateway.monitor")}</span>
@@ -166,7 +166,7 @@ function GlobalSidebar() {
 				className="flex shrink-0 flex-col gap-1 border-t border-border p-3"
 				aria-label={t("sidebar.settings")}
 			>
-				<Button variant="navigation" size="navigation-compact" className="min-h-9" asChild>
+				<Button variant="navigation" size="navigation-compact" asChild>
 					<EnvironmentNavLink to="/settings">
 						<Settings2 strokeWidth={1.5} />
 						<span>{t("sidebar.settings")}</span>
@@ -258,7 +258,7 @@ function WorkspaceSidebar({
 	return (
 		<>
 			<div className="flex shrink-0 flex-col gap-1 px-5 py-4">
-				<h2 className="truncate font-medium" title={workspace?.name}>
+				<h2 className="truncate text-base font-semibold" title={workspace?.name}>
 					{workspace?.name ?? t("workspaces.workspaceLabel")}
 				</h2>
 				<p
@@ -269,7 +269,7 @@ function WorkspaceSidebar({
 				</p>
 			</div>
 			<nav
-				className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto px-3 pb-3"
+				className="flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto px-3 pb-3"
 				aria-label={t("navigation.workspace")}
 			>
 				{available && !overview.data && !overview.error && <Skeleton className="h-24" />}

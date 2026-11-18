@@ -68,7 +68,7 @@ export function TopBar({ homeTo, onOpenNavigation }: { homeTo: string; onOpenNav
 		"/settings/desktop": t("desktop.settings"),
 	};
 	return (
-		<header className="window-titlebar window-topbar flex min-h-14 shrink-0 items-center justify-between gap-2 border-b border-border bg-card px-4 py-2 ud-md:px-6">
+		<header className="window-titlebar window-topbar flex min-h-14 shrink-0 items-center justify-between gap-2 border-b border-border bg-background px-4 py-2 ud-md:px-6">
 			<div className="flex min-w-0 flex-1 items-center gap-3">
 				<Button
 					variant="ghost"
@@ -80,7 +80,7 @@ export function TopBar({ homeTo, onOpenNavigation }: { homeTo: string; onOpenNav
 					<Menu />
 				</Button>
 				<Breadcrumb className="min-w-0">
-					<BreadcrumbList className="flex-nowrap text-sm [&>li]:min-w-0 [&_[data-slot=breadcrumb-page]]:truncate [&_[data-slot=breadcrumb-link]]:truncate">
+					<BreadcrumbList className="flex-nowrap gap-2 text-sm [&>li]:min-w-0 [&_[data-slot=breadcrumb-page]]:truncate [&_[data-slot=breadcrumb-page]]:font-medium [&_[data-slot=breadcrumb-link]]:truncate">
 						{match ? (
 							<>
 								<BreadcrumbItem>
@@ -152,21 +152,23 @@ export function TopBar({ homeTo, onOpenNavigation }: { homeTo: string; onOpenNav
 					</BreadcrumbList>
 				</Breadcrumb>
 			</div>
-			<div className="flex shrink-0 items-center gap-1">
+			<div className="flex shrink-0 items-center gap-1.5">
 				{match && available && (
 					<EnvironmentSelector environments={overview.data?.workspace?.environments} />
 				)}
 				{match?.params.entryId && <WorktreeSelector entryId={match.params.entryId} />}
-				<LanguageSwitcher />
-				<Button
-					variant="ghost"
-					size="icon"
-					onClick={toggle}
-					title={themeLabel}
-					aria-label={themeLabel}
-				>
-					{mode === "light" ? <MoonStar /> : <SunMedium />}
-				</Button>
+				<div className="flex items-center gap-1">
+					<LanguageSwitcher />
+					<Button
+						variant="ghost"
+						size="icon"
+						onClick={toggle}
+						title={themeLabel}
+						aria-label={themeLabel}
+					>
+						{mode === "light" ? <MoonStar /> : <SunMedium />}
+					</Button>
+				</div>
 			</div>
 		</header>
 	);

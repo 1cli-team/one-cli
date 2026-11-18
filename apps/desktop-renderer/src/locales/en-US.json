@@ -175,6 +175,9 @@
 	"projectInspector": {
 		"workspaceTitle": "Module settings",
 		"projectListLabel": "Workspace modules",
+		"selectModule": "Switch module, currently {{module}}",
+		"searchModules": "Search modules by name or path",
+		"noMatchingModules": "No matching modules.",
 		"empty": "This workspace has no modules.",
 		"loadFailed": "Unable to load module configuration",
 		"retry": "Retry",
@@ -759,6 +762,7 @@
 		"settings": "Gateway connection",
 		"monitor": "Gateway monitor",
 		"connection": "Connection",
+		"connectionDetails": "Connection details",
 		"address": "Address",
 		"addressHint": "Use HTTPS for a remote Gateway or HTTP for a local Gateway.",
 		"token": "Token",

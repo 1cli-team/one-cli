@@ -34,29 +34,26 @@ import {
 	inviteWorker,
 	repositoryKey,
 	useExecution,
-	useWorkers,
 	type ExecutionState,
 	type ExecutionWorker,
 	type WorkerInvite,
 } from "./executions";
 
-export function GatewayExecutions({
-	connection,
+export function GatewayWorkers({
 	canInvite,
-	selected,
-	onSelect,
+	machines,
+	isLoading,
+	hasError,
 }: {
-	connection: string;
 	canInvite: boolean;
-	selected?: string;
-	onSelect(id?: string): void;
+	machines: ExecutionWorker[];
+	isLoading: boolean;
+	hasError: boolean;
 }) {
 	const { t, i18n } = useTranslation();
-	const workers = useWorkers(connection);
 	const [invite, setInvite] = useState<WorkerInvite>();
 	const [inviting, setInviting] = useState(false);
 	const [inviteError, setInviteError] = useState("");
-	const machines = workers.data ?? [];
 
 	async function pair() {
 		setInviting(true);
@@ -73,25 +70,25 @@ export function GatewayExecutions({
 	return (
 		<div className="flex flex-col gap-6">
 			<section className="flex flex-col gap-3" aria-labelledby="gateway-workers-heading">
-				<div className="flex flex-wrap items-center justify-between gap-2">
-					<h2 id="gateway-workers-heading" className="text-base font-semibold">
-						{t("gateway.execution.workers")}
-					</h2>
-					{canInvite && (
+				<h2 id="gateway-workers-heading" className="sr-only">
+					{t("gateway.execution.workers")}
+				</h2>
+				{canInvite && (
+					<div className="flex justify-end">
 						<Button variant="outline" size="sm" disabled={inviting} onClick={() => void pair()}>
 							{t("gateway.execution.addWorker")}
 						</Button>
-					)}
-				</div>
-				{(workers.error || inviteError) && (
+					</div>
+				)}
+				{(hasError || inviteError) && (
 					<p role="alert" className="text-sm text-destructive">
 						{inviteError || t("gateway.execution.loadError")}
 					</p>
 				)}
-				{workers.isLoading ? (
+				{isLoading ? (
 					<Skeleton className="h-12 w-full" />
 				) : (
-					<div className="rounded-lg border">
+					<div className="overflow-hidden rounded-lg border border-border bg-card">
 						<Table>
 							<TableHeader>
 								<TableRow>
@@ -102,9 +99,12 @@ export function GatewayExecutions({
 							<TableBody>
 								{machines.map((worker) => (
 									<TableRow key={worker.id}>
-										<TableCell className="font-medium">{worker.name}</TableCell>
+										<TableCell className="font-mono text-xs font-medium">{worker.name}</TableCell>
 										<TableCell>
-											<Badge variant="outline">
+											<Badge
+												variant={worker.online ? (worker.busy ? "warning" : "success") : "muted"}
+											>
+												<span aria-hidden="true" className="size-1.5 rounded-full bg-current" />
 												{t(
 													`gateway.execution.workerState.${worker.online ? (worker.busy ? "busy" : "available") : "offline"}`,
 												)}
@@ -123,16 +123,6 @@ export function GatewayExecutions({
 				)}
 			</section>
 
-			{selected && (
-				<ExecutionDetails
-					key={selected}
-					connection={connection}
-					id={selected}
-					workers={machines}
-					onClose={() => onSelect()}
-					onRevised={onSelect}
-				/>
-			)}
 			{invite && (
 				<Dialog
 					open
@@ -172,7 +162,7 @@ function ExecutionBadge({ state }: { state: ExecutionState }) {
 	);
 }
 
-function ExecutionDetails({
+export function GatewayExecutionDetails({
 	connection,
 	id,
 	workers,

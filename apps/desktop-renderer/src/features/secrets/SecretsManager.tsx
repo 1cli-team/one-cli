@@ -1,7 +1,7 @@
 import { useEnvironmentDirtyStore } from "@/features/environment-context/environment-dirty-store";
 import { MoreHorizontal, SearchX } from "lucide-react";
 import { IconButton } from "@/components/ui/icon-button";
-import { ErrorNotice, SearchInput, StatePanel } from "@/components/ui/page-layout";
+import { ErrorNotice, PageToolbar, SearchInput, StatePanel } from "@/components/ui/page-layout";
 import {
 	DropdownMenu,
 	DropdownMenuContent,
@@ -90,6 +90,7 @@ export const SecretsManager: React.FC<{
 	fixedProject?: string;
 	variant?: "standalone" | "embedded";
 	readOnly?: boolean;
+	toolbarStart?: React.ReactNode;
 }> = ({
 	workspaceEntryId,
 	environment,
@@ -97,6 +98,7 @@ export const SecretsManager: React.FC<{
 	fixedProject,
 	variant = "standalone",
 	readOnly,
+	toolbarStart,
 }) => {
 	const { t } = useTranslation();
 	const toast = useToast();
@@ -287,14 +289,19 @@ export const SecretsManager: React.FC<{
 	}
 
 	const titleId = useId();
+	const searchLabel = t(variant === "embedded" ? "global.search" : "secrets.search");
 	return (
 		<section aria-labelledby={titleId} className="flex min-h-0 flex-col gap-4">
-			<header className="flex shrink-0 items-start justify-between gap-4">
+			<header
+				className={
+					variant === "embedded" ? "sr-only" : "flex shrink-0 items-start justify-between gap-4"
+				}
+			>
 				<div className="flex min-w-0 flex-col gap-1">
 					<h2 id={titleId} className="text-lg font-medium">
 						{t("secrets.title")}
 					</h2>
-					{result.data && (
+					{result.data && variant === "standalone" && (
 						<p className="text-xs text-muted-foreground" aria-live="polite">
 							{t("global.count", { count: visibleKeys.length })}
 						</p>
@@ -304,16 +311,23 @@ export const SecretsManager: React.FC<{
 					)}
 				</div>
 			</header>
-			<div className="flex shrink-0 flex-wrap items-center justify-between gap-3">
+			<PageToolbar>
+				{toolbarStart}
 				<div className="min-w-40 max-w-xs flex-1">
 					<SearchInput
+						groupClassName="h-9"
 						value={search}
 						onChange={(e) => setSearch(e.target.value)}
-						aria-label={t("secrets.search")}
-						placeholder={t("secrets.search")}
+						aria-label={searchLabel}
+						placeholder={searchLabel}
 					/>
 				</div>
-				<div className="flex flex-wrap items-center gap-2">
+				<div className="ms-auto flex flex-wrap items-center gap-2">
+					{result.data && variant === "embedded" && (
+						<span className="text-xs text-muted-foreground" aria-live="polite">
+							{t("global.count", { count: visibleKeys.length })}
+						</span>
+					)}
 					{fixedProject === undefined && (
 						<Select
 							value={selectedProject || WORKSPACE_SECRET_SCOPE}
@@ -344,6 +358,7 @@ export const SecretsManager: React.FC<{
 						{retrying ? <Spinner /> : <RefreshCw />}
 					</IconButton>
 					<Button
+						className="h-9"
 						onClick={() => {
 							setEditorError("");
 							actionTrigger.current = null;
@@ -352,10 +367,10 @@ export const SecretsManager: React.FC<{
 						disabled={readOnly || showError || result.isLoading}
 					>
 						<Plus />
-						{t("secrets.add")}
+						{t(variant === "embedded" ? "global.add" : "secrets.add")}
 					</Button>
 				</div>
-			</div>
+			</PageToolbar>
 			<div className="relative flex min-h-0 flex-col" aria-busy={result.isLoading}>
 				<div inert={refreshing} className="flex min-h-0 flex-col">
 					{showLoading && <SecretListLoading />}

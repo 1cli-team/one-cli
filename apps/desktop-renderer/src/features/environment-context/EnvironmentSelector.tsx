@@ -50,7 +50,7 @@ export function EnvironmentSelector({
 					className={
 						variant === "icon"
 							? "h-9 w-9 shrink-0 justify-center border-0 bg-transparent p-0 shadow-none hover:bg-accent"
-							: "w-32 shrink-0 font-mono text-xs font-semibold"
+							: "w-20 shrink-0 px-2 text-xs font-medium ud-sm:w-28 [&>span:first-child]:truncate"
 					}
 					title={variant === "icon" ? `${label}: ${selectedLabel}` : undefined}
 					aria-label={`${label}: ${selectedLabel}`}

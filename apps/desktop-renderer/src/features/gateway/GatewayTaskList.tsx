@@ -1,10 +1,10 @@
 import { GatewaySessionLink } from "@/features/openviking/GatewaySessionLink";
 import { useState } from "react";
-import { ChevronDown, ExternalLink } from "lucide-react";
+import { ChevronDown, ClipboardList, ExternalLink } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ErrorNotice } from "@/components/ui/page-layout";
+import { ErrorNotice, PageToolbar, StatePanel } from "@/components/ui/page-layout";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Choice } from "@/features/linear/Choice";
 import type { HttpError } from "@/types/api";
@@ -75,7 +75,7 @@ export function GatewayTaskList({
 	const { t } = useTranslation();
 	return (
 		<div className="space-y-3">
-			<div className="grid gap-3 sm:grid-cols-3">
+			<PageToolbar className="grid @min-[32rem]:grid-cols-3">
 				<Choice
 					label={t("gateway.execution.worker")}
 					value={filters.worker}
@@ -97,7 +97,7 @@ export function GatewayTaskList({
 					placeholder={t("gateway.execution.all")}
 					onChange={(value) => onFilterChange("source", value)}
 				/>
-			</div>
+			</PageToolbar>
 			{error && (
 				<ErrorNotice>
 					{t(error.status === 404 ? "gateway.taskList.updateRequired" : "gateway.taskList.error")}
@@ -108,7 +108,7 @@ export function GatewayTaskList({
 			{data && (
 				<>
 					{data.items.length > 0 ? (
-						<ul className="divide-y divide-border overflow-hidden rounded-md border border-border bg-card">
+						<ul className="divide-y divide-border overflow-hidden rounded-lg border border-border bg-card">
 							{data.items.map((task) => (
 								<GatewayTaskRow
 									key={task.id}
@@ -120,13 +120,15 @@ export function GatewayTaskList({
 							))}
 						</ul>
 					) : !data.partial ? (
-						<p className="rounded-md border border-border bg-card p-4 text-sm text-muted-foreground">
-							{t(
+						<StatePanel
+							icon={ClipboardList}
+							className="rounded-lg border border-border bg-card"
+							title={t(
 								filters.worker || filters.stage || filters.source
 									? "gateway.taskList.noMatching"
 									: "gateway.taskList.empty",
 							)}
-						</p>
+						/>
 					) : null}
 					{data.pageCount > 1 && (
 						<nav
@@ -187,7 +189,7 @@ function GatewayTaskRow({
 	return (
 		<li>
 			<details className="group" onToggle={(event) => setExpanded(event.currentTarget.open)}>
-				<summary className="flex cursor-pointer list-none flex-wrap items-center gap-x-3 gap-y-2 px-4 py-3 text-sm hover:bg-muted/50 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring [&::-webkit-details-marker]:hidden">
+				<summary className="flex cursor-pointer list-none flex-wrap items-center gap-x-3 gap-y-2 px-4 py-3 text-sm transition-colors duration-150 ease-ui hover:bg-muted/50 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring group-open:bg-muted/45 [&::-webkit-details-marker]:hidden">
 					<span className="min-w-0 flex-1 basis-[12rem] space-y-1">
 						<span className="block font-medium wrap-anywhere">
 							{task.identifier && (
@@ -208,7 +210,7 @@ function GatewayTaskRow({
 					</Badge>
 					<ChevronDown
 						aria-hidden="true"
-						className="size-4 shrink-0 text-muted-foreground group-open:rotate-180"
+						className="size-4 shrink-0 text-muted-foreground motion-safe:transition-transform motion-safe:duration-150 motion-safe:ease-ui group-open:rotate-180"
 					/>
 				</summary>
 				<div className="space-y-3 border-t border-border px-4 py-3 text-sm">

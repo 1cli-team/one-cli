@@ -35,7 +35,11 @@ export function WorktreeSelector({ entryId }: { entryId: string }) {
 				navigate({ pathname: target, search });
 			}}
 		>
-			<SelectTrigger className="w-[min(14rem,35vw)]" aria-label={t("git.selectWorktree")}>
+			<SelectTrigger
+				size="sm"
+				className="w-[clamp(6rem,24vw,12rem)] text-xs [&>span:first-child]:truncate"
+				aria-label={t("git.selectWorktree")}
+			>
 				<SelectValue />
 			</SelectTrigger>
 			<SelectContent>

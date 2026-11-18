@@ -22,11 +22,7 @@ export function WorkspaceGroupsSidebar() {
 					key={id}
 					variant="navigation"
 					size="navigation-compact"
-					className={
-						groupId
-							? "h-8 text-muted-foreground hover:text-foreground motion-reduce:transition-none"
-							: "h-9 motion-reduce:transition-none"
-					}
+					className={groupId ? "text-muted-foreground hover:text-foreground" : undefined}
 					asChild
 				>
 					<EnvironmentLink
@@ -42,7 +38,7 @@ export function WorkspaceGroupsSidebar() {
 	}
 	return (
 		<nav
-			className="flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto p-3"
+			className="flex min-h-0 flex-1 flex-col gap-0.5 overflow-y-auto p-3"
 			aria-label={t("groups.title")}
 		>
 			{result.isLoading && <Skeleton className="h-20" />}
@@ -60,7 +56,7 @@ export function WorkspaceGroupsSidebar() {
 							<Button
 								variant="navigation"
 								size="navigation-compact"
-								className="h-9 font-medium motion-reduce:transition-none"
+								className="font-medium"
 								asChild
 							>
 								<EnvironmentNavLink to={groupPath(project.id)} title={project.name}>
@@ -83,7 +79,7 @@ export function WorkspaceGroupsSidebar() {
 				<Button
 					variant="navigation"
 					size="navigation-compact"
-					className="h-9 text-muted-foreground hover:text-foreground motion-reduce:transition-none"
+					className="text-muted-foreground hover:text-foreground"
 					asChild
 				>
 					<EnvironmentNavLink to="/workspaces" end>
