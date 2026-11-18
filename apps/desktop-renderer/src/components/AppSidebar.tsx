@@ -70,10 +70,12 @@ function SidebarPanels({ entryId, homeTo }: Pick<SidebarProps, "entryId" | "home
 	const workspaceMode = Boolean(entryId);
 	const detailMode = section !== null;
 	return (
-		<div className="h-full overflow-hidden" data-sidebar-level={section ?? "global"}>
+		<div className="flex h-full flex-col overflow-hidden" data-sidebar-level={section ?? "global"}>
+			{/* Electron hit-tests the title bar separately from the sliding panels. */}
+			<SidebarTitlebar homeTo={detailMode ? homeTo : undefined} />
 			<div
 				className={cn(
-					"flex h-full w-[200%] transition-transform duration-[220ms] ease-out motion-reduce:transition-none",
+					"flex min-h-0 w-[200%] flex-1 transition-transform duration-[220ms] ease-out motion-reduce:transition-none",
 					detailMode && "-translate-x-1/2",
 				)}
 			>
@@ -90,14 +92,9 @@ function SidebarPanels({ entryId, homeTo }: Pick<SidebarProps, "entryId" | "home
 					aria-hidden={!detailMode}
 				>
 					{lastSection === "settings" ? (
-						<SettingsSidebar homeTo={homeTo} />
+						<SettingsSidebar />
 					) : lastEntryId ? (
-						<WorkspaceSidebar
-							key={lastEntryId}
-							entryId={lastEntryId}
-							homeTo={homeTo}
-							active={workspaceMode}
-						/>
+						<WorkspaceSidebar key={lastEntryId} entryId={lastEntryId} active={workspaceMode} />
 					) : null}
 				</div>
 			</div>
@@ -105,19 +102,50 @@ function SidebarPanels({ entryId, homeTo }: Pick<SidebarProps, "entryId" | "home
 	);
 }
 
-function GlobalSidebar() {
+function SidebarTitlebar({ homeTo }: { homeTo?: string }) {
 	const { t } = useTranslation();
 	const { mode } = useThemeStore();
+	const showBrand = homeTo === undefined;
+	return (
+		<div
+			className={cn(
+				"window-titlebar window-sidebar-titlebar flex min-h-14 shrink-0 items-center border-b border-border",
+				showBrand ? "window-sidebar-brand gap-2.5 px-4" : "px-3",
+			)}
+		>
+			{showBrand ? (
+				<>
+					<img
+						src={mode === "dark" ? "/brand/icon-inverted.svg" : "/brand/icon.svg"}
+						alt=""
+						className="size-6 shrink-0"
+					/>
+					<span className="truncate text-base font-medium">One Desktop</span>
+				</>
+			) : (
+				<Button variant="ghost" className="w-full min-w-0 justify-start [&>span]:truncate" asChild>
+					<EnvironmentLink to={homeTo}>
+						<ArrowLeft />
+						<span>
+							{t(
+								homeTo.startsWith("/projects/")
+									? "groups.backToProject"
+									: homeTo.startsWith("/workspaces")
+										? "groups.allWorkspaces"
+										: "groups.allProjects",
+							)}
+						</span>
+					</EnvironmentLink>
+				</Button>
+			)}
+		</div>
+	);
+}
+
+function GlobalSidebar() {
+	const { t } = useTranslation();
 	return (
 		<>
-			<div className="window-titlebar window-sidebar-titlebar window-sidebar-brand flex min-h-14 shrink-0 items-center gap-2.5 border-b border-border px-4">
-				<img
-					src={mode === "dark" ? "/brand/icon-inverted.svg" : "/brand/icon.svg"}
-					alt=""
-					className="size-6 shrink-0"
-				/>
-				<span className="truncate text-base font-medium">One Desktop</span>
-			</div>
 			<nav className="flex shrink-0 flex-col gap-1 p-3" aria-label={t("navigation.global")}>
 				<Button variant="navigation" size="navigation-compact" className="min-h-9" asChild>
 					<EnvironmentNavLink to="/" end>
@@ -149,26 +177,10 @@ function GlobalSidebar() {
 	);
 }
 
-function SettingsSidebar({ homeTo }: { homeTo: string }) {
+function SettingsSidebar() {
 	const { t } = useTranslation();
 	return (
 		<>
-			<div className="window-titlebar window-sidebar-titlebar flex min-h-14 shrink-0 items-center border-b border-border px-3">
-				<Button variant="ghost" className="w-full min-w-0 justify-start [&>span]:truncate" asChild>
-					<EnvironmentLink to={homeTo}>
-						<ArrowLeft />
-						<span>
-							{t(
-								homeTo.startsWith("/projects/")
-									? "groups.backToProject"
-									: homeTo.startsWith("/workspaces")
-										? "groups.allWorkspaces"
-										: "groups.allProjects",
-							)}
-						</span>
-					</EnvironmentLink>
-				</Button>
-			</div>
 			<h2 className="shrink-0 px-5 py-4 font-medium">{t("sidebar.settings")}</h2>
 			<nav
 				className="flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto px-3 pb-3"
@@ -217,11 +229,9 @@ function SettingsSidebar({ homeTo }: { homeTo: string }) {
 
 function WorkspaceSidebar({
 	entryId: logicalEntryId,
-	homeTo,
 	active,
 }: {
 	entryId: string;
-	homeTo: string;
 	active: boolean;
 }) {
 	const { t } = useTranslation();
@@ -248,22 +258,6 @@ function WorkspaceSidebar({
 	}
 	return (
 		<>
-			<div className="window-titlebar window-sidebar-titlebar flex min-h-14 shrink-0 items-center border-b border-border px-3">
-				<Button variant="ghost" className="w-full min-w-0 justify-start [&>span]:truncate" asChild>
-					<EnvironmentLink to={homeTo}>
-						<ArrowLeft />
-						<span>
-							{t(
-								homeTo.startsWith("/projects/")
-									? "groups.backToProject"
-									: homeTo.startsWith("/workspaces")
-										? "groups.allWorkspaces"
-										: "groups.allProjects",
-							)}
-						</span>
-					</EnvironmentLink>
-				</Button>
-			</div>
 			<div className="flex shrink-0 flex-col gap-1 px-5 py-4">
 				<h2 className="truncate font-medium" title={workspace?.name}>
 					{workspace?.name ?? t("workspaces.workspaceLabel")}
