@@ -45,17 +45,17 @@
 		"openProfiles": "打开设置",
 		"home": {
 			"title": "工作区",
-			"description": "管理本机已登记的工作区与项目",
+			"description": "管理本机已登记的工作区与模块",
 			"loading": "正在加载工作区…",
 			"loadFailedTitle": "无法加载工作区",
 			"loadFailedDescription": "无法读取本机工作区注册表。",
 			"retry": "重试",
-			"projectCount": "{{count}} 个项目",
-			"projectCount_one": "{{count}} 个项目",
-			"projectCount_other": "{{count}} 个项目",
-			"projects": "项目",
-			"projects_one": "项目",
-			"projects_other": "项目",
+			"projectCount": "{{count}} 个模块",
+			"projectCount_one": "{{count}} 个模块",
+			"projectCount_other": "{{count}} 个模块",
+			"projects": "模块",
+			"projects_one": "模块",
+			"projects_other": "模块",
 			"lastDetected": "最近识别",
 			"emptyTitle": "尚未登记工作区",
 			"emptyDescription": "运行 one create 创建工作区，或选择“打开工作区”登记已有目录。",
@@ -86,7 +86,7 @@
 		},
 		"conflict": {
 			"title": "只读：另一个目录正在使用相同的 Workspace ID",
-			"description": "你仍可查看其中的 Project，但配置操作已禁用，避免复制出来的 Workspace 共享并串用 Profile 绑定。"
+			"description": "你仍可查看其中的 模块，但配置操作已禁用，避免复制出来的 Workspace 共享并串用 Profile 绑定。"
 		},
 		"state": {
 			"missing": {
@@ -99,7 +99,7 @@
 			},
 			"identity-missing": {
 				"title": "Workspace 缺少稳定 ID",
-				"description": "请先在 one.manifest.toml 中补齐 workspace.id，再配置 Project 级 Profile。"
+				"description": "请先在 one.manifest.toml 中补齐 workspace.id，再连接工作区的环境变量存储。"
 			},
 			"identity-conflict": {
 				"title": "Workspace ID 重复",
@@ -107,19 +107,19 @@
 			},
 			"uninitialized": {
 				"title": "初始化 One 工作区",
-				"description": "这个目录已关联到工作区。初始化后即可管理其中的项目和配置。"
+				"description": "这个目录已关联到工作区。初始化后即可管理其中的模块和配置。"
 			}
 		},
 		"forget": {
 			"action": "移除 {{name}}",
-			"confirm": "要移除 Workspace「{{name}}」吗？这里只会移除本机注册记录，不会删除项目文件或远端变量。",
+			"confirm": "要移除 Workspace「{{name}}」吗？这里只会移除本机注册记录，不会删除模块文件或远端变量。",
 			"done": "已移除 {{name}}",
 			"failed": "无法移除 Workspace",
 			"pageHint": "可点击左侧该 Workspace 旁的垃圾桶，只移除它的本机注册记录。"
 		},
 		"registryError": {
 			"title": "Workspace 注册表不可用",
-			"description": "One Serve 无法读取本机 Workspace 注册表；Project 文件和凭据 Profile 均未被修改。"
+			"description": "One Serve 无法读取本机 Workspace 注册表；模块 文件和凭据 Profile 均未被修改。"
 		},
 		"overviewError": {
 			"title": "无法打开 {{name}}",
@@ -173,10 +173,10 @@
 		"networkError": "网络请求失败，请检查网络连接。"
 	},
 	"projectInspector": {
-		"workspaceTitle": "项目设置",
-		"projectListLabel": "工作区项目",
-		"empty": "这个工作区还没有项目。",
-		"loadFailed": "无法加载项目配置",
+		"workspaceTitle": "模块设置",
+		"projectListLabel": "工作区模块",
+		"empty": "这个工作区还没有模块。",
+		"loadFailed": "无法加载模块配置",
 		"retry": "重试",
 		"manifestReadOnly": "Manifest · 只读",
 		"manifestDraft": "Manifest 草稿",
@@ -184,8 +184,8 @@
 		"unsavedChanges": "当前修改尚未保存。要放弃修改并继续吗？",
 		"discardAndContinue": "放弃并继续",
 		"general": {
-			"path": "项目路径",
-			"metadata": "项目信息"
+			"path": "模块路径",
+			"metadata": "模块信息"
 		}
 	},
 	"secrets": {
@@ -312,24 +312,24 @@
 		"description": "管理多个工作区共用的凭据，按目录和环境查找变量"
 	},
 	"projectCreate": {
-		"title": "新建项目",
-		"description": "在当前工作区中，使用模板创建一个项目。",
-		"name": "项目名称",
+		"title": "新建模块",
+		"description": "在当前工作区中，使用模板创建一个模块。",
+		"name": "模块名称",
 		"nameHint": "以字母或数字开头，可使用字母、数字、连字符和下划线。",
 		"nameInvalid": "请输入以字母或数字开头，且仅包含字母、数字、连字符或下划线的名称。",
-		"nameExists": "当前工作区已存在同名项目，请使用其他名称。",
-		"template": "技术栈或空项目",
+		"nameExists": "当前工作区已存在同名模块，请使用其他名称。",
+		"template": "技术栈或空模块",
 		"templatesFailed": "无法加载模板",
 		"loadingTemplates": "正在加载模板…",
 		"noTemplates": "暂无可用模板",
-		"location": "项目目录",
-		"locationHint": "相对于当前工作区。创建项目时会同步更新工作区配置。",
-		"submit": "创建项目",
-		"creating": "正在创建项目…",
-		"failed": "创建项目失败",
-		"success": "项目 {{name}} 已创建",
-		"refreshFailed": "项目已创建，请刷新页面加载最新工作区。",
-		"connectionLost": "连接已中断，请先刷新项目列表确认是否已创建，再尝试提交。",
+		"location": "模块目录",
+		"locationHint": "相对于当前工作区。创建模块时会同步更新工作区配置。",
+		"submit": "创建模块",
+		"creating": "正在创建模块…",
+		"failed": "创建模块失败",
+		"success": "模块 {{name}} 已创建",
+		"refreshFailed": "模块已创建，请刷新页面加载最新工作区。",
+		"connectionLost": "连接已中断，请先刷新模块列表确认是否已创建，再尝试提交。",
 		"categories": {
 			"frontend": "应用",
 			"backend": "服务",
@@ -374,19 +374,19 @@
 			},
 			"electron-app": {
 				"name": "Electron 桌面应用",
-				"description": "Electron + React + Vite 桌面应用，生成 renderer、main、preload 三个顶层项目，主进程使用 Awilix。"
+				"description": "Electron + React + Vite 桌面应用，生成 renderer、main、preload 三个顶层模块，主进程使用 Awilix。"
 			},
 			"empty-app": {
 				"name": "空应用",
-				"description": "在 apps/ 下创建空项目，稍后自行配置技术栈。"
+				"description": "在 apps/ 下创建空应用模块，稍后自行配置技术栈。"
 			},
 			"empty-service": {
 				"name": "空服务",
-				"description": "在 services/ 下创建空项目，稍后自行配置技术栈。"
+				"description": "在 services/ 下创建空服务模块，稍后自行配置技术栈。"
 			},
 			"empty-library": {
 				"name": "空共享库",
-				"description": "在 packages/ 下创建空项目，稍后自行配置技术栈。"
+				"description": "在 packages/ 下创建空包模块，稍后自行配置技术栈。"
 			},
 			"swift-ios-app": {
 				"name": "Swift iOS 应用",
@@ -433,8 +433,8 @@
 				"description": "共享 Flutter 组件，使用原生 pub workspace 与组件测试"
 			}
 		},
-		"groupSuccess": "已创建项目组 {{name}}，包含 {{count}} 个项目",
-		"groupLocationHint": "使用输入的名称生成关联项目，统一使用工作区根目录的依赖配置。",
+		"groupSuccess": "已创建模块组 {{name}}，包含 {{count}} 个模块",
+		"groupLocationHint": "使用输入的名称生成关联模块，统一使用工作区根目录的依赖配置。",
 		"installSkills": "安装开发 skills",
 		"skillsHint": "安装 One 用法和技术栈指导。业务 skills 由用户另行手动安装。"
 	},
@@ -457,7 +457,7 @@
 		"defaultEnvironment": "默认环境：dev",
 		"workspaceStorage": "绑定信息写入 one.manifest.toml，变量值保存在 Infisical。",
 		"organizationRequired": "请选择组织并重新登录",
-		"devRequired": "工作区项目必须包含 dev 环境。",
+		"devRequired": "用于工作区的 Infisical 项目必须包含 dev 环境。",
 		"noProjects": "暂无可用项目，可切换到自动创建。",
 		"pendingDraft": "此工作区有未保存的配置，请先保存或放弃，再绑定项目。",
 		"conflict": "工作区配置已发生变化。请刷新并核对绑定目标后重试。",
@@ -551,7 +551,7 @@
 		"workspaceSettings": "工作区配置",
 		"workspace": "工作区导航",
 		"environmentVariables": "环境变量",
-		"emptyWorkspace": "从侧边栏创建第一个项目。"
+		"emptyWorkspace": "从侧边栏创建第一个模块。"
 	},
 	"git": {
 		"title": "Worktrees",

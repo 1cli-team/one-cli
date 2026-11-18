@@ -2,7 +2,7 @@ import type { Locale } from "@/i18n";
 
 const en = {
 	title: "Download One Desktop",
-	description: "Manage workspaces, projects, and shared credentials on your desktop.",
+	description: "Manage workspaces, modules, and shared credentials on your desktop.",
 	stable: "Latest stable release",
 	system: "Choose your computer’s operating system",
 	macos: "macOS",
@@ -33,7 +33,7 @@ export const desktopDownloadCopy = {
 	en,
 	zh: {
 		title: "下载 One Desktop",
-		description: "在桌面上管理工作区、项目和共享凭据。",
+		description: "在桌面上管理工作区、模块和共享凭据。",
 		stable: "最新正式版",
 		system: "选择电脑的操作系统",
 		macos: "macOS",

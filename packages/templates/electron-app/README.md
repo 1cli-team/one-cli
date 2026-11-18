@@ -5,19 +5,19 @@ Electron · React · TypeScript · shadcn/ui (Base UI) · Tailwind CSS · Axios 
 ## 中文
 
 - `apps/one-template-electron-renderer`：React UI；`services/one-template-electron-main`：主进程；`packages/one-template-electron-preload`：隔离桥接。
-- 生成后使用用户项目名，例如 `desktop-renderer`、`desktop-main`、`desktop-preload`。
-- `one run <项目名>:dev` 开发；`one run <项目名>:build` 构建。主进程的 `pack` / `release` 生成本地制品，不自动发布。
+- 生成的模块以用户指定的模块组名为前缀，例如 `desktop-renderer`、`desktop-main`、`desktop-preload`。
+- `one run <模块名>:dev` 开发；`one run <模块名>:build` 构建。主进程的 `pack` / `release` 生成本地制品，不自动发布。
 - Awilix 只在 composition root 使用，业务通过函数工厂接收显式依赖。
 - preload 只暴露 `getAppInfo()`；主进程校验请求所属窗口、主 frame、URL 和参数。
 - 生产界面通过 `loadFile` 加载，Vite 使用相对资源路径，路由使用 HashRouter。
-- SWR 管理远程数据与应用信息，Zustand 保存 UI 主题。初始项目没有文件操作、自动更新或业务功能。
+- SWR 管理远程数据与应用信息，Zustand 保存 UI 主题。初始应用没有文件操作、自动更新或业务功能。
 - Ubuntu 开发启动时检查沙箱权限并自动识别 X11/Wayland 桌面；按提示安装 AppArmor profile，保留 Electron 沙箱。可运行主进程 `sandbox:profile` 生成配置。
 
 ## English
 
 - `apps/one-template-electron-renderer`: React UI; `services/one-template-electron-main`: main process; `packages/one-template-electron-preload`: isolated bridge.
-- Generated member names use the project name, e.g. `desktop-renderer`, `desktop-main`, `desktop-preload`.
-- Develop with `one run <project>:dev`; build with `one run <project>:build`. Main's `pack` / `release` produce local artifacts without publishing.
+- Generated module names use the module group name as a prefix, e.g. `desktop-renderer`, `desktop-main`, `desktop-preload`.
+- Develop with `one run <module>:dev`; build with `one run <module>:build`. Main's `pack` / `release` produce local artifacts without publishing.
 - Awilix is accessed only in the composition root. Function factories receive explicit dependencies.
 - Preload exposes only `getAppInfo()`. Main validates the window, main frame, URL, and arguments.
 - Production loads the renderer with `loadFile`, relative Vite asset URLs, and HashRouter.

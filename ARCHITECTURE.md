@@ -14,12 +14,12 @@ This file records source boundaries for maintainers and agents. Discover command
 | `services/desktop-main` | Electron host; bundles `one-api` and `one` / 原生能力及后端进程管理 |
 | `packages/desktop-preload` | Typed contextBridge API / 类型化原生桥接 |
 | `apps/website` | Next.js static homepage; exports to `out/` / Next.js 静态官网 |
-| `packages/templates` | Project template sources, including `nextjs-site` and `fumadocs-docs` / 项目模板源 |
+| `packages/templates` | Module template sources, including `nextjs-site` and `fumadocs-docs` / 模块模板源 |
 | `packages/agent-skills` | Agent guidance embedded in CLI builds / CLI 构建时内置的 AI 指引 |
 
-`go.work` contains four modules: CLI, One Core, Desktop API and Gateway. Go projects inside templates remain independent fixtures.
+`go.work` contains four modules: CLI, One Core, Desktop API and Gateway. Go modules inside templates remain independent fixtures.
 
-`go.work` 仅登记 CLI、One Core、Desktop API、Gateway 四个模块；模板中的 Go 项目独立管理。
+`go.work` 仅登记 CLI、One Core、Desktop API、Gateway 四个模块；模板中的 Go 模块独立管理。
 
 ## Go boundaries / Go 分层
 

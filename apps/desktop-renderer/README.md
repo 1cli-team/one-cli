@@ -4,7 +4,7 @@
 
 One Desktop 使用 Electron 主进程、隔离 preload、React 界面与独立 Go 后端。
 
-| 项目     | 路径                       | 职责                                                      |
+| 模块     | 路径                       | 职责                                                      |
 | -------- | -------------------------- | --------------------------------------------------------- |
 | Renderer | `apps/desktop-renderer`    | 现有 React 页面、HashRouter、Axios、SWR、主题与中英文文案 |
 | Main     | `services/desktop-main`    | 窗口、托盘、单实例、原生交互、后端生命周期与打包          |

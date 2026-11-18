@@ -1,20 +1,20 @@
-# Project layouts inside a One workspace
+# Module layouts inside a One workspace
 
 The outer convention is `apps/` for runnable clients/sites, `services/` for
 backends/workers, and `packages/` for reusable libraries. Preserve existing
-project structure and public import paths. Add directories when they hold
+module structure and public import paths. Add directories when they hold
 real code; do not generate empty architectural scaffolding.
 
-Empty templates leave the project's internal layout and stack to the user.
-The examples below apply only when the project uses that stack; they do not
-require an empty project to adopt it. Follow the selected framework's layout
+Empty templates leave the module's internal layout and stack to the user.
+The examples below apply only when the module uses that stack; they do not
+require an empty module to adopt it. Follow the selected framework's layout
 and the user's architecture while keeping the One workspace placement.
 
 - **Go services:** keep binaries under `cmd/<binary>` and private code under
   `internal/`. Group handlers, application logic, persistence, and configuration
   according to the existing service. Use constructor/function injection where
   needed. Libraries should expose deliberate public packages; `pkg/` is not
-  required for every Go module. Module paths follow the project's actual
+  required for every Go module. Module paths follow the module's actual
   publishing/import identity. See the [official Go module layout guide](https://go.dev/doc/modules/layout).
 - **Node services:** organize substantial business domains into modules that
   own their transport, application logic, and data access. Keep reusable
@@ -37,9 +37,9 @@ and the user's architecture while keeping the One workspace placement.
   layout; the upstream project-structure skill is for new unstructured apps.
 - **TypeScript libraries:** keep public exports deliberate, implementation in
   `src/`, and tests near the behavior they cover. Preserve tsdown output,
-  package exports, and the project's actual test convention.
+  package exports, and the module's actual test convention.
 - **Bun and Deno:** use `bun` or `deno` as the One toolchain while keeping npm
-  dependencies and scripts in the shared pnpm workspace. Deno projects use
+  dependencies and scripts in the shared pnpm workspace. Deno modules use
   `nodeModulesDir: "manual"`. Declare local package dependencies with `workspace:*`.
 - **Python:** use the `python` toolchain, a `pyproject.toml` for each member and
   the root uv workspace. Keep importable code under `src/<module>/` and declare
@@ -56,7 +56,7 @@ and the user's architecture while keeping the One workspace placement.
   the task and local dependency graph. The app starter includes a Web entry
   point; use its explicit `platforms` task to generate native runners. Platform
   SDK installation, signing and publishing remain explicit.
-- **Electron:** a desktop project is a group with `<name>-renderer` under
+- **Electron:** a desktop app forms a module group with `<name>-renderer` under
   apps, `<name>-main` under services, and `<name>-preload` under packages.
   Consult the installed `one-electron` skill for the process boundaries.
 

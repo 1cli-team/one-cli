@@ -19,8 +19,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Removed — Workspace presets / 工作区预设组合
 
-- 删除 `one create --preset`、`--project-names`、preset 编解码与批量展开。统一先 `one create` 创建空工作区，再通过 `one add` 添加项目；旧参数会在写入前报错。
-- Removed `one create --preset`, `--project-names`, preset encoding, and batch expansion. Create an empty workspace with `one create`, then add projects with `one add`. Retired flags fail before writing files.
+- 删除 `one create --preset`、`--project-names`、preset 编解码与批量展开。统一先 `one create` 创建空工作区，再通过 `one add` 添加模块；旧参数会在写入前报错。
+- Removed `one create --preset`, `--project-names`, preset encoding, and batch expansion. Create an empty workspace with `one create`, then add modules with `one add`. Retired flags fail before writing files.
 - 模板注册表和 `one templates` JSON 输出删除 preset 专用 `code` 字段，使用模板 `id` 作为标识。
 - The template registry and `one templates` JSON output no longer include the preset-only `code` field; templates are identified by `id`.
 - 官网保留原有封面卡片、视觉样式和切换动画，展示 10 个非空模板，补充封面插画与中英文详情页。移除组合构建器、组合示例、创建命令生成与复制入口，以及详情页推荐区；旧示例地址跳转至目录。
@@ -28,27 +28,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed — Agent instructions / Agent 指引
 
-- `one create` 按当前 CLI 语言生成单语言 `AGENTS.md`，中英文模板改为独立 Markdown 文件维护；后续添加项目或切换语言保留已有文件。
-- `one create` generates a single-language `AGENTS.md` from separate English and Chinese Markdown sources, preserving existing files during later project additions or language changes.
+- `one create` 按当前 CLI 语言生成单语言 `AGENTS.md`，中英文模板改为独立 Markdown 文件维护；后续添加模块或切换语言保留已有文件。
+- `one create` generates a single-language `AGENTS.md` from separate English and Chinese Markdown sources, preserving existing files during later module additions or language changes.
 - 指引明确使用 `one run` 执行任务、使用 `scripts/*.mts` 编写复杂脚本、通过 One 管理变量，并引导用户在 Dashboard 配置全局操作凭据。
 - Guidance requires `one run` for tasks, supports complex scripts in `scripts/*.mts`, manages variables through One, and directs users to Dashboard for global operation credentials.
 
 ### Changed — Manifest v2 (TOML)
 
-- 工作区配置改为无自动注释的 `one.manifest.toml`，`version = 2`；项目使用 `[projects.<name>]`，字段收敛为 `path`、`toolchain` 和可选 `template`。不提供 JSON 兼容或迁移命令。
-- Workspaces now use `one.manifest.toml` with `version = 2`, without generated comments. Projects use `[projects.<name>]` with `path`, `toolchain`, and optional `template`. JSON compatibility and migration commands are not provided.
-- Infisical 绑定放在 `[env.infisical]`，环境列表随绑定保存；默认固定 `dev`，保留 `--env`。共享目录固定 `/`，项目目录从本地路径推导并继承父级变量，移除变量名清单和项目覆盖字段。
-- Infisical bindings and environment slugs live under `[env.infisical]`. The default is always `dev`, with `--env` retained. Shared variables use `/`; project folders derive from local paths and inherit ancestors. Key registries and project overrides are removed.
-- Dashboard 展示派生的项目设置，从日志发现服务地址；绑定草稿预览和发布使用 TOML，保留手写注释与未修改的格式。
-- Dashboard displays derived project settings and discovers service URLs from logs. Binding drafts preview and publish TOML while preserving user comments and unchanged formatting.
+- 工作区配置改为无自动注释的 `one.manifest.toml`，`version = 2`；模块使用 `[projects.<name>]`，字段收敛为 `path`、`toolchain` 和可选 `template`。不提供 JSON 兼容或迁移命令。
+- Workspaces now use `one.manifest.toml` with `version = 2`, without generated comments. Modules use `[projects.<name>]` with `path`, `toolchain`, and optional `template`. JSON compatibility and migration commands are not provided.
+- Infisical 绑定放在 `[env.infisical]`，环境列表随绑定保存；默认固定 `dev`，保留 `--env`。共享目录固定 `/`，模块目录从本地路径推导并继承父级变量，移除变量名清单和模块覆盖字段。
+- Infisical bindings and environment slugs live under `[env.infisical]`. The default is always `dev`, with `--env` retained. Shared variables use `/`; module folders derive from local paths and inherit ancestors. Key registries and module overrides are removed.
+- Dashboard 展示派生的模块设置，从日志发现服务地址；绑定草稿预览和发布使用 TOML，保留手写注释与未修改的格式。
+- Dashboard displays derived module settings and discovers service URLs from logs. Binding drafts preview and publish TOML while preserving user comments and unchanged formatting.
 
 
 ### Changed — 工作区任务统一到 mise / Workspace tasks use mise
 
 - `one exec` 执行任意命令，`one run` 执行具名任务；`one build` 复用同一任务服务。Node 使用 pnpm，Go 使用 Task，工作区依赖与实验性产物缓存由 mise 调度。
-- `one exec` runs arbitrary commands; `one run` executes named tasks, and `one build` shares the same service. pnpm and Task own project commands; mise owns workspace scheduling and experimental artifact caching.
-- 项目环境在缓存查找前冻结并参与指纹；自定义构建需要显式缓存规则。开发进程保留现有终端管理，上游构建使用 mise。
-- Project environments are frozen before cache lookup and included in fingerprints. Custom builds need explicit cache declarations. Development keeps its terminal supervisor and uses mise for prerequisite builds.
+- `one exec` runs arbitrary commands; `one run` executes named tasks, and `one build` shares the same service. pnpm and Task own module commands; mise owns workspace scheduling and experimental artifact caching.
+- 模块环境在缓存查找前冻结并参与指纹；自定义构建需要显式缓存规则。开发进程保留现有终端管理，上游构建使用 mise。
+- Module environments are frozen before cache lookup and included in fingerprints. Custom builds need explicit cache declarations. Development keeps its terminal supervisor and uses mise for prerequisite builds.
 - 删除 `one ci`、工作流生成器和现有 skills 功能；保留仓库 Actions、hooks 和 preset。仓库贡献入口改为 `mise run check`。
 - Removed `one ci`, workflow generation, and the current skills feature. Repository Actions, hooks, and presets remain. The contributor gate is now `mise run check`.
 

@@ -1,6 +1,6 @@
 # Next.js runtime and static export
 
-Resolve Next from the target subproject and read its installed documentation
+Resolve Next from the target module and read its installed documentation
 under node_modules/next/dist/docs when available. Read next.config and the actual
 route/layout structure before applying upstream patterns. In the templates,
 route entries are under src/app/; keep route-specific code colocated and shared
@@ -35,7 +35,7 @@ located under an API route directory. Content/search work follows the installed
 one-fumadocs guidance.
 
 Run typecheck, lint/format, and production build tasks. Check exported localized
-pages and search after static content changes. When both Expo and Next projects
+pages and search after static content changes. When both Expo and Next modules
 share a workspace, use explicit React type imports in reusable Web components
-and verify against the target project's React types rather than a global React
+and verify against the target module's React types rather than a global React
 namespace that may resolve to Expo's version.

@@ -45,17 +45,17 @@
 		"openProfiles": "Open settings",
 		"home": {
 			"title": "Workspaces",
-			"description": "Manage local workspaces and their projects",
+			"description": "Manage local workspaces and their modules",
 			"loading": "Loading Workspaces…",
 			"loadFailedTitle": "Could not load Workspaces",
 			"loadFailedDescription": "The local Workspace registry could not be read.",
 			"retry": "Retry",
-			"projectCount": "{{count}} projects",
-			"projectCount_one": "{{count}} project",
-			"projectCount_other": "{{count}} projects",
-			"projects": "projects",
-			"projects_one": "project",
-			"projects_other": "projects",
+			"projectCount": "{{count}} modules",
+			"projectCount_one": "{{count}} module",
+			"projectCount_other": "{{count}} modules",
+			"projects": "modules",
+			"projects_one": "module",
+			"projects_other": "modules",
 			"lastDetected": "Last detected",
 			"emptyTitle": "No Workspaces yet",
 			"emptyDescription": "Run one create to create a workspace, or choose Open workspace to register an existing folder.",
@@ -86,7 +86,7 @@
 		},
 		"conflict": {
 			"title": "Read-only: this Workspace ID is used by another path",
-			"description": "You can inspect its Projects, but configuration is disabled to prevent Profile bindings from crossing between copied Workspaces."
+			"description": "You can inspect its modules, but configuration is disabled to prevent Profile bindings from crossing between copied Workspaces."
 		},
 		"state": {
 			"missing": {
@@ -99,7 +99,7 @@
 			},
 			"identity-missing": {
 				"title": "This Workspace has no stable ID",
-				"description": "Add workspace.id to one.manifest.toml before configuring project-scoped Profiles."
+				"description": "Add workspace.id to one.manifest.toml before connecting environment variable storage for this workspace."
 			},
 			"identity-conflict": {
 				"title": "This Workspace ID is duplicated",
@@ -107,19 +107,19 @@
 			},
 			"uninitialized": {
 				"title": "Initialize One workspace",
-				"description": "This directory is linked to the workspace. Initialize it to manage its projects and configuration."
+				"description": "This directory is linked to the workspace. Initialize it to manage its modules and configuration."
 			}
 		},
 		"forget": {
 			"action": "Remove {{name}}",
-			"confirm": "Remove Workspace \"{{name}}\"? This only removes the local registry entry; no project files or remote variables will be deleted.",
+			"confirm": "Remove Workspace \"{{name}}\"? This only removes the local registry entry; no module files or remote variables will be deleted.",
 			"done": "Removed {{name}}",
 			"failed": "Could not remove Workspace",
 			"pageHint": "Use the trash action beside this Workspace in the left rail to remove only its local registry entry."
 		},
 		"registryError": {
 			"title": "Workspace registry unavailable",
-			"description": "One Serve could not read the machine-local Workspace registry. Project files and credential Profiles have not been changed."
+			"description": "One Serve could not read the machine-local Workspace registry. Module files and credential Profiles have not been changed."
 		},
 		"overviewError": {
 			"title": "Could not open {{name}}",
@@ -173,10 +173,10 @@
 		"networkError": "Network request failed. Check your connection."
 	},
 	"projectInspector": {
-		"workspaceTitle": "Project settings",
-		"projectListLabel": "Workspace projects",
-		"empty": "This workspace has no projects.",
-		"loadFailed": "Unable to load project configuration",
+		"workspaceTitle": "Module settings",
+		"projectListLabel": "Workspace modules",
+		"empty": "This workspace has no modules.",
+		"loadFailed": "Unable to load module configuration",
 		"retry": "Retry",
 		"manifestReadOnly": "Manifest · read-only",
 		"manifestDraft": "Manifest draft",
@@ -184,8 +184,8 @@
 		"unsavedChanges": "You have unsaved changes. Discard them and continue?",
 		"discardAndContinue": "Discard and continue",
 		"general": {
-			"path": "Project path",
-			"metadata": "Project information"
+			"path": "Module path",
+			"metadata": "Module information"
 		}
 	},
 	"secrets": {
@@ -312,24 +312,24 @@
 		"description": "Manage shared workspace credentials and browse variables by folder and environment"
 	},
 	"projectCreate": {
-		"title": "New project",
-		"description": "Create a project from a template in this workspace.",
-		"name": "Project name",
+		"title": "New module",
+		"description": "Create a module from a template in this workspace.",
+		"name": "Module name",
 		"nameHint": "Start with a letter or number. Use letters, numbers, hyphens or underscores.",
 		"nameInvalid": "Enter a name starting with a letter or number, using only letters, numbers, hyphens or underscores.",
-		"nameExists": "A project with this name already exists in the workspace.",
-		"template": "Technology stack or empty project",
+		"nameExists": "A module with this name already exists in the workspace.",
+		"template": "Technology stack or empty module",
 		"templatesFailed": "Could not load templates",
 		"loadingTemplates": "Loading templates…",
 		"noTemplates": "No templates available",
-		"location": "Project directory",
-		"locationHint": "Relative to this workspace. Creating the project also updates the workspace configuration.",
-		"submit": "Create project",
-		"creating": "Creating project…",
-		"failed": "Could not create project",
-		"success": "Project {{name}} created",
-		"refreshFailed": "Project created. Refresh the page to load the updated workspace.",
-		"connectionLost": "The connection was interrupted. Refresh the project list to check whether the project was created before trying again.",
+		"location": "Module directory",
+		"locationHint": "Relative to this workspace. Creating the module also updates the workspace configuration.",
+		"submit": "Create module",
+		"creating": "Creating module…",
+		"failed": "Could not create module",
+		"success": "Module {{name}} created",
+		"refreshFailed": "Module created. Refresh the page to load the updated workspace.",
+		"connectionLost": "The connection was interrupted. Refresh the module list to check whether the module was created before trying again.",
 		"categories": {
 			"frontend": "Applications",
 			"backend": "Services",
@@ -374,19 +374,19 @@
 			},
 			"electron-app": {
 				"name": "Electron desktop app",
-				"description": "Electron + React + Vite with top-level renderer, main, and preload projects, using Awilix in main."
+				"description": "Electron + React + Vite with top-level renderer, main, and preload modules, using Awilix in main."
 			},
 			"empty-app": {
 				"name": "Empty application",
-				"description": "Create an empty project under apps/ and configure a technology stack later."
+				"description": "Create an empty app module under apps/ and configure a technology stack later."
 			},
 			"empty-service": {
 				"name": "Empty service",
-				"description": "Create an empty project under services/ and configure a technology stack later."
+				"description": "Create an empty service module under services/ and configure a technology stack later."
 			},
 			"empty-library": {
 				"name": "Empty library",
-				"description": "Create an empty project under packages/ and configure a technology stack later."
+				"description": "Create an empty package module under packages/ and configure a technology stack later."
 			},
 			"swift-ios-app": {
 				"name": "Swift iOS app",
@@ -433,8 +433,8 @@
 				"description": "Shared Flutter widgets with a native pub workspace and widget tests"
 			}
 		},
-		"groupSuccess": "Created project group {{name}} with {{count}} projects",
-		"groupLocationHint": "Creates related projects using your name and the workspace root dependency configuration.",
+		"groupSuccess": "Created module group {{name}} with {{count}} modules",
+		"groupLocationHint": "Creates related modules using your name and the workspace root dependency configuration.",
 		"installSkills": "Install development skills",
 		"skillsHint": "Add One usage and technology-stack guidance. Business skills are installed separately on request."
 	},
@@ -457,7 +457,7 @@
 		"defaultEnvironment": "Default environment: dev",
 		"workspaceStorage": "Binding metadata is saved to one.manifest.toml. Variable values are stored in Infisical.",
 		"organizationRequired": "Select an organization and sign in again",
-		"devRequired": "Workspace projects must include a dev environment.",
+		"devRequired": "The Infisical project for this workspace must include a dev environment.",
 		"noProjects": "No projects are available. Switch to automatic creation.",
 		"pendingDraft": "This workspace has unsaved configuration. Save or discard it before binding a project.",
 		"conflict": "Workspace configuration has changed. Refresh and review the binding target before retrying.",
@@ -551,7 +551,7 @@
 		"workspaceSettings": "Workspace configuration",
 		"workspace": "Workspace navigation",
 		"environmentVariables": "Environment variables",
-		"emptyWorkspace": "Create your first project from the sidebar."
+		"emptyWorkspace": "Create your first module from the sidebar."
 	},
 	"git": {
 		"title": "Worktrees",

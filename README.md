@@ -1,8 +1,12 @@
 # One CLI
 
-AI-native workspace tooling: create projects, run tasks, and manage variables through predictable commands and structured results.
+AI-native workspace tooling: create modules, run tasks, and manage variables through predictable commands and structured results.
 
-面向 AI 的工作区工具：创建项目、执行任务、管理变量，提供稳定的命令与结构化结果。
+面向 AI 的工作区工具：创建模块、执行任务、管理变量，提供稳定的命令与结构化结果。
+
+A project can contain one or more workspaces. Each workspace declares its apps, services, and packages as modules in `[projects.*]`.
+
+一个项目可以包含一个或多个工作区。工作区用 `[projects.*]` 声明应用、服务和包等模块。
 
 [Website / 官网](https://www.1cli.dev/) · [Downloads / 下载](https://github.com/1cli-team/one-cli/releases/latest) · [Agent skills / AI 技能](packages/agent-skills/skills)
 
@@ -16,9 +20,9 @@ curl -fsSL https://1cli.dev/install.sh | bash
 irm https://1cli.dev/install.ps1 | iex
 ```
 
-One Desktop installers and CLI archives share the same Release. Open One Desktop to manage workspaces, accounts, project variables, and shared credentials.
+One Desktop installers and CLI archives share the same Release. Open One Desktop to manage workspaces, accounts, module variables, and shared credentials.
 
-One Desktop 安装包与 CLI 归档位于同一 Release。工作区、账号、项目变量和共享凭据通过 One Desktop 管理。
+One Desktop 安装包与 CLI 归档位于同一 Release。工作区、账号、模块变量和共享凭据通过 One Desktop 管理。
 
 ## Download mirrors / 下载镜像
 
@@ -75,9 +79,9 @@ Open the displayed URL in your own computer's browser, sign in to Infisical, and
 
 ## Agent entry points / AI 入口
 
-Use the installed CLI as the source of truth. Read the workspace's `AGENTS.md` and `one.manifest.toml` before changing projects.
+Use the installed CLI as the source of truth. Read the workspace's `AGENTS.md` and `one.manifest.toml` before changing modules.
 
-以实际安装的 CLI 为准；修改项目之前先读取工作区的 `AGENTS.md` 和 `one.manifest.toml`。
+以实际安装的 CLI 为准；修改模块之前先读取工作区的 `AGENTS.md` 和 `one.manifest.toml`。
 
 ```sh
 one help --all
@@ -95,9 +99,9 @@ Templates and official One skills ship with the CLI. New workspaces copy embedde
 
 ## Bun, Deno and Python workspaces / Bun、Deno 与 Python 工作区
 
-Bun and Deno projects share the pnpm workspace with Node.js projects. Python projects share a uv workspace and its root `uv.lock` and `.venv`. Each runtime is pinned in `mise.toml`; `one run` prepares dependencies before running tasks.
+Bun and Deno modules share the pnpm workspace with Node.js modules. Python modules share a uv workspace and its root `uv.lock` and `.venv`. Each runtime is pinned in `mise.toml`; `one run` prepares dependencies before running tasks.
 
-Bun、Deno 项目与 Node.js 项目共用 pnpm workspace。Python 项目共用 uv workspace 及根目录的 `uv.lock`、`.venv`。运行时版本固定在 `mise.toml` 中，`one run` 在运行任务前准备依赖。
+Bun、Deno 模块与 Node.js 模块共用 pnpm workspace。Python 模块共用 uv workspace 及根目录的 `uv.lock`、`.venv`。运行时版本固定在 `mise.toml` 中，`one run` 在运行任务前准备依赖。
 
 ```sh
 one add bun-api --name bun-service --yes
@@ -108,9 +112,9 @@ one run check
 one run dev -p python-service
 ```
 
-Each runtime has an API service and library starter (`bun-lib`, `deno-lib`, `python-lib`). The API starters use the runtime's built-in HTTP server. Bun and Deno expose tasks through `package.json`; Python declares tasks under `[tool.one.tasks.<name>]` in `pyproject.toml`, using `run` argument arrays. One also discovers `[project.scripts]` entry points. After editing task definitions or local package dependencies, run `one init mise` to update task discovery and build ordering. Use its `--bun-version`, `--deno-version`, `--python-version` and `--uv-version` options to set exact runtime versions. `one exec` runs arbitrary commands with the selected project's environment.
+Each runtime has an API service and library starter (`bun-lib`, `deno-lib`, `python-lib`). The API starters use the runtime's built-in HTTP server. Bun and Deno expose tasks through `package.json`; Python declares tasks under `[tool.one.tasks.<name>]` in `pyproject.toml`, using `run` argument arrays. One also discovers `[project.scripts]` entry points. After editing task definitions or local package dependencies, run `one init mise` to update task discovery and build ordering. Use its `--bun-version`, `--deno-version`, `--python-version` and `--uv-version` options to set exact runtime versions. `one exec` runs arbitrary commands with the selected module's environment.
 
-每种运行时都提供 API 服务与共享库模板（`bun-lib`、`deno-lib`、`python-lib`），API 模板使用运行时内置 HTTP 服务。Bun、Deno 通过 `package.json` 声明任务，Python 在 `pyproject.toml` 的 `[tool.one.tasks.<name>]` 中通过 `run` 参数数组声明任务，同时支持发现 `[project.scripts]` 命令入口。修改任务或本地包依赖后执行 `one init mise`，更新任务发现和构建顺序。可用 `--bun-version`、`--deno-version`、`--python-version`、`--uv-version` 设置精确版本。`one exec` 可在所选项目环境中执行任意命令。
+每种运行时都提供 API 服务与共享库模板（`bun-lib`、`deno-lib`、`python-lib`），API 模板使用运行时内置 HTTP 服务。Bun、Deno 通过 `package.json` 声明任务，Python 在 `pyproject.toml` 的 `[tool.one.tasks.<name>]` 中通过 `run` 参数数组声明任务，同时支持发现 `[project.scripts]` 命令入口。修改任务或本地包依赖后执行 `one init mise`，更新任务发现和构建顺序。可用 `--bun-version`、`--deno-version`、`--python-version`、`--uv-version` 设置精确版本。`one exec` 可在所选模块的环境中执行任意命令。
 
 Use `workspace:*` for local pnpm dependencies. For Python, declare the package in `project.dependencies` and set `package-name = { workspace = true }` under `tool.uv.sources`. Python members must have compatible dependency and Python version requirements because uv resolves the workspace together. Dependency preparation synchronizes all Python members to retain dependencies used by other services. Deno starters use manual `node_modules` management for pnpm; declare npm dependencies in `package.json`.
 
@@ -118,9 +122,9 @@ pnpm 本地依赖使用 `workspace:*`。Python 在 `project.dependencies` 声明
 
 ## Flutter workspaces / Flutter 工作区
 
-Flutter apps and widget libraries use the `flutter` toolchain and native pub workspaces. One pins the Flutter SDK (including Dart), adds members to the root `pubspec.yaml`, and resolves shared dependencies before tasks. Commit the root `pubspec.lock`. Project tasks live in `Taskfile.yml`; local pub dependencies participate in One's task graph. Set a different SDK with `one init mise --flutter-version X.Y.Z`.
+Flutter apps and widget libraries use the `flutter` toolchain and native pub workspaces. One pins the Flutter SDK (including Dart), adds members to the root `pubspec.yaml`, and resolves shared dependencies before tasks. Commit the root `pubspec.lock`. Module tasks live in `Taskfile.yml`; local pub dependencies participate in One's task graph. Set a different SDK with `one init mise --flutter-version X.Y.Z`.
 
-Flutter 应用与组件库使用 `flutter` 工具链及原生 pub workspace。One 固定 Flutter SDK（包含 Dart），将成员加入根目录 `pubspec.yaml`，并在执行任务前解析共享依赖。请提交根目录 `pubspec.lock`。项目任务定义在 `Taskfile.yml`，本地 pub 依赖会进入 One 任务图。通过 `one init mise --flutter-version X.Y.Z` 可设置其他 SDK 版本。
+Flutter 应用与组件库使用 `flutter` 工具链及原生 pub workspace。One 固定 Flutter SDK（包含 Dart），将成员加入根目录 `pubspec.yaml`，并在执行任务前解析共享依赖。请提交根目录 `pubspec.lock`。模块任务定义在 `Taskfile.yml`，本地 pub 依赖会进入 One 任务图。通过 `one init mise --flutter-version X.Y.Z` 可设置其他 SDK 版本。
 
 ```sh
 one add flutter-app --name mobile --yes
@@ -151,7 +155,7 @@ Native macOS starters: [SwiftUI window app](packages/templates/swift-macos-app) 
 | `services/desktop-main` | Electron native host / 原生宿主 |
 | `packages/desktop-preload` | Typed native bridge / 类型化原生桥接 |
 | `apps/website` | Next.js static homepage / 静态官网 |
-| `packages/templates` | Project templates, including Fumadocs / 项目模板，包含 Fumadocs |
+| `packages/templates` | Module templates, including Fumadocs / 模块模板，包含 Fumadocs |
 | `packages/agent-skills` | Maintained agent skills / AI 技能源码 |
 
 Development conventions: [AGENTS.md](AGENTS.md), [CONTRIBUTING.md](CONTRIBUTING.md). Release procedure: [RELEASING.md](RELEASING.md).

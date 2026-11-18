@@ -1,38 +1,38 @@
 ---
 name: one-cli
-description: Develop and manage One CLI workspaces, discover installed commands and tasks, and apply project layouts within apps, services, and packages.
+description: Develop and manage One CLI workspaces, discover installed commands and tasks, and apply module layouts within apps, services, and packages.
 ---
 
 # One CLI
 
-Find the nearest `one.manifest.toml`; use its project names, paths, toolchains,
+Find the nearest `one.manifest.toml`; use its module names, paths, toolchains,
 and groups rather than assuming a single application. Read applicable
-`AGENTS.md` and project README files. Team instructions and the user's chosen
+`AGENTS.md` and module README files. Team instructions and the user's chosen
 stack take precedence over examples in installed skills.
 
 For `empty-app`, `empty-service`, and `empty-library`, the user defines the
 language, frameworks, UI, database, and other tooling. These templates only
 establish the One workspace location and workflow, not a default stack or
-internal architecture. Do not infer a stack from sibling projects or impose
+internal architecture. Do not infer a stack from sibling modules or impose
 dependencies from another template or installed skill. Once a stack is chosen,
-adapt project tasks and relevant development skills to that choice.
+adapt module tasks and relevant development skills to that choice.
 
 Discover commands with `one --help`, `one help --all`, and command-specific
 help. Discover templates with `one templates -o json` before `one add`.
 The installed CLI is the authority; do not invent flags or commands.
 
 Discover tasks with `one run --list -o json`. For non-interactive agent execution,
-use `one run <task> -p <project> --ui stream -o json` for project checks, builds,
+use `one run <task> -p <module> --ui stream -o json` for module checks, builds,
 tests, dependency preparation, and scripts. Explicit stream mode keeps logs
 readable when the agent allocates a terminal; reserve TUI for a user-requested
 interactive view. Tasks that require terminal input use their declared
 interactive/raw mode.
 
 Reuse existing commands and tasks before writing helpers. For one-off commands,
-use `one exec <project> -- <command> [args...]`; keep short one-off logic inline
+use `one exec <module> -- <command> [args...]`; keep short one-off logic inline
 or send it to an interpreter's stdin. If a script is warranted, put it and its
 intermediate files in an OS temporary directory, pass absolute paths because
-`one exec` runs in the project directory, and clean up when finished. Reuse
+`one exec` runs in the module directory, and clean up when finished. Reuse
 One's environment injection and existing CLI operations inside the workflow.
 Do not add repository scripts, package scripts, or task definitions solely for
 one-off work. `one exec` forwards stdout/stderr and the exit code, and has no
@@ -41,8 +41,8 @@ one-off work. `one exec` forwards stdout/stderr and the exit code, and has no
 Create a persistent script when the user requests it as a deliverable or the
 operation is intended for reuse and maintenance. Length or multiple steps alone
 do not make an operation reusable. Put shared reusable scripts in root
-`scripts/` and project-specific scripts in the project, following the
-repository's script language convention. Define reusable tasks in the project's
+`scripts/` and module-specific scripts in the module, following the
+repository's script language convention. Define reusable tasks in the module's
 package.json, Python pyproject.toml (`[tool.one.tasks.<name>]` with a `run`
 argument array), Taskfile.yml, or root mise.toml. Synchronize with `one init mise`
 and run them through One.
@@ -61,19 +61,19 @@ Publishing credentials belong in Shared credentials, configured by the
 user, and are injected by a task using `one exec --global`. Never request
 or print their values.
 
-Read [project layouts](references/layouts.md) when adding or restructuring
-a project. Read [stack adaptations](references/stacks.md) when an upstream
-skill's examples differ from this project's dependencies or conventions.
+Read [module layouts](references/layouts.md) when adding or restructuring
+a module. Read [stack adaptations](references/stacks.md) when an upstream
+skill's examples differ from this module's dependencies or conventions.
 
 For deeper template-specific work, select the installed one-nestjs, one-go,
 one-expo, or one-web skill for that stack. Electron process boundaries use
 one-electron; Fumadocs content and search use one-fumadocs. Read only the skill
 and references needed for the current task. Their absence does not prescribe
-a stack for an empty/custom project; follow its actual dependencies and README.
+a stack for an empty/custom module; follow its actual dependencies and README.
 
 Official One skills are initially copied from the CLI bundle, then registered
 in the upstream `skills-lock.json` with their GitHub `master` source. Update
-project skills with `one skills update --project`; `npx skills update --project`
+workspace skills with `one skills update --project`; `npx skills update --project`
 uses the same records. Updates follow the repository independently of CLI
 releases. Check the installed CLI's help for supported commands and flags.
 
@@ -86,11 +86,11 @@ CLI upgrades alone do not change a workspace's skills.
 
 For older workspaces missing stack skills, preview with
 `one init skills --install-recommend --dry-run -o json`. This scans each
-project's own dependencies and lists the curated skill catalog. When the user
+module's own dependencies and lists the curated skill catalog. When the user
 requests the recommended installation, use
 `one init skills --install-recommend --yes` for non-interactive execution.
 The picker shows skill names and keeps existing skills separate. Choose target
-agents, project/global scope and symlink/copy mode once, then review the whole
+agents, workspace/global scope and symlink/copy mode once, then review the whole
 installation. The upstream Skills API manages installation and lock entries.
 Failed skill/agent targets can be retried without reinstalling successful ones.
 Use `--agent codex,claude-code`, `--global` and `--copy` to set non-interactive
@@ -104,5 +104,5 @@ or a separate skill. Global installation and updates require an explicit
 Business skills are optional instructions maintained in separate GitHub
 repositories. Install them only when the user requests installation, using
 `one skills add <owner/repo> --skill <name>` from the workspace root. Install
-skills in the project's `.agents/skills`, without `--global`. Installing a
+skills in the workspace's `.agents/skills`, without `--global`. Installing a
 skill does not authorize implementing a feature or provisioning an external service.

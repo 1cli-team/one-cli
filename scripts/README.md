@@ -26,9 +26,9 @@ Keep entrypoint paths and exported compatibility APIs stable. Importing an entry
 
 ## Run / 运行
 
-Use the Node version pinned in the root `mise.toml` to run `.mts` files directly. Node strips their TypeScript types; no compilation, `tsconfig` or npm dependencies are needed for the scripts. The command runner uses Bash on every platform; Windows development requires Git Bash with `bash` available on PATH. Frontend projects manage their own tooling dependencies.
+Use the Node version pinned in the root `mise.toml` to run `.mts` files directly. Node strips their TypeScript types; no compilation, `tsconfig` or npm dependencies are needed for the scripts. The command runner uses Bash on every platform; Windows development requires Git Bash with `bash` available on PATH. Frontend modules manage their own tooling dependencies.
 
-使用根 `mise.toml` 固定的 Node 直接运行 `.mts`。Node 会移除 TypeScript 类型，脚本无需编译、`tsconfig` 或 npm 依赖。命令执行器在所有平台使用 Bash，Windows 开发需安装 Git Bash 并将 `bash` 加入 PATH。前端项目自行管理其工具依赖。
+使用根 `mise.toml` 固定的 Node 直接运行 `.mts`。Node 会移除 TypeScript 类型，脚本无需编译、`tsconfig` 或 npm 依赖。命令执行器在所有平台使用 Bash，Windows 开发需安装 Git Bash 并将 `bash` 加入 PATH。前端模块自行管理其工具依赖。
 
 ```sh
 node scripts/release.mts --help
