@@ -12,7 +12,7 @@ After changing scripts, synchronize One task definitions when required.
 
 Use the existing shared UI theme store and provider, keep persisted preferences
 small, and avoid persisting server responses or introducing an auth store by
-copying a starter from another project. Keep error and not-found states usable
+copying a starter from another module. Keep error and not-found states usable
 with accessible recovery actions.
 
 Electron renderer uses its own Vite APP environment prefix, relative assets,
@@ -22,7 +22,7 @@ them. Read native application information through window.electron.getAppInfo();
 keep Node/filesystem access outside the renderer and update preload types with
 main handlers when a requested feature needs another narrow method.
 
-Run the target project's typecheck, lint/format, and production build tasks.
+Run the target module's typecheck, lint/format, and production build tasks.
 For Electron renderer changes, also verify the preload/main build dependencies
 and assembled production resources; Vite development success alone does not
 verify the packaged application.

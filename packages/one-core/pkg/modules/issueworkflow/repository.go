@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"slices"
 	"strings"
 
 	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/modules/codehost"
@@ -150,5 +151,133 @@ func (r Repository) Push(ctx context.Context, job Job) error {
 		return err
 	}
 	_, err := git(ctx, job.Worktree, "push", "origin", job.HeadSHA+":refs/heads/"+job.Branch)
+	return err
+}
+
+func subtaskHead(ctx context.Context, job Job) (string, error) {
+	branch, err := git(ctx, job.Worktree, "branch", "--show-current")
+	if err != nil {
+		return "", err
+	}
+	if branch != job.Branch {
+		return "", i18n.Errorf("gateway.workflow_subtask_branch")
+	}
+	return git(ctx, job.Worktree, "rev-parse", "--verify", "HEAD")
+}
+
+func (r Repository) ValidateSubtaskStart(ctx context.Context, job Job, base string) error {
+	head, err := subtaskHead(ctx, job)
+	if err != nil {
+		return err
+	}
+	status, err := git(ctx, job.Worktree, "status", "--porcelain")
+	if err != nil {
+		return err
+	}
+	if head != base || status != "" {
+		return i18n.Errorf("gateway.workflow_subtask_branch")
+	}
+	return nil
+}
+
+func (r Repository) CommitSubtask(ctx context.Context, job Job, task SubtaskRun) (string, error) {
+	title := task.Issue.Identifier + " " + strings.Join(strings.Fields(task.Issue.Title), " ")
+	return r.commitOnBranch(ctx, job, task.StartSHA, title, "One-Linear-Subtask: "+task.Issue.ID)
+}
+
+func (r Repository) commitOnBranch(ctx context.Context, job Job, base, title, trailer string) (string, error) {
+	head, err := subtaskHead(ctx, job)
+	if err != nil {
+		return "", err
+	}
+	if head != base {
+		// A restart after git commit and before the checkpoint can reuse
+		// only the commit Gateway created for this child.
+		parents, err := git(ctx, job.Worktree, "show", "-s", "--format=%P", "HEAD")
+		if err != nil {
+			return "", err
+		}
+		message, err := git(ctx, job.Worktree, "show", "-s", "--format=%B", "HEAD")
+		if err != nil {
+			return "", err
+		}
+		if parents != base || !slices.Contains(strings.Split(message, "\n"), trailer) {
+			return "", i18n.Errorf("gateway.workflow_subtask_branch")
+		}
+		return head, r.ValidateSubtaskStart(ctx, job, head)
+	}
+	if _, err := git(ctx, job.Worktree, "add", "-A", "--", "."); err != nil {
+		return "", err
+	}
+	staged, err := git(ctx, job.Worktree, "diff", "--cached", "--name-only", "--")
+	if err != nil || staged == "" {
+		return "", err
+	}
+	if _, err := git(ctx, job.Worktree, "commit", "-m", title, "-m", trailer); err != nil {
+		return "", err
+	}
+	return subtaskHead(ctx, job)
+}
+
+func (r Repository) PrepareRevision(ctx context.Context, job Job) (string, error) {
+	if !branchPattern.MatchString(job.Branch) || job.Worktree == "" {
+		return "", revisionBranchChanged
+	}
+	if err := r.origin(ctx, job.Project); err != nil {
+		return "", err
+	}
+	head, err := subtaskHead(ctx, job)
+	if err != nil {
+		return "", err
+	}
+	if err := r.ValidateSubtaskStart(ctx, job, head); err != nil {
+		return "", err
+	}
+	if _, err := git(ctx, job.Worktree, "fetch", "--no-tags", "origin", "refs/heads/"+job.Branch); err != nil {
+		return "", err
+	}
+	base, err := git(ctx, job.Worktree, "rev-parse", "--verify", "FETCH_HEAD^{commit}")
+	if err != nil {
+		return "", err
+	}
+	if head != base {
+		if _, err := git(ctx, job.Worktree, "merge", "--ff-only", base); err != nil {
+			return "", revisionBranchChanged
+		}
+	}
+	return base, r.ValidateSubtaskStart(ctx, job, base)
+}
+
+func (r Repository) CommitRevision(ctx context.Context, job Job) (string, error) {
+	issue := job.Revision.Issue
+	title := i18n.Tf("gateway.workflow_revision_commit", issue.Identifier, strings.Join(strings.Fields(issue.Title), " "))
+	return r.commitOnBranch(ctx, job, job.BaseSHA, title, "One-Linear-Comment: "+job.Revision.CommentID)
+}
+
+func (r Repository) PushRevision(ctx context.Context, job Job) error {
+	if err := r.origin(ctx, job.Project); err != nil {
+		return err
+	}
+	parents, err := git(ctx, job.Worktree, "show", "-s", "--format=%P", job.HeadSHA)
+	if err != nil {
+		return err
+	}
+	if parents != job.BaseSHA {
+		return revisionBranchChanged
+	}
+	ref := "refs/heads/" + job.Branch
+	remote, err := git(ctx, job.Worktree, "ls-remote", "origin", ref)
+	if err != nil {
+		return err
+	}
+	if remote == job.HeadSHA+"\t"+ref {
+		return nil // A previous push succeeded before the checkpoint.
+	}
+	if remote != job.BaseSHA+"\t"+ref {
+		return revisionBranchChanged
+	}
+	// The single-parent check makes this a fast-forward. The lease prevents
+	// recreating a branch deleted on merge or racing with another update.
+	_, err = git(ctx, job.Worktree, "push", "--force-with-lease="+ref+":"+job.BaseSHA, "origin", job.HeadSHA+":"+ref)
 	return err
 }

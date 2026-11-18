@@ -29,6 +29,13 @@ func (s *Service) Handle(ctx context.Context, req api.WorkRequest) api.WorkReply
 		}
 		return reply(code, map[string]string{"reason": reason})
 	}
+	dispatchProblem := func(code int, reason string, err error) api.WorkReply {
+		var subtask subtaskProblem
+		if errors.As(err, &subtask) {
+			reason = string(subtask)
+		}
+		return problem(code, reason, err)
+	}
 	switch req.Operation {
 	case api.WorkStatus:
 		return reply(http.StatusOK, s.snapshot())
@@ -43,7 +50,32 @@ func (s *Service) Handle(ctx context.Context, req api.WorkRequest) api.WorkReply
 			return reply(http.StatusOK, catalog)
 		}
 		return problem(http.StatusNotFound, "codex_models_unavailable", nil)
+	case api.WorkCodexJobResult:
+		if !uuidPattern.MatchString(req.JobID) {
+			return problem(http.StatusBadRequest, "invalid_job_id", nil)
+		}
+		job, ok := s.store.findID(req.JobID)
+		if !ok {
+			return problem(http.StatusNotFound, "job_not_found", nil)
+		}
+		result, err := s.codexJobResult(ctx, job)
+		if err != nil {
+			return problem(http.StatusBadGateway, "codex_job_result_unavailable", err)
+		}
+		return reply(http.StatusOK, result)
+	case api.WorkTaskSnapshot:
+		return reply(http.StatusOK, s.taskSnapshot())
 	case api.WorkMonitorJobs:
+		if req.RevisionCommentID != "" {
+			if !api.ValidIssueID(req.ProjectID) || !api.ValidIssueID(req.IssueID) || !api.ValidIssueID(req.RevisionCommentID) {
+				return problem(http.StatusBadRequest, "invalid_revision", nil)
+			}
+			items := []api.JobSummary{}
+			if job, ok := s.store.getRun(req.ProjectID, req.IssueID, req.RevisionCommentID); ok {
+				items = append(items, job.monitorSummary())
+			}
+			return reply(http.StatusOK, api.JobPage{Items: items, Page: 1, PageCount: 1})
+		}
 		if req.IssueID != "" && !api.ValidIssueReference(req.IssueID) {
 			return problem(http.StatusBadRequest, "invalid_issue_reference", nil)
 		}
@@ -52,20 +84,79 @@ func (s *Service) Handle(ctx context.Context, req api.WorkRequest) api.WorkReply
 		if uuidPattern.MatchString(req.ProjectID) {
 			return reply(http.StatusOK, s.list(req.ProjectID))
 		}
+	case api.WorkResolveIssue:
+		if !api.ValidSubtaskOrder(req.SubtaskOrder) {
+			return problem(http.StatusBadRequest, "invalid_subtask_order", nil)
+		}
+		if req.ProjectID == "" && api.ValidIssueReference(req.IssueID) {
+			resolved, code, err := s.findResolvedIssue(ctx, req.IssueID, req.SubtaskOrder)
+			switch code {
+			case http.StatusOK:
+				return reply(code, resolved)
+			case http.StatusNotFound:
+				return problem(code, "issue_unmapped", err)
+			case http.StatusConflict:
+				return dispatchProblem(code, "issue_reference_ambiguous", err)
+			default:
+				return problem(code, "workflow_dispatch", err)
+			}
+		}
+		if uuidPattern.MatchString(req.ProjectID) && api.ValidIssueReference(req.IssueID) {
+			resolved, code, err := s.resolvedIssue(ctx, req.ProjectID, req.IssueID, req.SubtaskOrder)
+			if err != nil {
+				return dispatchProblem(code, "workflow_dispatch", err)
+			}
+			return reply(http.StatusOK, resolved)
+		}
 	case api.WorkDispatch, api.WorkDispatchWithOptions:
 		if uuidPattern.MatchString(req.ProjectID) && api.ValidIssueReference(req.IssueID) {
 			if !req.Codex.Valid() {
 				return problem(http.StatusBadRequest, "invalid_codex_options", nil)
 			}
-			status, code, err := s.dispatch(ctx, req.ProjectID, req.IssueID, req.Codex)
+			if !api.ValidSubtaskOrder(req.SubtaskOrder) {
+				return problem(http.StatusBadRequest, "invalid_subtask_order", nil)
+			}
+			status, code, err := s.dispatch(ctx, req)
 			if errors.Is(err, api.ErrCodexOptionsConflict) {
 				return problem(code, "codex_options_conflict", nil)
 			}
 			if err != nil {
-				return problem(code, "workflow_dispatch", err)
+				return dispatchProblem(code, "workflow_dispatch", err)
 			}
 			return reply(code, map[string]api.Status{"status": status})
 		}
+	case api.WorkReviseIssue:
+		if !api.ValidIssueID(req.ProjectID) || !api.ValidIssueID(req.IssueID) || !api.ValidIssueID(req.RevisionCommentID) || !req.Codex.Valid() {
+			return problem(http.StatusBadRequest, "invalid_revision", nil)
+		}
+		if err := s.revise(ctx, req); err != nil {
+			var revision revisionProblem
+			if errors.As(err, &revision) {
+				return problem(http.StatusConflict, string(revision), err)
+			}
+			return problem(http.StatusBadGateway, "workflow_dispatch", err)
+		}
+		return reply(http.StatusAccepted, struct{}{})
+	case api.WorkAnswerIssue:
+		if !uuidPattern.MatchString(req.ProjectID) || !uuidPattern.MatchString(req.IssueID) || !req.Answer.Valid() {
+			return problem(http.StatusBadRequest, "invalid_execution_answer", nil)
+		}
+		code, err := s.store.answer(req.ProjectID, req.IssueID, req.RevisionCommentID, req.Answer)
+		if err != nil {
+			return problem(code, "execution_question_conflict", err)
+		}
+		s.notifyRun()
+		return reply(code, struct{}{})
+	case api.WorkContinueIssue:
+		if !uuidPattern.MatchString(req.ProjectID) || !uuidPattern.MatchString(req.IssueID) || !api.ValidProgressID(req.ProgressID) {
+			return problem(http.StatusBadRequest, "invalid_execution_continue", nil)
+		}
+		code, err := s.store.requestContinue(req.ProjectID, req.IssueID, req.RevisionCommentID, req.ProgressID)
+		if err != nil {
+			return problem(code, "execution_continue_conflict", err)
+		}
+		s.notifyRun()
+		return reply(code, struct{}{})
 	case api.WorkRepositories:
 		if s.manager != nil {
 			repos, err := s.repositories(ctx)
@@ -162,6 +253,13 @@ func (s *Service) RunIssue(ctx context.Context, project, issue string, onReview 
 	if reply.Status != http.StatusOK && reply.Status != http.StatusAccepted {
 		return RunResult{}, i18n.Errorf("linear.cli.workflow_dispatch", reply.Status)
 	}
+	if _, ok := s.store.get(project, issue); !ok {
+		_, parent, _, _, err := s.resolveDispatchIssue(ctx, project, issue, nil)
+		if err != nil {
+			return RunResult{}, err
+		}
+		issue = parent.ID
+	}
 	ticker := time.NewTicker(15 * time.Second)
 	defer ticker.Stop()
 	for ctx.Err() == nil {
@@ -185,9 +283,21 @@ func (s *Service) RunIssue(ctx context.Context, project, issue string, onReview 
 			return job.result(), nil
 		case failed:
 			return RunResult{}, i18n.Errorf("linear.cli.workflow_failed", job.LastError)
-		case queued, running, verifying:
+		case queued, running, verifying, preparingSubtask, committingSubtask:
 			s.execute(ctx, job)
 			continue
+		case waitingForAnswer:
+			if job.readyToResume() {
+				s.execute(ctx, job)
+				continue
+			}
+			return RunResult{}, i18n.Errorf("gateway.cli.workflow_waiting_for_answer")
+		case waitingToContinue:
+			if job.readyToResume() {
+				s.execute(ctx, job)
+				continue
+			}
+			return RunResult{}, i18n.Errorf("gateway.cli.workflow_waiting_to_continue")
 		default:
 			previous := job.Stage
 			if err := s.deliver(ctx, &job); err != nil && ctx.Err() == nil {

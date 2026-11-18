@@ -8,7 +8,12 @@ import {
 	SelectValue,
 } from "@/components/ui/select";
 import { useWorkspace } from "./useWorkspace";
-import { projectPath, workspaceContext, workspacePath } from "@/router/paths";
+import {
+	workspaceContext,
+	workspaceKnowledgePath,
+	workspacePath,
+	workspaceVariablesPath,
+} from "@/router/paths";
 
 export function WorktreeSelector({ entryId }: { entryId: string }) {
 	const { t } = useTranslation();
@@ -22,13 +27,19 @@ export function WorktreeSelector({ entryId }: { entryId: string }) {
 			value={workspace.worktreeId}
 			onValueChange={(id) => {
 				const context = workspaceContext(registered.entryId, id);
-				let target = workspacePath(context);
-				if (pathname.endsWith("/git/worktrees")) target += "/git/worktrees";
-				else if (projectName) target = projectPath(context, projectName);
+				const target = pathname.endsWith("/git/worktrees")
+					? `${workspacePath(context)}/git/worktrees`
+					: pathname.endsWith("/knowledge")
+						? workspaceKnowledgePath(context)
+						: workspaceVariablesPath(context, projectName);
 				navigate({ pathname: target, search });
 			}}
 		>
-			<SelectTrigger className="w-[min(14rem,35vw)]" aria-label={t("git.selectWorktree")}>
+			<SelectTrigger
+				size="sm"
+				className="w-[clamp(6rem,24vw,12rem)] text-xs [&>span:first-child]:truncate"
+				aria-label={t("git.selectWorktree")}
+			>
 				<SelectValue />
 			</SelectTrigger>
 			<SelectContent>

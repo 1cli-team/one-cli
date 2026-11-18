@@ -24,8 +24,8 @@ one run one-template-project:build
 one run one-template-project:pack
 ```
 
-Or run `task dev|check|build|pack` in this project directory.
-也可以进入本项目目录运行对应的 Task 任务。
+Or run `task dev|check|build|pack` in this module directory.
+也可以进入本模块目录运行对应的 Task 任务。
 
 `build` produces `build/one-template-macos.app`; `pack` adds a DMG with an Applications shortcut.
 The enclosed app is ad-hoc signed; the DMG is unsigned. These are local development artifacts, not notarized downloads.
@@ -67,9 +67,9 @@ one exec --global --env dev --path /macos \
   --keys SIGNING_IDENTITY,NOTARY_PROFILE -- task release
 ```
 
-Run this in the generated project directory. This only injects environment variables: it does **not** install signing keys or create a notarytool profile. Each signing machine (including CI) still needs the certificate/private key and notarization credentials. For CI, use an ephemeral keychain and your secret store, then remove it after the job. Never commit P12 files, private keys or passwords. Do not enable shell tracing around secrets.
+Run this in the generated module directory. This only injects environment variables: it does **not** install signing keys or create a notarytool profile. Each signing machine (including CI) still needs the certificate/private key and notarization credentials. For CI, use an ephemeral keychain and your secret store, then remove it after the job. Never commit P12 files, private keys or passwords. Do not enable shell tracing around secrets.
 
-在生成的项目目录执行。此命令仅注入环境变量，**不会**安装签名私钥或建立 notarytool 凭据。
+在生成的模块目录执行。此命令仅注入环境变量，**不会**安装签名私钥或建立 notarytool 凭据。
 每台签名机器（包括 CI）仍需要证书私钥和公证凭据；CI 应使用临时钥匙串与凭据存储，并在结束时清理。
 不要提交 P12、私钥或密码，也不要在处理凭据时开启 shell tracing。
 

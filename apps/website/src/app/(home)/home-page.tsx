@@ -34,9 +34,9 @@ import {
 const homeCopy = {
 	zh: {
 		meta: {
-			title: "One CLI | 创建工作区，运行每个项目",
+			title: "One CLI | 创建工作区，运行每个模块",
 			description:
-				"One CLI 帮助你创建多项目工作区，统一运行开发、构建和测试，通过 One Desktop 管理项目、变量与共享凭据。",
+				"One CLI 帮助你创建包含多个模块的工作区，统一运行开发、构建和测试，通过 One Desktop 管理模块、变量与共享凭据。",
 		},
 		nav: {
 			github: "GitHub",
@@ -46,14 +46,14 @@ const homeCopy = {
 			byline: "来自 · TORCHSTELLAR",
 			title: (
 				<>
-					从第一个项目
+					从第一个模块
 					<br />
 					到整个工作区。
 					<br />
 					用同一套命令。
 				</>
 			),
-			body: "创建多项目工作区，统一运行开发、构建和测试。通过 One Desktop 管理项目、变量与共享凭据，让人和 AI 使用同一套项目约定。",
+			body: "创建包含多个模块的工作区，统一运行开发、构建和测试。通过 One Desktop 管理模块、变量与共享凭据，让人和 AI 使用同一套工作区约定。",
 			canvasAria:
 				"One CLI 工作区模块画布，展示应用、API、文档、Packages、Manifest、Env、Build 和 CLI 接口模块",
 			install: "开始使用",
@@ -66,13 +66,13 @@ const homeCopy = {
 		},
 		workflow: {
 			eyebrow: "常用命令",
-			title: "从创建项目，到日常开发。",
-			body: "创建和添加项目时按提示选择，日常开发用 one run 执行任务。脚本和 AI 可以通过明确参数与 JSON 输出完成操作。",
+			title: "从创建工作区，到日常开发。",
+			body: "创建工作区或添加模块时按提示选择，日常开发用 one run 执行任务。脚本和 AI 可以通过明确参数与 JSON 输出完成操作。",
 			commandBodies: [
 				"创建空工作区",
-				"追加一个模板项目",
+				"追加一个模板模块",
 				"运行开发、构建与测试",
-				"管理项目环境变量",
+				"管理模块环境变量",
 				"桌面管理工作区",
 				"查阅完整命令",
 			],
@@ -81,15 +81,15 @@ const homeCopy = {
 				<>
 					一条命令，
 					<br />
-					先把项目搭起来。
+					先创建工作区。
 				</>
 			),
 			createBody:
-				"one create 创建空工作区，准备好目录、项目说明和任务入口。之后通过 one add 逐个添加需要的项目。",
+				"one create 创建空工作区，准备好目录、工作区说明和任务入口。之后通过 one add 逐个添加需要的模块。",
 			bullets: [
-				["直接创建", "one create my-app --yes 会写入基础项目文件。"],
-				["添加项目", "通过 one add 选择模板，为工作区添加项目。"],
-				["结果可查", "完成后返回工作区位置和生成的文件，方便继续添加项目。"],
+				["直接创建", "one create my-app --yes 会写入基础工作区文件。"],
+				["添加模块", "通过 one add 选择模板，为工作区添加模块。"],
+				["结果可查", "完成后返回工作区位置和生成的文件，方便继续添加模块。"],
 			],
 			explore: "查看 one create",
 			details: [
@@ -101,13 +101,13 @@ const homeCopy = {
 						<>
 							一条命令，
 							<br />
-							先把项目搭起来。
+							先创建工作区。
 						</>
 					),
-					body: "one create 可以直接运行并填写目标目录，也可以指定目录名，创建空工作区后再用 one add 添加项目。",
+					body: "one create 可以直接运行并填写目标目录，也可以指定目录名，创建空工作区后再用 one add 添加模块。",
 					bullets: [
 						["交互创建", "直接输入 one create，会引导你填写目标目录。"],
-						["添加项目", "运行 one templates 查看模板，再通过 one add 添加所需项目。"],
+						["添加模块", "运行 one templates 查看模板，再通过 one add 添加所需模块。"],
 						["自动化模式", "CI 或 AI 使用 --yes 和 -o json，方便确认输出和错误。"],
 					],
 					href: agentSkillUrl,
@@ -119,28 +119,28 @@ const homeCopy = {
 				},
 				{
 					command: "one add",
-					navBody: "追加一个模板项目",
+					navBody: "追加一个模板模块",
 					eyebrow: "one add",
 					title: (
 						<>
-							项目已经有了，
+							模块已经有了，
 							<br />
 							也能继续加。
 						</>
 					),
-					body: "one add 在已有 One 工作区里添加项目。你可以直接输入 one add 进入交互式选择，也可以在脚本里写明模板名和项目名。",
+					body: "one add 在已有 One 工作区里添加模块。你可以直接输入 one add 进入交互式选择，也可以在脚本里写明模板名和模块名。",
 					bullets: [
-						["交互添加", "直接输入 one add，会让你选择模板和项目名。"],
+						["交互添加", "直接输入 one add，会让你选择模板和模块名。"],
 						["自动化模式", "脚本或 AI 可使用 one add nextjs-app --name web --yes。"],
-						["同步默认值", "按模板生成项目代码，并登记本地开发命令。"],
+						["同步默认值", "按模板生成模块代码，并登记本地开发命令。"],
 					],
 					href: agentSkillUrl,
 					cta: "查看 AI Skill",
 					sample: "one add",
 					output: [
-						"确认当前目录属于 One 项目",
-						"打开模板和项目名选择器",
-						"写入新目录并登记到项目清单",
+						"确认当前目录属于 One 工作区",
+						"打开模板和模块名选择器",
+						"写入新目录并登记到模块清单",
 					],
 				},
 				{
@@ -149,29 +149,29 @@ const homeCopy = {
 					eyebrow: "one run",
 					title: (
 						<>
-							不同项目，
+							不同模块，
 							<br />
 							同一套运行方式。
 						</>
 					),
-					body: "one run 列出工作区任务，通过 mise 执行开发、构建和测试。用 -p 选择项目，One 会按需准备工具和依赖。",
+					body: "one run 列出工作区任务，通过 mise 执行开发、构建和测试。用 -p 选择模块，One 会按需准备工具和依赖。",
 					bullets: [
 						["发现任务", "运行 one run 查看可用任务，再选择要执行的操作。"],
-						["日常开发", "one dev -p web 启动项目；one build -p web 构建项目。"],
+						["日常开发", "one dev -p web 启动模块；one build -p web 构建模块。"],
 						["查看日志", "多任务支持树形日志界面，可搜索、滚动和切换任务。"],
 					],
 					href: agentSkillUrl,
 					cta: "查看 AI Skill",
 					sample: "one dev -p web",
 					output: [
-						"解析项目任务与依赖关系",
-						"准备工具、依赖和已绑定的项目变量",
+						"解析模块任务与依赖关系",
+						"准备工具、依赖和已绑定的模块变量",
 						"启动开发服务并显示原始日志",
 					],
 				},
 				{
 					command: "one env",
-					navBody: "管理项目环境变量",
+					navBody: "管理模块环境变量",
 					eyebrow: "one env",
 					title: (
 						<>
@@ -180,10 +180,10 @@ const homeCopy = {
 							运行时按需注入。
 						</>
 					),
-					body: "通过 one login 在浏览器登录 Infisical，再用 one env 管理项目变量。新工作区可先直接运行，需要托管变量时再绑定。",
+					body: "通过 one login 在浏览器登录 Infisical，再用 one env 管理模块变量。新工作区可先直接运行，需要托管变量时再绑定。",
 					bullets: [
 						["浏览器登录", "登录会话保存在本地凭据文件，使用 one whoami 查看状态。"],
-						["项目变量", "首次保存变量时初始化工作区绑定，按环境与项目目录组织变量。"],
+						["模块变量", "首次保存变量时初始化工作区绑定，按环境与模块目录组织变量。"],
 						["共享凭据", "在 One Desktop 配置共享凭据，通过 one exec --global 显式注入。"],
 					],
 					href: agentSkillUrl,
@@ -192,7 +192,7 @@ const homeCopy = {
 					output: [
 						"先通过 one login 登录",
 						"在终端隐藏输入变量值",
-						"运行项目时从 Infisical 拉取并注入变量",
+						"运行模块时从 Infisical 拉取并注入变量",
 					],
 				},
 				{
@@ -201,21 +201,21 @@ const homeCopy = {
 					eyebrow: "One Desktop",
 					title: (
 						<>
-							项目和环境变量，
+							模块和环境变量，
 							<br />
 							在桌面上管理。
 						</>
 					),
-					body: "打开 One Desktop，浏览工作区、添加项目、管理环境变量和共享凭据。",
+					body: "打开 One Desktop，浏览工作区、添加模块、管理环境变量和共享凭据。",
 					bullets: [
-						["项目管理", "查看项目配置、选择模板添加项目，审阅 Manifest 修改后保存。"],
+						["模块管理", "查看模块配置、选择模板添加模块，审阅 Manifest 修改后保存。"],
 						["共享凭据", "集中管理发布与运维凭据，在终端任务中按需注入。"],
 						["账号与变量", "在设置中登录 Infisical，按环境和目录管理变量。"],
 					],
 					href: releasesUrl,
 					cta: "下载 One Desktop",
 					sample: "One Desktop",
-					output: ["打开 One Desktop 桌面应用", "管理工作区、项目与共享凭据", "按环境管理项目变量"],
+					output: ["打开 One Desktop 桌面应用", "管理工作区、模块与共享凭据", "按环境管理模块变量"],
 				},
 				{
 					command: "one help",
@@ -228,7 +228,7 @@ const homeCopy = {
 							找到正确的命令。
 						</>
 					),
-					body: "使用 one help --all 查看完整命令目录，再通过子命令的 --help 获取参数说明。AI 可以结合 README 和 one.manifest.toml 里的项目事实选择操作。",
+					body: "使用 one help --all 查看完整命令目录，再通过子命令的 --help 获取参数说明。AI 可以结合 README 和 one.manifest.toml 里的模块信息选择操作。",
 					bullets: [
 						["完整目录", "列出当前版本支持的全部命令。"],
 						["参数说明", "使用子命令的 --help 确认参数和用法。"],
@@ -237,14 +237,14 @@ const homeCopy = {
 					href: agentSkillUrl,
 					cta: "查看 AI Skill",
 					sample: "one help --all",
-					output: ["查看当前版本支持的命令", "确认子命令参数", "结合项目说明选择操作"],
+					output: ["查看当前版本支持的命令", "确认子命令参数", "结合工作区说明选择操作"],
 				},
 			],
 		},
 		why: {
 			eyebrow: "AGENT-READY WORKSPACE",
-			title: "让 agent 先读事实，再动项目。",
-			body: "One CLI 不是另一个聊天入口。它把 manifest、项目配置和结构化错误组织成一套工程契约，让 Codex、Claude Code、Cursor 这类 AI 编程工具能先确认项目事实，再选择命令、修改代码和处理失败。",
+			title: "让 agent 先读事实，再动模块。",
+			body: "One CLI 不是另一个聊天入口。它把 manifest、模块配置和结构化错误组织成一套工程契约，让 Codex、Claude Code、Cursor 这类 AI 编程工具能先确认模块信息，再选择命令、修改代码和处理失败。",
 			cards: [
 				{
 					icon: Sparkles,
@@ -254,14 +254,14 @@ const homeCopy = {
 				},
 				{
 					icon: ClipboardCheck,
-					title: "Manifest 记录项目事实",
-					body: "`one.manifest.toml` 记录工作区身份、项目路径、工具链和 Infisical 绑定。agent 先读这份事实，再决定进入哪个子项目、调用哪个命令。",
+					title: "Manifest 记录模块信息",
+					body: "`one.manifest.toml` 记录工作区身份、模块路径、工具链和 Infisical 绑定。agent 先读这份事实，再决定进入哪个模块、调用哪个命令。",
 					chip: "one.manifest.toml",
 				},
 				{
 					icon: Wrench,
-					title: "项目说明由团队维护",
-					body: "one create 按当前 CLI 语言生成 AGENTS.md。之后由团队维护，添加项目不会覆盖已有内容。",
+					title: "工作区说明由团队维护",
+					body: "one create 按当前 CLI 语言生成 AGENTS.md。之后由团队维护，添加模块不会覆盖已有内容。",
 					chip: "AGENTS.md",
 				},
 				{
@@ -275,15 +275,15 @@ const homeCopy = {
 		json: {
 			eyebrow: "可读的错误与恢复建议",
 			title: "命令没跑通，不用自己猜。",
-			body: "创建、添加和运行项目遇到问题时，One CLI 会保留具体原因，并为常见错误提供恢复建议。人和 AI 可以根据相同的信息继续处理。",
+			body: "创建工作区、添加模块或运行任务遇到问题时，One CLI 会保留具体原因，并为常见错误提供恢复建议。人和 AI 可以根据相同的信息继续处理。",
 			cards: [
-				["创建项目", "目录不对或目标已存在，会告诉你怎么继续"],
-				["添加项目", "模板、名称、位置不对，会给出修复命令"],
+				["创建工作区", "目录不对或目标已存在，会告诉你怎么继续"],
+				["添加模块", "模板、名称、位置不对，会给出修复命令"],
 				["运行任务", "缺少配置或工具，会提示先补什么"],
 				["接给 AI", "同样结果可以输出 JSON，方便工具处理"],
 			],
 			sampleLabel: "one add react-spa --name web --yes",
-			sampleOutput: `未检测到 One CLI 项目，请在项目根目录执行。
+			sampleOutput: `未检测到 One 工作区，请在工作区根目录执行。
   - 当前目录缺少 one.manifest.toml；
     请先创建工作区，或 cd 到已有工作区：
     one create <dir>`,
@@ -298,7 +298,7 @@ const homeCopy = {
 				label: "方式一",
 				title: "直接运行 one create",
 				body: "先创建空工作区。输入 one create，按提示填写目录；之后用 one add 添加应用、服务或共享库。",
-				bullets: ["不需要先记参数", "按提示填写目标目录", "创建后再用 one add 继续添加项目"],
+				bullets: ["不需要先记参数", "按提示填写目标目录", "创建后再用 one add 继续添加模块"],
 				cta: "查看 one create",
 				metaLabel: "创建工作区",
 				metaValue: "one create",
@@ -306,8 +306,8 @@ const homeCopy = {
 			template: {
 				label: "方式二",
 				title: "运行 one templates",
-				body: "在终端查看当前版本内置的应用、服务和共享库模板，再通过 one add 添加所需项目。",
-				bullets: ["终端查看模板清单", "了解模板类型与用途", "通过 one add 添加所需项目"],
+				body: "在终端查看当前版本内置的应用、服务和共享库模板，再通过 one add 添加所需模块。",
+				bullets: ["终端查看模板清单", "了解模板类型与用途", "通过 one add 添加所需模块"],
 				cta: "查看模板源码",
 				metaLabel: "查看可用模板",
 				metaValue: "one templates",
@@ -328,8 +328,8 @@ const homeCopy = {
 			},
 		},
 		final: {
-			title: "把项目放在一起，把开发跑起来。",
-			body: "从一个空工作区开始，按需添加项目，用相同的命令完成每天的开发。",
+			title: "把模块放在一起，把开发跑起来。",
+			body: "从一个空工作区开始，按需添加模块，用相同的命令完成每天的开发。",
 			install: "开始使用",
 		},
 		footer: {
@@ -354,9 +354,9 @@ const homeCopy = {
 	},
 	en: {
 		meta: {
-			title: "One CLI | Create workspaces. Run your projects.",
+			title: "One CLI | Create workspaces. Run your modules.",
 			description:
-				"Create workspaces, run development, builds, and tests, and manage projects, variables, and shared credentials in One Desktop.",
+				"Create workspaces, run development, builds, and tests, and manage modules, variables, and shared credentials in One Desktop.",
 		},
 		nav: {
 			github: "GitHub",
@@ -366,14 +366,14 @@ const homeCopy = {
 			byline: "BY · TORCHSTELLAR",
 			title: (
 				<>
-					Every project.
+					Every module.
 					<br />
 					One workspace.
 					<br />
 					One workflow.
 				</>
 			),
-			body: "Create workspaces and run development, builds, and tests. Manage projects, variables, and shared credentials in One Desktop, with shared conventions for people and AI.",
+			body: "Create workspaces and run development, builds, and tests. Manage modules, variables, and shared credentials in One Desktop, with shared conventions for people and AI.",
 			canvasAria:
 				"One CLI workspace module canvas showing apps, API, docs, packages, manifest, env, build, and CLI interface modules",
 			install: "Start building",
@@ -386,32 +386,32 @@ const homeCopy = {
 		},
 		workflow: {
 			eyebrow: "Common commands",
-			title: "From project setup to daily development.",
-			body: "Follow prompts to create workspaces and add projects, then use one run for daily tasks. Scripts and AI can use explicit arguments and JSON output.",
+			title: "From workspace setup to daily development.",
+			body: "Follow prompts to create workspaces and add modules, then use one run for daily tasks. Scripts and AI can use explicit arguments and JSON output.",
 			commandBodies: [
 				"create an empty workspace",
-				"add a template project",
+				"add a template module",
 				"run development, builds, and tests",
-				"manage project variables",
+				"manage module variables",
 				"manage workspaces on desktop",
 				"find the right command",
 			],
 			createEyebrow: "ONE CREATE",
 			createTitle: (
 				<>
-					Start a project
+					Create a workspace
 					<br />
 					with one command.
 				</>
 			),
 			createBody:
-				"one create prepares an empty workspace with directories, project guidance, and task configuration. Add the projects you need with one add.",
+				"one create prepares an empty workspace with directories, workspace guidance, and task configuration. Add the modules you need with one add.",
 			bullets: [
-				["DIRECT CREATE", "one create my-app --yes writes the base project files."],
-				["ADD PROJECTS", "Use one add to select a template and add a project."],
+				["DIRECT CREATE", "one create my-app --yes writes the base workspace files."],
+				["ADD MODULES", "Use one add to select a template and add a module."],
 				[
 					"CHECKABLE",
-					"The result includes the workspace location and generated files so you can add projects next.",
+					"The result includes the workspace location and generated files so you can add modules next.",
 				],
 			],
 			explore: "Explore one create",
@@ -422,17 +422,17 @@ const homeCopy = {
 					eyebrow: "ONE CREATE",
 					title: (
 						<>
-							Start a project
+							Create a workspace
 							<br />
 							with one command.
 						</>
 					),
-					body: "Run one create to choose a target directory, or pass the directory explicitly. Then use one add to add projects to the empty workspace.",
+					body: "Run one create to choose a target directory, or pass the directory explicitly. Then use one add to add modules to the empty workspace.",
 					bullets: [
 						["PROMPTED CREATE", "Run one create by itself to choose the target directory."],
 						[
-							"ADD PROJECTS",
-							"Run one templates to list templates, then add projects with one add.",
+							"ADD MODULES",
+							"Run one templates to list templates, then add modules with one add.",
 						],
 						["AUTOMATION", "CI and AI use --yes and -o json for predictable output and errors."],
 					],
@@ -449,31 +449,31 @@ const homeCopy = {
 				},
 				{
 					command: "one add",
-					navBody: "add a template project",
+					navBody: "add a template module",
 					eyebrow: "ONE ADD",
 					title: (
 						<>
 							Keep building
 							<br />
-							after the project exists.
+							after the module exists.
 						</>
 					),
-					body: "one add adds a project to an existing One workspace. You can run one add directly to use the picker, or pass the template name and project name in scripts.",
+					body: "one add adds a module to an existing One workspace. You can run one add directly to use the picker, or pass the template name and module name in scripts.",
 					bullets: [
-						["PROMPTED ADD", "Run one add to choose the template and project name."],
+						["PROMPTED ADD", "Run one add to choose the template and module name."],
 						["AUTOMATION", "CI and AI use one add nextjs-app --name web --yes."],
 						[
 							"SYNC DEFAULTS",
-							"Templates generate project code and register local development commands.",
+							"Templates generate module code and register local development commands.",
 						],
 					],
 					href: agentSkillUrl,
 					cta: "View the AI skill",
 					sample: "one add",
 					output: [
-						"checks that cwd belongs to a One project",
-						"opens template and project-name prompts",
-						"writes the new directory and records it in the project list",
+						"checks that cwd belongs to a One workspace",
+						"opens template and module-name prompts",
+						"writes the new directory and records it in the module list",
 					],
 				},
 				{
@@ -482,15 +482,15 @@ const homeCopy = {
 					eyebrow: "ONE RUN",
 					title: (
 						<>
-							Different projects.
+							Different modules.
 							<br />
 							One way to run them.
 						</>
 					),
-					body: "one run lists workspace tasks and uses mise to run development, builds, and tests. Select a project with -p; One prepares tools and dependencies as needed.",
+					body: "one run lists workspace tasks and uses mise to run development, builds, and tests. Select a module with -p; One prepares tools and dependencies as needed.",
 					bullets: [
 						["DISCOVER TASKS", "Run one run to see available tasks and choose what to execute."],
-						["DAILY DEVELOPMENT", "one dev -p web starts a project; one build -p web builds it."],
+						["DAILY DEVELOPMENT", "one dev -p web starts a module; one build -p web builds it."],
 						[
 							"FOLLOW LOGS",
 							"Multi-task runs offer a log tree with search, scrolling, and task selection.",
@@ -500,14 +500,14 @@ const homeCopy = {
 					cta: "View the AI skill",
 					sample: "one dev -p web",
 					output: [
-						"resolve project tasks and dependencies",
-						"prepare tools, dependencies, and bound project variables",
+						"resolve module tasks and dependencies",
+						"prepare tools, dependencies, and bound module variables",
 						"start the dev service and show its original logs",
 					],
 				},
 				{
 					command: "one env",
-					navBody: "manage project variables",
+					navBody: "manage module variables",
 					eyebrow: "ONE ENV",
 					title: (
 						<>
@@ -516,15 +516,15 @@ const homeCopy = {
 							Inject them when needed.
 						</>
 					),
-					body: "Sign in to Infisical in your browser with one login, then manage project variables with one env. New workspaces can run before you connect variable storage.",
+					body: "Sign in to Infisical in your browser with one login, then manage module variables with one env. New workspaces can run before you connect variable storage.",
 					bullets: [
 						[
 							"BROWSER LOGIN",
 							"A local credential file stores your session. Check its status with one whoami.",
 						],
 						[
-							"PROJECT VARIABLES",
-							"Saving the first variable initializes the binding. Organize values by environment and project folder.",
+							"MODULE VARIABLES",
+							"Saving the first variable initializes the binding. Organize values by environment and module folder.",
 						],
 						[
 							"SHARED CREDENTIALS",
@@ -537,7 +537,7 @@ const homeCopy = {
 					output: [
 						"sign in first with one login",
 						"enter the value in a hidden terminal prompt",
-						"fetch and inject variables from Infisical when the project runs",
+						"fetch and inject variables from Infisical when the module runs",
 					],
 				},
 				{
@@ -546,16 +546,16 @@ const homeCopy = {
 					eyebrow: "ONE DESKTOP",
 					title: (
 						<>
-							Manage projects
+							Manage modules
 							<br />
 							on your desktop.
 						</>
 					),
-					body: "Open One Desktop to browse workspaces, add projects, and manage variables and shared credentials.",
+					body: "Open One Desktop to browse workspaces, add modules, and manage variables and shared credentials.",
 					bullets: [
 						[
-							"PROJECTS",
-							"Inspect configuration, add projects from templates, and review Manifest changes before saving.",
+							"MODULES",
+							"Inspect configuration, add modules from templates, and review Manifest changes before saving.",
 						],
 						[
 							"SHARED CREDENTIALS",
@@ -571,8 +571,8 @@ const homeCopy = {
 					sample: "One Desktop",
 					output: [
 						"open the One Desktop app",
-						"manage workspaces, projects, and shared credentials",
-						"manage project variables by environment",
+						"manage workspaces, modules, and shared credentials",
+						"manage module variables by environment",
 					],
 				},
 				{
@@ -586,7 +586,7 @@ const homeCopy = {
 							the right command.
 						</>
 					),
-					body: "Use one help --all for the complete command catalogue, then a subcommand's --help for its options. Agents can combine this with README files and one.manifest.toml to choose project operations.",
+					body: "Use one help --all for the complete command catalogue, then a subcommand's --help for its options. Agents can combine this with README files and one.manifest.toml to choose module operations.",
 					bullets: [
 						["FULL CATALOGUE", "List every command supported by the installed version."],
 						["OPTIONS", "Check a subcommand's --help for arguments and usage."],
@@ -598,15 +598,15 @@ const homeCopy = {
 					output: [
 						"find commands supported by this version",
 						"check subcommand options",
-						"choose operations using project guidance",
+						"choose operations using workspace guidance",
 					],
 				},
 			],
 		},
 		why: {
 			eyebrow: "AGENT-READY WORKSPACE",
-			title: "Let agents read facts before touching the project.",
-			body: "One CLI is not another chat surface. It organizes manifests, project configuration, and structured errors into one engineering contract so Codex, Claude Code, and Cursor can confirm project facts before choosing commands, editing code, or recovering from failures.",
+			title: "Let agents read facts before touching the module.",
+			body: "One CLI is not another chat surface. It organizes manifests, module configuration, and structured errors into one engineering contract so Codex, Claude Code, and Cursor can confirm module details before choosing commands, editing code, or recovering from failures.",
 			cards: [
 				{
 					icon: Sparkles,
@@ -616,14 +616,14 @@ const homeCopy = {
 				},
 				{
 					icon: ClipboardCheck,
-					title: "Manifest records project facts",
-					body: "`one.manifest.toml` records workspace identity, project paths, toolchains, and the Infisical binding. Agents read those facts before choosing a subproject or command.",
+					title: "Manifest records module details",
+					body: "`one.manifest.toml` records workspace identity, module paths, toolchains, and the Infisical binding. Agents read those facts before choosing a module or command.",
 					chip: "one.manifest.toml",
 				},
 				{
 					icon: Wrench,
-					title: "Teams own project instructions",
-					body: "one create generates AGENTS.md in the current CLI language. Teams maintain it afterward; adding projects does not overwrite it.",
+					title: "Teams own workspace instructions",
+					body: "one create generates AGENTS.md in the current CLI language. Teams maintain it afterward; adding modules does not overwrite it.",
 					chip: "AGENTS.md",
 				},
 				{
@@ -637,10 +637,10 @@ const homeCopy = {
 		json: {
 			eyebrow: "Clear errors and recovery hints",
 			title: "When a command fails, you do not have to guess.",
-			body: "When creating, adding, or running projects fails, One CLI preserves the cause and provides recovery hints for common errors. People and AI can use the same details to continue.",
+			body: "When workspace creation, module setup, or task execution fails, One CLI preserves the cause and provides recovery hints for common errors. People and AI can use the same details to continue.",
 			cards: [
-				["Create projects", "Wrong folder or existing target: it tells you how to continue"],
-				["Add projects", "Template, name, or location issues come with a fix command"],
+				["Create workspaces", "Wrong folder or existing target: it tells you how to continue"],
+				["Add modules", "Template, name, or location issues come with a fix command"],
 				["Run tasks", "Missing config or tools are called out before you continue"],
 				["Connect AI", "The same result can be emitted as JSON for tools"],
 			],
@@ -663,7 +663,7 @@ const homeCopy = {
 				bullets: [
 					"No flags to memorize first",
 					"Choose a target directory",
-					"Use one add later for more projects",
+					"Use one add later for more modules",
 				],
 				cta: "Explore one create",
 				metaLabel: "Create a workspace",
@@ -672,11 +672,11 @@ const homeCopy = {
 			template: {
 				label: "Option two",
 				title: "Run one templates",
-				body: "List the apps, services, and shared library templates bundled with your CLI, then add projects with one add.",
+				body: "List the apps, services, and shared library templates bundled with your CLI, then add modules with one add.",
 				bullets: [
 					"List templates in the terminal",
 					"Compare their type and purpose",
-					"Add projects with one add",
+					"Add modules with one add",
 				],
 				cta: "Browse template source",
 				metaLabel: "List available templates",
@@ -698,8 +698,8 @@ const homeCopy = {
 			},
 		},
 		final: {
-			title: "Bring your projects together. Get them running.",
-			body: "Start with an empty workspace, add projects as you need them, and use the same commands for daily development.",
+			title: "Bring your modules together. Get them running.",
+			body: "Start with an empty workspace, add modules as you need them, and use the same commands for daily development.",
 			install: "Start building",
 		},
 		footer: {

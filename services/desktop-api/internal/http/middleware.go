@@ -13,6 +13,7 @@ import (
 	environmentmodule "github.com/torchstellar-team/one-cli/packages/one-core/pkg/modules/environment"
 	gitmodule "github.com/torchstellar-team/one-cli/packages/one-core/pkg/modules/git"
 	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/modules/issuetracking"
+	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/modules/knowledge"
 	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/modules/workspacegroups"
 	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/platform/desktopcontrol"
 	cliErrors "github.com/torchstellar-team/one-cli/packages/one-core/pkg/platform/errors"
@@ -26,6 +27,7 @@ import (
 // MuxOpts is the static configuration for one running server. Tests
 // construct it directly; production goes through Run.
 type MuxOpts struct {
+	Knowledge         knowledge.Backend
 	IssueTracking     *issuetracking.Service
 	GitService        *gitmodule.Service
 	GroupService      *workspacegroups.Service
@@ -113,7 +115,9 @@ func BuildMux(opts MuxOpts) http.Handler {
 	registerWorkspacesRoutes(api, opts)
 	registerGroupRoutes(api, opts)
 	registerIssueTrackingRoutes(api, opts)
+	registerKnowledgeRoutes(api, opts)
 	registerGatewayRoutes(api, opts, desktopGateway)
+	registerGatewayExecutionRoutes(api, desktopGateway)
 	registerGatewaySettingsRoutes(api)
 	registerCodeHostRoutes(api)
 	registerGatewayProjectRoutes(api, opts)

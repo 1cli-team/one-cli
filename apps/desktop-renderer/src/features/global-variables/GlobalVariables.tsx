@@ -38,8 +38,14 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Field, FieldLabel } from "@/components/ui/field";
 import { IconButton } from "@/components/ui/icon-button";
-import { ErrorNotice, SearchInput, StatePanel } from "@/components/ui/page-layout";
-import { SettingsPage } from "@/components/settings-layout";
+import {
+	ErrorNotice,
+	PageContent,
+	PageHeader,
+	PageToolbar,
+	SearchInput,
+	StatePanel,
+} from "@/components/ui/page-layout";
 import { DiscardDialog } from "@/components/ui/discard-dialog";
 import { Spinner } from "@/components/ui/spinner";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -90,7 +96,8 @@ export function GlobalVariables() {
 		current.siteUrl === account.siteUrl &&
 		current.organizationId === account.organizationId;
 	return (
-		<SettingsPage title={t("global.title")} className="h-full min-h-0">
+		<PageContent className="h-full min-h-0">
+			<PageHeader title={t("global.title")} />
 			{session.error ? (
 				<ErrorNotice
 					action={
@@ -112,17 +119,16 @@ export function GlobalVariables() {
 					<Skeleton className="min-h-0 flex-1" />
 				</div>
 			) : !account?.loggedIn ? (
-				<Card>
-					<StatePanel
-						icon={LockKeyhole}
-						title={t("session.signedOut")}
-						description={t("global.loginRequired")}
-					>
-						<Button asChild>
-							<Link to="/settings">{t("session.login")}</Link>
-						</Button>
-					</StatePanel>
-				</Card>
+				<StatePanel
+					framed
+					icon={LockKeyhole}
+					title={t("session.signedOut")}
+					description={t("global.loginRequired")}
+				>
+					<Button asChild>
+						<Link to="/settings">{t("session.login")}</Link>
+					</Button>
+				</StatePanel>
 			) : usable ? (
 				<VariableBrowser
 					key={JSON.stringify([
@@ -148,7 +154,7 @@ export function GlobalVariables() {
 					/>
 				</Card>
 			)}
-		</SettingsPage>
+		</PageContent>
 	);
 }
 
@@ -339,7 +345,7 @@ function VariableBrowser({ location }: { location: GlobalLocation }) {
 	return (
 		<>
 			<div className="flex min-h-0 flex-1 flex-col gap-4">
-				<div className="flex shrink-0 flex-wrap items-center gap-3">
+				<PageToolbar className="shrink-0">
 					<Select
 						value={environment}
 						onValueChange={setEnvironment}
@@ -356,7 +362,7 @@ function VariableBrowser({ location }: { location: GlobalLocation }) {
 							))}
 						</SelectContent>
 					</Select>
-					<div className="min-w-48 max-w-sm flex-1">
+					<div className="min-w-40 max-w-sm flex-1">
 						<SearchInput
 							aria-label={t("global.searchAll")}
 							placeholder={t("global.searchAll")}
@@ -365,7 +371,7 @@ function VariableBrowser({ location }: { location: GlobalLocation }) {
 							disabled={editing}
 						/>
 					</div>
-					<div className="ml-auto flex items-center gap-2">
+					<div className="ms-auto flex flex-wrap items-center gap-2">
 						<IconButton
 							label={t("global.refresh")}
 							disabled={unavailable}
@@ -398,7 +404,7 @@ function VariableBrowser({ location }: { location: GlobalLocation }) {
 							{t("global.add")}
 						</Button>
 					</div>
-				</div>
+				</PageToolbar>
 				{(detail.error || (error && !editing)) && (
 					<ErrorNotice>{error || message(detail.error)}</ErrorNotice>
 				)}

@@ -1,10 +1,18 @@
 import { useState } from "react";
-import useSWR from "swr";
+import { useSearchParams } from "react-router-dom";
+import useSWR, { useSWRConfig } from "swr";
 import { Activity, Plus, RefreshCw, Send, Settings2, SlidersHorizontal } from "lucide-react";
+import { Popover, Tabs } from "radix-ui";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { ErrorNotice, PageHeader, StatePanel } from "@/components/ui/page-layout";
+import {
+	ErrorNotice,
+	PageContent,
+	PageHeader,
+	PageTab,
+	PageTabList,
+	StatePanel,
+} from "@/components/ui/page-layout";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
 	Table,
@@ -16,6 +24,8 @@ import {
 } from "@/components/ui/table";
 import { EnvironmentLink } from "@/features/environment-context/EnvironmentLink";
 import { ConnectionBadge } from "./ConnectionBadge";
+import { GatewayExecutionDetails, GatewayWorkers } from "./GatewayExecutions";
+import { useWorkers } from "./executions";
 import { GatewayIssueDialog, type GatewayIssueAction } from "./GatewayIssueDialog";
 import { GatewayProjectDialog } from "./GatewayProjectDialog";
 import { GatewayTaskList } from "./GatewayTaskList";
@@ -23,54 +33,84 @@ import {
 	getProjectBindings,
 	projectBindingsKey,
 	repositoryLabel,
-	useGatewayJobs,
+	useGatewayTasks,
 	useGatewayStatus,
 	type GatewaySnapshot,
+	type GatewayStatus,
+	type GatewayTaskFilters,
 	type ProjectSummary,
 } from "./api";
 
-const displayedCounts = ["queued", "active", "review", "completed", "failed"] as const;
-
 export function GatewayMonitor() {
-	const { t, i18n } = useTranslation();
+	const { t } = useTranslation();
 	const status = useGatewayStatus();
+	const { mutate } = useSWRConfig();
 	const [configure, setConfigure] = useState(false);
 	const [configured, setConfigured] = useState(false);
 	const [page, setPage] = useState(1);
+	const [filters, setFilters] = useState<GatewayTaskFilters>({ worker: "", stage: "", source: "" });
 	const [issueAction, setIssueAction] = useState<GatewayIssueAction>();
+	const [search, setSearch] = useSearchParams();
+	const selectedExecution = search.get("execution") ?? undefined;
 	const connection = status.error ? undefined : status.data;
 	const snapshot = connection?.snapshot;
-	const mappedProjectIds = snapshot
-		? (snapshot.mappings ?? []).map(({ projectId }) => projectId)
-		: undefined;
-	const jobs = useGatewayJobs(connection, page);
-	const locale = i18n.resolvedLanguage;
-	const formatTime = (value: string) => new Date(value).toLocaleString(locale);
+	const requested = search.get("section");
+	const section =
+		requested === "mappings" || (requested === "workers" && snapshot?.executions)
+			? requested
+			: "tasks";
+	const mappedProjects = snapshot ? (snapshot.mappings ?? []) : undefined;
+	const workers = useWorkers(snapshot?.executions ? connection?.url : undefined);
+	const machines = workers.data ?? [];
+	const tasks = useGatewayTasks(connection, page, filters);
+	const openExecution = (id?: string) => {
+		setSearch(
+			(current) => {
+				const next = new URLSearchParams(current);
+				if (id) next.set("execution", id);
+				else next.delete("execution");
+				return next;
+			},
+			{ replace: true },
+		);
+		if (id && connection) {
+			void mutate(["/gateway/executions", connection.url]);
+			void tasks.mutate();
+		}
+	};
 
 	return (
-		<div className="@container mx-auto flex w-full max-w-[1120px] flex-col gap-6">
+		<PageContent>
 			<PageHeader
 				title={t("gateway.monitor")}
+				status={connection && <ConnectionBadge state={connection.state} />}
 				actions={
 					<>
-						<Button variant="outline" size="sm" asChild>
-							<EnvironmentLink to="/settings/gateway">
-								<Settings2 />
-								{t("gateway.settings")}
-							</EnvironmentLink>
-						</Button>
+						<GatewayConnectionDetails connection={connection} />
 						<Button
 							variant="outline"
-							size="sm"
-							disabled={status.isValidating || jobs.isValidating}
+							disabled={status.isValidating || tasks.isValidating}
 							onClick={() => {
 								void status.mutate();
-								void jobs.mutate();
+								void tasks.mutate();
+								void workers.mutate();
 							}}
 						>
 							<RefreshCw />
 							{t("gateway.refresh")}
 						</Button>
+						{snapshot && section === "tasks" && (
+							<>
+								<Button variant="outline" onClick={() => setIssueAction("new")}>
+									<Plus />
+									{t("gateway.issueActions.new")}
+								</Button>
+								<Button onClick={() => setIssueAction("dispatch")}>
+									<Send />
+									{t("gateway.issueActions.dispatch")}
+								</Button>
+							</>
+						)}
 					</>
 				}
 			/>
@@ -81,50 +121,71 @@ export function GatewayMonitor() {
 					<Skeleton className="h-20 w-full" />
 				</div>
 			)}
-			{connection && (
-				<Card>
-					<CardContent className="space-y-4 p-5">
-						<div className="flex flex-wrap items-center justify-between gap-2">
-							<h2 className="flex items-center gap-2 text-base font-medium">
-								<Activity aria-hidden="true" className="size-4 text-muted-foreground" />
-								{t("gateway.connection")}
-							</h2>
-							<ConnectionBadge state={connection.state} />
-						</div>
-						<dl className="grid gap-4 text-sm @min-[42rem]:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,1fr)]">
-							{connection.url && (
-								<div className="min-w-0 space-y-1">
-									<dt className="text-muted-foreground">{t("gateway.address")}</dt>
-									<dd className="break-all font-mono text-xs">{connection.url}</dd>
-								</div>
-							)}
-							{snapshot && (
-								<div className="min-w-0 space-y-1">
-									<dt className="text-muted-foreground">{t("gateway.startedAt")}</dt>
-									<dd>{formatTime(snapshot.startedAt)}</dd>
-								</div>
-							)}
-							<div className="min-w-0 space-y-1">
-								<dt className="text-muted-foreground">{t("gateway.checkedAt")}</dt>
-								<dd>{formatTime(connection.checkedAt)}</dd>
-							</div>
-						</dl>
-					</CardContent>
-				</Card>
-			)}
-			{snapshot ? (
-				<>
-					<ProjectMappings
-						snapshot={snapshot}
-						configured={configured}
-						onConfigure={() => {
-							setConfigured(false);
-							setConfigure(true);
-						}}
-					/>
-				</>
+			{connection && snapshot ? (
+				<Tabs.Root
+					value={section}
+					onValueChange={(value) => {
+						setSearch(
+							(current) => {
+								const next = new URLSearchParams(current);
+								if (value === "tasks") next.delete("section");
+								else next.set("section", value);
+								return next;
+							},
+							{ replace: true },
+						);
+					}}
+					className="flex min-w-0 flex-col gap-4"
+				>
+					<PageTabList aria-label={t("gateway.monitor")}>
+						<PageTab value="tasks">{t("gateway.tasks")}</PageTab>
+						{snapshot.executions && (
+							<PageTab value="workers">{t("gateway.execution.workers")}</PageTab>
+						)}
+						<PageTab value="mappings">{t("gateway.projectMappings")}</PageTab>
+					</PageTabList>
+					<Tabs.Content value="tasks" forceMount className="min-w-0 data-[state=inactive]:hidden">
+						<GatewayTaskList
+							connection={connection.url}
+							data={tasks.data}
+							error={tasks.error}
+							isLoading={tasks.isLoading}
+							filters={filters}
+							machines={machines}
+							onFilterChange={(field, value) => {
+								setFilters((current) => ({ ...current, [field]: value }));
+								setPage(1);
+							}}
+							onPageChange={setPage}
+							onOpenRun={openExecution}
+							onRunUpdated={() => void tasks.mutate()}
+						/>
+					</Tabs.Content>
+					{snapshot.executions && (
+						<Tabs.Content value="workers" className="min-w-0">
+							<GatewayWorkers
+								key={connection.url}
+								machines={machines}
+								isLoading={workers.isLoading}
+								hasError={!!workers.error}
+								canInvite={!!snapshot.workerUrl}
+							/>
+						</Tabs.Content>
+					)}
+					<Tabs.Content value="mappings" className="min-w-0">
+						<ProjectMappings
+							snapshot={snapshot}
+							configured={configured}
+							onConfigure={() => {
+								setConfigured(false);
+								setConfigure(true);
+							}}
+						/>
+					</Tabs.Content>
+				</Tabs.Root>
 			) : connection ? (
 				<StatePanel
+					framed
 					icon={Activity}
 					title={t("gateway.snapshotUnavailable")}
 					description={t(
@@ -134,46 +195,31 @@ export function GatewayMonitor() {
 					)}
 				/>
 			) : null}
-			<section className="space-y-3" aria-labelledby="gateway-queue-heading">
-				<div className="flex flex-wrap items-center justify-between gap-3">
-					<h2 id="gateway-queue-heading" className="text-base font-medium">
-						{t("gateway.tasks")}
-					</h2>
-					{snapshot && (
-						<div className="flex flex-wrap gap-2">
-							<Button variant="outline" size="sm" onClick={() => setIssueAction("new")}>
-								<Plus />
-								{t("gateway.issueActions.new")}
-							</Button>
-							<Button size="sm" onClick={() => setIssueAction("dispatch")}>
-								<Send />
-								{t("gateway.issueActions.dispatch")}
-							</Button>
-						</div>
-					)}
-				</div>
-				{snapshot && <QueueSummary snapshot={snapshot} />}
-			</section>
-			{snapshot && (
-				<GatewayTaskList
-					data={jobs.data}
-					error={jobs.error}
-					isLoading={jobs.isLoading}
-					onPageChange={setPage}
+			{connection && snapshot?.executions && selectedExecution && (
+				<GatewayExecutionDetails
+					key={`${connection.url}:${selectedExecution}`}
+					connection={connection.url}
+					id={selectedExecution}
+					workers={machines}
+					onClose={() => openExecution()}
+					onRevised={openExecution}
 				/>
 			)}
 			{issueAction && (
 				<GatewayIssueDialog
 					action={issueAction}
-					mappedProjectIds={mappedProjectIds}
+					mappedProjects={mappedProjects}
+					machines={snapshot?.executions ? machines : undefined}
 					onClose={() => setIssueAction(undefined)}
-					onDispatched={() => {
-						if (page === 1) void jobs.mutate();
+					onDispatched={(id) => {
+						if (id) openExecution(id);
+						if (page === 1) void tasks.mutate();
 						setPage(1);
 						void status.mutate();
 					}}
 				/>
 			)}
+
 			{configure && (
 				<GatewayProjectDialog
 					onClose={() => setConfigure(false)}
@@ -183,7 +229,60 @@ export function GatewayMonitor() {
 					}}
 				/>
 			)}
-		</div>
+		</PageContent>
+	);
+}
+
+function GatewayConnectionDetails({ connection }: { connection?: GatewayStatus }) {
+	const { t, i18n } = useTranslation();
+	function formatTime(value: string) {
+		return new Date(value).toLocaleString(i18n.resolvedLanguage);
+	}
+	return (
+		<Popover.Root>
+			<Popover.Trigger asChild>
+				<Button variant="outline">
+					<Settings2 />
+					{t("gateway.connectionDetails")}
+				</Button>
+			</Popover.Trigger>
+			<Popover.Portal>
+				<Popover.Content
+					align="end"
+					sideOffset={8}
+					collisionPadding={12}
+					aria-label={t("gateway.connectionDetails")}
+					className="z-50 w-80 max-w-[var(--radix-popover-content-available-width)] space-y-3 rounded-lg border border-border bg-popover p-4 text-popover-foreground shadow-lg"
+				>
+					{connection && (
+						<dl className="space-y-2 text-sm">
+							{connection.url && (
+								<div>
+									<dt className="text-xs text-muted-foreground">{t("gateway.address")}</dt>
+									<dd className="font-mono text-xs wrap-anywhere">{connection.url}</dd>
+								</div>
+							)}
+							{connection.snapshot && (
+								<div>
+									<dt className="text-xs text-muted-foreground">{t("gateway.startedAt")}</dt>
+									<dd>{formatTime(connection.snapshot.startedAt)}</dd>
+								</div>
+							)}
+							<div>
+								<dt className="text-xs text-muted-foreground">{t("gateway.checkedAt")}</dt>
+								<dd>{formatTime(connection.checkedAt)}</dd>
+							</div>
+						</dl>
+					)}
+					<Button variant="outline" size="sm" asChild>
+						<EnvironmentLink to="/settings/gateway">
+							<Settings2 />
+							{t("gateway.settings")}
+						</EnvironmentLink>
+					</Button>
+				</Popover.Content>
+			</Popover.Portal>
+		</Popover.Root>
 	);
 }
 
@@ -201,7 +300,7 @@ function ProjectMappings({
 		<section className="space-y-3" aria-labelledby="gateway-projects-heading">
 			<div className="flex flex-wrap items-center justify-between gap-3">
 				<div className="space-y-1">
-					<h2 id="gateway-projects-heading" className="text-base font-medium">
+					<h2 id="gateway-projects-heading" className="sr-only">
 						{t("gateway.projectMappings")}
 					</h2>
 					<p className="text-sm text-muted-foreground">
@@ -234,7 +333,7 @@ function MappingTable({ mappings }: { mappings: ProjectSummary[] }) {
 		bindings.data?.map(({ binding }) => [binding.project.id, binding.project.name]),
 	);
 	return (
-		<div className="overflow-hidden rounded-md border border-border bg-card">
+		<div className="overflow-hidden rounded-lg border border-border bg-card">
 			<Table aria-labelledby="gateway-projects-heading" className="table-fixed">
 				<TableHeader>
 					<TableRow>
@@ -270,27 +369,5 @@ function MappingTable({ mappings }: { mappings: ProjectSummary[] }) {
 				</TableBody>
 			</Table>
 		</div>
-	);
-}
-
-function QueueSummary({ snapshot }: { snapshot: GatewaySnapshot }) {
-	const { t, i18n } = useTranslation();
-	const format = new Intl.NumberFormat(i18n.resolvedLanguage);
-	return (
-		<dl className="grid grid-cols-2 gap-px overflow-hidden rounded-md border border-border bg-border @min-[42rem]:grid-cols-5">
-			{displayedCounts.map((count) => (
-				<div
-					key={count}
-					className="min-w-0 bg-card p-4 last:col-span-2 @min-[42rem]:last:col-span-1"
-				>
-					<dt className="break-words text-sm text-muted-foreground">
-						{t(`gateway.counts.${count}`)}
-					</dt>
-					<dd className="mt-1 text-2xl font-medium tabular-nums">
-						{format.format(snapshot.jobs[count])}
-					</dd>
-				</div>
-			))}
-		</dl>
 	);
 }

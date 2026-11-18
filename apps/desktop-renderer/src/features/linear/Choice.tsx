@@ -27,14 +27,16 @@ export function Choice({
 	const id = useId();
 	const emptyValue = `${id}-empty`;
 	return (
-		<div className="grid min-w-0 gap-2">
-			<Label htmlFor={id}>{label}</Label>
+		<div className="grid min-w-0 gap-1">
+			<Label className="text-xs text-muted-foreground" htmlFor={id}>
+				{label}
+			</Label>
 			<Select
 				value={value || (placeholder !== undefined ? emptyValue : "")}
 				disabled={disabled}
 				onValueChange={(next) => onChange(next === emptyValue ? "" : next)}
 			>
-				<SelectTrigger id={id} className="h-9">
+				<SelectTrigger id={id} className="h-9 [&>span:first-child]:truncate">
 					<SelectValue placeholder={placeholder} />
 				</SelectTrigger>
 				<SelectContent>

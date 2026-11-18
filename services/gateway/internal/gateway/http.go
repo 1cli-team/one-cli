@@ -18,8 +18,18 @@ func Handler(token string, forward func(context.Context, api.WorkRequest) (api.W
 	register := func(pattern string, op api.WorkOperation) {
 		mux.HandleFunc(pattern, func(w http.ResponseWriter, r *http.Request) {
 			input := api.WorkRequest{
-				Operation: op, ProjectID: r.PathValue("project"),
+				Operation: op, ProjectID: r.PathValue("project"), JobID: r.PathValue("job"),
 				IssueID: r.PathValue("issue"), RepositoryID: r.PathValue("repository"),
+			}
+			if op == api.WorkMonitorTasks {
+				filter, valid := api.ParseTaskFilter(r.URL.Query())
+				if !valid {
+					w.Header().Set("Content-Type", "application/json")
+					w.WriteHeader(http.StatusBadRequest)
+					_, _ = w.Write([]byte(`{"reason":"invalid_task_filter"}`))
+					return
+				}
+				input.TaskFilter = filter
 			}
 			if op == api.WorkMonitorJobs {
 				input.IssueID = r.URL.Query().Get("issue")
@@ -47,13 +57,29 @@ func Handler(token string, forward func(context.Context, api.WorkRequest) (api.W
 				decoder := json.NewDecoder(http.MaxBytesReader(w, r.Body, 4<<10))
 				decoder.DisallowUnknownFields()
 				if decoder.Decode(&dispatch) != nil || decoder.Decode(new(any)) != io.EOF ||
-					!api.ValidIssueReference(dispatch.Issue) || !dispatch.CodexOptions.Valid() {
+					!api.ValidIssueReference(dispatch.Issue) || !dispatch.CodexOptions.Valid() ||
+					(dispatch.WorkerID != "" && !api.ValidWorkerID(dispatch.WorkerID)) ||
+					(dispatch.Source != "" && dispatch.Source != "cli" && dispatch.Source != "desktop") {
 					w.Header().Set("Content-Type", "application/json")
 					w.WriteHeader(http.StatusBadRequest)
 					_, _ = w.Write([]byte(`{"reason":"invalid_codex_options"}`))
 					return
 				}
+				if input.ProjectID == "" && dispatch.WorkerID == "" {
+					w.Header().Set("Content-Type", "application/json")
+					w.WriteHeader(http.StatusBadRequest)
+					_, _ = w.Write([]byte(`{"reason":"worker_required"}`))
+					return
+				}
 				input.IssueID, input.Codex = dispatch.Issue, dispatch.CodexOptions
+				input.WorkerID, input.Source = dispatch.WorkerID, dispatch.Source
+				if !api.ValidSubtaskOrder(dispatch.SubtaskOrder) {
+					w.Header().Set("Content-Type", "application/json")
+					w.WriteHeader(http.StatusBadRequest)
+					_, _ = w.Write([]byte(`{"reason":"invalid_subtask_order"}`))
+					return
+				}
+				input.SubtaskOrder = dispatch.SubtaskOrder
 			}
 			reply, err := forward(r.Context(), input)
 			if err != nil || reply.Status < 200 || reply.Status > 599 {
@@ -68,6 +94,9 @@ func Handler(token string, forward func(context.Context, api.WorkRequest) (api.W
 	register("GET /v1/status", api.WorkStatus)
 	register("GET /v1/codex/models", api.WorkCodexModels)
 	register("GET /v1/jobs", api.WorkMonitorJobs)
+	register("GET /v1/tasks", api.WorkMonitorTasks)
+	register("POST /v1/jobs", api.WorkDispatchWithOptions)
+	register("GET /v1/jobs/{job}/codex-result", api.WorkCodexJobResult)
 	register("GET /v1/repositories", api.WorkRepositories)
 	register("GET /v1/repositories/{repository}", api.WorkRepository)
 	register("GET /v1/projects/{project}/configuration", api.WorkMapping)

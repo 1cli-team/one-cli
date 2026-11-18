@@ -51,7 +51,13 @@ func (s *Service) prepareGroup(ctx context.Context, job *Job) error {
 		}); err != nil {
 			return i18n.Errorf("linear.cli.workflow_repository_error", child.Project.ref().Slug, err)
 		}
-		common, err := s.git.CommonDir(ctx, child)
+	}
+	return s.addGroupReadRoots(ctx, job)
+}
+
+func (s *Service) addGroupReadRoots(ctx context.Context, job *Job) error {
+	for index := range job.RepositoryRuns {
+		common, err := s.git.CommonDir(ctx, job.repositoryJob(index))
 		if err != nil {
 			return err
 		}

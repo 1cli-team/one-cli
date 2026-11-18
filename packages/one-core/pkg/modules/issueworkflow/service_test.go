@@ -59,7 +59,10 @@ func (r *fakeRunner) Implement(_ context.Context, job *Job, _ string, save func(
 	job.ThreadID, job.TurnID, job.Stage = "thread", "turn", running
 	return save(*job)
 }
-func (r *fakeRunner) Recover(_ context.Context, _ Job) error { r.recoveries++; return nil }
+func (r *fakeRunner) Recover(_ context.Context, _ *Job, _ func(Job) error) error {
+	r.recoveries++
+	return nil
+}
 func (r *fakeRunner) Verify(context.Context, Job, string) error {
 	r.checks++
 	return r.checkError
@@ -191,7 +194,7 @@ func TestVerificationFailureStopsPublication(t *testing.T) {
 	project.Check = []string{"true"}
 	service.projects[projectID] = project
 	runner.checkError = errors.New("check failed")
-	if _, _, err := service.dispatch(t.Context(), projectID, issueID, api.CodexOptions{}); err != nil {
+	if _, _, err := service.dispatch(t.Context(), api.WorkRequest{ProjectID: projectID, IssueID: issueID}); err != nil {
 		t.Fatal(err)
 	}
 	job, _ := store.get(projectID, issueID)

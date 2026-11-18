@@ -3,6 +3,7 @@ import React from "react";
 import { useTranslation } from "react-i18next";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { Button } from "@/components/ui/button";
+import { PageHeader } from "@/components/ui/page-layout";
 
 interface ErrorBoundaryState {
 	hasError: boolean;
@@ -79,20 +80,14 @@ const DefaultErrorFallback: React.FC<{
 	const { t } = useTranslation();
 
 	return (
-		<div className="window-fallback flex min-h-screen items-center justify-center bg-background px-6 py-10 text-foreground">
-			<section className="flex w-full max-w-2xl flex-col gap-6">
-				<header className="flex flex-col gap-4">
-					<div className="flex items-start justify-between gap-4">
-						<div className="flex size-10 items-center justify-center text-destructive">
-							<AlertTriangle className="h-6 w-6" />
-						</div>
-						<LanguageSwitcher />
-					</div>
-					<div className="flex flex-col gap-2">
-						<h1 className="text-2xl font-medium">{t("errorBoundary.title")}</h1>
-						<p className="max-w-2xl text-sm text-muted-foreground">{t("errorBoundary.body")}</p>
-					</div>
-				</header>
+		<div className="window-fallback flex min-h-dvh items-center justify-center bg-background px-6 py-10 text-foreground">
+			<section className="flex w-full max-w-2xl flex-col gap-4 rounded-lg border border-border bg-card p-6">
+				<PageHeader
+					title={t("errorBoundary.title")}
+					description={t("errorBoundary.body")}
+					status={<AlertTriangle aria-hidden="true" className="size-5 text-error-foreground" />}
+					actions={<LanguageSwitcher />}
+				/>
 				<div className="flex flex-col gap-6">
 					{errorId ? (
 						<div className="text-sm">

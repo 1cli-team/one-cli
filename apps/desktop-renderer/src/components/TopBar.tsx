@@ -38,16 +38,26 @@ export function TopBar({ homeTo, onOpenNavigation }: { homeTo: string; onOpenNav
 		"/workspaces/:entryId/worktrees/:worktreeId/git/worktrees",
 	);
 	const worktreesMatch = baseWorktreesMatch || checkoutWorktreesMatch;
-	const baseProjectMatch = useMatch("/workspaces/:entryId/projects/:projectName");
-	const checkoutProjectMatch = useMatch(
-		"/workspaces/:entryId/worktrees/:worktreeId/projects/:projectName",
+	const baseVariablesMatch = useMatch("/workspaces/:entryId/environment-variables/:projectName?");
+	const checkoutVariablesMatch = useMatch(
+		"/workspaces/:entryId/worktrees/:worktreeId/environment-variables/:projectName?",
 	);
-	const projectMatch = baseProjectMatch || checkoutProjectMatch;
+	const variablesMatch = baseVariablesMatch || checkoutVariablesMatch;
+	const knowledgeMatch = useMatch("/workspaces/:entryId/knowledge");
+	const checkoutKnowledgeMatch = useMatch("/workspaces/:entryId/worktrees/:worktreeId/knowledge");
+	const workspacePageTitle = worktreesMatch
+		? t("git.title")
+		: variablesMatch
+			? t("navigation.environmentVariables")
+			: knowledgeMatch || checkoutKnowledgeMatch
+				? t("openviking.title")
+				: undefined;
 	const { workspace, overview, available } = useWorkspace(match?.params.entryId);
 	const themeLabel = t(mode === "light" ? "sidebar.themeToDark" : "sidebar.themeToLight");
 	const titles: Record<string, string> = {
 		"/settings/linear": t("linear.settings"),
 		"/settings/gateway": t("gateway.settings"),
+		"/settings/openviking": t("openviking.settings"),
 		"/settings/code-hosts": t("codeHosts.settings"),
 		"/gateway": t("gateway.monitor"),
 		"/": t("groups.title"),
@@ -58,7 +68,7 @@ export function TopBar({ homeTo, onOpenNavigation }: { homeTo: string; onOpenNav
 		"/settings/desktop": t("desktop.settings"),
 	};
 	return (
-		<header className="window-titlebar window-topbar flex min-h-14 shrink-0 items-center justify-between gap-2 border-b border-border bg-card px-4 py-2 ud-md:px-6">
+		<header className="window-titlebar window-topbar flex min-h-14 shrink-0 items-center justify-between gap-2 border-b border-border bg-background px-4 py-2 ud-md:px-6">
 			<div className="flex min-w-0 flex-1 items-center gap-3">
 				<Button
 					variant="ghost"
@@ -70,7 +80,7 @@ export function TopBar({ homeTo, onOpenNavigation }: { homeTo: string; onOpenNav
 					<Menu />
 				</Button>
 				<Breadcrumb className="min-w-0">
-					<BreadcrumbList className="flex-nowrap text-sm [&>li]:min-w-0 [&_[data-slot=breadcrumb-page]]:truncate [&_[data-slot=breadcrumb-link]]:truncate">
+					<BreadcrumbList className="flex-nowrap gap-2 text-sm [&>li]:min-w-0 [&_[data-slot=breadcrumb-page]]:truncate [&_[data-slot=breadcrumb-page]]:font-medium [&_[data-slot=breadcrumb-link]]:truncate">
 						{match ? (
 							<>
 								<BreadcrumbItem>
@@ -87,7 +97,7 @@ export function TopBar({ homeTo, onOpenNavigation }: { homeTo: string; onOpenNav
 								</BreadcrumbItem>
 								<BreadcrumbSeparator />
 								<BreadcrumbItem>
-									{projectMatch || worktreesMatch ? (
+									{workspacePageTitle ? (
 										<BreadcrumbLink asChild>
 											<EnvironmentLink
 												to={workspacePath(workspace?.entryId || match.params.entryId!)}
@@ -101,13 +111,11 @@ export function TopBar({ homeTo, onOpenNavigation }: { homeTo: string; onOpenNav
 										</BreadcrumbPage>
 									)}
 								</BreadcrumbItem>
-								{(projectMatch || worktreesMatch) && (
+								{workspacePageTitle && (
 									<>
 										<BreadcrumbSeparator />
 										<BreadcrumbItem>
-											<BreadcrumbPage>
-												{worktreesMatch ? t("git.title") : projectMatch?.params.projectName}
-											</BreadcrumbPage>
+											<BreadcrumbPage>{workspacePageTitle}</BreadcrumbPage>
 										</BreadcrumbItem>
 									</>
 								)}
@@ -144,21 +152,23 @@ export function TopBar({ homeTo, onOpenNavigation }: { homeTo: string; onOpenNav
 					</BreadcrumbList>
 				</Breadcrumb>
 			</div>
-			<div className="flex shrink-0 items-center gap-1">
+			<div className="flex shrink-0 items-center gap-1.5">
 				{match && available && (
 					<EnvironmentSelector environments={overview.data?.workspace?.environments} />
 				)}
 				{match?.params.entryId && <WorktreeSelector entryId={match.params.entryId} />}
-				<LanguageSwitcher />
-				<Button
-					variant="ghost"
-					size="icon"
-					onClick={toggle}
-					title={themeLabel}
-					aria-label={themeLabel}
-				>
-					{mode === "light" ? <MoonStar /> : <SunMedium />}
-				</Button>
+				<div className="flex items-center gap-1">
+					<LanguageSwitcher />
+					<Button
+						variant="ghost"
+						size="icon"
+						onClick={toggle}
+						title={themeLabel}
+						aria-label={themeLabel}
+					>
+						{mode === "light" ? <MoonStar /> : <SunMedium />}
+					</Button>
+				</div>
 			</div>
 		</header>
 	);

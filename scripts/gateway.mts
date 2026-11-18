@@ -4,7 +4,7 @@ import { homedir } from "node:os";
 import { isAbsolute, join } from "node:path";
 import { isMain, runMain } from "./lib/entrypoint.mts";
 import { readJson } from "./lib/files.mts";
-import { fail } from "./lib/output.mts";
+import { fail, say } from "./lib/output.mts";
 import { repositoryRoot } from "./lib/repository.mts";
 import { shell } from "./lib/shell.mts";
 
@@ -65,7 +65,7 @@ async function requireAvailablePort(host: string, port: number, listen: string) 
   );
 }
 
-async function startGateway() {
+function gatewaySettings() {
   if (process.platform !== "darwin" && process.platform !== "linux") {
     fail("Local Gateway development requires macOS or Linux.", "本机 Gateway 开发需要 macOS 或 Linux。");
   }
@@ -81,23 +81,69 @@ async function startGateway() {
     );
   }
   const { host, port, token } = readConnection(join(oneHome, "config", "gateway.json"));
-  const listen = `${host}:${port}`;
+  return { oneHome, config, host, port, token, listen: `${host}:${port}` };
+}
+
+function gatewayCommand(settings: ReturnType<typeof gatewaySettings>) {
+  const { oneHome, config, listen, token } = settings;
+  const one = join(repositoryRoot, "packages", "cli", "bin", "one");
+  return {
+    binary: join(repositoryRoot, "services", "gateway", "bin", "one-gateway"),
+    args: ["-one", one, "-config", config, "-listen", listen],
+    env: { ONE_HOME: oneHome, ONE_GATEWAY_TOKEN: token },
+  };
+}
+
+async function gatewayIsListening({ listen, token }: ReturnType<typeof gatewaySettings>) {
+  try {
+    const response = await fetch(`http://${listen}/v1/status`, {
+      headers: { Authorization: `Bearer ${token}` },
+      redirect: "error",
+      signal: AbortSignal.timeout(1500),
+    });
+    if (!response.ok) {
+      await response.body?.cancel();
+      return false;
+    }
+    return (await response.json())?.schema === "one-gateway/status/v1";
+  } catch {
+    return false;
+  }
+}
+
+export async function prepareDesktopGateway() {
+  if (process.platform !== "darwin" && process.platform !== "linux") return;
+  let settings: ReturnType<typeof gatewaySettings>;
+  try {
+    settings = gatewaySettings();
+  } catch (error) {
+    console.warn(error instanceof Error ? error.message : error);
+    return;
+  }
+  const { host, port, listen } = settings;
+  if (await gatewayIsListening(settings)) {
+    say(`Using the running Gateway at ${listen}.`, `使用 ${listen} 上正在运行的 Gateway。`);
+    return;
+  }
+  await requireAvailablePort(host === "[::1]" ? "::1" : host, port, listen);
+  const build = shell({ cwd: repositoryRoot, stdio: "inherit" });
+  build`mise run gateway:build`;
+  return gatewayCommand(settings);
+}
+
+async function startGateway() {
+  const settings = gatewaySettings();
+  const { host, port, listen } = settings;
   await requireAvailablePort(host === "[::1]" ? "::1" : host, port, listen);
 
   const build = shell({ cwd: repositoryRoot, stdio: "inherit" });
   build`mise run cli:build`;
   build`mise run gateway:build`;
 
-  const binary = join(repositoryRoot, "services", "gateway", "bin", "one-gateway");
-  const one = join(repositoryRoot, "packages", "cli", "bin", "one");
   // Replace the launcher so the Gateway receives the task runner's stop signals.
-  const args = [binary, "-one", one, "-config", config, "-listen", listen];
+  const { binary, args, env } = gatewayCommand(settings);
   if (process.stdin.isTTY) args.push("-show-token");
-  process.execve(binary, args, {
-    ...process.env,
-    ONE_HOME: oneHome,
-    ONE_GATEWAY_TOKEN: token,
-  });
+  process.execve(binary, [binary, ...args], { ...process.env, ...env });
 }
 
 if (isMain(import.meta.url)) await runMain(startGateway);

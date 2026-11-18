@@ -12,12 +12,12 @@ One 官方技能使用标准 Agent Skills 格式。源码在 `skills/`，工作�
 ## First installation / 首次安装
 
 Templates and official skills ship with the CLI. Creating a workspace installs
-`one-cli`; adding a project selects its stack skills. Official files come from
+`one-cli`; adding a module selects its stack skills. Official files come from
 the binary, without downloading the repository. One registers their actual
 content hash, GitHub source, skill path and `master` branch in the standard
 Skills lock file. Later updates are handled entirely by the upstream tool.
 
-模板和官方技能随 CLI 发布。创建工作区时安装 `one-cli`，添加项目时安装对应
+模板和官方技能随 CLI 发布。创建工作区时安装 `one-cli`，添加模块时安装对应
 技术栈技能。官方文件直接取自当前 CLI，无需下载仓库。One 将文件的实际摘要、
 GitHub 来源、技能路径和 `master` 分支登记到标准锁文件，后续更新完全交给上游。
 
@@ -39,9 +39,9 @@ Use `--skip-skills` during creation to skip automatic skill installation.
 
 ## Initialize or register an older workspace / 初始化或登记旧工作区
 
-From the workspace root or a project inside it:
+From the workspace root or one of its module directories:
 
-在工作区根目录或其中的项目目录运行：
+在工作区根目录或其中的模块目录运行：
 
 ```sh
 one init skills --dry-run
@@ -72,9 +72,9 @@ GitHub 来源均保留。缺少技能路径的旧 GitHub 记录可以在内容�
 
 ## Install missing stack skills / 补装技术栈技能
 
-Older workspaces can scan all registered projects and choose missing skills:
+Older workspaces can scan all registered modules and choose missing skills:
 
-旧工作区可以扫描所有已登记的子项目，选择并补齐缺失技能：
+旧工作区可以扫描所有已登记的模块，选择并补齐缺失技能：
 
 ```sh
 one init skills --install-recommend
@@ -86,39 +86,39 @@ one init skills --install-recommend --yes
 
 The chooser lists skill names, preselects missing recommendations, and keeps
 existing skills separate. Use Space to toggle, Ctrl+A to select or clear all,
-and `/` to search. After selecting skills, choose target agents, project/global
+and `/` to search. After selecting skills, choose target agents, workspace/global
 scope and symlink/copy mode once. Review the selected skills by source, then
 start installation or return to change your choices. Changing scope refreshes
 the installed-skill list before confirmation.
 
 选择界面只列技能名，默认勾选推荐且缺失的项，已安装项单独列出。用空格勾选或
-取消、Ctrl+A 全选或清空、`/` 搜索。选择技能后，统一选择目标 Agent、当前项目
+取消、Ctrl+A 全选或清空、`/` 搜索。选择技能后，统一选择目标 Agent、当前工作区
 或全局范围、软链接或复制方式。最后按来源查看安装清单，确认开始，或返回修改。
 切换安装范围时，会刷新该范围内的已安装技能，并再次确认技能选择。
 
 For scripts, `--yes` skips selection, settings, confirmation and retry prompts.
-It defaults to the current project, detected agents (or `universal` when none
+It defaults to the current workspace, detected agents (or `universal` when none
 are detected), and symlinks. Override with `--agent codex,claude-code`,
 `--global`, and `--copy`. These flags require `--install-recommend`.
 Empty selection installs nothing. `--skill` cannot be combined with this mode.
 
-脚本使用 `--yes` 跳过选择、设置、确认和重试询问。默认安装到当前项目，使用检测到
+脚本使用 `--yes` 跳过选择、设置、确认和重试询问。默认安装到当前工作区，使用检测到
 的 Agent（未检测到时使用 `universal`）和软链接；可用 `--agent codex,claude-code`、
 `--global`、`--copy` 覆盖。这些参数需要配合 `--install-recommend`。全部取消则不
 安装任何技能；`--skill` 不能与该模式同时使用。
 
 Manifests do not record original template IDs. Recommendations use each
-project's current dependencies, including declared package members, with the
+module's current dependencies, including declared package members, with the
 same skill mappings used by template creation. Root tooling is not treated as
-a subproject's framework. Unknown/empty stacks get common guidance; uncertain
-or unreadable projects can still be handled by manual selection. Python,
+a module's framework. Unknown/empty stacks get common guidance; uncertain
+or unreadable modules can still be handled by manual selection. Python,
 Flutter and Swift currently get the common skills because the catalog has no
 dedicated stack skills for them.
 
-Manifest 没有记录最初的模板 ID。推荐会根据每个子项目的实际依赖（含其声明的
+Manifest 没有记录最初的模板 ID。推荐会根据每个模块的实际依赖（含其声明的
 包成员）识别技术栈，并复用创建模板时的技能清单，不会把根目录的工具依赖当作
-子项目框架。未知或空项目只推荐通用指引，无法识别或读取的项目可手动选择。
-当前清单没有 Python、Flutter 和 Swift 专属技能，因此这些项目推荐通用项。
+模块框架。未知或空模块只推荐通用指引，无法识别或读取的模块可手动选择。
+当前清单没有 Python、Flutter 和 Swift 专属技能，因此这些模块推荐通用项。
 
 One provides the shared prompts and progress display. The pinned upstream
 Skills API performs each source installation and owns files and lock entries;

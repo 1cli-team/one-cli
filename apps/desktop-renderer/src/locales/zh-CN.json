@@ -45,17 +45,17 @@
 		"openProfiles": "打开设置",
 		"home": {
 			"title": "工作区",
-			"description": "管理本机已登记的工作区与项目",
+			"description": "管理本机已登记的工作区与模块",
 			"loading": "正在加载工作区…",
 			"loadFailedTitle": "无法加载工作区",
 			"loadFailedDescription": "无法读取本机工作区注册表。",
 			"retry": "重试",
-			"projectCount": "{{count}} 个项目",
-			"projectCount_one": "{{count}} 个项目",
-			"projectCount_other": "{{count}} 个项目",
-			"projects": "项目",
-			"projects_one": "项目",
-			"projects_other": "项目",
+			"projectCount": "{{count}} 个模块",
+			"projectCount_one": "{{count}} 个模块",
+			"projectCount_other": "{{count}} 个模块",
+			"projects": "模块",
+			"projects_one": "模块",
+			"projects_other": "模块",
 			"lastDetected": "最近识别",
 			"emptyTitle": "尚未登记工作区",
 			"emptyDescription": "运行 one create 创建工作区，或选择“打开工作区”登记已有目录。",
@@ -86,7 +86,7 @@
 		},
 		"conflict": {
 			"title": "只读：另一个目录正在使用相同的 Workspace ID",
-			"description": "你仍可查看其中的 Project，但配置操作已禁用，避免复制出来的 Workspace 共享并串用 Profile 绑定。"
+			"description": "你仍可查看其中的 模块，但配置操作已禁用，避免复制出来的 Workspace 共享并串用 Profile 绑定。"
 		},
 		"state": {
 			"missing": {
@@ -99,7 +99,7 @@
 			},
 			"identity-missing": {
 				"title": "Workspace 缺少稳定 ID",
-				"description": "请先在 one.manifest.toml 中补齐 workspace.id，再配置 Project 级 Profile。"
+				"description": "请先在 one.manifest.toml 中补齐 workspace.id，再连接工作区的环境变量存储。"
 			},
 			"identity-conflict": {
 				"title": "Workspace ID 重复",
@@ -107,19 +107,19 @@
 			},
 			"uninitialized": {
 				"title": "初始化 One 工作区",
-				"description": "这个目录已关联到工作区。初始化后即可管理其中的项目和配置。"
+				"description": "这个目录已关联到工作区。初始化后即可管理其中的模块和配置。"
 			}
 		},
 		"forget": {
 			"action": "移除 {{name}}",
-			"confirm": "要移除 Workspace「{{name}}」吗？这里只会移除本机注册记录，不会删除项目文件或远端变量。",
+			"confirm": "要移除 Workspace「{{name}}」吗？这里只会移除本机注册记录，不会删除模块文件或远端变量。",
 			"done": "已移除 {{name}}",
 			"failed": "无法移除 Workspace",
 			"pageHint": "可点击左侧该 Workspace 旁的垃圾桶，只移除它的本机注册记录。"
 		},
 		"registryError": {
 			"title": "Workspace 注册表不可用",
-			"description": "One Serve 无法读取本机 Workspace 注册表；Project 文件和凭据 Profile 均未被修改。"
+			"description": "One Serve 无法读取本机 Workspace 注册表；模块 文件和凭据 Profile 均未被修改。"
 		},
 		"overviewError": {
 			"title": "无法打开 {{name}}",
@@ -173,12 +173,13 @@
 		"networkError": "网络请求失败，请检查网络连接。"
 	},
 	"projectInspector": {
-		"workspaceTitle": "项目设置",
-		"projectsTitle": "项目",
-		"groupLabel": "{{group}}，{{count}} 个项目",
-		"projectListLabel": "工作区项目",
-		"empty": "这个工作区还没有项目。",
-		"loadFailed": "无法加载项目配置",
+		"workspaceTitle": "模块设置",
+		"projectListLabel": "工作区模块",
+		"selectModule": "切换模块，当前为 {{module}}",
+		"searchModules": "搜索模块名或路径",
+		"noMatchingModules": "没有找到匹配的模块。",
+		"empty": "这个工作区还没有模块。",
+		"loadFailed": "无法加载模块配置",
 		"retry": "重试",
 		"manifestReadOnly": "Manifest · 只读",
 		"manifestDraft": "Manifest 草稿",
@@ -186,14 +187,14 @@
 		"unsavedChanges": "当前修改尚未保存。要放弃修改并继续吗？",
 		"discardAndContinue": "放弃并继续",
 		"general": {
-			"path": "项目路径",
-			"metadata": "项目信息"
+			"path": "模块路径",
+			"metadata": "模块信息"
 		}
 	},
 	"secrets": {
 		"title": "Infisical 密钥",
 		"unavailableTitle": "远端密钥尚未启用",
-		"unavailableDescription": "在“工作区配置”中连接存储项目后，即可管理环境变量",
+		"unavailableDescription": "绑定存放项目后即可管理环境变量。",
 		"scope": "密钥作用域",
 		"workspaceScope": "Workspace 共享",
 		"add": "新增密钥",
@@ -222,7 +223,7 @@
 		"deleteDescription": "这会从当前 Infisical 环境和 folder 中移除该值，无法在这里撤销。",
 		"deleteConfirmation": "输入 {{key}} 确认删除",
 		"notConfiguredTitle": "尚未配置环境变量存储",
-		"notConfiguredHint": "自动创建工作区存储项目，或选择已有项目。确认绑定后即可添加变量。",
+		"notConfiguredHint": "绑定存放项目后即可添加环境变量。",
 		"connectStorage": "连接 Infisical 项目",
 		"search": "搜索密钥名称",
 		"noMatches": "没有匹配的密钥",
@@ -314,24 +315,24 @@
 		"description": "管理多个工作区共用的凭据，按目录和环境查找变量"
 	},
 	"projectCreate": {
-		"title": "新建项目",
-		"description": "在当前工作区中，使用模板创建一个项目。",
-		"name": "项目名称",
+		"title": "新建模块",
+		"description": "在当前工作区中，使用模板创建一个模块。",
+		"name": "模块名称",
 		"nameHint": "以字母或数字开头，可使用字母、数字、连字符和下划线。",
 		"nameInvalid": "请输入以字母或数字开头，且仅包含字母、数字、连字符或下划线的名称。",
-		"nameExists": "当前工作区已存在同名项目，请使用其他名称。",
-		"template": "技术栈或空项目",
+		"nameExists": "当前工作区已存在同名模块，请使用其他名称。",
+		"template": "技术栈或空模块",
 		"templatesFailed": "无法加载模板",
 		"loadingTemplates": "正在加载模板…",
 		"noTemplates": "暂无可用模板",
-		"location": "项目目录",
-		"locationHint": "相对于当前工作区。创建项目时会同步更新工作区配置。",
-		"submit": "创建项目",
-		"creating": "正在创建项目…",
-		"failed": "创建项目失败",
-		"success": "项目 {{name}} 已创建",
-		"refreshFailed": "项目已创建，请刷新页面加载最新工作区。",
-		"connectionLost": "连接已中断，请先刷新项目列表确认是否已创建，再尝试提交。",
+		"location": "模块目录",
+		"locationHint": "相对于当前工作区。创建模块时会同步更新工作区配置。",
+		"submit": "创建模块",
+		"creating": "正在创建模块…",
+		"failed": "创建模块失败",
+		"success": "模块 {{name}} 已创建",
+		"refreshFailed": "模块已创建，请刷新页面加载最新工作区。",
+		"connectionLost": "连接已中断，请先刷新模块列表确认是否已创建，再尝试提交。",
 		"categories": {
 			"frontend": "应用",
 			"backend": "服务",
@@ -376,19 +377,19 @@
 			},
 			"electron-app": {
 				"name": "Electron 桌面应用",
-				"description": "Electron + React + Vite 桌面应用，生成 renderer、main、preload 三个顶层项目，主进程使用 Awilix。"
+				"description": "Electron + React + Vite 桌面应用，生成 renderer、main、preload 三个顶层模块，主进程使用 Awilix。"
 			},
 			"empty-app": {
 				"name": "空应用",
-				"description": "在 apps/ 下创建空项目，稍后自行配置技术栈。"
+				"description": "在 apps/ 下创建空应用模块，稍后自行配置技术栈。"
 			},
 			"empty-service": {
 				"name": "空服务",
-				"description": "在 services/ 下创建空项目，稍后自行配置技术栈。"
+				"description": "在 services/ 下创建空服务模块，稍后自行配置技术栈。"
 			},
 			"empty-library": {
 				"name": "空共享库",
-				"description": "在 packages/ 下创建空项目，稍后自行配置技术栈。"
+				"description": "在 packages/ 下创建空包模块，稍后自行配置技术栈。"
 			},
 			"swift-ios-app": {
 				"name": "Swift iOS 应用",
@@ -435,8 +436,8 @@
 				"description": "共享 Flutter 组件，使用原生 pub workspace 与组件测试"
 			}
 		},
-		"groupSuccess": "已创建项目组 {{name}}，包含 {{count}} 个项目",
-		"groupLocationHint": "使用输入的名称生成关联项目，统一使用工作区根目录的依赖配置。",
+		"groupSuccess": "已创建模块组 {{name}}，包含 {{count}} 个模块",
+		"groupLocationHint": "使用输入的名称生成关联模块，统一使用工作区根目录的依赖配置。",
 		"installSkills": "安装开发 skills",
 		"skillsHint": "安装 One 用法和技术栈指导。业务 skills 由用户另行手动安装。"
 	},
@@ -444,22 +445,18 @@
 		"label": "One CLI 导航菜单"
 	},
 	"binding": {
-		"workspaceTitle": "绑定项目",
-		"change": "更换项目",
+		"storageProject": "存放项目",
+		"workspaceTitle": "绑定存放项目",
+		"change": "更换存放项目",
 		"unbound": "尚未绑定 Infisical",
-		"workspaceHint": "自动创建工作区存储项目，或选择已有项目。确认绑定后即可添加变量。",
 		"method": "绑定方式",
 		"automatic": "自动创建",
 		"existing": "选择已有项目",
 		"unavailable": "当前绑定的项目在此账号和组织下不可用。请选择其他项目，或切换为自动创建。",
-		"replaceHint": "确认后将替换工作区绑定。原项目中的变量会保留，不会复制到新项目。",
 		"createdUnsaved": "项目 {{name}}（{{id}}）已创建，但绑定保存失败：{{reason}}。请重试绑定此项目，避免重复创建。",
 		"current": "当前绑定：{{name}}",
-		"target": "目标项目：{{name}}",
-		"defaultEnvironment": "默认环境：dev",
-		"workspaceStorage": "绑定信息写入 one.manifest.toml，变量值保存在 Infisical。",
 		"organizationRequired": "请选择组织并重新登录",
-		"devRequired": "工作区项目必须包含 dev 环境。",
+		"devRequired": "用于工作区的 Infisical 项目必须包含 dev 环境。",
 		"noProjects": "暂无可用项目，可切换到自动创建。",
 		"pendingDraft": "此工作区有未保存的配置，请先保存或放弃，再绑定项目。",
 		"conflict": "工作区配置已发生变化。请刷新并核对绑定目标后重试。",
@@ -475,6 +472,7 @@
 		},
 		"settings": "桌面设置",
 		"settingsHint": "管理桌面运行状态、终端集成与更新。",
+		"gatewayQuestionNotification": "Gateway 任务正在等待你的回答",
 		"connectionInvalid": "后端连接信息无效。",
 		"notConnected": "请连接桌面后端后再继续。",
 		"sessionChanged": "后端已重启，请重新读取最新状态后保存。",
@@ -549,14 +547,14 @@
 		"global": "全局导航",
 		"open": "打开导航",
 		"allWorkspaces": "返回首页",
-		"workspaceSettings": "工作区配置",
-		"emptyWorkspace": "从侧边栏创建第一个项目。",
-		"projectMissing": "项目不存在",
-		"projectMissingDescription": "此项目可能已被重命名或移除，请从侧边栏选择其他项目。",
-		"backToWorkspace": "返回工作区"
+		"workspace": "工作区导航",
+		"environmentVariables": "环境变量",
+		"emptyWorkspace": "从侧边栏创建第一个模块。"
 	},
 	"git": {
 		"title": "Worktrees",
+		"searchWorktrees": "搜索分支名或路径",
+		"noMatchingWorktrees": "没有找到匹配的工作树。",
 		"refresh": "刷新",
 		"create": "创建工作树",
 		"main": "主工作树",
@@ -625,6 +623,8 @@
 	},
 	"groups": {
 		"title": "项目",
+		"searchProjects": "搜索项目名称",
+		"noMatchingProjects": "没有找到匹配的项目。",
 		"allProjects": "所有项目",
 		"allWorkspaces": "所有工作区",
 		"rename": "重命名",
@@ -674,6 +674,68 @@
 		"verifyAndSave": "验证并保存"
 	},
 	"gateway": {
+		"execution": {
+			"revision": "返工",
+			"reviseFromComment": "按此评论修改",
+			"revisionComment": "本轮修改意见",
+			"viewRevision": "查看返工任务",
+			"workers": "执行机器",
+			"worker": "机器",
+			"addWorker": "添加执行机",
+			"inviteDescription": "在执行机上运行以下命令，并在 {{time}} 前输入配对码。",
+			"inviteCode": "配对码",
+			"status": "状态",
+			"noWorkers": "尚未登记执行机器。",
+			"jobs": "执行任务",
+			"all": "全部",
+			"sourceLabel": "来源",
+			"source": {
+				"desktop": "Desktop",
+				"cli": "One CLI"
+			},
+			"state": {
+				"queued": "排队中",
+				"running": "执行中",
+				"waiting_for_answer": "等待回答",
+				"waiting_to_continue": "待继续",
+				"outcome_unknown": "结果待确认",
+				"succeeded": "已成功",
+				"failed": "失败"
+			},
+			"workerState": {
+				"offline": "离线",
+				"busy": "执行中",
+				"available": "已连接"
+			},
+			"reason": {
+				"worker_offline": "正在等待所选机器重新连接。",
+				"worker_disconnected": "机器在执行中断开连接，结果待确认。"
+			},
+			"loadError": "无法读取 Gateway 执行数据。",
+			"noJobs": "没有符合筛选条件的执行任务。",
+			"details": "执行详情",
+			"questions": {
+				"title": "Codex 提问",
+				"answer": "回答",
+				"send": "发送回答",
+				"sending": "正在发送…",
+				"received": "回答已保存，等待执行机继续。"
+			},
+			"progress": {
+				"title": "上轮进度",
+				"continue": "继续任务",
+				"sending": "正在请求继续…",
+				"requested": "已排队，等待原执行机继续。"
+			},
+			"exitCode": "退出码 {{code}}",
+			"logs": "执行日志",
+			"noLogs": "尚未收到日志。",
+			"truncated": "日志已达到大小上限。",
+			"noIssueWorkers": "没有配置相同 Linear 项目和仓库映射的执行机。",
+			"chooseWorker": "选择机器",
+			"task": "任务",
+			"waiting": "任务将等待 {{name}}。"
+		},
 		"dispatch": "交给 Codex",
 		"codex": {
 			"model": "Codex 模型",
@@ -681,21 +743,21 @@
 			"default": "Codex 默认",
 			"defaultValue": "Codex 默认 · {{value}}",
 			"modelsLoading": "正在从执行机器读取模型列表…",
-			"modelsUnavailable": "无法从执行机器读取模型列表。仍可使用 Codex 默认配置派发。",
+			"modelsUnavailable": "暂时无法获取执行机器的模型列表，仍可使用 Codex 默认配置派发。",
 			"sending": "正在派发…"
 		},
 		"issueActions": {
 			"new": "新建需求",
 			"dispatch": "派发需求",
-			"newDescription": "在已配置 Gateway 映射的 Linear 项目中新建需求，也可以创建后直接交给 Codex。",
-			"dispatchDescription": "选择 Linear 项目和需求，再选择本次任务的 Codex 配置。",
+			"newDescription": "在已配置 Gateway 映射的 Linear 项目中新建需求，也可以创建后直接派发。",
+			"dispatchDescription": "选择需求和执行机，Gateway 会使用需求所属项目的仓库。",
 			"selectProject": "选择 Linear 项目",
 			"selectIssue": "选择需求",
 			"noIssues": "本页没有可派发的需求。",
 			"noMappedProjects": "请先在 Gateway 配置项目映射。",
 			"noMappedBindings": "请先在 One Desktop 的任务页面绑定一个已配置 Gateway 映射的 Linear 项目。",
 			"createOnly": "仅创建",
-			"createAndDispatch": "创建并交给 Codex",
+			"createAndDispatch": "创建并派发",
 			"created": "已在 Linear 创建 {{issue}}。",
 			"dispatched": "已交给 Codex，可以在任务明细中查看进度。",
 			"alreadyFailed": "该需求已有失败的任务，请查看任务明细。"
@@ -704,6 +766,7 @@
 		"settings": "Gateway 连接",
 		"monitor": "Gateway 监控",
 		"connection": "连接状态",
+		"connectionDetails": "连接详情",
 		"address": "地址",
 		"addressHint": "远程 Gateway 使用 HTTPS，本机 Gateway 可以使用 HTTP。",
 		"token": "令牌",
@@ -735,10 +798,15 @@
 		"projects_other": "已配置 {{count}} 个项目",
 		"tasks": "任务",
 		"taskList": {
-			"heading": "任务明细",
 			"empty": "还没有派发任务。",
+			"noMatching": "没有符合筛选条件的任务。",
+			"partial": "暂时无法读取本机的需求流程详情。",
+			"runs": "执行记录",
+			"initialRun": "首次执行",
 			"error": "暂时无法读取任务列表。请刷新重试。",
 			"updateRequired": "请更新 One Desktop、Gateway 和执行机器上的 One CLI，以查看任务详情。",
+			"codexResult": "Codex 执行结果",
+			"codexResultUnavailable": "未能读取 Codex 的最终回复。",
 			"lastError": "最近错误",
 			"openLinear": "在 Linear 中打开",
 			"linkError": "无法打开链接。",
@@ -752,8 +820,17 @@
 			"previous": "上一页",
 			"next": "下一页",
 			"stages": {
+				"revising": "修改中",
+				"succeeded": "已成功",
+				"outcome_unknown": "结果未知",
+				"preparing_subtask": "准备子任务",
+				"committing_subtask": "提交子任务",
+				"committed": "已提交",
+				"no_changes": "无代码改动",
 				"queued": "排队",
 				"running": "Codex 处理中",
+				"waiting_for_answer": "等待回答",
+				"waiting_to_continue": "待继续",
 				"verifying": "正在检查",
 				"publishing": "正在发布",
 				"opening": "正在创建 PR",
@@ -763,13 +840,6 @@
 				"done": "已完成",
 				"failed": "失败"
 			}
-		},
-		"counts": {
-			"queued": "排队",
-			"active": "处理中",
-			"review": "待审",
-			"completed": "已完成",
-			"failed": "失败"
 		},
 		"mappedRepository": "仓库",
 		"mappingListUnavailable": "更新 Gateway 后即可查看已配置的仓库映射。",
@@ -849,6 +919,12 @@
 		"addComment": "添加评论",
 		"sendComment": "发表评论",
 		"moreComments": "更多评论",
+		"noComments": "暂无评论。",
+		"subtasks": "子任务",
+		"createSubtask": "新建子任务",
+		"parentIssue": "主需求 {{issue}}",
+		"noSubtasks": "暂无子任务。",
+		"moreSubtasks": "更多子任务",
 		"openLinear": "在 Linear 中打开",
 		"unknownUser": "未知用户",
 		"unknown": "此操作的结果尚未确认。再次新建 Issue 或评论前，请先查询结果。",
@@ -901,5 +977,101 @@
 		"worktreeRepository": "目标仓库",
 		"worktreeChooseRepository": "选择仓库",
 		"worktreeNoRepository": "此项目暂无可用的 Git 仓库。"
+	},
+	"openviking": {
+		"settings": "OpenViking",
+		"connection": "OpenViking 连接",
+		"configureFirst": "请先在设置中配置 OpenViking 全局连接，再选择工作区资源目录。",
+		"rebindRequired": "OpenViking 连接已变更，请重新验证当前工作区的目录。",
+		"keySaved": "已保存 API Key",
+		"saveConnection": "保存连接",
+		"testConnection": "测试连接",
+		"testingConnection": "正在测试连接…",
+		"testPassed": "OpenViking 连接验证成功。",
+		"connectionSaved": "OpenViking 连接已保存。",
+		"connectionIdentity": "账号 {{account}} · 用户 {{user}}",
+		"title": "知识库",
+		"configure": "编辑 OpenViking 绑定",
+		"bindingHint": "选择或输入资源目录。目录不存在时，绑定会自动创建。",
+		"url": "服务地址",
+		"uri": "资源目录 URI",
+		"apiKey": "API Key",
+		"keyHint": "留空可沿用该地址已保存的密钥，也可连接无需密钥的服务。",
+		"save": "验证并绑定",
+		"saving": "正在保存…",
+		"unbind": "解除绑定",
+		"query": "搜索工作区资料",
+		"search": "搜索",
+		"searching": "正在搜索…",
+		"reading": "正在读取资料…",
+		"noResults": "当前工作区没有匹配的资料。",
+		"results": "搜索结果",
+		"source": "资料原文",
+		"overview": "目录概览",
+		"error": "无法完成 OpenViking 请求。",
+		"importDocument": "导入文档",
+		"uploading": "正在上传文档…",
+		"invalidImportFile": "请选择一个不超过 20 MiB 的非空文件。",
+		"indexing": "正在建立索引…",
+		"importStatusUnavailable": "暂时无法查询索引状态。",
+		"searchImported": "搜索这份资料",
+		"browseDirectories": "浏览资源目录",
+		"loadingDirectories": "正在读取目录…",
+		"parentDirectory": "上一级目录",
+		"selectDirectory": "使用此目录",
+		"importStatus": {
+			"completed": "可搜索",
+			"failed": "索引失败",
+			"cancelled": "导入已取消"
+		},
+		"resources": "资料",
+		"memories": "记忆",
+		"sessions": "会话",
+		"skills": "Skills",
+		"refresh": "刷新",
+		"extractedCount": "已提取 {{count}} 条记忆",
+		"noSessions": "当前工作区还没有会话记录。",
+		"noMessages": "这一轮还没有消息。",
+		"previousRound": "上一轮",
+		"nextRound": "下一轮",
+		"viewSession": "查看 OpenViking 会话",
+		"automaticMemory": "自动记忆",
+		"automaticMemoryHint": "新 Gateway 任务会召回相关记忆，并将需求、用户回答和 Codex 回复发给 OpenViking 提取记忆。",
+		"newMemory": "新增记忆",
+		"memoryPlaceholder": "值得留存的决定、偏好或排障结论",
+		"writeMemory": "保存记忆",
+		"memoryQueued": "已提交记忆提取。",
+		"searchMemories": "搜索工作区记忆",
+		"noMemories": "当前工作区没有匹配的记忆。",
+		"searchSkills": "搜索 OpenViking Skill",
+		"addSkill": "导入 Skill",
+		"noSkills": "没有匹配的 Skill。",
+		"enableSkill": "工作区启用",
+		"disableSkill": "工作区停用",
+		"deleteSkill": "删除 Skill",
+		"deleteSkillHint": "从 OpenViking 删除 {{name}}？使用它的工作区也将无法读取。",
+		"saveSkill": "保存 Skill",
+		"skillQueued": "Skill 已提交索引。",
+		"skillSaved": "Skill 已保存。",
+		"skillScopeLabel": "可见范围",
+		"skillSourceHint": "请选择 SKILL.md 文件、粘贴正文或填写 GitHub 仓库地址。",
+		"skillPackageHint": "此 Skill 包含辅助文件，请提供完整的 GitHub 技能包地址进行更新。",
+		"skillFile": "SKILL.md 文件",
+		"skillSource": "SKILL.md 或 GitHub 地址",
+		"memoryStatus": {
+			"pending": "正在提取记忆",
+			"running": "正在提取记忆",
+			"completed": "记忆提取完成",
+			"failed": "记忆提取失败",
+			"skipped": "没有可提取的新记忆"
+		},
+		"message": {
+			"user": "用户",
+			"assistant": "Codex"
+		},
+		"skillScope": {
+			"user": "个人",
+			"shared": "账号共享"
+		}
 	}
 }

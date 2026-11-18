@@ -4,7 +4,9 @@ import (
 	"cmp"
 	"crypto/rand"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"net/http"
 	"os"
 	"path/filepath"
 	"slices"
@@ -14,6 +16,7 @@ import (
 	"github.com/gofrs/flock"
 	api "github.com/torchstellar-team/one-cli/packages/one-core/pkg/modules/gateway"
 	tracking "github.com/torchstellar-team/one-cli/packages/one-core/pkg/modules/issuetracking"
+	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/modules/knowledge"
 	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/platform/fsutil"
 	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/platform/i18n"
 )
@@ -21,38 +24,54 @@ import (
 type stage string
 
 const (
-	queued     stage = "queued"
-	running    stage = "running"
-	verifying  stage = "verifying"
-	publishing stage = "publishing"
-	opening    stage = "opening"
-	toReview   stage = "to_review"
-	review     stage = "review"
-	toDone     stage = "to_done"
-	done       stage = "done"
-	failed     stage = "failed"
+	queued            stage = "queued"
+	running           stage = "running"
+	waitingForAnswer  stage = api.ExecutionWaitingForAnswer
+	waitingToContinue stage = api.ExecutionWaitingToContinue
+	verifying         stage = "verifying"
+	preparingSubtask  stage = "preparing_subtask"
+	committingSubtask stage = "committing_subtask"
+	publishing        stage = "publishing"
+	opening           stage = "opening"
+	toReview          stage = "to_review"
+	review            stage = "review"
+	toDone            stage = "to_done"
+	done              stage = "done"
+	failed            stage = "failed"
 )
 
 type Job struct {
-	ID             string           `json:"id"`
-	ProjectID      string           `json:"projectId"`
-	Issue          tracking.Issue   `json:"issue"`
-	Project        Project          `json:"project"`
-	Codex          api.CodexOptions `json:"codex,omitzero"`
-	Stage          stage            `json:"stage"`
-	Created        time.Time        `json:"created"`
-	Worktree       string           `json:"worktree,omitempty"`
-	CheckDir       string           `json:"checkDir,omitempty"`
-	BaseSHA        string           `json:"baseSha,omitempty"`
-	Branch         string           `json:"branch,omitempty"`
-	ThreadID       string           `json:"threadId,omitempty"`
-	TurnID         string           `json:"turnId,omitempty"`
-	HeadSHA        string           `json:"headSha,omitempty"`
-	OpenSince      time.Time        `json:"openSince,omitzero"`
-	PR             PullRequest      `json:"pr"`
-	LastError      string           `json:"lastError,omitempty"`
-	RepositoryRuns []RepositoryRun  `json:"repositoryRuns,omitempty"`
-	readRoots      []string
+	ID                  string                 `json:"id"`
+	ProjectID           string                 `json:"projectId"`
+	Issue               tracking.Issue         `json:"issue"`
+	Project             Project                `json:"project"`
+	Codex               api.CodexOptions       `json:"codex,omitzero"`
+	AskUser             bool                   `json:"askUser,omitempty"`
+	TrackProgress       bool                   `json:"trackProgress,omitempty"`
+	Question            *api.ExecutionQuestion `json:"question,omitempty"`
+	Progress            *api.ExecutionProgress `json:"progress,omitempty"`
+	Stage               stage                  `json:"stage"`
+	Created             time.Time              `json:"created"`
+	Updated             time.Time              `json:"updated,omitzero"`
+	Worktree            string                 `json:"worktree,omitempty"`
+	CheckDir            string                 `json:"checkDir,omitempty"`
+	BaseSHA             string                 `json:"baseSha,omitempty"`
+	Branch              string                 `json:"branch,omitempty"`
+	ThreadID            string                 `json:"threadId,omitempty"`
+	OpenVikingSkillTool bool                   `json:"openVikingSkillTool,omitempty"`
+	KnowledgeScope      string                 `json:"knowledgeScope,omitempty"`
+	OpenViking          *knowledge.SessionLink `json:"openViking,omitempty"`
+	memoryPrompt        string
+	TurnID              string          `json:"turnId,omitempty"`
+	CodexResponse       string          `json:"codexResponse,omitempty"`
+	HeadSHA             string          `json:"headSha,omitempty"`
+	OpenSince           time.Time       `json:"openSince,omitzero"`
+	PR                  PullRequest     `json:"pr"`
+	LastError           string          `json:"lastError,omitempty"`
+	RepositoryRuns      []RepositoryRun `json:"repositoryRuns,omitempty"`
+	Subtasks            []SubtaskRun    `json:"subtasks,omitempty"`
+	Revision            *Revision       `json:"revision,omitempty"`
+	readRoots           []string
 }
 
 type RepositoryRun struct {
@@ -69,8 +88,23 @@ type RepositoryRun struct {
 
 func (j Job) clone() Job {
 	j.RepositoryRuns = slices.Clone(j.RepositoryRuns)
+	j.Subtasks = slices.Clone(j.Subtasks)
+	if j.Question != nil {
+		question := *j.Question
+		j.Question = &question
+	}
+	if j.Progress != nil {
+		progress := *j.Progress
+		j.Progress = &progress
+	}
 	j.readRoots = nil
+	j.memoryPrompt = ""
 	return j
+}
+
+func (j Job) readyToResume() bool {
+	return (j.Stage == waitingForAnswer && j.Question != nil && j.Question.Answer != "") ||
+		(j.Stage == waitingToContinue && j.Progress != nil && j.Progress.ContinueRequested)
 }
 
 func (j Job) status() api.Status {
@@ -138,7 +172,7 @@ func (s *Store) load() error {
 		if len(job.RepositoryRuns) != 0 && len(job.RepositoryRuns) != len(job.Project.Repositories) {
 			return fmt.Errorf("invalid repository progress in job record %s", file.Name())
 		}
-		key := jobKey(job.ProjectID, job.Issue.ID)
+		key := job.recordKey()
 		if _, ok := s.jobs[key]; ok {
 			return fmt.Errorf("duplicate job for %s", key)
 		}
@@ -149,18 +183,53 @@ func (s *Store) load() error {
 
 func jobKey(project, issue string) string { return project + "/" + issue }
 
+func runKey(project, issue, comment string) string {
+	key := jobKey(project, issue)
+	if comment != "" {
+		key += "/" + comment
+	}
+	return key
+}
+
+func (j Job) recordKey() string {
+	return runKey(j.ProjectID, j.Issue.ID, j.revisionCommentID())
+}
+
 func (s *Store) get(project, issue string) (Job, bool) {
+	return s.getRun(project, issue, "")
+}
+
+func (s *Store) getRun(project, issue, comment string) (Job, bool) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	job, ok := s.jobs[jobKey(project, issue)]
+	job, ok := s.jobs[runKey(project, issue, comment)]
 	return job.clone(), ok
+}
+
+func (s *Store) findID(id string) (Job, bool) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	for _, job := range s.jobs {
+		if job.ID == id {
+			return job.clone(), true
+		}
+	}
+	return Job{}, false
 }
 
 func (s *Store) enqueue(job Job) (Job, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	if existing, ok := s.jobs[jobKey(job.ProjectID, job.Issue.ID)]; ok {
+	if existing, ok := s.jobs[job.recordKey()]; ok {
 		return existing.clone(), nil
+	}
+	if job.Revision != nil {
+		for _, existing := range s.jobs {
+			if existing.Revision != nil && existing.Issue.ID == job.Issue.ID && existing.ProjectID == job.ProjectID &&
+				existing.Stage != failed && existing.Stage != review {
+				return Job{}, revisionInProgress
+			}
+		}
 	}
 	// Use a stable UUID basename for filesystem recovery and stored job validation.
 	var id [16]byte
@@ -178,7 +247,56 @@ func (s *Store) save(job Job) error {
 	return s.saveLocked(job)
 }
 
+func (s *Store) answer(projectID, issueID, commentID string, input api.ExecutionAnswer) (int, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	job, ok := s.jobs[runKey(projectID, issueID, commentID)]
+	if !ok {
+		return http.StatusNotFound, errors.New("workflow job not found")
+	}
+	if job.Question == nil || job.Question.ID != input.QuestionID {
+		return http.StatusConflict, errors.New("question does not match the workflow job")
+	}
+	question := *job.Question
+	if question.Answer == input.Answer {
+		return http.StatusOK, nil
+	}
+	if job.Stage != waitingForAnswer || question.Answer != "" {
+		return http.StatusConflict, errors.New("question is no longer waiting for an answer")
+	}
+	question.Answer = input.Answer
+	job.Question = &question
+	if err := s.saveLocked(job); err != nil {
+		return http.StatusInternalServerError, err
+	}
+	return http.StatusOK, nil
+}
+
+func (s *Store) requestContinue(projectID, issueID, commentID, progressID string) (int, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	job, ok := s.jobs[runKey(projectID, issueID, commentID)]
+	if !ok {
+		return http.StatusNotFound, errors.New("workflow job not found")
+	}
+	if job.Progress == nil || job.Progress.ID != progressID ||
+		(job.Stage != waitingToContinue && !job.Progress.ContinueRequested) {
+		return http.StatusConflict, errors.New("progress does not match a paused turn")
+	}
+	if job.Progress.ContinueRequested {
+		return http.StatusOK, nil
+	}
+	progress := *job.Progress
+	progress.ContinueRequested = true
+	job.Progress = &progress
+	if err := s.saveLocked(job); err != nil {
+		return http.StatusInternalServerError, err
+	}
+	return http.StatusOK, nil
+}
+
 func (s *Store) saveLocked(job Job) error {
+	job.Updated = time.Now().UTC()
 	data, err := json.Marshal(job)
 	if err != nil {
 		return err
@@ -186,7 +304,7 @@ func (s *Store) saveLocked(job Job) error {
 	if err := fsutil.WriteAtomic(filepath.Join(s.dir, job.ID+".json"), data, 0600); err != nil {
 		return err
 	}
-	s.jobs[jobKey(job.ProjectID, job.Issue.ID)] = job.clone()
+	s.jobs[job.recordKey()] = job.clone()
 	return nil
 }
 
@@ -208,10 +326,13 @@ func (s *Store) counts() api.QueueCounts {
 	defer s.mu.Unlock()
 	var counts api.QueueCounts
 	for _, job := range s.jobs {
+		if job.Revision != nil {
+			continue
+		}
 		switch job.Stage {
 		case queued:
 			counts.Queued++
-		case running, verifying, publishing, opening, toReview, toDone:
+		case running, waitingForAnswer, waitingToContinue, verifying, preparingSubtask, committingSubtask, publishing, opening, toReview, toDone:
 			counts.Active++
 		case review:
 			counts.Review++

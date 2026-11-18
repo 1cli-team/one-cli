@@ -30,14 +30,15 @@ export function CodeHostSettings() {
 	return (
 		<SettingsPage title={t("codeHosts.settings")}>
 			{hosts.error && (
-				<SettingsSection title={t("codeHosts.settings")}>
-					<ErrorNotice>
-						{(hosts.error as HttpError).message || t("codeHosts.loadError")}
-					</ErrorNotice>
-					<Button variant="outline" className="self-start" onClick={() => void hosts.mutate()}>
-						{t("codeHosts.refresh")}
-					</Button>
-				</SettingsSection>
+				<ErrorNotice
+					action={
+						<Button variant="outline" onClick={() => void hosts.mutate()}>
+							{t("codeHosts.refresh")}
+						</Button>
+					}
+				>
+					{(hosts.error as HttpError).message || t("codeHosts.loadError")}
+				</ErrorNotice>
 			)}
 			{hosts.isLoading && <Skeleton className="h-24 w-full" aria-busy="true" />}
 			{github && (

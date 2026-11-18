@@ -17,6 +17,13 @@ type Code string
 const (
 	// Bundled skill installation.
 
+	// Workspace knowledge.
+	OPENVIKING_INVALID_INPUT  Code = "OPENVIKING_INVALID_INPUT"
+	OPENVIKING_UNBOUND        Code = "OPENVIKING_UNBOUND"
+	OPENVIKING_ACCESS_DENIED  Code = "OPENVIKING_ACCESS_DENIED"
+	OPENVIKING_NOT_FOUND      Code = "OPENVIKING_NOT_FOUND"
+	OPENVIKING_UPSTREAM_ERROR Code = "OPENVIKING_UPSTREAM_ERROR"
+
 	// Generic / lifecycle.
 	ONE_CLI_ERROR         Code = "ONE_CLI_ERROR"
 	UNKNOWN_COMMAND       Code = "UNKNOWN_COMMAND"
@@ -143,32 +150,38 @@ var Codes = map[Code]Definition{
 	MISE_VERSION_UNSUPPORTED: {Summary: "The installed mise version is unsupported or could not be read."},
 	MISE_CONFIG_CONFLICT:     {Summary: "A managed mise configuration was modified or changed during generation."},
 	HOOKS_CONFIG_CONFLICT:    {Summary: "Existing Git hooks or hk configuration conflict with One's generated setup."},
-	RUNTIME_TASK_NOT_FOUND:   {Summary: "The project does not provide the requested runtime task."},
+	RUNTIME_TASK_NOT_FOUND:   {Summary: "The runtime does not provide the requested task."},
 	ONE_CLI_ERROR:            {Summary: "Generic CLI failure with no specific code."},
 	UNKNOWN_COMMAND:          {Summary: "First positional argument did not match any known subcommand.", Remediation: []output.Remediation{{Action: "show-help", Hint: "查看可用命令", Command: "one --help"}}},
 	PROMPT_CANCELLED:         {Summary: "User cancelled an interactive prompt (Ctrl+C / ESC)."},
 	OUTPUT_MARSHAL_FAILED:    {Summary: "Internal: failed to marshal a result payload to JSON. Should never fire in practice."},
 
+	OPENVIKING_INVALID_INPUT:  {Summary: "The OpenViking binding or request is invalid."},
+	OPENVIKING_UNBOUND:        {Summary: "The workspace has no OpenViking binding."},
+	OPENVIKING_ACCESS_DENIED:  {Summary: "The requested OpenViking resource cannot be accessed."},
+	OPENVIKING_NOT_FOUND:      {Summary: "The OpenViking resource or endpoint was not found."},
+	OPENVIKING_UPSTREAM_ERROR: {Summary: "OpenViking could not complete the request."},
+
 	NOT_ONE_PROJECT:            {Summary: "Current directory is not a One workspace (one.manifest.toml is missing).", Remediation: []output.Remediation{{Action: "create-workspace", Hint: "当前目录缺少 one.manifest.toml；请先创建工作区，或 cd 到已有工作区", Command: "one create <dir>"}}},
 	NODE_VERSION_UNSUPPORTED:   {Summary: "Local Node version is below the supported minimum.", Remediation: []output.Remediation{{Action: "upgrade-node", Hint: "升级到 Node.js 18+"}}},
 	DEPENDENCIES_NOT_INSTALLED: {Summary: "Node dependencies required for local development are not installed."},
-	INVALID_NAME:               {Summary: "Project / subproject name fails the ^[a-zA-Z0-9][a-zA-Z0-9_-]*$ pattern.", Remediation: []output.Remediation{{Action: "use-valid-name", Hint: "用 kebab-case；空格替换为 -"}}},
+	INVALID_NAME:               {Summary: "Workspace or module name fails the ^[a-zA-Z0-9][a-zA-Z0-9_-]*$ pattern.", Remediation: []output.Remediation{{Action: "use-valid-name", Hint: "用 kebab-case；空格替换为 -"}}},
 	INVALID_WORKSPACE_ROOTS:    {Summary: "one.manifest.toml#workspace.roots is malformed."},
 	PROJECT_NAME_REQUIRED:      {Summary: "Non-interactive create called without a workspace directory.", Remediation: []output.Remediation{{Action: "provide-name", Hint: "把工作区目录作为位置参数", Command: "one create <workspace-directory>"}}},
 	EXISTING_TARGET_NOT_EMPTY:  {Summary: "Target directory exists and is non-empty; create only writes into empty / new directories.", Remediation: []output.Remediation{{Action: "use-different-dir", Hint: "换一个空的目标目录"}}},
-	TARGET_EXISTS:              {Summary: "Subproject directory already exists.", Remediation: []output.Remediation{{Action: "use-different-name", Hint: "换一个 --name"}}},
-	WORKSPACE_NESTED_FORBIDDEN: {Summary: "Refusing to create a workspace inside an existing workspace; nesting one workspace inside another corrupts both manifests.", Remediation: []output.Remediation{{Action: "use-add", Hint: "在现有工作区里加项目，应该用 one add", Command: "one add <template> --name <subproject-name>"}, {Action: "create-elsewhere", Hint: "或换到工作区外的目录再 one create"}}},
+	TARGET_EXISTS:              {Summary: "A target with that name already exists.", Remediation: []output.Remediation{{Action: "use-different-name", Hint: "换一个 --name"}}},
+	WORKSPACE_NESTED_FORBIDDEN: {Summary: "Refusing to create a workspace inside an existing workspace; nesting one workspace inside another corrupts both manifests.", Remediation: []output.Remediation{{Action: "use-add", Hint: "用 one add 在当前工作区添加模块", Command: "one add <template> --name <module-name>"}, {Action: "create-elsewhere", Hint: "或换到工作区外的目录再 one create"}}},
 
 	REGISTRY_FETCH_FAILED:    {Summary: "Failed to download the template registry."},
 	REGISTRY_INVALID:         {Summary: "Registry JSON is malformed."},
 	REGISTRY_NOT_FOUND:       {Summary: "Registry path does not exist."},
 	NO_TEMPLATES:             {Summary: "Registry is empty."},
 	TEMPLATE_NOT_FOUND:       {Summary: "Requested template ID is not in the registry.", Remediation: []output.Remediation{{Action: "list-templates", Hint: "查看所有可用模板 ID", Command: "one templates -o json"}}},
-	TEMPLATE_REQUIRED:        {Summary: "Non-interactive add called without a template ID.", Remediation: []output.Remediation{{Action: "specify-template", Hint: "把 template ID 作为位置参数", Command: "one add <template-id> --name <subproject-name>"}}},
-	SUBPROJECT_NAME_REQUIRED: {Summary: "Non-interactive add called without --name.", Remediation: []output.Remediation{{Action: "provide-name", Hint: "传入 --name", Command: "one add <template-id> --name <subproject-name>"}}},
+	TEMPLATE_REQUIRED:        {Summary: "Non-interactive add called without a template ID.", Remediation: []output.Remediation{{Action: "specify-template", Hint: "把 template ID 作为位置参数", Command: "one add <template-id> --name <module-name>"}}},
+	SUBPROJECT_NAME_REQUIRED: {Summary: "Non-interactive add called without --name.", Remediation: []output.Remediation{{Action: "provide-name", Hint: "传入 --name", Command: "one add <template-id> --name <module-name>"}}},
 
 	MANIFEST_INVALID:          {Summary: "one.manifest.toml is malformed."},
-	MANIFEST_MISSING_OR_EMPTY: {Summary: "Workspace has no manifest, or the manifest declares no projects.", Remediation: []output.Remediation{{Action: "add-project", Hint: "新增一个项目", Command: "one add <template-id> --name <project-name>"}}},
+	MANIFEST_MISSING_OR_EMPTY: {Summary: "Workspace has no manifest, or the manifest declares no modules.", Remediation: []output.Remediation{{Action: "add-project", Hint: "新增一个模块", Command: "one add <template-id> --name <module-name>"}}},
 
 	STATUS_FIX_FAILED: {Summary: "Workspace 后置同步失败：写入 manifest 后某个后端 sync 回滚或失败。", Remediation: []output.Remediation{{Action: "retry", Hint: "重试触发该错误的命令"}}},
 
@@ -177,7 +190,7 @@ var Codes = map[Code]Definition{
 	DOMAIN_INVALID:             {Summary: "The requested configuration domain is not supported."},
 	DOMAIN_NOT_REGISTERED:      {Summary: "Domain is recognised but this build has no backend implementation for it."},
 	DOMAIN_NOT_PER_SUBPROJECT:  {Summary: "This domain operates at workspace scope; -p / --project is not allowed.", Remediation: []output.Remediation{{Action: "drop-flag", Hint: "去掉 -p / --project 重试"}}},
-	SUBPROJECT_NOT_FOUND:       {Summary: "-p / --project named a project that does not exist in manifest.projects.", Remediation: []output.Remediation{{Action: "list-projects", Hint: "Check the project name or switch to its directory."}}},
+	SUBPROJECT_NOT_FOUND:       {Summary: "-p / --project selected a module that does not exist in manifest.projects.", Remediation: []output.Remediation{{Action: "list-projects", Hint: "Check the module name or switch to its directory."}}},
 	PATCH_CONFLICT:             {Summary: "Two configuration fragments contributed conflicting patches to the same backend target."},
 	BACKEND_INVOKE_FAILED:      {Summary: "Backend's Invoke method returned an error."},
 	BACKEND_NOT_ENABLED:        {Summary: "The requested environment backend is not configured.", Remediation: []output.Remediation{{Action: "configure-domain", Hint: "Explicitly bind environment variable storage with one env bind first.", Command: "one env bind"}}},
@@ -187,7 +200,7 @@ var Codes = map[Code]Definition{
 	PREFERENCES_INVALID:        {Summary: "The requested preference value is not supported."},
 	RELEASE_FLOW_MISMATCH:      {Summary: "The release-flow backend's expected toolchain or repo state does not match the workspace."},
 	ENV_PROFILE_NOT_FOUND:      {Summary: "manifest.environments[<env>] was requested by a backend but is missing or empty."},
-	LOCAL_ORCH_PORT_CONFLICT:   {Summary: "Two projects requested the same dev port and the dev runner could not auto-allocate a free one."},
+	LOCAL_ORCH_PORT_CONFLICT:   {Summary: "Two modules requested the same dev port and the dev runner could not auto-allocate a free one."},
 
 	ENV_INVALID_ENV_NAME:       {Summary: "Environment name fails ^[a-zA-Z0-9][a-zA-Z0-9-_]*$ (e.g. dev, staging, prod)."},
 	ENV_INVALID_KEY:            {Summary: "Variable name fails POSIX env-var pattern (uppercase + underscore + digits, must not start with digit)."},
@@ -215,7 +228,7 @@ var Codes = map[Code]Definition{
 
 	RUN_COMMAND_NOT_FOUND: {Summary: "one exec could not locate the requested executable on PATH.", Remediation: []output.Remediation{{Action: "check-spelling", Hint: "确认命令名拼写正确"}, {Action: "use-package-runner", Hint: "对于 npm script，使用包管理器调用", Command: "one exec -- npm run <script>"}}},
 	RUN_DOTENV_MISSING:    {Summary: "Reserved error code from the retired local environment workflow."},
-	RUN_USAGE_INVALID:     {Summary: "one exec arguments do not match `one exec [project] -- <cmd> [args...]`.", Remediation: []output.Remediation{{Action: "use-run-separator", Hint: "用 -- 分隔 One CLI 参数和子进程命令", Command: "one exec [project] -- <cmd> [args...]"}}},
+	RUN_USAGE_INVALID:     {Summary: "one exec arguments do not match `one exec [module] -- <cmd> [args...]`.", Remediation: []output.Remediation{{Action: "use-run-separator", Hint: "用 -- 分隔 One CLI 参数和子进程命令", Command: "one exec [module] -- <cmd> [args...]"}}},
 
 	SERVE_BIND_FORBIDDEN:    {Summary: "One Desktop rejected access to its local API.", Remediation: []output.Remediation{{Action: "restart-desktop", Hint: "Restart One Desktop to reconnect to its local API"}}},
 	SERVE_PAYLOAD_INVALID:   {Summary: "POST/PUT 请求体不是合法 JSON 或缺少必要字段。"},

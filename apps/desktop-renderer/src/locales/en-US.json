@@ -45,17 +45,17 @@
 		"openProfiles": "Open settings",
 		"home": {
 			"title": "Workspaces",
-			"description": "Manage local workspaces and their projects",
+			"description": "Manage local workspaces and their modules",
 			"loading": "Loading Workspaces…",
 			"loadFailedTitle": "Could not load Workspaces",
 			"loadFailedDescription": "The local Workspace registry could not be read.",
 			"retry": "Retry",
-			"projectCount": "{{count}} projects",
-			"projectCount_one": "{{count}} project",
-			"projectCount_other": "{{count}} projects",
-			"projects": "projects",
-			"projects_one": "project",
-			"projects_other": "projects",
+			"projectCount": "{{count}} modules",
+			"projectCount_one": "{{count}} module",
+			"projectCount_other": "{{count}} modules",
+			"projects": "modules",
+			"projects_one": "module",
+			"projects_other": "modules",
 			"lastDetected": "Last detected",
 			"emptyTitle": "No Workspaces yet",
 			"emptyDescription": "Run one create to create a workspace, or choose Open workspace to register an existing folder.",
@@ -86,7 +86,7 @@
 		},
 		"conflict": {
 			"title": "Read-only: this Workspace ID is used by another path",
-			"description": "You can inspect its Projects, but configuration is disabled to prevent Profile bindings from crossing between copied Workspaces."
+			"description": "You can inspect its modules, but configuration is disabled to prevent Profile bindings from crossing between copied Workspaces."
 		},
 		"state": {
 			"missing": {
@@ -99,7 +99,7 @@
 			},
 			"identity-missing": {
 				"title": "This Workspace has no stable ID",
-				"description": "Add workspace.id to one.manifest.toml before configuring project-scoped Profiles."
+				"description": "Add workspace.id to one.manifest.toml before connecting environment variable storage for this workspace."
 			},
 			"identity-conflict": {
 				"title": "This Workspace ID is duplicated",
@@ -107,19 +107,19 @@
 			},
 			"uninitialized": {
 				"title": "Initialize One workspace",
-				"description": "This directory is linked to the workspace. Initialize it to manage its projects and configuration."
+				"description": "This directory is linked to the workspace. Initialize it to manage its modules and configuration."
 			}
 		},
 		"forget": {
 			"action": "Remove {{name}}",
-			"confirm": "Remove Workspace \"{{name}}\"? This only removes the local registry entry; no project files or remote variables will be deleted.",
+			"confirm": "Remove Workspace \"{{name}}\"? This only removes the local registry entry; no module files or remote variables will be deleted.",
 			"done": "Removed {{name}}",
 			"failed": "Could not remove Workspace",
 			"pageHint": "Use the trash action beside this Workspace in the left rail to remove only its local registry entry."
 		},
 		"registryError": {
 			"title": "Workspace registry unavailable",
-			"description": "One Serve could not read the machine-local Workspace registry. Project files and credential Profiles have not been changed."
+			"description": "One Serve could not read the machine-local Workspace registry. Module files and credential Profiles have not been changed."
 		},
 		"overviewError": {
 			"title": "Could not open {{name}}",
@@ -173,12 +173,13 @@
 		"networkError": "Network request failed. Check your connection."
 	},
 	"projectInspector": {
-		"workspaceTitle": "Project settings",
-		"projectsTitle": "Projects",
-		"groupLabel": "{{group}}, {{count}} projects",
-		"projectListLabel": "Workspace projects",
-		"empty": "This workspace has no projects.",
-		"loadFailed": "Unable to load project configuration",
+		"workspaceTitle": "Module settings",
+		"projectListLabel": "Workspace modules",
+		"selectModule": "Switch module, currently {{module}}",
+		"searchModules": "Search modules by name or path",
+		"noMatchingModules": "No matching modules.",
+		"empty": "This workspace has no modules.",
+		"loadFailed": "Unable to load module configuration",
 		"retry": "Retry",
 		"manifestReadOnly": "Manifest · read-only",
 		"manifestDraft": "Manifest draft",
@@ -186,14 +187,14 @@
 		"unsavedChanges": "You have unsaved changes. Discard them and continue?",
 		"discardAndContinue": "Discard and continue",
 		"general": {
-			"path": "Project path",
-			"metadata": "Project information"
+			"path": "Module path",
+			"metadata": "Module information"
 		}
 	},
 	"secrets": {
 		"title": "Infisical secrets",
 		"unavailableTitle": "Remote secrets are not enabled",
-		"unavailableDescription": "Connect a storage project in Workspace configuration to manage environment variables",
+		"unavailableDescription": "Bind a storage project to manage environment variables.",
 		"scope": "Secret scope",
 		"workspaceScope": "Workspace shared",
 		"add": "Add secret",
@@ -222,7 +223,7 @@
 		"deleteDescription": "This removes the value from the selected Infisical environment and folder. This action cannot be undone here.",
 		"deleteConfirmation": "Type {{key}} to confirm",
 		"notConfiguredTitle": "Environment variable storage is not set up",
-		"notConfiguredHint": "Create storage for this workspace or select an existing project. Add variables after confirming the binding.",
+		"notConfiguredHint": "Bind a storage project to add environment variables.",
 		"connectStorage": "Connect Infisical project",
 		"search": "Search secret keys",
 		"noMatches": "No matching secrets",
@@ -314,24 +315,24 @@
 		"description": "Manage shared workspace credentials and browse variables by folder and environment"
 	},
 	"projectCreate": {
-		"title": "New project",
-		"description": "Create a project from a template in this workspace.",
-		"name": "Project name",
+		"title": "New module",
+		"description": "Create a module from a template in this workspace.",
+		"name": "Module name",
 		"nameHint": "Start with a letter or number. Use letters, numbers, hyphens or underscores.",
 		"nameInvalid": "Enter a name starting with a letter or number, using only letters, numbers, hyphens or underscores.",
-		"nameExists": "A project with this name already exists in the workspace.",
-		"template": "Technology stack or empty project",
+		"nameExists": "A module with this name already exists in the workspace.",
+		"template": "Technology stack or empty module",
 		"templatesFailed": "Could not load templates",
 		"loadingTemplates": "Loading templates…",
 		"noTemplates": "No templates available",
-		"location": "Project directory",
-		"locationHint": "Relative to this workspace. Creating the project also updates the workspace configuration.",
-		"submit": "Create project",
-		"creating": "Creating project…",
-		"failed": "Could not create project",
-		"success": "Project {{name}} created",
-		"refreshFailed": "Project created. Refresh the page to load the updated workspace.",
-		"connectionLost": "The connection was interrupted. Refresh the project list to check whether the project was created before trying again.",
+		"location": "Module directory",
+		"locationHint": "Relative to this workspace. Creating the module also updates the workspace configuration.",
+		"submit": "Create module",
+		"creating": "Creating module…",
+		"failed": "Could not create module",
+		"success": "Module {{name}} created",
+		"refreshFailed": "Module created. Refresh the page to load the updated workspace.",
+		"connectionLost": "The connection was interrupted. Refresh the module list to check whether the module was created before trying again.",
 		"categories": {
 			"frontend": "Applications",
 			"backend": "Services",
@@ -376,19 +377,19 @@
 			},
 			"electron-app": {
 				"name": "Electron desktop app",
-				"description": "Electron + React + Vite with top-level renderer, main, and preload projects, using Awilix in main."
+				"description": "Electron + React + Vite with top-level renderer, main, and preload modules, using Awilix in main."
 			},
 			"empty-app": {
 				"name": "Empty application",
-				"description": "Create an empty project under apps/ and configure a technology stack later."
+				"description": "Create an empty app module under apps/ and configure a technology stack later."
 			},
 			"empty-service": {
 				"name": "Empty service",
-				"description": "Create an empty project under services/ and configure a technology stack later."
+				"description": "Create an empty service module under services/ and configure a technology stack later."
 			},
 			"empty-library": {
 				"name": "Empty library",
-				"description": "Create an empty project under packages/ and configure a technology stack later."
+				"description": "Create an empty package module under packages/ and configure a technology stack later."
 			},
 			"swift-ios-app": {
 				"name": "Swift iOS app",
@@ -435,8 +436,8 @@
 				"description": "Shared Flutter widgets with a native pub workspace and widget tests"
 			}
 		},
-		"groupSuccess": "Created project group {{name}} with {{count}} projects",
-		"groupLocationHint": "Creates related projects using your name and the workspace root dependency configuration.",
+		"groupSuccess": "Created module group {{name}} with {{count}} modules",
+		"groupLocationHint": "Creates related modules using your name and the workspace root dependency configuration.",
 		"installSkills": "Install development skills",
 		"skillsHint": "Add One usage and technology-stack guidance. Business skills are installed separately on request."
 	},
@@ -444,22 +445,18 @@
 		"label": "One CLI navigation menu"
 	},
 	"binding": {
-		"workspaceTitle": "Bind project",
-		"change": "Change project",
+		"storageProject": "Storage project",
+		"workspaceTitle": "Bind storage project",
+		"change": "Change storage project",
 		"unbound": "Infisical is not bound",
-		"workspaceHint": "Create storage for this workspace or select an existing project. Add variables after confirming the binding.",
 		"method": "Binding method",
 		"automatic": "Create automatically",
 		"existing": "Select an existing project",
 		"unavailable": "The current project is unavailable in this account and organization. Select another project or switch to automatic creation.",
-		"replaceHint": "Confirming will replace the workspace binding. Existing variables stay in the original project and are not copied.",
 		"createdUnsaved": "Project {{name}} ({{id}}) was created, but the binding could not be saved: {{reason}} Retry binding this project to avoid creating another one.",
 		"current": "Current binding: {{name}}",
-		"target": "Target project: {{name}}",
-		"defaultEnvironment": "Default environment: dev",
-		"workspaceStorage": "Binding metadata is saved to one.manifest.toml. Variable values are stored in Infisical.",
 		"organizationRequired": "Select an organization and sign in again",
-		"devRequired": "Workspace projects must include a dev environment.",
+		"devRequired": "The Infisical project for this workspace must include a dev environment.",
 		"noProjects": "No projects are available. Switch to automatic creation.",
 		"pendingDraft": "This workspace has unsaved configuration. Save or discard it before binding a project.",
 		"conflict": "Workspace configuration has changed. Refresh and review the binding target before retrying.",
@@ -473,6 +470,7 @@
 			"show": "Open One Desktop",
 			"quit": "Quit One Desktop"
 		},
+		"gatewayQuestionNotification": "A Gateway task is waiting for your answer",
 		"settings": "Desktop settings",
 		"settingsHint": "Desktop runtime, terminal integration and updates.",
 		"connectionInvalid": "The backend connection is invalid.",
@@ -549,14 +547,14 @@
 		"global": "Global navigation",
 		"open": "Open navigation",
 		"allWorkspaces": "Back to home",
-		"workspaceSettings": "Workspace configuration",
-		"emptyWorkspace": "Create your first project from the sidebar.",
-		"projectMissing": "Project not found",
-		"projectMissingDescription": "This project may have been renamed or removed. Select another project from the sidebar.",
-		"backToWorkspace": "Back to workspace"
+		"workspace": "Workspace navigation",
+		"environmentVariables": "Environment variables",
+		"emptyWorkspace": "Create your first module from the sidebar."
 	},
 	"git": {
 		"title": "Worktrees",
+		"searchWorktrees": "Search branches or paths",
+		"noMatchingWorktrees": "No worktrees match this search.",
 		"refresh": "Refresh",
 		"create": "Create worktree",
 		"main": "Main worktree",
@@ -625,6 +623,8 @@
 	},
 	"groups": {
 		"title": "Projects",
+		"searchProjects": "Search projects by name",
+		"noMatchingProjects": "No projects match this search.",
 		"allProjects": "All projects",
 		"allWorkspaces": "All workspaces",
 		"rename": "Rename",
@@ -674,6 +674,68 @@
 		"verifyAndSave": "Verify and save"
 	},
 	"gateway": {
+		"execution": {
+			"revision": "Revision",
+			"reviseFromComment": "Revise from this comment",
+			"revisionComment": "Revision feedback",
+			"viewRevision": "View revision task",
+			"workers": "Execution machines",
+			"worker": "Machine",
+			"addWorker": "Add execution machine",
+			"inviteDescription": "Run these commands on the execution machine. Enter the pairing code before {{time}}.",
+			"inviteCode": "Pairing code",
+			"status": "Status",
+			"noWorkers": "No execution machines are registered.",
+			"jobs": "Execution tasks",
+			"all": "All",
+			"sourceLabel": "Source",
+			"source": {
+				"desktop": "Desktop",
+				"cli": "One CLI"
+			},
+			"state": {
+				"queued": "Queued",
+				"running": "Running",
+				"waiting_for_answer": "Waiting for answer",
+				"waiting_to_continue": "Awaiting continuation",
+				"outcome_unknown": "Outcome unknown",
+				"succeeded": "Succeeded",
+				"failed": "Failed"
+			},
+			"workerState": {
+				"offline": "Offline",
+				"busy": "Running task",
+				"available": "Connected"
+			},
+			"reason": {
+				"worker_offline": "Waiting for the selected machine to reconnect.",
+				"worker_disconnected": "The machine disconnected during execution. Its outcome is pending."
+			},
+			"loadError": "Could not load Gateway execution data.",
+			"noJobs": "No execution tasks match these filters.",
+			"details": "Execution details",
+			"questions": {
+				"title": "Codex questions",
+				"answer": "Answer",
+				"send": "Send answer",
+				"sending": "Sending…",
+				"received": "Answer saved. Waiting for the execution machine to resume."
+			},
+			"progress": {
+				"title": "Previous turn progress",
+				"continue": "Continue task",
+				"sending": "Requesting continuation…",
+				"requested": "Queued to resume on the original machine."
+			},
+			"exitCode": "Exit code {{code}}",
+			"logs": "Execution logs",
+			"noLogs": "No logs have arrived yet.",
+			"truncated": "The logs reached the size limit.",
+			"noIssueWorkers": "No machine has a matching Linear project and repository mapping.",
+			"chooseWorker": "Choose a machine",
+			"task": "Task",
+			"waiting": "This task will wait for {{name}}."
+		},
 		"dispatch": "Send to Codex",
 		"codex": {
 			"model": "Codex model",
@@ -681,14 +743,14 @@
 			"default": "Codex default",
 			"defaultValue": "Codex default · {{value}}",
 			"modelsLoading": "Loading models from the execution machine…",
-			"modelsUnavailable": "Could not load models from the execution machine. You can still send using Codex defaults.",
+			"modelsUnavailable": "The machine's model list is unavailable. You can still dispatch using its Codex defaults.",
 			"sending": "Sending…"
 		},
 		"issueActions": {
 			"new": "New issue",
 			"dispatch": "Dispatch issue",
-			"newDescription": "Create a Linear issue in a project mapped in Gateway. You can send it to Codex immediately.",
-			"dispatchDescription": "Select a Linear project and issue, then choose the Codex settings for this task.",
+			"newDescription": "Create a Linear issue in a project mapped in Gateway. You can dispatch it immediately.",
+			"dispatchDescription": "Choose a Linear issue and an execution machine. Gateway uses the repositories mapped to the issue’s project.",
 			"selectProject": "Select a Linear project",
 			"selectIssue": "Select an issue",
 			"noIssues": "This page has no issues available to dispatch.",
@@ -704,6 +766,7 @@
 		"settings": "Gateway connection",
 		"monitor": "Gateway monitor",
 		"connection": "Connection",
+		"connectionDetails": "Connection details",
 		"address": "Address",
 		"addressHint": "Use HTTPS for a remote Gateway or HTTP for a local Gateway.",
 		"token": "Token",
@@ -735,10 +798,15 @@
 		"projects_other": "{{count}} configured projects",
 		"tasks": "Tasks",
 		"taskList": {
-			"heading": "Task details",
 			"empty": "No tasks have been dispatched yet.",
+			"noMatching": "No tasks match the selected filters.",
+			"partial": "Local workflow details are temporarily unavailable.",
+			"runs": "Execution history",
+			"initialRun": "Initial execution",
 			"error": "Could not load tasks. Refresh to try again.",
 			"updateRequired": "Update One Desktop, Gateway, and One CLI on the execution machine to view task details.",
+			"codexResult": "Codex result",
+			"codexResultUnavailable": "The final Codex reply could not be retrieved.",
 			"lastError": "Latest error",
 			"openLinear": "Open in Linear",
 			"linkError": "Could not open the link.",
@@ -752,8 +820,17 @@
 			"previous": "Previous",
 			"next": "Next",
 			"stages": {
+				"revising": "Revising",
+				"succeeded": "Succeeded",
+				"outcome_unknown": "Result unknown",
+				"preparing_subtask": "Preparing sub-issue",
+				"committing_subtask": "Committing sub-issue",
+				"committed": "Committed",
+				"no_changes": "No changes",
 				"queued": "Queued",
 				"running": "Codex working",
+				"waiting_for_answer": "Waiting for answer",
+				"waiting_to_continue": "Awaiting continuation",
 				"verifying": "Running checks",
 				"publishing": "Publishing",
 				"opening": "Opening PR",
@@ -763,13 +840,6 @@
 				"done": "Completed",
 				"failed": "Failed"
 			}
-		},
-		"counts": {
-			"queued": "Queued",
-			"active": "Processing",
-			"review": "Awaiting review",
-			"completed": "Completed",
-			"failed": "Failed"
 		},
 		"mappedRepository": "Repository",
 		"mappingListUnavailable": "Update Gateway to view the configured repository mappings.",
@@ -849,6 +919,12 @@
 		"addComment": "Add a comment",
 		"sendComment": "Post comment",
 		"moreComments": "More comments",
+		"noComments": "No comments yet.",
+		"subtasks": "Sub-issues",
+		"createSubtask": "New sub-issue",
+		"parentIssue": "Parent issue {{issue}}",
+		"noSubtasks": "No sub-issues yet.",
+		"moreSubtasks": "More sub-issues",
 		"openLinear": "Open in Linear",
 		"unknownUser": "Unknown user",
 		"unknown": "This operation has not been confirmed. Check its result before creating another issue or comment.",
@@ -901,5 +977,101 @@
 		"worktreeRepository": "Target repository",
 		"worktreeChooseRepository": "Choose a repository",
 		"worktreeNoRepository": "This project has no available Git repository."
+	},
+	"openviking": {
+		"settings": "OpenViking",
+		"connection": "OpenViking connection",
+		"configureFirst": "Set up the shared OpenViking connection in Settings before selecting a workspace directory.",
+		"rebindRequired": "The OpenViking connection changed. Verify the directory for this workspace again.",
+		"keySaved": "API key saved",
+		"saveConnection": "Save connection",
+		"testConnection": "Test connection",
+		"testingConnection": "Testing connection…",
+		"testPassed": "OpenViking connection verified.",
+		"connectionSaved": "OpenViking connection saved.",
+		"connectionIdentity": "Account {{account}} · User {{user}}",
+		"title": "Knowledge base",
+		"configure": "Edit OpenViking binding",
+		"bindingHint": "Choose or enter a resource directory. OpenViking will create it when you bind if it does not exist.",
+		"url": "Server URL",
+		"uri": "Resource directory URI",
+		"apiKey": "API Key",
+		"keyHint": "Leave blank to reuse a saved key for this server or connect to a server that needs no key.",
+		"save": "Verify and bind",
+		"saving": "Saving…",
+		"unbind": "Remove binding",
+		"query": "Search workspace knowledge",
+		"search": "Search",
+		"searching": "Searching…",
+		"reading": "Loading content…",
+		"noResults": "No matching resources in this workspace.",
+		"results": "Search results",
+		"source": "Source content",
+		"overview": "Directory overview",
+		"error": "Could not complete the OpenViking request.",
+		"importDocument": "Import document",
+		"uploading": "Uploading document…",
+		"invalidImportFile": "Choose a nonempty file up to 20 MiB.",
+		"indexing": "Indexing…",
+		"importStatusUnavailable": "Could not check indexing status.",
+		"searchImported": "Search for this document",
+		"browseDirectories": "Browse resource directories",
+		"loadingDirectories": "Loading directories…",
+		"parentDirectory": "Parent directory",
+		"selectDirectory": "Use this directory",
+		"importStatus": {
+			"completed": "Ready to search",
+			"failed": "Indexing failed",
+			"cancelled": "Import cancelled"
+		},
+		"resources": "Resources",
+		"memories": "Memories",
+		"sessions": "Sessions",
+		"skills": "Skills",
+		"refresh": "Refresh",
+		"extractedCount": "Memories extracted: {{count}}",
+		"noSessions": "No sessions have been recorded for this workspace.",
+		"noMessages": "There are no messages in this round.",
+		"previousRound": "Previous round",
+		"nextRound": "Next round",
+		"viewSession": "View OpenViking session",
+		"automaticMemory": "Automatic memory",
+		"automaticMemoryHint": "Recall relevant memory in new Gateway tasks and send the request, user answers, and Codex replies to OpenViking for extraction.",
+		"newMemory": "Add a memory",
+		"memoryPlaceholder": "A decision, preference, or lesson worth remembering",
+		"writeMemory": "Save memory",
+		"memoryQueued": "Submitted for memory extraction.",
+		"searchMemories": "Search workspace memories",
+		"noMemories": "No matching memories in this workspace.",
+		"searchSkills": "Search OpenViking Skills",
+		"addSkill": "Import Skill",
+		"noSkills": "No matching Skills.",
+		"enableSkill": "Use in workspace",
+		"disableSkill": "Disable in workspace",
+		"deleteSkill": "Delete Skill",
+		"deleteSkillHint": "Delete {{name}} from OpenViking? It will also be removed from any workspace that uses it.",
+		"saveSkill": "Save Skill",
+		"skillQueued": "Skill submitted for indexing.",
+		"skillSaved": "Skill saved.",
+		"skillScopeLabel": "Visibility",
+		"skillSourceHint": "Choose a SKILL.md file, paste its contents, or enter a GitHub repository URL.",
+		"skillPackageHint": "This Skill includes supporting files. Supply the URL of the complete GitHub package to update it.",
+		"skillFile": "SKILL.md file",
+		"skillSource": "SKILL.md or GitHub URL",
+		"memoryStatus": {
+			"pending": "Extracting memory",
+			"running": "Extracting memory",
+			"completed": "Extraction completed",
+			"failed": "Extraction failed",
+			"skipped": "No new memory to extract"
+		},
+		"message": {
+			"user": "User",
+			"assistant": "Codex"
+		},
+		"skillScope": {
+			"user": "Personal",
+			"shared": "Account shared"
+		}
 	}
 }

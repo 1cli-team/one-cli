@@ -1,14 +1,16 @@
-import { useLayoutEffect, useRef, useState } from "react";
-import { Outlet, useLocation, useMatch } from "react-router-dom";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { Outlet, useLocation, useMatch, useNavigate } from "react-router-dom";
 import { AppSidebar } from "@/components/AppSidebar";
 import { TopBar } from "@/components/TopBar";
 import { DesktopWelcome } from "@/lib/desktop/DesktopSettings";
+import { desktop, native } from "@/lib/desktop/runtime";
 import { NavigationGuard } from "@/router/NavigationGuard";
 import { groupPath } from "@/router/paths";
 import { cn } from "@/lib/utils";
 
 export function App() {
 	const { pathname, search } = useLocation();
+	const navigate = useNavigate();
 	const entryId = useMatch("/workspaces/:entryId/*")?.params.entryId;
 	const workspaceMode = Boolean(entryId);
 	const detailMode = workspaceMode;
@@ -20,6 +22,12 @@ export function App() {
 	if (pathname === "/" || pathname === "/workspaces") homeTo.current = `${pathname}${search}`;
 	const groupId = new URLSearchParams(search).get("group");
 	const workspaceHome = entryId && groupId ? groupPath(groupId) : homeTo.current;
+	useEffect(() => {
+		if (!native) return;
+		return desktop().onGatewayExecution?.((id) => {
+			void navigate(`/gateway?execution=${encodeURIComponent(id)}`);
+		});
+	}, [navigate]);
 	useLayoutEffect(() => {
 		setMobileOpen(false);
 		const element = main.current;

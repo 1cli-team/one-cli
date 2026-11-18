@@ -91,10 +91,12 @@ depends = ["check:static"]
 depends = ["cli:fmt", "one-core:fmt", "desktop-api:fmt", "gateway:fmt"]
 
 [tasks."gateway:check"]
+depends = ["//:sync-bundled"]
 dir = "services/gateway"
 run = ["go vet ./...", "go test -race ./..."]
 
 [tasks."gateway:build"]
+depends = ["//:sync-bundled"]
 dir = "services/gateway"
 run = "go build -trimpath -o bin/ ./cmd/one-gateway"
 
@@ -135,8 +137,9 @@ run = "task -d packages/cli install-launcher"
 # 兼容旧入口，统一复用项目任务。
 
 [tasks.dev]
-description = "Run One Desktop with its bundled Go API and CLI"
-depends = ["install-deps"]
+description = "Install One and run Desktop with the local Gateway / 安装 One 并启动桌面版和本机 Gateway"
+depends = ["install", "install-deps"]
+env = { ONE_DESKTOP_DEV_GATEWAY = "1" }
 run = "node scripts/desktop.mts dev"
 
 [tasks."dev:gateway"]

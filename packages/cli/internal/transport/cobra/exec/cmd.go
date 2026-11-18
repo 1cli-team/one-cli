@@ -46,7 +46,7 @@ type runFlags struct {
 func newRunCmd(loaders *secrets.Registry, provider runtimeport.Provider, global secrets.GlobalLoader) *cobra.Command {
 	flags := &runFlags{provider: provider, globalLoader: global}
 	cmd := &cobra.Command{
-		Use:                   "exec [project] [-p <name|path>] [--env <name>] -- <cmd> [args...]",
+		Use:                   "exec [module] [-p <name|path>] [--env <name>] -- <cmd> [args...]",
 		DisableFlagsInUseLine: true,
 		Long:                  i18n.T("exec.tip"),
 		Args:                  cobra.ArbitraryArgs,

@@ -147,7 +147,7 @@
     {
       "id": "electron-app",
       "name": "Electron 桌面应用",
-      "description": "Electron + React + Vite 桌面应用模板，生成 renderer、main、preload 三个顶层项目，主进程使用 Awilix 工厂函数",
+      "description": "Electron + React + Vite 桌面应用模板，生成 renderer、main、preload 三个工作区模块，主进程使用 Awilix 工厂函数",
       "category": "frontend",
       "tags": [
         "electron",
@@ -194,7 +194,7 @@
     {
       "id": "empty-app",
       "name": "空应用",
-      "description": "在 apps/ 下创建空项目，稍后自行配置技术栈",
+      "description": "在 apps/ 下创建空模块，稍后自行配置技术栈",
       "category": "frontend",
       "tags": [
         "empty",
@@ -207,7 +207,7 @@
     {
       "id": "empty-service",
       "name": "空服务",
-      "description": "在 services/ 下创建空项目，稍后自行配置技术栈",
+      "description": "在 services/ 下创建空模块，稍后自行配置技术栈",
       "category": "backend",
       "tags": [
         "empty",
@@ -220,7 +220,7 @@
     {
       "id": "empty-library",
       "name": "空共享库",
-      "description": "在 packages/ 下创建空项目，稍后自行配置技术栈",
+      "description": "在 packages/ 下创建空模块，稍后自行配置技术栈",
       "category": "library",
       "tags": [
         "empty",

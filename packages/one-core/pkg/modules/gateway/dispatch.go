@@ -32,16 +32,39 @@ func validSelector(value string, maxBytes int) bool {
 }
 
 type DispatchInput struct {
-	Issue string `json:"issue"`
+	Issue        string   `json:"issue"`
+	SubtaskOrder []string `json:"subtaskOrder,omitempty"`
+	WorkerID     string   `json:"workerId,omitempty"`
+	Source       string   `json:"source,omitempty"`
 	CodexOptions
 }
 
-type dispatchReply struct {
-	Status Status `json:"status"`
+func ValidSubtaskOrder(order []string) bool {
+	seen := make(map[string]bool, len(order))
+	for _, ref := range order {
+		key := strings.ToLower(ref)
+		if !ValidIssueReference(ref) || seen[key] {
+			return false
+		}
+		seen[key] = true
+	}
+	return true
+}
+
+type DispatchResult struct {
+	Status    Status `json:"status"`
+	JobID     string `json:"jobId,omitempty"`
+	ProjectID string `json:"projectId,omitempty"`
+}
+
+func (c *Client) DispatchIssue(ctx context.Context, input DispatchInput) (DispatchResult, error) {
+	var result DispatchResult
+	err := c.request(ctx, http.MethodPost, input, &result, "jobs")
+	return result, err
 }
 
 func (c *Client) Dispatch(ctx context.Context, project, issue string) (Status, error) {
-	var result dispatchReply
+	var result DispatchResult
 	err := c.do(ctx, http.MethodPost, &result, "projects", url.PathEscape(project), "jobs", url.PathEscape(issue))
 	return result.Status, err
 }
@@ -50,24 +73,29 @@ func (c *Client) DispatchWithOptions(ctx context.Context, project, issue string,
 	if options == (CodexOptions{}) {
 		return c.Dispatch(ctx, project, issue)
 	}
+	result, err := c.DispatchToWorker(ctx, project, issue, options, "", "")
+	return result.Status, err
+}
+
+func (c *Client) DispatchToWorker(ctx context.Context, project, issue string, options CodexOptions, workerID, source string) (DispatchResult, error) {
 	if !options.Valid() {
-		return "", ErrInvalidCodexOptions
+		return DispatchResult{}, ErrInvalidCodexOptions
 	}
-	var result dispatchReply
-	input := DispatchInput{Issue: issue, CodexOptions: options}
+	var result DispatchResult
+	input := DispatchInput{Issue: issue, CodexOptions: options, WorkerID: workerID, Source: source}
 	err := c.request(ctx, http.MethodPost, input, &result, "projects", url.PathEscape(project), "jobs")
 	var problem *ResponseError
 	if errors.As(err, &problem) {
 		switch {
 		case problem.Reason == "codex_options_conflict":
-			return "", ErrCodexOptionsConflict
+			return result, ErrCodexOptionsConflict
 		case problem.Reason == "invalid_codex_options":
-			return "", ErrInvalidCodexOptions
+			return result, ErrInvalidCodexOptions
 		case problem.Code == http.StatusMethodNotAllowed,
 			problem.Code == http.StatusNotFound && problem.Reason == "",
 			problem.Code == http.StatusBadRequest && problem.Reason == "invalid_mapping":
-			return "", ErrCodexOptionsUnsupported
+			return result, ErrCodexOptionsUnsupported
 		}
 	}
-	return result.Status, err
+	return result, err
 }

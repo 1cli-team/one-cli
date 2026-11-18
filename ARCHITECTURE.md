@@ -14,12 +14,12 @@ This file records source boundaries for maintainers and agents. Discover command
 | `services/desktop-main` | Electron host; bundles `one-api` and `one` / 原生能力及后端进程管理 |
 | `packages/desktop-preload` | Typed contextBridge API / 类型化原生桥接 |
 | `apps/website` | Next.js static homepage; exports to `out/` / Next.js 静态官网 |
-| `packages/templates` | Project template sources, including `nextjs-site` and `fumadocs-docs` / 项目模板源 |
+| `packages/templates` | Module template sources, including `nextjs-site` and `fumadocs-docs` / 模块模板源 |
 | `packages/agent-skills` | Agent guidance embedded in CLI builds / CLI 构建时内置的 AI 指引 |
 
-`go.work` contains four modules: CLI, One Core, Desktop API and Gateway. Go projects inside templates remain independent fixtures.
+`go.work` contains four modules: CLI, One Core, Desktop API and Gateway. Go modules inside templates remain independent fixtures.
 
-`go.work` 仅登记 CLI、One Core、Desktop API、Gateway 四个模块；模板中的 Go 项目独立管理。
+`go.work` 仅登记 CLI、One Core、Desktop API、Gateway 四个模块；模板中的 Go 模块独立管理。
 
 ## Go boundaries / Go 分层
 
@@ -40,9 +40,9 @@ For command execution, `packages/cli/internal/lifecycle` runs `Start` for all pl
 
 命令执行顺序为 `Start → BeforeCommand → 命令 → AfterCommand → 清理`。启动与执行前钩子按注册顺序运行，执行后钩子与清理逆序运行；部分启动失败、命令错误和取消均会收尾。清理使用独立且有超时的上下文。帮助和本地摘要不启动插件资源，信号与最终错误、退出码由 CLI 统一处理。
 
-`one-core/pkg/plugins.Plugin` contributes backend descriptors, `environment.Backend`, secret loaders, optional shared-credential loading, Git, and issue-tracking capabilities. `cli.Plugin` adds command registration and optional lifecycle hooks. Registries belong to one application; no `init()` registration or mutable global plugin registry is used. Duplicate plugin identities, backend registrations, global loaders, and command names/aliases fail during composition. `NewApplication()` constructs the CLI without vendor plugins; `builtin.go` installs Infisical, Git, and Linear explicitly.
+`one-core/pkg/plugins.Plugin` contributes backend descriptors, `environment.Backend`, secret loaders, optional shared-credential loading, Git, and issue-tracking capabilities. `cli.Plugin` adds command registration and optional lifecycle hooks. Registries belong to one application; no `init()` registration or mutable global plugin registry is used. Duplicate plugin identities, backend registrations, global loaders, and command names/aliases fail during composition. `NewApplication()` constructs the CLI without vendor plugins; `builtin.go` installs Infisical, Git, Linear, and OpenViking explicitly.
 
-`one-core/pkg/plugins.Plugin` 提供后端描述、`environment.Backend`、变量加载器、共享凭据加载器以及 Git 和 Issue 管理能力；`cli.Plugin` 增加命令注册和可选生命周期钩子。注册表属于单个应用，不使用 `init()` 自动注册或全局可变插件表。重复注册在装配时失败。`NewApplication()` 可构造不含厂商插件的 CLI，默认 `builtin.go` 显式安装 Infisical、Git 和 Linear。
+`one-core/pkg/plugins.Plugin` 提供后端描述、`environment.Backend`、变量加载器、共享凭据加载器以及 Git 和 Issue 管理能力；`cli.Plugin` 增加命令注册和可选生命周期钩子。注册表属于单个应用，不使用 `init()` 自动注册或全局可变插件表。重复注册在装配时失败。`NewApplication()` 可构造不含厂商插件的 CLI，默认 `builtin.go` 显式安装 Infisical、Git、Linear 和 OpenViking。
 
 Infisical owns its remote client, session storage, workspace binding, shared credentials, and CLI `login`/`logout`/`whoami`/`env` commands. Shared code is in `one-core/pkg/plugins/infisical`, private vendor code in its `internal/remote`, and Cobra adapters in `cli/internal/plugins/infisical`. The generic environment service dispatches through an injected backend; task and arbitrary-command execution use injected loaders. Existing `[env.infisical]` manifest fields, session files, protocol values, and CLI commands remain compatible. This is a compiled-in extension boundary, not dynamic Go `.so` loading or a separately installed executable.
 
@@ -51,6 +51,14 @@ Infisical 插件拥有远端客户端、会话存储、工作区绑定、共享�
 Linear owns OAuth PKCE, token refresh, GraphQL access, and write-operation recovery in `one-core/pkg/plugins/linear`. The `modules/issuetracking` service resolves local project scopes and stores bindings. The CLI adapter and Desktop HTTP handlers use the same service. Tokens remain in the local plugin store and never enter renderer responses. Desktop uses its existing authenticated HTTP boundary. Setup and recovery behavior are documented in [the Linear plugin README](packages/one-core/pkg/plugins/linear/README.md).
 
 Linear 插件负责 OAuth PKCE、令牌刷新、GraphQL 请求与写入结果恢复。`modules/issuetracking` 负责本地项目范围和绑定存储，CLI 与 Desktop HTTP 共用同一服务。令牌只保存在本机插件存储，renderer 通过现有认证 HTTP 边界调用业务接口。
+
+OpenViking validates and stores one machine-local service connection for One CLI and Desktop API. Each registered workspace selects a resource directory and its worktrees share that selection. Searches, reads, and imports stay within the selected directory. The API key is kept in the local plugin store.
+
+OpenViking 插件校验并保存 One CLI 和 Desktop API 共用的本机服务连接。每个已登记的工作区选择一个资源目录，同一工作区的工作树共用该目录，检索、读取和导入均在所选目录下进行。API Key 保存在本机插件存储中。
+
+One Core uses the OpenViking Go SDK for the knowledge base, sessions, memory extraction, and Skills. The workspace's manifest ID determines its OpenViking Peer for memory. Automatic memory is a workspace opt-in that starts with new Codex sessions. One records requester text and Codex replies, tracks extraction by archive, and resolves explicitly selected Skill files through the existing Codex tool bridge. In a LAN setup, the machine running Codex uses its own One configuration and workspace registration. Use the same OpenViking account and manifest ID to view those sessions from another machine. A job whose repository roots resolve to different workspaces cannot select a single workspace context.
+
+One Core 通过 OpenViking Go SDK 访问知识库、会话、记忆和 Skill。记忆的 OpenViking Peer 由工作区清单中的 ID 决定。自动记忆按工作区启用，从新 Codex 会话开始，记录需求方的文字和 Codex 回复，并按归档跟踪记忆提取。Codex 通过现有工具桥接读取工作区明确启用的 Skill 文件。局域网执行机使用本机的 One 全局配置和工作区登记，另一台机器可以通过相同的 OpenViking 账号和工作区 ID 查看这些会话。若一次任务的仓库属于不同工作区，任务没有唯一的工作区上下文。
 
 ## Desktop boundary / 桌面边界
 

@@ -4,18 +4,19 @@ import * as React from "react";
 import { cn } from "@/lib/utils";
 
 const buttonVariants = cva(
-	"inline-flex shrink-0 items-center justify-center gap-2 rounded-md text-sm font-medium whitespace-nowrap transition-[color,background-color,border-color,box-shadow] duration-150 outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/30 disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+	"inline-flex shrink-0 items-center justify-center gap-2 rounded-md text-sm font-medium whitespace-nowrap transition-[color,background-color,border-color,box-shadow,translate] duration-150 ease-ui outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
 	{
 		variants: {
 			variant: {
 				default:
-					"bg-primary-action text-primary-foreground hover:bg-primary-hover active:bg-primary-hover",
+					"bg-primary-action text-primary-foreground shadow-sm hover:bg-primary-hover active:bg-primary-hover motion-safe:active:translate-y-px",
 				destructive:
 					"bg-destructive text-destructive-foreground hover:bg-destructive/90 focus-visible:ring-destructive/20 dark:focus-visible:ring-destructive/40",
-				outline: "border border-input bg-card hover:bg-muted hover:text-foreground",
+				outline:
+					"border border-input bg-card hover:bg-muted hover:text-foreground motion-safe:active:translate-y-px",
 				secondary: "bg-secondary text-secondary-foreground hover:bg-secondary/85",
 				navigation:
-					"justify-start text-left font-normal hover:bg-muted aria-[current=page]:bg-accent aria-[current=page]:font-medium aria-[current=page]:text-accent-foreground",
+					"relative justify-start text-left font-normal hover:bg-card/80 focus-visible:ring-inset focus-visible:ring-offset-0 aria-[current=page]:bg-accent aria-[current=page]:font-medium aria-[current=page]:text-accent-foreground aria-[current=page]:before:absolute aria-[current=page]:before:inset-y-2 aria-[current=page]:before:start-0 aria-[current=page]:before:w-0.5 aria-[current=page]:before:rounded-full aria-[current=page]:before:bg-primary",
 				"danger-ghost": "text-muted-foreground hover:bg-error-surface hover:text-error-foreground",
 				ghost: "hover:bg-muted hover:text-foreground",
 				link: "text-primary-text underline-offset-4 hover:underline",

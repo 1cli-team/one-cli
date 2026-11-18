@@ -8,6 +8,7 @@ import (
 	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/modules/environment"
 	gitmodule "github.com/torchstellar-team/one-cli/packages/one-core/pkg/modules/git"
 	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/modules/issuetracking"
+	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/modules/knowledge"
 	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/ports/secrets"
 )
 
@@ -19,6 +20,7 @@ type Plugin interface {
 }
 
 type Contributions struct {
+	Knowledge     knowledge.Backend
 	IssueTracking issuetracking.Backend
 	Git           gitmodule.Backend
 	Backends      []backend.BackendSpec
@@ -28,6 +30,7 @@ type Contributions struct {
 }
 
 type Registry struct {
+	Knowledge     knowledge.Backend
 	IssueTracking issuetracking.Backend
 	Git           gitmodule.Backend
 	Catalog       *backend.Catalog
@@ -44,6 +47,7 @@ func New(installed ...Plugin) (*Registry, error) {
 	var global secrets.GlobalLoader
 	var gitBackend gitmodule.Backend
 	var issueBackend issuetracking.Backend
+	var knowledgeBackend knowledge.Backend
 	for _, plugin := range installed {
 		if plugin == nil || plugin.ID() == "" {
 			return nil, fmt.Errorf("plugins: missing identity")
@@ -53,6 +57,12 @@ func New(installed ...Plugin) (*Registry, error) {
 		}
 		seen[plugin.ID()] = true
 		contributions := plugin.Contributions()
+		if contributions.Knowledge != nil {
+			if knowledgeBackend != nil {
+				return nil, fmt.Errorf("plugins: knowledge backend registered twice")
+			}
+			knowledgeBackend = contributions.Knowledge
+		}
 		if contributions.IssueTracking != nil {
 			if issueBackend != nil {
 				return nil, fmt.Errorf("plugins: issue tracking backend registered twice")
@@ -87,5 +97,5 @@ func New(installed ...Plugin) (*Registry, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &Registry{Git: gitBackend, IssueTracking: issueBackend, Catalog: catalog, Environments: environmentService, Loaders: registry, Global: global}, nil
+	return &Registry{Knowledge: knowledgeBackend, Git: gitBackend, IssueTracking: issueBackend, Catalog: catalog, Environments: environmentService, Loaders: registry, Global: global}, nil
 }

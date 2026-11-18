@@ -10,6 +10,18 @@ One Gateway 转发 Desktop 的派发请求和任务状态，并为执行机器�
 
 ## 本机开发 / Local development
 
+Run `one dev` to install the development CLI and launch Desktop and the local
+Gateway together on macOS or Linux. It uses the same configuration files as
+`one dev:gateway`. Closing Desktop or stopping `one dev` shuts down the
+Gateway it started. A Gateway already serving the saved local connection is
+reused. Desktop also starts with a saved remote connection or before local
+Gateway configuration is complete.
+
+在 macOS 或 Linux 上运行 `one dev`，即可安装开发版 CLI，并一起启动桌面版和本机
+Gateway。配置文件和 `one dev:gateway` 相同。关闭桌面版或停止 `one dev` 时，会关掉
+这次启动的 Gateway。如果保存的本机地址上已有 Gateway 在运行，桌面会复用它。使用
+远端连接或尚未配置本机 Gateway 时，桌面仍可启动。
+
 From the One CLI checkout, run `one dev:gateway` to build both binaries and
 start Gateway in the foreground. It reads
 `$ONE_HOME/config/gateway-server.json` for the workflow and the saved
@@ -135,31 +147,85 @@ one gateway configure http://127.0.0.1:39128
 one gateway status -o json
 ```
 
-For a project already mapped on Gateway, dispatch an issue and look up its
-stage, error details and PR links by its Linear identifier. If Gateway has
-multiple mapped projects, pass its Linear project ID with `--project`. Find the
-available IDs with `one gateway status -o json`.
+Pass the Linear issue identifier or UUID and the target machine ID. Gateway
+uses the repositories mapped to the issue's project and the machine's Codex
+configuration. The built-in execution machine has the ID `local`.
 
-Gateway 配置好项目映射后，可以用 Linear 需求编号派发，并查看当前阶段、错误和 PR 链接。
-有多个项目映射时，在派发命令中用 `--project` 指定目标 Linear 项目 ID。
-可运行 `one gateway status -o json` 查看项目 ID。
+派发时指定 Linear 需求编号或 UUID，以及目标执行机 ID。Gateway 使用需求所属项目
+的仓库映射和执行机的 Codex 配置。内置执行机的 ID 是 `local`。
 
 ```sh
-one gateway dispatch MG-3
-one gateway jobs --issue MG-3
+one gateway workers -o json
+one gateway dispatch MG-3 --worker local -o json
+one gateway wait JOB_ID --timeout 10m -o json
+one gateway logs JOB_ID --follow
 ```
 
-Use `--model` and `--effort` to override the execution machine's Codex
-configuration for one task. Each omitted flag uses the configured default.
-The Desktop **Send to Codex** dialog offers the same fields. A previously
-dispatched task keeps the settings it was created with.
+Use `--model` and `--effort` to override Codex settings for this dispatch. Each
+omitted option uses the execution machine's default.
 
-可用 `--model` 和 `--effort` 指定本次任务的模型与推理强度。省略的选项
-沿用执行机器上的 Codex 配置。One Desktop 的「交给 Codex」弹窗提供相同选项。
-已经派发的任务沿用首次派发时的设置。
+用 `--model` 和 `--effort` 可指定本次任务的 Codex 模型和推理强度。省略的参数沿用
+执行机的默认配置。
 
 ```sh
-one gateway dispatch MG-3 --model gpt-6.2-sol --effort xhigh
+one gateway dispatch MG-3 --worker local --model MODEL_ID --effort high -o json
+```
+
+Use `data.jobId` from the dispatch response with `one gateway job`, `wait`, or
+`logs`. The completed result includes the final Codex reply when available.
+
+使用派发结果中的 `data.jobId` 查看任务、等待结果或读取日志。任务结果会带出可读取的
+Codex 最终回复。
+
+### 回答执行中的提问 / Answer questions during execution
+
+When Codex needs a clarification, Gateway saves the question and pauses the task.
+One Desktop sends a system notification while running, including when its window
+is hidden. Open the execution details to read and answer the question.
+The execution machine resumes the original Codex thread and worktree after it
+receives the answer.
+
+Codex 需要你确认时，Gateway 会保存问题并暂停任务。One Desktop 运行时会发送系统
+通知，窗口隐藏时也能收到。在执行详情中查看问题并回复，执行机会在原来的 Codex 会话
+和工作区里继续。
+
+`one gateway wait JOB_ID -o json` returns early with state `waiting_for_answer`
+when a question needs an answer. Use the question ID from `data.questions` in
+`reply`, then wait again. `one gateway job JOB_ID` includes the questions and
+their saved answers.
+
+`wait` 遇到待回答的问题会返回 `waiting_for_answer`。从 `data.questions` 取得问题 ID，
+回答后再次等待任务。`job` 可以查看问题和已保存的回答。
+
+```sh
+one gateway wait JOB_ID -o json
+one gateway reply JOB_ID QUESTION_ID '请使用蓝色。' -o json
+one gateway wait JOB_ID -o json
+```
+
+### 继续未完成的任务 / Continue an unfinished task
+
+If a Codex turn ends before the issue is complete, Gateway saves the progress
+and sets `waiting_to_continue`. The execution machine can run other tasks while
+this task is paused. PR publication starts after the work is confirmed complete
+and its configured checks pass. In Desktop's execution details, select
+**Continue task** to add the task to the end of the original machine's queue.
+When the machine claims it, Codex resumes the original thread and worktree.
+
+一轮结束时，只要任务还没完成，Gateway 就保存进度并进入「待继续」。下一步是否明确
+都适用。暂停期间，执行机可以执行其他任务。任务确认完成、配置的检查通过后才会发布 PR。
+在 Desktop 的执行详情中点击 **继续任务**，任务会排到原执行机的队尾。执行机领到任务后，
+会沿用原来的 Codex 会话和工作区。
+
+`wait` returns when the task pauses. The last saved summary is available in
+`data.progress.summary`.
+
+`wait` 会在任务进入「待继续」时返回。上轮保存的进度在 `data.progress.summary` 中。
+
+```sh
+one gateway wait JOB_ID -o json
+one gateway continue JOB_ID -o json
+one gateway wait JOB_ID -o json
 ```
 
 ## One Desktop
@@ -167,8 +233,8 @@ one gateway dispatch MG-3 --model gpt-6.2-sol --effort xhigh
 Open **Settings → Gateway connection**. Enter the server address and the same
 token configured in the service environment. Test the connection and save it.
 Open **Gateway monitor** from the home sidebar to see connection health and
-task counts. Use the same Linear project binding in Desktop and Gateway to
-select **Send to Codex** from an Issue.
+task counts. Use **Dispatch issue** to select a Linear issue and an eligible
+execution machine.
 
 在 **设置 → Gateway 连接** 填入服务地址和相同的令牌，测试连接后保存。
 在 **设置 → 代码库** 测试本机 GitHub 或保存 Gitea 的 HTTPS 根地址及 API Token。
@@ -178,7 +244,7 @@ One Desktop 根据每个工作区的 Git `origin` 匹配执行机器上已登记
 One CLI 在同一 Codex 会话中提供这些 worktree，为有改动的仓库分别开 PR，
 确认相关 PR 全部合并后回写 Linear。One CLI 使用项目已绑定的 Linear 团队及其工作流。
 没有单独待审状态时，Linear 需求保持进行中，直到 PR 合并后回写完成。
-保存后可在需求详情选择 **交给 Codex**。One CLI 在开始执行时读取远端的默认分支。
+保存后可在 **派发需求** 中选择需求和执行机。One CLI 在开始执行时读取远端的默认分支。
 
 Use **Settings → Code repositories** to test the local GitHub connection or add
 a Gitea server. Enter the root HTTPS URL and an API token with account read and
@@ -228,3 +294,66 @@ interruption. The workflow configuration can also be supplied to Gateway.
 
 可在执行机器运行上述 One CLI 命令，处理已映射的需求并跟踪 PR。中断后使用同一条
 命令继续，任务状态保存在配置指定的目录。
+
+## 局域网执行机 / LAN execution machines
+
+The same `one-gateway` binary runs in both roles. The Gateway process starts
+the local execution machine automatically. Add a Worker HTTP listener on a
+specific trusted LAN address to accept additional machines. The control address
+uses the connection settings above.
+
+服务端和执行机共用 `one-gateway` 二进制。Gateway 自动启动本机执行器。
+在可信内网的具体地址开启 Worker HTTP 监听，即可接入更多机器。
+Desktop 和 One CLI 使用上文的控制端地址。
+
+```sh
+one-gateway -config /srv/one/issue-workflow.json -worker-listen 192.168.1.20:39129
+one gateway workers invite
+```
+
+Generate one pairing code per machine in **Gateway monitor → Add execution
+machine**, or with the CLI command above. On the execution machine, use the same
+service account and `ONE_HOME` for repository registration, pairing, and running
+the Worker. The Worker keeps its credentials in
+`$ONE_HOME/config/gateway-worker.json`. Run it under the machine's service
+manager. Codex tasks also require a compatible, signed-in Codex CLI on that
+machine.
+
+通过 **Gateway 监控 → 添加执行机** 或上述 CLI 命令为每台机器生成配对码。
+在执行机用相同账户和 `ONE_HOME` 登记仓库、配对并运行 Worker。
+配对凭据保存在 `$ONE_HOME/config/gateway-worker.json`，由系统服务管理器常驻运行
+Worker。运行 Codex 任务的机器还需安装并登录兼容的 Codex CLI。
+
+```sh
+one git repo add /srv/repos/application
+one-gateway worker join http://192.168.1.20:39129 --name linux-01
+one-gateway worker run
+```
+
+### 在指定机器派发 Linear 需求 / Dispatch Linear issues to a specific machine
+
+In **Gateway monitor → Dispatch issue**, select a Linear issue and an eligible
+machine. In One CLI, pass the machine ID returned by `one gateway workers`.
+To accept Linear issues on a remote worker, configure its own Linear and code
+host credentials plus a local workflow file with the same Linear project,
+repositories, and base branches.
+Use a persistent state directory for the workflow so the assigned machine can
+resume monitoring and Linear writeback across restarts.
+
+在 **Gateway 监控 → 派发需求** 选择 Linear 需求和执行机。One CLI 使用
+`one gateway workers` 返回的机器 ID。远端机器需要自己的 Linear 和代码库凭据，以及包含同一 Linear 项目、
+仓库和基准分支的流程配置。流程状态目录用于在执行机重启后恢复 PR 跟踪和 Linear 回写，
+请保留该目录。
+
+```sh
+one-gateway worker run --workflow-config /srv/one/issue-workflow.json
+one gateway dispatch MG-3 --worker WORKER_ID -o json
+```
+
+The execution record shows the pull requests when they are ready for review.
+The selected machine keeps tracking the merge and updating Linear in its
+workflow process. Repeated requests for the same issue resume its original
+assignment.
+
+执行记录会在 PR 进入待审时显示链接。所选机器上的流程进程继续跟踪合并并回写 Linear。
+重复派发同一需求时，Gateway 使用原有任务记录。

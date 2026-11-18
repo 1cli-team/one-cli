@@ -12,6 +12,7 @@ import (
 	environmentmodule "github.com/torchstellar-team/one-cli/packages/one-core/pkg/modules/environment"
 	gitmodule "github.com/torchstellar-team/one-cli/packages/one-core/pkg/modules/git"
 	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/modules/issuetracking"
+	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/modules/knowledge"
 	skillsmodule "github.com/torchstellar-team/one-cli/packages/one-core/pkg/modules/skills"
 	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/modules/workspacegroups"
 	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/platform/prompt"
@@ -24,6 +25,7 @@ import (
 // application services, cohesive feature modules, or narrow real ports;
 // vertical modules may compose their built-in adapters internally.
 type Dependencies struct {
+	Knowledge     knowledge.Backend
 	IssueTracking *issuetracking.Service
 	Git           *gitmodule.Service
 	Runtime       runtimeport.Provider
@@ -65,6 +67,7 @@ func ComposePlugins(installed ...plugins.Plugin) (Dependencies, error) {
 	}
 
 	return Dependencies{
+		Knowledge:     pluginRegistry.Knowledge,
 		Git:           gitService,
 		IssueTracking: issues,
 		Runtime:       miseruntime.Provider{},

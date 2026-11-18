@@ -4,7 +4,7 @@ import { htmlLang, type Locale } from "@/i18n";
 export const siteUrl = "https://www.1cli.dev";
 export const siteName = "One CLI";
 export const defaultDescription =
-	"One CLI helps people and AI create workspaces, run project tasks, and manage variables and development services.";
+	"One CLI helps people and AI create workspaces, run module tasks, and manage variables and development services.";
 
 type PageMetadataInput = {
 	title: string;

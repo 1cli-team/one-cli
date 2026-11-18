@@ -11,8 +11,8 @@ one dev -p docs
 one build -p docs
 ```
 
-项目直接位于 `apps/<用户项目名>`，共用工作区根目录的 pnpm 配置。
-The project lives directly in `apps/<project-name>` and uses the workspace root pnpm configuration.
+模块直接位于 `apps/<模块名>`，共用工作区根目录的 pnpm 配置。
+The module lives directly in `apps/<module-name>` and uses the workspace root pnpm configuration.
 
 ## 内容与语言 / Content and languages
 
@@ -48,7 +48,7 @@ pnpm install
 pnpm run dev
 ```
 
-源码目录的 `pnpm-workspace.yaml` 隔离父工作区，生成项目时会排除它。
-The source-only `pnpm-workspace.yaml` isolates the parent workspace and is excluded when generating projects.
+源码目录的 `pnpm-workspace.yaml` 隔离父工作区，生成模块时会排除它。
+The source-only `pnpm-workspace.yaml` isolates the parent workspace and is excluded when generating modules.
 生成的内容、依赖、锁文件和构建产物不包含在模板中。
 Generated content, dependencies, lockfiles, and build outputs are excluded from the template.

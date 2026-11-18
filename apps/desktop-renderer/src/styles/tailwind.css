@@ -4,6 +4,7 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 @theme inline {
+	--ease-ui: cubic-bezier(0.22, 1, 0.36, 1);
 	--breakpoint-ud-sm: 37.5rem;
 	--breakpoint-ud-md: 64rem;
 	--breakpoint-ud-lg: 90rem;

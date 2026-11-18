@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"maps"
 	"net/http"
 	"slices"
 	"strings"
@@ -27,7 +28,7 @@ type Linear interface {
 
 type Runner interface {
 	Implement(context.Context, *Job, string, func(Job) error) error
-	Recover(context.Context, Job) error
+	Recover(context.Context, *Job, func(Job) error) error
 	Verify(context.Context, Job, string) error
 }
 
@@ -96,33 +97,21 @@ func (s *Service) list(project string) api.Jobs {
 	_, enabled := s.project(project)
 	result := api.Jobs{Enabled: enabled, Issues: make(map[string]api.Status)}
 	for _, j := range s.store.list() {
-		if j.ProjectID == project {
+		if j.ProjectID == project && j.Revision == nil {
 			result.Issues[j.Issue.ID] = j.status()
 		}
 	}
 	return result
 }
 
-func (s *Service) dispatch(ctx context.Context, projectID, issueID string, options api.CodexOptions) (api.Status, int, error) {
+func (s *Service) dispatch(ctx context.Context, req api.WorkRequest) (api.Status, int, error) {
+	projectID, issueID, options := req.ProjectID, req.IssueID, req.Codex
 	if j, ok := s.store.get(projectID, issueID); ok {
 		return existingDispatch(j, options)
 	}
-	project, ok := s.project(projectID)
-	if !ok {
-		return "", http.StatusNotFound, fmt.Errorf("project is not configured")
-	}
-	// The server resolves the issue using its own project-scoped credentials.
-	reference := issueID
-	if !uuidPattern.MatchString(reference) {
-		reference = strings.ToUpper(reference)
-	}
-	issue, err := s.linear.Issue(ctx, project.binding(projectID, ""), reference)
+	project, issue, order, code, err := s.resolveDispatchIssue(ctx, projectID, issueID, req.SubtaskOrder)
 	if err != nil {
-		return "", http.StatusBadGateway, err
-	}
-	if !uuidPattern.MatchString(issue.ID) ||
-		(issue.ID != issueID && !strings.EqualFold(issue.Identifier, issueID)) {
-		return "", http.StatusConflict, fmt.Errorf("Linear returned an issue that does not match the requested reference")
+		return "", code, err
 	}
 	if j, ok := s.store.get(projectID, issue.ID); ok {
 		return existingDispatch(j, options)
@@ -138,18 +127,119 @@ func (s *Service) dispatch(ctx context.Context, projectID, issueID string, optio
 	if !matchesTeamFlow(flow, team) {
 		return "", http.StatusConflict, fmt.Errorf("configured Linear states do not match the team")
 	}
-	job, err := s.store.enqueue(Job{ProjectID: projectID, Project: project, Issue: issue, Codex: options})
+	subtasks, err := s.planSubtasks(ctx, project, issue, order)
+	if err != nil {
+		return "", subtaskErrorStatus(err), err
+	}
+	if len(subtasks) != 0 && len(project.Repositories) == 1 {
+		single := project.Repositories[0].project()
+		single.ConnectionID, single.Teams = project.ConnectionID, project.Teams
+		project = single
+	}
+	job, err := s.store.enqueue(Job{
+		ProjectID: projectID, Project: project, Issue: issue, Codex: options,
+		AskUser: req.AskUser, TrackProgress: req.TrackProgress, Subtasks: subtasks,
+	})
 	if err != nil {
 		return "", http.StatusInternalServerError, err
 	}
 	if job.Codex != options {
 		return existingDispatch(job, options)
 	}
+	s.notifyRun()
+	return job.status(), http.StatusAccepted, nil
+}
+
+func (s *Service) notifyRun() {
 	select {
 	case s.wake <- struct{}{}:
 	default:
 	}
-	return job.status(), http.StatusAccepted, nil
+}
+
+func (s *Service) resolveIssue(ctx context.Context, projectID, issueID string) (Project, tracking.Issue, int, error) {
+	project, ok := s.project(projectID)
+	if !ok {
+		return Project{}, tracking.Issue{}, http.StatusNotFound, fmt.Errorf("project is not configured")
+	}
+	// The server resolves the issue using its own project-scoped credentials.
+	reference := issueID
+	if !uuidPattern.MatchString(reference) {
+		reference = strings.ToUpper(reference)
+	}
+	issue, err := s.linear.Issue(ctx, project.binding(projectID, ""), reference)
+	if err != nil {
+		var problem *tracking.Error
+		if errors.As(err, &problem) && (problem.Code == "scope" || problem.Code == "not_found") {
+			return Project{}, tracking.Issue{}, http.StatusNotFound, err
+		}
+		return Project{}, tracking.Issue{}, http.StatusBadGateway, err
+	}
+	if !uuidPattern.MatchString(issue.ID) ||
+		(!strings.EqualFold(issue.ID, issueID) && !strings.EqualFold(issue.Identifier, issueID)) {
+		return Project{}, tracking.Issue{}, http.StatusConflict, fmt.Errorf("Linear returned an issue that does not match the requested reference")
+	}
+	return project, issue, http.StatusOK, nil
+}
+
+func (s *Service) resolvedIssue(ctx context.Context, projectID, issueID string, requestedOrder []string) (api.ResolvedIssue, int, error) {
+	project, issue, order, code, err := s.resolveDispatchIssue(ctx, projectID, issueID, requestedOrder)
+	if err != nil {
+		return api.ResolvedIssue{}, code, err
+	}
+	_, mapped := project.Teams[issue.Team.ID]
+	resolved := api.ResolvedIssue{
+		Dispatchable: mapped && issue.State.Type != "completed" && issue.State.Type != "canceled",
+		ID:           issue.ID, Identifier: issue.Identifier, Title: issue.Title, URL: issue.URL,
+		Project: api.LinearProject{ID: projectID},
+	}
+	for _, repo := range project.repositorySettings() {
+		resolved.Project.Repositories = append(resolved.Project.Repositories, api.RepositorySummary{
+			Repository: repo.project().ref(), Base: repo.Base,
+		})
+	}
+	if existing, ok := s.store.get(projectID, issue.ID); ok {
+		resolved.LocalStatus = existing.status()
+	}
+	if resolved.LocalStatus == "" && (resolved.Dispatchable || len(order) != 0) {
+		subtasks, err := s.planSubtasks(ctx, project, issue, order)
+		if err != nil {
+			return api.ResolvedIssue{}, subtaskErrorStatus(err), err
+		}
+		// Carry the resolved order to the execution machine, including when
+		// the requested issue was a child and must run first.
+		for _, task := range subtasks {
+			resolved.SubtaskOrder = append(resolved.SubtaskOrder, task.Issue.ID)
+		}
+	}
+	return resolved, http.StatusOK, nil
+}
+
+func (s *Service) findResolvedIssue(ctx context.Context, issueID string, order []string) (api.ResolvedIssue, int, error) {
+	s.configMu.RLock()
+	projectIDs := slices.Sorted(maps.Keys(s.projects))
+	s.configMu.RUnlock()
+	var resolved api.ResolvedIssue
+	for _, projectID := range projectIDs {
+		candidate, code, err := s.resolvedIssue(ctx, projectID, issueID, order)
+		if code == http.StatusNotFound {
+			continue
+		}
+		if err != nil {
+			return api.ResolvedIssue{}, code, err
+		}
+		if resolved.ID != "" {
+			return api.ResolvedIssue{}, http.StatusConflict, fmt.Errorf("issue reference matches more than one configured Linear project")
+		}
+		resolved = candidate
+		if api.ValidIssueID(issueID) {
+			break
+		}
+	}
+	if resolved.ID == "" {
+		return resolved, http.StatusNotFound, fmt.Errorf("issue was not found in the configured Linear projects")
+	}
+	return resolved, http.StatusOK, nil
 }
 
 func existingDispatch(job Job, options api.CodexOptions) (api.Status, int, error) {
@@ -168,8 +258,12 @@ func (s *Service) Run(ctx context.Context) {
 				return
 			}
 			switch job.Stage {
-			case queued, running, verifying:
+			case queued, running, verifying, preparingSubtask, committingSubtask:
 				s.execute(ctx, job)
+			case waitingForAnswer, waitingToContinue:
+				if job.readyToResume() {
+					s.execute(ctx, job)
+				}
 			}
 		}
 		select {
@@ -188,6 +282,9 @@ func (s *Service) Monitor(ctx context.Context) {
 		for _, job := range s.store.list() {
 			if ctx.Err() != nil {
 				return
+			}
+			if job.Revision != nil && job.Stage != publishing {
+				continue
 			}
 			switch job.Stage {
 			case publishing, opening, toReview, review, toDone:
@@ -239,22 +336,41 @@ func (s *Service) saveStage(job *Job, next stage) error {
 }
 
 func (s *Service) run(ctx context.Context, job *Job) error {
+	if job.Revision != nil && job.Stage != queued {
+		if _, err := s.openRevisionPR(ctx, *job); err != nil {
+			return err
+		}
+	}
 	flow := job.Project.Teams[job.Issue.Team.ID]
 	binding := job.Project.binding(job.ProjectID, job.Issue.Team.ID)
 	group := len(job.Project.Repositories) != 0
 	if job.Stage == queued {
-		var err error
-		if group {
-			err = s.prepareGroup(ctx, job)
+		if job.Revision != nil {
+			if err := s.prepareRevision(ctx, job); err != nil {
+				return err
+			}
+		} else if job.Issue.HasChildren && len(job.Subtasks) == 0 {
+			if err := s.linear.TransitionIssue(ctx, binding, job.Issue.ID, job.Issue.State.ID, flow.Running); err != nil {
+				return err
+			}
+			return s.saveStage(job, toDone)
 		} else {
-			err = s.git.Prepare(ctx, job, s.store.save)
+			var err error
+			if group {
+				err = s.prepareGroup(ctx, job)
+			} else {
+				err = s.git.Prepare(ctx, job, s.store.save)
+			}
+			if err != nil {
+				return err
+			}
+			if err := s.linear.TransitionIssue(ctx, binding, job.Issue.ID, job.Issue.State.ID, flow.Running); err != nil {
+				return err
+			}
 		}
-		if err != nil {
-			return err
-		}
-		if err := s.linear.TransitionIssue(ctx, binding, job.Issue.ID, job.Issue.State.ID, flow.Running); err != nil {
-			return err
-		}
+	}
+	if len(job.Subtasks) != 0 {
+		return s.runSubtask(ctx, job)
 	}
 	var commonDir string
 	if !group {
@@ -263,36 +379,57 @@ func (s *Service) run(ctx context.Context, job *Job) error {
 			return err
 		}
 		commonDir = dir
+	} else if job.readyToResume() {
+		if err := s.addGroupReadRoots(ctx, job); err != nil {
+			return err
+		}
 	}
 	switch job.Stage {
-	case queued:
+	case queued, waitingForAnswer, waitingToContinue:
 		if err := s.runner.Implement(ctx, job, commonDir, s.store.save); err != nil {
 			return err
 		}
 	case running:
-		if err := s.runner.Recover(ctx, *job); err != nil {
+		if err := s.runner.Recover(ctx, job, s.store.save); err != nil {
 			return err
 		}
+	}
+	if job.Stage == waitingForAnswer || job.Stage == waitingToContinue {
+		return nil
 	}
 	if group {
 		if err := s.saveStage(job, verifying); err != nil {
 			return err
 		}
 		if err := s.verifyGroup(ctx, job); err != nil {
-			return err
+			return s.checkFailed(ctx, job, err)
 		}
 	} else if len(job.Project.Check) != 0 {
 		if err := s.saveStage(job, verifying); err != nil {
 			return err
 		}
 		if err := s.runner.Verify(ctx, *job, commonDir); err != nil {
-			return err
+			return s.checkFailed(ctx, job, err)
 		}
 	}
 	return s.saveStage(job, publishing)
 }
 
+func (s *Service) checkFailed(ctx context.Context, job *Job, err error) error {
+	if !job.TrackProgress || job.ThreadID == "" || ctx.Err() == context.Canceled {
+		return err
+	}
+	summary := i18n.Tf("gateway.workflow_progress_check_failed", err)
+	if job.CodexResponse != "" {
+		summary += "\n\n" + job.CodexResponse
+	}
+	return saveExecutionProgress(job, summary, s.store.save)
+}
+
 func (s *Service) deliver(ctx context.Context, job *Job) error {
+	if job.Revision != nil {
+		return s.publishRevision(ctx, job)
+	}
 	flow := job.Project.Teams[job.Issue.Team.ID]
 	binding := job.Project.binding(job.ProjectID, job.Issue.Team.ID)
 	switch job.Stage {
@@ -331,6 +468,9 @@ func (s *Service) deliver(ctx context.Context, job *Job) error {
 		}
 		// The user may already have merged every PR since publication.
 		if merged {
+			if len(job.Subtasks) != 0 {
+				return s.saveStage(job, toDone)
+			}
 			current, err := s.linear.Issue(ctx, binding, job.Issue.ID)
 			if err != nil {
 				return err
@@ -350,6 +490,9 @@ func (s *Service) deliver(ctx context.Context, job *Job) error {
 		}
 		return s.saveStage(job, review)
 	case toDone:
+		if job.Issue.HasChildren || len(job.Subtasks) != 0 {
+			return s.completeSubtasks(ctx, job)
+		}
 		if err := s.linear.TransitionIssue(ctx, binding, job.Issue.ID, flow.Review, flow.Done); err != nil {
 			return err
 		}
@@ -396,10 +539,21 @@ func pullRequestInput(job Job) codehost.PullRequestInput {
 	if len(job.Project.Check) != 0 {
 		bodyKey = "linear.cli.workflow_pr_verified"
 	}
+	body := i18n.Tf(bodyKey, job.Issue.URL, job.HeadSHA)
+	if len(job.Subtasks) != 0 {
+		body += "\n\n## " + i18n.T("gateway.workflow_subtasks") + "\n"
+		for _, task := range job.Subtasks {
+			result := i18n.T("gateway.workflow_subtask_no_changes")
+			if task.CommitSHA != "" {
+				result = "`" + task.CommitSHA + "`"
+			}
+			body += fmt.Sprintf("\n- [x] %s %s (%s)", task.Issue.Identifier, strings.Join(strings.Fields(task.Issue.Title), " "), result)
+		}
+	}
 	return codehost.PullRequestInput{
 		Title: strings.TrimSpace(job.Issue.Identifier + " " + strings.Join(strings.Fields(job.Issue.Title), " ")),
 		Head:  job.Branch,
 		Base:  job.Project.Base,
-		Body:  i18n.Tf(bodyKey, job.Issue.URL, job.HeadSHA),
+		Body:  body,
 	}
 }

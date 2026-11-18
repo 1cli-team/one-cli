@@ -97,7 +97,7 @@ const moduleConfigs: ModuleConfig[] = [
 		id: "manifest",
 		labels: { zh: "Manifest", en: "Manifest" },
 		spotlight: {
-			zh: { title: "Manifest", subtitle: "项目清单和工程契约" },
+			zh: { title: "Manifest", subtitle: "模块清单和工程契约" },
 			en: { title: "Manifest", subtitle: "Workspace contract file" },
 		},
 		x: -0.1,
@@ -110,8 +110,8 @@ const moduleConfigs: ModuleConfig[] = [
 		id: "build",
 		labels: { zh: "Build", en: "Build" },
 		spotlight: {
-			zh: { title: "Build", subtitle: "统一项目构建" },
-			en: { title: "Build", subtitle: "Build workspace projects" },
+			zh: { title: "Build", subtitle: "统一模块构建" },
+			en: { title: "Build", subtitle: "Build workspace modules" },
 		},
 		x: 1.0,
 		y: 0.48,

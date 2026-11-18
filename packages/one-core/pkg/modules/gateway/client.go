@@ -55,11 +55,13 @@ type RepositorySummary struct {
 }
 
 type Snapshot struct {
-	Schema    string           `json:"schema"`
-	StartedAt time.Time        `json:"startedAt"`
-	Projects  int              `json:"projects"`
-	Mappings  []ProjectSummary `json:"mappings"`
-	Jobs      QueueCounts      `json:"jobs"`
+	Executions bool             `json:"executions,omitempty"`
+	WorkerURL  string           `json:"workerUrl,omitempty"`
+	Schema     string           `json:"schema"`
+	StartedAt  time.Time        `json:"startedAt"`
+	Projects   int              `json:"projects"`
+	Mappings   []ProjectSummary `json:"mappings"`
+	Jobs       QueueCounts      `json:"jobs"`
 }
 
 var ErrInvalidSnapshot = errors.New("invalid Gateway status response")

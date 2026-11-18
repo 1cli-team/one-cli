@@ -1,7 +1,9 @@
+import type { SessionLink } from "@/features/openviking/api";
 import useSWR from "swr";
 import http from "@/lib/http";
 import { scopeQuery, type Binding, type Scope } from "@/features/linear/api";
 import type { HttpError } from "@/types/api";
+import type { ExecutionProgress, ExecutionQuestion, ExecutionState } from "./executions";
 
 export type ConnectionState =
 	| "unconfigured"
@@ -27,8 +29,8 @@ export interface CodexModelCatalog {
 	defaultEffort?: string;
 }
 
-export function useCodexModels() {
-	return useSWR("/gateway/codex/models", (path) =>
+export function useCodexModels(enabled: boolean) {
+	return useSWR(enabled ? "/gateway/codex/models" : null, (path) =>
 		http.get<CodexModelCatalog>(path, { timeout: 40000 }),
 	);
 }
@@ -55,6 +57,8 @@ export interface ProjectSummary extends RepositoryIdentity {
 }
 
 export interface GatewaySnapshot {
+	executions?: boolean;
+	workerUrl?: string;
 	startedAt: string;
 	projects: number;
 	mappings?: ProjectSummary[] | null;
@@ -84,33 +88,82 @@ export interface JobRepository {
 	pr?: { number: number; url: string; state: string; merged: boolean };
 }
 
-export interface GatewayJob {
+export interface GatewayTask {
+	openViking?: SessionLink;
 	id: string;
-	identifier: string;
-	title: string;
+	identifier?: string;
+	title?: string;
 	projectName?: string;
 	description?: string;
 	url?: string;
 	stage: string;
-	createdAt: string;
+	updatedAt: string;
+	workerName?: string;
 	lastError?: string;
+	localResultJobId?: string;
 	codex?: CodexOptions;
-	repositories: JobRepository[];
+	repository?: { host: string; slug: string };
+	repositories?: JobRepository[];
+	pullRequests?: NonNullable<JobRepository["pr"]>[];
+	subtasks?: GatewaySubtask[];
+	runs?: GatewayTaskRun[];
 }
 
-export interface GatewayJobPage {
-	items: GatewayJob[];
+export interface GatewayTaskRun {
+	id: string;
+	workerId: string;
+	workerName: string;
+	source: "cli" | "desktop";
+	state: ExecutionState;
+	revision?: boolean;
+	createdAt: string;
+	question?: ExecutionQuestion;
+	progress?: ExecutionProgress;
+}
+
+export interface GatewaySubtask {
+	identifier: string;
+	title: string;
+	stage: string;
+	commitSha?: string;
+	response?: string;
+}
+
+export interface GatewayTaskPage {
+	items: GatewayTask[];
 	page: number;
 	pageCount: number;
+	partial?: boolean;
 }
 
-export function useGatewayJobs(connection: GatewayStatus | undefined, page: number) {
-	return useSWR<GatewayJobPage, HttpError>(
+export interface GatewayTaskFilters {
+	worker: string;
+	stage: string;
+	source: string;
+}
+
+export function useGatewayTasks(
+	connection: GatewayStatus | undefined,
+	page: number,
+	filters: GatewayTaskFilters,
+) {
+	const query = new URLSearchParams({ page: String(page), ...filters }).toString();
+	return useSWR<GatewayTaskPage, HttpError>(
 		connection?.snapshot
-			? (["/gateway/jobs", page, connection.url, connection.snapshot.startedAt] as const)
+			? (["/gateway/tasks", query, connection.url, connection.snapshot.startedAt] as const)
 			: null,
-		([path, page]) => http.get<GatewayJobPage>(`${path}?page=${page}`),
+		([path, query]) => http.get<GatewayTaskPage>(`${path}?${query}`),
 		{ refreshInterval: 5000, shouldRetryOnError: (error) => error.status !== 404 },
+	);
+}
+
+export function useGatewayJobCodexResult(connection: string | undefined, id: string | undefined) {
+	return useSWR<{ response?: string }, HttpError>(
+		connection && id
+			? ([`/gateway/jobs/${encodeURIComponent(id)}/codex-result`, connection] as const)
+			: null,
+		([path]) => http.get<{ response?: string }>(path, { timeout: 18000 }),
+		{ revalidateOnFocus: false, shouldRetryOnError: false },
 	);
 }
 

@@ -9,6 +9,6 @@ one run check -p one-template-deno-lib
 one run build -p one-template-deno-lib
 ```
 
-Add this package with `workspace:*` in a consuming project.
+Add this package with `workspace:*` in a consuming module.
 
 在使用方的 package.json 中通过 `workspace:*` 引用此包。

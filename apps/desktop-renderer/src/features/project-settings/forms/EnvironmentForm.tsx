@@ -5,12 +5,9 @@ import { useTranslation } from "react-i18next";
 import { StatePanel } from "@/components/ui/page-layout";
 import type { ProjectSettingsFormProps } from "@/features/project-settings/forms/FormLayout";
 
-export const EnvironmentForm: React.FC<ProjectSettingsFormProps> = ({
-	project,
-	environment,
-	workspaceEntryId,
-	readOnly,
-}) => {
+export const EnvironmentForm: React.FC<
+	ProjectSettingsFormProps & { toolbarStart: React.ReactNode }
+> = ({ project, environment, workspaceEntryId, readOnly, toolbarStart }) => {
 	const { t } = useTranslation();
 	return (
 		<section className="flex min-h-0 flex-1 flex-col">
@@ -21,6 +18,7 @@ export const EnvironmentForm: React.FC<ProjectSettingsFormProps> = ({
 					fixedProject={project.name}
 					variant="embedded"
 					readOnly={readOnly}
+					toolbarStart={toolbarStart}
 				/>
 			) : (
 				<StatePanel

@@ -1,7 +1,7 @@
 import { useEnvironmentDirtyStore } from "@/features/environment-context/environment-dirty-store";
 import { MoreHorizontal, SearchX } from "lucide-react";
 import { IconButton } from "@/components/ui/icon-button";
-import { ErrorNotice, SearchInput, StatePanel } from "@/components/ui/page-layout";
+import { ErrorNotice, PageToolbar, SearchInput, StatePanel } from "@/components/ui/page-layout";
 import {
 	DropdownMenu,
 	DropdownMenuContent,
@@ -33,7 +33,6 @@ import {
 	secretsKey,
 	updateSecret,
 } from "@/api/secrets";
-import { InfisicalBindingDialog } from "@/features/infisical-binding/InfisicalBindingDialog";
 import {
 	AlertDialog,
 	AlertDialogCancel,
@@ -91,6 +90,7 @@ export const SecretsManager: React.FC<{
 	fixedProject?: string;
 	variant?: "standalone" | "embedded";
 	readOnly?: boolean;
+	toolbarStart?: React.ReactNode;
 }> = ({
 	workspaceEntryId,
 	environment,
@@ -98,6 +98,7 @@ export const SecretsManager: React.FC<{
 	fixedProject,
 	variant = "standalone",
 	readOnly,
+	toolbarStart,
 }) => {
 	const { t } = useTranslation();
 	const toast = useToast();
@@ -112,7 +113,6 @@ export const SecretsManager: React.FC<{
 	const [deleteKey, setDeleteKey] = useState("");
 	const [deleteConfirmation, setDeleteConfirmation] = useState("");
 	const [saving, setSaving] = useState(false);
-	const [bindingOpen, setBindingOpen] = useState(false);
 	const [retrying, setRetrying] = useState(false);
 	const [recoveryError, setRecoveryError] = useState("");
 	const [search, setSearch] = useState("");
@@ -139,7 +139,6 @@ export const SecretsManager: React.FC<{
 		requestEpoch.current++;
 		setRevealed({});
 		setEditor(null);
-		setBindingOpen(false);
 		setDeleteKey("");
 		setDeleteConfirmation("");
 		setRecoveryError("");
@@ -290,14 +289,19 @@ export const SecretsManager: React.FC<{
 	}
 
 	const titleId = useId();
+	const searchLabel = t(variant === "embedded" ? "global.search" : "secrets.search");
 	return (
 		<section aria-labelledby={titleId} className="flex min-h-0 flex-col gap-4">
-			<header className="flex shrink-0 items-start justify-between gap-4">
+			<header
+				className={
+					variant === "embedded" ? "sr-only" : "flex shrink-0 items-start justify-between gap-4"
+				}
+			>
 				<div className="flex min-w-0 flex-col gap-1">
 					<h2 id={titleId} className="text-lg font-medium">
 						{t("secrets.title")}
 					</h2>
-					{result.data && (
+					{result.data && variant === "standalone" && (
 						<p className="text-xs text-muted-foreground" aria-live="polite">
 							{t("global.count", { count: visibleKeys.length })}
 						</p>
@@ -307,16 +311,23 @@ export const SecretsManager: React.FC<{
 					)}
 				</div>
 			</header>
-			<div className="flex shrink-0 flex-wrap items-center justify-between gap-3">
+			<PageToolbar>
+				{toolbarStart}
 				<div className="min-w-40 max-w-xs flex-1">
 					<SearchInput
+						groupClassName="h-9"
 						value={search}
 						onChange={(e) => setSearch(e.target.value)}
-						aria-label={t("secrets.search")}
-						placeholder={t("secrets.search")}
+						aria-label={searchLabel}
+						placeholder={searchLabel}
 					/>
 				</div>
-				<div className="flex flex-wrap items-center gap-2">
+				<div className="ms-auto flex flex-wrap items-center gap-2">
+					{result.data && variant === "embedded" && (
+						<span className="text-xs text-muted-foreground" aria-live="polite">
+							{t("global.count", { count: visibleKeys.length })}
+						</span>
+					)}
 					{fixedProject === undefined && (
 						<Select
 							value={selectedProject || WORKSPACE_SECRET_SCOPE}
@@ -347,6 +358,7 @@ export const SecretsManager: React.FC<{
 						{retrying ? <Spinner /> : <RefreshCw />}
 					</IconButton>
 					<Button
+						className="h-9"
 						onClick={() => {
 							setEditorError("");
 							actionTrigger.current = null;
@@ -355,10 +367,10 @@ export const SecretsManager: React.FC<{
 						disabled={readOnly || showError || result.isLoading}
 					>
 						<Plus />
-						{t("secrets.add")}
+						{t(variant === "embedded" ? "global.add" : "secrets.add")}
 					</Button>
 				</div>
-			</div>
+			</PageToolbar>
 			<div className="relative flex min-h-0 flex-col" aria-busy={result.isLoading}>
 				<div inert={refreshing} className="flex min-h-0 flex-col">
 					{showLoading && <SecretListLoading />}
@@ -366,25 +378,15 @@ export const SecretsManager: React.FC<{
 						<StatePanel
 							className="rounded-lg border border-border bg-card"
 							icon={KeyRound}
-							title={t(
-								listError.code === "INFISICAL_NOT_CONFIGURED"
-									? "secrets.notConfiguredTitle"
-									: "secrets.loadError",
-							)}
+							title={t(needsInitialization ? "secrets.notConfiguredTitle" : "secrets.loadError")}
 							description={
-								listError.code === "INFISICAL_NOT_CONFIGURED"
+								needsInitialization
 									? t("secrets.notConfiguredHint")
 									: recoveryError || listError.message
 							}
 						>
-							{recoveryError && listError.code === "INFISICAL_NOT_CONFIGURED" ? (
+							{recoveryError && needsInitialization ? (
 								<ErrorNotice>{recoveryError}</ErrorNotice>
-							) : null}
-							{needsInitialization ? (
-								<Button disabled={readOnly} onClick={() => setBindingOpen(true)}>
-									<KeyRound />
-									{t("binding.workspaceTitle")}
-								</Button>
 							) : null}
 							<Button variant="outline" disabled={retrying} onClick={() => void retryList()}>
 								{retrying ? <Spinner /> : <RefreshCw />}
@@ -519,13 +521,6 @@ export const SecretsManager: React.FC<{
 				)}
 			</div>
 
-			<InfisicalBindingDialog
-				open={bindingOpen}
-				onOpenChange={setBindingOpen}
-				workspaceEntryId={workspaceEntryId}
-				environment={environment}
-				readOnly={readOnly}
-			/>
 			<SecretEditor
 				editor={editor}
 				error={editorError}

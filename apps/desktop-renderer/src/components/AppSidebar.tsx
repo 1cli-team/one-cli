@@ -1,21 +1,17 @@
 import {
 	Activity,
-	AppWindow,
+	BookOpen,
 	ClipboardList,
 	ArrowLeft,
-	ChevronRight,
 	House,
 	GitBranch,
 	KeyRound,
 	MonitorCog,
-	Package,
 	Plus,
-	Server,
 	Network,
 	Settings2,
 	SlidersHorizontal,
 } from "lucide-react";
-import { Collapsible } from "radix-ui";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useLocation, useMatch, useNavigate, useParams } from "react-router-dom";
@@ -23,27 +19,18 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { DiscardDialog } from "@/components/ui/discard-dialog";
 import { Separator } from "@/components/ui/separator";
-import { Skeleton } from "@/components/ui/skeleton";
 import {
 	EnvironmentLink,
 	EnvironmentNavLink,
 } from "@/features/environment-context/EnvironmentLink";
 import { useEnvironmentDirtyStore } from "@/features/environment-context/environment-dirty-store";
 import { preserveEnvironment } from "@/features/environment-context/environment";
-import { InfisicalBindingDialog } from "@/features/infisical-binding/InfisicalBindingDialog";
 import { CreateProjectDialog } from "@/features/project-creation/CreateProjectDialog";
 import { useWorkspace } from "@/features/workspace-navigation/useWorkspace";
 import { useThemeStore } from "@/lib/stores/theme";
 import { cn } from "@/lib/utils";
-import { projectPath, workspacePath } from "@/router/paths";
+import { workspaceKnowledgePath, workspacePath, workspaceVariablesPath } from "@/router/paths";
 import { WorkspaceGroupsSidebar } from "@/features/workspace-groups/WorkspaceGroupsSidebar";
-import type { OverviewProject } from "@/types/api";
-
-const PROJECT_GROUPS = [
-	{ kind: "app", directory: "apps", icon: AppWindow },
-	{ kind: "package", directory: "packages", icon: Package },
-	{ kind: "service", directory: "services", icon: Server },
-] as const;
 
 interface SidebarProps {
 	entryId?: string;
@@ -82,10 +69,12 @@ function SidebarPanels({ entryId, homeTo }: Pick<SidebarProps, "entryId" | "home
 	const workspaceMode = Boolean(entryId);
 	const detailMode = section !== null;
 	return (
-		<div className="h-full overflow-hidden" data-sidebar-level={section ?? "global"}>
+		<div className="flex h-full flex-col overflow-hidden" data-sidebar-level={section ?? "global"}>
+			{/* Electron hit-tests the title bar separately from the sliding panels. */}
+			<SidebarTitlebar homeTo={detailMode ? homeTo : undefined} />
 			<div
 				className={cn(
-					"flex h-full w-[200%] transition-transform duration-[220ms] ease-out motion-reduce:transition-none",
+					"flex min-h-0 w-[200%] flex-1 transition-transform duration-200 ease-ui motion-reduce:transition-none",
 					detailMode && "-translate-x-1/2",
 				)}
 			>
@@ -102,14 +91,9 @@ function SidebarPanels({ entryId, homeTo }: Pick<SidebarProps, "entryId" | "home
 					aria-hidden={!detailMode}
 				>
 					{lastSection === "settings" ? (
-						<SettingsSidebar homeTo={homeTo} />
+						<SettingsSidebar />
 					) : lastEntryId ? (
-						<WorkspaceSidebar
-							key={lastEntryId}
-							entryId={lastEntryId}
-							homeTo={homeTo}
-							active={workspaceMode}
-						/>
+						<WorkspaceSidebar key={lastEntryId} entryId={lastEntryId} active={workspaceMode} />
 					) : null}
 				</div>
 			</div>
@@ -117,55 +101,27 @@ function SidebarPanels({ entryId, homeTo }: Pick<SidebarProps, "entryId" | "home
 	);
 }
 
-function GlobalSidebar() {
+function SidebarTitlebar({ homeTo }: { homeTo?: string }) {
 	const { t } = useTranslation();
 	const { mode } = useThemeStore();
+	const showBrand = homeTo === undefined;
 	return (
-		<>
-			<div className="window-titlebar window-sidebar-titlebar window-sidebar-brand flex min-h-14 shrink-0 items-center gap-2.5 border-b border-border px-4">
-				<img
-					src={mode === "dark" ? "/brand/icon-inverted.svg" : "/brand/icon.svg"}
-					alt=""
-					className="size-6 shrink-0"
-				/>
-				<span className="truncate text-base font-medium">One Desktop</span>
-			</div>
-			<nav className="flex shrink-0 flex-col gap-1 p-3" aria-label={t("navigation.global")}>
-				<Button variant="navigation" size="navigation-compact" className="min-h-9" asChild>
-					<EnvironmentNavLink to="/" end>
-						<House strokeWidth={1.5} />
-						<span>{t("sidebar.home")}</span>
-					</EnvironmentNavLink>
-				</Button>
-				<Button variant="navigation" size="navigation-compact" className="min-h-9" asChild>
-					<EnvironmentNavLink to="/gateway" end>
-						<Activity strokeWidth={1.5} />
-						<span>{t("gateway.monitor")}</span>
-					</EnvironmentNavLink>
-				</Button>
-			</nav>
-			<Separator />
-			<WorkspaceGroupsSidebar />
-			<nav
-				className="flex shrink-0 flex-col gap-1 border-t border-border p-3"
-				aria-label={t("sidebar.settings")}
-			>
-				<Button variant="navigation" size="navigation-compact" className="min-h-9" asChild>
-					<EnvironmentNavLink to="/settings">
-						<Settings2 strokeWidth={1.5} />
-						<span>{t("sidebar.settings")}</span>
-					</EnvironmentNavLink>
-				</Button>
-			</nav>
-		</>
-	);
-}
-
-function SettingsSidebar({ homeTo }: { homeTo: string }) {
-	const { t } = useTranslation();
-	return (
-		<>
-			<div className="window-titlebar window-sidebar-titlebar flex min-h-14 shrink-0 items-center border-b border-border px-3">
+		<div
+			className={cn(
+				"window-titlebar window-sidebar-titlebar flex min-h-14 shrink-0 items-center border-b border-border",
+				showBrand ? "window-sidebar-brand gap-2.5 px-4" : "px-3",
+			)}
+		>
+			{showBrand ? (
+				<>
+					<img
+						src={mode === "dark" ? "/brand/icon-inverted.svg" : "/brand/icon.svg"}
+						alt=""
+						className="size-6 shrink-0"
+					/>
+					<span className="truncate text-base font-medium">One Desktop</span>
+				</>
+			) : (
 				<Button variant="ghost" className="w-full min-w-0 justify-start [&>span]:truncate" asChild>
 					<EnvironmentLink to={homeTo}>
 						<ArrowLeft />
@@ -180,7 +136,50 @@ function SettingsSidebar({ homeTo }: { homeTo: string }) {
 						</span>
 					</EnvironmentLink>
 				</Button>
-			</div>
+			)}
+		</div>
+	);
+}
+
+function GlobalSidebar() {
+	const { t } = useTranslation();
+	return (
+		<>
+			<nav className="flex shrink-0 flex-col gap-0.5 p-3" aria-label={t("navigation.global")}>
+				<Button variant="navigation" size="navigation-compact" asChild>
+					<EnvironmentNavLink to="/" end>
+						<House strokeWidth={1.5} />
+						<span>{t("sidebar.home")}</span>
+					</EnvironmentNavLink>
+				</Button>
+				<Button variant="navigation" size="navigation-compact" asChild>
+					<EnvironmentNavLink to="/gateway" end>
+						<Activity strokeWidth={1.5} />
+						<span>{t("gateway.monitor")}</span>
+					</EnvironmentNavLink>
+				</Button>
+			</nav>
+			<Separator />
+			<WorkspaceGroupsSidebar />
+			<nav
+				className="flex shrink-0 flex-col gap-1 border-t border-border p-3"
+				aria-label={t("sidebar.settings")}
+			>
+				<Button variant="navigation" size="navigation-compact" asChild>
+					<EnvironmentNavLink to="/settings">
+						<Settings2 strokeWidth={1.5} />
+						<span>{t("sidebar.settings")}</span>
+					</EnvironmentNavLink>
+				</Button>
+			</nav>
+		</>
+	);
+}
+
+function SettingsSidebar() {
+	const { t } = useTranslation();
+	return (
+		<>
 			<h2 className="shrink-0 px-5 py-4 font-medium">{t("sidebar.settings")}</h2>
 			<nav
 				className="flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto px-3 pb-3"
@@ -222,6 +221,12 @@ function SettingsSidebar({ homeTo }: { homeTo: string }) {
 						<span>{t("gateway.settings")}</span>
 					</EnvironmentNavLink>
 				</Button>
+				<Button variant="navigation" size="navigation-compact" className="min-h-9" asChild>
+					<EnvironmentNavLink to="/settings/openviking" end>
+						<BookOpen />
+						<span>{t("openviking.settings")}</span>
+					</EnvironmentNavLink>
+				</Button>
 			</nav>
 		</>
 	);
@@ -229,31 +234,19 @@ function SettingsSidebar({ homeTo }: { homeTo: string }) {
 
 function WorkspaceSidebar({
 	entryId: logicalEntryId,
-	homeTo,
 	active,
 }: {
 	entryId: string;
-	homeTo: string;
 	active: boolean;
 }) {
 	const { t } = useTranslation();
 	const { projectName } = useParams();
 	const { search } = useLocation();
 	const navigate = useNavigate();
-	const {
-		workspace,
-		overview,
-		environment,
-		available,
-		contextEntryId: entryId,
-	} = useWorkspace(logicalEntryId);
+	const { workspace, overview, available, contextEntryId: entryId } = useWorkspace(logicalEntryId);
 	const projects = overview.data?.projects ?? [];
 	const [createOpen, setCreateOpen] = useState(false);
-	const [bindingOpen, setBindingOpen] = useState(false);
 	const [pendingAction, setPendingAction] = useState<(() => void) | null>(null);
-	const [collapsedGroups, setCollapsedGroups] = useState<
-		Partial<Record<OverviewProject["kind"], boolean>>
-	>({});
 	const dirty = useEnvironmentDirtyStore((state) => state.dirty);
 	const discardAll = useEnvironmentDirtyStore((state) => state.discardAll);
 	const readOnly = workspace?.status === "identity-conflict";
@@ -263,24 +256,8 @@ function WorkspaceSidebar({
 	}
 	return (
 		<>
-			<div className="window-titlebar window-sidebar-titlebar flex min-h-14 shrink-0 items-center border-b border-border px-3">
-				<Button variant="ghost" className="w-full min-w-0 justify-start [&>span]:truncate" asChild>
-					<EnvironmentLink to={homeTo}>
-						<ArrowLeft />
-						<span>
-							{t(
-								homeTo.startsWith("/projects/")
-									? "groups.backToProject"
-									: homeTo.startsWith("/workspaces")
-										? "groups.allWorkspaces"
-										: "groups.allProjects",
-							)}
-						</span>
-					</EnvironmentLink>
-				</Button>
-			</div>
 			<div className="flex shrink-0 flex-col gap-1 px-5 py-4">
-				<h2 className="truncate font-medium" title={workspace?.name}>
+				<h2 className="truncate text-base font-semibold" title={workspace?.name}>
 					{workspace?.name ?? t("workspaces.workspaceLabel")}
 				</h2>
 				<p
@@ -291,10 +268,9 @@ function WorkspaceSidebar({
 				</p>
 			</div>
 			<nav
-				className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto px-3 pb-3"
-				aria-label={t("projectInspector.projectListLabel")}
+				className="flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto px-3 pb-3"
+				aria-label={t("navigation.workspace")}
 			>
-				{available && !overview.data && !overview.error && <Skeleton className="h-24" />}
 				<Button variant="navigation" size="navigation-compact" asChild>
 					<EnvironmentNavLink
 						to={
@@ -318,65 +294,18 @@ function WorkspaceSidebar({
 						<span>{t("git.title")}</span>
 					</EnvironmentNavLink>
 				</Button>
-				{PROJECT_GROUPS.map(({ kind, directory, icon: Icon }) => {
-					const group = projects.filter((project) => project.kind === kind);
-					if (!group.length) return null;
-					return (
-						<Collapsible.Root
-							key={kind}
-							open={!collapsedGroups[kind]}
-							onOpenChange={(open) =>
-								setCollapsedGroups((current) => ({ ...current, [kind]: !open }))
-							}
-						>
-							<Collapsible.Trigger asChild>
-								<Button
-									variant="ghost"
-									size="sm"
-									className="w-full justify-start"
-									aria-label={t("projectInspector.groupLabel", {
-										group: directory,
-										count: group.length,
-									})}
-								>
-									<ChevronRight
-										className={cn(
-											"transition-transform motion-reduce:transition-none",
-											!collapsedGroups[kind] && "rotate-90",
-										)}
-									/>
-									<span className="flex-1 text-left font-mono">{directory}</span>
-									<span className="font-mono tabular-nums text-muted-foreground">
-										{group.length}
-									</span>
-								</Button>
-							</Collapsible.Trigger>
-							<Collapsible.Content className="flex flex-col gap-1 pt-1">
-								{group.map((project) => (
-									<Button
-										key={project.name}
-										variant="navigation"
-										size="navigation-compact"
-										className="min-h-9"
-										asChild
-									>
-										<EnvironmentLink
-											to={projectPath(entryId, project.name)}
-											aria-current={projectName === project.name ? "page" : undefined}
-											title={project.relativeDir}
-										>
-											<Icon />
-											<span className="min-w-0 flex-1 truncate">{project.name}</span>
-										</EnvironmentLink>
-									</Button>
-								))}
-							</Collapsible.Content>
-						</Collapsible.Root>
-					);
-				})}
-				{overview.data && !projects.length && (
-					<p className="px-2 text-sm text-muted-foreground">{t("projectInspector.empty")}</p>
-				)}
+				<Button variant="navigation" size="navigation-compact" asChild>
+					<EnvironmentNavLink to={workspaceVariablesPath(entryId, projectName)}>
+						<KeyRound />
+						<span>{t("navigation.environmentVariables")}</span>
+					</EnvironmentNavLink>
+				</Button>
+				<Button variant="navigation" size="navigation-compact" asChild>
+					<EnvironmentNavLink to={workspaceKnowledgePath(entryId)}>
+						<BookOpen />
+						<span>{t("openviking.title")}</span>
+					</EnvironmentNavLink>
+				</Button>
 			</nav>
 			{available && (
 				<div className="flex shrink-0 flex-col gap-2 border-t border-border p-3">
@@ -387,14 +316,6 @@ function WorkspaceSidebar({
 						<Plus />
 						{t("projectCreate.title")}
 					</Button>
-					<Button
-						variant="outline"
-						disabled={readOnly || !overview.data}
-						onClick={() => requestAction(() => setBindingOpen(true))}
-					>
-						<Settings2 />
-						{t("navigation.workspaceSettings")}
-					</Button>
 				</div>
 			)}
 			{active && createOpen && !readOnly && (
@@ -404,17 +325,8 @@ function WorkspaceSidebar({
 					onClose={() => setCreateOpen(false)}
 					onCreated={(name) => {
 						setCreateOpen(false);
-						navigate(preserveEnvironment(projectPath(entryId, name), search));
+						navigate(preserveEnvironment(workspaceVariablesPath(entryId, name), search));
 					}}
-				/>
-			)}
-			{active && (
-				<InfisicalBindingDialog
-					open={bindingOpen}
-					onOpenChange={setBindingOpen}
-					workspaceEntryId={entryId}
-					environment={environment}
-					readOnly={readOnly}
 				/>
 			)}
 			<DiscardDialog

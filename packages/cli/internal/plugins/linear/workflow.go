@@ -12,7 +12,6 @@ import (
 	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/bootstrap"
 	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/modules/codehost"
 	api "github.com/torchstellar-team/one-cli/packages/one-core/pkg/modules/gateway"
-	gitmodule "github.com/torchstellar-team/one-cli/packages/one-core/pkg/modules/git"
 	flow "github.com/torchstellar-team/one-cli/packages/one-core/pkg/modules/issueworkflow"
 	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/platform/i18n"
 	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/platform/output"
@@ -21,9 +20,10 @@ import (
 	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/platform/userdirs"
 	gitplugin "github.com/torchstellar-team/one-cli/packages/one-core/pkg/plugins/git"
 	core "github.com/torchstellar-team/one-cli/packages/one-core/pkg/plugins/linear"
+	"github.com/torchstellar-team/one-cli/packages/one-core/pkg/plugins/openviking"
 )
 
-func openWorkflow(ctx context.Context, path string, launcher api.CodexLauncher, git *gitmodule.Service, linear *core.Plugin) (*flow.Service, *flow.Store, error) {
+func openWorkflow(ctx context.Context, path string, launcher api.CodexLauncher, deps bootstrap.Dependencies, linear *core.Plugin) (*flow.Service, *flow.Store, error) {
 	if path == "" {
 		dir, err := userdirs.Config()
 		if err != nil {
@@ -46,16 +46,16 @@ func openWorkflow(ctx context.Context, path string, launcher api.CodexLauncher, 
 	}
 	one, _ := os.Executable()
 	service := flow.New(cfg, store, linear,
-		flow.Codex{Executable: "codex", One: one, Launch: launcher, ReadRoots: cfg.CodexReadRoots, StateDir: cfg.StateDir},
-		flow.Repository{Git: git, StateDir: cfg.StateDir, Hosts: hosts}, hosts, slog.Default())
-	service.ManageProjects(path, linear, git)
+		flow.Codex{Executable: "codex", One: one, Launch: launcher, ReadRoots: cfg.CodexReadRoots, StateDir: cfg.StateDir, Knowledge: flow.WorkspaceKnowledge{Backend: deps.Knowledge, Registry: deps.Registry}},
+		flow.Repository{Git: deps.Git, StateDir: cfg.StateDir, Hosts: hosts}, hosts, slog.Default())
+	service.ManageProjects(path, linear, deps.Git)
 	return service, store, nil
 }
 
-func workflowCommand(git *gitmodule.Service, linear *core.Plugin) *cobra.Command {
+func workflowCommand(deps bootstrap.Dependencies, linear *core.Plugin) *cobra.Command {
 	var path string
 	cmd := &cobra.Command{Use: "workflow <project-id> <issue-id>", Args: i18n.ExactArgs(2), RunE: func(cmd *cobra.Command, args []string) error {
-		service, store, err := openWorkflow(cmd.Context(), path, nil, git, linear)
+		service, store, err := openWorkflow(cmd.Context(), path, nil, deps, linear)
 		if err != nil {
 			return err
 		}
@@ -86,14 +86,14 @@ func RunWorker(path, socket string) error {
 	}
 	_ = i18n.Init(i18n.Resolve(locale))
 	linear := core.New()
-	deps, err := bootstrap.ComposePlugins(gitplugin.New(), linear)
+	deps, err := bootstrap.ComposePlugins(gitplugin.New(), linear, openviking.New())
 	if err != nil {
 		return err
 	}
 	launcher := func(ctx context.Context, input api.CodexStart) (api.CodexStream, error) {
 		return api.DialCodex(ctx, socket, input)
 	}
-	service, store, err := openWorkflow(ctx, path, launcher, deps.Git, linear)
+	service, store, err := openWorkflow(ctx, path, launcher, deps, linear)
 	if err != nil {
 		return err
 	}
