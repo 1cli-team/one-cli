@@ -465,7 +465,12 @@
 			"show": "Open One Desktop",
 			"quit": "Quit One Desktop"
 		},
-		"gatewayQuestionNotification": "A Gateway task is waiting for your answer",
+		"gatewayNotifications": {
+			"question": "A Gateway task is waiting for your answer",
+			"continuation": "A Gateway task is ready to continue",
+			"failure": "A Gateway task failed",
+			"pullRequest": "A Gateway task opened a pull request"
+		},
 		"settings": "Desktop settings",
 		"settingsHint": "Desktop runtime, terminal integration and updates.",
 		"connectionInvalid": "The backend connection is invalid.",

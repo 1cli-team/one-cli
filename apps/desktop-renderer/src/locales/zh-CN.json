@@ -467,7 +467,12 @@
 		},
 		"settings": "桌面设置",
 		"settingsHint": "管理桌面运行状态、终端集成与更新。",
-		"gatewayQuestionNotification": "Gateway 任务正在等待你的回答",
+		"gatewayNotifications": {
+			"question": "Gateway 任务正在等待你的回答",
+			"continuation": "Gateway 任务待继续",
+			"failure": "Gateway 任务执行失败",
+			"pullRequest": "Gateway 任务已创建 PR"
+		},
 		"connectionInvalid": "后端连接信息无效。",
 		"notConnected": "请连接桌面后端后再继续。",
 		"sessionChanged": "后端已重启，请重新读取最新状态后保存。",

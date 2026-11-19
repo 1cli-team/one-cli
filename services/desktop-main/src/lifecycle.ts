@@ -1,4 +1,4 @@
-import { app, dialog, Menu, Tray, nativeImage } from "electron";
+import { app, dialog, Menu, Notification, Tray, nativeImage } from "electron";
 import { join } from "node:path";
 import type { MainWindow } from "./window.ts";
 import type { Backend } from "./backend.ts";
@@ -16,6 +16,7 @@ export function createLifecycle({
   assetsDirectory: string;
 }) {
   let tray: Tray | undefined;
+  let stopGatewayNotifications: (() => Promise<void>) | undefined;
   let closing = false;
   let finished = false;
   let locale = "en-US";
@@ -44,6 +45,7 @@ export function createLifecycle({
         }
       }
       await backend.stop();
+      await stopGatewayNotifications?.();
       finished = true;
       tray?.destroy();
       mainWindow.permitExit();
@@ -95,17 +97,20 @@ export function createLifecycle({
     tray.setToolTip("One Desktop");
     tray.on("double-click", () => mainWindow.show());
     setLocale(app.getLocale().startsWith("zh") ? "zh-CN" : "en-US");
-    const stopGatewayNotifications = startGatewayNotifications({
-      backend,
-      title: () => messages().gatewayQuestionNotification,
-      openExecution: (id) => {
-        mainWindow.show();
-        const window = mainWindow.window;
-        if (window && !window.isDestroyed())
-          window.webContents.send("desktop:gateway-execution", id);
-      },
-    });
-    app.once("will-quit", stopGatewayNotifications);
+    if (Notification.isSupported()) {
+      stopGatewayNotifications = startGatewayNotifications({
+        backend,
+        statePath: join(app.getPath("userData"), "gateway-notifications.json"),
+        title: (kind) => messages().gatewayNotifications[kind],
+        createNotification: (options) => new Notification(options),
+        openExecution: (id) => {
+          mainWindow.show();
+          const window = mainWindow.window;
+          if (window && !window.isDestroyed())
+            window.webContents.send("desktop:gateway-execution", id);
+        },
+      });
+    }
     app.on("activate", () => mainWindow.show());
     app.on("second-instance", () => mainWindow.show());
     app.on("before-quit", (event) => {

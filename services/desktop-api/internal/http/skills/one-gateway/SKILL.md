@@ -53,13 +53,19 @@ This sends task content, user answers, and Codex replies to OpenViking.
 
 ## Find and dispatch work
 
-- To locate an existing execution, use the Gateway monitor or `one gateway jobs --issue ISSUE_ID -o json`. To inspect a known execution, use `one gateway job JOB_ID -o json`.
+- To locate an existing execution, use the Gateway monitor or `one gateway jobs --issue ISSUE_ID -o json`. For a status update on a known execution, run `one gateway job JOB_ID -o json` once and report the snapshot.
+- For a log snapshot, use `one gateway logs JOB_ID`.
 - When asked to dispatch, use `one gateway workers -o json` to identify an online worker with the repositories mapped to the issue's Linear project. Use the worker ID from the listing. If the mapping is missing, follow [the project mapping steps](#link-a-linear-project-and-map-its-repositories).
-- Run `one gateway dispatch ISSUE_ID --worker WORKER_ID -o json`. Copy `data.jobId` from the response. If the response is interrupted, look up the issue's jobs before retrying so you avoid duplicate work.
+- Run `one gateway dispatch ISSUE_ID --worker WORKER_ID -o json`. Once Gateway returns `data.jobId`, report the issue, worker, job ID, and returned status, then end the current turn by default. Gateway and the worker handle execution in the background. If the response is interrupted, look up the issue's jobs before retrying to avoid duplicate work.
 
-## Follow an execution
+## Follow an execution when explicitly requested
 
-- Use `one gateway wait JOB_ID --timeout 1m -o json` in bounded intervals. A timeout only stops the local wait. Use `one gateway job JOB_ID -o json` to check its current state and `one gateway logs JOB_ID` for a log snapshot.
-- For `waiting_for_answer`, find the unanswered question in `data.questions`. Relay it if it needs the user's decision. Submit an authorized answer with `one gateway reply JOB_ID QUESTION_ID 'ANSWER' -o json`.
-- For `waiting_to_continue`, read `data.progress.summary`. If the next step is in scope and the user asked you to carry the task through, use `one gateway continue JOB_ID -o json` to resume the same session and worktree. Surface any decision the saved progress needs from the user.
+Use this workflow only when the user explicitly asks you to wait or keep following the execution, for example, “wait until the PR is created” or “等到 PR 出来”.
+
+- Use `one gateway wait JOB_ID --timeout 1m -o json` in bounded intervals until the requested milestone or a decision that requires the user. A timeout only stops the local wait. If the task pauses, use its saved question or progress as described below.
 - Once the run ends, report its state and the pull requests in `data.result.pullRequests` when present. Verify PR merge status separately when the user asks whether it merged.
+
+## Answer or continue a paused execution
+
+- For `waiting_for_answer`, find the unanswered question in `data.questions`. Relay it if it needs the user's decision. Submit an authorized answer with `one gateway reply JOB_ID QUESTION_ID 'ANSWER' -o json`.
+- For `waiting_to_continue`, read `data.progress.summary`. Use `one gateway continue JOB_ID -o json` to resume the same session and worktree when the user asks you to continue or has asked you to carry the execution through and the next step is in scope. Surface any decision the saved progress needs from the user.
