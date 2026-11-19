@@ -164,8 +164,6 @@ configuration. The built-in execution machine has the ID `local`.
 ```sh
 one gateway workers -o json
 one gateway dispatch MG-3 --worker local -o json
-one gateway wait JOB_ID --timeout 10m -o json
-one gateway logs JOB_ID --follow
 ```
 
 Use `--model` and `--effort` to override Codex settings for this dispatch. Each
@@ -178,11 +176,29 @@ omitted option uses the execution machine's default.
 one gateway dispatch MG-3 --worker local --model MODEL_ID --effort high -o json
 ```
 
-Use `data.jobId` from the dispatch response with `one gateway job`, `wait`, or
-`logs`. The completed result includes the final Codex reply when available.
+Gateway returns `data.jobId` after accepting the job. The selected worker runs it
+in the background. The dispatching agent reports the issue, worker, job ID, and
+returned status, then ends its turn by default. For an on-demand status update,
+use `one gateway job JOB_ID -o json` once. Use `one gateway logs JOB_ID` for a log
+snapshot. The completed result includes the final Codex reply when available.
 
-使用派发结果中的 `data.jobId` 查看任务、等待结果或读取日志。任务结果会带出可读取的
-Codex 最终回复。
+Gateway 接收任务后返回 `data.jobId`，所选执行机在后台运行任务。主 Agent 默认在
+告知需求编号、执行机、任务 ID 和返回状态后结束当前回合。需要查进度时，运行一次
+`one gateway job JOB_ID -o json`。使用 `one gateway logs JOB_ID` 查看日志快照。
+任务结果包含可读取的 Codex 最终回复。
+
+### 按明确要求等待 / Wait when explicitly requested
+
+The agent uses `wait` or polls for updates only when the user explicitly asks it
+to wait or keep following the execution, such as waiting for PR creation. A wait
+timeout ends the local wait command. The job continues on its worker.
+
+只有用户明确要求等待或持续跟进时，例如「等到 PR 出来」，主 Agent 才使用 `wait`
+或轮询状态。等待超时只会结束本地等待命令，任务仍由执行机处理。
+
+```sh
+one gateway wait JOB_ID --timeout 1m -o json
+```
 
 ### 回答执行中的提问 / Answer questions during execution
 
@@ -196,18 +212,16 @@ Codex 需要你确认时，Gateway 会保存问题并暂停任务。One Desktop 
 通知，窗口隐藏时也能收到。在执行详情中查看问题并回复，执行机会在原来的 Codex 会话
 和工作区里继续。
 
-`one gateway wait JOB_ID -o json` returns early with state `waiting_for_answer`
-when a question needs an answer. Use the question ID from `data.questions` in
-`reply`, then wait again. `one gateway job JOB_ID` includes the questions and
-their saved answers.
+`wait` returns early with state `waiting_for_answer` when a question needs an
+answer. `one gateway job JOB_ID` includes the questions and their saved answers.
+Use the question ID from `data.questions` in `reply`.
 
-`wait` 遇到待回答的问题会返回 `waiting_for_answer`。从 `data.questions` 取得问题 ID，
-回答后再次等待任务。`job` 可以查看问题和已保存的回答。
+`wait` 遇到待回答的问题会返回 `waiting_for_answer`。`job` 可以查看问题和已保存的
+回答。从 `data.questions` 取得问题 ID 后使用 `reply` 回复。
 
 ```sh
-one gateway wait JOB_ID -o json
+one gateway job JOB_ID -o json
 one gateway reply JOB_ID QUESTION_ID '请使用蓝色。' -o json
-one gateway wait JOB_ID -o json
 ```
 
 ### 继续未完成的任务 / Continue an unfinished task
@@ -230,9 +244,8 @@ When the machine claims it, Codex resumes the original thread and worktree.
 `wait` 会在任务进入「待继续」时返回。上轮保存的进度在 `data.progress.summary` 中。
 
 ```sh
-one gateway wait JOB_ID -o json
+one gateway job JOB_ID -o json
 one gateway continue JOB_ID -o json
-one gateway wait JOB_ID -o json
 ```
 
 ## One Desktop
